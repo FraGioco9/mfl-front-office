@@ -7,11 +7,6 @@
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
   const TOAST_COORDINATION_REASONS = new Set([
-    "setPage",
-    "setView",
-    "switchWatchlist",
-    "route-runtime",
-    "requestIncrementalRoute",
     "evaluation-load",
   ]);
   const controller = window.__mflInteractionBusy;
@@ -116,7 +111,8 @@
   function syncFooterLock(snapshot) {
     const footer = document.querySelector(".siteFooter");
     if (!(footer instanceof HTMLElement)) return;
-    const locked = Boolean(snapshot?.busy) || document.documentElement.dataset.mflReady !== "true";
+    const initialRouteResolved = document.documentElement.classList.contains("mflInitialRouteResolved");
+    const locked = Boolean(snapshot?.busy) || !initialRouteResolved;
     footer.classList.toggle(FOOTER_LOCK_CLASS, locked);
     if (locked) {
       footer.inert = true;
@@ -182,6 +178,7 @@
     sync();
   }
 
+  window.addEventListener("mfl:route-ready", sync);
   window.addEventListener("mfl:ready", sync);
   window.addEventListener("resize", sync);
   document.addEventListener("scroll", onScroll, true);
@@ -195,6 +192,7 @@
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
+    window.removeEventListener("mfl:route-ready", sync);
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
     document.removeEventListener("scroll", onScroll, true);
