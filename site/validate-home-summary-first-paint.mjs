@@ -62,8 +62,8 @@ includes(
 );
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
-    < preBootstrap.indexOf("const initialClubPath = String(location.pathname"),
-  "Initial body route state must be committed before route-specific bootstrap work.",
+    < preBootstrap.indexOf("const initialPath = cleanPath(location.pathname);"),
+  "Initial body route state must be committed before canonical URL replacement or route-specific bootstrap work.",
 );
 
 includes(
@@ -179,4 +179,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home summary first-paint validation passed: deep links show header placeholders immediately and brand-link Home navigation repaints cached Players/Wallets counts after route priming.");
+console.log("Home summary first-paint validation passed: canonical deep links show the correct header state immediately and brand-link Home navigation repaints cached Players/Wallets counts after route priming.");
