@@ -18,7 +18,7 @@ invariant(
   buildNormalizer.includes('import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";')
     && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);")
     && buildNormalizer.includes("normalizeEvaluationRecentReadiness(globalSearchArtifacts)"),
-  "Canonical application-core builds must apply Global Search open-lifecycle normalization before later readiness transforms.",
+  "Canonical application-core builds must apply Global Search lifecycle normalization before later readiness transforms.",
 );
 
 invariant(
@@ -38,4 +38,19 @@ invariant(
   "After search indexes become ready, openSearch must not overwrite canonical recent-five cards with whichever typed results remain in the mutable live indexes.",
 );
 
-console.log("Global Search open keeps the canonical recent five authoritative before and after search-index readiness.");
+invariant(
+  normalizedCore.includes("return [...playerResults, ...agentResults].slice(0, 10);")
+    && normalizedCore.includes("const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);")
+    && normalizedCore.includes("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,\n    ].slice(0, 10);")
+    && !normalizedCore.includes("return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];")
+    && !normalizedCore.includes("...playerResults.slice(0, 5),\n      ...clubResults,\n      ...agentResults.slice(0, 5),"),
+  "Typed Global Search must use one ten-result budget across players, clubs and agents instead of reserving five-result category buckets.",
+);
+
+const mergedResultsStart = normalizedCore.indexOf("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,");
+invariant(
+  mergedResultsStart >= 0,
+  "Typed Global Search must preserve player -> club -> agent category priority while applying the shared ten-result cap.",
+);
+
+console.log("Global Search keeps canonical recents authoritative and uses one shared ten-result typed-result budget across players, clubs and agents.");
