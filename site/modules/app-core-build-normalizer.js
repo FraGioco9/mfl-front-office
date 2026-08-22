@@ -72,6 +72,27 @@ function normalizeViewFilterStateBeforeTransition(artifacts) {
   });
 }
 
+function normalizeTableRequestLoadingBoundary(artifacts) {
+  const core = String(artifacts?.core || "");
+  if (!core) throw new Error("Cannot normalize table loading request boundary without shared application core.");
+
+  const normalizedCore = replaceRequired(
+    core,
+    "  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);",
+    `  if (["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope)) {
+    window.__mflTableLoadingRuntime?.beginRequest?.();
+  }
+
+  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);`,
+    "uncached table request loading boundary",
+  );
+
+  return Object.freeze({
+    ...artifacts,
+    core: normalizedCore,
+  });
+}
+
 function normalizeFilterSummaryLifecycle(artifacts) {
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
   const table = String(routeChunks.table || "");
@@ -129,8 +150,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
   const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
+  const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
