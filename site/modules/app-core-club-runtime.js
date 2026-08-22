@@ -384,6 +384,10 @@
       if (!dataLoaded) return;
       const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+      if (!loadedClubTitle && clubRows().length === 0) {
+        window.__mflStaticUiRuntime?.showNotFound?.("Club");
+        return;
+      }
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
@@ -434,7 +438,7 @@
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (route) void openClubPage(route.clubId, route.view, false);
@@ -444,7 +448,7 @@
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (!route || initialClubRoute) return;
