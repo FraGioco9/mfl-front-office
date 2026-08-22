@@ -5,11 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase, appCoreSource, tableRuntime] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generatedCore, tableRuntime] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -47,6 +49,39 @@ for (const marker of loadingGuardMarkers) {
   invariant(tableRuntime.includes(marker), `Generated table runtime selection-header loading guard is missing ${marker}`);
 }
 
+for (const required of [
+  "function beginRequest() {",
+  "!loadingSnapshot().dataLoading",
+  "return primeLoadingRows() && body.dataset.staticLoading === \"true\";",
+  "Object.freeze({ beginRequest, show, release, sync, installCoreBridge, destroy })",
+  'if (body.dataset.staticLoading === "true" && realRowsPresent) return false;',
+]) {
+  invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
+}
+
+const requestBoundaryMarker = 'window.__mflTableLoadingRuntime?.beginRequest?.();';
+invariant(
+  buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
+    && buildNormalizer.includes('["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope)')
+    && buildNormalizer.includes(requestBoundaryMarker)
+    && buildNormalizer.includes("const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);")
+    && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);"),
+  "The build must attach stale-row replacement to real uncached table request boundaries.",
+);
+
+const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);
+const generatedPromiseIndex = generatedCore.indexOf("let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);");
+invariant(
+  generatedBoundaryIndex >= 0 && generatedPromiseIndex > generatedBoundaryIndex,
+  "Generated shared core must re-prime loading rows immediately before an uncached table request is acquired.",
+);
+
+invariant(
+  !tableRuntime.includes('document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying')
+    && !tableRuntime.includes("commitFinalRender"),
+  "Normal and final table rendering must stay untouched; loading ownership belongs to request start, not render gating.",
+);
+
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
     && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
@@ -73,4 +108,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selector stays visually neutral in source and generated runtime, with synchronous first-paint row geometry.");
+console.log("Table loading re-primes stale or empty table content only at real uncached table request boundaries, without gating final row rendering.");
