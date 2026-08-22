@@ -7,6 +7,7 @@
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";
   const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
+  const ROUTE_LOADING_REASON = "route-loading";
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -129,9 +130,24 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
+    const ROUTE_LOADING_ALIASES = new Set([
+      "startup",
+      "setPage",
+      "setView",
+      "switchWatchlist",
+      "route-runtime",
+      "ensureProgressionData",
+      "requestIncrementalRoute",
+      "databaseStatsData",
+      "mflStatsData",
+      "evaluationRouteLoading",
+    ]);
     const DATA_LOADING_REASONS = new Set([
-      "startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
-      "evaluationRouteLoading", "loadSharedEvaluation", "loadSavedEvaluation", "openSavedEvaluationsModal",
+      ROUTE_LOADING_REASON,
+      "interaction-loading",
+      "loadSharedEvaluation",
+      "loadSavedEvaluation",
+      "openSavedEvaluationsModal",
     ]);
     const blockedEvents = [
       "pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu",
@@ -152,6 +168,11 @@
       dataLoading: false,
       reasons: Object.freeze([]),
     });
+
+    function loadingReason(reason) {
+      const normalizedReason = String(reason || "loading");
+      return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;
+    }
 
     function makeSnapshot() {
       const reasons = Object.freeze(Array.from(activeTokens.values()));
@@ -185,7 +206,7 @@
     }
 
     function begin(reason = "loading") {
-      const normalizedReason = String(reason || "loading");
+      const normalizedReason = loadingReason(reason);
       const token = `${normalizedReason}-${++sequence}`;
       activeTokens.set(token, normalizedReason);
       applyState();
@@ -203,6 +224,12 @@
       } finally {
         end(token);
       }
+    }
+
+    function waitForRoutePaint() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
     }
 
     function subscribe(callback, options = {}) {
@@ -248,10 +275,15 @@
       return Reflect.set(window, name, replacement);
     }
 
-    function wrapBusyGlobal(name) {
+    function wrapBusyGlobal(name, reason = name) {
       const original = globalFunction(name);
       if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
-      const wrapped = (...args) => run(() => original.apply(window, args), name);
+      const normalizedReason = loadingReason(reason);
+      const wrapped = (...args) => run(async () => {
+        const result = await original.apply(window, args);
+        if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();
+        return result;
+      }, normalizedReason);
       Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
       Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
       return replaceGlobalFunction(name, original, wrapped);
@@ -282,17 +314,30 @@
       syncStoredAccessFlags();
 
       [
-        "setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
-        "openSavedEvaluationsModal", "createSharedEvaluationFromPayload", "createSharedEvaluation",
-        "createSavedEvaluation", "linkWallet",
-      ].forEach(wrapBusyGlobal);
+        "setPage",
+        "setView",
+        "switchWatchlist",
+        "ensureProgressionData",
+        "requestIncrementalRoute",
+      ].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));
+      [
+        "loadSharedEvaluation",
+        "loadSavedEvaluation",
+        "openSavedEvaluationsModal",
+        "createSharedEvaluationFromPayload",
+        "createSharedEvaluation",
+        "createSavedEvaluation",
+        "linkWallet",
+      ].forEach((name) => wrapBusyGlobal(name));
     }
 
     return Object.freeze({
       name: UNIFORM_LOADING_WORKFLOW_NAME,
+      reason: ROUTE_LOADING_REASON,
       begin,
       end,
       run,
+      waitForRoutePaint,
       subscribe,
       snapshot: () => currentSnapshot,
       isBusy: () => currentSnapshot.busy,
@@ -323,34 +368,29 @@
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;
   window.__mflInteractionBusy = createInteractionBusyController();
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
-  const startupToken = window.__mflInteractionBusy.begin("startup");
-  let startupFinished = false;
+  const initialRouteToken = window.__mflInteractionBusy.begin(ROUTE_LOADING_REASON);
+  let initialRouteFinished = false;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;
 
-  const finishStartup = async ({ skipAppStart = false } = {}) => {
-    if (startupFinished) return;
-    startupFinished = true;
+  const finishInitialRoute = () => {
+    if (initialRouteFinished) return;
+    initialRouteFinished = true;
     startupStateObserver?.disconnect();
-    try {
-      if (!skipAppStart && window.__mflAppStartPromise) {
-        await window.__mflAppStartPromise;
-      }
-    } catch {}
-    window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");
     document.documentElement.classList.add("mflInitialRouteResolved");
+    window.__mflInteractionBusy.end(initialRouteToken);
   };
 
   const recoverCompletedApplicationStartup = async () => {
-    if (startupFailureRecoveryRunning || startupFinished) return;
+    if (startupFailureRecoveryRunning || initialRouteFinished) return;
     startupFailureRecoveryRunning = true;
 
     const appStartPromise = window.__mflAppStartPromise;
     if (!appStartPromise || typeof appStartPromise.then !== "function") {
       ensureFatalStartupMessage();
       startupFailureRecoveryRunning = false;
-      await finishStartup({ skipAppStart: true });
+      finishInitialRoute();
       return;
     }
 
@@ -364,6 +404,7 @@
     }
 
     document.getElementById("mflStartupError")?.remove();
+    finishInitialRoute();
     document.documentElement.dataset.mflReady = "true";
     console.warn("Suppressed a post-core startup error after the application shell finished settling.");
     window.dispatchEvent(new CustomEvent("mfl:ready", {
@@ -372,7 +413,8 @@
     startupFailureRecoveryRunning = false;
   };
 
-  window.addEventListener("mfl:ready", () => { void finishStartup(); }, { once: true });
+  window.addEventListener("mfl:route-ready", finishInitialRoute, { once: true });
+  window.addEventListener("mfl:ready", finishInitialRoute, { once: true });
   startupStateObserver = new MutationObserver(() => {
     if (document.documentElement.dataset.mflReady === "error") {
       void recoverCompletedApplicationStartup();
