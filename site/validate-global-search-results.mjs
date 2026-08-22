@@ -83,10 +83,10 @@ invariant(
 );
 
 invariant(
-  core.includes("state.searchIndex = playerEntries;")
-    && core.includes("state.agentSearchIndex = Array.isArray(agents?.rows)")
-    && core.includes("state.clubSearchIndex = Array.isArray(payload?.clubs)"),
-  "Regression coverage must account for typed database searches replacing the live player, agent, and club indexes.",
+  core.includes('function applyDatabaseSearchPayload(payload, type = "all")')
+    && core.includes("state.searchIndex = playerEntries;")
+    && core.includes("state.agentSearchIndex = Array.isArray(agents?.rows)"),
+  "Regression coverage must account for typed database searches replacing the live player and agent indexes that recent rendering previously depended on.",
 );
 
 invariant(
