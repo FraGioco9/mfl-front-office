@@ -219,6 +219,19 @@ body[data-page="club"] #progressionPage .rowsField {
   vertical-align: middle;
 }
 
+#progressionPage #tableBody .tableControlCellContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+  line-height: 1;
+}
+
+#progressionPage #tableBody .tableControlCellContentCentered {
+  justify-content: center;
+}
+
 #progressionPage #tableBody .playerNameCell {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
