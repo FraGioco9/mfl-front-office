@@ -474,39 +474,61 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 #databaseStatsPage #databaseStatsCustomFilter {
   position: fixed;
   z-index: 2147483000;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: max-content;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  width: 220px;
   max-width: calc(100vw - 24px);
   margin: 0;
-  padding: 10px 11px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--mfl-dropdown-shadow);
 }
 
 #databaseStatsPage #databaseStatsCustomFilter[hidden] {
   display: none;
 }
 
-#databaseStatsPage #databaseStatsCustomFilter::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: var(--database-stats-arrow-left, 50%);
-  width: 10px;
-  height: 10px;
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  background: inherit;
-  transform: translateX(-50%) rotate(45deg);
+#databaseStatsPage #databaseStatsCustomFilter label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 4px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-#databaseStatsPage #databaseStatsCustomFilter.databaseStatsTooltipAbove::before {
-  top: auto;
-  bottom: -6px;
-  transform: translateX(-50%) rotate(225deg);
+#databaseStatsPage #databaseStatsCustomFilter input {
+  height: 34px;
+  min-width: 0;
+  padding: 0 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+}
+
+#databaseStatsPage #databaseStatsCustomFilter input:hover:not(:disabled),
+#databaseStatsPage #databaseStatsCustomFilter input:focus:not(:disabled),
+#databaseStatsPage #databaseStatsCustomFilter input:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+#databaseStatsPage #databaseStatsCustomApply {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 34px;
+  margin: 0;
 }
