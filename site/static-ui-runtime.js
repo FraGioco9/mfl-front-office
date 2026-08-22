@@ -107,7 +107,8 @@
       if (orderIndex >= 0) button.style.order = String(orderIndex + 1);
       else button.style.removeProperty("order");
       if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
-        button.textContent = page === "club" ? "Squad" : "Attributes";
+        const label = page === "club" ? "Squad" : "Attributes";
+        if (button.textContent !== label) button.textContent = label;
       }
     });
 
