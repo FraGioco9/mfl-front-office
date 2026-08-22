@@ -3,6 +3,7 @@
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const MAX_GLOBAL_SEARCH_RESULTS = 10;
+  const MAX_RECENT_GLOBAL_SEARCH_RESULTS = 5;
   window.__mflGlobalSearchRuntime?.destroy?.();
 
   let controller = null;
@@ -81,14 +82,16 @@
     results.classList.remove("filledSearchResults");
   }
 
-  function normalizeTypedSearchResults() {
+  function normalizeSearchResults() {
     const input = searchInput();
     const results = searchResults();
-    if (!input || !results || !input.value.trim()) return;
+    if (!input || !results) return;
 
+    const hasQuery = Boolean(input.value.trim());
+    const maxResults = hasQuery ? MAX_GLOBAL_SEARCH_RESULTS : MAX_RECENT_GLOBAL_SEARCH_RESULTS;
     const directResults = Array.from(results.querySelectorAll(":scope > .searchResult"));
-    directResults.slice(MAX_GLOBAL_SEARCH_RESULTS).forEach((result) => result.remove());
-    results.classList.remove("filledSearchResults");
+    directResults.slice(maxResults).forEach((result) => result.remove());
+    results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);
   }
 
   function renderEvaluationMessage(message) {
@@ -130,7 +133,7 @@
   function renderCurrentResults() {
     try {
       coreContracts()?.renderGlobalSearchResults?.();
-      normalizeTypedSearchResults();
+      normalizeSearchResults();
     } catch (error) {
       console.warn("Could not render Global Search results.", error);
     }
@@ -386,7 +389,11 @@
     if (!modal) return;
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
-      if (!modal.hidden) focusAndSelectSearch();
+      if (!modal.hidden) {
+        const input = searchInput();
+        if (input && !input.value.trim()) renderCurrentResults();
+        focusAndSelectSearch();
+      }
     });
     modalObserver.observe(modal, { attributes: true, attributeFilter: ["hidden"] });
   }
@@ -395,6 +402,9 @@
     installCoreSearchMatching();
     flushPendingPayload();
     flushPendingEvaluationPayload();
+    const modal = searchModal();
+    const input = searchInput();
+    if (modal && !modal.hidden && input && !input.value.trim()) renderCurrentResults();
   }
 
   document.addEventListener("input", onInput, true);
@@ -425,7 +435,7 @@
     version: VERSION,
     search: searchDatabase,
     searchEvaluation: searchEvaluationDatabase,
-    cap: normalizeTypedSearchResults,
+    cap: normalizeSearchResults,
     flush: flushPendingPayload,
     flushEvaluation: flushPendingEvaluationPayload,
     focus: focusAndSelectSearch,
