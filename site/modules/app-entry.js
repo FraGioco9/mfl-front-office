@@ -239,7 +239,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflDatabaseStatsRuntime?: { sync?: () => void },
- * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
+ * __mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void },
  * __mflEvaluationLayoutRuntime?: { sync?: () => void },
  * __mflEvaluationSearchStateRuntime?: { sync?: () => void, restoreEmptyRecentResults?: (force?: boolean) => Promise<boolean>, destroy?: () => void },
  * __mflSelectionStartupResetRuntime?: { rebind?: () => void },
@@ -313,6 +313,7 @@ function installCoreBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.installCoreBridge?.();
   runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
+  void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
   installClubRouteRuntimeGate();
 }
