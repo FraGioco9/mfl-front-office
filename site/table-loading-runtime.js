@@ -81,9 +81,8 @@
     }
 
     const realRowsPresent = hasRealRows(body);
-    if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
     if (realRowsPresent && !replaceExisting) return false;
-    if (body.dataset.staticLoading !== "true" && !primeLoadingRows()) return false;
+    if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;
     return body.dataset.staticLoading === "true";
   }
 
