@@ -50,6 +50,17 @@ invariant(
   "Destination incremental requests must be built from reset filter state so loaded players match the reset controls.",
 );
 invariant(
+  generated.includes('if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }'),
+  "Same-page table view switches must snapshot live quick-filter controls before synchronous destination chrome can read persisted state.",
+);
+const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
+const liveFilterSnapshot = generated.indexOf('saveTableStateLocally(currentTableState());', activeViewNoOp);
+const viewTransition = generated.indexOf('runViewTransition(', activeViewNoOp);
+invariant(
+  activeViewNoOp >= 0 && liveFilterSnapshot > activeViewNoOp && viewTransition > liveFilterSnapshot,
+  "Live quick-filter state must be persisted after the active-view no-op and before any view transition begins.",
+);
+invariant(
   appCore.includes('function appliedTableFilterSignature(rules) {')
     && appCore.includes('if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {\n    state.selectedPlayerIds.clear();\n    state.selectionAnchorPlayerId = null;')
     && generated.includes('function appliedTableFilterSignature(rules) {'),
@@ -62,4 +73,4 @@ invariant(
   "Source and generated sorting must reapply unchanged filters instead of owning a separate selection reset.",
 );
 
-console.log("Page filter isolation, request-time player reset, and view/filter selection reset validation passed in source and generated table runtime.");
+console.log("Page filter isolation, live quick-filter preservation across view switches, request-time player reset, and view/filter selection reset validation passed.");
