@@ -69,7 +69,7 @@ for (const required of [
   "body.filtersOpen .filtersViewButton",
   ".viewControlsSeparator",
   "#progressionPage .views > #openFiltersButton",
-  'body[data-page="club"] #progressionPage .filtersViewButton',
+  'html[data-route-table-page="club"] #progressionPage .filtersViewButton',
 ]) {
   invariant(controls.includes(required), `Search and structural Filters chrome is missing canonical ownership through ${required}`);
 }
