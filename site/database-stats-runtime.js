@@ -66,13 +66,12 @@
     });
   }
 
-  function closeCustomPanel({ restoreFocus = false } = {}) {
+  function closeCustomPanel() {
     customPanelOpen = false;
     syncCustomInputs();
     const panel = customPanel();
     if (panel instanceof HTMLElement) panel.hidden = true;
     syncFilterButtons();
-    if (restoreFocus) customButton()?.focus({ preventScroll: true });
   }
 
   function positionCustomPanel() {
