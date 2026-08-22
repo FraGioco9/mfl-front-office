@@ -105,7 +105,7 @@ same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_LABELS"), TABLE_CO
 invariant(staticUiSource.includes("const configured = window.__mflTableViewConfig;"), "Static UI must consume canonical table-view configuration.");
 invariant(staticUiSource.includes("const routeConfig = window.__mflAppConfig?.routes;"), "Static UI must consume canonical route configuration.");
 invariant(staticUiSource.includes("const request = routeConfig.initialRequest(url.pathname);"), "Static UI must classify routes through the canonical initialRequest owner.");
-invariant(staticUiSource.includes('if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");'), "Static UI must paint the shared not-found shell instead of Home.");
+invariant(staticUiSource.includes('if (state.page === "notfound") return document.getElementById("routeMessagePage");'), "Static UI must paint the dedicated not-found shell instead of Home or the opt-in shell.");
 for (const retiredOwner of [
   "const VIEW_BY_SLUG = Object.freeze(",
   "STATIC_TABLE_BASE_COLUMNS",
@@ -115,6 +115,7 @@ for (const retiredOwner of [
   "STATIC_TABLE_SORTABLE_COLUMNS",
   "STATIC_TABLE_COLUMN_LABELS",
   "STATIC_TABLE_COLUMN_CLASSES",
+  'if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");',
   'return document.getElementById("homePage");\n  }',
 ]) {
   invariant(!staticUiSource.includes(retiredOwner), `Static UI must not retain duplicate or fallback route owner: ${retiredOwner}.`);
@@ -129,4 +130,4 @@ for (const legacyOwner of [
   invariant(!routeCoreSource.includes(legacyOwner), `Route core must not retain duplicate config owner: ${legacyOwner}`);
 }
 
-console.log("Canonical app configuration validation passed with static UI route ownership delegated to app-config.");
+console.log("Canonical app configuration validation passed with static UI route ownership delegated to app-config and a dedicated not-found shell.");
