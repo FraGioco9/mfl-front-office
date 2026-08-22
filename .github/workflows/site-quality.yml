@@ -163,7 +163,7 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          git add -- site/table-width-runtime.js site/modules/app-core-runtime.js site/modules/app-core-*-runtime.js
+          git add -- site/index.html site/bootstrap.js site/static-ui-runtime.js site/modules/app-core.js site/modules/app-core-route-policy.js site/table-width-runtime.js site/modules/app-core-runtime.js site/modules/app-core-*-runtime.js
           if git diff --cached --quiet; then
             echo "Generated application artifacts are current."
             exit 0
