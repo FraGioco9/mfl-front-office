@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, styles, controls, core, walletPreferencesApi, dataViews] = await Promise.all([
+const [runtime, styles, controls, core, appEntry, walletPreferencesApi, dataViews] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
   read("./controls.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
   read("./api/_data-views.js"),
 ]);
@@ -28,6 +29,7 @@ for (const required of [
   'windowFunction("walletProofHeaders")',
   'fetch("/api/wallet-preferences", {',
   "applySupabaseRecentState(data?.tableState);",
+  "preload: preloadRecentResults,",
   "recent: restoreSupabaseRecentResults,",
 ]) {
   invariant(runtime.includes(required), `Global Search result ownership is missing ${required}`);
@@ -53,22 +55,46 @@ invariant(
   "Global Search history must never use browser recent-history storage, including the legacy club-only key.",
 );
 
+const restoreRecentSection = runtime.slice(
+  runtime.indexOf("async function restoreSupabaseRecentResults()"),
+  runtime.indexOf("async function renderEmptySearchResults()"),
+);
+const modalOpenSection = runtime.slice(
+  runtime.indexOf("function observeSearchModal()"),
+  runtime.indexOf("function onReady()"),
+);
+
 invariant(
   runtime.includes("let recentLoadPromise = null;")
     && runtime.includes("let recentLoadedForSession = false;")
+    && runtime.includes("let recentLoadFailed = false;")
     && runtime.includes("let canonicalRecentItems = [];")
     && runtime.includes("let canonicalRecentResults = new Map();")
     && runtime.includes("let canonicalRecentPayload = null;")
     && runtime.includes("async function hydrateSupabaseRecentResults()")
+    && runtime.includes("function preloadRecentResults() {")
+    && runtime.includes("return hydrateSupabaseRecentResults();")
     && runtime.includes("if (recentLoadedForSession) return true;")
     && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
     && runtime.includes("recentLoadedForSession = true;")
     && runtime.includes("async function restoreSupabaseRecentResults()")
-    && runtime.includes("if (!recentLoadedForSession) await hydrateSupabaseRecentResults();")
+    && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
+    && runtime.includes("if (!recentLoadedForSession && pendingRecentLoad) await pendingRecentLoad;")
+    && !restoreRecentSection.includes("hydrateSupabaseRecentResults(")
+    && !modalOpenSection.includes("hydrateSupabaseRecentResults(")
     && !runtime.includes("recentLoadedForOpen")
     && !runtime.includes("options.force")
     && !runtime.includes("renderEmptySearchResults({ force: true })"),
-  "Global Search must hydrate its Supabase recent state once per session and reuse it like Evaluation.",
+  "Global Search must preload its Supabase recent state during page startup; opening the popup may only consume an existing preload and must never initiate the recent-history fetch.",
+);
+
+invariant(
+  appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
+    && appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+    && appEntry.includes("function installCoreBridges() {")
+    && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+      < appEntry.indexOf('document.documentElement.dataset.mflReady = "true";'),
+  "Application startup must launch Global Search recent preloading as soon as the application core bridge is installed, before the page is marked ready.",
 );
 
 invariant(
@@ -112,9 +138,10 @@ invariant(
   runtime.includes('event.target.closest("#playerSearchResults > .searchResult")')
     && runtime.includes("promoteCanonicalRecentResult(target);")
     && runtime.includes("flushCanonicalRecentState();")
+    && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
     && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
     && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
-  "Clicking a Global Search result must promote it into the canonical five before flushing the complete updated history to Supabase.",
+  "Clicking a Global Search result must promote it into the canonical five before flushing the complete updated history to Supabase, without starting a new recent-history request.",
 );
 
 invariant(
@@ -182,4 +209,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search resolves the complete Supabase five by identifier, keeps that canonical result payload independent of typed indexes, promotes clicks without collapsing history, and restores the five instantly when empty.");
+console.log("Global Search preloads its complete Supabase recent-five payload during page startup, keeps popup opening render-only, preserves recents across typed searches, and promotes clicks without collapsing history.");
