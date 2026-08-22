@@ -8,6 +8,7 @@
 
   let destroyed = false;
   let unsubscribe = null;
+  let previousReasonCount = 0;
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -81,6 +82,9 @@
     }
 
     const realRowsPresent = hasRealRows(body);
+    if (body.dataset.staticLoading === "true" && realRowsPresent) {
+      if (!replaceExisting) return false;
+    }
     if (realRowsPresent && !replaceExisting) return false;
     if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;
     return body.dataset.staticLoading === "true";
@@ -98,11 +102,14 @@
 
   function sync(snapshot = loadingSnapshot()) {
     if (destroyed) return;
+    const reasonCount = Array.isArray(snapshot.reasons) ? snapshot.reasons.length : 0;
+    const loadingReasonAdded = snapshot.dataLoading && reasonCount > previousReasonCount;
+    previousReasonCount = reasonCount;
     if (!tableRouteActive()) {
       release();
       return;
     }
-    if (snapshot.dataLoading) show({ replaceExisting: true });
+    if (snapshot.dataLoading) show({ replaceExisting: loadingReasonAdded });
     else release();
   }
 
