@@ -492,6 +492,26 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   display: none;
 }
 
+#databaseStatsPage #databaseStatsCustomFilter::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid var(--border-strong);
+  border-left: 1px solid var(--border-strong);
+  background: var(--surface);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+#databaseStatsPage #databaseStatsCustomFilter.databaseStatsMenuAbove::before {
+  top: auto;
+  bottom: -5px;
+  transform: translateX(-50%) rotate(225deg);
+}
+
 #databaseStatsPage #databaseStatsCustomFilter label {
   display: grid;
   gap: 5px;
