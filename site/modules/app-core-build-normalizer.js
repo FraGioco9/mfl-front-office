@@ -17,6 +17,7 @@ import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
+import { normalizeTableControlCellAlignment } from "./app-core-table-cell-alignment.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
@@ -54,16 +55,8 @@ function normalizeViewFilterStateBeforeTransition(artifacts) {
 
   const normalizedCore = replaceRequired(
     core,
-    `  if (pageName === activePageName && viewName === activeViewName) return;
-
-`,
-    `  if (pageName === activePageName && viewName === activeViewName) return;
-
-  if (pageName === activePageName && tablePages.has(pageName)) {
-    saveTableStateLocally(currentTableState());
-  }
-
-`,
+    `  if (pageName === activePageName && viewName === activeViewName) return;\n\n`,
+    `  if (pageName === activePageName && viewName === activeViewName) return;\n\n  if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }\n\n`,
     "live table filters persisted before same-page view transition",
   );
 
@@ -83,45 +76,13 @@ function normalizeTableRequestLoadingBoundary(artifacts) {
   let normalizedCore = replaceRequired(
     core,
     "  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);",
-    `  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
-
-  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);`,
+    `  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;\n\n  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);`,
     "uncached table request loading boundary",
   );
   normalizedCore = replaceRequired(
     normalizedCore,
-    `  let payload;
-  try {
-    payload = await requestPromise;
-  } catch (error) {
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
-    throw error;
-  }
-  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
-  applyIncrementalPayload(route, payload);
-  state.incrementalLastKey = requestKey;
-  state.incrementalLastLoadedAt = Date.now();
-  return payload;`,
-    `  let payload;
-  try {
-    payload = await requestPromise;
-  } catch (error) {
-    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
-    throw error;
-  }
-  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
-    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
-  }
-  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
-  try {
-    applyIncrementalPayload(route, payload);
-    state.incrementalLastKey = requestKey;
-    state.incrementalLastLoadedAt = Date.now();
-    return payload;
-  } finally {
-    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
-  }`,
+    `  let payload;\n  try {\n    payload = await requestPromise;\n  } catch (error) {\n    if (!incrementalRouteRequestIsCurrent(generation)) return null;\n    throw error;\n  }\n  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;\n  applyIncrementalPayload(route, payload);\n  state.incrementalLastKey = requestKey;\n  state.incrementalLastLoadedAt = Date.now();\n  return payload;`,
+    `  let payload;\n  try {\n    payload = await requestPromise;\n  } catch (error) {\n    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);\n    if (!incrementalRouteRequestIsCurrent(generation)) return null;\n    throw error;\n  }\n  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {\n    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);\n  }\n  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;\n  try {\n    applyIncrementalPayload(route, payload);\n    state.incrementalLastKey = requestKey;\n    state.incrementalLastLoadedAt = Date.now();\n    return payload;\n  } finally {\n    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);\n  }`,
     "table request loading boundary completion",
   );
 
@@ -159,16 +120,8 @@ function normalizeFilterSummaryLifecycle(artifacts) {
   );
   normalizedTable = replaceRequired(
     normalizedTable,
-    `  state.filterDraftRules = null;
-  hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
-    if (restoreTriggerFocus) openFiltersButton.focus();
-  });`,
-    `  state.filterDraftRules = null;
-  document.body.classList.remove("filtersOpen");
-  hideModal(filtersModal, () => {
-    if (restoreTriggerFocus) openFiltersButton.focus();
-  });`,
+    `  state.filterDraftRules = null;\n  hideModal(filtersModal, () => {\n    document.body.classList.remove("filtersOpen");\n    if (restoreTriggerFocus) openFiltersButton.focus();\n  });`,
+    `  state.filterDraftRules = null;\n  document.body.classList.remove("filtersOpen");\n  hideModal(filtersModal, () => {\n    if (restoreTriggerFocus) openFiltersButton.focus();\n  });`,
     "Filters highlight clears when close starts",
   );
 
@@ -198,8 +151,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
   const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
   const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);
+  const tableControlCellArtifacts = normalizeTableControlCellAlignment(tableRequestLoadingArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableControlCellArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
