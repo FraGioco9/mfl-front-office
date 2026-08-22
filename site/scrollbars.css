@@ -27,9 +27,16 @@ html body > #appShell > main {
   scrollbar-gutter: auto;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
+/*
+ * Standards-based scrollbar properties take precedence over ::-webkit-scrollbar
+ * in modern Chromium. Only use them where WebKit scrollbar pseudo-elements are
+ * unavailable so Chromium/Safari keep the thumb-only WebKit treatment below.
+ */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
+  }
 }
 
 *::-webkit-scrollbar {
@@ -63,11 +70,15 @@ html body > #appShell > main {
   background-clip: padding-box;
 }
 
-/* Thumb-only scrollbars: never render track controls or directional arrows. */
+/* Thumb-only scrollbars: never reserve or render directional button boxes. */
 *::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
+  min-width: 0;
+  min-height: 0;
+  max-width: 0;
+  max-height: 0;
   background: transparent;
 }
 
