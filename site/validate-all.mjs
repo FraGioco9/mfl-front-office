@@ -38,6 +38,7 @@ const validators = [
   "validate-database-refresh-deployment.mjs",
   "validate-route-core-startup-routing.mjs",
   "validate-route-page-normalization.mjs",
+  "validate-route-policy.mjs",
   "validate-database-stats-lazy-runtime.mjs",
   "validate-static-route-ui.mjs",
   "validate-mfl-stats-first-paint.mjs",
