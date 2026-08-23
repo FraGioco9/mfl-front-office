@@ -11,20 +11,20 @@ const [databaseStats, databaseState, mflStats, normalizer, buildCore, stylesBase
   read("./database-stats-runtime.js"),
   read("./database-stats-state-runtime.js"),
   read("./modules/app-core-mfl-stats-runtime.js"),
-  read("./modules/app-core-stats-animation-owner.js"),
+  read("./modules/app-core-stats-route-ownership.js"),
   read("./build-app-core.mjs"),
   read("./styles-base.css"),
 ]);
 
 includes(
   databaseState,
-  "state owner must not invoke renderDatabaseStatsPage a second time",
-  "Database Stats state ownership must document why it does not start a second render.",
-);
-excludes(
-  databaseState,
   "await window.renderDatabaseStatsPage(false);",
-  "Database Stats route-state runtime must not duplicate the render already started by database-stats-runtime.",
+  "Database Stats route-state runtime must delegate to the cached domain renderer so revisits restore data.",
+);
+includes(
+  databaseStats,
+  "mflStatsDistributionSignature",
+  "Database Stats must preserve identical histogram DOM when startup and delegated renders overlap.",
 );
 
 for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", mflStats]]) {
@@ -53,6 +53,11 @@ includes(
   "Database Stats must allow one fresh animation after leaving and re-entering the route.",
 );
 
+includes(
+  mflStats,
+  'if (state.incrementalRoute?.scope !== "mflstats") return;',
+  "MFL Stats must not render its histogram from data owned by another incremental route.",
+);
 includes(
   mflStats,
   "if (state.mflStatsOverallFilter === filter.id) return;",
@@ -85,9 +90,14 @@ includes(
   "The MFL Stats generator must remove the animated wrapper from the render path.",
 );
 includes(
+  normalizer,
+  'if (state.incrementalRoute?.scope !== "mflstats") return;',
+  "The MFL Stats generator must enforce route data ownership before rendering the histogram.",
+);
+includes(
   buildCore,
-  "normalizeMflStatsAnimationOwner",
-  "The canonical application-core build must apply the MFL Stats animation-owner normalization.",
+  "normalizeMflStatsRouteOwnership",
+  "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
-console.log("Database Stats and MFL Stats render one column animation owner and preserve identical histogram DOM.");
+console.log("Database Stats revisits render cached data, while MFL Stats waits for owned data and both keep one column animation owner.");
