@@ -86,6 +86,11 @@ includes(
 );
 includes(
   eagerCore,
+  "if (entry.name) saveAgentNameForWallet(entry.walletAddress, entry.name);",
+  "Indexed agent counting must preserve canonical agent display-name persistence.",
+);
+includes(
+  eagerCore,
   'compactSearchValue(row, agentColumns, "player_count")',
   "Database-backed Global Search results must keep using the authoritative API player_count field.",
 );
