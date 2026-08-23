@@ -13,6 +13,7 @@
     ["common", "Common", null, 54],
     ["custom", "Custom", null, null],
   ]);
+  const COUNT_FORMATTER = new Intl.NumberFormat("en-US");
 
   window.__mflDatabaseStatsRuntime?.destroy?.();
 
@@ -35,7 +36,7 @@
   }
 
   function formatCount(value) {
-    return new Intl.NumberFormat("en-US").format(Number(value || 0));
+    return COUNT_FORMATTER.format(Number(value || 0));
   }
 
   function filterButtons() {
@@ -202,19 +203,43 @@
     return Number.isFinite(value) ? value : null;
   }
 
-  function filteredGroups() {
-    if (!Array.isArray(data?.rows)) return [];
-    const { min, max } = currentFilter();
-    return data.rows.filter((group) => {
-      const overall = Number(group?.[0]);
-      return Number.isFinite(overall)
-        && (min === null || overall >= min)
-        && (max === null || overall <= max);
-    });
-  }
+  function databaseStatsSummary() {
+    const counts = new Map();
+    const summary = {
+      active: 0,
+      retired: 0,
+      retiringThree: 0,
+      retiringTwo: 0,
+      retiringOne: 0,
+      distributionCounts: counts,
+      distributionTotal: 0,
+    };
+    if (!Array.isArray(data?.rows)) return summary;
 
-  function sumGroups(groups, predicate = () => true) {
-    return groups.reduce((total, group) => predicate(group) ? total + Number(group?.[3] || 0) : total, 0);
+    const { min, max } = currentFilter();
+    for (const group of data.rows) {
+      const overall = Number(group?.[0]);
+      if (!Number.isFinite(overall)
+        || (min !== null && overall < min)
+        || (max !== null && overall > max)) {
+        continue;
+      }
+
+      const count = Number(group?.[3] || 0);
+      const years = retirementYears(group);
+      if (years === 0) summary.retired += count;
+      else summary.active += count;
+      if (years === 3) summary.retiringThree += count;
+      if (years === 2) summary.retiringTwo += count;
+      if (years === 1) summary.retiringOne += count;
+
+      if (years === 0) continue;
+      const value = Number(distributionMode === "age" ? group?.[1] : group?.[0]);
+      if (!Number.isFinite(value) || count <= 0) continue;
+      counts.set(value, (counts.get(value) || 0) + count);
+      summary.distributionTotal += count;
+    }
+    return summary;
   }
 
   function setCard(id, value) {
@@ -224,23 +249,22 @@
 
   function renderStats() {
     if (!data || !isStatsPath()) return;
-    const groups = filteredGroups();
-    const retired = (group) => retirementYears(group) === 0;
+    const summary = databaseStatsSummary();
     const activeCount = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
       ? Number(data.totalActivePlayers)
-      : sumGroups(groups, (group) => !retired(group));
+      : summary.active;
     const retiredCount = activeFilter === "all" && Number.isFinite(Number(data.totalRetiredPlayers))
       ? Number(data.totalRetiredPlayers)
-      : sumGroups(groups, retired);
+      : summary.retired;
     setCard("databaseStatsTotalPlayers", activeCount);
-    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => retirementYears(group) === 3));
-    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => retirementYears(group) === 2));
-    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => retirementYears(group) === 1));
+    setCard("databaseStatsRetiringThree", summary.retiringThree);
+    setCard("databaseStatsRetiringTwo", summary.retiringTwo);
+    setCard("databaseStatsRetiringOne", summary.retiringOne);
     setCard("databaseStatsRetired", retiredCount);
-    renderDistribution();
+    renderDistribution(summary);
   }
 
-  function renderDistribution() {
+  function renderDistribution(summary = null) {
     if (!data || !isStatsPath()) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       const active = button.dataset.distribution === distributionMode;
@@ -250,17 +274,9 @@
     const title = document.getElementById("databaseStatsDistributionTitle");
     if (title) title.textContent = distributionMode === "age" ? "Active Players Age Distribution" : "Active Players Overall Distribution";
 
-    const counts = new Map();
-    let total = 0;
-    filteredGroups().forEach((group) => {
-      if (retirementYears(group) === 0) return;
-      const value = Number(distributionMode === "age" ? group?.[1] : group?.[0]);
-      const count = Number(group?.[3] || 0);
-      if (!Number.isFinite(value) || count <= 0) return;
-      counts.set(value, (counts.get(value) || 0) + count);
-      total += count;
-    });
-
+    const resolvedSummary = summary || databaseStatsSummary();
+    const counts = resolvedSummary.distributionCounts;
+    const total = resolvedSummary.distributionTotal;
     const container = document.getElementById("databaseStatsDistribution");
     if (!(container instanceof HTMLElement)) return;
     if (!counts.size) {
