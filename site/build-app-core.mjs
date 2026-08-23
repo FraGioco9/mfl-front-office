@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { normalizeMflStatsAnimationOwner } from "./modules/app-core-stats-animation-owner.js";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,7 @@ const source = await readFile(sourcePath, "utf8");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = String(artifacts.core || "").replace(/\s*$/, "");
 const evaluationRuntime = String(artifacts.routeChunks?.evaluation || "").replace(/\s*$/, "");
-const mflStatsRuntime = String(artifacts.routeChunks?.mflstats || "").replace(/\s*$/, "");
+const mflStatsRuntime = normalizeMflStatsAnimationOwner(String(artifacts.routeChunks?.mflstats || "").replace(/\s*$/, ""));
 const clubRuntime = String(artifacts.routeChunks?.club || "").replace(/\s*$/, "");
 const settingsRuntime = String(artifacts.routeChunks?.settings || "").replace(/\s*$/, "");
 const playerRuntime = String(artifacts.routeChunks?.player || "").replace(/\s*$/, "");
