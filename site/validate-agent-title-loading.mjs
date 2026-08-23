@@ -22,10 +22,12 @@ const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
+const searchCore = String(artifacts.routeChunks?.search || "");
 
 new Function(sharedCore);
 new Function(tableCore);
 new Function(playerCore);
+new Function(searchCore);
 
 includes(
   buildNormalizer,
@@ -40,7 +42,7 @@ includes(playerSplitter, '"Player Agent name handoff"', "Player ownership must e
 includes(sharedCore, "function ensureAgentPageTitleName(address) {", "Shared setPage must retain only a small Agent-title readiness facade.");
 includes(sharedCore, 'function openAgentPage(walletAddress, agentName = "") {', "Agent navigation must accept an already-known name.");
 includes(sharedCore, "agentName: knownName", "Agent navigation must carry the known name into page loading.");
-includes(sharedCore, "navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));", "Global search must reuse the Agent name it already rendered.");
+includes(searchCore, "navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));", "Global search must reuse the Agent name it already rendered from its lazy Search owner.");
 includes(sharedCore, 'agentLink.dataset.agentName || agentLink.textContent || ""', "Table navigation must reuse the Agent label already rendered in the row.");
 includes(sharedCore, "const agentTitleReady = pageName === \"agents\"", "Agent page loading must start title resolution with the route.");
 includes(sharedCore, "await agentTitleReady;", "Agent page loading must not finish before title resolution settles.");
