@@ -24,223 +24,79 @@ const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRun
 ]);
 const release = JSON.parse(releaseJson);
 const preBootstrap = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release));
-const eagerCore = String(normalizeBuiltApplicationCoreArtifacts(coreSource).core || "");
+const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const eagerCore = String(artifacts.core || "");
+const homeCore = String(artifacts.routeChunks?.home || "");
+new Function(eagerCore);
+new Function(homeCore);
 
-includes(
-  indexHtml,
+for (const placeholder of [
   '<span id="totalPlayers">-</span>',
-  "Header Players must exist statically with '-' before summary data loads.",
-);
-includes(
-  indexHtml,
   '<span id="totalWallets">-</span>',
-  "Header Wallets must exist statically with '-' before summary data loads.",
-);
-includes(
-  indexHtml,
   '<span id="homePlayers">-</span>',
-  "Home Players tracked must exist statically with '-' before summary data loads.",
-);
-includes(
-  indexHtml,
   '<span id="homeWallets">-</span>',
-  "Home Wallets tracked must exist statically with '-' before summary data loads.",
-);
+]) {
+  includes(indexHtml, placeholder, `Home/header summary placeholder must remain static: ${placeholder}`);
+}
 
-includes(
-  stylesBase,
-  'body[data-page="home"] .topbar .stats',
-  "The canonical header summary visibility rule must remain Home-owned.",
-);
-includes(
-  preBootstrap,
-  "const initialRoute = routes.initialRequest(location.pathname);",
-  "Pre-bootstrap runtime must resolve the real initial route before hydration.",
-);
-includes(
-  preBootstrap,
-  'if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;',
-  "Pre-bootstrap runtime must commit the real initial route to body[data-page] when a DOM is available.",
-);
+includes(stylesBase, 'body[data-page="home"] .topbar .stats', "The canonical header summary visibility rule must remain Home-owned.");
+includes(preBootstrap, "const initialRoute = routes.initialRequest(location.pathname);", "Pre-bootstrap runtime must resolve the real initial route before hydration.");
+includes(preBootstrap, 'if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;', "Pre-bootstrap runtime must commit the real initial route to body[data-page].");
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
     < preBootstrap.indexOf('const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";'),
   "Initial body route state must be committed before canonical URL replacement or route-specific bootstrap work.",
 );
-includes(
-  indexHtml,
-  'html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,',
-  "Every non-Home direct URL must suppress the default Home boxes before route hydration.",
-);
-includes(
-  indexHtml,
-  'body[data-page="notfound"] main > .pageView:not(#notFoundPage)',
-  "A typed not-found route must suppress every previously primed application page.",
-);
-includes(
-  indexHtml,
-  'root.dataset.initialEntityRoute = initialEntityRoute;',
-  "Direct entity URLs must publish an early first-paint identity guard.",
-);
-includes(
-  indexHtml,
-  'data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage',
-  "A direct Club URL must not reveal the table shell before the Club identity is confirmed.",
-);
-includes(
-  indexHtml,
-  'data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage',
-  "A direct Player URL must not reveal the Player shell before the Player identity is confirmed.",
-);
+includes(indexHtml, 'html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,', "Every non-Home direct URL must suppress default Home boxes before hydration.");
+includes(indexHtml, 'body[data-page="notfound"] main > .pageView:not(#notFoundPage)', "Typed not-found routes must suppress previously primed pages.");
+includes(indexHtml, 'root.dataset.initialEntityRoute = initialEntityRoute;', "Direct entity URLs must publish an early identity guard.");
+includes(indexHtml, 'data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage', "Direct Club URLs must hide the table shell until identity verification.");
+includes(indexHtml, 'data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage', "Direct Player URLs must hide the Player shell until identity verification.");
 
-includes(
-  bootstrapRuntime,
-  'setLoadingValue("homePlayers");',
-  "Home route priming must retain the Players tracked loading placeholder.",
-);
-includes(
-  bootstrapRuntime,
-  'setLoadingValue("homeWallets");',
-  "Home route priming must retain the Wallets tracked loading placeholder.",
-);
-includes(
-  staticUiRuntime,
-  'const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");',
-  "Shared navigation must continue using the canonical route-skeleton primer.",
-);
-includes(
-  staticUiRuntime,
-  'if (typeof prime === "function") prime(target);',
-  "Home navigation must still prime its destination shell before data ownership resumes.",
-);
+includes(bootstrapRuntime, 'setLoadingValue("homePlayers");', "Home priming must retain the Players tracked loading placeholder.");
+includes(bootstrapRuntime, 'setLoadingValue("homeWallets");', "Home priming must retain the Wallets tracked loading placeholder.");
+includes(staticUiRuntime, 'const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");', "Shared navigation must keep using the canonical route-skeleton primer.");
+includes(staticUiRuntime, 'if (typeof prime === "function") prime(target);', "Home navigation must prime its destination shell before data ownership resumes.");
 
-includes(
-  eagerCore,
+for (const value of [
   "let summaryLoadPromise = null;",
-  "Shared summary loading must track one in-flight bootstrap request.",
-);
-includes(
-  eagerCore,
   "let summaryLoaded = false;",
-  "Shared summary loading must remember a successful bootstrap request.",
-);
-includes(
-  eagerCore,
   "let summarySnapshot = null;",
-  "Successful Players/Wallets counts must be cached for later Home repaint.",
-);
-includes(
-  eagerCore,
-  "function homeSummaryCacheReady() {",
-  "Home summary loading must expose one canonical cache-readiness predicate.",
-);
-includes(
-  eagerCore,
-  'Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({',
-  "Shared runtimes must be able to inspect Home summary cache readiness without duplicating data ownership.",
-);
-includes(
-  eagerCore,
-  "isReady: homeSummaryCacheReady,",
-  "The Home summary cache contract must expose only readiness, not duplicate cached data.",
-);
-includes(
-  eagerCore,
-  'Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({',
-  "All route data owners must expose one shared cache-readiness contract.",
-);
-includes(
-  eagerCore,
-  "isCurrentRouteReady: currentRouteDataCacheReady,",
-  "Shared loading UI must be able to query whether the committed destination is fully cached.",
-);
-includes(
-  eagerCore,
-  'return route.scope === "empty" || incrementalRouteIsCached(route, 1);',
-  "Incremental pages and views must reuse the canonical payload-cache predicate.",
-);
-includes(
-  eagerCore,
-  "function databaseStatsDataCacheReady() {",
-  "Database Stats must participate in route cache readiness after its data has rendered.",
-);
-includes(
-  eagerCore,
-  "function settingsDataCacheReady() {",
-  "Settings must participate in route cache readiness once its required wallet data is loaded.",
-);
-includes(
-  eagerCore,
+  "function homeSummaryCacheReadyOwner() {",
+  "async function homeLoadSummaryOwner() {",
   "if (summaryLoaded && summarySnapshot) {",
-  "Home navigation must detect an already-loaded cached summary.",
-);
-includes(
-  eagerCore,
   "updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);",
-  "Home navigation must repaint cached counts after the route skeleton resets its placeholders.",
-);
-includes(
-  eagerCore,
   "if (summaryLoadPromise) return summaryLoadPromise;",
-  "Home navigation must reuse an in-flight database summary request.",
-);
-includes(
-  eagerCore,
-  'if (pageName === "home") void loadSummary();',
-  "Every Home navigation must ensure the Players/Wallets tracked summary is restored or loading.",
-);
-invariant(
-  occurrences(eagerCore, 'fetch("/api/data?mode=bootstrap"') === 1,
-  "The normalized shared core must keep exactly one database-summary fetch owner.",
-);
-includes(
-  eagerCore,
-  'brandLinks.forEach((link) => {',
-  "The MFL Front Office brand link must continue using shared page navigation.",
-);
-includes(
-  eagerCore,
-  'setPage("home");',
-  "The MFL Front Office brand link must navigate through the Home page owner.",
-);
+]) {
+  includes(homeCore, value, `Home summary lazy core is missing ${value}`);
+  excludes(eagerCore, value, `Home summary implementation must not remain eager: ${value}`);
+}
+includes(homeCore, "function updateSummaryCounts(playerCount, walletCount) {", "Home count rendering must live with the lazy Home summary owner.");
+invariant(occurrences(homeCore, 'fetch("/api/data?mode=bootstrap"') === 1, "The Home chunk must keep exactly one database-summary fetch owner.");
+invariant(occurrences(eagerCore, 'fetch("/api/data?mode=bootstrap"') === 0, "The eager core must not fetch Home summary data directly.");
 
-includes(
-  loadingToastRuntime,
-  'const ROUTE_LOADING_REASON = "route-loading";',
-  "Loading toast coordination must identify route-only loading snapshots.",
-);
-includes(
-  loadingToastRuntime,
-  'const cache = Reflect.get(window, "__mflRouteDataCache");',
-  "The loading toast must consume the shared route-data cache contract instead of page-specific cache rules.",
-);
-includes(
-  loadingToastRuntime,
-  'if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {',
-  "A destination rendered completely from cache must suppress the Loading toast.",
-);
-includes(
-  loadingToastRuntime,
-  "let remainingFrames = 3;",
-  "Toast eligibility must be checked after the destination transition has committed its route-specific state.",
-);
-excludes(
-  loadingToastRuntime,
-  "HOME_NAVIGATION_SELECTOR",
-  "Cached-route toast suppression must not depend on Home-specific controls.",
-);
-excludes(
-  loadingToastRuntime,
-  "cachedHomeNavigationIntent",
-  "Cached-route toast suppression must not retain the old Home-only intent state.",
-);
+includes(eagerCore, "function homeSummaryCacheReady() {", "The eager core must keep a small Home cache-readiness facade.");
+includes(eagerCore, "async function loadSummary() {", "The eager core must keep the stable Home summary facade used by navigation.");
+includes(eagerCore, 'await window.__mflEnsureRouteCore("home");', "The Home summary facade must lazy-load its canonical chunk.");
+includes(eagerCore, 'Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({', "Shared runtimes must retain the Home summary readiness contract.");
+includes(eagerCore, "isReady: homeSummaryCacheReady,", "The Home cache contract must expose readiness through the shared facade.");
+includes(eagerCore, 'Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({', "All route data owners must expose one shared cache-readiness contract.");
+includes(eagerCore, "isCurrentRouteReady: currentRouteDataCacheReady,", "Loading UI must be able to query whether the committed destination is cached.");
+includes(eagerCore, 'return route.scope === "empty" || incrementalRouteIsCached(route, 1);', "Incremental routes must reuse the canonical payload-cache predicate.");
+includes(eagerCore, "function databaseStatsDataCacheReady() {", "Database Stats must participate in route cache readiness.");
+includes(eagerCore, "function settingsDataCacheReady() {", "Settings must participate in route cache readiness.");
+includes(eagerCore, 'if (pageName === "home") void loadSummary();', "Every Home navigation must ensure its summary facade runs.");
+includes(eagerCore, 'brandLinks.forEach((link) => {', "The brand link must continue using shared navigation.");
+includes(eagerCore, 'setPage("home");', "The brand link must navigate through the Home owner.");
 
-const loaderStart = eagerCore.indexOf("let summaryLoadPromise = null;");
-const loaderEnd = eagerCore.indexOf("\nfunction tablePageKey", loaderStart);
-invariant(loaderStart >= 0 && loaderEnd > loaderStart, "Could not isolate the generated Home summary loader for behavioral validation.");
-const loaderSource = eagerCore.slice(loaderStart, loaderEnd);
+includes(loadingToastRuntime, 'const ROUTE_LOADING_REASON = "route-loading";', "Loading toast coordination must identify route-only loading snapshots.");
+includes(loadingToastRuntime, 'const cache = Reflect.get(window, "__mflRouteDataCache");', "Loading toast must consume the shared route-data cache contract.");
+includes(loadingToastRuntime, 'if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {', "A fully cached destination must suppress the Loading toast.");
+includes(loadingToastRuntime, "let remainingFrames = 3;", "Toast eligibility must be checked after route-specific state commits.");
+excludes(loadingToastRuntime, "HOME_NAVIGATION_SELECTOR", "Cached-route toast suppression must not depend on Home-specific controls.");
+excludes(loadingToastRuntime, "cachedHomeNavigationIntent", "Cached-route toast suppression must not retain the retired Home-only state.");
+
 let fetchCount = 0;
-const updates = [];
 const context = {
   fetch: async () => {
     fetchCount += 1;
@@ -257,32 +113,28 @@ const context = {
     };
   },
   state: {},
-  updateSummaryCounts: (players, wallets) => updates.push([players, wallets]),
+  totalPlayers: { textContent: "-" },
+  totalWallets: { textContent: "-" },
+  homePlayers: { textContent: "-" },
+  homeWallets: { textContent: "-" },
+  formatCount: (value) => String(value),
   updateStatusDate: () => {},
   console: { error: () => {} },
 };
-vm.runInNewContext(`${loaderSource}\nthis.__loadSummary = loadSummary;`, context);
-invariant(
-  context.__mflHomeSummaryCache?.isReady?.() === false,
-  "Home summary cache readiness must remain false before the first successful load.",
+vm.runInNewContext(
+  `let __mflHomeSummaryCacheReadyOwner = null;\nlet __mflHomeLoadSummaryOwner = null;\n${homeCore}\nthis.__ready = __mflHomeSummaryCacheReadyOwner;\nthis.__load = __mflHomeLoadSummaryOwner;`,
+  context,
 );
-await context.__loadSummary();
+invariant(context.__ready?.() === false, "Home summary cache readiness must be false before the first successful load.");
+await context.__load();
 invariant(fetchCount === 1, "Initial Home summary load must fetch exactly once.");
-invariant(
-  updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87,
-  "Initial Home summary load must render the fetched Players/Wallets counts.",
-);
-invariant(
-  context.__mflHomeSummaryCache?.isReady?.() === true,
-  "Home summary cache readiness must become true after a successful load.",
-);
+invariant(context.homePlayers.textContent === "321" && context.homeWallets.textContent === "87", "Initial Home summary load must render fetched counts.");
+invariant(context.__ready?.() === true, "Home summary cache readiness must become true after a successful load.");
 
-updates.length = 0;
-await context.__loadSummary();
+context.homePlayers.textContent = "-";
+context.homeWallets.textContent = "-";
+await context.__load();
 invariant(fetchCount === 1, "Returning Home after a successful summary load must not fetch again.");
-invariant(
-  updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87,
-  "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
-);
+invariant(context.homePlayers.textContent === "321" && context.homeWallets.textContent === "87", "Returning Home must repaint cached counts after route priming resets placeholders.");
 
-console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and any fully cached route suppresses the Loading toast.");
+console.log("Home first-paint validation passed with summary fetch/cache/repaint behavior owned by the lazy Home core and stable readiness facades retained eagerly.");

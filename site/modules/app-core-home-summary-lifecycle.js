@@ -1,5 +1,6 @@
 // @ts-check
 
+import { splitHomeApplicationCoreRuntime } from "./app-core-home-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 
 const SUMMARY_LOADER = `async function loadSummary() {
@@ -151,8 +152,8 @@ export function normalizeHomeSummaryLifecycle(artifacts) {
     "every Home navigation ensures database summary loading",
   );
 
-  return Object.freeze({
+  return splitHomeApplicationCoreRuntime(Object.freeze({
     ...artifacts,
     core,
-  });
+  }));
 }
