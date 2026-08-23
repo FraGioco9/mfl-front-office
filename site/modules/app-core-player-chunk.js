@@ -59,6 +59,52 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
     state.settingsTimeFormat,
     state.trainingAdjustments[key] || null,
   ]);
+}
+
+function bindPlayerTrainingControls(playerId) {
+  const id = String(playerId || "").trim();
+  playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const stat = button.dataset.trainingStat;
+      const delta = Number(button.dataset.trainingDelta || 0);
+      adjustTrainingStat(id, stat, delta);
+      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
+        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
+      );
+      replayTrainingControlHover(replacement);
+    });
+  });
+  playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetTrainingStats(id);
+      replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
+    });
+  });
+}
+
+function renderPlayerTrainingPreview(playerId) {
+  const id = String(playerId || "").trim();
+  const row = rowByPlayerId(id);
+  const attributeGrid = playerDetail.querySelector(".attributesPanel .attributeGrid");
+  const pitch = playerDetail.querySelector(".pitchPanel .pitch");
+  const reusableTrainingSurface = row
+    && state.currentPage === "player"
+    && state.playerAttributeView === "training"
+    && playerDetail.firstElementChild?.classList.contains("playerHero")
+    && attributeGrid
+    && pitch;
+
+  if (!reusableTrainingSurface) {
+    renderPlayerPage(id);
+    return false;
+  }
+
+  const displayRow = trainingRow(row);
+  attributeGrid.innerHTML = renderPlayerAttributePanel(displayRow);
+  pitch.innerHTML = renderPitch(displayRow);
+  bindPlayerTrainingControls(id);
+  playerDetailLastRenderSignature = playerDetailRenderSignature(row, id, "training");
+  return true;
 }`;
 
 const PLAYER_NOT_FOUND_RENDER = `  if (!row) {
@@ -85,6 +131,24 @@ const PLAYER_RENDER_CACHE_COMMIT = `  const notesInput = playerDetail.querySelec
   playerDetailLastRenderSignature = renderSignature;
 }`;
 
+const PLAYER_TRAINING_BINDINGS = `  playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const stat = button.dataset.trainingStat;
+      const delta = Number(button.dataset.trainingDelta || 0);
+      adjustTrainingStat(id, stat, delta);
+      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
+        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
+      );
+      replayTrainingControlHover(replacement);
+    });
+  });
+  playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetTrainingStats(id);
+      replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
+    });
+  });`;
+
 export function splitPlayerApplicationCoreRuntime(artifacts) {
   const { alreadySplit, routeChunks, core: inputCore } = normalizeSplitterInput(
     artifacts,
@@ -96,7 +160,35 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   const routeOnly = extractRequiredFunctions(inputCore, PLAYER_ROUTE_ONLY_FUNCTIONS, "Player route-only helper");
   const extractedSections = extractRequiredSections(routeOnly.core, PLAYER_SECTIONS);
   let core = extractedSections.core;
-  const playerParts = [...routeOnly.chunks, ...extractedSections.chunks];
+  let trainingChunk = extractedSections.chunks[1];
+  trainingChunk = replaceRequired(
+    trainingChunk,
+    `  renderPlayerPage(playerId);
+}
+
+function resetTrainingStats(playerId) {`,
+    `  renderPlayerTrainingPreview(playerId);
+}
+
+function resetTrainingStats(playerId) {`,
+    "Player training stat partial render",
+  );
+  trainingChunk = replaceRequired(
+    trainingChunk,
+    `  delete state.trainingAdjustments[playerTrainingKey(row)];
+  renderPlayerPage(playerId);
+}`,
+    `  delete state.trainingAdjustments[playerTrainingKey(row)];
+  renderPlayerTrainingPreview(playerId);
+}`,
+    "Player training reset partial render",
+  );
+  const playerParts = [
+    ...routeOnly.chunks,
+    extractedSections.chunks[0],
+    trainingChunk,
+    ...extractedSections.chunks.slice(2),
+  ];
 
   const renderer = extractRequiredSection(
     core,
@@ -132,6 +224,12 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
     "  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);",
     "  state.playerAttributeView = normalizedAttributeView;",
     "Player normalized attribute view reuse",
+  );
+  playerRenderer = replaceRequired(
+    playerRenderer,
+    PLAYER_TRAINING_BINDINGS,
+    "  bindPlayerTrainingControls(id);",
+    "Player shared training-control binding",
   );
   playerRenderer = replaceRequired(
     playerRenderer,
