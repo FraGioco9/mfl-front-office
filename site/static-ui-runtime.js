@@ -95,24 +95,32 @@
   function syncFooter() {
     const version = String(window.__mflReleaseVersion || window.__mflRelease?.version || "").trim();
     if (!/^\d+\.\d+\.\d+$/.test(version)) return;
+    const footerText = `MFL Front Office v${version}`;
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-    if (footer instanceof HTMLElement) footer.textContent = `MFL Front Office v${version}`;
+    if (footer instanceof HTMLElement && footer.textContent !== footerText) footer.textContent = footerText;
+    const versionText = `v${version}`;
     document.querySelectorAll("[data-app-version]").forEach((element) => {
-      if (element instanceof HTMLElement) element.textContent = `v${version}`;
+      if (element instanceof HTMLElement && element.textContent !== versionText) element.textContent = versionText;
     });
   }
 
   function setActiveNavigation(page) {
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       const buttonPage = String(button.dataset.page || "").toLowerCase();
-      button.classList.toggle("active", buttonPage === page);
+      const shouldBeActive = buttonPage === page;
+      if (button.classList.contains("active") !== shouldBeActive) {
+        button.classList.toggle("active", shouldBeActive);
+      }
     });
   }
 
   function setActiveView(container, view) {
     if (!(container instanceof Element) || !view) return;
     container.querySelectorAll(".viewButton[data-view]").forEach((button) => {
-      button.classList.toggle("active", String(button.dataset.view || "") === view);
+      const shouldBeActive = String(button.dataset.view || "") === view;
+      if (button.classList.contains("active") !== shouldBeActive) {
+        button.classList.toggle("active", shouldBeActive);
+      }
     });
   }
 
@@ -215,7 +223,8 @@
       document.querySelector("main")?.appendChild(page);
     }
     const title = page.querySelector("#notFoundTitle");
-    if (title instanceof HTMLElement) title.textContent = `${normalizedKind} not found`;
+    const titleText = `${normalizedKind} not found`;
+    if (title instanceof HTMLElement && title.textContent !== titleText) title.textContent = titleText;
     return page;
   }
 
@@ -317,13 +326,15 @@
   if (target.id !== "notFoundPage") primeDestinationRouteShell(state, target);
 
   document.querySelectorAll("main > .pageView").forEach((page) => {
-    if (page instanceof HTMLElement) page.hidden = page !== target;
+    if (!(page instanceof HTMLElement)) return;
+    const shouldHide = page !== target;
+    if (page.hidden !== shouldHide) page.hidden = shouldHide;
   });
 }
 
   function showNotFound(kind = "Page") {
     hideGlobalTooltip({ immediate: true });
-    document.body.dataset.page = "notfound";
+    if (document.body.dataset.page !== "notfound") document.body.dataset.page = "notfound";
     setActiveNavigation("notfound");
     showRouteShell({
       page: "notfound",
@@ -344,15 +355,19 @@
   lastRouteView = state.view;
 
   if (resetFilters) {
-    document.documentElement.dataset.mflResetTableFilters = state.page;
-  } else if (pageChanged) {
+    if (document.documentElement.dataset.mflResetTableFilters !== state.page) {
+      document.documentElement.dataset.mflResetTableFilters = state.page;
+    }
+  } else if (pageChanged && document.documentElement.dataset.mflResetTableFilters) {
     delete document.documentElement.dataset.mflResetTableFilters;
   }
   if (pageChanged || viewChanged) {
     window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
   }
 
-  if (state.page === "notfound") document.body.dataset.page = "notfound";
+  if (state.page === "notfound" && document.body.dataset.page !== "notfound") {
+    document.body.dataset.page = "notfound";
+  }
   syncFooter();
   setActiveNavigation(state.page);
   syncTableViews(state.page, state.view);
