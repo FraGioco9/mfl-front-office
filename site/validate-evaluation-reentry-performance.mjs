@@ -152,6 +152,11 @@ invariant(
     && generatedCore.slice(generatedBanner.length).replace(/\s*$/, "") === core.replace(/\s*$/, ""),
   "The tracked eager runtime must exactly match the complete Step 19 build pipeline.",
 );
+includes(
+  generatedCore,
+  "if (reusableTable && evaluationTableLastRenderSignature === renderSignature) {\n    updateEvaluationFooterActions();\n    return;\n  }",
+  "The shipped generated runtime must contain the guarded Evaluation table reuse path, not only the build-time source transformation.",
+);
 
 // Deterministic accounting for the targeted DOM operations only. An unchanged
 // selected-player Evaluation revisit previously replaced both the summary tbody
