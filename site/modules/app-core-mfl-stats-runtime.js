@@ -2,6 +2,9 @@
 let mflStatsDistributionAnimationRevision = 0;
 let mflStatsDistributionAnimationFrame = 0;
 let mflStatsDistributionAnimationUnsubscribe = null;
+let mflStatsRouteActive = false;
+let mflStatsLoadAnimationAvailable = true;
+let mflStatsInteractionAnimationRequested = false;
 
 function cancelMflStatsDistributionAnimationSchedule() {
   mflStatsDistributionAnimationRevision += 1;
@@ -11,11 +14,46 @@ function cancelMflStatsDistributionAnimationSchedule() {
   mflStatsDistributionAnimationUnsubscribe = null;
 }
 
-function playMflStatsDistributionAnimation(container, revision) {
+function resetMflStatsDistributionAnimationSession() {
+  cancelMflStatsDistributionAnimationSchedule();
+  mflStatsLoadAnimationAvailable = true;
+  mflStatsInteractionAnimationRequested = false;
+  if (mflStatsAgeDistribution instanceof HTMLElement) {
+    delete mflStatsAgeDistribution.dataset.mflStatsRenderSignature;
+  }
+}
+
+function syncMflStatsAnimationRouteSession() {
+  const active = document.body?.dataset.page === "mflstats";
+  if (active && !mflStatsRouteActive) {
+    mflStatsRouteActive = true;
+    resetMflStatsDistributionAnimationSession();
+  } else if (!active && mflStatsRouteActive) {
+    mflStatsRouteActive = false;
+    cancelMflStatsDistributionAnimationSchedule();
+    mflStatsInteractionAnimationRequested = false;
+  }
+  return active;
+}
+
+function requestMflStatsInteractionAnimation() {
+  mflStatsInteractionAnimationRequested = true;
+}
+
+function mflStatsDistributionAnimationIntent() {
+  if (!syncMflStatsAnimationRouteSession()) return "";
+  if (mflStatsInteractionAnimationRequested) return "interaction";
+  if (mflStatsLoadAnimationAvailable) return "load";
+  return "";
+}
+
+function playMflStatsDistributionAnimation(container, revision, intent) {
   mflStatsDistributionAnimationFrame = 0;
   if (revision !== mflStatsDistributionAnimationRevision
       || document.body?.dataset.page !== "mflstats"
       || !container.isConnected) return;
+  if (intent === "interaction") mflStatsInteractionAnimationRequested = false;
+  if (intent === "load") mflStatsLoadAnimationAvailable = false;
   container.querySelectorAll(".mflStatsHistogramFill").forEach((fill) => {
     if (!(fill instanceof HTMLElement)) return;
     fill.getAnimations().forEach((animation) => animation.cancel());
@@ -29,14 +67,14 @@ function playMflStatsDistributionAnimation(container, revision) {
   });
 }
 
-function scheduleMflStatsDistributionAnimation(container) {
+function scheduleMflStatsDistributionAnimation(container, intent) {
   cancelMflStatsDistributionAnimationSchedule();
   const revision = mflStatsDistributionAnimationRevision;
   const scheduleAfterPaint = () => {
     if (revision !== mflStatsDistributionAnimationRevision) return;
     mflStatsDistributionAnimationFrame = requestAnimationFrame(() => {
       if (revision !== mflStatsDistributionAnimationRevision) return;
-      mflStatsDistributionAnimationFrame = requestAnimationFrame(() => playMflStatsDistributionAnimation(container, revision));
+      mflStatsDistributionAnimationFrame = requestAnimationFrame(() => playMflStatsDistributionAnimation(container, revision, intent));
     });
   };
 
@@ -60,6 +98,15 @@ function scheduleMflStatsDistributionAnimation(container) {
 
   scheduleAfterPaint();
 }
+
+const mflStatsAnimationRouteObserver = new MutationObserver(syncMflStatsAnimationRouteSession);
+if (document.body) {
+  mflStatsAnimationRouteObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-page"],
+  });
+}
+syncMflStatsAnimationRouteSession();
 
 const mflStatsOverallFilterOptions = [
   { id: "all", label: "All", min: null, max: null },
@@ -142,7 +189,9 @@ function renderMflStatsFilterButtons() {
     if (button.dataset.mflStatsBound !== "true") {
       button.dataset.mflStatsBound = "true";
       button.addEventListener("click", () => {
+        if (state.mflStatsOverallFilter === filter.id) return;
         state.mflStatsOverallFilter = filter.id;
+        requestMflStatsInteractionAnimation();
         renderMflStatsPage();
       });
     }
@@ -215,10 +264,12 @@ function renderMflStatsDistribution(packableRows) {
 
   if (!counts.size) {
     cancelMflStatsDistributionAnimationSchedule();
+    mflStatsInteractionAnimationRequested = false;
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
   }
 
+  const animationIntent = mflStatsDistributionAnimationIntent();
   const maxCount = Math.max(...counts.values());
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
@@ -239,7 +290,8 @@ function renderMflStatsDistribution(packableRows) {
 
   fragment.appendChild(histogram);
   mflStatsAgeDistribution.replaceChildren(fragment);
-  scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution);
+  if (animationIntent) scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution, animationIntent);
+  else cancelMflStatsDistributionAnimationSchedule();
 }
 
 function renderMflStatsPage() {
@@ -271,6 +323,9 @@ mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
     return;
   }
 
-  state.mflStatsDistributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+  const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+  if (nextMode === state.mflStatsDistributionMode) return;
+  state.mflStatsDistributionMode = nextMode;
+  requestMflStatsInteractionAnimation();
   renderMflStatsPage();
 });
