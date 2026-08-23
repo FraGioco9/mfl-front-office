@@ -390,11 +390,9 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   normalizedCore = replaceRequired(
     normalizedCore,
     `  hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     openFiltersButton.focus();
   });`,
     `  hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     if (restoreTriggerFocus) openFiltersButton.focus();
   });`,
     "Filters close focus ownership",

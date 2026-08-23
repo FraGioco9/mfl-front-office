@@ -175,13 +175,20 @@ invariant(
 const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';
 const requestFinishMarker = 'window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);';
 invariant(
-  buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
-    && buildNormalizer.includes(requestBoundaryMarker)
-    && buildNormalizer.includes(requestFinishMarker)
-    && buildNormalizer.includes('if (window.__mflTableLoadingRuntime?.requestActive?.()) return;')
-    && buildNormalizer.includes("const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);")
-    && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);"),
-  "The build must keep loading ownership active from uncached request start through payload application.",
+  appCoreSource.includes(requestBoundaryMarker)
+    && appCoreSource.includes(requestFinishMarker)
+    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;'),
+  "Canonical application source must directly own the Table request loading boundary and active-request render guard.",
+);
+invariant(
+  !buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
+    && !buildNormalizer.includes(requestBoundaryMarker)
+    && !buildNormalizer.includes(requestFinishMarker)
+    && !buildNormalizer.includes("tableRequestLoadingArtifacts")
+    && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
+    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
+    && buildNormalizer.includes("const tableControlCellArtifacts = normalizeTableControlCellAlignment(statsNavigationArtifacts);"),
+  "The build normalizer must not inject Table request loading behavior after source authoring.",
 );
 
 const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);
