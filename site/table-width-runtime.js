@@ -262,6 +262,7 @@
   const appConfig = Object.freeze({ release: data.release, routes, table });
 
   window.__mflAppConfig = appConfig;
+  window.__mflRelease = data.release;
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
 

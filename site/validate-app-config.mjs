@@ -31,7 +31,7 @@ function initializer(source, name) {
 }
 
 function evaluateInitializer(source, name, context = {}) {
-  return vm.runInNewContext(initializer(source, name), { Object, Set, ...context });
+  return vm.runInNewContext(initializer(source, name), { Object, Set, String, ...context });
 }
 
 function plain(value) {
@@ -94,17 +94,22 @@ same(runtimeConfig.table.joinedAgencyPages, TABLE_JOINED_AGENCY_PAGES, "pre-boot
 same(runtimeConfig.table.sortableColumns, TABLE_SORTABLE_COLUMNS, "pre-bootstrap sortable columns");
 same(runtimeConfig.table.columnLabels, TABLE_COLUMN_LABELS, "pre-bootstrap column labels");
 same(runtimeConfig.table.columnClasses, TABLE_COLUMN_CLASSES, "pre-bootstrap column classes");
-invariant(runtimeSandbox.window.__mflReleaseVersion === release.version, "Pre-bootstrap release facade must come from release.json.");
+same(runtimeSandbox.window.__mflRelease, release, "pre-bootstrap release facade");
+invariant(runtimeSandbox.window.__mflReleaseVersion === release.version, "Pre-bootstrap release version facade must come from release.json.");
 invariant(runtimeSandbox.window.__mflTableViewConfig === runtimeConfig.routes.tableViews, "Legacy table-view facade must point to canonical config.");
 invariant(runtimeSandbox.window.__mflUniformWidth?.name === "Uniform Width", "Uniform Width marker must remain available before bootstrap.");
 
 same(evaluateInitializer(indexSource, "TABLE_VIEW_CONFIG"), TABLE_VIEW_CONFIG, "index first-paint view config");
 same(evaluateInitializer(indexSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "index first-paint view slug map");
 
-const bootstrapRelease = evaluateInitializer(bootstrapSource, "STATIC_RELEASE_VERSION");
+const bootstrapWindow = {
+  __mflAppConfig: { release },
+  __mflReleaseVersion: "stale-fallback",
+};
+const bootstrapRelease = evaluateInitializer(bootstrapSource, "STATIC_RELEASE_VERSION", { window: bootstrapWindow });
 invariant(
   String(bootstrapRelease) === String(release.version),
-  "bootstrap first-paint release projection must match release.json.",
+  "bootstrap first-paint release projection must resolve from the canonical app configuration.",
 );
 const bootstrapViewBySlug = plain(evaluateInitializer(bootstrapSource, "TABLE_VIEW_BY_SLUG"));
 same(bootstrapViewBySlug, VIEW_BY_SLUG, "bootstrap first-paint view slug projection");
@@ -144,4 +149,4 @@ invariant(
   invariant(!routeCoreSource.includes(legacyOwner), `Route core must not retain duplicate config owner: ${legacyOwner}`);
 });
 
-console.log("Canonical app configuration validation passed.");
+console.log("Canonical app configuration and release facade validation passed.");

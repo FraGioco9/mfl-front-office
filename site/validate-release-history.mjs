@@ -45,19 +45,19 @@ invariant(currentParts, "release.json must contain a Semantic Version.");
 
 const bootstrapVersion = bootstrap.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1] || "";
 const bootstrapCoreVersion = bootstrapCore.match(/window\.__mflReleaseVersion\s*\|\|\s*["'](\d+\.\d+\.\d+)["']/)?.[1] || "";
-invariant(bootstrapVersion === currentVersion, `bootstrap.js ${bootstrapVersion || "<missing>"} must match release.json ${currentVersion}.`);
-invariant(bootstrapCoreVersion === currentVersion, `bootstrap-core.js ${bootstrapCoreVersion || "<missing>"} must match release.json ${currentVersion}.`);
+invariant(bootstrapVersion === currentVersion, `bootstrap.js generated projection ${bootstrapVersion || "<missing>"} must match release.json ${currentVersion}.`);
+invariant(bootstrapCoreVersion === currentVersion, `bootstrap-core.js generated fallback ${bootstrapCoreVersion || "<missing>"} must match release.json ${currentVersion}.`);
 invariant(
   bootstrap.includes("footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`"),
-  "bootstrap.js must synchronously render the current release version in the footer.",
+  "bootstrap.js must synchronously render the generated current release version in the footer.",
 );
 invariant(
   bootstrapCore.includes("footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`"),
-  "bootstrap-core.js must preserve the current release version in the footer.",
+  "bootstrap-core.js must preserve the generated current release version in the footer.",
 );
 invariant(
-  /<a\s+href=["']\/changelog["'][^>]*data-page=["']changelog["'][^>]*>MFL Front Office v\d+\.\d+\.\d+<\/a>/.test(indexHtml),
-  "index.html must keep a Semantic Version footer fallback before bootstrap runs.",
+  indexHtml.includes(`<a href="/changelog" data-page="changelog">MFL Front Office v${currentVersion}</a>`),
+  "index.html must contain the generated current release footer projection.",
 );
 
 const overrides = JSON.parse(overridesSource);
@@ -91,4 +91,4 @@ invariant(
   "The releases API must merge the complete override and archived histories after the current release.",
 );
 
-console.log(`Release/footer history validation passed for v${currentVersion} with complete ${major}.${minor}.0-${patch} coverage.`);
+console.log(`Release/footer history validation passed for v${currentVersion} with generated projections and complete ${major}.${minor}.0-${patch} coverage.`);
