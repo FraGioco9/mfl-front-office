@@ -159,15 +159,8 @@
       page.id = "notFoundPage";
       page.className = "pageView homePage";
       page.hidden = true;
-      page.innerHTML = `<div class="homeIntro">
-        <h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>
-        <p id="notFoundMessage">The requested page could not be found.</p>
-      </div>
-      <div class="homeStats" aria-hidden="true">
-        <div><span>404</span><label>Not found</label></div>
-        <div><span id="notFoundResource">Page</span><label>Resource</label></div>
-      </div>
-      <button id="notFoundHomeButton" class="viewButton" type="button">Go to homepage</button>`;
+      page.innerHTML = `<h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>
+      <button id="notFoundHomeButton" class="homeOptInButton" type="button">Home</button>`;
       page.querySelector("#notFoundHomeButton")?.addEventListener("click", () => {
         window.location.assign("/");
       });
@@ -175,10 +168,6 @@
     }
     const title = page.querySelector("#notFoundTitle");
     if (title instanceof HTMLElement) title.textContent = `${normalizedKind} not found`;
-    const message = page.querySelector("#notFoundMessage");
-    if (message instanceof HTMLElement) message.textContent = `The requested ${normalizedKind.toLowerCase()} could not be found.`;
-    const resource = page.querySelector("#notFoundResource");
-    if (resource instanceof HTMLElement) resource.textContent = normalizedKind;
     return page;
   }
 
