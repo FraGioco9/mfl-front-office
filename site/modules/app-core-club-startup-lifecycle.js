@@ -106,19 +106,22 @@ const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) 
       }
       return true;`;
 
-const CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
+const CLUB_SHARED_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
       if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
       }
       if (clubPage) {
         state.currentPage = "club";
+        state.page = 1;
+        state.pageSize = Math.max(100, state.rows.length || 100);
+        if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        if (!clubPage) originalApplyFilters.call(this, { save: false });
+        originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
@@ -128,10 +131,7 @@ const CLUB_FINAL_RENDER = `      if (typeof updateViewButtons === "function") up
       applyClubPresentation();
       captureClubView(nextView);`;
 
-const CLUB_FINAL_ROSTER_RENDER = `      if (typeof updateViewButtons === "function") updateViewButtons();
-      if (typeof buildHeader === "function") buildHeader();
-      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
-      applyClubPresentation();
+const CLUB_FINAL_PRESENTATION_ONLY = `      applyClubPresentation();
       captureClubView(nextView);`;
 
 const CLUB_APPLY_FILTER_OVERRIDE = `  if (typeof applyFilters === "function") {
@@ -314,8 +314,8 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
   normalizedClub = replaceRequired(
     normalizedClub,
     CLUB_FINAL_RENDER,
-    CLUB_FINAL_ROSTER_RENDER,
-    "Club-owned final roster render",
+    CLUB_FINAL_PRESENTATION_ONLY,
+    "Club route leaves table rendering to the shared incremental owner",
   );
   normalizedClub = replaceRequired(
     normalizedClub,
@@ -345,8 +345,8 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
   normalizedCore = replaceRequired(
     normalizedCore,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
-    CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
-    "Club payload defers rendering until filter-free Club state is ready",
+    CLUB_SHARED_INCREMENTAL_PAYLOAD_RENDER,
+    "Club payload renders through the same shared table pass as other table routes",
   );
 
   let normalizedTable = replaceRequired(
