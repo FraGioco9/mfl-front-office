@@ -103,7 +103,7 @@ function routeDataCacheReady(pageName, options = {}) {
 
 function currentRouteDataCacheReady() {
   if (!document.documentElement.classList.contains("mflInitialRouteResolved")) return false;
-  const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const target = pageTargetFromPath(window.location.pathname + window.location.search);
   if (!target?.pageName) return false;
   return routeDataCacheReady(target.pageName, target.options || {});
 }
