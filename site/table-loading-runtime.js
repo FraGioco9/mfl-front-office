@@ -153,7 +153,17 @@
       selectVisibleInput.dataset.mflClubHeaderBound = "true";
     }
 
+    return true;
+  }
+
+  function releaseInitialClubHeader() {
+    const root = document.documentElement;
+    if (String(root.dataset.initialTablePage || "").toLowerCase() !== "club") return false;
+    const head = document.getElementById("tableHead");
+    if (!(head instanceof HTMLTableSectionElement)) return false;
+    if (head.dataset.mflStaticHeader !== "true" || head.dataset.mflClubHeaderGeometry !== "canonical") return false;
     delete head.dataset.mflStaticHeader;
+    delete head.dataset.mflClubHeaderGeometry;
     return true;
   }
 
@@ -189,6 +199,7 @@
 
   function release() {
     if (requestActive()) return false;
+    releaseInitialClubHeader();
     const { body } = elements();
     if (body) {
       delete body.dataset.staticLoading;
