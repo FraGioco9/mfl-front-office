@@ -10,7 +10,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime] = await Promise.all([
+const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, syncWorkflow] = await Promise.all([
   read("./release.json"),
   read("./build-app-core.mjs"),
   read("./modules/pre-bootstrap-route-state.js"),
@@ -18,69 +18,74 @@ const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore,
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./table-width-runtime.js"),
+  read("../.github/workflows/release-projection-sync.yml"),
 ]);
 
 const release = JSON.parse(releaseSource);
 const version = String(release.version || "").trim();
 invariant(/^\d+\.\d+\.\d+$/.test(version), "release.json must contain the canonical Semantic Version.");
 
-const canonicalExpression = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
 invariant(
-  bootstrap.includes(`const STATIC_RELEASE_VERSION = ${canonicalExpression};`),
-  "bootstrap.js must resolve the current version from generated pre-bootstrap release metadata.",
+  bootstrap.includes(`const STATIC_RELEASE_VERSION = "${version}";`),
+  "bootstrap.js must contain the generated projection of release.json.",
 );
 invariant(
-  bootstrapCore.includes(`const STATIC_RELEASE_VERSION = ${canonicalExpression};`),
-  "bootstrap-core.js must resolve the current version from generated pre-bootstrap release metadata.",
+  bootstrapCore.includes(`const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "${version}");`),
+  "bootstrap-core.js must contain the generated fallback projection of release.json.",
 );
 invariant(
-  !bootstrap.includes(`const STATIC_RELEASE_VERSION = "${version}";`),
-  "bootstrap.js must not duplicate the current release version.",
-);
-invariant(
-  !bootstrapCore.includes(`window.__mflReleaseVersion || "${version}"`),
-  "bootstrap-core.js must not duplicate the current release version.",
-);
-invariant(
-  indexHtml.includes('<a href="/changelog" data-page="changelog">MFL Front Office</a>'),
-  "The static footer must remain version-neutral before generated pre-bootstrap metadata runs.",
-);
-invariant(
-  !indexHtml.includes(`MFL Front Office v${version}</a>`),
-  "index.html must not duplicate the current release version.",
+  indexHtml.includes(`<a href="/changelog" data-page="changelog">MFL Front Office v${version}</a>`),
+  "The static footer must contain the generated projection of release.json.",
 );
 
 invariant(
   buildSource.includes('import { synchronizeReleaseProjections } from "./sync-release-projections.mjs";')
     && buildSource.includes("await synchronizeReleaseProjections(siteRoot);"),
-  "The canonical build must normalize release projections before generating browser artifacts.",
+  "The canonical build must regenerate release projections from release.json before browser artifacts.",
+);
+invariant(
+  syncWorkflow.includes("node site/sync-release-projections.mjs")
+    && syncWorkflow.includes("site/bootstrap.js site/bootstrap-core.js site/index.html"),
+  "Pull requests must automatically persist generated bootstrap/footer release projections.",
 );
 invariant(
   preBootstrapSource.includes("window.__mflRelease = data.release;")
-    && preBootstrapSource.includes("window.__mflReleaseVersion = data.release.version;")
-    && preBootstrapSource.includes("releaseFooter.textContent = `MFL Front Office v${data.release.version}`;"),
-  "Generated pre-bootstrap state must own the browser release facade and first-paint footer version.",
+    && preBootstrapSource.includes("window.__mflReleaseVersion = data.release.version;"),
+  "Generated pre-bootstrap state must expose the canonical release facade sourced from release.json.",
 );
 invariant(
   tableWidthRuntime.includes(`"version":"${version}"`),
   "The tracked generated pre-bootstrap runtime must project the version from release.json.",
 );
 
+const fakeVersion = "8.8.8";
 const normalizedBootstrap = normalizeBootstrapReleaseProjection(
   '(() => {\n  const STATIC_RELEASE_VERSION = "9.9.9";\n})();\n',
-  "test bootstrap",
+  fakeVersion,
+  "bootstrap.js",
 );
 invariant(
-  normalizedBootstrap.includes(`const STATIC_RELEASE_VERSION = ${canonicalExpression};`)
+  normalizedBootstrap.includes(`const STATIC_RELEASE_VERSION = "${fakeVersion}";`)
     && !normalizedBootstrap.includes('"9.9.9"'),
-  "Bootstrap projection normalization must remove an independently owned version literal.",
+  "Bootstrap projection generation must replace a stale version from the canonical release input.",
+);
+const normalizedBootstrapCore = normalizeBootstrapReleaseProjection(
+  '(() => {\n  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "9.9.9");\n})();\n',
+  fakeVersion,
+  "bootstrap-core.js",
+);
+invariant(
+  normalizedBootstrapCore.includes(`window.__mflReleaseVersion || "${fakeVersion}"`)
+    && !normalizedBootstrapCore.includes('"9.9.9"'),
+  "Bootstrap-core projection generation must replace a stale fallback from the canonical release input.",
 );
 const normalizedIndex = normalizeIndexReleaseProjection(
   '<footer><a href="/changelog" data-page="changelog">MFL Front Office v9.9.9</a></footer>',
+  fakeVersion,
 );
 invariant(
-  normalizedIndex.includes('>MFL Front Office</a>') && !normalizedIndex.includes("9.9.9"),
-  "Footer projection normalization must remove an independently owned version literal.",
+  normalizedIndex.includes(`>MFL Front Office v${fakeVersion}</a>`) && !normalizedIndex.includes("9.9.9"),
+  "Footer projection generation must replace a stale version from the canonical release input.",
 );
 
-console.log(`Single release source validation passed for v${version}: release.json is the only human-owned current-version source.`);
+console.log(`Single release source validation passed for v${version}: release.json owns the version and all browser literals are generated projections.`);
