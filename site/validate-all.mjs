@@ -45,6 +45,7 @@ const validators = [
   "validate-view-button-refresh-handoff.mjs",
   "validate-mfl-stats-first-paint.mjs",
   "validate-mfl-stats-data-scope.mjs",
+  "validate-stats-single-animation.mjs",
   "validate-generated-view-transition.mjs",
   "validate-page-route-gate-transition.mjs",
   "validate-club-entry-workflow.mjs",
