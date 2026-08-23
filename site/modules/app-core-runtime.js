@@ -8273,12 +8273,15 @@ async function startApp() {
       }
       if (clubPage) {
         state.currentPage = "club";
+        state.page = 1;
+        state.pageSize = Math.max(100, state.rows.length || 100);
+        if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        if (!clubPage) originalApplyFilters.call(this, { save: false });
+        originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
