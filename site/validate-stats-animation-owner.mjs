@@ -53,10 +53,12 @@ includes(
   "Database Stats must allow one fresh animation after leaving and re-entering the route.",
 );
 
-includes(
-  mflStats,
-  'if (state.incrementalRoute?.scope !== "mflstats") return;',
-  "MFL Stats must not render its histogram from data owned by another incremental route.",
+const mflRenderStart = mflStats.indexOf("function renderMflStatsPage() {");
+const mflOwnershipGate = mflStats.indexOf('if (state.incrementalRoute?.scope !== "mflstats") return;', mflRenderStart);
+const mflRowsRead = mflStats.indexOf("const rows = mflStatsRows();", mflRenderStart);
+invariant(
+  mflRenderStart >= 0 && mflOwnershipGate > mflRenderStart && mflRowsRead > mflOwnershipGate,
+  "MFL Stats must verify mflstats data ownership before reading shared state.rows.",
 );
 includes(
   mflStats,
@@ -100,4 +102,4 @@ includes(
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
-console.log("Database Stats revisits render cached data, while MFL Stats waits for owned data and both keep one column animation owner.");
+console.log("Database Stats revisits render cached data, while MFL Stats validates owned data before shared row access and both keep one column animation owner.");
