@@ -64,6 +64,7 @@ const validators = [
   "validate-cached-route-performance.mjs",
   "validate-table-loading-performance.mjs",
   "validate-table-chrome-performance.mjs",
+  "validate-persistence-performance.mjs",
   "validate-pager-current-page.mjs",
   "validate-agent-title-loading.mjs",
   "validate-table-column-layout.mjs",
