@@ -24,6 +24,7 @@ const validators = [
   "validate-control-style-ownership.mjs",
   "validate-global-escape-ownership.mjs",
   "validate-motion-ownership.mjs",
+  "validate-modal-entrance-lifecycle.mjs",
   "validate-z-index-ownership.mjs",
   "validate-loading-ownership.mjs",
   "validate-home-summary-first-paint.mjs",
