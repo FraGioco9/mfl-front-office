@@ -1562,24 +1562,30 @@ function updateSelectionHeader(pageRows = currentPageRows()) {
   }
 
   if (document.documentElement.classList.contains("mflDataLoading")) {
-  selectVisibleInput.checked = false;
-  selectVisibleInput.indeterminate = false;
-  selectVisibleInput.disabled = false;
-  if (document.activeElement === selectVisibleInput) {
-    selectVisibleInput.blur();
+    selectVisibleInput.checked = false;
+    selectVisibleInput.indeterminate = false;
+    selectVisibleInput.disabled = false;
+    if (document.activeElement === selectVisibleInput) {
+      selectVisibleInput.blur();
+    }
+    return;
   }
-  return;
+
+  let visibleCount = 0;
+  let selectedVisibleCount = 0;
+  for (const row of pageRows) {
+    visibleCount += 1;
+    if (state.selectedPlayerIds.has(String(getValue(row, "player_id")))) {
+      selectedVisibleCount += 1;
+    }
+  }
+
+  selectVisibleInput.disabled = visibleCount === 0;
+  selectVisibleInput.checked = visibleCount > 0 && selectedVisibleCount === visibleCount;
+  selectVisibleInput.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleCount;
 }
 
-  const visibleIds = pageRows.map((row) => String(getValue(row, "player_id")));
-  const selectedVisibleCount = visibleIds.filter((playerId) => state.selectedPlayerIds.has(playerId)).length;
-
-  selectVisibleInput.disabled = visibleIds.length === 0;
-  selectVisibleInput.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
-  selectVisibleInput.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
-}
-
-function updateSelectionBar() {
+function updateSelectionBar(pageRows = null) {
   const selectedCount = state.selectedPlayerIds.size;
   const optedIn = hasWalletOptIn();
   selectionBar.classList.toggle("visible", selectedCount > 0);
@@ -1589,7 +1595,7 @@ function updateSelectionBar() {
   if (moveToWatchlistButton) {
     moveToWatchlistButton.hidden = !optedIn || state.currentPage !== "watchlist" || selectedCount <= 0;
   }
-  updateSelectionHeader();
+  updateSelectionHeader(pageRows || currentPageRows());
 }
 
 function setVisiblePlayersSelected(selected) {
@@ -1612,25 +1618,32 @@ function setVisiblePlayersSelected(selected) {
 function setPlayerSelected(playerId, selected, shiftKey = false) {
   const key = String(playerId);
   const anchorKey = state.selectionAnchorPlayerId;
-  const filteredIds = state.filteredRows.map((row) => String(getValue(row, "player_id")));
-  const anchorIndex = filteredIds.indexOf(anchorKey);
-  const currentIndex = filteredIds.indexOf(key);
 
-  if (shiftKey && anchorKey && anchorIndex >= 0 && currentIndex >= 0) {
-    const start = Math.min(anchorIndex, currentIndex);
-    const end = Math.max(anchorIndex, currentIndex);
+  if (shiftKey && anchorKey) {
+    let anchorIndex = -1;
+    let currentIndex = -1;
+    for (let index = 0; index < state.filteredRows.length && (anchorIndex < 0 || currentIndex < 0); index += 1) {
+      const candidateId = String(getValue(state.filteredRows[index], "player_id"));
+      if (candidateId === anchorKey) anchorIndex = index;
+      if (candidateId === key) currentIndex = index;
+    }
 
-    filteredIds.slice(start, end + 1).forEach((rangePlayerId) => {
-      if (selected) {
-        state.selectedPlayerIds.add(rangePlayerId);
-      } else {
-        state.selectedPlayerIds.delete(rangePlayerId);
+    if (anchorIndex >= 0 && currentIndex >= 0) {
+      const start = Math.min(anchorIndex, currentIndex);
+      const end = Math.max(anchorIndex, currentIndex);
+      for (let index = start; index <= end; index += 1) {
+        const rangePlayerId = String(getValue(state.filteredRows[index], "player_id"));
+        if (selected) {
+          state.selectedPlayerIds.add(rangePlayerId);
+        } else {
+          state.selectedPlayerIds.delete(rangePlayerId);
+        }
       }
-    });
 
-    renderTable();
-    saveTableState();
-    return;
+      renderTable();
+      saveTableState();
+      return;
+    }
   }
 
   if (selected) {
@@ -1891,6 +1904,14 @@ function tableRenderTableOwner() {
   }
 
   const pageRows = currentPageRows();
+  const renderColumns = currentViewColumns().map((column) => {
+    const columnClass = tableColumnClass(column);
+    return {
+      column,
+      classNames: columnClass ? columnClass.split(" ") : [],
+      isStat: statColumns.includes(column),
+    };
+  });
   const fragment = document.createDocumentFragment();
 
   pageRows.forEach((row) => {
@@ -1914,11 +1935,10 @@ function tableRenderTableOwner() {
     selectionCell.appendChild(selectionContent);
     tableRow.appendChild(selectionCell);
 
-    currentViewColumns().forEach((column) => {
+    renderColumns.forEach(({ column, classNames, isStat }) => {
       const cell = document.createElement("td");
-      const columnClass = tableColumnClass(column);
-      if (columnClass) {
-        cell.classList.add(...columnClass.split(" "));
+      if (classNames.length) {
+        cell.classList.add(...classNames);
       }
 
       if (column === "name") {
@@ -2020,7 +2040,7 @@ function tableRenderTableOwner() {
         link.rel = "noopener noreferrer";
         link.textContent = "Link";
         cell.appendChild(link);
-      } else if (statColumns.includes(column)) {
+      } else if (isStat) {
         appendStatValue(cell, row, column);
       } else {
         cell.textContent = formatCellValue(row, column);
@@ -2038,7 +2058,7 @@ function tableRenderTableOwner() {
   syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
-  updateSelectionBar();
+  updateSelectionBar(pageRows);
 }
 
 function showTableBusyState() {
