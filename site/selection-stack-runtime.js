@@ -3,7 +3,7 @@
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const GAP = 12;
-  const EXIT_MS = 220;
+  const EXIT_MS = window.__mflControlInteractionsRuntime?.motionDurationMs?.("--mfl-motion-slow", 220) ?? 220;
   const TOAST_ANCHOR_MS = 15000;
   const TABLE_PAGE_NAMES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const NAVIGATION_STATE_CONTROL_IDS = [

@@ -11,8 +11,18 @@
     "all-time": "all",
   });
   const TOOLTIP_HEIGHT = 6;
+
+  function cssDurationMs(propertyName, fallbackMs) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(propertyName).trim();
+    const value = Number.parseFloat(raw);
+    if (!Number.isFinite(value)) return fallbackMs;
+    if (raw.endsWith("ms")) return value;
+    if (raw.endsWith("s")) return value * 1000;
+    return fallbackMs;
+  }
+
   const TOOLTIP_SETTINGS = Object.freeze({
-    durationMs: 170,
+    durationMs: cssDurationMs("--mfl-motion-tooltip", 170),
   });
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
   const SPECIALIZED_TOOLTIP_SELECTOR = [

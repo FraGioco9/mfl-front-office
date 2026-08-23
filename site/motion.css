@@ -1,0 +1,9 @@
+/* Canonical global motion timing owner for MFL Front Office. */
+
+:root {
+  --mfl-motion-fast: 120ms;
+  --mfl-motion-tooltip: 170ms;
+  --mfl-motion-standard: 180ms;
+  --mfl-motion-expand: 200ms;
+  --mfl-motion-slow: 220ms;
+}
