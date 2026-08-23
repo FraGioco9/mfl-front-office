@@ -159,7 +159,7 @@
       page.id = "notFoundPage";
       page.className = "pageView homePage";
       page.hidden = true;
-      page.innerHTML = `<h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>
+      page.innerHTML = `<h1 id="notFoundTitle">Page not found</h1>
       <button id="notFoundHomeButton" class="homeOptInButton" type="button">Home</button>`;
       page.querySelector("#notFoundHomeButton")?.addEventListener("click", () => {
         window.location.assign("/");
