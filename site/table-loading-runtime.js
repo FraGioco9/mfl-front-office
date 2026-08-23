@@ -46,8 +46,49 @@
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
 
+  function initialClubHeader() {
+    const root = document.documentElement;
+    if (root.classList.contains("mflInitialRouteResolved")) return null;
+    if (String(root.dataset.initialTablePage || "").toLowerCase() !== "club") return null;
+    if (!/^\/(?:clubs|club)(?:\/|$)/i.test(location.pathname)) return null;
+
+    const head = document.getElementById("tableHead");
+    if (!(head instanceof HTMLTableSectionElement) || head.dataset.mflStaticHeader !== "true" || !head.rows[0]) return null;
+
+    const signatureFor = Reflect.get(window, "__mflPrimeTableHeaderSignature");
+    if (typeof signatureFor !== "function") return null;
+    const initialView = String(root.dataset.initialTableView || "").toLowerCase();
+    const expectedSignature = String(signatureFor("club", initialView) || "");
+    if (!expectedSignature || String(head.dataset.mflHeaderSignature || "") !== expectedSignature) return null;
+    return head;
+  }
+
+  function normalizeInitialClubHeaderGeometry() {
+    const head = initialClubHeader();
+    if (!head) return false;
+    if (head.dataset.mflClubHeaderGeometry === "canonical") return true;
+
+    const cells = Array.from(head.rows[0].cells);
+    cells.forEach((cell) => {
+      cell.classList.remove("sortable");
+      cell.querySelectorAll(":scope > .sortArrow").forEach((arrow) => arrow.remove());
+    });
+
+    const positionsCell = cells.find((cell) => cell.querySelector(":scope > span")?.textContent === "Positions");
+    if (positionsCell) {
+      const arrow = document.createElement("span");
+      arrow.className = "sortArrow asc";
+      arrow.setAttribute("aria-hidden", "true");
+      positionsCell.appendChild(arrow);
+    }
+
+    head.dataset.mflClubHeaderGeometry = "canonical";
+    return true;
+  }
+
   function ensureCanonicalHeader() {
     if (!tableRouteActive()) return false;
+    if (normalizeInitialClubHeaderGeometry()) return true;
     const ensureHeader = coreContracts()?.ensureCanonicalTableHeader;
     return typeof ensureHeader === "function" ? Boolean(ensureHeader()) : false;
   }
@@ -98,10 +139,29 @@
     return token;
   }
 
+  function hydrateInitialClubHeader() {
+    const head = initialClubHeader();
+    if (!head) return false;
+    normalizeInitialClubHeaderGeometry();
+
+    const selectVisibleInput = head.querySelector("#selectVisiblePlayersInput");
+    const setVisiblePlayersSelected = Reflect.get(window, "setVisiblePlayersSelected");
+    if (selectVisibleInput instanceof HTMLInputElement
+      && typeof setVisiblePlayersSelected === "function"
+      && selectVisibleInput.dataset.mflClubHeaderBound !== "true") {
+      selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
+      selectVisibleInput.dataset.mflClubHeaderBound = "true";
+    }
+
+    delete head.dataset.mflStaticHeader;
+    return true;
+  }
+
   function finishRequest(token) {
     const requestToken = Number(token || 0);
     if (!requestToken || requestToken !== activeRequestToken) return false;
     activeRequestToken = 0;
+    hydrateInitialClubHeader();
     return true;
   }
 
@@ -155,6 +215,8 @@
     sync();
     return true;
   }
+
+  normalizeInitialClubHeaderGeometry();
 
   if (typeof controller?.subscribe === "function") {
     unsubscribe = controller.subscribe(sync);

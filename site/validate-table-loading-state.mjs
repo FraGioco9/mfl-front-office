@@ -69,15 +69,64 @@ for (const required of [
 ]) {
   invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
 }
-const beginRequestSource = runtime.slice(
-  runtime.indexOf("function beginRequest(routeScope) {"),
-  runtime.indexOf("function finishRequest(", runtime.indexOf("function beginRequest(routeScope) {")),
-);
+const beginRequestStart = runtime.indexOf("function beginRequest(routeScope) {");
+const beginRequestEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginRequestStart);
+const beginRequestSource = runtime.slice(beginRequestStart, beginRequestEnd);
 invariant(
-  beginRequestSource
+  beginRequestStart >= 0
+    && beginRequestEnd > beginRequestStart
     && !beginRequestSource.includes("tableRouteActive()")
     && !beginRequestSource.includes("loadingSnapshot().dataLoading"),
   "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
+);
+
+for (const required of [
+  "function initialClubHeader() {",
+  'root.classList.contains("mflInitialRouteResolved")',
+  'String(root.dataset.initialTablePage || "").toLowerCase() !== "club"',
+  'head.dataset.mflStaticHeader !== "true"',
+  'const signatureFor = Reflect.get(window, "__mflPrimeTableHeaderSignature");',
+  'String(head.dataset.mflHeaderSignature || "") !== expectedSignature',
+  "function normalizeInitialClubHeaderGeometry() {",
+  'head.dataset.mflClubHeaderGeometry === "canonical"',
+  'cell.classList.remove("sortable");',
+  'cell.querySelectorAll(":scope > .sortArrow").forEach((arrow) => arrow.remove());',
+  'cell.querySelector(":scope > span")?.textContent === "Positions"',
+  'arrow.className = "sortArrow asc";',
+  'head.dataset.mflClubHeaderGeometry = "canonical";',
+  'if (normalizeInitialClubHeaderGeometry()) return true;',
+  "function hydrateInitialClubHeader() {",
+  'const setVisiblePlayersSelected = Reflect.get(window, "setVisiblePlayersSelected");',
+  'selectVisibleInput.dataset.mflClubHeaderBound !== "true"',
+  'selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));',
+  'selectVisibleInput.dataset.mflClubHeaderBound = "true";',
+  "delete head.dataset.mflStaticHeader;",
+  "normalizeInitialClubHeaderGeometry();\n\n  if (typeof controller?.subscribe",
+]) {
+  invariant(runtime.includes(required), `Club refresh header handoff is missing ${required}`);
+}
+
+const normalizeStart = runtime.indexOf("function normalizeInitialClubHeaderGeometry() {");
+const normalizeEnd = runtime.indexOf("function ensureCanonicalHeader() {", normalizeStart);
+const normalizeSource = runtime.slice(normalizeStart, normalizeEnd);
+invariant(
+  normalizeStart >= 0
+    && normalizeEnd > normalizeStart
+    && normalizeSource.includes('cell.classList.remove("sortable");')
+    && normalizeSource.includes('arrow.className = "sortArrow asc";'),
+  "Club header geometry must be normalized before the request starts.",
+);
+
+const hydrateStart = runtime.indexOf("function hydrateInitialClubHeader() {");
+const hydrateEnd = runtime.indexOf("function finishRequest(token) {", hydrateStart);
+const hydrateSource = runtime.slice(hydrateStart, hydrateEnd);
+invariant(
+  hydrateStart >= 0
+    && hydrateEnd > hydrateStart
+    && hydrateSource.includes('selectVisibleInput.addEventListener("change"')
+    && !hydrateSource.includes('cell.classList.remove("sortable")')
+    && !hydrateSource.includes('arrow.className = "sortArrow asc";'),
+  "Request completion may hydrate behavior but must not change Club header geometry.",
 );
 
 const finishRequestStart = runtime.indexOf("function finishRequest(token) {");
@@ -86,9 +135,12 @@ const finishRequestSource = runtime.slice(finishRequestStart, finishRequestEnd);
 invariant(
   finishRequestStart >= 0
     && finishRequestEnd > finishRequestStart
+    && finishRequestSource.includes("hydrateInitialClubHeader();")
+    && !finishRequestSource.includes('classList.remove("sortable")')
+    && !finishRequestSource.includes("sortArrow")
     && !finishRequestSource.includes("delete body.dataset.staticLoading")
     && !finishRequestSource.includes("primeLoadingRows()"),
-  "Completing the inner data request must preserve the existing loading tbody while an outer route-loading owner can still be active.",
+  "Completing the inner data request must not mutate Club header geometry or release the loading tbody.",
 );
 
 const releaseStart = runtime.indexOf("function release() {");
@@ -137,6 +189,12 @@ invariant(
 );
 
 invariant(
+  tableRuntime.includes('const clubPositionSort = state.currentPage === "club" && column === "positions";')
+    && tableRuntime.includes('if (state.currentPage !== "club" && sortableColumns.has(column)) {'),
+  "The pre-request Club header normalization must match the non-sortable Club header contract used by the runtime.",
+);
+
+invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
     && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
     && bootstrap.includes('if (columnIndex === nameColumnIndex) {')
@@ -162,4 +220,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("All table-backed routes keep one stable loading tbody through nested request completion and release it only after the final route-loading owner settles.");
+console.log("All table-backed routes keep one stable loading tbody, and Club refresh normalizes its first-paint header before the request so request completion changes behavior only, not geometry.");
