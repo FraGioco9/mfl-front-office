@@ -147,7 +147,8 @@ includes(normalizedCore, "if (!payload || !incrementalRouteRequestIsCurrent(gene
 includes(normalizedCore, "if (error?.name === \"AbortError\" && !timedOut) return null;", "Intentional route aborts must remain silent.");
 includes(normalizedCore, "if (result === false) return false;", "Obsolete page renders must stop before scroll or final commit work.");
 includes(normalizedArtifacts.routeChunks.club, "if (!dataLoaded) return;", "Obsolete Club loads must not commit a Club render.");
-includes(evaluationCore, "if (!playerPayload) return;", "Obsolete saved-Evaluation hydration must not commit Evaluation state.");
+includes(evaluationCore, 'if (!playerPayload) throw new Error("Evaluation player is not available.");', "Unresolvable saved/shared Evaluation players must enter invalid-link recovery.");
+excludes(evaluationCore, "if (!playerPayload) return;", "Saved/shared Evaluation hydration must never silently leave a broken route active.");
 excludes(normalizedCore, "      await requestIncrementalRoute(route, page);\n      state.incrementalApplying = true;", "Pagination must not render after an obsolete request.");
 excludes(tableCore, "        await requestIncrementalRoute(route, 1);\n        state.incrementalApplying = true;", "View switches must not render after an obsolete request.");
 
