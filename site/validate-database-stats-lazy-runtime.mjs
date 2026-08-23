@@ -12,6 +12,7 @@ const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 const statsRuntime = await read("./database-stats-runtime.js");
 const controlInteractions = await read("./control-interactions-runtime.js");
+const controls = await read("./controls.css");
 const styles = await read("./styles.css");
 const coreSource = await read("./modules/app-core.js");
 
@@ -85,6 +86,19 @@ includes(
   "customPanelOpen = false;\n        syncCustomInputs();\n        activeFilter = filter[0];",
   "Choosing another Overall filter while Custom is open must discard the Custom input draft.",
 );
+
+includes(statsRuntime, 'control.className = "mflNumericStepperControl";', "Database Stats Custom must reuse the canonical numeric-stepper control wrapper.");
+includes(statsRuntime, 'stepper.className = "mflIncrementStepper";', "Database Stats Custom must reuse the canonical increment/decrement arrow stack.");
+includes(statsRuntime, 'button.textContent = delta > 0 ? "▲" : "▼";', "Database Stats Custom must use the same visible increment/decrement arrows as numeric Filters.");
+includes(statsRuntime, "if (delta > 0) input.stepUp();", "Database Stats Custom increment must use the native one-step number-input behavior.");
+includes(statsRuntime, "else input.stepDown();", "Database Stats Custom decrement must use the native one-step number-input behavior.");
+includes(statsRuntime, "ensureCustomSteppers();", "Database Stats Custom must install its canonical steppers before binding keyboard behavior.");
+includes(statsRuntime, "data-database-stats-custom-step", "Database Stats Custom arrow interaction must be delegated so cached route reuse does not require per-button ownership.");
+includes(controls, ".mflNumericStepperControl {", "Numeric stepper layout must remain owned by the shared control stylesheet.");
+includes(controls, ".mflIncrementStepper button {", "Numeric stepper arrow sizing must remain owned by the shared control stylesheet.");
+excludes(styles, "#databaseStatsPage .mflNumericStepperControl", "Database Stats must not add a route-specific numeric-stepper style override.");
+excludes(styles, "#databaseStatsPage .mflIncrementStepper", "Database Stats must not add a route-specific increment-stepper style override.");
+
 for (const preset of [
   '["all", "All", null, null]',
   '["ultimate", "Ultimate", 95, null]',
@@ -215,4 +229,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats cached revisit rendering, single histogram rebuild, Custom preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");
+console.log("Database Stats cached revisit rendering, Custom shared +1/-1 steppers, single histogram rebuild, preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");

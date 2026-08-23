@@ -71,6 +71,58 @@
     histogram.style.minWidth = "620px";
   }
 
+  function dispatchCustomStepperChange(input) {
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function adjustCustomInput(input, delta) {
+    if (!(input instanceof HTMLInputElement) || input.type !== "number" || !delta) return;
+    try {
+      if (delta > 0) input.stepUp();
+      else input.stepDown();
+    } catch {
+      const currentValue = Number.parseFloat(input.value);
+      input.value = String((Number.isFinite(currentValue) ? currentValue : 0) + delta);
+    }
+    dispatchCustomStepperChange(input);
+  }
+
+  function createCustomStepperButton(input, delta, label) {
+    const button = document.createElement("button");
+    const direction = delta > 0 ? "Increase" : "Decrease";
+    button.type = "button";
+    button.textContent = delta > 0 ? "▲" : "▼";
+    button.dataset.databaseStatsCustomStep = String(delta);
+    button.dataset.databaseStatsCustomInput = input.id;
+    button.setAttribute("aria-label", `${direction} ${label}`);
+    return button;
+  }
+
+  function ensureCustomStepper(input, label) {
+    if (!(input instanceof HTMLInputElement) || input.closest(".mflNumericStepperControl")) return;
+
+    const marker = document.createTextNode("");
+    input.replaceWith(marker);
+
+    const control = document.createElement("span");
+    control.className = "mflNumericStepperControl";
+    const stepper = document.createElement("span");
+    stepper.className = "mflIncrementStepper";
+    stepper.setAttribute("aria-label", `Adjust ${label}`);
+    stepper.append(
+      createCustomStepperButton(input, 1, label),
+      createCustomStepperButton(input, -1, label),
+    );
+    control.append(input, stepper);
+    marker.replaceWith(control);
+  }
+
+  function ensureCustomSteppers() {
+    ensureCustomStepper(page.querySelector("#databaseStatsCustomMin"), "minimum Overall");
+    ensureCustomStepper(page.querySelector("#databaseStatsCustomMax"), "maximum Overall");
+  }
+
   function syncCustomInputs() {
     const minInput = page.querySelector("#databaseStatsCustomMin");
     const maxInput = page.querySelector("#databaseStatsCustomMax");
@@ -158,6 +210,7 @@
       });
     });
     page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
+    ensureCustomSteppers();
     page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") applyCustomFilter();
@@ -396,9 +449,24 @@
     }
   }
 
+  function onDocumentMouseDown(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#databaseStatsCustomFilter [data-database-stats-custom-step]")) {
+      event.preventDefault();
+    }
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
+    const stepperButton = target.closest("#databaseStatsCustomFilter [data-database-stats-custom-step]");
+    if (stepperButton instanceof HTMLButtonElement) {
+      const input = document.getElementById(stepperButton.dataset.databaseStatsCustomInput || "");
+      adjustCustomInput(input, Number(stepperButton.dataset.databaseStatsCustomStep || 0));
+      return;
+    }
+
     const panel = customPanel();
     if (!(panel instanceof HTMLElement) || panel.hidden) return;
     if (target.closest('#databaseStatsOverallFilters .mflStatsFilterButton[data-filter="custom"]')) return;
@@ -417,6 +485,7 @@
     destroyed = true;
     if (customPanelFrame) cancelAnimationFrame(customPanelFrame);
     customPanelFrame = 0;
+    document.removeEventListener("mousedown", onDocumentMouseDown);
     document.removeEventListener("click", onDocumentClick);
     document.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("resize", scheduleCustomPanel);
@@ -426,6 +495,7 @@
   }
 
   bindPermanentControls();
+  document.addEventListener("mousedown", onDocumentMouseDown);
   document.addEventListener("click", onDocumentClick);
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", scheduleCustomPanel);
