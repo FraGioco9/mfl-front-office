@@ -46,6 +46,13 @@
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
 
+  function hasPrimedLoadingRows(body) {
+    const rows = Array.from(body.rows);
+    return body.dataset.staticLoading === "true"
+      && rows.length > 0
+      && rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
+  }
+
   function initialClubHeader() {
     const root = document.documentElement;
     if (root.classList.contains("mflInitialRouteResolved")) return null;
@@ -135,7 +142,7 @@
     const token = ++nextRequestToken;
     activeRequestToken = token;
     const body = prepareLoadingSurface();
-    if (body) primeLoadingRows();
+    if (body && !hasPrimedLoadingRows(body)) primeLoadingRows();
     return token;
   }
 
