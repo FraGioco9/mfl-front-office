@@ -270,6 +270,9 @@ const EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY = `  if (!data.playerId) {
     throw new Error("Evaluation player is not available.");
   }`;
 
+const EVALUATION_UNRESOLVED_PLAYER_ROUTE = `      if (!playerPayload) return;`;
+const EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY = `      if (!playerPayload) throw new Error("Evaluation player is not available.");`;
+
 const EVALUATION_INVALID_LINK_RECOVERY = `  const playerId = playerRow ? candidatePlayerId : "";
   state.evaluationSavedId = "";
   state.evaluationShareId = "";
@@ -363,6 +366,18 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     EVALUATION_MISSING_PLAYER_PAYLOAD,
     EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY,
     "Saved and shared Evaluation payloads without a player ID enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY,
+    "Shared Evaluation routes with an unresolved player enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY,
+    "Saved Evaluation routes with an unresolved player enter canonical invalid-link recovery",
   );
   evaluation = replaceRequired(
     evaluation,
