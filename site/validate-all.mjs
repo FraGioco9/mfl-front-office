@@ -10,6 +10,7 @@ const validators = [
   "validate.mjs",
   "validate-global-search-results.mjs",
   "validate-global-search-open-lifecycle.mjs",
+  "validate-global-search-performance.mjs",
   "validate-release-history.mjs",
   "validate-release-runtime-ownership.mjs",
   "validate-document-title-runtime.mjs",
