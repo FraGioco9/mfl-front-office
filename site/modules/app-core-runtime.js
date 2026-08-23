@@ -939,8 +939,11 @@ function updateAccountState() {
   }
   updateEvaluationFooterActions();
   if (evaluationLoadButton) {
-    evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
-    evaluationButtons.hidden = Boolean(state.evaluationPlayerId) ? evaluationButtons.hidden : !walletLinked;
+    const evaluationRouteSelected = Boolean(
+      state.evaluationPlayerId || evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+    );
+    evaluationLoadButton.hidden = evaluationRouteSelected || !walletLinked;
+    evaluationButtons.hidden = evaluationRouteSelected ? false : !walletLinked;
   }
   syncHomeLoginButton();
 }
@@ -1288,6 +1291,20 @@ function pageTargetFromPath(path) {
     const playerId = String(params.get("player") || "").trim();
     const savedId = String(params.get("saved") || "").trim();
     const shareId = String(params.get("share") || "").trim();
+    const queryKeys = Array.from(params.keys());
+    const validQueryKeys = queryKeys.every((key) => key === "player" || key === "saved" || key === "share");
+    const hasEvaluationSelection = Boolean(playerId || savedId || shareId);
+
+    if (search && (!validQueryKeys || !hasEvaluationSelection)) {
+      return {
+        pageName: "evaluation",
+        options: {
+          plain: true,
+          replaceUrl: "/evaluation",
+        },
+      };
+    }
+
     return {
       pageName: "evaluation",
       options: {
@@ -1829,7 +1846,21 @@ function setView() {
     : undefined;
 }
 
+let evaluationPageCacheReady = false;
+
+function preparePlainEvaluationReentry() {
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
+  state.evaluationPlayerId = null;
+  state.evaluationOverallRows = {};
+  state.evaluationSummaryPositions = {};
+  evaluationSearchInput.value = "";
+  renderEmptyEvaluationSelection(false, true);
+}
+
 async function setPage(pageName, updateHash = true, options = {}) {
+  const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
+  if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
     await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
@@ -2008,18 +2039,22 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (evaluationPageActive) {
-    const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
-    document.documentElement.classList.remove("mflEvaluationReady");
-    document.body.classList.add("evaluationPageLoading");
-    if (options.plain || isPlainEvaluationUrl()) {
-      state.evaluationShareId = "";
-      state.evaluationSavedId = "";
-      state.evaluationPlayerId = null;
-      evaluationSearchInput.value = "";
+    const plainEvaluationRoute = options.plain || isPlainEvaluationUrl();
+    const cachedEvaluationReentry = plainEvaluationRoute
+      && options.reuseCachedRoute === true
+      && evaluationPageCacheReady;
+    const evaluationBusyToken = cachedEvaluationReentry
+      ? ""
+      : window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    if (!cachedEvaluationReentry) {
+      document.documentElement.classList.remove("mflEvaluationReady");
+      document.body.classList.add("evaluationPageLoading");
     }
     try {
       await renderEvaluationPage();
-      await finishEvaluationReadiness();
+      if (!cachedEvaluationReentry) {
+        await finishEvaluationReadiness();
+      }
       if (document.body.classList.contains("loading")) {
         await finishLoading();
       }
@@ -2028,6 +2063,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
       if (shouldResetScroll) {
         resetPageScroll();
       }
+      evaluationPageCacheReady = true;
       document.documentElement.classList.add("mflEvaluationReady");
       window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
       return;
@@ -4877,9 +4913,9 @@ function rememberEvaluationResult(playerId) {
   saveTableState();
 }
 
-function renderEmptyEvaluationSelection(showRecentResults = true) {
+function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false) {
   const evaluationRouteParams = new URLSearchParams(window.location.search);
-  const pendingEvaluationRoute = window.location.pathname === "/evaluation" && Boolean(
+  const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(
     evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")
   );
 
@@ -6841,13 +6877,25 @@ evaluationPlayerPageButton.addEventListener("auxclick", preventEvaluationPlayerP
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
+const setPageWithoutRouteLoading = setPage;
+
 navButtons.forEach((button) => {
   button.addEventListener("click", async (event) => {
     event.preventDefault();
     const pageName = button.dataset.page;
-    const options = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
+    const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
+    const options = tablePages.has(pageName)
+      ? { view: preferredViewForPage(pageName) }
+      : pageName === "evaluation"
+        ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
+        : {};
     const target = pagePath(pageName, options);
     if (button.classList.contains("active") && target === `${location.pathname}${location.search}`) return;
+    if (pageName === "evaluation") preparePlainEvaluationReentry();
+    if (reuseCachedEvaluationRoute) {
+      await setPageWithoutRouteLoading(pageName, true, options);
+      return;
+    }
     await setPage(pageName, true, options);
   });
 });

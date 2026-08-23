@@ -108,6 +108,14 @@ function cachedSavedEvaluationEntry(savedId) {
   return savedEvaluationPayloadCache()[id] || null;
 }
 
+function showSavedEvaluationPlayerName(entry, fallbackPlayerId = "") {
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || fallbackPlayerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const playerName = String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim();
+  if (playerName) evaluationSearchInput.value = playerName;
+  return playerName;
+}
+
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
   const list = Array.isArray(entries)
@@ -153,6 +161,7 @@ const EVALUATION_LOAD_LIST_HANDLER = `    const loadEvaluation = () => {
 const EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION = `    const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
+      showSavedEvaluationPlayerName(entry, playerId);
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);
@@ -202,6 +211,7 @@ const EVALUATION_SAVED_LOAD_REQUEST = `  try {
 const EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE = `  try {
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
     let data = cachedSavedEvaluationEntry(id);
+    showSavedEvaluationPlayerName(data, selectedPlayerId);
 
     if (!data) {
       const requestUrl = new URL("/api/evaluation-save", window.location.origin);
@@ -221,6 +231,7 @@ const EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE = `  try {
 
       data = await response.json();
       rememberSavedEvaluationCacheEntry(data);
+      showSavedEvaluationPlayerName(data, selectedPlayerId);
     }
 
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();`;
@@ -249,6 +260,42 @@ const EVALUATION_DELETE_SUCCESS_WITH_INVALIDATION = `  if (!response.ok) {
   }
 
   invalidateSavedEvaluationCache();
+  return true;`;
+
+const EVALUATION_MISSING_PLAYER_PAYLOAD = `  if (!data.playerId) {
+    showToast("Shared evaluation is not available.");
+    return;
+  }`;
+const EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY = `  if (!data.playerId) {
+    throw new Error("Evaluation player is not available.");
+  }`;
+
+const EVALUATION_UNRESOLVED_PLAYER_ROUTE = `      if (!playerPayload) return;`;
+const EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY = `      if (!playerPayload) throw new Error("Evaluation player is not available.");`;
+
+const EVALUATION_INVALID_LINK_RECOVERY = `  const playerId = playerRow ? candidatePlayerId : "";
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
+  return true;`;
+const EVALUATION_INVALID_LINK_RECOVERY_WITH_PLAIN_RESET = `  const playerId = playerRow ? candidatePlayerId : "";
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+
+  if (playerId) {
+    window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));
+  } else {
+    state.evaluationOverallRows = {};
+    state.evaluationSummaryPositions = {};
+    evaluationSearchInput.value = "";
+    window.history.replaceState({}, "", "/evaluation");
+    document.documentElement.dataset.initialEvaluationSelection = "false";
+    renderEmptyEvaluationSelection(true, true);
+    syncEvaluationSearchClearButton();
+  }
+
   return true;`;
 
 /**
@@ -294,7 +341,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     evaluation,
     EVALUATION_LOAD_LIST_HANDLER,
     EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION,
-    "Saved Evaluation list rows use the canonical saved-route hydration path",
+    "Saved Evaluation list rows expose their player name before saved-route hydration starts",
   );
   evaluation = replaceRequired(
     evaluation,
@@ -312,7 +359,31 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     evaluation,
     EVALUATION_SAVED_LOAD_REQUEST,
     EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE,
-    "Saved Evaluation routes reuse cached payloads before making another request",
+    "Saved Evaluation routes show the known player name immediately and reuse cached payloads before making another request",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_MISSING_PLAYER_PAYLOAD,
+    EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY,
+    "Saved and shared Evaluation payloads without a player ID enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY,
+    "Shared Evaluation routes with an unresolved player enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE,
+    EVALUATION_UNRESOLVED_PLAYER_ROUTE_WITH_RECOVERY,
+    "Saved Evaluation routes with an unresolved player enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_INVALID_LINK_RECOVERY,
+    EVALUATION_INVALID_LINK_RECOVERY_WITH_PLAIN_RESET,
+    "Broken saved and shared links without a resolvable player synchronously restore plain Evaluation chrome and URL",
   );
   evaluation = replaceRequired(
     evaluation,

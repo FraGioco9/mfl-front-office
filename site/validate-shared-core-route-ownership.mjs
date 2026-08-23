@@ -14,7 +14,7 @@ const shared = String(artifacts.core || "");
 const chunks = artifacts.routeChunks || {};
 
 const routeOnlyFunctions = {
-  evaluation: ["resetInvalidEvaluationLinkToPlainEvaluation"],
+  evaluation: ["recoverInvalidEvaluationLink"],
   settings: ["setSettingsEmailAddressDraft", "discardSettingsEmailAddressDraft", "saveSettingsEmailAddressDraft", "updateSettingsEmailOption", "validSettingsEmailAddress"],
   player: ["showPlayerNoteTooltip", "setPlayerNote", "normalizePlayerAttributeView", "formatFootedness", "rarityColorForOverall", "shortStatLabel", "playerNoteIconHtml", "measureTooltipAnchorWidth", "queueWalletNotesSave", "allowedPlayerAttributeViews", "toggleWatchlistPlayer", "createWatchlistStar"],
   table: ["currentViewColumns", "tableColumnClass", "agentTitleForWallet", "selectedPlayerIdsArray", "trackWatchlistChange", "isNumericColumn", "uniqueNationalityValues", "uniquePositions", "availableFilterColumns", "contractStatusValue", "precomputedValue", "cachedRowSortValue", "newMintMarker", "rowIsOwnedByLinkedWallet", "displayColumnForPage", "filterLabel", "uniqueColumnValues"],
@@ -55,6 +55,7 @@ for (const name of protectedSharedFunctions) {
 
 // Rounded baseline captured after the shared-core route split. Allow modest growth for
 // genuinely shared behavior while still catching meaningful eager-bundle regressions.
+// This source-level check also keeps a normal CI run on workflow-generated application-core heads.
 const SHARED_CORE_BASELINE_BYTES = 302_000;
 const SHARED_CORE_MAX_GROWTH_RATIO = 1.05;
 const sharedCoreBudgetBytes = Math.floor(SHARED_CORE_BASELINE_BYTES * SHARED_CORE_MAX_GROWTH_RATIO);

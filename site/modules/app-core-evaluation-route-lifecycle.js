@@ -21,6 +21,20 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     const playerId = String(params.get("player") || "").trim();
     const savedId = String(params.get("saved") || "").trim();
     const shareId = String(params.get("share") || "").trim();
+    const queryKeys = Array.from(params.keys());
+    const validQueryKeys = queryKeys.every((key) => key === "player" || key === "saved" || key === "share");
+    const hasEvaluationSelection = Boolean(playerId || savedId || shareId);
+
+    if (search && (!validQueryKeys || !hasEvaluationSelection)) {
+      return {
+        pageName: "evaluation",
+        options: {
+          plain: true,
+          replaceUrl: "/evaluation",
+        },
+      };
+    }
+
     return {
       pageName: "evaluation",
       options: {
@@ -31,7 +45,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
       },
     };
   }`,
-    "Evaluation route preserves its complete query state",
+    "Evaluation route preserves valid selection query state and canonicalizes malformed query strings",
   );
 
   normalizedCore = replaceRequired(
@@ -69,6 +83,58 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     startupDependencies.push(startupWalletPreferencesPromise);
   }`,
     "Evaluation startup waits for wallet preferences before selected-route readiness",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `  updateEvaluationFooterActions();
+  if (evaluationLoadButton) {
+    evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
+    evaluationButtons.hidden = Boolean(state.evaluationPlayerId) ? evaluationButtons.hidden : !walletLinked;
+  }`,
+    `  updateEvaluationFooterActions();
+  if (evaluationLoadButton) {
+    const evaluationRouteSelected = Boolean(
+      state.evaluationPlayerId || evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+    );
+    evaluationLoadButton.hidden = evaluationRouteSelected || !walletLinked;
+    evaluationButtons.hidden = evaluationRouteSelected ? false : !walletLinked;
+  }`,
+    "Saved and shared Evaluation hydration never exposes Load while route identity is pending",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `    const pageName = button.dataset.page;
+    const options = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
+    const target = pagePath(pageName, options);`,
+    `    const pageName = button.dataset.page;
+    const options = tablePages.has(pageName)
+      ? { view: preferredViewForPage(pageName) }
+      : pageName === "evaluation"
+        ? { plain: true }
+        : {};
+    const target = pagePath(pageName, options);`,
+    "Evaluation navigation always targets the fresh base route",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `    if (options.plain) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+    }`,
+    `    if (options.plain) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      state.evaluationOverallRows = {};
+      state.evaluationSummaryPositions = {};
+      evaluationSearchInput.value = "";
+    }`,
+    "Fresh Evaluation route discards the previous player-specific Evaluation state",
   );
 
   normalizedCore = replaceRequired(
@@ -229,6 +295,60 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
 
   evaluationSource = replaceRequired(
     evaluationSource,
+    `function resetInvalidEvaluationLinkToPlainEvaluation() {
+  if (window.location.pathname !== "/evaluation") {
+    return false;
+  }
+
+  if (!evaluationSavedIdFromUrl() && !evaluationShareIdFromUrl()) {
+    return false;
+  }
+
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = null;
+  window.history.replaceState({}, "", "/evaluation");
+  return true;
+}`,
+    `async function recoverInvalidEvaluationLink() {
+  if (window.location.pathname !== "/evaluation") {
+    return false;
+  }
+
+  if (!evaluationSavedIdFromUrl() && !evaluationShareIdFromUrl()) {
+    return false;
+  }
+
+  const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+  let playerRow = candidatePlayerId ? rowByPlayerId(candidatePlayerId) : null;
+
+  if (candidatePlayerId && !playerRow) {
+    try {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: candidatePlayerId,
+      }, 1, { force: true });
+      playerRow = rowByPlayerId(candidatePlayerId);
+    } catch {
+      playerRow = null;
+    }
+  }
+
+  const playerId = playerRow ? candidatePlayerId : "";
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
+  return true;
+}`,
+    "Invalid saved/shared Evaluation links recover to a valid player Evaluation when possible",
+  );
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
     `  evaluationSearchInput.value = "";
   renderEvaluationMflPerUsdControl(false);`,
     `  renderEvaluationMflPerUsdControl(false);`,
@@ -281,6 +401,21 @@ async function loadSharedEvaluation`,
 
   evaluationSource = replaceRequired(
     evaluationSource,
+    `  } catch {
+    showToast("Shared evaluation has expired or could not be loaded.");
+    resetInvalidEvaluationLinkToPlainEvaluation();
+    renderEmptyEvaluationSelection(true);
+  } finally {`,
+    `  } catch {
+    showToast("Shared evaluation has expired or could not be loaded.");
+    await recoverInvalidEvaluationLink();
+    await renderEvaluationPage();
+  } finally {`,
+    "Invalid shared Evaluation recovers through the base player or plain Evaluation renderer",
+  );
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
     `    state.evaluationSavedId = id;
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
@@ -292,6 +427,23 @@ async function loadSharedEvaluation`,
     clearEvaluationSearchFocus();
     await applySharedEvaluationPayload(data.payload);`,
     "Saved Evaluation awaits the same final table render before its loader settles",
+  );
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `  } catch {
+    showToast("Saved evaluation could not be loaded.");
+    resetInvalidEvaluationLinkToPlainEvaluation();
+    updateEvaluationFooterActions();
+    renderEmptyEvaluationSelection(true);
+  } finally {`,
+    `  } catch {
+    showToast("Saved evaluation could not be loaded.");
+    await recoverInvalidEvaluationLink();
+    updateEvaluationFooterActions();
+    await renderEvaluationPage();
+  } finally {`,
+    "Invalid saved Evaluation recovers through the base player or plain Evaluation renderer",
   );
 
   routeChunks.evaluation = evaluationSource;

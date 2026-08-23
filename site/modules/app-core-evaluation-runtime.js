@@ -1,5 +1,5 @@
 // Generated Evaluation core chunk from modules/app-core.js. Do not edit directly.
-function resetInvalidEvaluationLinkToPlainEvaluation() {
+async function recoverInvalidEvaluationLink() {
   if (window.location.pathname !== "/evaluation") {
     return false;
   }
@@ -8,10 +8,41 @@ function resetInvalidEvaluationLinkToPlainEvaluation() {
     return false;
   }
 
+  const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+  let playerRow = candidatePlayerId ? rowByPlayerId(candidatePlayerId) : null;
+
+  if (candidatePlayerId && !playerRow) {
+    try {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: candidatePlayerId,
+      }, 1, { force: true });
+      playerRow = rowByPlayerId(candidatePlayerId);
+    } catch {
+      playerRow = null;
+    }
+  }
+
+  const playerId = playerRow ? candidatePlayerId : "";
   state.evaluationSavedId = "";
   state.evaluationShareId = "";
-  state.evaluationPlayerId = null;
-  window.history.replaceState({}, "", "/evaluation");
+  state.evaluationPlayerId = playerId || null;
+
+  if (playerId) {
+    window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));
+  } else {
+    state.evaluationOverallRows = {};
+    state.evaluationSummaryPositions = {};
+    evaluationSearchInput.value = "";
+    window.history.replaceState({}, "", "/evaluation");
+    document.documentElement.dataset.initialEvaluationSelection = "false";
+    renderEmptyEvaluationSelection(true, true);
+    syncEvaluationSearchClearButton();
+  }
+
   return true;
 }
 
@@ -159,8 +190,7 @@ async function applySharedEvaluationPayload(payload) {
   const data = normalizeSharedEvaluationPayload(payload);
 
   if (!data.playerId) {
-    showToast("Shared evaluation is not available.");
-    return;
+    throw new Error("Evaluation player is not available.");
   }
 
   state.evaluationPlayerId = data.playerId;
@@ -214,14 +244,14 @@ async function loadSharedEvaluation(shareId) {
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
       }, 1, { force: true });
-      if (!playerPayload) return;
+      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     state.evaluationShareId = id;
     await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
-    renderEmptyEvaluationSelection(true);
+    await recoverInvalidEvaluationLink();
+    await renderEvaluationPage();
   } finally {
     state.evaluationShareLoading = false;
   }
@@ -339,6 +369,14 @@ function cachedSavedEvaluationEntry(savedId) {
   return savedEvaluationPayloadCache()[id] || null;
 }
 
+function showSavedEvaluationPlayerName(entry, fallbackPlayerId = "") {
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || fallbackPlayerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const playerName = String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim();
+  if (playerName) evaluationSearchInput.value = playerName;
+  return playerName;
+}
+
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
   const list = Array.isArray(entries)
@@ -422,6 +460,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
   try {
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
     let data = cachedSavedEvaluationEntry(id);
+    showSavedEvaluationPlayerName(data, selectedPlayerId);
 
     if (!data) {
       const requestUrl = new URL("/api/evaluation-save", window.location.origin);
@@ -441,6 +480,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
 
       data = await response.json();
       rememberSavedEvaluationCacheEntry(data);
+      showSavedEvaluationPlayerName(data, selectedPlayerId);
     }
 
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
@@ -452,7 +492,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
       }, 1, { force: true });
-      if (!playerPayload) return;
+      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     data = rememberSavedEvaluationCacheEntry(data) || data;
     state.evaluationSavedId = id;
@@ -462,9 +502,9 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
+    await recoverInvalidEvaluationLink();
     updateEvaluationFooterActions();
-    renderEmptyEvaluationSelection(true);
+    await renderEvaluationPage();
   } finally {
     state.evaluationSavedLoading = false;
   }
@@ -640,6 +680,7 @@ function renderSavedEvaluationList(rows) {
     const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
+      showSavedEvaluationPlayerName(entry, playerId);
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);

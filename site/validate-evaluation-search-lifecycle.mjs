@@ -172,11 +172,15 @@ const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", pri
 const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
 invariant(
   primeSource.includes("function primeRecentSearchData({ force = false, showLoading = false } = {})")
+    && primeSource.includes("if (!force && recentPayload && recentPayloadSignature === currentSignature) {")
+    && primeSource.includes("publishRecentPayload(recentPayload);")
+    && primeSource.includes("return Promise.resolve(renderEmptySearchFromCore());")
+    && primeSource.indexOf("return Promise.resolve(renderEmptySearchFromCore());") < primeSource.indexOf("if (showLoading) beginRecentLoadingGate(field);")
     && primeSource.includes("if (showLoading) beginRecentLoadingGate(field);")
     && primeSource.indexOf("if (showLoading) beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
     && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
     && primeSource.indexOf("const ids = recentEvaluationPlayerIds();") < primeSource.indexOf("return fetchRecentEvaluationPayload(ids).then"),
-  "When route/startup loading is requested, Evaluation must begin the readiness gate, await authoritative Supabase preferences, resolve the five IDs, then request player rows.",
+  "Evaluation recent searches must reuse the matching in-memory payload before any loading gate or request, while uncached startup still awaits Supabase and fetches the recent player rows.",
 );
 invariant(
   primeSource.includes("publishRecentPayload(payload);")
@@ -185,22 +189,35 @@ invariant(
     && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
   "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
 );
-const evaluationPageStart = generatedSharedCore.indexOf("  if (evaluationPageActive) {");
-const evaluationPageEnd = generatedSharedCore.indexOf("  if (playerPageActive) {", evaluationPageStart);
-const evaluationPageSource = evaluationPageStart >= 0 && evaluationPageEnd > evaluationPageStart
-  ? generatedSharedCore.slice(evaluationPageStart, evaluationPageEnd)
-  : "";
 invariant(
-  evaluationPageSource.includes('document.body.classList.add("evaluationPageLoading");\n    if (options.plain || isPlainEvaluationUrl()) {')
-    && evaluationPageSource.includes('state.evaluationShareId = "";')
-    && evaluationPageSource.includes('state.evaluationSavedId = "";')
-    && evaluationPageSource.includes("state.evaluationPlayerId = null;")
-    && evaluationPageSource.includes('evaluationSearchInput.value = "";')
+  generatedSharedCore.includes("let evaluationPageCacheReady = false;")
+    && generatedSharedCore.includes("function preparePlainEvaluationReentry() {")
+    && generatedSharedCore.includes('state.evaluationShareId = "";')
+    && generatedSharedCore.includes('state.evaluationSavedId = "";')
+    && generatedSharedCore.includes("state.evaluationPlayerId = null;")
+    && generatedSharedCore.includes("state.evaluationOverallRows = {};")
+    && generatedSharedCore.includes("state.evaluationSummaryPositions = {};")
+    && generatedSharedCore.includes('evaluationSearchInput.value = "";')
+    && generatedSharedCore.includes("renderEmptyEvaluationSelection(false, true);")
+    && generatedSharedCore.includes("function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false) {")
+    && generatedSharedCore.includes('const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(')
+    && generatedSharedCore.includes("const cachedEvaluationReentry = plainEvaluationRoute")
+    && generatedSharedCore.includes("options.reuseCachedRoute === true")
+    && generatedSharedCore.includes("evaluationPageCacheReady;")
+    && generatedSharedCore.includes('document.documentElement.classList.remove("mflEvaluationReady");')
+    && generatedSharedCore.includes("await finishEvaluationReadiness();")
+    && generatedSharedCore.includes("evaluationPageCacheReady = true;")
+    && generatedSharedCore.includes("const setPageWithoutRouteLoading = setPage;")
+    && generatedSharedCore.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
+    && generatedSharedCore.includes("reuseCachedRoute: reuseCachedEvaluationRoute")
+    && generatedSharedCore.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
+    && generatedSharedCore.includes("await setPageWithoutRouteLoading(pageName, true, options);")
+    && generatedSharedCore.includes("await setPage(pageName, true, options);")
     && generatedSharedCore.includes('if (pageName === "evaluation") {\n    if (options.plain) {')
     && searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
     && !searchRuntime.includes("MutationObserver")
     && !generatedSharedCore.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
-  "Entering plain /evaluation must clear stale selected Evaluation state in the Evaluation render block, while pagePath keeps its canonical options.plain rule and Evaluation-ready restores the Supabase recent five without DOM observation or an early route signal.",
+  "Plain Evaluation re-entry must clear stale player chrome before first paint, reuse the completed in-session route without Uniform Loading/readiness work, and keep first visit/refresh on the normal loading path.",
 );
 invariant(
   searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
@@ -216,4 +233,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, late Evaluation ownership rehydrates authoritative Supabase recents before the search loader reads them, the Evaluation render block clears stale selected state on plain /evaluation, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
+console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");
