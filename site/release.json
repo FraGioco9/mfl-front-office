@@ -1,4 +1,4 @@
 {
-  "version": "1.124.1",
-  "description": "Optimize loading, routing, caching, and navigation across the application"
+  "version": "1.124.2",
+  "description": "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"
 }
