@@ -48,11 +48,10 @@
   async function renderStatsRoute() {
     if (!isStatsPath()) return false;
 
-    if (typeof window.renderDatabaseStatsPage === "function") {
-      await window.renderDatabaseStatsPage(false);
-    } else {
-      window.setDatabaseStatsPageVisibility?.(true);
-    }
+    // database-stats-runtime.js owns data loading and rendering. Its startup
+    // sync already begins the route render when the runtime is loaded, so this
+    // state owner must not invoke renderDatabaseStatsPage a second time.
+    window.setDatabaseStatsPageVisibility?.(true);
     rememberStatsView(false);
     return true;
   }
