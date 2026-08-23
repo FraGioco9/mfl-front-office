@@ -14,6 +14,7 @@ const validators = [
   "validate-release-runtime-ownership.mjs",
   "validate-document-title-runtime.mjs",
   "validate-app-config.mjs",
+  "validate-shared-api-logic.mjs",
   "validate-css-priority.mjs",
   "validate-runtime-style-ownership.mjs",
   "validate-sidebar-lifecycle-ownership.mjs",

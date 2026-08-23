@@ -49,7 +49,9 @@ invariant(packageManifest.scripts?.["build:core"] === "node build-app-core.mjs",
 includes(String(packageManifest.scripts?.check || ""), "npm run build:core", "The full site check must build the canonical core before validation.");
 
 const dataAuth = await readSite("api/_data-auth.js");
-matches(dataAuth, /require\(["']@onflow\/fcl["']\)/, "The data API must verify Dapper proofs with @onflow/fcl.");
+const walletProof = await readSite("api/_wallet-proof.js");
+matches(walletProof, /require\(["']@onflow\/fcl["']\)/, "The canonical wallet-proof owner must verify Dapper proofs with @onflow/fcl.");
+includes(dataAuth, 'require("./_wallet-proof")', "The data API must delegate Dapper proof verification to the canonical wallet-proof owner.");
 
 const bootstrap = await readSite("bootstrap.js");
 const bootstrapCore = await readSite("bootstrap-core.js");

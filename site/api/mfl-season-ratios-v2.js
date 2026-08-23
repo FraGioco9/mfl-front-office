@@ -1,21 +1,8 @@
 const { version: VERSION } = require("../release.json");
+const { supabaseConfig } = require("./_supabase");
+
 const REQUIRED_RATIO_ROWS = 4;
 const REQUEST_TIMEOUT_MS = 8000;
-
-function supabaseConfig() {
-  const url = String(
-    process.env.SUPABASE_URL
-      || process.env.NEXT_PUBLIC_SUPABASE_URL
-      || "",
-  ).replace(/\/+$/, "");
-  const key = String(
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-      || process.env.SUPABASE_ANON_KEY
-      || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      || "",
-  );
-  return url && key ? { url, key } : null;
-}
 
 function normalizeRows(value) {
   return (Array.isArray(value) ? value : [])
@@ -40,7 +27,7 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 async function loadRatiosFromSupabase() {
-  const config = supabaseConfig();
+  const config = supabaseConfig({ allowAnonKey: true });
   if (!config) {
     throw new Error("Supabase is not configured for MFL season ratios.");
   }

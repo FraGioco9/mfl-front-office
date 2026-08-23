@@ -1,126 +1,5 @@
-const fcl = require("@onflow/fcl");
-
-fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
-
-function normalizeWalletAddress(address) {
-  const value = String(address || "").trim().toLowerCase();
-  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
-}
-
-function signatureWalletAddresses(signatures) {
-  return new Set((Array.isArray(signatures) ? signatures : [])
-    .map((signature) => normalizeWalletAddress(signature?.addr || signature?.address))
-    .filter(Boolean));
-}
-
-function walletAccessMessage() {
-  return "MFL Front Office Dapper Opt-In";
-}
-
-function stringToHex(value) {
-  return Buffer.from(value, "utf8").toString("hex");
-}
-
-async function verifyWalletProof(request) {
-  const wallet = normalizeWalletAddress(request.headers["x-dapper-wallet-address"]);
-  const signingWallet = normalizeWalletAddress(request.headers["x-wallet-signing-address"] || wallet);
-  const message = String(request.headers["x-wallet-message"] || "");
-  const proofType = String(request.headers["x-wallet-proof-type"] || "user-signature");
-  const appIdentifier = String(request.headers["x-wallet-app-identifier"] || walletAccessMessage());
-  const nonce = String(request.headers["x-wallet-nonce"] || "");
-  let signatures = [];
-
-  try {
-    signatures = JSON.parse(String(request.headers["x-wallet-signatures"] || "[]"));
-  } catch {
-    return "";
-  }
-
-  if (!wallet || !signingWallet || message !== walletAccessMessage(wallet, signingWallet) || !Array.isArray(signatures) || !signatures.length) {
-    return "";
-  }
-
-  try {
-    if (proofType === "account-proof") {
-      const verified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
-        address: signingWallet,
-        nonce,
-        signatures,
-      });
-
-      if (verified) {
-        return wallet;
-      }
-
-      if (signingWallet !== wallet) {
-        const walletVerified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
-          address: wallet,
-          nonce,
-          signatures,
-        });
-
-        if (walletVerified) {
-          return wallet;
-        }
-      }
-
-      return "";
-    }
-
-    if (!signatureWalletAddresses(signatures).has(signingWallet)) {
-      return "";
-    }
-
-    return (await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures)) ? wallet : "";
-  } catch (error) {
-    console.warn("Could not verify Dapper wallet opt-in proof.", error);
-
-    if (proofType === "account-proof") {
-      return nonce && signatures.length ? wallet : "";
-    }
-
-    return "";
-  }
-}
-
-function supabaseConfig() {
-  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
-  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
-
-  if (!url || !key) {
-    return null;
-  }
-
-  return { url, key };
-}
-
-async function supabaseRequest(pathname, options = {}) {
-  const config = supabaseConfig();
-
-  if (!config) {
-    throw new Error("Supabase is not configured.");
-  }
-
-  const response = await fetch(`${config.url}/rest/v1/${pathname}`, {
-    ...options,
-    headers: {
-      apikey: config.key,
-      Authorization: `Bearer ${config.key}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase request failed with ${response.status}: ${await response.text()}`);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
+const { signedWalletFromRequest } = require("./_wallet-proof");
+const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
 async function writeSupabaseOptIn(wallet) {
   const now = new Date().toISOString();
@@ -158,7 +37,10 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const wallet = await verifyWalletProof(request);
+  const wallet = await signedWalletFromRequest(request, {
+    allowAccountProofFallback: true,
+    warning: "Could not verify Dapper wallet opt-in proof.",
+  });
 
   if (!wallet) {
     response.status(401).json({ error: "Invalid wallet proof." });
