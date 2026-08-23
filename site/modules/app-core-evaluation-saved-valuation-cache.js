@@ -52,12 +52,12 @@ const SAVED_LIST_VALUATION_FROM_CACHE = `    const value = document.createElemen
       : evaluationPresentValueTotalFromPayload(entry.payload);
     value.textContent = Number.isFinite(presentValue) ? formatEvaluationCurrency(presentValue) : "-";`;
 
-const SAVED_LOAD_AFTER_PLAYER_HYDRATION = `      if (!playerPayload) return;
+const SAVED_LOAD_AFTER_PLAYER_HYDRATION = `      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     state.evaluationSavedId = id;
     state.evaluationShareId = "";`;
 
-const SAVED_LOAD_AFTER_PLAYER_HYDRATION_WITH_CACHE_REFRESH = `      if (!playerPayload) return;
+const SAVED_LOAD_AFTER_PLAYER_HYDRATION_WITH_CACHE_REFRESH = `      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     data = rememberSavedEvaluationCacheEntry(data) || data;
     state.evaluationSavedId = id;
