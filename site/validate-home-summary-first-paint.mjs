@@ -10,6 +10,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
+const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
 const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, releaseJson] = await Promise.all([
@@ -145,6 +146,31 @@ includes(
 );
 includes(
   eagerCore,
+  'Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({',
+  "All route data owners must expose one shared cache-readiness contract.",
+);
+includes(
+  eagerCore,
+  "isCurrentRouteReady: currentRouteDataCacheReady,",
+  "Shared loading UI must be able to query whether the committed destination is fully cached.",
+);
+includes(
+  eagerCore,
+  'return route.scope === "empty" || incrementalRouteIsCached(route, 1);',
+  "Incremental pages and views must reuse the canonical payload-cache predicate.",
+);
+includes(
+  eagerCore,
+  "function databaseStatsDataCacheReady() {",
+  "Database Stats must participate in route cache readiness after its data has rendered.",
+);
+includes(
+  eagerCore,
+  "function settingsDataCacheReady() {",
+  "Settings must participate in route cache readiness once its required wallet data is loaded.",
+);
+includes(
+  eagerCore,
   "if (summaryLoaded && summarySnapshot) {",
   "Home navigation must detect an already-loaded cached summary.",
 );
@@ -180,33 +206,33 @@ includes(
 
 includes(
   loadingToastRuntime,
-  '"#notFoundHomeButton",',
-  "The not-found Home action must participate in cached Home navigation suppression.",
+  'const ROUTE_LOADING_REASON = "route-loading";',
+  "Loading toast coordination must identify route-only loading snapshots.",
 );
 includes(
   loadingToastRuntime,
-  '.brandLink[data-page="home"]',
-  "The MFL Front Office brand link must participate in cached Home navigation suppression.",
+  'const cache = Reflect.get(window, "__mflRouteDataCache");',
+  "The loading toast must consume the shared route-data cache contract instead of page-specific cache rules.",
 );
 includes(
   loadingToastRuntime,
-  'a[data-page="home"][href="/"]',
-  "Any canonical Home link must participate in cached Home navigation suppression.",
+  'if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {',
+  "A destination rendered completely from cache must suppress the Loading toast.",
 );
 includes(
   loadingToastRuntime,
-  'if (!homeSummaryCacheReady()) return false;',
-  "A Home navigation must not suppress loading feedback until its summary cache is actually ready.",
+  "let remainingFrames = 3;",
+  "Toast eligibility must be checked after the destination transition has committed its route-specific state.",
 );
-includes(
+excludes(
   loadingToastRuntime,
-  'if (cachedHomeNavigationIntent && homeSummaryCacheReady()) return false;',
-  "Cached Home navigation must bypass the loading toast while retaining the shared loading controller.",
+  "HOME_NAVIGATION_SELECTOR",
+  "Cached-route toast suppression must not depend on Home-specific controls.",
 );
-includes(
+excludes(
   loadingToastRuntime,
-  'window.addEventListener("popstate", onNavigationPopState);',
-  "Back/forward navigation to cached Home must follow the same no-toast behavior.",
+  "cachedHomeNavigationIntent",
+  "Cached-route toast suppression must not retain the old Home-only intent state.",
 );
 
 const loaderStart = eagerCore.indexOf("let summaryLoadPromise = null;");
@@ -259,4 +285,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and cached Home navigation does not show the loading toast.");
+console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and any fully cached route suppresses the Loading toast.");
