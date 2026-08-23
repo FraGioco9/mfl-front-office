@@ -80,6 +80,28 @@ invariant(
   "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
 );
 
+const finishRequestStart = runtime.indexOf("function finishRequest(token) {");
+const finishRequestEnd = runtime.indexOf("function show(", finishRequestStart);
+const finishRequestSource = runtime.slice(finishRequestStart, finishRequestEnd);
+invariant(
+  finishRequestStart >= 0
+    && finishRequestEnd > finishRequestStart
+    && !finishRequestSource.includes("delete body.dataset.staticLoading")
+    && !finishRequestSource.includes("primeLoadingRows()"),
+  "Completing the inner data request must preserve the existing loading tbody while an outer route-loading owner can still be active.",
+);
+
+const releaseStart = runtime.indexOf("function release() {");
+const releaseEnd = runtime.indexOf("function sync(", releaseStart);
+const releaseSource = runtime.slice(releaseStart, releaseEnd);
+invariant(
+  releaseStart >= 0
+    && releaseEnd > releaseStart
+    && releaseSource.includes("delete body.dataset.staticLoading;")
+    && releaseSource.includes('body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());'),
+  "Only final table-loading release may clear the loading marker and remove any remaining placeholder rows.",
+);
+
 const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';
 const requestFinishMarker = 'window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);';
 invariant(
@@ -140,4 +162,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("All table-backed routes keep canonical loading rows through the active request and release normal rendering only after fresh payload state is applied.");
+console.log("All table-backed routes keep one stable loading tbody through nested request completion and release it only after the final route-loading owner settles.");

@@ -306,18 +306,6 @@
 
 
   function hideClubPageControls() {
-    const views = document.querySelector("#progressionPage .views");
-    if (views) {
-      const orderedViews = ["attributes", "contracts", "current", "all"];
-      orderedViews.forEach((viewName) => {
-        const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
-        if (button) views.appendChild(button);
-      });
-      views.querySelectorAll(".viewButton").forEach((button) => {
-        button.hidden = !CLUB_VIEWS.has(button.dataset.view);
-      });
-    }
-
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");

@@ -71,11 +71,31 @@ const LATE_CLUB_HOME_SHELL_GATE = `  if (initialClubRoute && typeof showHomeShel
     };
   }`;
 
+const CLUB_VIEW_BUTTON_REORDER = `  function hideClubPageControls() {
+    const views = document.querySelector("#progressionPage .views");
+    if (views) {
+      const orderedViews = ["attributes", "contracts", "current", "all"];
+      orderedViews.forEach((viewName) => {
+        const button = views.querySelector(\`.viewButton[data-view="\${viewName}"]\`);
+        if (button) views.appendChild(button);
+      });
+      views.querySelectorAll(".viewButton").forEach((button) => {
+        button.hidden = !CLUB_VIEWS.has(button.dataset.view);
+      });
+    }
+
+`;
+
+const CLUB_VIEW_BUTTON_SHARED_OWNERSHIP = `  function hideClubPageControls() {
+`;
+
 /**
  * Make every Club shell entry use the same public Club navigation gate.
  * Direct Club URLs must first resolve as Club in the shared route parser; otherwise
  * startApp falls back to Home after the correct bootstrap paint. The route chunk
  * remains presentation/data ownership only and never owns a second startup workflow.
+ * View-button visibility/order stays with the shared static UI owner so the verified
+ * Club handoff cannot detach and reinsert an already-correct first-paint button row.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeClubEntryLifecycle(routeArtifacts) {
@@ -101,11 +121,17 @@ export function normalizeClubEntryLifecycle(routeArtifacts) {
     "shared Club entry through public navigation gate",
   );
 
-  const normalizedClub = replaceRequired(
+  let normalizedClub = replaceRequired(
     club,
     LATE_CLUB_HOME_SHELL_GATE,
     "",
     "remove late Club startup interception",
+  );
+  normalizedClub = replaceRequired(
+    normalizedClub,
+    CLUB_VIEW_BUTTON_REORDER,
+    CLUB_VIEW_BUTTON_SHARED_OWNERSHIP,
+    "remove Club-specific view-button reorder after shared first paint",
   );
 
   return Object.freeze({
