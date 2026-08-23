@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, appCore, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./index.html"),
   read("./bootstrap.js"),
   read("./controls.css"),
@@ -13,6 +13,7 @@ const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, bui
   read("./static-ui-runtime.js"),
   read("./dropdowns-runtime.js"),
   read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -133,22 +134,34 @@ for (const required of [
 }
 
 for (const required of [
-  "function normalizePageFilterResetBeforeRequest(artifacts) {",
+  'const storedPageState = !clubTarget && tablePages.has(pageName)',
   "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
   "? tableStateWithoutPageFilters(pageName, storedPageState)",
   "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
-  "function normalizeViewFilterStateBeforeTransition(artifacts) {",
+  "if (pageName === activePageName && tablePages.has(pageName)) {",
   "saveTableStateLocally(currentTableState());",
+]) {
+  invariant(appCore.includes(required), `Canonical source must preserve direct Filters transition ownership through ${required}`);
+}
+
+for (const required of [
   "function normalizeFilterSummaryLifecycle(artifacts) {",
   'filterSummary.textContent = String(count);',
   'if (filterSummary) filterSummary.textContent = "0";',
   'document.body.classList.remove("filtersOpen");',
-  "const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);",
-  "const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);",
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);",
+  "const statsNavigationArtifacts = Object.freeze({",
+  'core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),',
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);",
 ]) {
-  invariant(buildNormalizer.includes(required), `Build normalization must preserve direct Filters reset/count/close ownership through ${required}`);
+  invariant(buildNormalizer.includes(required), `Build normalization must preserve Filters summary/close and independent stats navigation ownership through ${required}`);
 }
+invariant(
+  !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
+    && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
+    && !buildNormalizer.includes("pageFilterResetArtifacts")
+    && !buildNormalizer.includes("viewFilterStateArtifacts"),
+  "Build normalization must not reintroduce page/view filter transition rewrites.",
+);
 
 for (const required of [
   "function filterSelectForTarget(target) {",

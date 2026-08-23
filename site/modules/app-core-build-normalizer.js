@@ -22,59 +22,6 @@ import { normalizeTableControlCellAlignment } from "./app-core-table-cell-alignm
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
-function normalizePageFilterResetBeforeRequest(artifacts) {
-  const core = String(artifacts?.core || "");
-  if (!core) throw new Error("Cannot normalize destination filter reset without shared application core.");
-
-  const normalizedCore = replaceRequired(
-    core,
-    `    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
-      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
-      : null;
-    if (savedPageState) {`,
-    `    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
-      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
-      : null;
-    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
-    const savedPageState = resetFilters && storedPageState
-      ? tableStateWithoutPageFilters(pageName, storedPageState)
-      : storedPageState;
-    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
-    if (savedPageState) {`,
-    "destination filters reset before incremental route request",
-  );
-
-  return Object.freeze({
-    ...artifacts,
-    core: normalizedCore,
-  });
-}
-
-function normalizeViewFilterStateBeforeTransition(artifacts) {
-  const core = String(artifacts?.core || "");
-  if (!core) throw new Error("Cannot normalize view filter preservation without shared application core.");
-
-  const normalizedCore = replaceRequired(
-    core,
-    `  if (pageName === activePageName && viewName === activeViewName) return;
-
-`,
-    `  if (pageName === activePageName && viewName === activeViewName) return;
-
-  if (pageName === activePageName && tablePages.has(pageName)) {
-    saveTableStateLocally(currentTableState());
-  }
-
-`,
-    "live table filters persisted before same-page view transition",
-  );
-
-  return Object.freeze({
-    ...artifacts,
-    core: normalizeStatsNavigationLifecycle(normalizedCore),
-  });
-}
-
 function normalizePagerCurrentPageLifecycle(artifacts) {
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
   const table = String(routeChunks.table || "");
@@ -311,10 +258,12 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
-  const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
-  const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
+  const statsNavigationArtifacts = Object.freeze({
+    ...clubSortArtifacts,
+    core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),
+  });
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);
   const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(filterSummaryArtifacts);
   const tableControlCellArtifacts = normalizeTableControlCellAlignment(pagerCurrentPageArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableControlCellArtifacts);

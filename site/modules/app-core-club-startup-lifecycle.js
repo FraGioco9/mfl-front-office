@@ -84,13 +84,23 @@ const GENERIC_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
 const CLUB_FREE_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
       if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();`;
 
-const GENERIC_PREPARE_SAVED_PAGE_STATE = `    const savedPageState = !clubTarget && tablePages.has(pageName)
+const GENERIC_PREPARE_SAVED_PAGE_STATE = `    const storedPageState = !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
-      : null;`;
+      : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;`;
 
-const CLUB_FREE_PREPARE_SAVED_PAGE_STATE = `    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
+const CLUB_FREE_PREPARE_SAVED_PAGE_STATE = `    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
-      : null;`;
+      : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;`;
 
 const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
