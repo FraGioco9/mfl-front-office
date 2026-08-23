@@ -263,6 +263,21 @@
 
     const container = document.getElementById("databaseStatsDistribution");
     if (!(container instanceof HTMLElement)) return;
+    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
+    const distributionSignature = JSON.stringify([
+      activeFilter,
+      customMin,
+      customMax,
+      distributionMode,
+      total,
+      rows,
+    ]);
+    if (container.dataset.mflStatsRenderSignature === distributionSignature
+        && container.firstElementChild) {
+      return;
+    }
+    container.dataset.mflStatsRenderSignature = distributionSignature;
+
     if (!counts.size) {
       const empty = document.createElement("p");
       empty.className = "mflStatsEmpty";
@@ -271,7 +286,6 @@
       return;
     }
 
-    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
     const maxCount = Math.max(...rows.map(([, count]) => count));
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram";
