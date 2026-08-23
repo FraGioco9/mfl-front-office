@@ -64,6 +64,7 @@ const validators = [
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
   "validate-player-reentry-performance.mjs",
+  "validate-player-training-performance.mjs",
   "validate-table-route-core.mjs",
   "validate-incremental-table-performance.mjs",
   "validate-table-render-performance.mjs",
