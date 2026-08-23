@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.3",
+    "Centralize popup stacking and restore consistent first-open modal animations"
+  ],
+  [
     "v1.124.2",
     "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"
   ],
