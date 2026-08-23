@@ -52,17 +52,21 @@ invariant(
 
 invariant(
   searchCore.includes("return [...playerResults, ...agentResults].slice(0, 10);")
-    && searchCore.includes("const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);")
-    && searchCore.includes("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,\n    ].slice(0, 10);")
-    && !searchCore.includes("return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];")
-    && !searchCore.includes("...playerResults.slice(0, 5),\n      ...clubResults,\n      ...agentResults.slice(0, 5),"),
-  "Typed Global Search must use one ten-result budget across players, clubs and agents instead of reserving five-result category buckets.",
+    && !searchCore.includes("return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];"),
+  "The lazy Search owner must give players and agents one shared ten-result budget before the club bridge runs.",
 );
 
-const mergedResultsStart = searchCore.indexOf("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,");
+invariant(
+  normalizedCore.includes("const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);")
+    && normalizedCore.includes("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,\n    ].slice(0, 10);")
+    && !normalizedCore.includes("...playerResults.slice(0, 5),\n      ...clubResults,\n      ...agentResults.slice(0, 5),"),
+  "The shared club-search enhancer must preserve the same ten-result total budget when it merges club matches into Search output.",
+);
+
+const mergedResultsStart = normalizedCore.indexOf("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,");
 invariant(
   mergedResultsStart >= 0,
-  "Typed Global Search must preserve player -> club -> agent category priority while applying the shared ten-result cap.",
+  "The club-search bridge must preserve player -> club -> agent category priority while applying the shared ten-result cap.",
 );
 
 invariant(
@@ -72,7 +76,7 @@ invariant(
     && normalizedCore.includes("function renderSearchResultsNow() {")
     && !normalizedCore.includes("function searchMatchScore(query, primaryText, secondaryText = \"\") {")
     && !normalizedCore.includes("function bestSearchResults(query) {"),
-  "The eager core must retain only Global Search facades while ranking and rendering implementations stay lazy.",
+  "The eager core must retain only Global Search facades while base ranking and rendering implementations stay lazy.",
 );
 
-console.log("Global Search lifecycle validation passed with canonical recent-five behavior and typed-result ranking owned by the lazy Search core.");
+console.log("Global Search lifecycle validation passed with canonical recent-five behavior and base ranking owned by the lazy Search core while the club merge remains a shared bridge.");
