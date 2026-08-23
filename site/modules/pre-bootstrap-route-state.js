@@ -15,17 +15,12 @@ const APP_CONFIG_EXPORTS_WITH_INITIAL_ROUTE = `  window.__mflAppConfig = appConf
 
   const initialRoute = routes.initialRequest(location.pathname);
   if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
-  if (typeof document !== "undefined" && document.body) {
-    const releaseFooter = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-    if (releaseFooter) releaseFooter.textContent = \`MFL Front Office v\${data.release.version}\`;
-  }
 
   const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";`;
 
 /**
  * Commit the real initial route and release metadata in the parser-blocking
- * pre-bootstrap runtime. This keeps first paint authoritative without a CSS
- * override or independently owned version literal.
+ * pre-bootstrap runtime without adding DOM-repair ownership.
  * @param {string} source
  */
 export function normalizePreBootstrapRouteState(source) {
