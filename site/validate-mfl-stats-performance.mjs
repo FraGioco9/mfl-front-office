@@ -18,9 +18,15 @@ includes(
   'import { optimizeMflStatsRuntimeArtifacts } from "./modules/app-core-mfl-stats-performance.js";',
   "The canonical application-core build must load the Step 8 MFL Stats optimizer.",
 );
-includes(
-  build,
-  "const artifacts = optimizeMflStatsRuntimeArtifacts(\n  optimizeTableRenderPerformanceArtifacts(\n    optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(source)),\n  ),\n);",
+const mflStatsOptimizerIndex = build.indexOf("optimizeMflStatsRuntimeArtifacts(");
+const tableRenderOptimizerIndex = build.indexOf("optimizeTableRenderPerformanceArtifacts(", mflStatsOptimizerIndex);
+const incrementalOptimizerIndex = build.indexOf("optimizeIncrementalTableRuntimeArtifacts(", tableRenderOptimizerIndex);
+const normalizedArtifactsIndex = build.indexOf("normalizeBuiltApplicationCoreArtifacts(source)", incrementalOptimizerIndex);
+invariant(
+  mflStatsOptimizerIndex >= 0
+    && tableRenderOptimizerIndex > mflStatsOptimizerIndex
+    && incrementalOptimizerIndex > tableRenderOptimizerIndex
+    && normalizedArtifactsIndex > incrementalOptimizerIndex,
   "Step 8 must consume the fully normalized Step 6/7 artifacts before generated runtimes are written.",
 );
 includes(
