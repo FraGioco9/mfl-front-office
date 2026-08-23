@@ -102,9 +102,14 @@ invariant(renderer, "The Player page renderer owner must exist.");
 const guardIndex = renderer.indexOf("playerDetailLastRenderSignature === renderSignature");
 const subtreeReplaceIndex = renderer.indexOf("playerDetail.innerHTML = `");
 const signatureCommitIndex = renderer.lastIndexOf("playerDetailLastRenderSignature = renderSignature;");
+const subtreeReplacementSites = (renderer.match(/playerDetail\.innerHTML = `/g) || []).length;
 invariant(
   guardIndex >= 0 && subtreeReplaceIndex > guardIndex && signatureCommitIndex > subtreeReplaceIndex,
   "The cached Player re-entry guard must run before the full subtree replacement, and the new signature may only commit after the rebuilt subtree is complete.",
+);
+invariant(
+  subtreeReplacementSites === 1,
+  "The Player renderer must retain one canonical full-subtree rebuild site so the cached re-entry guard cannot leave a second unconditional rebuild path.",
 );
 
 const generatedBanner = "// Generated Player core chunk from modules/app-core.js. Do not edit directly.\n";
