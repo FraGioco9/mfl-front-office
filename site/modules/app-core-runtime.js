@@ -5958,11 +5958,8 @@ function clubViewPayloadCacheKey(route) {
 function rememberClubViewPayload(route, payload) {
   const key = clubViewPayloadCacheKey(route);
   if (!key || !payload || !Array.isArray(payload.rows)) return;
-  clubViewPayloadCache.set(key, {
-    ...payload,
-    columns: Array.isArray(payload.columns) ? [...payload.columns] : [],
-    rows: [...payload.rows],
-  });
+  if (clubViewPayloadCache.get(key) === payload) return;
+  clubViewPayloadCache.set(key, payload);
 }
 
 function cachedClubViewPayload(route) {
@@ -6031,7 +6028,7 @@ function applyIncrementalPayload(route, payload) {
   state.columns = Array.isArray(payload.columns) ? payload.columns : [];
   rebuildColumnIndexMap();
   state.rows = Array.isArray(payload.rows) ? payload.rows : [];
-  state.filteredRows = [...state.rows];
+  state.filteredRows = state.rows;
   state.page = Number(payload.page || 1);
   if (tableRoute && !["club"].includes(route.scope)) {
     state.pageSize = Number(payload.pageSize || state.pageSize);
