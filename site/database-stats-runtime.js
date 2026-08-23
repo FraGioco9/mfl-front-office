@@ -50,6 +50,27 @@
     return page.querySelector("#databaseStatsCustomFilter");
   }
 
+  function distributionContainer() {
+    return document.getElementById("databaseStatsDistribution");
+  }
+
+  function clearDistributionRenderSignature() {
+    const container = distributionContainer();
+    if (container instanceof HTMLElement) delete container.dataset.mflStatsDistributionSignature;
+  }
+
+  function configureHistogramLayout(histogram) {
+    histogram.className = "mflStatsHistogramLayout";
+    histogram.style.display = "grid";
+    histogram.style.gridTemplateColumns = "repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr))";
+    histogram.style.alignItems = "end";
+    histogram.style.gap = "clamp(3px, 0.45vw, 7px)";
+    histogram.style.width = "100%";
+    histogram.style.height = "100%";
+    histogram.style.paddingTop = "34px";
+    histogram.style.minWidth = "620px";
+  }
+
   function syncCustomInputs() {
     const minInput = page.querySelector("#databaseStatsCustomMin");
     const maxInput = page.querySelector("#databaseStatsCustomMax");
@@ -119,17 +140,20 @@
           return;
         }
 
+        const filterChanged = activeFilter !== filter[0];
         customPanelOpen = false;
         syncCustomInputs();
         activeFilter = filter[0];
         syncFilterControls();
-        renderStats();
+        if (filterChanged) renderStats();
       });
     });
 
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
-        distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+        const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+        if (nextMode === distributionMode) return;
+        distributionMode = nextMode;
         renderDistribution();
       });
     });
@@ -261,8 +285,19 @@
       total += count;
     });
 
-    const container = document.getElementById("databaseStatsDistribution");
+    const container = distributionContainer();
     if (!(container instanceof HTMLElement)) return;
+    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
+    const distributionSignature = JSON.stringify([
+      activeFilter,
+      customMin,
+      customMax,
+      distributionMode,
+      rows,
+    ]);
+    if (container.dataset.mflStatsDistributionSignature === distributionSignature && container.firstElementChild) return;
+    container.dataset.mflStatsDistributionSignature = distributionSignature;
+
     if (!counts.size) {
       const empty = document.createElement("p");
       empty.className = "mflStatsEmpty";
@@ -271,10 +306,9 @@
       return;
     }
 
-    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
     const maxCount = Math.max(...rows.map(([, count]) => count));
     const histogram = document.createElement("div");
-    histogram.className = "mflStatsHistogram";
+    configureHistogramLayout(histogram);
     histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
     const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
     histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
@@ -336,7 +370,7 @@
       if (!destroyed && isStatsPath()) renderStats();
       return true;
     } catch (error) {
-      const container = document.getElementById("databaseStatsDistribution");
+      const container = distributionContainer();
       if (container instanceof HTMLElement && isStatsPath()) {
         const message = document.createElement("p");
         message.className = "mflStatsEmpty";
@@ -356,6 +390,7 @@
       else void showStatsPage();
       scheduleCustomPanel();
     } else {
+      clearDistributionRenderSignature();
       closeCustomPanel();
       endBusy();
     }
