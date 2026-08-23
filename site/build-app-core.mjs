@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { optimizeIncrementalTableRuntimeArtifacts } from "./modules/app-core-incremental-table-performance.js";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
@@ -40,7 +41,7 @@ if (!appConfigRuntime) throw new Error("Canonical app configuration produced an 
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
 const source = await readFile(sourcePath, "utf8");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+const artifacts = optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(source));
 const normalized = String(artifacts.core || "").replace(/\s*$/, "");
 const homeRuntime = String(artifacts.routeChunks?.home || "").replace(/\s*$/, "");
 const searchRuntime = String(artifacts.routeChunks?.search || "").replace(/\s*$/, "");
