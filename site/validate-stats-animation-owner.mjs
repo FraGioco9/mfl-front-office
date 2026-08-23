@@ -63,6 +63,16 @@ includes(
   "if (nextMode === state.mflStatsDistributionMode) return;",
   "MFL Stats must ignore an already-active distribution mode.",
 );
+includes(
+  mflStats,
+  'histogram.style.display = "grid";',
+  "Generated MFL Stats must retain the full structural histogram layout after removing the animated wrapper class.",
+);
+includes(
+  mflStats,
+  'class="mflStatsHistogramFill"',
+  "Generated MFL Stats must leave the canonical CSS fill rise intact without replacing or suppressing it.",
+);
 
 includes(
   stylesBase,
