@@ -1,0 +1,56 @@
+name: Temporary Club view-button handoff fix
+
+on:
+  push:
+    branches:
+      - fix/refresh-view-button-flicker
+    paths:
+      - .github/workflows/tmp-club-view-button-handoff.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/refresh-view-button-flicker
+          fetch-depth: 0
+      - name: Remove Club-specific view-button reordering
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("site/modules/app-core.js")
+          source = path.read_text(encoding="utf-8")
+          old = '''  function hideClubPageControls() {
+    const views = document.querySelector("#progressionPage .views");
+    if (views) {
+      const orderedViews = ["attributes", "contracts", "current", "all"];
+      orderedViews.forEach((viewName) => {
+        const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+        if (button) views.appendChild(button);
+      });
+      views.querySelectorAll(".viewButton").forEach((button) => {
+        button.hidden = !CLUB_VIEWS.has(button.dataset.view);
+      });
+    }
+
+'''
+          new = '''  function hideClubPageControls() {
+'''
+          count = source.count(old)
+          if count != 1:
+              raise SystemExit(f"Expected one Club view-button ownership block, found {count}")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+      - name: Commit canonical source change and remove temporary workflow
+        run: |
+          set -euo pipefail
+          rm .github/workflows/tmp-club-view-button-handoff.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js .github/workflows/tmp-club-view-button-handoff.yml
+          git commit -m "Remove Club-specific view button reorder"
+          git push origin HEAD:fix/refresh-view-button-flicker
