@@ -161,8 +161,33 @@
       page.hidden = true;
       page.innerHTML = `<h1 id="notFoundTitle">Page not found</h1>
       <button id="notFoundHomeButton" class="homeOptInButton" type="button">Home</button>`;
+      const title = page.querySelector("#notFoundTitle");
+      if (title instanceof HTMLElement) {
+        title.style.justifySelf = "center";
+        title.style.fontSize = "44px";
+        title.style.textAlign = "center";
+      }
       page.querySelector("#notFoundHomeButton")?.addEventListener("click", () => {
-        window.location.assign("/");
+        const navigateHome = async () => {
+          let setPage = Reflect.get(window, "setPage");
+          if (typeof setPage !== "function") {
+            const startup = Reflect.get(window, "__mflAppStartPromise");
+            if (startup && typeof startup.then === "function") {
+              try {
+                await startup;
+              } catch {
+                // Fall through to the document-navigation recovery below.
+              }
+              setPage = Reflect.get(window, "setPage");
+            }
+          }
+          if (typeof setPage === "function") {
+            await setPage("home");
+            return;
+          }
+          window.location.assign("/");
+        };
+        void navigateHome();
       });
       document.querySelector("main")?.appendChild(page);
     }
