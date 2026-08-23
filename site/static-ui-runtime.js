@@ -47,6 +47,7 @@
   let lastPrimedRouteIdentity = "";
   let lastRoutePage = "";
   let lastRouteView = "";
+  let lastRouteChromeSignature = "";
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -90,6 +91,42 @@
       ? requestedView
       : String(config?.fallback || requestedView || "");
     return { page, view, notFoundKind: "", url: url.href };
+  }
+
+  function routeChromeSignature(state) {
+    const root = document.documentElement;
+    const config = tableViewConfig()[state.page];
+    const viewConfigSignature = config && Array.isArray(config.order)
+      ? `${config.order.join(",")}:${String(config.fallback || "")}`
+      : "";
+    const tableRoute = Boolean(config && Array.isArray(config.order));
+    const contracts = Reflect.get(window, "__mflCoreContracts");
+    const ensureHeader = contracts && typeof contracts === "object"
+      ? contracts.ensureCanonicalTableHeader
+      : null;
+    const tableCapabilitySignature = tableRoute
+      ? [
+          typeof Reflect.get(window, "__mflPrimeTableChrome") === "function" ? "1" : "0",
+          typeof Reflect.get(window, "__mflPrimeTableHeaderSignature") === "function" ? "1" : "0",
+          typeof Reflect.get(window, "__mflPrimeTableStructure") === "function" ? "1" : "0",
+          typeof ensureHeader === "function" ? "1" : "0",
+        ].join("")
+      : "";
+    const releaseVersion = String(window.__mflReleaseVersion || window.__mflRelease?.version || "").trim();
+    const notFoundKind = state.page === "notfound" ? normalizedNotFoundKind(state.notFoundKind || "Page") : "";
+    const bodyRouteState = state.page === "notfound" ? String(document.body?.dataset.page || "") : "";
+
+    return [
+      routeIdentity(state),
+      notFoundKind,
+      String(root.dataset.storedWalletOptIn || ""),
+      String(root.dataset.storedProgressionAccess || ""),
+      root.classList.contains("mflInitialRouteResolved") ? "1" : "0",
+      releaseVersion,
+      viewConfigSignature,
+      tableCapabilitySignature,
+      bodyRouteState,
+    ].join("|");
   }
 
   function syncFooter() {
@@ -334,6 +371,7 @@
 
   function showNotFound(kind = "Page") {
     hideGlobalTooltip({ immediate: true });
+    lastRouteChromeSignature = "";
     if (document.body.dataset.page !== "notfound") document.body.dataset.page = "notfound";
     setActiveNavigation("notfound");
     showRouteShell({
@@ -350,6 +388,9 @@
   const previousView = lastRouteView;
   const pageChanged = Boolean(previousPage && previousPage !== state.page);
   const viewChanged = Boolean(previousPage && !pageChanged && previousView !== state.view);
+  const nextSignature = routeChromeSignature(state);
+  if (!pageChanged && !viewChanged && nextSignature === lastRouteChromeSignature) return state;
+
   const resetFilters = pageChanged && FILTERED_TABLE_PAGES.has(state.page);
   lastRoutePage = state.page;
   lastRouteView = state.view;
@@ -372,6 +413,7 @@
   setActiveNavigation(state.page);
   syncTableViews(state.page, state.view);
   showRouteShell(state, { resetFilters });
+  lastRouteChromeSignature = routeChromeSignature(state);
   return state;
 }
 
