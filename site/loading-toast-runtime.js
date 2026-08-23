@@ -6,6 +6,7 @@
   const TOAST_ID = "mflLoadingToast";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
+  const ROUTE_LOADING_REASON = "route-loading";
   const TOAST_COORDINATION_REASONS = new Set([
     "evaluation-load",
   ]);
@@ -13,6 +14,8 @@
   let destroyed = false;
   let unsubscribe = null;
   let tableScrollTimer = 0;
+  let toastCheckFrame = 0;
+  let toastCheckSequence = 0;
 
   function setToastPosition(centerX) {
     if (!Number.isFinite(centerX)) return;
@@ -135,28 +138,95 @@
     return reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || "")));
   }
 
+  function routeOnlySnapshot(snapshot) {
+    const reasons = Array.isArray(snapshot?.reasons) ? snapshot.reasons : [];
+    return reasons.length > 0 && reasons.every((reason) => String(reason || "") === ROUTE_LOADING_REASON);
+  }
+
+  function currentRouteDataCacheReady() {
+    const cache = Reflect.get(window, "__mflRouteDataCache");
+    return Boolean(
+      cache
+      && typeof cache === "object"
+      && typeof cache.isCurrentRouteReady === "function"
+      && cache.isCurrentRouteReady(),
+    );
+  }
+
   function loadingSnapshot() {
     return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
+  }
+
+  function hideLoadingToast(toast) {
+    if (!(toast instanceof HTMLElement)) return;
+    toast.classList.remove("visible");
+    toast.hidden = true;
+  }
+
+  function cancelToastCheck() {
+    toastCheckSequence += 1;
+    if (toastCheckFrame) cancelAnimationFrame(toastCheckFrame);
+    toastCheckFrame = 0;
+  }
+
+  function showLoadingToastIfNeeded(sequence) {
+    toastCheckFrame = 0;
+    if (destroyed || sequence !== toastCheckSequence || !document.body) return;
+
+    const snapshot = loadingSnapshot();
+    const toast = ensureToast();
+    if (!(toast instanceof HTMLElement)) return;
+    positionToast(toast);
+
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+      hideLoadingToast(toast);
+      return;
+    }
+
+    if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {
+      hideLoadingToast(toast);
+      return;
+    }
+
+    retireVisibleApplicationToast();
+    toast.hidden = false;
+    toast.classList.add("visible");
+  }
+
+  function scheduleToastCheck() {
+    cancelToastCheck();
+    const sequence = toastCheckSequence;
+    let remainingFrames = 3;
+    const nextFrame = () => {
+      if (destroyed || sequence !== toastCheckSequence) return;
+      remainingFrames -= 1;
+      if (remainingFrames <= 0) {
+        showLoadingToastIfNeeded(sequence);
+        return;
+      }
+      toastCheckFrame = requestAnimationFrame(nextFrame);
+    };
+    toastCheckFrame = requestAnimationFrame(nextFrame);
   }
 
   function sync(snapshot = loadingSnapshot()) {
     if (!snapshot || typeof snapshot.busy !== "boolean") snapshot = loadingSnapshot();
     if (destroyed || !document.body) return;
     syncFooterLock(snapshot);
+
     const toast = ensureToast();
     if (!(toast instanceof HTMLElement)) return;
     positionToast(toast);
     const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
-    if (snapshotNeedsToast(snapshot) && !toastSuppressed()) {
-      if (!loadingToastVisible) retireVisibleApplicationToast();
-      toast.hidden = false;
-      toast.classList.add("visible");
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+      cancelToastCheck();
+      hideLoadingToast(toast);
       return;
     }
 
-    toast.classList.remove("visible");
-    toast.hidden = true;
+    if (loadingToastVisible) return;
+    scheduleToastCheck();
   }
 
   function clearTableScrollHover() {
@@ -191,6 +261,7 @@
     unsubscribe = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
+    cancelToastCheck();
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
     window.removeEventListener("mfl:route-ready", sync);
     window.removeEventListener("mfl:ready", sync);

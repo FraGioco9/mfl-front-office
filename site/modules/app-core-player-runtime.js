@@ -506,9 +506,10 @@ function renderPlayerPageOwner(playerId) {
   const row = rowByPlayerId(playerId);
 
   if (!row) {
-    playerDetail.innerHTML = `<div class="emptyState">Player ${escapeHtml(playerId || "")} was not found.</div>`;
+    window.__mflStaticUiRuntime?.showNotFound?.("Player");
     return;
   }
+  document.documentElement.dataset.initialEntityVerified = "player";
 
   const playerName = formatCellValue(row, "name");
   const id = formatCellValue(row, "player_id");

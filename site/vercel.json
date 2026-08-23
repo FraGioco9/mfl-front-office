@@ -16,13 +16,6 @@
     { "source": "/(.*\\.js)", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/(.*\\.css)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
   ],
-  "redirects": [
-    { "source": "/clubs/:id", "destination": "/", "permanent": false },
-    { "source": "/club/:id", "destination": "/", "permanent": false },
-    { "source": "/club/:id/:view", "destination": "/", "permanent": false },
-    { "source": "/club", "destination": "/", "permanent": false },
-    { "source": "/clubs", "destination": "/", "permanent": false }
-  ],
   "rewrites": [
     { "source": "/releases.json", "destination": "/api/releases" },
     { "source": "/(.*)", "destination": "/" }

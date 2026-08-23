@@ -55,7 +55,18 @@ includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view
 includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must reuse passive route chrome and its global tooltip cleanup API.");
+includes(staticUi, "Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy })", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
+includes(staticUi, 'const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;', "Static route chrome must consume the canonical route classifier for not-found state.");
+includes(staticUi, 'if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");', "Typed not-found routes must resolve to the shared not-found shell.");
+includes(staticUi, 'page.id = "notFoundPage";', "Static route chrome must own one reusable not-found page shell.");
+includes(staticUi, 'page.className = "pageView homePage";', "The not-found page must reuse the canonical centered Home page layout.");
+includes(staticUi, '<h1 id="notFoundTitle">Page not found</h1>', "The not-found title must reuse the larger centered site heading instead of table-title alignment.");
+includes(staticUi, 'class="homeOptInButton" type="button">Home</button>', "The Home action must reuse the canonical opt-in button visual language.");
+excludes(staticUi, "homeStats", "The not-found page must not render statistic or 404 cards.");
+excludes(staticUi, "notFoundMessage", "The not-found page must not render a secondary description.");
+excludes(staticUi, "notFoundResource", "The not-found page must not render a resource card or label.");
+includes(staticUi, 'window.location.assign("/");', "The not-found page must provide a direct homepage action.");
+excludes(staticUi, "not-found.css", "The not-found page must not load a standalone stylesheet or cache-busting asset.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
@@ -206,4 +217,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");

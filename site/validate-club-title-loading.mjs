@@ -190,13 +190,19 @@ includes(
 );
 includes(
   clubCore,
+  'document.documentElement.dataset.initialEntityVerified = "club";',
+  "A confirmed Club identity must release the guarded first-paint Club shell.",
+);
+includes(
+  clubCore,
   "const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);",
   "Loaded Club rows must become the authoritative hydrated title identity.",
 );
-excludes(
-  clubCore,
-  "const resolvedClubTitle = await clubTitleReady;",
-  "Roster completion must not wait for title lookup.",
+const emptyRosterIdentityGuard = clubCore.indexOf("if (!loadedClubTitle && clubRows().length === 0) {");
+const deferredEmptyRosterTitle = clubCore.indexOf("const resolvedClubTitle = await clubTitleReady;", emptyRosterIdentityGuard);
+invariant(
+  emptyRosterIdentityGuard >= 0 && deferredEmptyRosterTitle > emptyRosterIdentityGuard,
+  "Only an empty Club roster may wait for title identity before deciding that the Club is missing.",
 );
 
 excludes(routeSplitter, "!important", "Club route ownership must not add CSS priority overrides.");
@@ -217,4 +223,4 @@ invariant(
   "The tracked Club runtime must exactly match the normalized Club artifact.",
 );
 
-console.log("Club filter-free refresh checks passed: shared public entry, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club filter-free refresh checks passed: shared public entry, guarded first-paint identity, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");

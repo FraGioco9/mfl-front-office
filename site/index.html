@@ -38,6 +38,12 @@
             : ["database", "mfl", "progression", "watchlist", "agents"].includes(firstPart)
               ? firstPart
               : "";
+        const initialEntityRoute = tablePage === "club"
+          ? "club"
+          : firstPart === "players"
+            ? "player"
+            : "";
+        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
         const tableConfig = TABLE_VIEW_CONFIG[tablePage];
         if (tableConfig) {
           const lastPart = String(pathParts.at(-1) || "").toLowerCase();
@@ -110,6 +116,14 @@
         display: inline;
       }
       html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,
+      body[data-page="notfound"] main > .pageView:not(#notFoundPage) {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
         display: none;
       }
       html:not(.mflInitialRouteResolved):is(

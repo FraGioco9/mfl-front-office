@@ -562,12 +562,12 @@ export function splitApplicationCoreRuntime(source) {
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (route) void openClubPage(route.clubId, route.view, false);
   });`,
-    "invalid Club popstate redirect",
+    "invalid Club popstate not-found surface",
   );
   club = replaceRequiredFunction(
     club,
@@ -576,7 +576,7 @@ export function splitApplicationCoreRuntime(source) {
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (!route || initialClubRoute) return;
@@ -677,8 +677,12 @@ export function splitApplicationCoreRuntime(source) {
       const resolvedClubTitle = await clubTitleReady;
       if (resolvedClubTitle && String(activeClubId) === nextClubId) {
         activeClubTitle = resolvedClubTitle;
+      }
+      if (!resolvedClubTitle && clubRows().length === 0) {
+        window.__mflStaticUiRuntime?.showNotFound?.("Club");
+        return;
       }`,
-    "Club page canonical incremental loader and title readiness",
+    "Club page canonical incremental loader, title readiness, and missing-entity surface",
   );
 
   club = replaceRequired(

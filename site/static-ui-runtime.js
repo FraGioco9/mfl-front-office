@@ -20,6 +20,7 @@
     "#evaluationLoadModal .evaluationLoadIconButton",
     ".playerNoteIcon",
   ].join(", ");
+  const NOT_FOUND_KINDS = new Set(["Page", "Club", "Player", "Agent", "Watchlist"]);
 
   window.__mflStaticUiRuntime?.destroy?.();
   window.__mflTooltipHeight = TOOLTIP_HEIGHT;
@@ -50,6 +51,18 @@
       url = new URL(window.location.href);
     }
 
+    const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
+    if (typeof canonicalRequest === "function") {
+      const request = canonicalRequest(url.pathname);
+      const options = request?.options && typeof request.options === "object" ? request.options : {};
+      return {
+        page: String(request?.pageName || "home"),
+        view: String(options.view || ""),
+        notFoundKind: String(options.notFoundKind || ""),
+        url: url.href,
+      };
+    }
+
     const parts = url.pathname.split("/").filter(Boolean);
     const first = String(parts[0] || "").toLowerCase();
     const page = first === "my-players"
@@ -66,7 +79,7 @@
     const view = config && Array.isArray(config.order) && config.order.includes(requestedView)
       ? requestedView
       : String(config?.fallback || requestedView || "");
-    return { page, view, url: url.href };
+    return { page, view, notFoundKind: "", url: url.href };
   }
 
   function syncFooter() {
@@ -133,12 +146,63 @@
     syncStatsViews(String(page || ""), String(view || ""));
   }
 
+  function normalizedNotFoundKind(kind = "Page") {
+    const value = String(kind || "Page").trim();
+    return NOT_FOUND_KINDS.has(value) ? value : "Page";
+  }
+
+  function ensureNotFoundPage(kind = "Page") {
+    const normalizedKind = normalizedNotFoundKind(kind);
+    let page = document.getElementById("notFoundPage");
+    if (!(page instanceof HTMLElement)) {
+      page = document.createElement("section");
+      page.id = "notFoundPage";
+      page.className = "pageView homePage";
+      page.hidden = true;
+      page.innerHTML = `<h1 id="notFoundTitle">Page not found</h1>
+      <button id="notFoundHomeButton" class="homeOptInButton" type="button">Home</button>`;
+      const title = page.querySelector("#notFoundTitle");
+      if (title instanceof HTMLElement) {
+        title.style.justifySelf = "center";
+        title.style.fontSize = "44px";
+        title.style.textAlign = "center";
+      }
+      page.querySelector("#notFoundHomeButton")?.addEventListener("click", () => {
+        const navigateHome = async () => {
+          let setPage = Reflect.get(window, "setPage");
+          if (typeof setPage !== "function") {
+            const startup = Reflect.get(window, "__mflAppStartPromise");
+            if (startup && typeof startup.then === "function") {
+              try {
+                await startup;
+              } catch {
+                // Fall through to the document-navigation recovery below.
+              }
+              setPage = Reflect.get(window, "setPage");
+            }
+          }
+          if (typeof setPage === "function") {
+            await setPage("home");
+            return;
+          }
+          window.location.assign("/");
+        };
+        void navigateHome();
+      });
+      document.querySelector("main")?.appendChild(page);
+    }
+    const title = page.querySelector("#notFoundTitle");
+    if (title instanceof HTMLElement) title.textContent = `${normalizedKind} not found`;
+    return page;
+  }
+
   function routeNeedsLockedShell(page) {
     return document.documentElement.dataset.storedWalletOptIn !== "true"
       && ["watchlist", "myplayers", "settings"].includes(page);
   }
 
   function shellForRoute(state) {
+    if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");
     if (routeNeedsLockedShell(state.page)) return document.getElementById("myPlayersLockedPage");
     if (state.page === "database" && state.view === "stats") return document.getElementById("databaseStatsPage");
     if (state.page === "mfl" && state.view === "stats") return document.getElementById("mflStatsPage");
@@ -227,12 +291,24 @@
   const target = shellForRoute(state);
   if (!(target instanceof HTMLElement)) return;
   if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
-  primeDestinationRouteShell(state, target);
+  if (target.id !== "notFoundPage") primeDestinationRouteShell(state, target);
 
   document.querySelectorAll("main > .pageView").forEach((page) => {
     if (page instanceof HTMLElement) page.hidden = page !== target;
   });
 }
+
+  function showNotFound(kind = "Page") {
+    hideGlobalTooltip({ immediate: true });
+    document.body.dataset.page = "notfound";
+    setActiveNavigation("notfound");
+    showRouteShell({
+      page: "notfound",
+      view: "",
+      notFoundKind: normalizedNotFoundKind(kind),
+      url: window.location.href,
+    });
+  }
 
   function syncRouteChrome(urlLike = window.location.href) {
   const state = routeState(urlLike);
@@ -253,6 +329,7 @@
     window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
   }
 
+  if (state.page === "notfound") document.body.dataset.page = "notfound";
   syncFooter();
   setActiveNavigation(state.page);
   syncTableViews(state.page, state.view);
@@ -460,5 +537,5 @@
   window.addEventListener("scroll", positionTooltipPortal, true);
   window.addEventListener("popstate", onPopState);
 
-  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, hideTooltips, destroy });
+  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy });
 })();

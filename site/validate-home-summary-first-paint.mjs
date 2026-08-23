@@ -10,13 +10,15 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
+const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
-const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, coreSource, releaseJson] = await Promise.all([
+const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, releaseJson] = await Promise.all([
   read("./index.html"),
   read("./styles-base.css"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
+  read("./loading-toast-runtime.js"),
   read("./modules/app-core.js"),
   read("./release.json"),
 ]);
@@ -62,8 +64,33 @@ includes(
 );
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
-    < preBootstrap.indexOf("const initialClubPath = String(location.pathname"),
-  "Initial body route state must be committed before route-specific bootstrap work.",
+    < preBootstrap.indexOf('const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";'),
+  "Initial body route state must be committed before canonical URL replacement or route-specific bootstrap work.",
+);
+includes(
+  indexHtml,
+  'html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,',
+  "Every non-Home direct URL must suppress the default Home boxes before route hydration.",
+);
+includes(
+  indexHtml,
+  'body[data-page="notfound"] main > .pageView:not(#notFoundPage)',
+  "A typed not-found route must suppress every previously primed application page.",
+);
+includes(
+  indexHtml,
+  'root.dataset.initialEntityRoute = initialEntityRoute;',
+  "Direct entity URLs must publish an early first-paint identity guard.",
+);
+includes(
+  indexHtml,
+  'data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage',
+  "A direct Club URL must not reveal the table shell before the Club identity is confirmed.",
+);
+includes(
+  indexHtml,
+  'data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage',
+  "A direct Player URL must not reveal the Player shell before the Player identity is confirmed.",
 );
 
 includes(
@@ -104,6 +131,46 @@ includes(
 );
 includes(
   eagerCore,
+  "function homeSummaryCacheReady() {",
+  "Home summary loading must expose one canonical cache-readiness predicate.",
+);
+includes(
+  eagerCore,
+  'Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({',
+  "Shared runtimes must be able to inspect Home summary cache readiness without duplicating data ownership.",
+);
+includes(
+  eagerCore,
+  "isReady: homeSummaryCacheReady,",
+  "The Home summary cache contract must expose only readiness, not duplicate cached data.",
+);
+includes(
+  eagerCore,
+  'Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({',
+  "All route data owners must expose one shared cache-readiness contract.",
+);
+includes(
+  eagerCore,
+  "isCurrentRouteReady: currentRouteDataCacheReady,",
+  "Shared loading UI must be able to query whether the committed destination is fully cached.",
+);
+includes(
+  eagerCore,
+  'return route.scope === "empty" || incrementalRouteIsCached(route, 1);',
+  "Incremental pages and views must reuse the canonical payload-cache predicate.",
+);
+includes(
+  eagerCore,
+  "function databaseStatsDataCacheReady() {",
+  "Database Stats must participate in route cache readiness after its data has rendered.",
+);
+includes(
+  eagerCore,
+  "function settingsDataCacheReady() {",
+  "Settings must participate in route cache readiness once its required wallet data is loaded.",
+);
+includes(
+  eagerCore,
   "if (summaryLoaded && summarySnapshot) {",
   "Home navigation must detect an already-loaded cached summary.",
 );
@@ -137,6 +204,37 @@ includes(
   "The MFL Front Office brand link must navigate through the Home page owner.",
 );
 
+includes(
+  loadingToastRuntime,
+  'const ROUTE_LOADING_REASON = "route-loading";',
+  "Loading toast coordination must identify route-only loading snapshots.",
+);
+includes(
+  loadingToastRuntime,
+  'const cache = Reflect.get(window, "__mflRouteDataCache");',
+  "The loading toast must consume the shared route-data cache contract instead of page-specific cache rules.",
+);
+includes(
+  loadingToastRuntime,
+  'if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {',
+  "A destination rendered completely from cache must suppress the Loading toast.",
+);
+includes(
+  loadingToastRuntime,
+  "let remainingFrames = 3;",
+  "Toast eligibility must be checked after the destination transition has committed its route-specific state.",
+);
+excludes(
+  loadingToastRuntime,
+  "HOME_NAVIGATION_SELECTOR",
+  "Cached-route toast suppression must not depend on Home-specific controls.",
+);
+excludes(
+  loadingToastRuntime,
+  "cachedHomeNavigationIntent",
+  "Cached-route toast suppression must not retain the old Home-only intent state.",
+);
+
 const loaderStart = eagerCore.indexOf("let summaryLoadPromise = null;");
 const loaderEnd = eagerCore.indexOf("\nfunction tablePageKey", loaderStart);
 invariant(loaderStart >= 0 && loaderEnd > loaderStart, "Could not isolate the generated Home summary loader for behavioral validation.");
@@ -164,11 +262,19 @@ const context = {
   console: { error: () => {} },
 };
 vm.runInNewContext(`${loaderSource}\nthis.__loadSummary = loadSummary;`, context);
+invariant(
+  context.__mflHomeSummaryCache?.isReady?.() === false,
+  "Home summary cache readiness must remain false before the first successful load.",
+);
 await context.__loadSummary();
 invariant(fetchCount === 1, "Initial Home summary load must fetch exactly once.");
 invariant(
   updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87,
   "Initial Home summary load must render the fetched Players/Wallets counts.",
+);
+invariant(
+  context.__mflHomeSummaryCache?.isReady?.() === true,
+  "Home summary cache readiness must become true after a successful load.",
 );
 
 updates.length = 0;
@@ -179,4 +285,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home summary first-paint validation passed: deep links show header placeholders immediately and brand-link Home navigation repaints cached Players/Wallets counts after route priming.");
+console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and any fully cached route suppresses the Loading toast.");

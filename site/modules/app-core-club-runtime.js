@@ -369,7 +369,9 @@
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;
       renderClubTitle();
       void clubTitleReady.then((resolvedTitle) => {
-        if (!resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+        if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
+        document.documentElement.dataset.initialEntityVerified = "club";
+        if (state.currentPage !== CLUB_PAGE) return;
         activeClubTitle = resolvedTitle;
         renderClubTitle();
       });
@@ -383,7 +385,21 @@
         : false;
       if (!dataLoaded) return;
       const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
-      if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+      if (loadedClubTitle) {
+        activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+        document.documentElement.dataset.initialEntityVerified = "club";
+      }
+      if (!loadedClubTitle && clubRows().length === 0) {
+        const resolvedClubTitle = await clubTitleReady;
+        if (!resolvedClubTitle) {
+          window.__mflStaticUiRuntime?.showNotFound?.("Club");
+          return;
+        }
+        activeClubTitle = resolvedClubTitle;
+        document.documentElement.dataset.initialEntityVerified = "club";
+      } else if (clubRows().length > 0) {
+        document.documentElement.dataset.initialEntityVerified = "club";
+      }
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
@@ -434,7 +450,7 @@
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (route) void openClubPage(route.clubId, route.view, false);
@@ -444,7 +460,7 @@
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
+      window.__mflStaticUiRuntime?.showNotFound?.("Club");
       return;
     }
     if (!route || initialClubRoute) return;

@@ -6,7 +6,7 @@ const APP_CONFIG_EXPORTS = `  window.__mflAppConfig = appConfig;
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
 
-  const initialClubPath = String(location.pathname || "/");`;
+  const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";`;
 
 const APP_CONFIG_EXPORTS_WITH_INITIAL_ROUTE = `  window.__mflAppConfig = appConfig;
   window.__mflReleaseVersion = data.release.version;
@@ -15,7 +15,7 @@ const APP_CONFIG_EXPORTS_WITH_INITIAL_ROUTE = `  window.__mflAppConfig = appConf
   const initialRoute = routes.initialRequest(location.pathname);
   if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
 
-  const initialClubPath = String(location.pathname || "/");`;
+  const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";`;
 
 /**
  * Commit the real initial route to body[data-page] in the parser-blocking
