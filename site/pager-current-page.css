@@ -1,0 +1,54 @@
+#pageText {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.pagerCurrentPageInput {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 22px;
+  padding: 0 2px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.pagerCurrentPageInput:hover:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.pagerCurrentPageInput:focus:not(:disabled),
+.pagerCurrentPageInput:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.pagerCurrentPageInput:disabled {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: wait;
+}
+
+.pagerCurrentPageTotal {
+  min-width: 1ch;
+  white-space: nowrap;
+}
