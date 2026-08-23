@@ -32,9 +32,19 @@ includes(
   "Database Stats must start or intentionally restart animation on the persistent distribution container.",
 );
 includes(
+  databaseStats,
+  "const routeAnimationObserver = new MutationObserver(syncDistributionRouteAnimation);",
+  "Database Stats must reset its persistent animation class when the route is left.",
+);
+includes(
   mflStats,
   "animateMflStatsDistribution(options.restartDistributionAnimation === true);",
   "MFL Stats must start or intentionally restart animation on the persistent distribution container.",
+);
+includes(
+  mflStats,
+  "const mflStatsDistributionAnimationObserver = new MutationObserver(syncMflStatsDistributionAnimationRoute);",
+  "MFL Stats must reset its persistent animation class when the route is left.",
 );
 
 includes(histogramStyles, "@property --mfl-stats-rise-progress", "Stats histogram rise progress must be a registered custom property.");
@@ -71,4 +81,4 @@ includes(
   "The canonical application-core build must apply the persistent MFL Stats animation normalizer.",
 );
 
-console.log("Database Stats and MFL Stats keep histogram animation progress on their persistent distribution containers.");
+console.log("Database Stats and MFL Stats keep one inherited animation timeline on their persistent distribution containers.");
