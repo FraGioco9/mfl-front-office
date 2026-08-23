@@ -220,6 +220,11 @@
   }
 
   function onClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#themeButton")) {
+      window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
+    }
+
     if (consumeActivePageViewFilterEvent(event)) return;
     if (suppressDraggedClick(event)) {
       endNavigationIntent();
@@ -229,7 +234,6 @@
     syncWatchlistSelectorNavigationIntent(event.target);
     if (beginNavigationIntent(event.target)) handOffNavigationIntent();
 
-    const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#showAddFilterButton")) return;
 
     const select = addFilterSelect();
