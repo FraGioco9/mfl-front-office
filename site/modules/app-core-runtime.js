@@ -6407,6 +6407,19 @@ function activateViewButton(button) {
     });
     return;
   }
+  if (state.currentPage === "database"
+      && state.view === "stats"
+      && pageName === "database"
+      && (viewName === "attributes" || viewName === "contracts")) {
+    void runViewTransition("database", viewName, { statePageName: "database" }, async () => {
+      await setPage("database", false, {
+        view: viewName,
+        skipNavigationTransition: true,
+        skipNavigationLoading: true,
+      });
+    });
+    return;
+  }
   if (pageName !== state.currentPage && tablePages.has(pageName)) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
