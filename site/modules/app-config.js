@@ -39,6 +39,8 @@ export const CLUB_VIEW_SLUGS = Object.freeze({
 export const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
 
 export const ROUTE_CORE_PATHS = Object.freeze({
+  home: "/modules/app-core-home-runtime.js",
+  search: "/modules/app-core-search-runtime.js",
   evaluation: "/modules/app-core-evaluation-runtime.js",
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
   club: "/modules/app-core-club-runtime.js",
