@@ -294,10 +294,8 @@
     activeFilter = nextFilter;
     customPanelOpen = false;
     syncFilterControls();
-    if (effectiveFilterChanged) {
-      requestDistributionInteractionAnimation();
-      renderStats();
-    }
+    if (effectiveFilterChanged) requestDistributionInteractionAnimation();
+    if (effectiveFilterChanged) renderStats();
   }
 
   function retirementYears(group) {
@@ -517,7 +515,6 @@
     window.removeEventListener("resize", scheduleCustomPanel);
     window.removeEventListener("scroll", scheduleCustomPanel, true);
     window.removeEventListener("mfl:route-ready", syncDistributionAnimationRouteSession);
-    window.removeEventListener("popstate", syncDistributionAnimationRouteSession);
     closeCustomPanel();
     endBusy();
   }
@@ -528,7 +525,6 @@
   window.addEventListener("resize", scheduleCustomPanel);
   window.addEventListener("scroll", scheduleCustomPanel, true);
   window.addEventListener("mfl:route-ready", syncDistributionAnimationRouteSession);
-  window.addEventListener("popstate", syncDistributionAnimationRouteSession);
   window.renderDatabaseStatsPage = showStatsPage;
   window.setDatabaseStatsPageVisibility = (visible) => {
     if (visible && isStatsPath()) page.hidden = false;
