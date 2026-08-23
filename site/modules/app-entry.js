@@ -109,6 +109,7 @@ function preloadClassicScript(path) {
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/loading-toast-runtime.js",
   "/static-ui-runtime.js",
+  "/document-title-runtime.js",
   "/control-interactions-runtime.js",
   "/global-search-runtime.js",
 ]);
