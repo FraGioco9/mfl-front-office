@@ -1,4 +1,66 @@
 // Generated MFL Stats core chunk from modules/app-core.js. Do not edit directly.
+let mflStatsDistributionAnimationRevision = 0;
+let mflStatsDistributionAnimationFrame = 0;
+let mflStatsDistributionAnimationUnsubscribe = null;
+
+function cancelMflStatsDistributionAnimationSchedule() {
+  mflStatsDistributionAnimationRevision += 1;
+  if (mflStatsDistributionAnimationFrame) cancelAnimationFrame(mflStatsDistributionAnimationFrame);
+  mflStatsDistributionAnimationFrame = 0;
+  mflStatsDistributionAnimationUnsubscribe?.();
+  mflStatsDistributionAnimationUnsubscribe = null;
+}
+
+function playMflStatsDistributionAnimation(container, revision) {
+  mflStatsDistributionAnimationFrame = 0;
+  if (revision !== mflStatsDistributionAnimationRevision
+      || document.body?.dataset.page !== "mflstats"
+      || !container.isConnected) return;
+  container.querySelectorAll(".mflStatsHistogramFill").forEach((fill) => {
+    if (!(fill instanceof HTMLElement)) return;
+    fill.getAnimations().forEach((animation) => animation.cancel());
+    fill.animate([
+      { transform: "scaleY(0.18)" },
+      { transform: "scaleY(1)" },
+    ], {
+      duration: 220,
+      easing: "ease-out",
+    });
+  });
+}
+
+function scheduleMflStatsDistributionAnimation(container) {
+  cancelMflStatsDistributionAnimationSchedule();
+  const revision = mflStatsDistributionAnimationRevision;
+  const scheduleAfterPaint = () => {
+    if (revision !== mflStatsDistributionAnimationRevision) return;
+    mflStatsDistributionAnimationFrame = requestAnimationFrame(() => {
+      if (revision !== mflStatsDistributionAnimationRevision) return;
+      mflStatsDistributionAnimationFrame = requestAnimationFrame(() => playMflStatsDistributionAnimation(container, revision));
+    });
+  };
+
+  const controller = window.__mflInteractionBusy;
+  if (controller?.isBusy?.()) {
+    mflStatsDistributionAnimationUnsubscribe = controller.subscribe?.((snapshot) => {
+      if (revision !== mflStatsDistributionAnimationRevision || snapshot?.busy) return;
+      const unsubscribe = mflStatsDistributionAnimationUnsubscribe;
+      mflStatsDistributionAnimationUnsubscribe = null;
+      unsubscribe?.();
+      scheduleAfterPaint();
+    }, { immediate: false }) || null;
+    if (!controller.isBusy()) {
+      const unsubscribe = mflStatsDistributionAnimationUnsubscribe;
+      mflStatsDistributionAnimationUnsubscribe = null;
+      unsubscribe?.();
+      scheduleAfterPaint();
+    }
+    return;
+  }
+
+  scheduleAfterPaint();
+}
+
 const mflStatsOverallFilterOptions = [
   { id: "all", label: "All", min: null, max: null },
   { id: "90-94", label: "90-94", min: 90, max: 94 },
@@ -152,6 +214,7 @@ function renderMflStatsDistribution(packableRows) {
   mflStatsAgeDistribution.dataset.mflStatsRenderSignature = distributionSignature;
 
   if (!counts.size) {
+    cancelMflStatsDistributionAnimationSchedule();
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
   }
@@ -170,12 +233,13 @@ function renderMflStatsDistribution(packableRows) {
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
     const item = document.createElement("div");
     item.className = "mflStatsHistogramItem";
-    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="animation:none;--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
     histogram.appendChild(item);
   });
 
   fragment.appendChild(histogram);
   mflStatsAgeDistribution.replaceChildren(fragment);
+  scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution);
 }
 
 function renderMflStatsPage() {
