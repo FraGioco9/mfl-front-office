@@ -416,7 +416,7 @@ body[data-page="club"] #progressionPage .rowsField {
 
 .mflGlobalTooltip {
   position: fixed;
-  z-index: 2147483647;
+  z-index: var(--mfl-z-topmost);
   box-sizing: border-box;
   width: max-content;
   max-width: min(320px, calc(100vw - 16px));
@@ -515,7 +515,7 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 
 #databaseStatsPage #databaseStatsCustomFilter {
   position: fixed;
-  z-index: 2147483000;
+  z-index: var(--mfl-z-chrome);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;

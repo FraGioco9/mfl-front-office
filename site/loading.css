@@ -41,7 +41,7 @@ html.mflInteractionBusy body::after {
   visibility: visible;
   position: fixed;
   inset: 0;
-  z-index: 2147483646;
+  z-index: var(--mfl-z-busy-shield);
   background: transparent;
   pointer-events: auto;
   cursor: wait;
@@ -126,11 +126,11 @@ html.mflTableScrolling #progressionPage .tableScroller tbody {
 
 .toastMessage:not(#mflLoadingToast) {
   bottom: var(--mfl-toast-bottom, 88px);
-  z-index: 2147483635;
+  z-index: var(--mfl-z-toast);
 }
 
 #mflLoadingToast {
-  z-index: 2147483647;
+  z-index: var(--mfl-z-topmost);
 }
 
 html.mflSelectionStartupResetPending #selectionBar {
