@@ -1,19 +1,18 @@
 // @ts-check
 
-import { replaceRequiredFunction } from "./app-core-splitter-utils.js";
+import { replaceRequired, replaceRequiredFunction } from "./app-core-splitter-utils.js";
 
-const COUNTED_SEARCH_INDEX = `function buildSearchIndex(options = {}) {
-  if (state.searchIndexesLoaded && state.searchIndex.length && !options.force) {
-    return;
-  }
+const LOCAL_AGENT_BUILDER = `  const addAgent = (walletAddress, name) => {
+    const entry = buildAgentSearchEntry(walletAddress, name);
+    if (!entry || agentsByWallet.has(entry.walletAddress)) {
+      return;
+    }
 
-  state.searchIndex = state.rows.map((row) => buildPlayerSearchEntryFromRow(row));
-  if (!state.evaluationSearchIndex.length || options.force) {
-    state.evaluationSearchIndex = [...state.searchIndex];
-  }
+    agentsByWallet.set(entry.walletAddress, entry);
+    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
+  };`;
 
-  const agentsByWallet = new Map();
-  const addAgent = (walletAddress, name, playerCountIncrement = 0) => {
+const COUNTED_LOCAL_AGENT_BUILDER = `  const addAgent = (walletAddress, name, playerCountIncrement = 0) => {
     const entry = buildAgentSearchEntry(walletAddress, name, playerCountIncrement);
     if (!entry) {
       return;
@@ -29,16 +28,10 @@ const COUNTED_SEARCH_INDEX = `function buildSearchIndex(options = {}) {
 
     agentsByWallet.set(entry.walletAddress, entry);
     if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
-  };
+  };`;
 
-  state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
-  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name"), 1));
-  state.agentSearchIndex = Array.from(agentsByWallet.values());
-  state.searchIndexesLoaded = true;
-  if (state.currentPage === "agents" && tablePageTitle) {
-      renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
-  }
-}`;
+const LOCAL_AGENT_ROW_INDEX = `  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));`;
+const COUNTED_LOCAL_AGENT_ROW_INDEX = `  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name"), 1));`;
 
 const REUSED_AGENT_COUNTS = `function bestSearchResults(query) {
   if ((!state.searchIndex.length && state.rows.length) || (!state.agentSearchIndex.length && (state.rows.length || state.walletRows.length))) {
@@ -92,11 +85,17 @@ export function optimizeGlobalSearchRuntimeArtifacts(artifacts) {
   if (!core) throw new Error("Cannot optimize Global Search without shared core.");
   if (!search) throw new Error("Cannot optimize Global Search without its action chunk.");
 
-  core = replaceRequiredFunction(
+  core = replaceRequired(
     core,
-    "buildSearchIndex",
-    COUNTED_SEARCH_INDEX,
+    LOCAL_AGENT_BUILDER,
+    COUNTED_LOCAL_AGENT_BUILDER,
     "Global Search local agent player counts accumulated during index construction",
+  );
+  core = replaceRequired(
+    core,
+    LOCAL_AGENT_ROW_INDEX,
+    COUNTED_LOCAL_AGENT_ROW_INDEX,
+    "Global Search player rows contribute to indexed agent counts",
   );
   search = replaceRequiredFunction(
     search,
