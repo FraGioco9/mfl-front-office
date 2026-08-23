@@ -46,6 +46,13 @@
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
 
+  function shouldPreserveRenderedRows(body = elements().body) {
+    if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
+    const root = document.documentElement;
+    return root.classList.contains("mflInitialRouteResolved")
+      && !root.classList.contains("mflNavigationPending");
+  }
+
   function initialClubHeader() {
     const root = document.documentElement;
     if (root.classList.contains("mflInitialRouteResolved")) return null;
@@ -134,8 +141,10 @@
     if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return 0;
     const token = ++nextRequestToken;
     activeRequestToken = token;
-    const body = prepareLoadingSurface();
-    if (body) primeLoadingRows();
+    const currentBody = elements().body;
+    const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);
+    const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
+    if (body && !preserveRenderedRows) primeLoadingRows();
     return token;
   }
 
@@ -216,6 +225,7 @@
       release();
       return;
     }
+    if ((snapshot.dataLoading || requestActive()) && shouldPreserveRenderedRows()) return;
     if (snapshot.dataLoading || requestActive()) show({ replaceExisting: true });
     else release();
   }
