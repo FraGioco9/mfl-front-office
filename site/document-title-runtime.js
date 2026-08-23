@@ -31,6 +31,8 @@
   let destroyed = false;
   let frame = 0;
   let observer = null;
+  let stableRouteIdentity = "";
+  let stableTitle = "";
 
   function cleanText(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
@@ -61,13 +63,24 @@
     return "notfound";
   }
 
-  function currentPageName() {
+  function currentRouteRequest() {
     const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
-    if (typeof canonicalRequest === "function") {
-      const request = canonicalRequest(window.location.pathname);
-      return normalizedPageName(request?.pageName);
-    }
-    return fallbackRoutePageName();
+    if (typeof canonicalRequest === "function") return canonicalRequest(window.location.pathname);
+    return { pageName: fallbackRoutePageName(), options: {} };
+  }
+
+  function currentPageName() {
+    return normalizedPageName(currentRouteRequest()?.pageName);
+  }
+
+  function routeIdentityForRequest(request) {
+    const pageName = normalizedPageName(request?.pageName);
+    const options = request?.options || {};
+    if (pageName === "club") return `club:${cleanText(options.clubId)}`;
+    if (pageName === "agents") return `agents:${cleanText(options.walletAddress).toLowerCase()}`;
+    if (pageName === "watchlist") return `watchlist:${cleanText(options.watchlistId)}`;
+    if (pageName === "player") return `player:${cleanText(options.playerId)}`;
+    return pageName;
   }
 
   function routeBusy() {
@@ -133,8 +146,8 @@
     return withAppName(notFoundTitle);
   }
 
-  function titleForCurrentRoute() {
-    const pageName = currentPageName();
+  function titleForCurrentRoute(request = currentRouteRequest()) {
+    const pageName = normalizedPageName(request?.pageName);
     if (pageName === "home") return APP_NAME;
     if (pageName === "player") return resolvedPlayerTitle();
     if (pageName === "club") return resolvedClubTitle();
@@ -149,7 +162,15 @@
 
   function sync() {
     if (destroyed) return;
-    const nextTitle = titleForCurrentRoute();
+    const request = currentRouteRequest();
+    const routeIdentity = routeIdentityForRequest(request);
+    const busy = routeBusy();
+    const preserveResolvedTitle = busy && routeIdentity === stableRouteIdentity && stableTitle;
+    const nextTitle = preserveResolvedTitle ? stableTitle : titleForCurrentRoute(request);
+    if (!busy && nextTitle) {
+      stableRouteIdentity = routeIdentity;
+      stableTitle = nextTitle;
+    }
     if (nextTitle && document.title !== nextTitle) document.title = nextTitle;
   }
 
