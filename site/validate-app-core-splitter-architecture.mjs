@@ -14,6 +14,8 @@ const splitterPaths = [
   "./modules/app-core-table-chunk.js",
   "./modules/app-core-wallet-chunk.js",
   "./modules/app-core-watchlist-route-chunk.js",
+  "./modules/app-core-home-chunk.js",
+  "./modules/app-core-search-chunk.js",
 ];
 const [utility, ...splitters] = await Promise.all([utilityPath, ...splitterPaths].map(read));
 
@@ -40,11 +42,11 @@ splitterPaths.forEach((path, index) => {
     `${path} must consume the shared splitter utility.`,
   );
   invariant(
-    !/function\s+extractRequired(?:Player|Settings|Table|Wallet|WatchlistRoute)?Section\s*\(/.test(source),
+    !/function\s+extractRequired(?:Player|Settings|Table|Wallet|WatchlistRoute|Home|Search)?Section\s*\(/.test(source),
     `${path} must not reintroduce a private required-section extractor.`,
   );
   invariant(
-    !/function\s+renameRequired(?:Table|Wallet|WatchlistRoute)Owner\s*\(/.test(source),
+    !/function\s+renameRequired(?:Table|Wallet|WatchlistRoute|Home|Search)Owner\s*\(/.test(source),
     `${path} must not reintroduce a private owner-renaming helper.`,
   );
 });
@@ -62,4 +64,4 @@ invariant(
   "Shared split-result finalization must remain in active splitter use.",
 );
 
-console.log("Canonical application-core splitter architecture validation passed.");
+console.log("Canonical application-core splitter architecture validation passed, including Home and Global Search domain ownership.");
