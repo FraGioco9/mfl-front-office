@@ -36,6 +36,7 @@ const validators = [
   "validate-shared-core-route-ownership.mjs",
   "validate-evaluation-route-ownership.mjs",
   "validate-evaluation-refresh-hydration.mjs",
+  "validate-evaluation-reentry-performance.mjs",
   "validate-nationality-flag-tooltips.mjs",
   "validate-bootstrap-ownership.mjs",
   "validate-prebuilt-core-loading.mjs",
