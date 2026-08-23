@@ -410,6 +410,29 @@
       if (typeof hideMflPlayersInput !== "undefined" && hideMflPlayersInput) hideMflPlayersInput.checked = false;
       if (typeof newMintsInput !== "undefined" && newMintsInput) newMintsInput.checked = false;
 
+      const clubFlagAssetUrls = new Set();
+      clubRows().forEach((row) => {
+        const flagMarkup = countryFlagHtml(getValue(row, "nationality"));
+        const sourceMatch = flagMarkup.match(/src="([^"]+)"/);
+        if (sourceMatch?.[1]) clubFlagAssetUrls.add(sourceMatch[1]);
+      });
+      await Promise.allSettled(Array.from(clubFlagAssetUrls, async (src) => {
+        const image = new Image();
+        image.decoding = "sync";
+        await new Promise((resolve) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+          image.src = src;
+          if (image.complete) resolve();
+        });
+        if (typeof image.decode === "function") {
+          try {
+            await image.decode();
+          } catch {
+            // A failed flag keeps the existing image fallback without blocking the roster.
+          }
+        }
+      }));
       if (typeof updateViewButtons === "function") updateViewButtons();
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
