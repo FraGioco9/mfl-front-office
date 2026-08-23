@@ -32,8 +32,10 @@ const [
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const eagerCore = String(artifacts.core || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
 new Function(eagerCore);
 new Function(clubCore);
+new Function(tableCore);
 
 includes(
   routeSplitter,
@@ -131,22 +133,32 @@ includes(
 includes(
   eagerCore,
   'state.currentPage = "club";',
-  "Club ownership must be committed before the payload is handed back to the Club route owner.",
+  "Club ownership must be committed before the shared Table render.",
 );
 includes(
   eagerCore,
-  "if (!clubPage) originalApplyFilters.call(this, { save: false });",
-  "Only non-Club incremental pages may render through the generic pre-route filter pipeline.",
+  "state.pageSize = Math.max(100, state.rows.length || 100);",
+  "Club must establish its full-roster page size before the shared Table render.",
+);
+includes(
+  eagerCore,
+  "originalApplyFilters.call(this, { save: false });",
+  "Club and non-Club table payloads must render through the same shared Table pass.",
 );
 
 const incrementalLoaderStart = eagerCore.indexOf("window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage");
 const incrementalLoaderEnd = eagerCore.indexOf("})();", incrementalLoaderStart);
 const incrementalLoader = eagerCore.slice(incrementalLoaderStart, incrementalLoaderEnd);
 invariant(incrementalLoaderStart >= 0 && incrementalLoaderEnd > incrementalLoaderStart, "Shared incremental route loader must exist.");
+includes(
+  incrementalLoader,
+  "originalApplyFilters.call(this, { save: false });",
+  "The shared incremental loader must perform the single final Club table render.",
+);
 excludes(
   incrementalLoader,
-  "if (clubPage) applyFilters(",
-  "Club payload loading must not execute the generic filter pipeline before Club state is reset.",
+  "if (!clubPage) originalApplyFilters.call(this, { save: false });",
+  "Club must not be excluded from the shared final table render.",
 );
 excludes(
   incrementalLoader,
@@ -154,6 +166,16 @@ excludes(
   "Club payload loading must never restore saved Club filter state.",
 );
 
+includes(
+  tableCore,
+  'if (state.currentPage === "club") {',
+  "The canonical Table filter owner must retain the filter-free Club branch.",
+);
+includes(
+  tableCore,
+  "state.filteredRows = [...state.rows];",
+  "The shared Table pass must render the loaded Club roster directly.",
+);
 excludes(
   clubCore,
   "applyFilters = function applyFiltersWithClubRows",
@@ -165,22 +187,29 @@ excludes(
   "Club must not capture a second Table filter owner.",
 );
 
-const rosterLoad = clubCore.indexOf("window.mflLoadIncrementalRoutePage");
-const filterRulesReset = clubCore.indexOf("filterRules.replaceChildren();", rosterLoad);
-const hideRetiredReset = clubCore.indexOf("hideRetiredInput.checked = false;", filterRulesReset);
-const hideRetiringReset = clubCore.indexOf("hideRetiringInput.checked = false;", hideRetiredReset);
-const hideMflReset = clubCore.indexOf("hideMflPlayersInput.checked = false;", hideRetiringReset);
-const newMintsReset = clubCore.indexOf("newMintsInput.checked = false;", hideMflReset);
-const finalFilterRender = clubCore.indexOf('applyFilters({ save: false, localOnly: true });', newMintsReset);
-invariant(
-  rosterLoad >= 0
-    && filterRulesReset > rosterLoad
-    && hideRetiredReset > filterRulesReset
-    && hideRetiringReset > hideRetiredReset
-    && hideMflReset > hideRetiringReset
-    && newMintsReset > hideMflReset
-    && finalFilterRender > newMintsReset,
-  "Club must clear every generic filter control before the single final Table render.",
+const openClubStart = clubCore.indexOf("async function openClubPage(clubId");
+const openClubEnd = clubCore.indexOf('\n  if (typeof compareRows === "function")', openClubStart);
+const openClubSource = clubCore.slice(openClubStart, openClubEnd);
+invariant(openClubStart >= 0 && openClubEnd > openClubStart, "The Club route owner must contain openClubPage.");
+excludes(
+  openClubSource,
+  'applyFilters({ save: false, localOnly: true });',
+  "openClubPage must not paint the Club table a second time after the shared incremental render.",
+);
+excludes(
+  openClubSource,
+  'if (typeof buildHeader === "function") buildHeader();',
+  "openClubPage must not rebuild the table header after the shared incremental render.",
+);
+includes(
+  openClubSource,
+  "applyClubPresentation();",
+  "The Club route owner must still apply Club-only presentation after the shared table render.",
+);
+includes(
+  openClubSource,
+  "captureClubView(nextView);",
+  "The Club route owner must still cache the completed shared render.",
 );
 
 includes(
@@ -223,4 +252,4 @@ invariant(
   "The tracked Club runtime must exactly match the normalized Club artifact.",
 );
 
-console.log("Club filter-free refresh checks passed: shared public entry, guarded first-paint identity, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club refresh checks passed: shared public entry, guarded first-paint identity, no saved-filter restore, and one shared table render with no Club-owned repaint.");
