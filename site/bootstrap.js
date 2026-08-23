@@ -830,6 +830,7 @@ function primeInitialTableStructure(page, view) {
         loadRuntime("/route-core-loader-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
         loadRuntime("/bootstrap-core.js"),
+        loadRuntime("/document-title-runtime.js"),
       ]);
     } catch (error) {
       root.dataset.mflReady = "error";
