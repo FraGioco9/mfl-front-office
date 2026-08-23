@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, coreSource] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, filterControls, coreBuild, coreSource] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -14,6 +14,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./static-ui-runtime.js"),
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./desktop-table-style-runtime.js"),
+  read("./filter-controls-runtime.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-core.js"),
 ]);
@@ -40,6 +41,8 @@ for (const required of [
   "#sidebar .navButton.active",
   ".trainingStatControls button:hover:not(:disabled)",
   ".popupCloseButton,",
+  ".mflNumericStepperControl",
+  ".mflIncrementStepper button",
   ".filtersDialog [data-filter-value]",
   "#evaluationSearchInput",
   ".globalSearchControl #playerSearchInput",
@@ -51,6 +54,20 @@ for (const required of [
 ]) {
   invariant(controls.includes(required), `controls.css is missing canonical shared rule: ${required}`);
 }
+
+for (const required of [
+  "mflNumericStepperControl",
+  "mflIncrementStepper",
+  'button.textContent = delta > 0 ? "▲" : "▼";',
+  "input.stepUp();",
+  "input.stepDown();",
+]) {
+  invariant(filterControls.includes(required), `Numeric filter arrows are missing shared Advanced Settings behavior through ${required}`);
+}
+invariant(
+  !filterControls.includes("popupAddButton") && !filterControls.includes("popupMinusButton"),
+  "Numeric arrow unification must not replace or restyle the existing +/- controls.",
+);
 
 for (const required of [
   '.siteFooter a[href="/changelog"]',
@@ -268,4 +285,4 @@ for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtim
   invariant(!exists, `${path} must remain deleted; its behavior is canonical static CSS or no-op.`);
 }
 
-console.log("Canonical shared-control, footer, Tooltip Height, and static table chrome ownership validation passed.");
+console.log("Canonical shared-control, increment-arrow, footer, Tooltip Height, and static table chrome ownership validation passed.");

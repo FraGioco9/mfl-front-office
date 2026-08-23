@@ -75,9 +75,82 @@
     try {
       const installed = Boolean(window.eval(`(() => {
         if (typeof buildOperatorSelect !== "function"
+          || typeof buildValueControl !== "function"
           || typeof ruleMatches !== "function"
           || typeof addFilterRule !== "function"
           || typeof contractStatusFilterColumn === "undefined") return false;
+
+        if (!buildValueControl.__mflNumericSteppers) {
+          const originalBuildValueControl = buildValueControl;
+
+          const numericStepperLabel = function(input) {
+            const placeholder = String(input.placeholder || "value").trim().toLowerCase();
+            return placeholder || "value";
+          };
+
+          const dispatchNumericStepperChange = function(input) {
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          };
+
+          const adjustNumericFilterInput = function(input, delta) {
+            if (!(input instanceof HTMLInputElement) || input.type !== "number" || !delta) return;
+            try {
+              if (delta > 0) input.stepUp();
+              else input.stepDown();
+            } catch {
+              const currentValue = Number.parseFloat(input.value);
+              input.value = String((Number.isFinite(currentValue) ? currentValue : 0) + delta);
+            }
+            dispatchNumericStepperChange(input);
+          };
+
+          const createNumericStepperButton = function(input, delta) {
+            const button = document.createElement("button");
+            const direction = delta > 0 ? "Increase" : "Decrease";
+            button.type = "button";
+            button.textContent = delta > 0 ? "▲" : "▼";
+            button.setAttribute("aria-label", direction + " " + numericStepperLabel(input));
+            button.addEventListener("mousedown", (event) => event.preventDefault());
+            button.addEventListener("click", () => adjustNumericFilterInput(input, delta));
+            return button;
+          };
+
+          const createNumericStepperControl = function(input, valueGroupOwner = false) {
+            const control = document.createElement("span");
+            control.className = "mflNumericStepperControl";
+            if (valueGroupOwner) control.dataset.filterValueGroup = "true";
+
+            const stepper = document.createElement("span");
+            stepper.className = "mflIncrementStepper";
+            stepper.setAttribute("aria-label", "Adjust " + numericStepperLabel(input));
+            stepper.append(
+              createNumericStepperButton(input, 1),
+              createNumericStepperButton(input, -1),
+            );
+            control.append(input, stepper);
+            return control;
+          };
+
+          const numericStepperBuildValueControl = function(column, savedValue = "", savedValueTo = "", operator = "") {
+            const control = originalBuildValueControl(column, savedValue, savedValueTo, operator);
+            if (control instanceof HTMLInputElement && control.type === "number" && control.matches("[data-filter-value]")) {
+              return createNumericStepperControl(control, true);
+            }
+
+            if (control instanceof Element) {
+              Array.from(control.querySelectorAll('input[type="number"][data-filter-value]')).forEach((input) => {
+                const marker = document.createTextNode("");
+                input.replaceWith(marker);
+                const stepperControl = createNumericStepperControl(input);
+                marker.replaceWith(stepperControl);
+              });
+            }
+            return control;
+          };
+          Object.defineProperty(numericStepperBuildValueControl, "__mflNumericSteppers", { value: true });
+          buildValueControl = numericStepperBuildValueControl;
+        }
 
         if (!buildOperatorSelect.__mflContractOperators) {
           const originalBuildOperatorSelect = buildOperatorSelect;

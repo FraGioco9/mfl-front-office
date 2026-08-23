@@ -247,6 +247,41 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
+.mflNumericStepperControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mflNumericStepperControl > input[type="number"] {
+  min-width: 0;
+  appearance: textfield;
+}
+
+.mflNumericStepperControl > input[type="number"]::-webkit-inner-spin-button,
+.mflNumericStepperControl > input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.mflIncrementStepper {
+  display: grid;
+  gap: 2px;
+}
+
+.mflIncrementStepper button {
+  width: 18px;
+  height: 13px;
+  min-height: 13px;
+  padding: 0;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+}
+
 .filtersDialog [data-filter-value],
 .filtersDialog select,
 #evaluationSearchInput,
