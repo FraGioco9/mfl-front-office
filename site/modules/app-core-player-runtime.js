@@ -314,7 +314,7 @@ function adjustTrainingStat(playerId, column, delta) {
     delete state.trainingAdjustments[key];
   }
 
-  renderPlayerPage(playerId);
+  renderPlayerTrainingPreview(playerId);
 }
 
 function resetTrainingStats(playerId) {
@@ -325,7 +325,7 @@ function resetTrainingStats(playerId) {
   }
 
   delete state.trainingAdjustments[playerTrainingKey(row)];
-  renderPlayerPage(playerId);
+  renderPlayerTrainingPreview(playerId);
 }
 
 function replayTrainingControlHover(control) {
@@ -522,6 +522,52 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
   ]);
 }
 
+function bindPlayerTrainingControls(playerId) {
+  const id = String(playerId || "").trim();
+  playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const stat = button.dataset.trainingStat;
+      const delta = Number(button.dataset.trainingDelta || 0);
+      adjustTrainingStat(id, stat, delta);
+      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
+        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
+      );
+      replayTrainingControlHover(replacement);
+    });
+  });
+  playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetTrainingStats(id);
+      replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
+    });
+  });
+}
+
+function renderPlayerTrainingPreview(playerId) {
+  const id = String(playerId || "").trim();
+  const row = rowByPlayerId(id);
+  const attributeGrid = playerDetail.querySelector(".attributesPanel .attributeGrid");
+  const pitch = playerDetail.querySelector(".pitchPanel .pitch");
+  const reusableTrainingSurface = row
+    && state.currentPage === "player"
+    && state.playerAttributeView === "training"
+    && playerDetail.firstElementChild?.classList.contains("playerHero")
+    && attributeGrid
+    && pitch;
+
+  if (!reusableTrainingSurface) {
+    renderPlayerPage(id);
+    return false;
+  }
+
+  const displayRow = trainingRow(row);
+  attributeGrid.innerHTML = renderPlayerAttributePanel(displayRow);
+  pitch.innerHTML = renderPitch(displayRow);
+  bindPlayerTrainingControls(id);
+  playerDetailLastRenderSignature = playerDetailRenderSignature(row, id, "training");
+  return true;
+}
+
 function renderPlayerPageOwner(playerId) {
   const row = rowByPlayerId(playerId);
 
@@ -673,23 +719,7 @@ function renderPlayerPageOwner(playerId) {
       renderPlayerPage(id);
     });
   });
-  playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const stat = button.dataset.trainingStat;
-      const delta = Number(button.dataset.trainingDelta || 0);
-      adjustTrainingStat(id, stat, delta);
-      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
-        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
-      );
-      replayTrainingControlHover(replacement);
-    });
-  });
-  playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
-    button.addEventListener("click", () => {
-      resetTrainingStats(id);
-      replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
-    });
-  });
+  bindPlayerTrainingControls(id);
   const notesInput = playerDetail.querySelector("#playerNotesInput");
   if (notesInput) {
     notesInput.addEventListener("input", () => {
