@@ -103,16 +103,33 @@ excludes(
   "renderPlayerPage(playerId);",
   "Training Reset must not rebuild the complete Player page.",
 );
+invariant(
+  (generatedPlayerRuntime.match(/renderPlayerTrainingPreview\(playerId\);/g) || []).length === 2,
+  "The shipped Player runtime must route exactly the Training adjustment and Reset mutations through the partial renderer.",
+);
 
 const bindingOwnerStart = generatedPlayerRuntime.indexOf("function bindPlayerTrainingControls(playerId) {");
 const previewStart = generatedPlayerRuntime.indexOf("\nfunction renderPlayerTrainingPreview", bindingOwnerStart);
+const rendererStart = generatedPlayerRuntime.indexOf("\nfunction renderPlayerPageOwner", previewStart);
 const bindingOwner = bindingOwnerStart >= 0 && previewStart > bindingOwnerStart
   ? generatedPlayerRuntime.slice(bindingOwnerStart, previewStart)
   : "";
+const previewBlock = previewStart >= 0 && rendererStart > previewStart
+  ? generatedPlayerRuntime.slice(previewStart, rendererStart)
+  : "";
 invariant(bindingOwner, "The shared Training-control binding helper must exist.");
+invariant(previewBlock, "The generated partial Training renderer must remain independently inspectable.");
 invariant(
   (generatedPlayerRuntime.match(/querySelectorAll\("\[data-training-stat\]"\)/g) || []).length === 2,
   "Training stat controls should be queried only by the shared binder and the post-render hover lookup.",
+);
+invariant(
+  (previewBlock.match(/renderPlayerPage\(id\);/g) || []).length === 1,
+  "The partial Training renderer must retain exactly one guarded full-render fallback and no unconditional full render.",
+);
+invariant(
+  (previewBlock.match(/\.innerHTML = /g) || []).length === 2,
+  "The partial Training renderer must write exactly the two affected inner surfaces.",
 );
 includes(
   generatedPlayerRuntime,
@@ -133,5 +150,5 @@ const reductionPercent = Math.round(
 invariant(reductionPercent === 100, "Step 20 must eliminate the full Player subtree replacement for Training interactions.");
 
 console.log(
-  `Player Training performance validation passed: full #playerDetail replacements per +/- or Reset action ${previousFullPlayerSubtreeReplacementsPerAction} -> ${optimizedFullPlayerSubtreeReplacementsPerAction} (${reductionPercent}% reduction), with only the attribute grid and pitch rebuilt and the Player cache signature kept current.`,
+  `Player Training performance validation passed: full #playerDetail replacements per +/- or Reset action ${previousFullPlayerSubtreeReplacementsPerAction} -> ${optimizedFullPlayerSubtreeReplacementsPerAction} (${reductionPercent}% reduction), with exactly two affected inner surfaces rebuilt and the Player cache signature kept current.`,
 );
