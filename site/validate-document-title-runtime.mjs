@@ -7,14 +7,16 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [indexHtml, appEntry, runtime] = await Promise.all([
+const [indexHtml, bootstrap, appEntry, runtime] = await Promise.all([
   read("./index.html"),
+  read("./bootstrap.js"),
   read("./modules/app-entry.js"),
   read("./document-title-runtime.js"),
 ]);
 
 includes(indexHtml, "<title>MFL Front Office</title>", "The static document title must remain the Home fallback.");
-includes(appEntry, '"/document-title-runtime.js",', "Document-title ownership must load on every application route.");
+includes(bootstrap, 'loadRuntime("/document-title-runtime.js")', "Document-title ownership must load from the guaranteed bootstrap runtime group.");
+excludes(appEntry, '"/document-title-runtime.js",', "Document-title ownership must not also load from the later application-entry runtime group.");
 includes(runtime, 'const APP_NAME = "MFL Front Office";', "Document titles must have one application-name owner.");
 includes(runtime, 'window.__mflAppConfig?.routes?.canonicalRequest', "Document titles must derive the active page from the canonical SPA route owner.");
 includes(runtime, 'canonicalRequest(window.location.pathname)', "Document titles must classify the current browser URL instead of startup-only page state.");
