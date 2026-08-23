@@ -1,17 +1,50 @@
 /* Canonical cross-site stacking-level owner for MFL Front Office.
- * Component-local stacking contexts keep their own small z-index values. */
+ *
+ * Stacking contract:
+ * - page content is contained inside one isolated root stacking context;
+ * - ordinary player-table headers, rows, and cells do not create independent
+ *   stacking contexts; sticky/pinned table layers are scoped to components that
+ *   actually require them;
+ * - component-local z-index values stay below 300 and are meaningful only
+ *   inside their local component/page stacking context;
+ * - cross-site application layers start at 300 and use only these semantic
+ *   tokens;
+ * - every popup/modal layer is above every non-popup application layer.
+ *
+ * Keep popups as ordinary fixed application elements. Do not use the browser
+ * Popover/top-layer API, which changes native rendering and popup appearance. */
 
 :root {
-  --mfl-z-navigation: 15;
-  --mfl-z-navigation-mobile: 18;
-  --mfl-z-dropdown: 20;
-  --mfl-z-wallet-guard: 34;
-  --mfl-z-modal: 50;
-  --mfl-z-floating-tooltip: 10030;
-  --mfl-z-chrome: 2147483000;
-  --mfl-z-selection: 2147483630;
-  --mfl-z-toast: 2147483635;
-  --mfl-z-critical-modal: 2147483645;
-  --mfl-z-busy-shield: 2147483646;
-  --mfl-z-topmost: 2147483647;
+  /* Root page-content plane. Nested page layers cannot escape this context. */
+  --mfl-z-content: 0;
+
+  /* Cross-site chrome and transient UI. */
+  --mfl-z-navigation: 300;
+  --mfl-z-navigation-mobile: 310;
+  --mfl-z-dropdown: 400;
+  --mfl-z-chrome: 500;
+  --mfl-z-floating-tooltip: 600;
+  --mfl-z-selection: 700;
+  --mfl-z-wallet-guard: 720;
+  --mfl-z-busy-shield: 740;
+  --mfl-z-toast: 760;
+
+  /* Legacy name for the highest non-popup layer. It must remain below modals. */
+  --mfl-z-topmost: 780;
+
+  /* Popup layers always win over every non-popup layer above. */
+  --mfl-z-modal: 900;
+  --mfl-z-critical-modal: 1000;
+}
+
+/*
+ * Keep all normal route/page UI in one root stacking context. Without this
+ * boundary, nested positioned elements can participate directly in the root
+ * stacking order and compete with body-level modal backdrops even when their
+ * local z-index values look small in isolation.
+ */
+.appShell {
+  position: relative;
+  z-index: var(--mfl-z-content);
+  isolation: isolate;
 }

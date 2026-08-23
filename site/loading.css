@@ -9,8 +9,13 @@ html.mflInteractionBusy body *,
 html.mflInteractionBusy body *::before,
 html.mflInteractionBusy body *::after {
   pointer-events: none;
-  transition: none;
   animation-play-state: paused;
+}
+
+html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *),
+html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *)::before,
+html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *)::after {
+  transition: none;
 }
 
 html.mflInitialChromePreparing body:has(> #appShell),

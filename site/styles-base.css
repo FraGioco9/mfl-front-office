@@ -1740,11 +1740,6 @@ td.col-id {
   overflow: visible;
 }
 
-td.col-id {
-  position: relative;
-  z-index: 4;
-}
-
 .flagCell {
   text-align: center;
   vertical-align: middle;
@@ -1756,9 +1751,6 @@ td.col-id {
   height: 18px;
 }
 th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   background: var(--header-bg);
   color: var(--text);
   font-size: 12px;
@@ -2969,7 +2961,6 @@ button.playerIdText:active {
 
 .evaluationSearchResults {
   position: absolute;
-  z-index: 12;
   top: 72px;
   left: 0;
   right: 0;
@@ -3906,10 +3897,6 @@ button.playerIdText:active {
   color: #fff7f7;
 }
 
-#tableBody tr {
-  isolation: isolate;
-}
-
 #tableBody tr:hover .playerNameLink:hover,
 #tableBody tr:hover a:hover,
 #tableBody tr:hover button:hover,
@@ -4593,33 +4580,23 @@ body.evaluationPlayerRoute #evaluationLoadButton {
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
-  position: relative;
-  z-index: 10;
   overflow: visible;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
 html body[data-page="evaluation"] #evaluationPage .evaluationSearch,
 html body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
-  position: relative;
   overflow: visible;
-}
-
-html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-html body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  z-index: 11;
 }
 
 html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
   position: absolute;
-  z-index: 12;
   max-height: none;
   overflow: visible;
 }
 
 html body[data-page="evaluation"] #evaluationPanel {
   position: relative;
-  z-index: 0;
 }
 
 html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown) + .evaluationSearchClearButton[hidden] {

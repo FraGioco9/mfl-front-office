@@ -1,5 +1,6 @@
 // @ts-check
 
+import { normalizeModalEntranceLifecycle } from "./app-core-modal-entrance-lifecycle.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 
 const EVALUATION_LOAD_FACADE = `let __mflOpenSavedEvaluationsModalOwner = null;
@@ -305,7 +306,8 @@ const EVALUATION_INVALID_LINK_RECOVERY_WITH_PLAIN_RESET = `  const playerId = pl
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeEvaluationLoadLifecycle(artifacts) {
-  const source = String(artifacts?.core || "");
+  const modalArtifacts = normalizeModalEntranceLifecycle(artifacts);
+  const source = String(modalArtifacts?.core || "");
   if (!source) throw new Error("Cannot normalize Evaluation Load lifecycle without shared core.");
 
   let core = replaceRequired(
@@ -321,7 +323,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     "Saved Evaluations closes on Escape through the canonical shared modal owner",
   );
 
-  const routeChunks = { ...(artifacts?.routeChunks || {}) };
+  const routeChunks = { ...(modalArtifacts?.routeChunks || {}) };
   const evaluationSource = String(routeChunks.evaluation || "");
   if (!evaluationSource) throw new Error("Cannot normalize Evaluation Load lifecycle without Evaluation route core.");
 
@@ -400,7 +402,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
   routeChunks.evaluation = evaluation;
 
   return Object.freeze({
-    ...artifacts,
+    ...modalArtifacts,
     core,
     routeChunks: Object.freeze(routeChunks),
   });
