@@ -7,6 +7,7 @@
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
   const ROUTE_LOADING_REASON = "route-loading";
+  const TOAST_ENTER_DURATION_MS = 180;
   const TOAST_COORDINATION_REASONS = new Set([
     "evaluation-load",
   ]);
@@ -16,6 +17,7 @@
   let tableScrollTimer = 0;
   let toastCheckFrame = 0;
   let toastCheckSequence = 0;
+  let toastEnterAnimation = null;
 
   function setToastPosition(centerX) {
     if (!Number.isFinite(centerX)) return;
@@ -128,8 +130,21 @@
     }
   }
 
-  function toastSuppressed() {
-    return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
+  function savedEvaluationRouteActive() {
+    if (window.location.pathname !== "/evaluation") return false;
+    const savedId = new URLSearchParams(window.location.search).get("saved");
+    return Boolean(String(savedId || "").trim());
+  }
+
+  function snapshotHasReason(snapshot, targetReason) {
+    const reasons = Array.isArray(snapshot?.reasons) ? snapshot.reasons : [];
+    return reasons.some((reason) => String(reason || "") === targetReason);
+  }
+
+  function toastSuppressed(snapshot) {
+    return snapshotHasReason(snapshot, "evaluation-load")
+      || Boolean(document.body?.classList.contains("evaluationLoadIntent"))
+      || savedEvaluationRouteActive();
   }
 
   function snapshotNeedsToast(snapshot) {
@@ -157,10 +172,34 @@
     return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
   }
 
+  function cancelToastEnterAnimation() {
+    toastEnterAnimation?.cancel?.();
+    toastEnterAnimation = null;
+  }
+
   function hideLoadingToast(toast) {
     if (!(toast instanceof HTMLElement)) return;
+    cancelToastEnterAnimation();
     toast.classList.remove("visible");
     toast.hidden = true;
+  }
+
+  function animateLoadingToastIn(toast) {
+    if (!(toast instanceof HTMLElement) || typeof toast.animate !== "function") return;
+    cancelToastEnterAnimation();
+    const animation = toast.animate([
+      { opacity: 0 },
+      { opacity: 1 },
+    ], {
+      duration: TOAST_ENTER_DURATION_MS,
+      easing: "ease",
+    });
+    toastEnterAnimation = animation;
+    const clearAnimation = () => {
+      if (toastEnterAnimation === animation) toastEnterAnimation = null;
+    };
+    animation.addEventListener("finish", clearAnimation, { once: true });
+    animation.addEventListener("cancel", clearAnimation, { once: true });
   }
 
   function cancelToastCheck() {
@@ -178,7 +217,7 @@
     if (!(toast instanceof HTMLElement)) return;
     positionToast(toast);
 
-    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed(snapshot)) {
       hideLoadingToast(toast);
       return;
     }
@@ -191,6 +230,7 @@
     retireVisibleApplicationToast();
     toast.hidden = false;
     toast.classList.add("visible");
+    animateLoadingToastIn(toast);
   }
 
   function scheduleToastCheck() {
@@ -219,7 +259,7 @@
     positionToast(toast);
     const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
-    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed(snapshot)) {
       cancelToastCheck();
       hideLoadingToast(toast);
       return;
@@ -261,6 +301,7 @@
     unsubscribe = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
+    cancelToastEnterAnimation();
     cancelToastCheck();
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
     window.removeEventListener("mfl:route-ready", sync);

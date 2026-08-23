@@ -156,6 +156,23 @@ invariant(
   "Loading toast must require at least one non-coordination busy reason before becoming visible.",
 );
 invariant(
+  loadingUi.includes("function savedEvaluationRouteActive() {")
+    && loadingUi.includes('window.location.pathname !== "/evaluation"')
+    && loadingUi.includes('new URLSearchParams(window.location.search).get("saved")')
+    && loadingUi.includes("function snapshotHasReason(snapshot, targetReason) {")
+    && loadingUi.includes('snapshotHasReason(snapshot, "evaluation-load")')
+    && loadingUi.match(/toastSuppressed\(snapshot\)/g)?.length >= 3,
+  "Saved Evaluation loading must suppress the global Loading toast for direct routes and mixed evaluation-load plus route-loading operations.",
+);
+invariant(
+  loadingUi.includes("const TOAST_ENTER_DURATION_MS = 180;")
+    && loadingUi.includes("function animateLoadingToastIn(toast) {")
+    && loadingUi.includes("{ opacity: 0 },")
+    && loadingUi.includes("{ opacity: 1 },")
+    && loadingUi.includes("animateLoadingToastIn(toast);"),
+  "Loading toast must use the canonical 180ms one-shot opacity entrance without changing its anchored position.",
+);
+invariant(
   loadingUi.includes("const initialRouteResolved = document.documentElement.classList.contains(\"mflInitialRouteResolved\");"),
   "Footer readiness must follow the visible route instead of application-wide background warm-up.",
 );
@@ -192,4 +209,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Unified route loading ownership, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");
+console.log("Unified route loading ownership, mixed saved-Evaluation toast suppression, loading-toast entrance, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");
