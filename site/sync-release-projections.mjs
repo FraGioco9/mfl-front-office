@@ -3,7 +3,14 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
-const RELEASE_EXPRESSION = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
+
+function semanticVersion(value) {
+  const version = String(value || "").trim();
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(`Invalid release version: ${version || "<missing>"}.`);
+  }
+  return version;
+}
 
 function replaceExactlyOnce(source, pattern, replacement, label) {
   const matches = source.match(pattern) || [];
@@ -13,20 +20,25 @@ function replaceExactlyOnce(source, pattern, replacement, label) {
   return source.replace(pattern, replacement);
 }
 
-export function normalizeBootstrapReleaseProjection(source, label = "bootstrap") {
+export function normalizeBootstrapReleaseProjection(source, version, label = "bootstrap") {
+  const releaseVersion = semanticVersion(version);
+  const replacement = label === "bootstrap-core.js"
+    ? `  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "${releaseVersion}");`
+    : `  const STATIC_RELEASE_VERSION = "${releaseVersion}";`;
   return replaceExactlyOnce(
     String(source || ""),
     /^  const STATIC_RELEASE_VERSION = .*;$/gm,
-    `  const STATIC_RELEASE_VERSION = ${RELEASE_EXPRESSION};`,
+    replacement,
     `${label} release projection`,
   );
 }
 
-export function normalizeIndexReleaseProjection(source) {
+export function normalizeIndexReleaseProjection(source, version) {
+  const releaseVersion = semanticVersion(version);
   return replaceExactlyOnce(
     String(source || ""),
     /<a href="\/changelog" data-page="changelog">MFL Front Office(?: v\d+\.\d+\.\d+)?<\/a>/g,
-    '<a href="/changelog" data-page="changelog">MFL Front Office</a>',
+    `<a href="/changelog" data-page="changelog">MFL Front Office v${releaseVersion}</a>`,
     "index footer release projection",
   );
 }
@@ -39,10 +51,12 @@ async function writeIfChanged(path, content) {
 }
 
 export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT) {
+  const release = JSON.parse(await readFile(resolve(siteRoot, "release.json"), "utf8"));
+  const version = semanticVersion(release?.version);
   const targets = [
-    ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, "bootstrap.js")],
-    ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, "bootstrap-core.js")],
-    ["index.html", normalizeIndexReleaseProjection],
+    ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap.js")],
+    ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
+    ["index.html", (source) => normalizeIndexReleaseProjection(source, version)],
   ];
 
   const results = [];
@@ -58,6 +72,6 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const results = await synchronizeReleaseProjections();
   results.forEach(({ path, changed }) => {
-    console.log(`${changed ? "Normalized" : "Unchanged"} ${path}`);
+    console.log(`${changed ? "Generated" : "Unchanged"} ${path}`);
   });
 }
