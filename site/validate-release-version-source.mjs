@@ -24,7 +24,7 @@ const release = JSON.parse(releaseSource);
 const version = String(release.version || "").trim();
 invariant(/^\d+\.\d+\.\d+$/.test(version), "release.json must contain the canonical Semantic Version.");
 
-const canonicalExpression = 'String(window.__mflAppConfig?.release?.version || window.__mflReleaseVersion || "dev")';
+const canonicalExpression = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
 invariant(
   bootstrap.includes(`const STATIC_RELEASE_VERSION = ${canonicalExpression};`),
   "bootstrap.js must resolve the current version from generated pre-bootstrap release metadata.",
