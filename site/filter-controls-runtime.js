@@ -109,7 +109,7 @@
             const button = document.createElement("button");
             const direction = delta > 0 ? "Increase" : "Decrease";
             button.type = "button";
-            button.textContent = delta > 0 ? "\\u25b2" : "\\u25bc";
+            button.textContent = delta > 0 ? "▲" : "▼";
             button.setAttribute("aria-label", direction + " " + numericStepperLabel(input));
             button.addEventListener("mousedown", (event) => event.preventDefault());
             button.addEventListener("click", () => adjustNumericFilterInput(input, delta));
@@ -140,8 +140,10 @@
 
             if (control instanceof Element) {
               Array.from(control.querySelectorAll('input[type="number"][data-filter-value]')).forEach((input) => {
+                const marker = document.createTextNode("");
+                input.replaceWith(marker);
                 const stepperControl = createNumericStepperControl(input);
-                input.replaceWith(stepperControl);
+                marker.replaceWith(stepperControl);
               });
             }
             return control;
