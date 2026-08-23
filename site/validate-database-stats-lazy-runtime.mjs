@@ -110,8 +110,8 @@ includes(
 );
 includes(
   statsRuntime,
-  "if (effectiveFilterChanged) renderStats();",
-  "Database Stats Custom Apply must skip the histogram rebuild when the effective filter did not change.",
+  "if (effectiveFilterChanged) renderStats({ restartDistributionAnimation: true });",
+  "Database Stats Custom Apply must skip the histogram rebuild when the effective filter did not change and restart the persistent animation when it did.",
 );
 includes(
   controlInteractions,
@@ -120,7 +120,7 @@ includes(
 );
 const customOpenIndex = statsRuntime.indexOf('if (filter[0] === "custom") {');
 const customOpenReturnIndex = statsRuntime.indexOf("return;", customOpenIndex);
-const nextStatsRenderIndex = statsRuntime.indexOf("renderStats();", customOpenIndex);
+const nextStatsRenderIndex = statsRuntime.indexOf("renderStats(", customOpenIndex);
 invariant(
   customOpenIndex >= 0 && customOpenReturnIndex > customOpenIndex && nextStatsRenderIndex > customOpenReturnIndex,
   "Opening Database Stats Custom must return before rendering stats so the histogram does not transition before Apply.",
@@ -130,8 +130,12 @@ const customApplyEnd = statsRuntime.indexOf("\n  function retirementYears", cust
 const customApplyBlock = customApplyStart >= 0 && customApplyEnd > customApplyStart
   ? statsRuntime.slice(customApplyStart, customApplyEnd)
   : "";
-includes(customApplyBlock, "if (effectiveFilterChanged) renderStats();", "Custom Apply must render only after an effective filter change.");
-excludes(customApplyBlock, "\n    renderStats();", "Custom Apply must not unconditionally rebuild the histogram.");
+includes(
+  customApplyBlock,
+  "if (effectiveFilterChanged) renderStats({ restartDistributionAnimation: true });",
+  "Custom Apply must render and restart the persistent histogram animation only after an effective filter change.",
+);
+excludes(customApplyBlock, "\n    renderStats(", "Custom Apply must not unconditionally rebuild the histogram.");
 const customEscapeStart = statsRuntime.indexOf("function onKeyDown(event) {");
 const customEscapeEnd = statsRuntime.indexOf("\n  function destroy()", customEscapeStart);
 const customEscapeBlock = customEscapeStart >= 0 && customEscapeEnd > customEscapeStart
