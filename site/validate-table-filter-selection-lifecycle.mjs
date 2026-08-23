@@ -59,10 +59,12 @@ invariant(
 invariant(
   !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
     && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
+    && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
+    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
     && buildNormalizer.includes("const statsNavigationArtifacts = Object.freeze({")
     && buildNormalizer.includes('core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),')
-    && buildNormalizer.includes("const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(statsNavigationArtifacts);"),
-  "Build normalization must not inject page/view filter transition behavior and must preserve stats navigation independently.",
+    && buildNormalizer.includes("const tableControlCellArtifacts = normalizeTableControlCellAlignment(statsNavigationArtifacts);"),
+  "Build normalization must not inject page/view filter or editable-pager behavior and must preserve stats/Table composition independently.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
 const liveFilterSnapshot = generated.indexOf('saveTableStateLocally(currentTableState());', activeViewNoOp);
