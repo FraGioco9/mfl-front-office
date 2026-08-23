@@ -47,11 +47,41 @@ function mflStatsCategory(row) {
   return "other";
 }
 
-function mflStatsRows() {
+function mflStatsSummary() {
   const filter = mflStatsFilterById();
-  return state.rows
-    .filter((row) => rowIsMflWalletPlayer(row))
-    .filter((row) => rowMatchesMflStatsOverallFilter(row, filter));
+  const distributionCounts = new Map();
+  let totalPlayers = 0;
+  let packablePlayers = 0;
+  let agedPlayers = 0;
+  let otherPlayers = 0;
+
+  for (const row of state.rows) {
+    if (!rowIsMflWalletPlayer(row) || !rowMatchesMflStatsOverallFilter(row, filter)) {
+      continue;
+    }
+
+    totalPlayers += 1;
+    const category = mflStatsCategory(row);
+    if (category === "packable") {
+      packablePlayers += 1;
+      const distributionValue = mflStatsDistributionValue(row);
+      if (distributionValue !== null) {
+        distributionCounts.set(distributionValue, (distributionCounts.get(distributionValue) || 0) + 1);
+      }
+    } else if (category === "aged") {
+      agedPlayers += 1;
+    } else {
+      otherPlayers += 1;
+    }
+  }
+
+  return {
+    totalPlayers,
+    packablePlayers,
+    agedPlayers,
+    otherPlayers,
+    distributionCounts,
+  };
 }
 
 function renderMflStatsFilterButtons() {
@@ -117,7 +147,7 @@ function renderMflStatsDistributionModeButtons() {
   });
 }
 
-function renderMflStatsDistribution(packableRows) {
+function renderMflStatsDistribution(counts, totalPackable) {
   if (!mflStatsAgeDistribution) {
     return;
   }
@@ -129,14 +159,6 @@ function renderMflStatsDistribution(packableRows) {
       : "Packable Overall Distribution";
   }
 
-  const counts = new Map();
-  packableRows.forEach((row) => {
-    const value = mflStatsDistributionValue(row);
-    if (value !== null) {
-      counts.set(value, (counts.get(value) || 0) + 1);
-    }
-  });
-
   if (!counts.size) {
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
@@ -144,7 +166,6 @@ function renderMflStatsDistribution(packableRows) {
 
   const maxCount = Math.max(...counts.values());
   const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
-  const totalPackable = packableRows.length;
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
@@ -167,25 +188,22 @@ function renderMflStatsDistribution(packableRows) {
 
 function renderMflStatsPage() {
   renderMflStatsFilterButtons();
-  const rows = mflStatsRows();
-  const packableRows = rows.filter((row) => mflStatsCategory(row) === "packable");
-  const agedRows = rows.filter((row) => mflStatsCategory(row) === "aged");
-  const otherRows = rows.filter((row) => mflStatsCategory(row) === "other");
+  const summary = mflStatsSummary();
 
   if (mflStatsTotalPlayers) {
-    mflStatsTotalPlayers.textContent = formatCount(rows.length);
+    mflStatsTotalPlayers.textContent = formatCount(summary.totalPlayers);
   }
   if (mflStatsPackablePlayers) {
-    mflStatsPackablePlayers.textContent = formatCount(packableRows.length);
+    mflStatsPackablePlayers.textContent = formatCount(summary.packablePlayers);
   }
   if (mflStatsAgedPlayers) {
-    mflStatsAgedPlayers.textContent = formatCount(agedRows.length);
+    mflStatsAgedPlayers.textContent = formatCount(summary.agedPlayers);
   }
   if (mflStatsOtherPlayers) {
-    mflStatsOtherPlayers.textContent = formatCount(otherRows.length);
+    mflStatsOtherPlayers.textContent = formatCount(summary.otherPlayers);
   }
 
-  renderMflStatsDistribution(packableRows);
+  renderMflStatsDistribution(summary.distributionCounts, summary.packablePlayers);
 }
 
 mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
