@@ -49,9 +49,9 @@ for (const canonicalConfig of [
 includes(entry, '"/static-ui-runtime.js"', "Static route chrome must load universally before the application core.");
 excludes(entry, "/table-view-runtime.js", "The retired table-view runtime must stay out of the browser runtime graph.");
 includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reuse first-paint view configuration.");
-includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
-includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must be rendered by passive route chrome.");
-includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "Active view state must be rendered by passive route chrome.");
+includes(staticUi, "footer.textContent !== footerText", "Static route chrome must compare footer text before synchronizing it.");
+includes(staticUi, 'button.classList.contains("active") !== shouldBeActive', "Sidebar and view destination state must be change-driven.");
+includes(staticUi, 'button.classList.toggle("active", shouldBeActive);', "Changed sidebar and view active state must still be rendered by passive route chrome.");
 includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
@@ -69,7 +69,7 @@ includes(staticUi, 'window.location.assign("/");', "The not-found page must prov
 excludes(staticUi, "not-found.css", "The not-found page must not load a standalone stylesheet or cache-busting asset.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
-includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
+includes(staticUi, "if (page.hidden !== shouldHide) page.hidden = shouldHide;", "Committed page state must reveal the destination shell directly without rewriting unchanged visibility.");
 includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");
 includes(staticUi, "contracts.ensureCanonicalTableHeader", "Static table chrome must request canonical headers through the core contract.");
 includes(staticUi, 'Reflect.get(window, "__mflPrimeTableHeaderSignature")', "Static table chrome must reuse the bootstrap header signature owner.");
@@ -217,4 +217,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with bootstrap-owned table headers, passive change-driven route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");
