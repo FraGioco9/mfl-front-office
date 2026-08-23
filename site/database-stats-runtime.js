@@ -32,6 +32,9 @@
   let distributionAnimationRevision = 0;
   let distributionAnimationFrame = 0;
   let distributionAnimationUnsubscribe = null;
+  let statsRouteActive = false;
+  let loadAnimationAvailable = true;
+  let interactionAnimationRequested = false;
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
@@ -61,9 +64,43 @@
     distributionAnimationUnsubscribe = null;
   }
 
-  function playDistributionAnimation(container, revision) {
+  function resetDistributionAnimationSession() {
+    cancelDistributionAnimationSchedule();
+    loadAnimationAvailable = true;
+    interactionAnimationRequested = false;
+    const container = document.getElementById("databaseStatsDistribution");
+    if (container instanceof HTMLElement) delete container.dataset.mflStatsRenderSignature;
+  }
+
+  function syncDistributionAnimationRouteSession() {
+    const active = isStatsPath();
+    if (active && !statsRouteActive) {
+      statsRouteActive = true;
+      resetDistributionAnimationSession();
+    } else if (!active && statsRouteActive) {
+      statsRouteActive = false;
+      cancelDistributionAnimationSchedule();
+      interactionAnimationRequested = false;
+    }
+    return active;
+  }
+
+  function requestDistributionInteractionAnimation() {
+    interactionAnimationRequested = true;
+  }
+
+  function distributionAnimationIntent() {
+    if (!syncDistributionAnimationRouteSession()) return "";
+    if (interactionAnimationRequested) return "interaction";
+    if (loadAnimationAvailable) return "load";
+    return "";
+  }
+
+  function playDistributionAnimation(container, revision, intent) {
     distributionAnimationFrame = 0;
     if (destroyed || revision !== distributionAnimationRevision || !isStatsPath() || !container.isConnected) return;
+    if (intent === "interaction") interactionAnimationRequested = false;
+    if (intent === "load") loadAnimationAvailable = false;
     container.querySelectorAll(".mflStatsHistogramFill").forEach((fill) => {
       if (!(fill instanceof HTMLElement)) return;
       fill.getAnimations().forEach((animation) => animation.cancel());
@@ -77,14 +114,14 @@
     });
   }
 
-  function scheduleDistributionAnimation(container) {
+  function scheduleDistributionAnimation(container, intent) {
     cancelDistributionAnimationSchedule();
     const revision = distributionAnimationRevision;
     const scheduleAfterPaint = () => {
       if (destroyed || revision !== distributionAnimationRevision) return;
       distributionAnimationFrame = requestAnimationFrame(() => {
         if (destroyed || revision !== distributionAnimationRevision) return;
-        distributionAnimationFrame = requestAnimationFrame(() => playDistributionAnimation(container, revision));
+        distributionAnimationFrame = requestAnimationFrame(() => playDistributionAnimation(container, revision, intent));
       });
     };
 
@@ -178,17 +215,23 @@
           return;
         }
 
+        const filterChanged = activeFilter !== filter[0];
         customPanelOpen = false;
         syncCustomInputs();
         activeFilter = filter[0];
         syncFilterControls();
+        if (!filterChanged) return;
+        requestDistributionInteractionAnimation();
         renderStats();
       });
     });
 
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
-        distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+        const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+        if (nextMode === distributionMode) return;
+        distributionMode = nextMode;
+        requestDistributionInteractionAnimation();
         renderDistribution();
       });
     });
@@ -251,7 +294,10 @@
     activeFilter = nextFilter;
     customPanelOpen = false;
     syncFilterControls();
-    if (effectiveFilterChanged) renderStats();
+    if (effectiveFilterChanged) {
+      requestDistributionInteractionAnimation();
+      renderStats();
+    }
   }
 
   function retirementYears(group) {
@@ -300,7 +346,7 @@
   }
 
   function renderDistribution() {
-    if (!data || !isStatsPath()) return;
+    if (!data || !syncDistributionAnimationRouteSession()) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       const active = button.dataset.distribution === distributionMode;
       button.classList.toggle("active", active);
@@ -339,6 +385,7 @@
 
     if (!counts.size) {
       cancelDistributionAnimationSchedule();
+      interactionAnimationRequested = false;
       const empty = document.createElement("p");
       empty.className = "mflStatsEmpty";
       empty.textContent = "No active players match this Overall filter.";
@@ -346,6 +393,7 @@
       return;
     }
 
+    const animationIntent = distributionAnimationIntent();
     const maxCount = Math.max(...rows.map(([, count]) => count));
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram";
@@ -372,7 +420,8 @@
       histogram.appendChild(item);
     });
     container.replaceChildren(histogram);
-    scheduleDistributionAnimation(container);
+    if (animationIntent) scheduleDistributionAnimation(container, animationIntent);
+    else cancelDistributionAnimationSchedule();
   }
 
   async function loadData() {
@@ -407,6 +456,7 @@
 
   async function showStatsPage() {
     if (destroyed || !isStatsPath()) return false;
+    syncDistributionAnimationRouteSession();
     try {
       beginBusy();
       await loadData();
@@ -429,12 +479,12 @@
 
   function sync() {
     if (destroyed) return;
+    syncDistributionAnimationRouteSession();
     if (isStatsPath()) {
       if (data) renderStats();
       else void showStatsPage();
       scheduleCustomPanel();
     } else {
-      cancelDistributionAnimationSchedule();
       closeCustomPanel();
       endBusy();
     }
@@ -466,6 +516,8 @@
     document.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("resize", scheduleCustomPanel);
     window.removeEventListener("scroll", scheduleCustomPanel, true);
+    window.removeEventListener("mfl:route-ready", syncDistributionAnimationRouteSession);
+    window.removeEventListener("popstate", syncDistributionAnimationRouteSession);
     closeCustomPanel();
     endBusy();
   }
@@ -475,6 +527,8 @@
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", scheduleCustomPanel);
   window.addEventListener("scroll", scheduleCustomPanel, true);
+  window.addEventListener("mfl:route-ready", syncDistributionAnimationRouteSession);
+  window.addEventListener("popstate", syncDistributionAnimationRouteSession);
   window.renderDatabaseStatsPage = showStatsPage;
   window.setDatabaseStatsPageVisibility = (visible) => {
     if (visible && isStatsPath()) page.hidden = false;
