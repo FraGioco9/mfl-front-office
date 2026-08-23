@@ -6,6 +6,7 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 import { normalizeMflStatsRouteOwnership } from "./modules/app-core-stats-route-ownership.js";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
+import { synchronizeReleaseProjections } from "./sync-release-projections.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(siteRoot, "modules/app-core.js");
@@ -32,6 +33,8 @@ async function writeFileIfChanged(path, content) {
   await writeFile(path, content, "utf8");
   return true;
 }
+
+await synchronizeReleaseProjections(siteRoot);
 
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release)).replace(/\s*$/, "");
