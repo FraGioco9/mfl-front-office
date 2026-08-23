@@ -2447,7 +2447,9 @@ function saveGuestWatchlist() {
   }
 
   try {
-    localStorage.setItem(GUEST_WATCHLIST_STORAGE_KEY, JSON.stringify(Array.from(state.watchlistPlayerIds)));
+    const serializedPlayerIds = JSON.stringify(Array.from(state.watchlistPlayerIds));
+    if (localStorage.getItem(GUEST_WATCHLIST_STORAGE_KEY) === serializedPlayerIds) return;
+    localStorage.setItem(GUEST_WATCHLIST_STORAGE_KEY, serializedPlayerIds);
   } catch {
     // Watchlist still works for this page even if the browser blocks storage.
   }
@@ -3317,7 +3319,9 @@ function loadRecentIdsFromStorage(storageKey) {
 
 function saveRecentIdsToStorage(storageKey, ids) {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(normalizeIdList(ids, 5)));
+    const serializedIds = JSON.stringify(normalizeIdList(ids, 5));
+    if (localStorage.getItem(storageKey) === serializedIds) return;
+    localStorage.setItem(storageKey, serializedIds);
   } catch {
     // Recent search sync is best-effort when browser storage is blocked.
   }
@@ -3693,7 +3697,9 @@ function stripPersistentSortState(savedState) {
 
 function saveTableStateLocally(savedState) {
   try {
-    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(stripPersistentSortState(savedState)));
+    const serializedState = JSON.stringify(stripPersistentSortState(savedState));
+    if (localStorage.getItem(FILTER_STORAGE_KEY) === serializedState) return;
+    localStorage.setItem(FILTER_STORAGE_KEY, serializedState);
   } catch {
     // Filtering still works for this page even if the browser blocks storage.
   }
