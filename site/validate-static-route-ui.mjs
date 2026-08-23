@@ -60,7 +60,7 @@ includes(staticUi, 'const canonicalRequest = window.__mflAppConfig?.routes?.cano
 includes(staticUi, 'if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");', "Typed not-found routes must resolve to the shared not-found shell.");
 includes(staticUi, 'page.id = "notFoundPage";', "Static route chrome must own one reusable not-found page shell.");
 includes(staticUi, 'page.className = "pageView homePage";', "The not-found page must reuse the canonical centered Home page layout.");
-includes(staticUi, '<h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>', "The not-found page must contain only the typed site title before its Home action.");
+includes(staticUi, '<h1 id="notFoundTitle">Page not found</h1>', "The not-found title must reuse the larger centered site heading instead of table-title alignment.");
 includes(staticUi, 'class="homeOptInButton" type="button">Home</button>', "The Home action must reuse the canonical opt-in button visual language.");
 excludes(staticUi, "homeStats", "The not-found page must not render statistic or 404 cards.");
 excludes(staticUi, "notFoundMessage", "The not-found page must not render a secondary description.");
