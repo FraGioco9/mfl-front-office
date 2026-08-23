@@ -16,6 +16,10 @@ const [indexHtml, appEntry, runtime] = await Promise.all([
 includes(indexHtml, "<title>MFL Front Office</title>", "The static document title must remain the Home fallback.");
 includes(appEntry, '"/document-title-runtime.js",', "Document-title ownership must load on every application route.");
 includes(runtime, 'const APP_NAME = "MFL Front Office";', "Document titles must have one application-name owner.");
+includes(runtime, 'window.__mflAppConfig?.routes?.canonicalRequest', "Document titles must derive the active page from the canonical SPA route owner.");
+includes(runtime, 'canonicalRequest(window.location.pathname)', "Document titles must classify the current browser URL instead of startup-only page state.");
+includes(runtime, 'if (document.body?.dataset.page === "notfound") return "notfound";', "The fallback classifier must retain typed not-found state before app config is available.");
+excludes(runtime, 'document.body?.dataset.page || document.documentElement.dataset.initialPage', "Document titles must not use startup page metadata as the active SPA route owner.");
 includes(runtime, 'database: "Database"', "Database must expose a route-aware browser title.");
 includes(runtime, 'mfl: "MFL"', "MFL must expose a route-aware browser title.");
 includes(runtime, 'progression: "Progression"', "Progression must expose a route-aware browser title.");
@@ -36,4 +40,4 @@ includes(runtime, "document.title = nextTitle", "The browser title must be commi
 excludes(runtime, "fetch(", "Browser-title ownership must never request data separately from the destination page.");
 excludes(runtime, "XMLHttpRequest", "Browser-title ownership must never own a second network transport.");
 
-console.log("Document-title runtime validation passed: SPA routes use canonical browser titles without separate data loading.");
+console.log("Document-title runtime validation passed: canonical SPA routes drive browser titles without separate data loading.");
