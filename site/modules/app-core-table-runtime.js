@@ -1680,6 +1680,141 @@ function tableOpenSelectedPlayerLinksOwner() {
   });
 }
 
+const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";
+const PAGER_CURRENT_PAGE_TOTAL_ID = "pagerCurrentPageTotal";
+const PAGER_CURRENT_PAGE_STYLE_HREF = "/pager-current-page.css";
+let suppressAdjacentPagerClick = false;
+
+function ensurePagerCurrentPageStyles() {
+  if (document.querySelector('link[data-mfl-pager-current-page-style="true"]')) return;
+  const link = document.createElement("link");
+  const releaseVersion = String(window.__mflReleaseVersion || "").trim();
+  link.rel = "stylesheet";
+  link.href = releaseVersion
+    ? PAGER_CURRENT_PAGE_STYLE_HREF + "?mfl_release=" + encodeURIComponent(releaseVersion)
+    : PAGER_CURRENT_PAGE_STYLE_HREF;
+  link.dataset.mflPagerCurrentPageStyle = "true";
+  document.head.appendChild(link);
+}
+
+function pagerCurrentPageControl() {
+  let input = document.getElementById(PAGER_CURRENT_PAGE_INPUT_ID);
+  let total = document.getElementById(PAGER_CURRENT_PAGE_TOTAL_ID);
+  if (input instanceof HTMLInputElement && total instanceof HTMLElement && pageText.contains(input) && pageText.contains(total)) {
+    return { input, total };
+  }
+
+  input = document.createElement("input");
+  input.id = PAGER_CURRENT_PAGE_INPUT_ID;
+  input.className = "pagerCurrentPageInput";
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.pattern = "[0-9]*";
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", "Current page");
+  input.title = "Type a page number";
+
+  total = document.createElement("span");
+  total.id = PAGER_CURRENT_PAGE_TOTAL_ID;
+  total.className = "pagerCurrentPageTotal";
+
+  pageText.replaceChildren(document.createTextNode("Page "), input, document.createTextNode(" of "), total);
+  return { input, total };
+}
+
+function syncPagerQuickJump(currentPage, totalPages) {
+  ensurePagerCurrentPageStyles();
+  const controls = pagerCurrentPageControl();
+  const total = Math.max(1, Number.parseInt(String(totalPages || 1), 10) || 1);
+  const current = Math.min(total, Math.max(1, Number.parseInt(String(currentPage || 1), 10) || 1));
+  controls.input.dataset.currentPage = String(current);
+  controls.input.dataset.totalPages = String(total);
+  controls.input.setAttribute("aria-valuemin", "1");
+  controls.input.setAttribute("aria-valuemax", String(total));
+  controls.input.setAttribute("aria-valuenow", String(current));
+  controls.total.textContent = String(total);
+  if (document.activeElement !== controls.input) {
+    controls.input.value = String(current);
+    controls.input.dataset.dirty = "false";
+    delete controls.input.dataset.cancelCommit;
+  }
+}
+
+async function commitPagerQuickJump(input) {
+  const total = Math.max(1, Number.parseInt(input.dataset.totalPages || "1", 10) || 1);
+  const current = Math.min(total, Math.max(1, Number.parseInt(input.dataset.currentPage || String(state.page || 1), 10) || 1));
+  const parsed = Number.parseInt(input.value, 10);
+  const target = Number.isInteger(parsed) ? Math.min(total, Math.max(1, parsed)) : current;
+  input.value = String(target);
+  input.dataset.dirty = "false";
+  input.setAttribute("aria-valuenow", String(target));
+  if (target === current) return;
+
+  if (state.incrementalMode) {
+    await reloadIncrementalPage(target);
+    return;
+  }
+
+  state.page = target;
+  renderTable();
+}
+
+function installPagerQuickJumpControl() {
+  const controls = pagerCurrentPageControl();
+  if (controls.input.dataset.pagerQuickJumpBound === "true") return;
+  controls.input.dataset.pagerQuickJumpBound = "true";
+
+  controls.input.addEventListener("focus", () => {
+    delete controls.input.dataset.cancelCommit;
+    controls.input.select();
+  });
+  controls.input.addEventListener("input", () => {
+    const digitsOnly = controls.input.value.replace(/\D+/g, "");
+    if (digitsOnly !== controls.input.value) controls.input.value = digitsOnly;
+    controls.input.dataset.dirty = "true";
+  });
+  controls.input.addEventListener("blur", () => {
+    if (controls.input.dataset.cancelCommit === "true") {
+      delete controls.input.dataset.cancelCommit;
+      controls.input.dataset.dirty = "false";
+      controls.input.value = controls.input.dataset.currentPage || String(state.page || 1);
+      return;
+    }
+    void commitPagerQuickJump(controls.input);
+  });
+  controls.input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      controls.input.blur();
+      return;
+    }
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    controls.input.dataset.cancelCommit = "true";
+    controls.input.dataset.dirty = "false";
+    controls.input.value = controls.input.dataset.currentPage || String(state.page || 1);
+    controls.input.blur();
+  });
+
+  [prevButton, nextButton].forEach((button) => {
+    button.addEventListener("pointerdown", () => {
+      suppressAdjacentPagerClick = document.activeElement === controls.input && controls.input.dataset.dirty === "true";
+    }, true);
+    button.addEventListener("click", (event) => {
+      if (!suppressAdjacentPagerClick) return;
+      suppressAdjacentPagerClick = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  });
+}
+
+ensurePagerCurrentPageStyles();
+installPagerQuickJumpControl();
+syncPagerQuickJump(1, 1);
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
@@ -1834,7 +1969,7 @@ function tableRenderTableOwner() {
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount();
-  pageText.textContent = `Page ${state.page} of ${totalPages}`;
+  syncPagerQuickJump(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
   updateSelectionBar();
