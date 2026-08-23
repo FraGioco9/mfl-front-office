@@ -274,21 +274,26 @@ function renderTableLoadingShell(pageName) {
     return;
   }
 
+  const setChecked = (input, checked) => {
+    if (input && input.checked !== checked) input.checked = checked;
+  };
+  const setHidden = (element, hidden) => {
+    if (element && element.hidden !== hidden) element.hidden = hidden;
+  };
+
   const clubPage = pageName === "club";
   if (clubPage) {
     state.pendingTableControlRestore = null;
-    filterRules.replaceChildren();
-    hideRetiredInput.checked = false;
-    hideRetiringInput.checked = false;
-    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
-    if (packablePlayersInput) packablePlayersInput.checked = false;
-    newMintsInput.checked = false;
-    const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    if (quickFilters) quickFilters.hidden = true;
-    const controlsBar = document.querySelector("#progressionPage .controlsBar");
-    if (controlsBar) controlsBar.hidden = true;
+    if (filterRules.childNodes.length) filterRules.replaceChildren();
+    setChecked(hideRetiredInput, false);
+    setChecked(hideRetiringInput, false);
+    setChecked(hideMflPlayersInput, false);
+    setChecked(packablePlayersInput, false);
+    setChecked(newMintsInput, false);
+    setHidden(document.querySelector("#progressionPage .quickFilters"), true);
+    setHidden(document.querySelector("#progressionPage .controlsBar"), true);
     document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
-      pager.hidden = true;
+      setHidden(pager, true);
     });
   } else {
     restoreSavedTableState(pageName);
@@ -299,12 +304,17 @@ function renderTableLoadingShell(pageName) {
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   } else if (pageName !== "club") {
-    tablePageTitle.textContent = tableTitleForPage(pageName);
+    const title = tableTitleForPage(pageName);
+    if (tablePageTitle.textContent !== title) tablePageTitle.textContent = title;
   }
-  emptyState.hidden = true;
-  emptyState.textContent = "";
-  tableBody.replaceChildren();
-  window.__mflTableLoadingRuntime?.show?.();
+  setHidden(emptyState, true);
+  if (emptyState.textContent) emptyState.textContent = "";
+
+  // Hand replacement ownership directly to Uniform Loading. This preserves the
+  // same loading rows while avoiding the former empty-body replace followed by
+  // a second replace when the loading rows were primed.
+  const loadingShown = window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
+  if (!loadingShown) tableBody.replaceChildren();
 }
 
 function tableNextOverallInfo(row, statColumn) {
