@@ -1,4 +1,4 @@
 {
-  "version": "1.124.3",
-  "description": "Centralize popup stacking and restore consistent first-open modal animations"
+  "version": "1.124.4",
+  "description": "Minimize Supabase persistence and add authenticated last-visit tracking"
 }
