@@ -62,7 +62,7 @@ invariant(
   "Generated pre-bootstrap state must own the browser release facade and first-paint footer version.",
 );
 invariant(
-  tableWidthRuntime.includes(`\"version\":\"${version}\"`),
+  tableWidthRuntime.includes(`"version":"${version}"`),
   "The tracked generated pre-bootstrap runtime must project the version from release.json.",
 );
 
