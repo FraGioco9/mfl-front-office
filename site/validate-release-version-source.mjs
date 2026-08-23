@@ -54,6 +54,10 @@ invariant(
   "Generated pre-bootstrap state must expose the canonical release facade sourced from release.json.",
 );
 invariant(
+  !preBootstrapSource.includes("querySelector") && !tableWidthRuntime.includes("querySelector"),
+  "Release projection must not add DOM-repair ownership to the Uniform Width pre-bootstrap runtime.",
+);
+invariant(
   tableWidthRuntime.includes(`"version":"${version}"`),
   "The tracked generated pre-bootstrap runtime must project the version from release.json.",
 );
