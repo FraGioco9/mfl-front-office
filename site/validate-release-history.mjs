@@ -43,38 +43,21 @@ const currentVersion = String(release.version || "").trim();
 const currentParts = versionParts(currentVersion);
 invariant(currentParts, "release.json must contain a Semantic Version.");
 
-const canonicalReleaseExpression = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
-invariant(
-  bootstrap.includes(`const STATIC_RELEASE_VERSION = ${canonicalReleaseExpression};`),
-  "bootstrap.js must consume the canonical pre-bootstrap release instead of owning a version literal.",
-);
-invariant(
-  bootstrapCore.includes(`const STATIC_RELEASE_VERSION = ${canonicalReleaseExpression};`),
-  "bootstrap-core.js must consume the canonical pre-bootstrap release instead of owning a version literal.",
-);
-invariant(
-  !/const\s+STATIC_RELEASE_VERSION\s*=\s*["']\d+\.\d+\.\d+["']/.test(bootstrap),
-  "bootstrap.js must not own a hard-coded current release version.",
-);
-invariant(
-  !/window\.__mflReleaseVersion\s*\|\|\s*["']\d+\.\d+\.\d+["']/.test(bootstrapCore),
-  "bootstrap-core.js must not own a hard-coded release fallback.",
-);
+const bootstrapVersion = bootstrap.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1] || "";
+const bootstrapCoreVersion = bootstrapCore.match(/window\.__mflReleaseVersion\s*\|\|\s*["'](\d+\.\d+\.\d+)["']/)?.[1] || "";
+invariant(bootstrapVersion === currentVersion, `bootstrap.js generated projection ${bootstrapVersion || "<missing>"} must match release.json ${currentVersion}.`);
+invariant(bootstrapCoreVersion === currentVersion, `bootstrap-core.js generated fallback ${bootstrapCoreVersion || "<missing>"} must match release.json ${currentVersion}.`);
 invariant(
   bootstrap.includes("footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`"),
-  "bootstrap.js must preserve footer synchronization from the canonical release projection.",
+  "bootstrap.js must synchronously render the generated current release version in the footer.",
 );
 invariant(
   bootstrapCore.includes("footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`"),
-  "bootstrap-core.js must preserve footer synchronization from the canonical release projection.",
+  "bootstrap-core.js must preserve the generated current release version in the footer.",
 );
 invariant(
-  /<a\s+href=["']\/changelog["'][^>]*data-page=["']changelog["'][^>]*>MFL Front Office<\/a>/.test(indexHtml),
-  "index.html must not own a manually synchronized release number.",
-);
-invariant(
-  !/<a\s+href=["']\/changelog["'][^>]*>MFL Front Office v\d+\.\d+\.\d+<\/a>/.test(indexHtml),
-  "The static footer must receive its version from generated pre-bootstrap release metadata.",
+  indexHtml.includes(`<a href="/changelog" data-page="changelog">MFL Front Office v${currentVersion}</a>`),
+  "index.html must contain the generated current release footer projection.",
 );
 
 const overrides = JSON.parse(overridesSource);
@@ -108,4 +91,4 @@ invariant(
   "The releases API must merge the complete override and archived histories after the current release.",
 );
 
-console.log(`Release/footer history validation passed for v${currentVersion} with release.json as the only current-version owner and complete ${major}.${minor}.0-${patch} coverage.`);
+console.log(`Release/footer history validation passed for v${currentVersion} with generated projections and complete ${major}.${minor}.0-${patch} coverage.`);
