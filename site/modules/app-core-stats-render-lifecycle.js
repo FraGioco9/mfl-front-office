@@ -5,6 +5,9 @@ import { replaceRequired } from "./app-core-splitter-utils.js";
 const MFL_STATS_ANIMATION_RUNTIME = `let mflStatsDistributionAnimationRevision = 0;
 let mflStatsDistributionAnimationFrame = 0;
 let mflStatsDistributionAnimationUnsubscribe = null;
+let mflStatsRouteActive = false;
+let mflStatsLoadAnimationAvailable = true;
+let mflStatsInteractionAnimationRequested = false;
 
 function cancelMflStatsDistributionAnimationSchedule() {
   mflStatsDistributionAnimationRevision += 1;
@@ -14,11 +17,46 @@ function cancelMflStatsDistributionAnimationSchedule() {
   mflStatsDistributionAnimationUnsubscribe = null;
 }
 
-function playMflStatsDistributionAnimation(container, revision) {
+function resetMflStatsDistributionAnimationSession() {
+  cancelMflStatsDistributionAnimationSchedule();
+  mflStatsLoadAnimationAvailable = true;
+  mflStatsInteractionAnimationRequested = false;
+  if (mflStatsAgeDistribution instanceof HTMLElement) {
+    delete mflStatsAgeDistribution.dataset.mflStatsRenderSignature;
+  }
+}
+
+function syncMflStatsAnimationRouteSession() {
+  const active = document.body?.dataset.page === "mflstats";
+  if (active && !mflStatsRouteActive) {
+    mflStatsRouteActive = true;
+    resetMflStatsDistributionAnimationSession();
+  } else if (!active && mflStatsRouteActive) {
+    mflStatsRouteActive = false;
+    cancelMflStatsDistributionAnimationSchedule();
+    mflStatsInteractionAnimationRequested = false;
+  }
+  return active;
+}
+
+function requestMflStatsInteractionAnimation() {
+  mflStatsInteractionAnimationRequested = true;
+}
+
+function mflStatsDistributionAnimationIntent() {
+  if (!syncMflStatsAnimationRouteSession()) return "";
+  if (mflStatsInteractionAnimationRequested) return "interaction";
+  if (mflStatsLoadAnimationAvailable) return "load";
+  return "";
+}
+
+function playMflStatsDistributionAnimation(container, revision, intent) {
   mflStatsDistributionAnimationFrame = 0;
   if (revision !== mflStatsDistributionAnimationRevision
       || document.body?.dataset.page !== "mflstats"
       || !container.isConnected) return;
+  if (intent === "interaction") mflStatsInteractionAnimationRequested = false;
+  if (intent === "load") mflStatsLoadAnimationAvailable = false;
   container.querySelectorAll(".mflStatsHistogramFill").forEach((fill) => {
     if (!(fill instanceof HTMLElement)) return;
     fill.getAnimations().forEach((animation) => animation.cancel());
@@ -32,14 +70,14 @@ function playMflStatsDistributionAnimation(container, revision) {
   });
 }
 
-function scheduleMflStatsDistributionAnimation(container) {
+function scheduleMflStatsDistributionAnimation(container, intent) {
   cancelMflStatsDistributionAnimationSchedule();
   const revision = mflStatsDistributionAnimationRevision;
   const scheduleAfterPaint = () => {
     if (revision !== mflStatsDistributionAnimationRevision) return;
     mflStatsDistributionAnimationFrame = requestAnimationFrame(() => {
       if (revision !== mflStatsDistributionAnimationRevision) return;
-      mflStatsDistributionAnimationFrame = requestAnimationFrame(() => playMflStatsDistributionAnimation(container, revision));
+      mflStatsDistributionAnimationFrame = requestAnimationFrame(() => playMflStatsDistributionAnimation(container, revision, intent));
     });
   };
 
@@ -63,13 +101,22 @@ function scheduleMflStatsDistributionAnimation(container) {
 
   scheduleAfterPaint();
 }
+
+const mflStatsAnimationRouteObserver = new MutationObserver(syncMflStatsAnimationRouteSession);
+if (document.body) {
+  mflStatsAnimationRouteObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-page"],
+  });
+}
+syncMflStatsAnimationRouteSession();
 `;
 
 /**
  * Keep the MFL Stats histogram DOM stable while route/data hydration can commit
- * more than one state. CSS must not auto-start a column animation for every DOM
- * creation; instead the final rendered histogram animates once after the shared
- * loading controller reports that the route is idle.
+ * more than one state. One page entry owns one load-animation token; newer
+ * renders may replace a pending animation, but once the rise begins that token
+ * is consumed and later hydration renders cannot start another one.
  * @param {string} source
  */
 export function normalizeMflStatsHistogramLifecycle(source) {
@@ -80,7 +127,22 @@ export function normalizeMflStatsHistogramLifecycle(source) {
     runtime,
     "const mflStatsOverallFilterOptions = [",
     `${MFL_STATS_ANIMATION_RUNTIME}\nconst mflStatsOverallFilterOptions = [`,
-    "MFL Stats owns a single post-loading histogram animation scheduler",
+    "MFL Stats owns a route-scoped one-shot histogram animation session",
+  );
+
+  normalizedRuntime = replaceRequired(
+    normalizedRuntime,
+    `      button.addEventListener("click", () => {
+        state.mflStatsOverallFilter = filter.id;
+        renderMflStatsPage();
+      });`,
+    `      button.addEventListener("click", () => {
+        if (state.mflStatsOverallFilter === filter.id) return;
+        state.mflStatsOverallFilter = filter.id;
+        requestMflStatsInteractionAnimation();
+        renderMflStatsPage();
+      });`,
+    "MFL Stats Overall filters request one interaction animation",
   );
 
   normalizedRuntime = replaceRequired(
@@ -109,12 +171,14 @@ export function normalizeMflStatsHistogramLifecycle(source) {
 
   if (!counts.size) {
     cancelMflStatsDistributionAnimationSchedule();
+    mflStatsInteractionAnimationRequested = false;
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
   }
 
+  const animationIntent = mflStatsDistributionAnimationIntent();
   const maxCount = Math.max(...counts.values());`,
-    "MFL Stats histogram preserves identical rendered distributions",
+    "MFL Stats histogram preserves identical rendered distributions and resolves one animation intent",
   );
 
   normalizedRuntime = replaceRequired(
@@ -133,14 +197,42 @@ export function normalizeMflStatsHistogramLifecycle(source) {
     normalizedRuntime,
     '    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;',
     '    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="animation:none;--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;',
-    "MFL Stats fill waits for the final post-loading animation",
+    "MFL Stats fill waits for its one-shot animation intent",
   );
 
   normalizedRuntime = replaceRequired(
     normalizedRuntime,
     "  mflStatsAgeDistribution.replaceChildren(fragment);",
-    "  mflStatsAgeDistribution.replaceChildren(fragment);\n  scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution);",
-    "MFL Stats starts one animation after its final histogram render",
+    `  mflStatsAgeDistribution.replaceChildren(fragment);
+  if (animationIntent) scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution, animationIntent);
+  else cancelMflStatsDistributionAnimationSchedule();`,
+    "MFL Stats starts at most one load animation per page entry",
+  );
+
+  normalizedRuntime = replaceRequired(
+    normalizedRuntime,
+    `mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-distribution]");
+  if (!button) {
+    return;
+  }
+
+  state.mflStatsDistributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+  renderMflStatsPage();
+});`,
+    `mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-distribution]");
+  if (!button) {
+    return;
+  }
+
+  const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+  if (nextMode === state.mflStatsDistributionMode) return;
+  state.mflStatsDistributionMode = nextMode;
+  requestMflStatsInteractionAnimation();
+  renderMflStatsPage();
+});`,
+    "MFL Stats distribution mode requests one interaction animation",
   );
 
   return normalizedRuntime;
