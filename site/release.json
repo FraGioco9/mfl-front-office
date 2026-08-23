@@ -1,4 +1,4 @@
 {
-  "version": "1.124.2",
-  "description": "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"
+  "version": "1.124.3",
+  "description": "Centralize popup stacking and restore consistent first-open modal animations"
 }
