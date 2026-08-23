@@ -132,10 +132,16 @@ invariant(
   evaluation.includes("async function recoverInvalidEvaluationLink() {")
     && evaluation.includes('const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
     && evaluation.includes("playerRow = rowByPlayerId(candidatePlayerId);")
-    && evaluation.includes('window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");')
+    && evaluation.includes('if (!data.playerId) {\n    throw new Error("Evaluation player is not available.");\n  }')
+    && evaluation.includes('window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));')
+    && evaluation.includes('window.history.replaceState({}, "", "/evaluation");')
+    && evaluation.includes('document.documentElement.dataset.initialEvaluationSelection = "false";')
+    && evaluation.includes('evaluationSearchInput.value = "";')
+    && evaluation.includes("renderEmptyEvaluationSelection(true, true);")
+    && evaluation.includes("syncEvaluationSearchClearButton();")
     && evaluation.includes("await recoverInvalidEvaluationLink();\n    await renderEvaluationPage();")
     && !evaluation.includes("resetInvalidEvaluationLinkToPlainEvaluation"),
-  "Invalid saved/shared Evaluation URLs must recover to a resolvable base player Evaluation, or to plain /evaluation when no player can be resolved.",
+  "Invalid saved/shared Evaluation URLs, including successful payloads without a player ID, must recover to a resolvable base player Evaluation or synchronously restore plain /evaluation and its search tip.",
 );
 
 invariant(
@@ -197,4 +203,4 @@ invariant(
   "Every bordered tableShell must own its single outer bottom edge without a duplicate last-row cell border.",
 );
 
-console.log("Evaluation refresh hydration, selected-route action stability, invalid-link recovery, cached plain-route re-entry, pre-paint empty history/navigation return, recent-player cache reuse, first-paint timing, clear-focus ownership, and shared table-edge validation passed.");
+console.log("Evaluation refresh hydration, selected-route action stability, invalid-link recovery including missing-player payloads, cached plain-route re-entry, pre-paint empty history/navigation return, recent-player cache reuse, first-paint timing, clear-focus ownership, and shared table-edge validation passed.");
