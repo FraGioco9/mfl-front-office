@@ -188,6 +188,7 @@ function renderMflStatsDistribution(packableRows) {
 
 function renderMflStatsPage() {
   renderMflStatsFilterButtons();
+  if (state.incrementalRoute?.scope !== "mflstats") return;
   const rows = mflStatsRows();
   const packableRows = rows.filter((row) => mflStatsCategory(row) === "packable");
   const agedRows = rows.filter((row) => mflStatsCategory(row) === "aged");
