@@ -140,7 +140,7 @@ html:not(.mflInitialRouteResolved):is(
   .menuRail {
     position: absolute;
     inset: 0 0 auto;
-    z-index: 18;
+    z-index: var(--mfl-z-navigation-mobile);
     width: 100%;
     height: var(--mobile-nav-height);
     min-height: var(--mobile-nav-height);

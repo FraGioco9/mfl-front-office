@@ -180,7 +180,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   position: absolute;
   top: calc(100% + var(--mfl-dropdown-gap));
   right: 0;
-  z-index: 20;
+  z-index: var(--mfl-z-dropdown);
   width: 100%;
 }
 
@@ -307,7 +307,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 20;
+  z-index: var(--mfl-z-dropdown);
   width: 350px;
   min-width: 350px;
   max-width: calc(100vw - 24px);

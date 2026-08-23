@@ -1,0 +1,17 @@
+/* Canonical cross-site stacking-level owner for MFL Front Office.
+ * Component-local stacking contexts keep their own small z-index values. */
+
+:root {
+  --mfl-z-navigation: 15;
+  --mfl-z-navigation-mobile: 18;
+  --mfl-z-dropdown: 20;
+  --mfl-z-wallet-guard: 34;
+  --mfl-z-modal: 50;
+  --mfl-z-floating-tooltip: 10030;
+  --mfl-z-chrome: 2147483000;
+  --mfl-z-selection: 2147483630;
+  --mfl-z-toast: 2147483635;
+  --mfl-z-critical-modal: 2147483645;
+  --mfl-z-busy-shield: 2147483646;
+  --mfl-z-topmost: 2147483647;
+}

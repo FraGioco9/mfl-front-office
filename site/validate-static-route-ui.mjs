@@ -100,7 +100,7 @@ for (const forbidden of ["function onSharedViewButtonClick", "clubRouteActive", 
 includes(staticUi, 'tooltipPortal = document.createElement("div");', "Generic tooltips must use a body-level portal.");
 includes(staticUi, "document.body.appendChild(tooltipPortal);", "Generic tooltips must escape page/sidebar stacking contexts.");
 includes(styles, ".mflGlobalTooltip {", "The global tooltip portal must have canonical static styling.");
-includes(styles, "z-index: 2147483647;", "Global tooltip portals must sit above application layers.");
+includes(styles, "z-index: var(--mfl-z-topmost);", "Global tooltip portals must consume the canonical topmost stacking level.");
 
 includes(bootstrap, "const TABLE_VIEW_BY_SLUG = Object.freeze({", "Bootstrap table chrome must understand canonical route view slugs directly.");
 includes(bootstrap, "function tableViewFromUrl(page, urlLike = window.location.href) {", "Bootstrap table chrome must resolve its view from the destination URL.");

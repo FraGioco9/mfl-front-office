@@ -1,3 +1,5 @@
+@import url("/stacking.css");
+
 :root {
   color-scheme: light;
   font-family: "Titillium Web", Arial, Helvetica, sans-serif;
@@ -71,7 +73,7 @@ body.walletOptingIn::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 34;
+  z-index: var(--mfl-z-wallet-guard);
   background: transparent;
   cursor: wait;
 }
@@ -86,7 +88,7 @@ select {
   grid-row: 1;
   position: relative;
   top: auto;
-  z-index: 2147483000;
+  z-index: var(--mfl-z-chrome);
   display: grid;
   grid-template-columns: minmax(460px, 1fr) minmax(420px, 560px) minmax(460px, 1fr);
   align-items: center;
@@ -277,7 +279,7 @@ body[data-page="home"] .topbar .stats {
   top: 102px;
   bottom: 0;
   left: 0;
-  z-index: 15;
+  z-index: var(--mfl-z-navigation);
   width: var(--pinned-sidebar-width);
   box-sizing: border-box;
   overflow: hidden;
@@ -773,7 +775,7 @@ main > .pageView {
 .siteFooter {
   grid-row: 3;
   position: relative;
-  z-index: 2147483000;
+  z-index: var(--mfl-z-chrome);
   display: grid;
   align-content: center;
   justify-items: center;
@@ -1108,7 +1110,7 @@ button:disabled:not(.menuButton) {
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--mfl-z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1957,7 +1959,7 @@ td a {
   left: var(--selection-center-x, 50%);
   right: auto;
   bottom: var(--mfl-selection-bar-bottom, 22px);
-  z-index: 2147483630;
+  z-index: var(--mfl-z-selection);
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -2062,7 +2064,6 @@ td a {
   position: fixed;
   left: var(--toast-center-x, 50%);
   bottom: 88px;
-  z-index: 10020;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3559,7 +3560,7 @@ button.playerIdText:active {
 
 .playerNoteFloatingTooltip {
   position: fixed;
-  z-index: 2147483647;
+  z-index: var(--mfl-z-topmost);
   max-width: 320px;
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
@@ -3753,7 +3754,7 @@ button.playerIdText:active {
 
 .floatingActionTooltip {
   position: fixed;
-  z-index: 10030;
+  z-index: var(--mfl-z-floating-tooltip);
   box-sizing: border-box;
   width: max-content;
   max-width: min(220px, calc(100vw - 16px));
@@ -4549,7 +4550,7 @@ body[data-page="evaluation"] #evaluationPage {
 #evaluationLoadModal:not([hidden]) {
   position: fixed;
   inset: 0;
-  z-index: 2147483645;
+  z-index: var(--mfl-z-critical-modal);
 }
 
 #searchModal > .searchDialog,
@@ -4660,7 +4661,7 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
 
 .evaluationDiscountTooltipPortal {
   position: fixed;
-  z-index: 2147483647;
+  z-index: var(--mfl-z-topmost);
   max-width: 320px;
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
