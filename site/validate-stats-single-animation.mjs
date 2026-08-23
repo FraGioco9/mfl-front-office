@@ -90,6 +90,16 @@ includes(
   'fill.style.animation = "none";',
   "Database Stats must prevent intermediate DOM creation from auto-starting the CSS animation.",
 );
+includes(
+  databaseStats,
+  "if (animationIntent) scheduleDistributionAnimation(container, animationIntent);",
+  "Database Stats must schedule a rise only when the current page entry owns an animation intent.",
+);
+excludes(
+  databaseStats,
+  "scheduleDistributionAnimation(container);",
+  "Database Stats must never unconditionally replay a histogram animation after a render.",
+);
 
 includes(
   mflStats,
@@ -115,6 +125,16 @@ includes(
   mflStats,
   'style="animation:none;--bar-height:${barHeight}%"',
   "MFL Stats must prevent intermediate DOM creation from auto-starting the CSS animation.",
+);
+includes(
+  mflStats,
+  "if (animationIntent) scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution, animationIntent);",
+  "MFL Stats must schedule a rise only when the current page entry owns an animation intent.",
+);
+excludes(
+  mflStats,
+  "scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution);",
+  "MFL Stats must never unconditionally replay a histogram animation after a render.",
 );
 
 includes(
