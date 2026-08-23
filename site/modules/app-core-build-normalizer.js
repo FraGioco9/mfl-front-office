@@ -14,6 +14,7 @@ import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lif
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
+import { normalizeStatsNavigationLifecycle } from "./app-core-stats-navigation-lifecycle.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
@@ -70,7 +71,7 @@ function normalizeViewFilterStateBeforeTransition(artifacts) {
 
   return Object.freeze({
     ...artifacts,
-    core: normalizedCore,
+    core: normalizeStatsNavigationLifecycle(normalizedCore),
   });
 }
 

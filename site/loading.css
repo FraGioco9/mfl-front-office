@@ -10,7 +10,7 @@ html.mflInteractionBusy body *::before,
 html.mflInteractionBusy body *::after {
   pointer-events: none;
   transition: none;
-  animation: none;
+  animation-play-state: paused;
 }
 
 html.mflInitialChromePreparing body:has(> #appShell),
@@ -18,7 +18,7 @@ html.mflInitialChromePreparing body:has(> #appShell) *,
 html.mflInitialChromePreparing body:has(> #appShell) *::before,
 html.mflInitialChromePreparing body:has(> #appShell) *::after {
   transition: none;
-  animation: none;
+  animation-play-state: paused;
 }
 
 html.mflInteractionBusy body main,

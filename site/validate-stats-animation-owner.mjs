@@ -7,13 +7,14 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [databaseStats, databaseState, mflStats, normalizer, buildCore, stylesBase] = await Promise.all([
+const [databaseStats, databaseState, mflStats, normalizer, buildCore, stylesBase, loadingStyles] = await Promise.all([
   read("./database-stats-runtime.js"),
   read("./database-stats-state-runtime.js"),
   read("./modules/app-core-mfl-stats-runtime.js"),
   read("./modules/app-core-stats-route-ownership.js"),
   read("./build-app-core.mjs"),
   read("./styles-base.css"),
+  read("./loading.css"),
 ]);
 
 includes(
@@ -81,6 +82,43 @@ includes(
   "Generated MFL Stats must leave the canonical CSS fill rise intact without replacing or suppressing it.",
 );
 
+for (const required of [
+  "let mflStatsPreparedSourceRows = null;",
+  "function mflStatsPreparedRowsForCurrentRoute() {",
+  "mflStatsPreparedSourceRows === state.rows && mflStatsPreparedSourceColumns === state.columns",
+  "category: mflStatsCategory(row),",
+  "if (filter.min === null && filter.max === null) return preparedRows;",
+  "return preparedRows.filter((entry) => rowMatchesMflStatsOverallFilter(entry.overall, filter));",
+  "if (state.mflStatsDistributionMode === \"age\") return entry.age;",
+  "rows.forEach((entry) => {",
+]) {
+  includes(
+    mflStats,
+    required,
+    `MFL Stats filter rendering must reuse prepared route facts: ${required}`,
+  );
+}
+excludes(
+  mflStats,
+  ".filter((row) => rowIsMflWalletPlayer(row))",
+  "MFL Stats must not re-check wallet ownership on every Overall filter click after the mflstats route already scoped the payload.",
+);
+excludes(
+  mflStats,
+  'rows.filter((row) => mflStatsCategory(row) === "packable")',
+  "MFL Stats must not reclassify the full All result in separate category passes.",
+);
+excludes(
+  mflStats,
+  "__mflInteractionBusy",
+  "MFL Stats Overall filters must remain local cached-data interactions instead of entering the global loading workflow.",
+);
+excludes(
+  mflStats,
+  "withInteractionBusy",
+  "MFL Stats Overall filters must not wrap already-loaded filter derivation in a synthetic loading state.",
+);
+
 includes(
   stylesBase,
   "animation: mflStatsBarRise 220ms ease-out;",
@@ -97,9 +135,49 @@ includes(
   "The MFL Stats generator must enforce route data ownership before rendering the histogram.",
 );
 includes(
+  normalizer,
+  "mflStatsPreparedRowsForCurrentRoute",
+  "The canonical MFL Stats normalizer must own prepared filter-row caching.",
+);
+includes(
+  normalizer,
+  "MFL Stats categories aggregate in one pass",
+  "The canonical MFL Stats normalizer must keep category aggregation single-pass.",
+);
+includes(
   buildCore,
   "normalizeMflStatsRouteOwnership",
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
-console.log("Database Stats revisits render cached data, while MFL Stats validates owned data before shared row access and both keep one column animation owner.");
+const busyAnimationStart = loadingStyles.indexOf("html.mflInteractionBusy body *,");
+const busyAnimationEnd = loadingStyles.indexOf("html.mflInitialChromePreparing", busyAnimationStart);
+const busyAnimationBlock = loadingStyles.slice(busyAnimationStart, busyAnimationEnd);
+invariant(busyAnimationStart >= 0 && busyAnimationEnd > busyAnimationStart, "Global busy animation ownership must remain explicit.");
+includes(
+  busyAnimationBlock,
+  "animation-play-state: paused;",
+  "Loading must pause existing CSS animations instead of removing and restarting Stats bar animations.",
+);
+excludes(
+  busyAnimationBlock,
+  "animation: none;",
+  "Global busy state must not recreate CSS animations when loading ends.",
+);
+
+const chromeAnimationStart = loadingStyles.indexOf("html.mflInitialChromePreparing");
+const chromeAnimationEnd = loadingStyles.indexOf("html.mflInteractionBusy body main,", chromeAnimationStart);
+const chromeAnimationBlock = loadingStyles.slice(chromeAnimationStart, chromeAnimationEnd);
+invariant(chromeAnimationStart >= 0 && chromeAnimationEnd > chromeAnimationStart, "Initial chrome animation ownership must remain explicit.");
+includes(
+  chromeAnimationBlock,
+  "animation-play-state: paused;",
+  "Initial chrome preparation must pause animations without recreating them at first route readiness.",
+);
+excludes(
+  chromeAnimationBlock,
+  "animation: none;",
+  "Initial chrome preparation must not restart Stats animations when readiness settles.",
+);
+
+console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, loading-safe animation timelines, and prepared local MFL filter derivation without synthetic loading.");

@@ -21,13 +21,10 @@ function mflStatsFilterById(filterId = state.mflStatsOverallFilter) {
   return mflStatsOverallFilterOptions.find((filter) => filter.id === filterId) || mflStatsOverallFilterOptions[0];
 }
 
-function rowMatchesMflStatsOverallFilter(row, filter = mflStatsFilterById()) {
-  const overall = Number(statDisplayValue(row, "overall"));
-  if (!Number.isFinite(overall)) {
-    return false;
-  }
-
-  return (filter.min === null || overall >= filter.min) && (filter.max === null || overall <= filter.max);
+function rowMatchesMflStatsOverallFilter(overall, filter = mflStatsFilterById()) {
+  return Number.isFinite(overall)
+    && (filter.min === null || overall >= filter.min)
+    && (filter.max === null || overall <= filter.max);
 }
 
 function mflStatsCategory(row) {
@@ -47,11 +44,40 @@ function mflStatsCategory(row) {
   return "other";
 }
 
+let mflStatsPreparedSourceRows = null;
+let mflStatsPreparedSourceColumns = null;
+let mflStatsPreparedRows = [];
+
+function mflStatsPreparedRowsForCurrentRoute() {
+  if (mflStatsPreparedSourceRows === state.rows && mflStatsPreparedSourceColumns === state.columns) {
+    return mflStatsPreparedRows;
+  }
+
+  mflStatsPreparedSourceRows = state.rows;
+  mflStatsPreparedSourceColumns = state.columns;
+  mflStatsPreparedRows = [];
+
+  if (!Array.isArray(state.rows)) return mflStatsPreparedRows;
+
+  state.rows.forEach((row) => {
+    const overall = Number(statDisplayValue(row, "overall"));
+    if (!Number.isFinite(overall)) return;
+    const age = Number(getValue(row, "age"));
+    mflStatsPreparedRows.push({
+      overall,
+      age: Number.isFinite(age) ? age : null,
+      category: mflStatsCategory(row),
+    });
+  });
+
+  return mflStatsPreparedRows;
+}
+
 function mflStatsRows() {
+  const preparedRows = mflStatsPreparedRowsForCurrentRoute();
   const filter = mflStatsFilterById();
-  return state.rows
-    .filter((row) => rowIsMflWalletPlayer(row))
-    .filter((row) => rowMatchesMflStatsOverallFilter(row, filter));
+  if (filter.min === null && filter.max === null) return preparedRows;
+  return preparedRows.filter((entry) => rowMatchesMflStatsOverallFilter(entry.overall, filter));
 }
 
 function renderMflStatsFilterButtons() {
@@ -97,14 +123,9 @@ function renderMflStatsFilterButtons() {
   });
 }
 
-function mflStatsDistributionValue(row) {
-  if (state.mflStatsDistributionMode === "age") {
-    const age = Number(getValue(row, "age"));
-    return Number.isFinite(age) ? age : null;
-  }
-
-  const overall = Number(statDisplayValue(row, "overall"));
-  return Number.isFinite(overall) ? Math.trunc(overall) : null;
+function mflStatsDistributionValue(entry) {
+  if (state.mflStatsDistributionMode === "age") return entry.age;
+  return Number.isFinite(entry.overall) ? Math.trunc(entry.overall) : null;
 }
 
 function renderMflStatsDistributionModeButtons() {
@@ -190,9 +211,14 @@ function renderMflStatsPage() {
   renderMflStatsFilterButtons();
   if (state.incrementalRoute?.scope !== "mflstats") return;
   const rows = mflStatsRows();
-  const packableRows = rows.filter((row) => mflStatsCategory(row) === "packable");
-  const agedRows = rows.filter((row) => mflStatsCategory(row) === "aged");
-  const otherRows = rows.filter((row) => mflStatsCategory(row) === "other");
+  const packableRows = [];
+  let agedCount = 0;
+  let otherCount = 0;
+  rows.forEach((entry) => {
+    if (entry.category === "packable") packableRows.push(entry);
+    else if (entry.category === "aged") agedCount += 1;
+    else otherCount += 1;
+  });
 
   if (mflStatsTotalPlayers) {
     mflStatsTotalPlayers.textContent = formatCount(rows.length);
@@ -201,10 +227,10 @@ function renderMflStatsPage() {
     mflStatsPackablePlayers.textContent = formatCount(packableRows.length);
   }
   if (mflStatsAgedPlayers) {
-    mflStatsAgedPlayers.textContent = formatCount(agedRows.length);
+    mflStatsAgedPlayers.textContent = formatCount(agedCount);
   }
   if (mflStatsOtherPlayers) {
-    mflStatsOtherPlayers.textContent = formatCount(otherRows.length);
+    mflStatsOtherPlayers.textContent = formatCount(otherCount);
   }
 
   renderMflStatsDistribution(packableRows);
