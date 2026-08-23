@@ -58,7 +58,7 @@ for (const required of [
 for (const required of [
   "mflNumericStepperControl",
   "mflIncrementStepper",
-  'button.textContent = delta > 0 ? "\\u25b2" : "\\u25bc";',
+  'button.textContent = delta > 0 ? "▲" : "▼";',
   "input.stepUp();",
   "input.stepDown();",
 ]) {
