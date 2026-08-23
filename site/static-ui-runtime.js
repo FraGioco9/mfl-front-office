@@ -127,7 +127,9 @@
       if (button.hidden !== shouldHide) button.hidden = shouldHide;
       if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
         const label = page === "club" ? "Squad" : "Attributes";
-        if (button.textContent !== label) button.textContent = label;
+        if (button.textContent !== label) {
+          button.textContent = page === "club" ? "Squad" : "Attributes";
+        }
       }
     });
 
