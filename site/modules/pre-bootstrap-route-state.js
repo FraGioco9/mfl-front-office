@@ -14,8 +14,8 @@ const APP_CONFIG_EXPORTS_WITH_INITIAL_ROUTE = `  window.__mflAppConfig = appConf
   window.__mflTableViewConfig = data.routes.tableViews;
 
   const initialRoute = routes.initialRequest(location.pathname);
+  if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
   if (typeof document !== "undefined" && document.body) {
-    document.body.dataset.page = initialRoute.pageName;
     const releaseFooter = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     if (releaseFooter) releaseFooter.textContent = \`MFL Front Office v\${data.release.version}\`;
   }
