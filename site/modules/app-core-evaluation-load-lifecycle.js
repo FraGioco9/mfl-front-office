@@ -262,6 +262,39 @@ const EVALUATION_DELETE_SUCCESS_WITH_INVALIDATION = `  if (!response.ok) {
   invalidateSavedEvaluationCache();
   return true;`;
 
+const EVALUATION_MISSING_PLAYER_PAYLOAD = `  if (!data.playerId) {
+    showToast("Shared evaluation is not available.");
+    return;
+  }`;
+const EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY = `  if (!data.playerId) {
+    throw new Error("Evaluation player is not available.");
+  }`;
+
+const EVALUATION_INVALID_LINK_RECOVERY = `  const playerId = playerRow ? candidatePlayerId : "";
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
+  return true;`;
+const EVALUATION_INVALID_LINK_RECOVERY_WITH_PLAIN_RESET = `  const playerId = playerRow ? candidatePlayerId : "";
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+
+  if (playerId) {
+    window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));
+  } else {
+    state.evaluationOverallRows = {};
+    state.evaluationSummaryPositions = {};
+    evaluationSearchInput.value = "";
+    window.history.replaceState({}, "", "/evaluation");
+    document.documentElement.dataset.initialEvaluationSelection = "false";
+    renderEmptyEvaluationSelection(true, true);
+    syncEvaluationSearchClearButton();
+  }
+
+  return true;`;
+
 /**
  * Keep Saved Evaluation loading in memory after the first successful fetch.
  * The list cache is scoped to the active wallet, stores stable player identity,
@@ -324,6 +357,18 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     EVALUATION_SAVED_LOAD_REQUEST,
     EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE,
     "Saved Evaluation routes show the known player name immediately and reuse cached payloads before making another request",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_MISSING_PLAYER_PAYLOAD,
+    EVALUATION_MISSING_PLAYER_PAYLOAD_WITH_RECOVERY,
+    "Saved and shared Evaluation payloads without a player ID enter canonical invalid-link recovery",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_INVALID_LINK_RECOVERY,
+    EVALUATION_INVALID_LINK_RECOVERY_WITH_PLAIN_RESET,
+    "Broken saved and shared links without a resolvable player synchronously restore plain Evaluation chrome and URL",
   );
   evaluation = replaceRequired(
     evaluation,
