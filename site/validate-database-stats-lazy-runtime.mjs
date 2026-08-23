@@ -49,8 +49,9 @@ includes(
   "Database Stats route-core dependency classification must preserve the canonical Stats view.",
 );
 
-includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats state owner must expose passive rendering after navigation.");
-includes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats state owner must delegate final rendering to the domain renderer.");
+includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats state owner must expose passive route-state rendering after navigation.");
+includes(stateRuntime, "window.setDatabaseStatsPageVisibility?.(true);", "Database Stats state owner must only expose the route shell after the domain runtime starts its own render.");
+excludes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats state owner must not invoke the domain renderer a second time after runtime startup.");
 for (const forbiddenOwner of [
   "commitStatsTransition",
   "__mflCommitViewTransition",
@@ -66,6 +67,7 @@ for (const forbiddenOwner of [
 }
 
 includes(statsRuntime, "async function showStatsPage() {", "Database Stats domain runtime must retain its data/render owner.");
+includes(statsRuntime, "\n  sync();\n})();", "Database Stats domain runtime must start its own route render exactly from its startup sync.");
 includes(statsRuntime, 'window.__mflInteractionBusy.begin("databaseStatsData")', "Database Stats data loading must retain its busy state after navigation paints.");
 includes(statsRuntime, "function positionCustomPanel() {", "Database Stats domain runtime must own Custom filter positioning directly.");
 includes(statsRuntime, 'customPanel()?.querySelector("input")?.focus', "Database Stats domain runtime must own Custom filter opening/focus directly.");
@@ -212,4 +214,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats Custom preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");
+console.log("Database Stats single render ownership, Custom preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");
