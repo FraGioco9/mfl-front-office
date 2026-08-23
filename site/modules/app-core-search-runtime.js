@@ -72,18 +72,11 @@ function bestSearchResults(query) {
     .filter((result) => result.score > 0)
     .sort(relevanceSort);
 
-  const agentPlayerCounts = new Map();
-  state.rows.forEach((row) => {
-    const walletAddress = normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase();
-    if (!walletAddress) return;
-    agentPlayerCounts.set(walletAddress, (agentPlayerCounts.get(walletAddress) || 0) + 1);
-  });
-
   const agentResults = state.agentSearchIndex
     .map((entry) => ({
       ...entry,
       score: Math.max(searchMatchScore(query, entry.nameText, entry.walletText), searchMatchScore(query, entry.walletText, entry.nameText)),
-      playerCount: agentPlayerCounts.get(entry.walletAddress) || entry.playerCount || 0,
+      playerCount: Number(entry.playerCount || 0),
       overall: -1,
       label: entry.name,
     }))

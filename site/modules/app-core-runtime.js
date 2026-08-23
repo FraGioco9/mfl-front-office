@@ -4403,9 +4403,17 @@ function buildSearchIndex(options = {}) {
   }
 
   const agentsByWallet = new Map();
-  const addAgent = (walletAddress, name) => {
-    const entry = buildAgentSearchEntry(walletAddress, name);
-    if (!entry || agentsByWallet.has(entry.walletAddress)) {
+  const addAgent = (walletAddress, name, playerCountIncrement = 0) => {
+    const entry = buildAgentSearchEntry(walletAddress, name, playerCountIncrement);
+    if (!entry) {
+      return;
+    }
+
+    const existing = agentsByWallet.get(entry.walletAddress);
+    if (existing) {
+      if (playerCountIncrement > 0) {
+        existing.playerCount = Number(existing.playerCount || 0) + playerCountIncrement;
+      }
       return;
     }
 
@@ -4414,7 +4422,7 @@ function buildSearchIndex(options = {}) {
   };
 
   state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
-  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));
+  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name"), 1));
   state.agentSearchIndex = Array.from(agentsByWallet.values());
   state.searchIndexesLoaded = true;
   if (state.currentPage === "agents" && tablePageTitle) {
