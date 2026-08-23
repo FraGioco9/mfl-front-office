@@ -1,5 +1,5 @@
 // Generated Evaluation core chunk from modules/app-core.js. Do not edit directly.
-function resetInvalidEvaluationLinkToPlainEvaluation() {
+async function recoverInvalidEvaluationLink() {
   if (window.location.pathname !== "/evaluation") {
     return false;
   }
@@ -8,10 +8,29 @@ function resetInvalidEvaluationLinkToPlainEvaluation() {
     return false;
   }
 
+  const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+  let playerRow = candidatePlayerId ? rowByPlayerId(candidatePlayerId) : null;
+
+  if (candidatePlayerId && !playerRow) {
+    try {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: candidatePlayerId,
+      }, 1, { force: true });
+      playerRow = rowByPlayerId(candidatePlayerId);
+    } catch {
+      playerRow = null;
+    }
+  }
+
+  const playerId = playerRow ? candidatePlayerId : "";
   state.evaluationSavedId = "";
   state.evaluationShareId = "";
-  state.evaluationPlayerId = null;
-  window.history.replaceState({}, "", "/evaluation");
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
   return true;
 }
 
@@ -220,8 +239,8 @@ async function loadSharedEvaluation(shareId) {
     await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
-    renderEmptyEvaluationSelection(true);
+    await recoverInvalidEvaluationLink();
+    await renderEvaluationPage();
   } finally {
     state.evaluationShareLoading = false;
   }
@@ -339,6 +358,14 @@ function cachedSavedEvaluationEntry(savedId) {
   return savedEvaluationPayloadCache()[id] || null;
 }
 
+function showSavedEvaluationPlayerName(entry, fallbackPlayerId = "") {
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || fallbackPlayerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const playerName = String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim();
+  if (playerName) evaluationSearchInput.value = playerName;
+  return playerName;
+}
+
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
   const list = Array.isArray(entries)
@@ -422,6 +449,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
   try {
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
     let data = cachedSavedEvaluationEntry(id);
+    showSavedEvaluationPlayerName(data, selectedPlayerId);
 
     if (!data) {
       const requestUrl = new URL("/api/evaluation-save", window.location.origin);
@@ -441,6 +469,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
 
       data = await response.json();
       rememberSavedEvaluationCacheEntry(data);
+      showSavedEvaluationPlayerName(data, selectedPlayerId);
     }
 
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
@@ -462,9 +491,9 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
+    await recoverInvalidEvaluationLink();
     updateEvaluationFooterActions();
-    renderEmptyEvaluationSelection(true);
+    await renderEvaluationPage();
   } finally {
     state.evaluationSavedLoading = false;
   }
@@ -640,6 +669,7 @@ function renderSavedEvaluationList(rows) {
     const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
+      showSavedEvaluationPlayerName(entry, playerId);
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);

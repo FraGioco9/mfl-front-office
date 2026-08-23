@@ -31,8 +31,12 @@ for (const required of [
   "suppressNextIdleSelection = true;",
   "if (suppressNextIdleSelection) {",
   "suppressNextIdleSelection = false;",
+  "function onEvaluationReady()",
+  "selectEmptySearchAfterLoading(window.__mflInteractionBusy?.snapshot?.());",
   'window.addEventListener("mfl:loading-state", onLoadingState);',
+  'window.addEventListener("mfl:evaluation-ready", onEvaluationReady);',
   'window.removeEventListener("mfl:loading-state", onLoadingState);',
+  'window.removeEventListener("mfl:evaluation-ready", onEvaluationReady);',
 ]) {
   invariant(layoutRuntime.includes(required), `Evaluation post-loading selection contract is missing ${required}`);
 }
@@ -84,4 +88,4 @@ invariant(
   "Evaluation selection must not add keyboard blocking while loading.",
 );
 
-console.log("Evaluation search selection validation passed: first paint stays unselected, clear X selects after reset, normal idle loading selects an empty search, and Saved Evaluations Load keeps it deselected.");
+console.log("Evaluation search selection validation passed: first paint stays unselected, normal loading focuses an empty search only after idle, cached Evaluation readiness focuses the same empty search without a loading transition, clear X selects after reset, and Saved Evaluations Load keeps it deselected.");

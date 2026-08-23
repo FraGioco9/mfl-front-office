@@ -108,6 +108,14 @@ function cachedSavedEvaluationEntry(savedId) {
   return savedEvaluationPayloadCache()[id] || null;
 }
 
+function showSavedEvaluationPlayerName(entry, fallbackPlayerId = "") {
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || fallbackPlayerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const playerName = String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim();
+  if (playerName) evaluationSearchInput.value = playerName;
+  return playerName;
+}
+
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
   const list = Array.isArray(entries)
@@ -153,6 +161,7 @@ const EVALUATION_LOAD_LIST_HANDLER = `    const loadEvaluation = () => {
 const EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION = `    const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
+      showSavedEvaluationPlayerName(entry, playerId);
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);
@@ -202,6 +211,7 @@ const EVALUATION_SAVED_LOAD_REQUEST = `  try {
 const EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE = `  try {
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
     let data = cachedSavedEvaluationEntry(id);
+    showSavedEvaluationPlayerName(data, selectedPlayerId);
 
     if (!data) {
       const requestUrl = new URL("/api/evaluation-save", window.location.origin);
@@ -221,6 +231,7 @@ const EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE = `  try {
 
       data = await response.json();
       rememberSavedEvaluationCacheEntry(data);
+      showSavedEvaluationPlayerName(data, selectedPlayerId);
     }
 
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();`;
@@ -294,7 +305,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     evaluation,
     EVALUATION_LOAD_LIST_HANDLER,
     EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION,
-    "Saved Evaluation list rows use the canonical saved-route hydration path",
+    "Saved Evaluation list rows expose their player name before saved-route hydration starts",
   );
   evaluation = replaceRequired(
     evaluation,
@@ -312,7 +323,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     evaluation,
     EVALUATION_SAVED_LOAD_REQUEST,
     EVALUATION_SAVED_LOAD_REQUEST_WITH_CACHE,
-    "Saved Evaluation routes reuse cached payloads before making another request",
+    "Saved Evaluation routes show the known player name immediately and reuse cached payloads before making another request",
   );
   evaluation = replaceRequired(
     evaluation,
