@@ -1393,6 +1393,23 @@ function appliedTableFilterSignature(rules) {
   ]);
 }
 
+function incrementalTableEmptyStateMessage(sourceRowsCount = state.incrementalSourceRows) {
+  const hasSourceRows = Number(sourceRowsCount || 0) > 0;
+  if (state.currentPage === "watchlist") {
+    return hasSourceRows ? "No watchlist players match the current filters." : "No players in your watchlist yet.";
+  }
+  if (state.currentPage === "myplayers") {
+    return hasSourceRows ? "No owned players match the current filters." : "No players found for this wallet.";
+  }
+  if (state.currentPage === "mfl") {
+    return hasSourceRows ? "No MFL players match the current filters." : "No MFL players found.";
+  }
+  if (state.currentPage === "agents") {
+    return hasSourceRows ? "No agent players match the current filters." : "No players found for this agent.";
+  }
+  return "No players match the current filters.";
+}
+
 function tableApplyFiltersOwner(options = {}) {
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
@@ -1408,6 +1425,35 @@ function tableApplyFiltersOwner(options = {}) {
     if (filterSummary) filterSummary.textContent = "0";
     emptyState.textContent = "No players found for this club.";
     syncActiveWatchlistFromSet();
+    renderTable();
+    return;
+  }
+
+  if (state.incrementalMode) {
+    const incrementalRules = readFilterRules();
+    const filterSignature = appliedTableFilterSignature(incrementalRules);
+    if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
+      state.selectedPlayerIds.clear();
+      state.selectionAnchorPlayerId = null;
+    }
+    lastAppliedTableFilterSignature = filterSignature;
+    updateFilterSummary();
+
+    if (!state.incrementalApplying) {
+      if (options.save !== false) saveTableState();
+      state.page = 1;
+      void reloadIncrementalPage(1, { save: false });
+      return;
+    }
+
+    // Incremental /api/data responses are already scoped, filtered, and sorted
+    // from the exact query that produced this page. Reuse that accepted payload
+    // instead of repeating the same row predicates and sort in the browser.
+    state.tableSourceRowsCount = state.incrementalSourceRows;
+    state.filteredRows = state.rows;
+    emptyState.textContent = incrementalTableEmptyStateMessage(state.incrementalSourceRows);
+    syncActiveWatchlistFromSet();
+    if (options.save !== false) saveTableState();
     renderTable();
     return;
   }
