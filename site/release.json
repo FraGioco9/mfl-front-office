@@ -1,4 +1,4 @@
 {
-  "version": "1.124.4",
-  "description": "Minimize Supabase persistence and add authenticated last-visit tracking"
+  "version": "1.124.5",
+  "description": "Restore progression email delivery and streamline Site quality validation"
 }
