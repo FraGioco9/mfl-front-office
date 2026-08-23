@@ -36,21 +36,22 @@ includes(
   "subscribe,",
   "The shared loading controller must expose loading-state subscriptions.",
 );
+
 for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", mflStats]]) {
   includes(
     source,
     "controller?.isBusy?.()",
-    `${name} must defer its histogram animation while route/data loading is active.`,
+    `${name} must defer a pending histogram animation while route/data loading is active.`,
   );
   includes(
     source,
     "subscribe?.((snapshot)",
-    `${name} must wait for the shared loading controller to settle before animating.`,
+    `${name} must preserve a pending animation across loading-state changes.`,
   );
   includes(
     source,
     "fill.animate([",
-    `${name} must start its column rise explicitly after loading settles.`,
+    `${name} must start its column rise explicitly.`,
   );
   includes(
     source,
@@ -63,30 +64,78 @@ for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", m
     `${name} must preserve the intended column-rise end state.`,
   );
 }
+
+includes(
+  databaseStats,
+  "let loadAnimationAvailable = true;",
+  "Database Stats must own one load-animation token per Stats page entry.",
+);
+includes(
+  databaseStats,
+  'if (intent === "load") loadAnimationAvailable = false;',
+  "Database Stats must consume the load-animation token only when animation begins.",
+);
+includes(
+  databaseStats,
+  "let interactionAnimationRequested = false;",
+  "Database Stats must keep user-triggered animation intent separate from page loading.",
+);
+includes(
+  databaseStats,
+  "requestDistributionInteractionAnimation();",
+  "Database Stats filters and distribution changes must explicitly request one interaction animation.",
+);
 includes(
   databaseStats,
   'fill.style.animation = "none";',
-  "Database Stats must prevent each intermediate DOM creation from auto-starting the CSS animation.",
+  "Database Stats must prevent intermediate DOM creation from auto-starting the CSS animation.",
+);
+
+includes(
+  mflStats,
+  "let mflStatsLoadAnimationAvailable = true;",
+  "MFL Stats must own one load-animation token per Stats page entry.",
+);
+includes(
+  mflStats,
+  'if (intent === "load") mflStatsLoadAnimationAvailable = false;',
+  "MFL Stats must consume the load-animation token only when animation begins.",
+);
+includes(
+  mflStats,
+  "let mflStatsInteractionAnimationRequested = false;",
+  "MFL Stats must keep user-triggered animation intent separate from page loading.",
+);
+includes(
+  mflStats,
+  "requestMflStatsInteractionAnimation();",
+  "MFL Stats filters and distribution changes must explicitly request one interaction animation.",
 );
 includes(
   mflStats,
   'style="animation:none;--bar-height:${barHeight}%"',
-  "MFL Stats must prevent each intermediate DOM creation from auto-starting the CSS animation.",
+  "MFL Stats must prevent intermediate DOM creation from auto-starting the CSS animation.",
 );
+
 includes(
   buildCore,
   "normalizeMflStatsHistogramLifecycle",
-  "The generated MFL Stats runtime must receive the post-loading animation lifecycle during the canonical core build.",
+  "The generated MFL Stats runtime must receive the one-shot animation lifecycle during the canonical core build.",
 );
 includes(
   lifecycle,
-  "MFL Stats owns a single post-loading histogram animation scheduler",
-  "The MFL Stats build normalizer must own the final-render animation scheduler.",
+  "MFL Stats owns a route-scoped one-shot histogram animation session",
+  "The MFL Stats build normalizer must own the route-scoped animation token.",
 );
 includes(
   lifecycle,
-  "scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution)",
-  "The generated MFL Stats runtime must schedule animation only after replacing the final histogram DOM.",
+  "scheduleMflStatsDistributionAnimation(mflStatsAgeDistribution, animationIntent)",
+  "The generated MFL Stats runtime must schedule only the currently-owned animation intent.",
+);
+includes(
+  lifecycle,
+  "new MutationObserver(syncMflStatsAnimationRouteSession)",
+  "MFL Stats must reset its load-animation token when leaving and re-entering the Stats route.",
 );
 excludes(
   indexHtml,
@@ -94,4 +143,4 @@ excludes(
   "Database Stats must not suppress animation with the legacy !important workaround.",
 );
 
-console.log("Database Stats and MFL Stats animate the final post-loading histogram exactly once.");
+console.log("Database Stats and MFL Stats allow at most one load animation per Stats page entry.");
