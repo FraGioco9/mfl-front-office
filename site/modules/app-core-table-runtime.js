@@ -1077,36 +1077,69 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
 }
 
 function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
-  if (pageName === "club") {
-    state.pendingTableControlRestore = null;
-    return false;
-  }
-
   const restored = state.pendingTableControlRestore;
   if (!restored || restored.pageName !== pageName) return false;
 
-  pageSizeSelect.value = String(state.pageSize);
-  hideRetiredInput.checked = restored.hideRetired;
-  hideRetiringInput.checked = restored.hideRetiring;
-  if (hideMflPlayersInput) hideMflPlayersInput.checked = restored.hideMflPlayers;
-  if (packablePlayersInput) packablePlayersInput.checked = restored.mflPackable;
-  newMintsInput.checked = restored.newMints;
-
-  const allowedColumns = new Set(availableFilterColumns(pageName));
-  filterRules.replaceChildren();
-  for (const rule of restored.rules) {
-    if (!allowedColumns.has(rule.column)) continue;
-    addFilterRule(rule.column, {
-      connector: rule.connector,
-      operator: rule.operator,
-      value: rule.value,
-      valueTo: rule.valueTo,
-      focus: false,
+  const availableColumns = availableFilterColumns(pageName);
+  const allowedColumns = new Set(availableColumns);
+  const restoredRules = restored.rules.filter((rule) => allowedColumns.has(rule.column));
+  const currentRules = readFilterDraftRules();
+  const restoreContext = [pageName, state.view, ...availableColumns].join("|");
+  const contextMatches = filterRules.dataset.mflRestoreContext === restoreContext;
+  const rulesMatch = currentRules.length === restoredRules.length
+    && currentRules.every((rule, index) => {
+      const expected = restoredRules[index];
+      return rule.column === expected.column
+        && rule.connector === expected.connector
+        && rule.operator === expected.operator
+        && rule.value === expected.value
+        && rule.valueTo === expected.valueTo;
     });
+  const controlsMatch = pageSizeSelect.value === String(state.pageSize)
+    && hideRetiredInput.checked === restored.hideRetired
+    && hideRetiringInput.checked === restored.hideRetiring
+    && Boolean(hideMflPlayersInput?.checked) === restored.hideMflPlayers
+    && Boolean(packablePlayersInput?.checked) === restored.mflPackable
+    && newMintsInput.checked === restored.newMints;
+
+  if (contextMatches && rulesMatch && controlsMatch) {
+    updateFilterSummary();
+    if (document.documentElement.dataset.mflResetTableFilters === pageName) {
+      delete document.documentElement.dataset.mflResetTableFilters;
+    }
+    state.pendingTableControlRestore = null;
+    return true;
   }
 
-  populateAddFilterSelect(pageName);
-  refreshRuleColumnSelects(pageName);
+  const pageSize = String(state.pageSize);
+  if (pageSizeSelect.value !== pageSize) pageSizeSelect.value = pageSize;
+  if (hideRetiredInput.checked !== restored.hideRetired) hideRetiredInput.checked = restored.hideRetired;
+  if (hideRetiringInput.checked !== restored.hideRetiring) hideRetiringInput.checked = restored.hideRetiring;
+  if (hideMflPlayersInput && hideMflPlayersInput.checked !== restored.hideMflPlayers) {
+    hideMflPlayersInput.checked = restored.hideMflPlayers;
+  }
+  if (packablePlayersInput && packablePlayersInput.checked !== restored.mflPackable) {
+    packablePlayersInput.checked = restored.mflPackable;
+  }
+  if (newMintsInput.checked !== restored.newMints) newMintsInput.checked = restored.newMints;
+
+  if (!contextMatches || !rulesMatch) {
+    filterRules.replaceChildren();
+    for (const rule of restoredRules) {
+      addFilterRule(rule.column, {
+        connector: rule.connector,
+        operator: rule.operator,
+        value: rule.value,
+        valueTo: rule.valueTo,
+        focus: false,
+      });
+    }
+
+    populateAddFilterSelect(pageName);
+    refreshRuleColumnSelects(pageName);
+    filterRules.dataset.mflRestoreContext = restoreContext;
+  }
+
   updateFilterSummary();
   if (document.documentElement.dataset.mflResetTableFilters === pageName) {
     delete document.documentElement.dataset.mflResetTableFilters;

@@ -6032,7 +6032,8 @@ function applyIncrementalPayload(route, payload) {
   state.page = Number(payload.page || 1);
   if (tableRoute && !["club"].includes(route.scope)) {
     state.pageSize = Number(payload.pageSize || state.pageSize);
-    pageSizeSelect.value = String(state.pageSize);
+    const nextPageSizeValue = String(state.pageSize);
+    if (pageSizeSelect.value !== nextPageSizeValue) pageSizeSelect.value = nextPageSizeValue;
   }
   state.incrementalMode = tableRoute;
   state.incrementalRoute = { ...route };
@@ -6203,7 +6204,6 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
       if (!payload) return false;
       state.incrementalApplying = true;
       try {
-        buildHeader();
         applyFilters({ save: options.save !== false });
       } finally {
         state.incrementalApplying = false;
