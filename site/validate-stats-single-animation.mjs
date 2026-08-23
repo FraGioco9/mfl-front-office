@@ -7,11 +7,12 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [databaseStats, mflStats, buildCore, lifecycle, indexHtml] = await Promise.all([
+const [databaseStats, mflStats, buildCore, lifecycle, stylesBase, indexHtml] = await Promise.all([
   read("./database-stats-runtime.js"),
   read("./modules/app-core-mfl-stats-runtime.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-core-stats-render-lifecycle.js"),
+  read("./styles-base.css"),
   read("./index.html"),
 ]);
 
@@ -26,14 +27,34 @@ includes(
   "MFL Stats must preserve an identical histogram DOM instead of replaying its animation.",
 );
 includes(
+  databaseStats,
+  'histogram.style.animation = "none";',
+  "Database Stats must keep the histogram wrapper static so columns have one visible load animation.",
+);
+includes(
+  mflStats,
+  'histogram.style.animation = "none";',
+  "MFL Stats must keep the histogram wrapper static so columns have one visible load animation.",
+);
+includes(
+  stylesBase,
+  "animation: mflStatsBarRise 220ms ease-out;",
+  "Stats must retain the intended single column-rise animation.",
+);
+includes(
   buildCore,
   "normalizeMflStatsHistogramLifecycle",
   "The generated MFL Stats runtime must receive its single-render lifecycle during the canonical core build.",
 );
 includes(
   lifecycle,
-  "MFL Stats histogram renders once for each distinct distribution",
-  "The MFL Stats build normalizer must own the distinct-distribution render contract.",
+  "MFL Stats columns use the fill rise as their single animation owner",
+  "The MFL Stats build normalizer must own the single-animation contract.",
+);
+includes(
+  lifecycle,
+  'histogram.style.animation = "none";',
+  "The generated MFL Stats runtime must keep the histogram wrapper static.",
 );
 excludes(
   indexHtml,
@@ -41,4 +62,4 @@ excludes(
   "Database Stats must not suppress histogram animation with the legacy !important workaround.",
 );
 
-console.log("Database Stats and MFL Stats rebuild animated histogram columns only for distinct distributions.");
+console.log("Database Stats and MFL Stats use one visible column-rise animation per distinct distribution.");
