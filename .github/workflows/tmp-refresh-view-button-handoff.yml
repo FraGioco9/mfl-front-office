@@ -1,0 +1,122 @@
+name: Temporary refresh view button handoff fix
+
+on:
+  push:
+    branches:
+      - fix/refresh-view-button-flicker
+    paths:
+      - .github/workflows/tmp-refresh-view-button-handoff.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/refresh-view-button-flicker
+          fetch-depth: 0
+      - name: Make shared view-button sync idempotent
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime_path = Path('site/static-ui-runtime.js')
+          source = runtime_path.read_text()
+          before = '''  function syncSharedViewSet(page, view) {
+    const config = tableViewConfig()[page];
+    if (!config || !Array.isArray(config.order)) return;
+    const container = document.querySelector("#progressionPage .views");
+    if (!(container instanceof HTMLElement)) return;
+
+    const buttons = new Map();
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+      const buttonView = String(button.dataset.view || "");
+      buttons.set(buttonView, button);
+      button.hidden = !config.order.includes(buttonView);
+      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
+        button.textContent = page === "club" ? "Squad" : "Attributes";
+      }
+    });
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    config.order.forEach((buttonView) => {
+      const button = buttons.get(buttonView);
+      if (!(button instanceof HTMLElement)) return;
+      button.hidden = false;
+      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+    });
+
+    const activeView = config.order.includes(view)
+      ? view
+      : String(config.fallback || config.order[0] || "");
+    setActiveView(container, activeView);
+  }
+'''
+          after = '''  function sharedViewOrderMatches(container, orderedButtons) {
+    const visibleButtons = Array.from(container.querySelectorAll(":scope > .viewButton[data-view]"))
+      .filter((button) => !button.hidden);
+    return visibleButtons.length === orderedButtons.length
+      && visibleButtons.every((button, index) => button === orderedButtons[index]);
+  }
+
+  function syncSharedViewSet(page, view) {
+    const config = tableViewConfig()[page];
+    if (!config || !Array.isArray(config.order)) return;
+    const container = document.querySelector("#progressionPage .views");
+    if (!(container instanceof HTMLElement)) return;
+
+    const buttons = new Map();
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+      const buttonView = String(button.dataset.view || "");
+      buttons.set(buttonView, button);
+      const shouldHide = !config.order.includes(buttonView);
+      if (button.hidden !== shouldHide) button.hidden = shouldHide;
+      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
+        const label = page === "club" ? "Squad" : "Attributes";
+        if (button.textContent !== label) button.textContent = label;
+      }
+    });
+
+    const orderedButtons = config.order
+      .map((buttonView) => buttons.get(buttonView))
+      .filter((button) => button instanceof HTMLElement);
+    const switcher = document.getElementById("watchlistSwitcher");
+    if (!sharedViewOrderMatches(container, orderedButtons)) {
+      orderedButtons.forEach((button) => {
+        container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+      });
+    }
+
+    const activeView = config.order.includes(view)
+      ? view
+      : String(config.fallback || config.order[0] || "");
+    setActiveView(container, activeView);
+  }
+'''
+          if before not in source:
+              raise SystemExit('Could not locate shared view-button synchronizer')
+          runtime_path.write_text(source.replace(before, after, 1))
+
+          validator_path = Path('site/validate-view-button-refresh-handoff.mjs')
+          validator_path.write_text('''import { readFile } from "node:fs/promises";\n\nconst read = (path) => readFile(new URL(path, import.meta.url), "utf8");\nconst invariant = (condition, message) => {\n  if (!condition) throw new Error(message);\n};\nconst includes = (source, value, message) => invariant(source.includes(value), message);\n\nconst [bootstrap, staticUi, core] = await Promise.all([\n  read("./bootstrap.js"),\n  read("./static-ui-runtime.js"),\n  read("./modules/app-core.js"),\n]);\n\nincludes(bootstrap, "primeViewButtons(normalizedPage, view);", "Bootstrap must continue priming destination view buttons before data loading.");\nincludes(core, "window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);", "The application core must keep one shared runtime owner for table view-button synchronization.");\nincludes(staticUi, "function sharedViewOrderMatches(container, orderedButtons)", "Shared view-button synchronization must detect an already-correct rendered order.");\nincludes(staticUi, "if (button.hidden !== shouldHide) button.hidden = shouldHide;", "Shared view-button synchronization must not rewrite unchanged visibility state.");\nincludes(staticUi, "if (button.textContent !== label) button.textContent = label;", "Shared view-button synchronization must not rebuild an unchanged Attributes/Squad label.");\nincludes(staticUi, "if (!sharedViewOrderMatches(container, orderedButtons))", "Shared view-button synchronization must only reorder buttons when the destination order actually differs.");\n\nconst orderGuard = staticUi.indexOf("if (!sharedViewOrderMatches(container, orderedButtons))");\nconst reorder = staticUi.indexOf("container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", orderGuard);\ninvariant(orderGuard >= 0 && reorder > orderGuard, "View-button DOM movement must remain inside the idempotence guard.");\n\nconsole.log("View-button refresh handoff validation passed: first paint and runtime share an idempotent button row without a post-load reorder.");\n''')
+
+          validate_all = Path('site/validate-all.mjs')
+          source = validate_all.read_text()
+          marker = '  "validate-static-route-ui.mjs",\n'
+          addition = marker + '  "validate-view-button-refresh-handoff.mjs",\n'
+          if '  "validate-view-button-refresh-handoff.mjs",\n' not in source:
+              if marker not in source:
+                  raise SystemExit('Could not locate static route validator registration')
+              validate_all.write_text(source.replace(marker, addition, 1))
+          PY
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-refresh-view-button-handoff.yml
+          git add site/static-ui-runtime.js site/validate-view-button-refresh-handoff.mjs site/validate-all.mjs
+          git commit -m "Prevent refresh view button reflow"
+          git push origin HEAD:fix/refresh-view-button-flicker
