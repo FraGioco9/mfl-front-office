@@ -30,7 +30,19 @@ async function recoverInvalidEvaluationLink() {
   state.evaluationSavedId = "";
   state.evaluationShareId = "";
   state.evaluationPlayerId = playerId || null;
-  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
+
+  if (playerId) {
+    window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));
+  } else {
+    state.evaluationOverallRows = {};
+    state.evaluationSummaryPositions = {};
+    evaluationSearchInput.value = "";
+    window.history.replaceState({}, "", "/evaluation");
+    document.documentElement.dataset.initialEvaluationSelection = "false";
+    renderEmptyEvaluationSelection(true, true);
+    syncEvaluationSearchClearButton();
+  }
+
   return true;
 }
 
@@ -178,8 +190,7 @@ async function applySharedEvaluationPayload(payload) {
   const data = normalizeSharedEvaluationPayload(payload);
 
   if (!data.playerId) {
-    showToast("Shared evaluation is not available.");
-    return;
+    throw new Error("Evaluation player is not available.");
   }
 
   state.evaluationPlayerId = data.playerId;
