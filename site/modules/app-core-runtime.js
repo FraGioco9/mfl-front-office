@@ -1291,6 +1291,20 @@ function pageTargetFromPath(path) {
     const playerId = String(params.get("player") || "").trim();
     const savedId = String(params.get("saved") || "").trim();
     const shareId = String(params.get("share") || "").trim();
+    const queryKeys = Array.from(params.keys());
+    const validQueryKeys = queryKeys.every((key) => key === "player" || key === "saved" || key === "share");
+    const hasEvaluationSelection = Boolean(playerId || savedId || shareId);
+
+    if (search && (!validQueryKeys || !hasEvaluationSelection)) {
+      return {
+        pageName: "evaluation",
+        options: {
+          plain: true,
+          replaceUrl: "/evaluation",
+        },
+      };
+    }
+
     return {
       pageName: "evaluation",
       options: {
