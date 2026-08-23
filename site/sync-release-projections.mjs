@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
-const RELEASE_EXPRESSION = 'String(window.__mflAppConfig?.release?.version || window.__mflReleaseVersion || "dev")';
+const RELEASE_EXPRESSION = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
 
 function replaceExactlyOnce(source, pattern, replacement, label) {
   const matches = source.match(pattern) || [];
