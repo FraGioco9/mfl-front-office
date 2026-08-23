@@ -160,6 +160,7 @@ function renderMflStatsDistribution(packableRows) {
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
+  histogram.style.animation = "none";
   histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
   const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
   histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
