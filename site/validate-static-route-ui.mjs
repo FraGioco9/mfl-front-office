@@ -60,8 +60,11 @@ includes(staticUi, 'const canonicalRequest = window.__mflAppConfig?.routes?.cano
 includes(staticUi, 'if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");', "Typed not-found routes must resolve to the shared not-found shell.");
 includes(staticUi, 'page.id = "notFoundPage";', "Static route chrome must own one reusable not-found page shell.");
 includes(staticUi, 'page.className = "pageView homePage";', "The not-found page must reuse the canonical centered Home page layout.");
-includes(staticUi, '<div class="homeStats" aria-hidden="true">', "The not-found page must reuse canonical Home stat cards instead of a separate graphic system.");
-includes(staticUi, 'class="viewButton" type="button">Go to homepage</button>', "The homepage action must reuse the canonical view-button component.");
+includes(staticUi, '<h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>', "The not-found page must contain only the typed site title before its Home action.");
+includes(staticUi, 'class="homeOptInButton" type="button">Home</button>', "The Home action must reuse the canonical opt-in button visual language.");
+excludes(staticUi, "homeStats", "The not-found page must not render statistic or 404 cards.");
+excludes(staticUi, "notFoundMessage", "The not-found page must not render a secondary description.");
+excludes(staticUi, "notFoundResource", "The not-found page must not render a resource card or label.");
 includes(staticUi, 'window.location.assign("/");', "The not-found page must provide a direct homepage action.");
 excludes(staticUi, "not-found.css", "The not-found page must not load a standalone stylesheet or cache-busting asset.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
@@ -214,4 +217,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, site-native shared not-found rendering, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");
