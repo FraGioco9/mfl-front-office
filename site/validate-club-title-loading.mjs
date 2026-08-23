@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { optimizeCachedRouteRuntimeArtifacts } from "./modules/app-core-cached-route-performance.js";
+import { optimizeIncrementalTableRuntimeArtifacts } from "./modules/app-core-incremental-table-performance.js";
+import { optimizeMflStatsRuntimeArtifacts } from "./modules/app-core-mfl-stats-performance.js";
+import { optimizeTableRenderPerformanceArtifacts } from "./modules/app-core-table-render-performance.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -29,7 +33,13 @@ const [
   read("./route-core-loader-runtime.js"),
 ]);
 
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = optimizeCachedRouteRuntimeArtifacts(
+  optimizeMflStatsRuntimeArtifacts(
+    optimizeTableRenderPerformanceArtifacts(
+      optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(coreSource)),
+    ),
+  ),
+);
 const eagerCore = String(artifacts.core || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
 new Function(eagerCore);
