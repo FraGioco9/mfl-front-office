@@ -43,7 +43,7 @@ const currentVersion = String(release.version || "").trim();
 const currentParts = versionParts(currentVersion);
 invariant(currentParts, "release.json must contain a Semantic Version.");
 
-const canonicalReleaseExpression = 'String(window.__mflAppConfig?.release?.version || window.__mflReleaseVersion || "dev")';
+const canonicalReleaseExpression = 'String(Reflect.get(window, "__mflAppConfig")?.release?.version || Reflect.get(window, "__mflReleaseVersion") || "dev")';
 invariant(
   bootstrap.includes(`const STATIC_RELEASE_VERSION = ${canonicalReleaseExpression};`),
   "bootstrap.js must consume the canonical pre-bootstrap release instead of owning a version literal.",
