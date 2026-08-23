@@ -8,7 +8,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import run_progression_emails as runner
 import send_progression_emails as sender
 
 
@@ -20,9 +19,8 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
         self.current_db = root / "current.db"
         self.wallet = "0x1234567890abcdef"
         self._write_database(self.previous_db, pace_progression=4)
-        # Deliberately keep the absolute Pace value unchanged.  This reproduces
-        # the regression: the progression endpoint has advanced, while the
-        # /players attribute snapshot does not yet expose the increase.
+        # Deliberately keep the absolute Pace value unchanged. The progression
+        # endpoint has advanced, which must still count as an email event.
         self._write_database(self.current_db, pace_progression=5)
 
     def tearDown(self) -> None:
@@ -88,13 +86,7 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
         ]
 
     def test_progression_counter_increase_creates_notification_job(self) -> None:
-        self.assertEqual(
-            sender.changed_players(self.previous_db, self.current_db),
-            {},
-            "The fixture must reproduce the legacy raw-stat detection miss.",
-        )
-
-        improvements = runner.changed_players(self.previous_db, self.current_db)
+        improvements = sender.changed_players(self.previous_db, self.current_db)
         self.assertIn("42", improvements)
         self.assertEqual(improvements["42"].changes, (("pace", 69, 70),))
 
@@ -114,27 +106,23 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
             "EMAIL_FROM": "MFL Front Office <notifications@example.com>",
         }
         argv = [
-            "run_progression_emails.py",
+            "send_progression_emails.py",
             "--previous-db",
             str(self.previous_db),
             "--current-db",
             str(self.current_db),
         ]
-        original_changed_players = sender.changed_players
-        try:
-            with (
-                patch.dict(os.environ, environment, clear=False),
-                patch.object(sender, "load_preferences", return_value=self._preferences()),
-                patch.object(sender, "send_email") as mocked_send,
-                patch.object(sys, "argv", argv),
-            ):
-                self.assertEqual(runner.main(), 0)
-                mocked_send.assert_called_once()
-                call = mocked_send.call_args
-                self.assertEqual(call.args[0], "regression@example.com")
-                self.assertEqual(call.args[1], "My Players Progression Update")
-        finally:
-            sender.changed_players = original_changed_players
+        with (
+            patch.dict(os.environ, environment, clear=False),
+            patch.object(sender, "load_preferences", return_value=self._preferences()),
+            patch.object(sender, "send_email") as mocked_send,
+            patch.object(sys, "argv", argv),
+        ):
+            self.assertEqual(sender.main(), 0)
+            mocked_send.assert_called_once()
+            call = mocked_send.call_args
+            self.assertEqual(call.args[0], "regression@example.com")
+            self.assertEqual(call.args[1], "My Players Progression Update")
 
 
 if __name__ == "__main__":
