@@ -282,7 +282,7 @@ const CLUB_FILTER_FREE_TABLE_APPLY_START = `function tableApplyFiltersOwner(opti
     if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
     if (packablePlayersInput) packablePlayersInput.checked = false;
     newMintsInput.checked = false;
-    if (filterSummary) filterSummary.textContent = "0 active";
+    if (filterSummary) filterSummary.textContent = "0";
     emptyState.textContent = "No players found for this club.";
     syncActiveWatchlistFromSet();
     renderTable();

@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, appCore, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, appCore, clubStartup, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./index.html"),
   read("./bootstrap.js"),
   read("./controls.css"),
@@ -14,6 +14,7 @@ const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, bui
   read("./dropdowns-runtime.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-club-startup-lifecycle.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -145,22 +146,31 @@ for (const required of [
 }
 
 for (const required of [
-  "function normalizeFilterSummaryLifecycle(artifacts) {",
-  'filterSummary.textContent = String(count);',
-  'if (filterSummary) filterSummary.textContent = "0";',
-  'document.body.classList.remove("filtersOpen");',
-  "const statsNavigationArtifacts = Object.freeze({",
-  'core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),',
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);",
+  'function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}',
+  'state.filterDraftRules = null;\n  document.body.classList.remove("filtersOpen");\n  hideModal(filtersModal, () => {\n    openFiltersButton.focus();',
 ]) {
-  invariant(buildNormalizer.includes(required), `Build normalization must preserve Filters summary/close and independent stats navigation ownership through ${required}`);
+  invariant(appCore.includes(required), `Canonical source must preserve Filters summary/close ownership through ${required}`);
 }
 invariant(
-  !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
+  clubStartup.includes('if (filterSummary) filterSummary.textContent = "0";')
+    && !clubStartup.includes('if (filterSummary) filterSummary.textContent = "0 active";'),
+  "Club filter-free rendering must emit the canonical count-only zero summary directly.",
+);
+for (const required of [
+  "const statsNavigationArtifacts = Object.freeze({",
+  'core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),',
+  "const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(statsNavigationArtifacts);",
+]) {
+  invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/pager composition through ${required}`);
+}
+invariant(
+  !buildNormalizer.includes("normalizeFilterSummaryLifecycle")
+    && !buildNormalizer.includes("filterSummaryArtifacts")
+    && !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
     && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
     && !buildNormalizer.includes("pageFilterResetArtifacts")
     && !buildNormalizer.includes("viewFilterStateArtifacts"),
-  "Build normalization must not reintroduce page/view filter transition rewrites.",
+  "Build normalization must not reintroduce Filters summary/close or page/view transition rewrites.",
 );
 
 for (const required of [

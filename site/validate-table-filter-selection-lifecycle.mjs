@@ -61,7 +61,7 @@ invariant(
     && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
     && buildNormalizer.includes("const statsNavigationArtifacts = Object.freeze({")
     && buildNormalizer.includes('core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),')
-    && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);"),
+    && buildNormalizer.includes("const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(statsNavigationArtifacts);"),
   "Build normalization must not inject page/view filter transition behavior and must preserve stats navigation independently.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
