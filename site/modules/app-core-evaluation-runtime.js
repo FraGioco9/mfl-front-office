@@ -244,7 +244,7 @@ async function loadSharedEvaluation(shareId) {
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
       }, 1, { force: true });
-      if (!playerPayload) return;
+      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     state.evaluationShareId = id;
     await applySharedEvaluationPayload(data.payload);
@@ -492,7 +492,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
       }, 1, { force: true });
-      if (!playerPayload) return;
+      if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     data = rememberSavedEvaluationCacheEntry(data) || data;
     state.evaluationSavedId = id;
