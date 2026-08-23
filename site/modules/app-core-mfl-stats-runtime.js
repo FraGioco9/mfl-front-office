@@ -1,4 +1,33 @@
 // Generated MFL Stats core chunk from modules/app-core.js. Do not edit directly.
+const MFL_STATS_DISTRIBUTION_ANIMATION_CLASS = "mflStatsDistributionAnimating";
+
+function resetMflStatsDistributionAnimation() {
+  if (mflStatsAgeDistribution instanceof HTMLElement) {
+    mflStatsAgeDistribution.classList.remove(MFL_STATS_DISTRIBUTION_ANIMATION_CLASS);
+  }
+}
+
+function animateMflStatsDistribution(restart = false) {
+  if (!(mflStatsAgeDistribution instanceof HTMLElement)) return;
+  if (restart) {
+    mflStatsAgeDistribution.classList.remove(MFL_STATS_DISTRIBUTION_ANIMATION_CLASS);
+    void mflStatsAgeDistribution.offsetWidth;
+  }
+  mflStatsAgeDistribution.classList.add(MFL_STATS_DISTRIBUTION_ANIMATION_CLASS);
+}
+
+function syncMflStatsDistributionAnimationRoute() {
+  if (document.body?.dataset.page !== "mflstats") resetMflStatsDistributionAnimation();
+}
+
+const mflStatsDistributionAnimationObserver = new MutationObserver(syncMflStatsDistributionAnimationRoute);
+if (document.body) {
+  mflStatsDistributionAnimationObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-page"],
+  });
+}
+
 const mflStatsOverallFilterOptions = [
   { id: "all", label: "All", min: null, max: null },
   { id: "90-94", label: "90-94", min: 90, max: 94 },
@@ -80,8 +109,9 @@ function renderMflStatsFilterButtons() {
     if (button.dataset.mflStatsBound !== "true") {
       button.dataset.mflStatsBound = "true";
       button.addEventListener("click", () => {
+        if (state.mflStatsOverallFilter === filter.id) return;
         state.mflStatsOverallFilter = filter.id;
-        renderMflStatsPage();
+        renderMflStatsPage({ restartDistributionAnimation: true });
       });
     }
 
@@ -117,7 +147,7 @@ function renderMflStatsDistributionModeButtons() {
   });
 }
 
-function renderMflStatsDistribution(packableRows) {
+function renderMflStatsDistribution(packableRows, options = {}) {
   if (!mflStatsAgeDistribution) {
     return;
   }
@@ -147,7 +177,7 @@ function renderMflStatsDistribution(packableRows) {
   const totalPackable = packableRows.length;
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
-  histogram.className = "mflStatsHistogram";
+  histogram.className = "mflStatsHistogramPersistent";
   histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
   const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
   histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
@@ -157,15 +187,16 @@ function renderMflStatsDistribution(packableRows) {
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
     const item = document.createElement("div");
     item.className = "mflStatsHistogramItem";
-    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFillPersistent" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
     histogram.appendChild(item);
   });
 
   fragment.appendChild(histogram);
   mflStatsAgeDistribution.replaceChildren(fragment);
+  animateMflStatsDistribution(options.restartDistributionAnimation === true);
 }
 
-function renderMflStatsPage() {
+function renderMflStatsPage(options = {}) {
   renderMflStatsFilterButtons();
   const rows = mflStatsRows();
   const packableRows = rows.filter((row) => mflStatsCategory(row) === "packable");
@@ -185,7 +216,7 @@ function renderMflStatsPage() {
     mflStatsOtherPlayers.textContent = formatCount(otherRows.length);
   }
 
-  renderMflStatsDistribution(packableRows);
+  renderMflStatsDistribution(packableRows, options);
 }
 
 mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
@@ -194,6 +225,8 @@ mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
     return;
   }
 
-  state.mflStatsDistributionMode = button.dataset.distribution === "age" ? "age" : "overall";
-  renderMflStatsPage();
+  const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+  if (nextMode === state.mflStatsDistributionMode) return;
+  state.mflStatsDistributionMode = nextMode;
+  renderMflStatsPage({ restartDistributionAnimation: true });
 });
