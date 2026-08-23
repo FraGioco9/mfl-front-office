@@ -29,6 +29,9 @@
   let customPanelOpen = false;
   let distributionMode = "overall";
   let customPanelFrame = 0;
+  let distributionAnimationRevision = 0;
+  let distributionAnimationFrame = 0;
+  let distributionAnimationUnsubscribe = null;
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
@@ -48,6 +51,62 @@
 
   function customPanel() {
     return page.querySelector("#databaseStatsCustomFilter");
+  }
+
+  function cancelDistributionAnimationSchedule() {
+    distributionAnimationRevision += 1;
+    if (distributionAnimationFrame) cancelAnimationFrame(distributionAnimationFrame);
+    distributionAnimationFrame = 0;
+    distributionAnimationUnsubscribe?.();
+    distributionAnimationUnsubscribe = null;
+  }
+
+  function playDistributionAnimation(container, revision) {
+    distributionAnimationFrame = 0;
+    if (destroyed || revision !== distributionAnimationRevision || !isStatsPath() || !container.isConnected) return;
+    container.querySelectorAll(".mflStatsHistogramFill").forEach((fill) => {
+      if (!(fill instanceof HTMLElement)) return;
+      fill.getAnimations().forEach((animation) => animation.cancel());
+      fill.animate([
+        { transform: "scaleY(0.18)" },
+        { transform: "scaleY(1)" },
+      ], {
+        duration: 220,
+        easing: "ease-out",
+      });
+    });
+  }
+
+  function scheduleDistributionAnimation(container) {
+    cancelDistributionAnimationSchedule();
+    const revision = distributionAnimationRevision;
+    const scheduleAfterPaint = () => {
+      if (destroyed || revision !== distributionAnimationRevision) return;
+      distributionAnimationFrame = requestAnimationFrame(() => {
+        if (destroyed || revision !== distributionAnimationRevision) return;
+        distributionAnimationFrame = requestAnimationFrame(() => playDistributionAnimation(container, revision));
+      });
+    };
+
+    const controller = window.__mflInteractionBusy;
+    if (controller?.isBusy?.()) {
+      distributionAnimationUnsubscribe = controller.subscribe?.((snapshot) => {
+        if (destroyed || revision !== distributionAnimationRevision || snapshot?.busy) return;
+        const unsubscribe = distributionAnimationUnsubscribe;
+        distributionAnimationUnsubscribe = null;
+        unsubscribe?.();
+        scheduleAfterPaint();
+      }, { immediate: false }) || null;
+      if (!controller.isBusy()) {
+        const unsubscribe = distributionAnimationUnsubscribe;
+        distributionAnimationUnsubscribe = null;
+        unsubscribe?.();
+        scheduleAfterPaint();
+      }
+      return;
+    }
+
+    scheduleAfterPaint();
   }
 
   function syncCustomInputs() {
@@ -279,6 +338,7 @@
     container.dataset.mflStatsRenderSignature = distributionSignature;
 
     if (!counts.size) {
+      cancelDistributionAnimationSchedule();
       const empty = document.createElement("p");
       empty.className = "mflStatsEmpty";
       empty.textContent = "No active players match this Overall filter.";
@@ -301,6 +361,7 @@
       bar.className = "mflStatsHistogramBar";
       const fill = document.createElement("div");
       fill.className = "mflStatsHistogramFill";
+      fill.style.animation = "none";
       fill.style.setProperty("--bar-height", `${Math.max(6, (count / maxCount) * 100)}%`);
       fill.dataset.tooltip = `${formatCount(count)} (${total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"}%)`;
       const label = document.createElement("span");
@@ -311,6 +372,7 @@
       histogram.appendChild(item);
     });
     container.replaceChildren(histogram);
+    scheduleDistributionAnimation(container);
   }
 
   async function loadData() {
@@ -351,6 +413,7 @@
       if (!destroyed && isStatsPath()) renderStats();
       return true;
     } catch (error) {
+      cancelDistributionAnimationSchedule();
       const container = document.getElementById("databaseStatsDistribution");
       if (container instanceof HTMLElement && isStatsPath()) {
         const message = document.createElement("p");
@@ -371,6 +434,7 @@
       else void showStatsPage();
       scheduleCustomPanel();
     } else {
+      cancelDistributionAnimationSchedule();
       closeCustomPanel();
       endBusy();
     }
@@ -395,6 +459,7 @@
 
   function destroy() {
     destroyed = true;
+    cancelDistributionAnimationSchedule();
     if (customPanelFrame) cancelAnimationFrame(customPanelFrame);
     customPanelFrame = 0;
     document.removeEventListener("click", onDocumentClick);
