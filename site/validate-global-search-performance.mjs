@@ -55,8 +55,13 @@ includes(
 );
 includes(
   optimizerSource,
-  'replaceRequiredFunction(\n    core,\n    "buildSearchIndex"',
-  "Global Search optimization must transform the canonical local index builder.",
+  "core = replaceRequired(\n    core,\n    LOCAL_AGENT_BUILDER,\n    COUNTED_LOCAL_AGENT_BUILDER,",
+  "Global Search optimization must patch the canonical local agent builder without replacing the whole index function.",
+);
+includes(
+  optimizerSource,
+  "core = replaceRequired(\n    core,\n    LOCAL_AGENT_ROW_INDEX,\n    COUNTED_LOCAL_AGENT_ROW_INDEX,",
+  "Global Search optimization must make the existing player-row agent-index pass contribute counts.",
 );
 includes(
   optimizerSource,
