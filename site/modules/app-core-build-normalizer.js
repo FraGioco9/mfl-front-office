@@ -203,45 +203,6 @@ syncPagerCurrentPage(1, 1);
   });
 }
 
-function normalizeFilterSummaryLifecycle(artifacts) {
-  const routeChunks = { ...(artifacts?.routeChunks || {}) };
-  const table = String(routeChunks.table || "");
-  if (!table) throw new Error("Cannot normalize Filters summary without the Table route chunk.");
-
-  let normalizedTable = replaceRequired(
-    table,
-    'function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = `${count} active`;\n}',
-    'function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}',
-    "Filters summary renders the count only",
-  );
-  normalizedTable = replaceRequired(
-    normalizedTable,
-    'if (filterSummary) filterSummary.textContent = "0 active";',
-    'if (filterSummary) filterSummary.textContent = "0";',
-    "Club table clears the Filters summary without the legacy label",
-  );
-  normalizedTable = replaceRequired(
-    normalizedTable,
-    `  state.filterDraftRules = null;
-  hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
-    if (restoreTriggerFocus) openFiltersButton.focus();
-  });`,
-    `  state.filterDraftRules = null;
-  document.body.classList.remove("filtersOpen");
-  hideModal(filtersModal, () => {
-    if (restoreTriggerFocus) openFiltersButton.focus();
-  });`,
-    "Filters highlight clears when close starts",
-  );
-
-  routeChunks.table = normalizedTable;
-  return Object.freeze({
-    ...artifacts,
-    routeChunks: Object.freeze(routeChunks),
-  });
-}
-
 export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
@@ -262,9 +223,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
     ...clubSortArtifacts,
     core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),
   });
-  // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);
-  const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(filterSummaryArtifacts);
+  const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(statsNavigationArtifacts);
   const tableControlCellArtifacts = normalizeTableControlCellAlignment(pagerCurrentPageArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableControlCellArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);

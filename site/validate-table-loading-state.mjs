@@ -185,7 +185,7 @@ invariant(
     && !buildNormalizer.includes(requestBoundaryMarker)
     && !buildNormalizer.includes(requestFinishMarker)
     && !buildNormalizer.includes("tableRequestLoadingArtifacts")
-    && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(statsNavigationArtifacts);"),
+    && buildNormalizer.includes("const pagerCurrentPageArtifacts = normalizePagerCurrentPageLifecycle(statsNavigationArtifacts);"),
   "The build normalizer must not inject Table request loading behavior after source authoring.",
 );
 

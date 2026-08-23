@@ -8569,7 +8569,7 @@ function activeFilterCountFromSavedRules(rules = []) {
 }
 
 function updateFilterSummary(count = activeFilterCount()) {
-  filterSummary.textContent = `${count} active`;
+  filterSummary.textContent = String(count);
 }
 
 function selectedFilterColumns(exceptRule = null) {
@@ -9002,8 +9002,8 @@ function closeFilters(commitChanges = false) {
   }
 
   state.filterDraftRules = null;
+  document.body.classList.remove("filtersOpen");
   hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     openFiltersButton.focus();
   });
 }
