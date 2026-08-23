@@ -2091,6 +2091,14 @@ let summaryLoadPromise = null;
 let summaryLoaded = false;
 let summarySnapshot = null;
 
+function homeSummaryCacheReady() {
+  return summaryLoaded && Boolean(summarySnapshot);
+}
+
+Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({
+  isReady: homeSummaryCacheReady,
+}));
+
 async function loadSummary() {
   if (summaryLoaded && summarySnapshot) {
     updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
