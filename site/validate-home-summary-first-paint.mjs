@@ -12,11 +12,12 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
-const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, coreSource, releaseJson] = await Promise.all([
+const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, releaseJson] = await Promise.all([
   read("./index.html"),
   read("./styles-base.css"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
+  read("./loading-toast-runtime.js"),
   read("./modules/app-core.js"),
   read("./release.json"),
 ]);
@@ -129,6 +130,21 @@ includes(
 );
 includes(
   eagerCore,
+  "function homeSummaryCacheReady() {",
+  "Home summary loading must expose one canonical cache-readiness predicate.",
+);
+includes(
+  eagerCore,
+  'Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({',
+  "Shared runtimes must be able to inspect Home summary cache readiness without duplicating data ownership.",
+);
+includes(
+  eagerCore,
+  "isReady: homeSummaryCacheReady,",
+  "The Home summary cache contract must expose only readiness, not duplicate cached data.",
+);
+includes(
+  eagerCore,
   "if (summaryLoaded && summarySnapshot) {",
   "Home navigation must detect an already-loaded cached summary.",
 );
@@ -162,6 +178,37 @@ includes(
   "The MFL Front Office brand link must navigate through the Home page owner.",
 );
 
+includes(
+  loadingToastRuntime,
+  '"#notFoundHomeButton",',
+  "The not-found Home action must participate in cached Home navigation suppression.",
+);
+includes(
+  loadingToastRuntime,
+  '.brandLink[data-page="home"]',
+  "The MFL Front Office brand link must participate in cached Home navigation suppression.",
+);
+includes(
+  loadingToastRuntime,
+  'a[data-page="home"][href="/"]',
+  "Any canonical Home link must participate in cached Home navigation suppression.",
+);
+includes(
+  loadingToastRuntime,
+  'if (!homeSummaryCacheReady()) return false;',
+  "A Home navigation must not suppress loading feedback until its summary cache is actually ready.",
+);
+includes(
+  loadingToastRuntime,
+  'if (cachedHomeNavigationIntent && homeSummaryCacheReady()) return false;',
+  "Cached Home navigation must bypass the loading toast while retaining the shared loading controller.",
+);
+includes(
+  loadingToastRuntime,
+  'window.addEventListener("popstate", onNavigationPopState);',
+  "Back/forward navigation to cached Home must follow the same no-toast behavior.",
+);
+
 const loaderStart = eagerCore.indexOf("let summaryLoadPromise = null;");
 const loaderEnd = eagerCore.indexOf("\nfunction tablePageKey", loaderStart);
 invariant(loaderStart >= 0 && loaderEnd > loaderStart, "Could not isolate the generated Home summary loader for behavioral validation.");
@@ -189,11 +236,19 @@ const context = {
   console: { error: () => {} },
 };
 vm.runInNewContext(`${loaderSource}\nthis.__loadSummary = loadSummary;`, context);
+invariant(
+  context.__mflHomeSummaryCache?.isReady?.() === false,
+  "Home summary cache readiness must remain false before the first successful load.",
+);
 await context.__loadSummary();
 invariant(fetchCount === 1, "Initial Home summary load must fetch exactly once.");
 invariant(
   updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87,
   "Initial Home summary load must render the fetched Players/Wallets counts.",
+);
+invariant(
+  context.__mflHomeSummaryCache?.isReady?.() === true,
+  "Home summary cache readiness must become true after a successful load.",
 );
 
 updates.length = 0;
@@ -204,4 +259,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, and cached Home counts still repaint correctly.");
+console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and cached Home navigation does not show the loading toast.");
