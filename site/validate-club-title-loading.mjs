@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 import { optimizeCachedRouteRuntimeArtifacts } from "./modules/app-core-cached-route-performance.js";
+import { optimizeEvaluationRuntimeArtifacts } from "./modules/app-core-evaluation-performance.js";
 import { optimizeGlobalSearchRuntimeArtifacts } from "./modules/app-core-global-search-performance.js";
 import { optimizeIncrementalTableRuntimeArtifacts } from "./modules/app-core-incremental-table-performance.js";
 import { optimizeMflStatsRuntimeArtifacts } from "./modules/app-core-mfl-stats-performance.js";
@@ -37,14 +38,16 @@ const [
   read("./route-core-loader-runtime.js"),
 ]);
 
-const artifacts = optimizeGlobalSearchRuntimeArtifacts(
-  optimizePersistenceRuntimeArtifacts(
-    optimizeTableChromeRuntimeArtifacts(
-      optimizeTableLoadingRuntimeArtifacts(
-        optimizeCachedRouteRuntimeArtifacts(
-          optimizeMflStatsRuntimeArtifacts(
-            optimizeTableRenderPerformanceArtifacts(
-              optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(coreSource)),
+const artifacts = optimizeEvaluationRuntimeArtifacts(
+  optimizeGlobalSearchRuntimeArtifacts(
+    optimizePersistenceRuntimeArtifacts(
+      optimizeTableChromeRuntimeArtifacts(
+        optimizeTableLoadingRuntimeArtifacts(
+          optimizeCachedRouteRuntimeArtifacts(
+            optimizeMflStatsRuntimeArtifacts(
+              optimizeTableRenderPerformanceArtifacts(
+                optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(coreSource)),
+              ),
             ),
           ),
         ),
