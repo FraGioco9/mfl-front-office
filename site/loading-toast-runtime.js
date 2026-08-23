@@ -6,12 +6,7 @@
   const TOAST_ID = "mflLoadingToast";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
-  const HOME_NAVIGATION_SELECTOR = [
-    "#notFoundHomeButton",
-    '.brandLink[data-page="home"]',
-    'a[data-page="home"][href="/"]',
-    'button[data-page="home"]',
-  ].join(", ");
+  const ROUTE_LOADING_REASON = "route-loading";
   const TOAST_COORDINATION_REASONS = new Set([
     "evaluation-load",
   ]);
@@ -19,8 +14,8 @@
   let destroyed = false;
   let unsubscribe = null;
   let tableScrollTimer = 0;
-  let cachedHomeNavigationIntent = false;
-  let cachedHomeIntentFrame = 0;
+  let toastCheckFrame = 0;
+  let toastCheckSequence = 0;
 
   function setToastPosition(centerX) {
     if (!Number.isFinite(centerX)) return;
@@ -133,80 +128,105 @@
     }
   }
 
-  function homeSummaryCacheReady() {
-    const cache = Reflect.get(window, "__mflHomeSummaryCache");
-    return Boolean(cache && typeof cache === "object" && typeof cache.isReady === "function" && cache.isReady());
-  }
-
-  function clearCachedHomeNavigationIntent() {
-    cachedHomeNavigationIntent = false;
-    if (cachedHomeIntentFrame) cancelAnimationFrame(cachedHomeIntentFrame);
-    cachedHomeIntentFrame = 0;
-  }
-
-  function markCachedHomeNavigationIntent() {
-    if (!homeSummaryCacheReady()) return false;
-    cachedHomeNavigationIntent = true;
-    if (cachedHomeIntentFrame) cancelAnimationFrame(cachedHomeIntentFrame);
-    cachedHomeIntentFrame = requestAnimationFrame(() => {
-      cachedHomeIntentFrame = requestAnimationFrame(() => {
-        cachedHomeIntentFrame = 0;
-        if (!loadingSnapshot().busy) cachedHomeNavigationIntent = false;
-      });
-    });
-    return true;
-  }
-
-  function cachedHomeNavigationTarget(target) {
-    if (!(target instanceof Element)) return null;
-    const control = target.closest(HOME_NAVIGATION_SELECTOR);
-    return control instanceof HTMLElement ? control : null;
-  }
-
-  function onNavigationClick(event) {
-    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-    if (!cachedHomeNavigationTarget(event.target)) return;
-    markCachedHomeNavigationIntent();
-  }
-
-  function onNavigationPopState() {
-    if (window.location.pathname === "/") markCachedHomeNavigationIntent();
-  }
-
   function toastSuppressed() {
     return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
   }
 
   function snapshotNeedsToast(snapshot) {
     if (!snapshot?.busy) return false;
-    if (cachedHomeNavigationIntent && homeSummaryCacheReady()) return false;
     const reasons = Array.isArray(snapshot.reasons) ? snapshot.reasons : [];
     return reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || "")));
+  }
+
+  function routeOnlySnapshot(snapshot) {
+    const reasons = Array.isArray(snapshot?.reasons) ? snapshot.reasons : [];
+    return reasons.length > 0 && reasons.every((reason) => String(reason || "") === ROUTE_LOADING_REASON);
+  }
+
+  function currentRouteDataCacheReady() {
+    const cache = Reflect.get(window, "__mflRouteDataCache");
+    return Boolean(
+      cache
+      && typeof cache === "object"
+      && typeof cache.isCurrentRouteReady === "function"
+      && cache.isCurrentRouteReady(),
+    );
   }
 
   function loadingSnapshot() {
     return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
   }
 
+  function hideLoadingToast(toast) {
+    if (!(toast instanceof HTMLElement)) return;
+    toast.classList.remove("visible");
+    toast.hidden = true;
+  }
+
+  function cancelToastCheck() {
+    toastCheckSequence += 1;
+    if (toastCheckFrame) cancelAnimationFrame(toastCheckFrame);
+    toastCheckFrame = 0;
+  }
+
+  function showLoadingToastIfNeeded(sequence) {
+    toastCheckFrame = 0;
+    if (destroyed || sequence !== toastCheckSequence || !document.body) return;
+
+    const snapshot = loadingSnapshot();
+    const toast = ensureToast();
+    if (!(toast instanceof HTMLElement)) return;
+    positionToast(toast);
+
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+      hideLoadingToast(toast);
+      return;
+    }
+
+    if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {
+      hideLoadingToast(toast);
+      return;
+    }
+
+    retireVisibleApplicationToast();
+    toast.hidden = false;
+    toast.classList.add("visible");
+  }
+
+  function scheduleToastCheck() {
+    cancelToastCheck();
+    const sequence = toastCheckSequence;
+    let remainingFrames = 3;
+    const nextFrame = () => {
+      if (destroyed || sequence !== toastCheckSequence) return;
+      remainingFrames -= 1;
+      if (remainingFrames <= 0) {
+        showLoadingToastIfNeeded(sequence);
+        return;
+      }
+      toastCheckFrame = requestAnimationFrame(nextFrame);
+    };
+    toastCheckFrame = requestAnimationFrame(nextFrame);
+  }
+
   function sync(snapshot = loadingSnapshot()) {
     if (!snapshot || typeof snapshot.busy !== "boolean") snapshot = loadingSnapshot();
     if (destroyed || !document.body) return;
-    if (!snapshot.busy && cachedHomeNavigationIntent) clearCachedHomeNavigationIntent();
     syncFooterLock(snapshot);
+
     const toast = ensureToast();
     if (!(toast instanceof HTMLElement)) return;
     positionToast(toast);
     const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
-    if (snapshotNeedsToast(snapshot) && !toastSuppressed()) {
-      if (!loadingToastVisible) retireVisibleApplicationToast();
-      toast.hidden = false;
-      toast.classList.add("visible");
+    if (!snapshotNeedsToast(snapshot) || toastSuppressed()) {
+      cancelToastCheck();
+      hideLoadingToast(toast);
       return;
     }
 
-    toast.classList.remove("visible");
-    toast.hidden = true;
+    if (loadingToastVisible) return;
+    scheduleToastCheck();
   }
 
   function clearTableScrollHover() {
@@ -231,8 +251,6 @@
   window.addEventListener("mfl:route-ready", sync);
   window.addEventListener("mfl:ready", sync);
   window.addEventListener("resize", sync);
-  window.addEventListener("popstate", onNavigationPopState);
-  document.addEventListener("click", onNavigationClick, true);
   document.addEventListener("scroll", onScroll, true);
   window.visualViewport?.addEventListener("resize", sync, { passive: true });
   window.visualViewport?.addEventListener("scroll", sync, { passive: true });
@@ -243,13 +261,11 @@
     unsubscribe = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
-    clearCachedHomeNavigationIntent();
+    cancelToastCheck();
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
     window.removeEventListener("mfl:route-ready", sync);
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
-    window.removeEventListener("popstate", onNavigationPopState);
-    document.removeEventListener("click", onNavigationClick, true);
     document.removeEventListener("scroll", onScroll, true);
     window.visualViewport?.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("scroll", sync);
@@ -269,5 +285,5 @@
     name: "Toast Position",
     sync: syncToastPosition,
   });
-  window.__mflLoadingToastRuntime = Object.freeze({ sync, markCachedHomeNavigationIntent, destroy });
+  window.__mflLoadingToastRuntime = Object.freeze({ sync, destroy });
 })();
