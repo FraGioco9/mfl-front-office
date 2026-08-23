@@ -20,6 +20,8 @@ const routeOnlyFunctions = {
   table: ["currentViewColumns", "tableColumnClass", "agentTitleForWallet", "selectedPlayerIdsArray", "trackWatchlistChange", "isNumericColumn", "uniqueNationalityValues", "uniquePositions", "availableFilterColumns", "contractStatusValue", "precomputedValue", "cachedRowSortValue", "newMintMarker", "rowIsOwnedByLinkedWallet", "displayColumnForPage", "filterLabel", "uniqueColumnValues"],
   wallet: ["appOrigin", "recordWalletOptIn", "loadWalletNames", "refreshLinkedWalletAgentName", "authenticatedWalletUser", "signatureWalletAddress", "mergeGuestWatchlistIntoAccount", "refreshWatchlistPageAfterWalletSync", "upgradeCurrentPageAfterWalletOptIn", "fetchLiveAgentNameForWallet", "walletAddressCandidatesFromValue", "walletAddressFromUser"],
   watchlist: ["openRenameWatchlistModal", "openDeleteWatchlistModal"],
+  home: ["updateSummaryCounts", "homeSummaryCacheReadyOwner", "homeLoadSummaryOwner"],
+  search: ["playerSearchResult", "searchMatchScore", "bestSearchResults", "recentSearchRows", "syncPlayerSearchClearButton", "searchOpenOwner", "searchCloseOwner", "searchClearOwner", "searchRenderNowOwner", "searchRenderOwner"],
 };
 
 for (const [chunkName, names] of Object.entries(routeOnlyFunctions)) {
@@ -48,13 +50,27 @@ const protectedSharedFunctions = [
   "normalizeWatchlists",
   "renderWatchlistSwitcher",
   "playerIsInAnyWatchlist",
+  "homeSummaryCacheReady",
+  "loadSummary",
+  "openSearch",
+  "closeSearch",
+  "clearPlayerSearch",
+  "renderSearchResultsNow",
+  "renderSearchResults",
 ];
 for (const name of protectedSharedFunctions) {
-  invariant(hasFunction(shared, name), `Cross-route/shared function ${name} must remain in the eager core.`);
+  invariant(hasFunction(shared, name), `Cross-route/shared facade ${name} must remain in the eager core.`);
 }
 
-// Rounded baseline captured after the shared-core route split. Allow modest growth for
-// genuinely shared behavior while still catching meaningful eager-bundle regressions.
+invariant(
+  shared.includes('window.__mflEnsureRouteCore("home")')
+    && shared.includes('window.__mflEnsureRouteCore("search")'),
+  "Home and Global Search shared facades must lazy-load their canonical owners through the route-core loader.",
+);
+
+// Rounded baseline captured before the Home/Search decomposition. The upper regression
+// budget remains unchanged while the new lower watermark ensures Step 5 actually shrinks
+// the eager core instead of only moving ownership labels around.
 const SHARED_CORE_BASELINE_BYTES = 302_000;
 const SHARED_CORE_MAX_GROWTH_RATIO = 1.05;
 const sharedCoreBudgetBytes = Math.floor(SHARED_CORE_BASELINE_BYTES * SHARED_CORE_MAX_GROWTH_RATIO);
@@ -62,6 +78,10 @@ const sharedBytes = Buffer.byteLength(shared);
 invariant(
   sharedBytes <= sharedCoreBudgetBytes,
   `Shared application core exceeded its 5% regression budget: ${sharedBytes} bytes > ${sharedCoreBudgetBytes} bytes (baseline ${SHARED_CORE_BASELINE_BYTES}).`,
+);
+invariant(
+  sharedBytes < SHARED_CORE_BASELINE_BYTES,
+  `Step 5 must reduce the eager application core below the previous ${SHARED_CORE_BASELINE_BYTES}-byte baseline; received ${sharedBytes} bytes.`,
 );
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
