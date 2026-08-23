@@ -1,0 +1,62 @@
+name: Feature request
+description: Propose a user-facing improvement for MFL Front Office
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user goal first, then the implementation idea if one is already clear.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Database / MFL
+        - Club / Agent / Player pages
+        - Watchlist / My Players
+        - Evaluation
+        - Search / Filters
+        - Loading / Navigation
+        - Settings / Account
+        - Database builder / Data pipeline
+        - Cross-site / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: User goal
+      description: What should become easier, faster, clearer, or newly possible?
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: What happens today, if applicable?
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - The page ...
+        - Loading ...
+        - Refresh and internal navigation behave the same ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context

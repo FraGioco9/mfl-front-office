@@ -1,0 +1,53 @@
+name: Maintenance / refactor
+description: Track technical work that improves reliability, performance, or maintainability
+title: "[Maintenance] "
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Work type
+      options:
+        - Refactor
+        - Performance
+        - CI / Workflow
+        - Dependency
+        - Database builder / Data pipeline
+        - Documentation
+        - Cleanup
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Which files, runtime owners, pages, or workflows are affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Current problem or technical debt
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Target state
+      description: Describe the desired architecture or behavior without relying on overrides.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation / completion criteria
+      placeholder: |
+        - Existing behavior remains unchanged where not in scope
+        - Relevant validators pass
+        - No duplicate runtime owner is introduced
+    validations:
+      required: true

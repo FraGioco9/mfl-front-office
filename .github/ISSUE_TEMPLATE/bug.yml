@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible problem in MFL Front Office
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible site behavior. Keep one issue focused on one problem.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Database / MFL
+        - Club / Agent / Player pages
+        - Watchlist / My Players
+        - Evaluation
+        - Search / Filters
+        - Loading / Navigation
+        - Settings / Account
+        - Database builder / Data pipeline
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: route
+    attributes:
+      label: Route or page
+      placeholder: /database/attributes
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Device and browser
+      placeholder: iPhone / iOS / Safari, or Windows 11 / Chrome
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, console errors, or extra context
