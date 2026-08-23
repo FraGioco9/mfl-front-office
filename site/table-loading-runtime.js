@@ -102,8 +102,6 @@
     const requestToken = Number(token || 0);
     if (!requestToken || requestToken !== activeRequestToken) return false;
     activeRequestToken = 0;
-    const { body } = elements();
-    if (body) delete body.dataset.staticLoading;
     return true;
   }
 
