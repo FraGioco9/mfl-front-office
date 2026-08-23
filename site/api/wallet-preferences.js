@@ -2,6 +2,7 @@ const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-p
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody } = require("./_request-body");
 const { normalizeLateSeasonRewardRates } = require("./_evaluation-payload");
+const { touchWalletLastSeen } = require("./_wallet-presence");
 
 const PLAYER_NOTE_MAX_LENGTH = 200;
 const WATCHLIST_ID_LENGTH = 8;
@@ -138,18 +139,6 @@ function mergeRecentIds(incomingIds, currentIds) {
   return normalizeIdList([...(Array.isArray(incomingIds) ? incomingIds : []), ...(Array.isArray(currentIds) ? currentIds : [])], 5);
 }
 
-function stripWatchlistStateFromTableState(tableState) {
-  if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
-    return {};
-  }
-
-  const sanitized = { ...tableState };
-  delete sanitized.watchlistPlayerIds;
-  delete sanitized.watchlists;
-  delete sanitized.currentWatchlistId;
-  return sanitized;
-}
-
 function recentSearchItemsFromLegacy(tableState) {
   const playerIds = normalizeIdList(tableState?.recentSearchPlayerIds, 5);
   const agentWallets = normalizeIdList(tableState?.recentSearchAgentWallets, 5)
@@ -162,32 +151,84 @@ function recentSearchItemsFromLegacy(tableState) {
   ];
 }
 
-function normalizeRecentSearchTableState(tableState) {
-  const sanitized = stripWatchlistStateFromTableState(tableState);
+function stripRedundantCloudTableState(tableState) {
+  if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
+    return {};
+  }
+
+  const sanitized = { ...tableState };
+  delete sanitized.watchlistPlayerIds;
+  delete sanitized.watchlists;
+  delete sanitized.currentWatchlistId;
+  delete sanitized.linkedWalletAddress;
+  delete sanitized.recentSearchPlayerIds;
+  delete sanitized.recentSearchAgentWallets;
+  return sanitized;
+}
+
+function normalizeCloudTableState(tableState) {
+  const source = tableState && typeof tableState === "object" && !Array.isArray(tableState)
+    ? tableState
+    : {};
+  const recentSearchItems = mergeRecentIds(source.recentSearchItems, recentSearchItemsFromLegacy(source));
+
   return {
-    ...sanitized,
-    recentSearchItems: mergeRecentIds(sanitized.recentSearchItems, recentSearchItemsFromLegacy(sanitized)),
+    ...stripRedundantCloudTableState(source),
+    recentSearchItems,
+  };
+}
+
+function legacyRecentSearchStateFromItems(items) {
+  const recentSearchPlayerIds = [];
+  const recentSearchAgentWallets = [];
+
+  normalizeIdList(items, 5).forEach((item) => {
+    if (item.startsWith("player:")) {
+      const playerId = item.slice(7).trim();
+      if (playerId && !recentSearchPlayerIds.includes(playerId)) {
+        recentSearchPlayerIds.push(playerId);
+      }
+      return;
+    }
+
+    if (item.startsWith("agent:")) {
+      const walletAddress = normalizeWalletAddress(item.slice(6));
+      if (walletAddress && !recentSearchAgentWallets.includes(walletAddress)) {
+        recentSearchAgentWallets.push(walletAddress);
+      }
+    }
+  });
+
+  return {
+    recentSearchPlayerIds: recentSearchPlayerIds.slice(0, 5),
+    recentSearchAgentWallets: recentSearchAgentWallets.slice(0, 5),
+  };
+}
+
+function tableStateForClient(tableState) {
+  const canonical = normalizeCloudTableState(tableState);
+  return {
+    ...canonical,
+    ...legacyRecentSearchStateFromItems(canonical.recentSearchItems),
   };
 }
 
 function mergeTableState(tableState, currentTableState) {
   const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState)
-    ? normalizeRecentSearchTableState(tableState)
+    ? normalizeCloudTableState(tableState)
     : null;
-  const current = normalizeRecentSearchTableState(currentTableState);
+  const current = normalizeCloudTableState(currentTableState);
 
   if (!incoming) {
     return current;
   }
 
-  return {
+  return normalizeCloudTableState({
     ...current,
     ...incoming,
     recentSearchItems: mergeRecentIds(incoming.recentSearchItems, current.recentSearchItems),
-    recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),
-    recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),
     recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds),
-  };
+  });
 }
 
 function preferencesFromRow(row) {
@@ -198,7 +239,7 @@ function preferencesFromRow(row) {
   return {
     watchlists: normalizeWatchlists(row.watchlists),
     playerNotes: normalizePlayerNotes(row.player_notes),
-    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? normalizeRecentSearchTableState(row.table_state) : null,
+    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? tableStateForClient(row.table_state) : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
     settings: normalizeSettings(row.settings),
   };
@@ -211,6 +252,21 @@ async function readPreferences(wallet) {
 
   const rows = await supabaseRequest(`wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
+}
+
+async function readPreferencesForVisit(wallet) {
+  if (!supabaseConfig()) {
+    return emptyPreferences();
+  }
+
+  const [preferences] = await Promise.all([
+    readPreferences(wallet),
+    touchWalletLastSeen(wallet).catch((error) => {
+      console.warn("Could not update wallet last seen timestamp.", error);
+      return null;
+    }),
+  ]);
+  return preferences;
 }
 
 async function writePreferences(wallet, preferences) {
@@ -233,7 +289,13 @@ async function writePreferences(wallet, preferences) {
     ? normalizeSettings(preferences.settings)
     : currentPreferences.settings;
 
-  const nextPreferences = { watchlists, playerNotes, tableState, evaluationSettings, settings };
+  const nextPreferences = {
+    watchlists,
+    playerNotes,
+    tableState: tableStateForClient(tableState),
+    evaluationSettings,
+    settings,
+  };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -267,7 +329,7 @@ module.exports = async function handler(request, response) {
 
   try {
     if (request.method === "GET") {
-      response.status(200).json(await readPreferences(wallet));
+      response.status(200).json(await readPreferencesForVisit(wallet));
       return;
     }
 
