@@ -7,6 +7,7 @@ import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build
 import { optimizeCachedRouteRuntimeArtifacts } from "./modules/app-core-cached-route-performance.js";
 import { optimizeIncrementalTableRuntimeArtifacts } from "./modules/app-core-incremental-table-performance.js";
 import { optimizeMflStatsRuntimeArtifacts } from "./modules/app-core-mfl-stats-performance.js";
+import { optimizeTableLoadingRuntimeArtifacts } from "./modules/app-core-table-loading-performance.js";
 import { optimizeTableRenderPerformanceArtifacts } from "./modules/app-core-table-render-performance.js";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
@@ -44,10 +45,12 @@ if (!appConfigRuntime) throw new Error("Canonical app configuration produced an 
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
 const source = await readFile(sourcePath, "utf8");
-const artifacts = optimizeCachedRouteRuntimeArtifacts(
-  optimizeMflStatsRuntimeArtifacts(
-    optimizeTableRenderPerformanceArtifacts(
-      optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(source)),
+const artifacts = optimizeTableLoadingRuntimeArtifacts(
+  optimizeCachedRouteRuntimeArtifacts(
+    optimizeMflStatsRuntimeArtifacts(
+      optimizeTableRenderPerformanceArtifacts(
+        optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(source)),
+      ),
     ),
   ),
 );
