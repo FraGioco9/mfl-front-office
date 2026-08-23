@@ -462,6 +462,53 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   display: none;
 }
 
+#pageText {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+#pagerCurrentPageInput {
+  box-sizing: border-box;
+  flex: 0 0 52px;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0 5px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: 22px;
+  text-align: center;
+  vertical-align: middle;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#pagerCurrentPageInput:hover:not(:disabled),
+#pagerCurrentPageInput:focus:not(:disabled),
+#pagerCurrentPageInput:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  caret-color: var(--text);
+  box-shadow: none;
+}
+
+html.mflInteractionBusy #pagerCurrentPageInput,
+html.mflDataLoading #pagerCurrentPageInput,
+body[aria-busy="true"] #pagerCurrentPageInput {
+  pointer-events: none;
+}
+
 html.mflInteractionBusy #pageSizeSelect,
 html.mflDataLoading #pageSizeSelect,
 body[aria-busy="true"] #pageSizeSelect {

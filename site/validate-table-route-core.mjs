@@ -82,6 +82,17 @@ excludes(sharedCore, "function tableNextOverallPreciseValue(row) {", "Table sort
 excludes(sharedCore, "function activeFilterCount() {", "Table filter UI must not remain in the shared core.");
 excludes(sharedCore, "function currentPageRows() {", "Table paging and selection must not remain in the shared core.");
 excludes(sharedCore, "function showTableBusyState() {", "Table busy-state rendering must not remain in the shared core.");
+excludes(sharedCore, "PAGER_CURRENT_PAGE_INPUT_ID", "Editable pager behavior must remain lazy in the Table core.");
+includes(tableCore, 'const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";', "The Table core must own the editable current-page input.");
+includes(tableCore, 'controls.input.addEventListener("blur", () => {', "The editable pager must commit when focus leaves the field.");
+includes(tableCore, "function cancelPagerCurrentPageEdit(input) {", "The editable pager must retain a dedicated Escape cancel action.");
+includes(tableCore, "function installPagerEscapeCapture() {", "The editable pager must install Escape before document-level global handlers.");
+includes(tableCore, 'window.addEventListener("keydown", (event) => {', "The editable pager Escape owner must bind at window level.");
+includes(tableCore, 'target.id !== PAGER_CURRENT_PAGE_INPUT_ID', "The window Escape owner must be scoped to the editable pager input.");
+includes(tableCore, "cancelPagerCurrentPageEdit(target);", "Escape must restore the current pager value without navigating.");
+includes(tableCore, 'input.dataset.cancelCommit = "true";', "Escape must suppress any pending blur commit before the pager field loses focus.");
+includes(tableCore, "const target = Math.min(total, Math.max(1, parsed));", "Pager input must clamp typed values to the live 1..total page range.");
+includes(tableCore, "syncPagerCurrentPage(state.page, totalPages);", "Table rendering must keep the editable pager synchronized with page state.");
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route player/search formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
 
@@ -124,4 +135,4 @@ for (const owner of [
   includes(generatedTableBody, owner, `Generated Table runtime must retain route owner ${owner}.`);
 }
 
-console.log("Table route-core splitting and globally placed facade validation passed.");
+console.log("Table route-core splitting, editable pager ownership, and globally placed facade validation passed.");
