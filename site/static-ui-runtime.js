@@ -106,6 +106,13 @@
     });
   }
 
+  function sharedViewOrderMatches(container, orderedButtons) {
+    const visibleButtons = Array.from(container.querySelectorAll(":scope > .viewButton[data-view]"))
+      .filter((button) => !button.hidden);
+    return visibleButtons.length === orderedButtons.length
+      && visibleButtons.every((button, index) => button === orderedButtons[index]);
+  }
+
   function syncSharedViewSet(page, view) {
     const config = tableViewConfig()[page];
     if (!config || !Array.isArray(config.order)) return;
@@ -116,19 +123,23 @@
     container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
       const buttonView = String(button.dataset.view || "");
       buttons.set(buttonView, button);
-      button.hidden = !config.order.includes(buttonView);
+      const shouldHide = !config.order.includes(buttonView);
+      if (button.hidden !== shouldHide) button.hidden = shouldHide;
       if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
-        button.textContent = page === "club" ? "Squad" : "Attributes";
+        const label = page === "club" ? "Squad" : "Attributes";
+        if (button.textContent !== label) button.textContent = label;
       }
     });
 
+    const orderedButtons = config.order
+      .map((buttonView) => buttons.get(buttonView))
+      .filter((button) => button instanceof HTMLElement);
     const switcher = document.getElementById("watchlistSwitcher");
-    config.order.forEach((buttonView) => {
-      const button = buttons.get(buttonView);
-      if (!(button instanceof HTMLElement)) return;
-      button.hidden = false;
-      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
-    });
+    if (!sharedViewOrderMatches(container, orderedButtons)) {
+      orderedButtons.forEach((button) => {
+        container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+      });
+    }
 
     const activeView = config.order.includes(view)
       ? view
