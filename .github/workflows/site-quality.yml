@@ -7,8 +7,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: write
+
+concurrency:
+  group: site-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -133,7 +136,11 @@ jobs:
 
       - name: Install site dependencies
         if: steps.changes.outputs.quality == 'true'
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Build canonical application core
+        if: steps.changes.outputs.quality == 'true'
+        run: npm run build:core
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'
@@ -142,10 +149,6 @@ jobs:
       - name: Typecheck
         if: steps.changes.outputs.site == 'true'
         run: npm run typecheck
-
-      - name: Build canonical application core
-        if: steps.changes.outputs.quality == 'true'
-        run: npm run build:core
 
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
@@ -159,7 +162,6 @@ jobs:
         working-directory: .
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
@@ -172,7 +174,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Regenerate application core"
           git push origin "HEAD:$HEAD_BRANCH"
-          gh workflow run site-quality.yml --ref "$HEAD_BRANCH"
 
       - name: Verify generated application artifacts
         if: steps.changes.outputs.quality == 'true'
