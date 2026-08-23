@@ -23,6 +23,14 @@ const DEDUPED_SUMMARY_LOADER = `let summaryLoadPromise = null;
 let summaryLoaded = false;
 let summarySnapshot = null;
 
+function homeSummaryCacheReady() {
+  return summaryLoaded && Boolean(summarySnapshot);
+}
+
+Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({
+  isReady: homeSummaryCacheReady,
+}));
+
 async function loadSummary() {
   if (summaryLoaded && summarySnapshot) {
     updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
@@ -68,8 +76,10 @@ const SET_PAGE_WITH_HOME_SUMMARY = `async function setPage(pageName, updateHash 
  * Make the database summary a reusable Home dependency. Startup and later Home
  * navigation share one in-flight request. Successful counts are cached so a
  * later Home route-prime can reset its placeholders and then immediately
- * repaint the cached summary without another request. A failed bootstrap
- * request remains retryable the next time Home is opened.
+ * repaint the cached summary without another request. The cache readiness
+ * contract lets shared navigation UI distinguish a cached Home transition from
+ * one that genuinely still needs data. A failed bootstrap request remains
+ * retryable the next time Home is opened.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeHomeSummaryLifecycle(artifacts) {
@@ -80,7 +90,7 @@ export function normalizeHomeSummaryLifecycle(artifacts) {
     source,
     SUMMARY_LOADER,
     DEDUPED_SUMMARY_LOADER,
-    "database summary loading is shared, repaintable, and retryable",
+    "database summary loading is shared, repaintable, cache-aware, and retryable",
   );
   core = replaceRequired(
     core,
