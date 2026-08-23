@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.2",
+    "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"
+  ],
+  [
     "v1.124.1",
     "Optimize loading, routing, caching, and navigation across the application"
   ],
