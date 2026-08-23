@@ -8301,7 +8301,9 @@ async function startApp() {
     const page = typeof tablePageKey === "function"
       ? (tablePageKey() || state.currentPage || "")
       : (state.currentPage || "");
-    const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
+    const headerSortKey = page === "club" ? "positions" : state.sortKey;
+    const headerSortDirection = page === "club" ? "asc" : state.sortDirection;
+    const signature = [page, state.view, headerSortKey, headerSortDirection].join("|");
     return { head, page, signature };
   }
 
