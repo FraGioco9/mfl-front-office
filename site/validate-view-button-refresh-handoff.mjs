@@ -5,11 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
+const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [bootstrap, staticUi, core] = await Promise.all([
+const [bootstrap, staticUi, core, clubCore] = await Promise.all([
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-club-runtime.js"),
 ]);
 
 includes(bootstrap, "primeViewButtons(normalizedPage, view);", "Bootstrap must keep priming the destination view set before data loading.");
@@ -23,4 +25,9 @@ const guardIndex = staticUi.indexOf("if (!sharedViewOrderMatches(container, orde
 const reorderIndex = staticUi.indexOf("container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", guardIndex);
 invariant(guardIndex >= 0 && reorderIndex > guardIndex, "View-button DOM movement must stay inside the idempotence guard.");
 
-console.log("View-button refresh handoff validation passed: an already-correct first-paint button row is not rebuilt after loading.");
+includes(clubCore, "function hideClubPageControls() {", "Club presentation must retain ownership of Club-only non-view controls.");
+excludes(clubCore, 'const orderedViews = ["attributes", "contracts", "current", "all"]', "Club presentation must not duplicate shared view-button ordering.");
+excludes(clubCore, "views.appendChild(button);", "Club presentation must not detach and reinsert view buttons after the first-paint handoff.");
+excludes(clubCore, 'button.hidden = !CLUB_VIEWS.has(button.dataset.view);', "Club presentation must not duplicate shared view-button visibility ownership.");
+
+console.log("View-button refresh handoff validation passed: shared and Club refresh paths leave an already-correct first-paint button row intact.");
