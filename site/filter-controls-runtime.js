@@ -2,6 +2,7 @@
   "use strict";
 
   let coreObserver = null;
+  let numericStepperObserver = null;
   let destroyed = false;
 
   function clubRouteActive() {
@@ -18,6 +19,92 @@
     } catch {
       // Dropdown enhancement is presentation-only; never block table startup.
     }
+  }
+
+  function numericStepperLabel(input) {
+    const placeholder = String(input.placeholder || "value").trim().toLowerCase();
+    return placeholder || "value";
+  }
+
+  function dispatchNumericStepperChange(input) {
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function adjustNumericFilterInput(input, delta) {
+    if (!(input instanceof HTMLInputElement) || input.type !== "number" || !delta) return;
+    try {
+      if (delta > 0) input.stepUp();
+      else input.stepDown();
+    } catch {
+      const currentValue = Number.parseFloat(input.value);
+      input.value = String((Number.isFinite(currentValue) ? currentValue : 0) + delta);
+    }
+    dispatchNumericStepperChange(input);
+  }
+
+  function createNumericStepperButton(input, delta) {
+    const button = document.createElement("button");
+    const direction = delta > 0 ? "Increase" : "Decrease";
+    button.type = "button";
+    button.textContent = delta > 0 ? "\u25b2" : "\u25bc";
+    button.setAttribute("aria-label", `${direction} ${numericStepperLabel(input)}`);
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", () => adjustNumericFilterInput(input, delta));
+    return button;
+  }
+
+  function enhanceNumericFilterInput(input) {
+    if (!(input instanceof HTMLInputElement) || input.type !== "number" || !input.matches("[data-filter-value]")) return;
+
+    let control = input.parentElement;
+    if (!control?.classList.contains("mflNumericStepperControl")) {
+      control = document.createElement("span");
+      control.className = "mflNumericStepperControl";
+      input.before(control);
+      control.appendChild(input);
+    }
+
+    control.querySelector(":scope > .mflIncrementStepper")?.remove();
+    const stepper = document.createElement("span");
+    stepper.className = "mflIncrementStepper";
+    stepper.setAttribute("aria-label", `Adjust ${numericStepperLabel(input)}`);
+    stepper.append(
+      createNumericStepperButton(input, 1),
+      createNumericStepperButton(input, -1),
+    );
+    control.appendChild(stepper);
+    input.dataset.mflIncrementStepper = "true";
+  }
+
+  function cleanupNumericStepperControls(root) {
+    root.querySelectorAll(".mflNumericStepperControl").forEach((control) => {
+      const input = control.querySelector(":scope > [data-filter-value]");
+      if (input instanceof HTMLInputElement && input.type === "number") return;
+      if (input) control.replaceWith(input);
+      else control.remove();
+    });
+  }
+
+  function syncNumericSteppers(root = document) {
+    if (!(root instanceof Document || root instanceof Element)) return;
+    cleanupNumericStepperControls(root);
+    root.querySelectorAll('input[type="number"][data-filter-value]').forEach((input) => {
+      const alreadyEnhanced = input.dataset.mflIncrementStepper === "true"
+        && input.parentElement?.classList.contains("mflNumericStepperControl")
+        && input.parentElement.querySelector(":scope > .mflIncrementStepper");
+      if (!alreadyEnhanced) enhanceNumericFilterInput(input);
+    });
+  }
+
+  function installNumericStepperOwner() {
+    if (destroyed || numericStepperObserver) return false;
+    const filterRules = document.getElementById("filterRules");
+    if (!(filterRules instanceof HTMLElement)) return false;
+    syncNumericSteppers(filterRules);
+    numericStepperObserver = new MutationObserver(() => syncNumericSteppers(filterRules));
+    numericStepperObserver.observe(filterRules, { childList: true, subtree: true });
+    return true;
   }
 
   function installSelectedLinksDirectOpen() {
@@ -137,7 +224,9 @@
     if (clubRouteActive()) return false;
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
+    installNumericStepperOwner();
     installCoreBridge();
+    syncNumericSteppers(document.getElementById("filterRules") || document);
     syncDropdowns(document);
     return true;
   }
@@ -159,6 +248,7 @@
 
   if (!clubRouteActive()) {
     installSelectedLinksDirectOpen();
+    installNumericStepperOwner();
     installCoreBridgeWhenAvailable();
   }
   window.addEventListener("mfl:ready", sync, { once: true });
@@ -167,6 +257,8 @@
     destroyed = true;
     coreObserver?.disconnect();
     coreObserver = null;
+    numericStepperObserver?.disconnect();
+    numericStepperObserver = null;
     window.removeEventListener("mfl:ready", sync);
   }
 
