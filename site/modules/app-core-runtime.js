@@ -5158,10 +5158,37 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
   return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
 
+let evaluationTableLastRenderSignature = "";
+
+function evaluationTableRenderSignature(row) {
+  const playerId = String(getValue(row, "player_id") || "");
+  return JSON.stringify([
+    state.columns,
+    row,
+    state.evaluationIgnoreDiscountRate,
+    state.evaluationIgnoreFirstSeason,
+    state.evaluationMflPerUsd,
+    state.evaluationLateSeasonRewardRates,
+    state.evaluationOverallRows[playerId] || null,
+    state.evaluationSummaryPositions[playerId] || "",
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+  ]);
+}
+
 function renderEvaluationTable(row) {
   const rawExpectedSeasons = expectedEvaluationSeasons(row);
   const seasonOffset = state.evaluationIgnoreFirstSeason ? 1 : 0;
   const expectedSeasons = Math.max(0, rawExpectedSeasons - seasonOffset);
+  const renderSignature = evaluationTableRenderSignature(row);
+  const reusableTable = evaluationPanel
+    && !evaluationPanel.hidden
+    && Boolean(evaluationSummaryBody?.firstElementChild)
+    && evaluationTableBody?.children.length === expectedSeasons;
+  if (reusableTable && evaluationTableLastRenderSignature === renderSignature) {
+    updateEvaluationFooterActions();
+    return;
+  }
   const playerName = formatCellValue(row, "name");
   const currentAge = Number(getValue(row, "age"));
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
@@ -5272,6 +5299,7 @@ function renderEvaluationTable(row) {
   evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach((button) => {
     button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
   });
+  evaluationTableLastRenderSignature = renderSignature;
 }
 async function renderEvaluationPage() {
   syncEvaluationSearchClearButton();
