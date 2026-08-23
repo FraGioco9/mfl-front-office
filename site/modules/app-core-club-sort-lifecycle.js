@@ -90,6 +90,11 @@ const CLUB_AWARE_HEADER_SORT_CONTROL = `    cell.appendChild(label);
 
     if (state.currentPage !== "club" && sortableColumns.has(column)) {`;
 
+const GENERIC_TABLE_HEADER_CONTEXT_SIGNATURE = `    const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");`;
+const CLUB_AWARE_TABLE_HEADER_CONTEXT_SIGNATURE = `    const headerSortKey = page === "club" ? "positions" : state.sortKey;
+    const headerSortDirection = page === "club" ? "asc" : state.sortDirection;
+    const signature = [page, state.view, headerSortKey, headerSortDirection].join("|");`;
+
 const ROUTE_GATE_RUNTIME_READY = `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;`;
 const ROUTE_GATE_RUNTIME_READY_WITH_STATE = `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
     let previousTableStateSaved = false;`;
@@ -162,6 +167,8 @@ const INCREMENTAL_PREVIOUS_TABLE_SAVE_GUARDED = `    const previousPage = state.
  * Keep Club's fixed Position -> Overall ordering local to the Club route.
  * Shared table sort state belongs only to pages whose headers can actually change
  * sorting. Club headers are read-only and expose Position as the fixed primary key.
+ * Header identity uses that same fixed Club contract instead of unrelated shared
+ * sort state, so bootstrap and runtime can preserve the same DOM across refresh.
  * Page transitions save the page being left before committing the destination so a
  * Club visit cannot overwrite the destination page's stored sort direction.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
@@ -181,6 +188,12 @@ export function normalizeClubSortLifecycle(routeArtifacts) {
     CLUB_PREPARE_SHARED_SORT,
     CLUB_PREPARE_LOCAL_SORT,
     "Club route preparation does not mutate shared sort state",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    GENERIC_TABLE_HEADER_CONTEXT_SIGNATURE,
+    CLUB_AWARE_TABLE_HEADER_CONTEXT_SIGNATURE,
+    "Club header identity uses its fixed local sort contract",
   );
   normalizedCore = replaceRequired(
     normalizedCore,
