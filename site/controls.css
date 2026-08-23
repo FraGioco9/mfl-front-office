@@ -1,3 +1,5 @@
+@import url("/motion.css");
+
 /* Canonical shared control owner for MFL Front Office. */
 
 :root {
@@ -201,7 +203,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .popupMinusButton {
   position: relative;
   font-size: 0;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
 .popupCloseButton::before,
@@ -244,7 +246,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 }
 
 .trainingStatControls button {
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
 .mflNumericStepperControl {
@@ -287,7 +289,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
 #pageSizeSelect {
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
 .filtersDialog [data-filter-value]:not(:disabled),
@@ -489,7 +491,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   line-height: 22px;
   text-align: center;
   vertical-align: middle;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
 #pagerCurrentPageInput:hover:not(:disabled),

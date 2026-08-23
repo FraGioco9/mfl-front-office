@@ -21,6 +21,7 @@ const validators = [
   "validate-filter-popup-interactions.mjs",
   "validate-control-style-ownership.mjs",
   "validate-global-escape-ownership.mjs",
+  "validate-motion-ownership.mjs",
   "validate-loading-ownership.mjs",
   "validate-home-summary-first-paint.mjs",
   "validate-eval-ownership.mjs",

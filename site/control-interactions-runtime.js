@@ -30,6 +30,15 @@
   let escapeHandlerSequence = 0;
   const escapeHandlers = new Map();
 
+  function motionDurationMs(propertyName, fallbackMs) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(String(propertyName || "")).trim();
+    const value = Number.parseFloat(raw);
+    if (!Number.isFinite(value)) return fallbackMs;
+    if (raw.endsWith("ms")) return value;
+    if (raw.endsWith("s")) return value * 1000;
+    return fallbackMs;
+  }
+
   function disableSearchSpellcheck() {
     document.querySelectorAll(SEARCH_INPUT_SELECTOR).forEach((field) => {
       if (!(field instanceof HTMLInputElement)) return;
@@ -367,6 +376,7 @@
 
   window.__mflControlInteractionsRuntime = Object.freeze({
     registerEscapeHandler,
+    motionDurationMs,
     destroy,
   });
 })();
