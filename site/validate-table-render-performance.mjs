@@ -18,10 +18,12 @@ includes(
   'import { optimizeTableRenderPerformanceArtifacts } from "./modules/app-core-table-render-performance.js";',
   "The canonical application-core build must load the Step 7 Table render optimizer.",
 );
-includes(
-  build,
-  "optimizeTableRenderPerformanceArtifacts(\n  optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(source)),\n)",
-  "Step 7 must run after the Step 6 incremental Table optimizer.",
+const step7Call = build.indexOf("optimizeTableRenderPerformanceArtifacts(");
+const nestedStep6Call = build.indexOf("optimizeIncrementalTableRuntimeArtifacts(", step7Call);
+const nestedNormalizerCall = build.indexOf("normalizeBuiltApplicationCoreArtifacts(source)", nestedStep6Call);
+invariant(
+  step7Call >= 0 && nestedStep6Call > step7Call && nestedNormalizerCall > nestedStep6Call,
+  "Step 7 must wrap the Step 6 incremental Table optimizer so Step 6 evaluates first, even when later optimization stages wrap Step 7.",
 );
 includes(
   optimizer,
