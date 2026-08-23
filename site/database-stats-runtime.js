@@ -3,6 +3,7 @@
 
   const VERSION = String(window.__mflReleaseVersion || "");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
+  const DISTRIBUTION_ANIMATION_CLASS = "mflStatsDistributionAnimating";
   const FILTERS = Object.freeze([
     ["all", "All", null, null],
     ["ultimate", "Ultimate", 95, null],
@@ -49,6 +50,34 @@
   function customPanel() {
     return page.querySelector("#databaseStatsCustomFilter");
   }
+
+  function distributionContainer() {
+    return document.getElementById("databaseStatsDistribution");
+  }
+
+  function animateDistribution(container, restart = false) {
+    if (!(container instanceof HTMLElement)) return;
+    if (restart) {
+      container.classList.remove(DISTRIBUTION_ANIMATION_CLASS);
+      void container.offsetWidth;
+    }
+    container.classList.add(DISTRIBUTION_ANIMATION_CLASS);
+  }
+
+  function resetDistributionAnimation() {
+    const container = distributionContainer();
+    if (container instanceof HTMLElement) container.classList.remove(DISTRIBUTION_ANIMATION_CLASS);
+  }
+
+  function syncDistributionRouteAnimation() {
+    if (!isStatsPath()) resetDistributionAnimation();
+  }
+
+  const routeAnimationObserver = new MutationObserver(syncDistributionRouteAnimation);
+  routeAnimationObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-page"],
+  });
 
   function syncCustomInputs() {
     const minInput = page.querySelector("#databaseStatsCustomMin");
@@ -119,18 +148,21 @@
           return;
         }
 
+        const filterChanged = activeFilter !== filter[0];
         customPanelOpen = false;
         syncCustomInputs();
         activeFilter = filter[0];
         syncFilterControls();
-        renderStats();
+        if (filterChanged) renderStats({ restartDistributionAnimation: true });
       });
     });
 
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
-        distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
-        renderDistribution();
+        const nextMode = button.dataset.distribution === "age" ? "age" : "overall";
+        if (nextMode === distributionMode) return;
+        distributionMode = nextMode;
+        renderDistribution({ restartDistributionAnimation: true });
       });
     });
     page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
@@ -192,7 +224,7 @@
     activeFilter = nextFilter;
     customPanelOpen = false;
     syncFilterControls();
-    if (effectiveFilterChanged) renderStats();
+    if (effectiveFilterChanged) renderStats({ restartDistributionAnimation: true });
   }
 
   function retirementYears(group) {
@@ -222,7 +254,7 @@
     if (element) element.textContent = formatCount(value);
   }
 
-  function renderStats() {
+  function renderStats(options = {}) {
     if (!data || !isStatsPath()) return;
     const groups = filteredGroups();
     const retired = (group) => retirementYears(group) === 0;
@@ -237,10 +269,10 @@
     setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => retirementYears(group) === 2));
     setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => retirementYears(group) === 1));
     setCard("databaseStatsRetired", retiredCount);
-    renderDistribution();
+    renderDistribution(options);
   }
 
-  function renderDistribution() {
+  function renderDistribution(options = {}) {
     if (!data || !isStatsPath()) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       const active = button.dataset.distribution === distributionMode;
@@ -261,7 +293,7 @@
       total += count;
     });
 
-    const container = document.getElementById("databaseStatsDistribution");
+    const container = distributionContainer();
     if (!(container instanceof HTMLElement)) return;
     if (!counts.size) {
       const empty = document.createElement("p");
@@ -274,7 +306,7 @@
     const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
     const maxCount = Math.max(...rows.map(([, count]) => count));
     const histogram = document.createElement("div");
-    histogram.className = "mflStatsHistogram";
+    histogram.className = "mflStatsHistogramPersistent";
     histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
     const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
     histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
@@ -285,7 +317,7 @@
       const bar = document.createElement("div");
       bar.className = "mflStatsHistogramBar";
       const fill = document.createElement("div");
-      fill.className = "mflStatsHistogramFill";
+      fill.className = "mflStatsHistogramFillPersistent";
       fill.style.setProperty("--bar-height", `${Math.max(6, (count / maxCount) * 100)}%`);
       fill.dataset.tooltip = `${formatCount(count)} (${total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"}%)`;
       const label = document.createElement("span");
@@ -296,6 +328,7 @@
       histogram.appendChild(item);
     });
     container.replaceChildren(histogram);
+    animateDistribution(container, options.restartDistributionAnimation === true);
   }
 
   async function loadData() {
@@ -336,7 +369,7 @@
       if (!destroyed && isStatsPath()) renderStats();
       return true;
     } catch (error) {
-      const container = document.getElementById("databaseStatsDistribution");
+      const container = distributionContainer();
       if (container instanceof HTMLElement && isStatsPath()) {
         const message = document.createElement("p");
         message.className = "mflStatsEmpty";
@@ -356,6 +389,7 @@
       else void showStatsPage();
       scheduleCustomPanel();
     } else {
+      resetDistributionAnimation();
       closeCustomPanel();
       endBusy();
     }
@@ -380,6 +414,8 @@
 
   function destroy() {
     destroyed = true;
+    routeAnimationObserver.disconnect();
+    resetDistributionAnimation();
     if (customPanelFrame) cancelAnimationFrame(customPanelFrame);
     customPanelFrame = 0;
     document.removeEventListener("click", onDocumentClick);
