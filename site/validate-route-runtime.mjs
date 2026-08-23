@@ -189,8 +189,9 @@ includes(normalizedCore, `      if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
       }
-      if (clubPage) {`, "The public incremental table renderer must consume staged controls only after route data is ready, while Club keeps route-owned roster state.");
-includes(normalizedCore, "if (!clubPage) originalApplyFilters.call(this, { save: false });", "Only non-Club incremental payloads may enter the generic pre-route filter renderer.");
+      if (clubPage) {`, "The public incremental table renderer must consume staged controls only after route data is ready, while Club skips saved filter-state restoration.");
+includes(normalizedCore, "originalApplyFilters.call(this, { save: false });", "Club and non-Club incremental payloads must share the one canonical final Table render.");
+excludes(normalizedCore, "if (!clubPage) originalApplyFilters.call(this, { save: false });", "Club must not be deferred to a second route-owned table render.");
 includes(normalizedCore, 'tablePages.add("club")', "Club must retain generic Table infrastructure ownership so the canonical loading shell and renderer remain active.");
 includes(normalizedCore, 'const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);', "Club public progression views must remain available while filter state is bypassed separately.");
 includes(tableCore, 'const clubPage = pageName === "club";', "The Table loading shell must distinguish Club from filterable table pages.");
@@ -198,4 +199,4 @@ includes(tableCore, 'window.__mflTableLoadingRuntime?.show?.();', "Club must ret
 includes(tableCore, 'if (state.currentPage === "club") {', "The Table renderer must have an explicit filter-free Club branch.");
 includes(tableCore, "state.filteredRows = [...state.rows];", "Club must render its returned roster rows without generic filtering.");
 
-console.log("Route runtime, prebuilt route-core splitting, request cancellation, pure table-state validation, and filter-free Club loading/render handoff passed.");
+console.log("Route runtime, prebuilt route-core splitting, request cancellation, pure table-state validation, and single-pass filter-free Club rendering passed.");
