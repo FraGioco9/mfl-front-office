@@ -48,8 +48,26 @@
     return page || "home";
   }
 
+  function fallbackRoutePageName() {
+    if (document.body?.dataset.page === "notfound") return "notfound";
+    const firstPart = String(window.location.pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
+    if (!firstPart) return "home";
+    if (firstPart === "my-players") return "myplayers";
+    if (["club", "clubs"].includes(firstPart)) return "club";
+    if (firstPart === "players") return "player";
+    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog"].includes(firstPart)) {
+      return firstPart;
+    }
+    return "notfound";
+  }
+
   function currentPageName() {
-    return normalizedPageName(document.body?.dataset.page || document.documentElement.dataset.initialPage || "home");
+    const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
+    if (typeof canonicalRequest === "function") {
+      const request = canonicalRequest(window.location.pathname);
+      return normalizedPageName(request?.pageName);
+    }
+    return fallbackRoutePageName();
   }
 
   function routeBusy() {
