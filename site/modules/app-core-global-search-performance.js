@@ -9,7 +9,7 @@ const LOCAL_AGENT_BUILDER = `  const addAgent = (walletAddress, name) => {
     }
 
     agentsByWallet.set(entry.walletAddress, entry);
-    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
+    if (entry.name) saveAgentNameForWallet(entry.walletAddress, entry.name);
   };`;
 
 const COUNTED_LOCAL_AGENT_BUILDER = `  const addAgent = (walletAddress, name, playerCountIncrement = 0) => {
@@ -27,7 +27,7 @@ const COUNTED_LOCAL_AGENT_BUILDER = `  const addAgent = (walletAddress, name, pl
     }
 
     agentsByWallet.set(entry.walletAddress, entry);
-    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
+    if (entry.name) saveAgentNameForWallet(entry.walletAddress, entry.name);
   };`;
 
 const LOCAL_AGENT_ROW_INDEX = `  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));`;
