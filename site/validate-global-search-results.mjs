@@ -182,21 +182,24 @@ invariant(
 
 invariant(
   walletPreferencesApi.includes("wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings")
-    && walletPreferencesApi.includes("tableState: row.table_state")
+    && walletPreferencesApi.includes("tableStateForClient(row.table_state)")
     && walletPreferencesApi.includes("recentSearchItems: mergeRecentIds(incoming.recentSearchItems, current.recentSearchItems),")
-    && walletPreferencesApi.includes("recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),")
-    && walletPreferencesApi.includes("recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),")
+    && walletPreferencesApi.includes("return normalizeCloudTableState({")
+    && !walletPreferencesApi.includes("recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),")
+    && !walletPreferencesApi.includes("recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),")
     && core.includes("recentSearchItems: state.recentSearchItems")
     && core.includes("queueCloudTableStateSave(savedState);"),
-  "Supabase persistence must merge the mixed Global Search history and agent history with the existing five so a partial or concurrent save cannot collapse recentSearchItems to only the newly clicked result.",
+  "Supabase persistence must merge the canonical mixed Global Search history with the existing five while avoiding independently stored legacy player/agent arrays.",
 );
 
 invariant(
   walletPreferencesApi.includes("function recentSearchItemsFromLegacy(tableState) {")
-    && walletPreferencesApi.includes("function normalizeRecentSearchTableState(tableState) {")
-    && walletPreferencesApi.includes("recentSearchItems: mergeRecentIds(sanitized.recentSearchItems, recentSearchItemsFromLegacy(sanitized)),")
-    && walletPreferencesApi.includes("? normalizeRecentSearchTableState(row.table_state) : null"),
-  "Wallet preference reads must recover a previously collapsed mixed recent list from preserved player and agent recent arrays whenever those entries still exist.",
+    && walletPreferencesApi.includes("function normalizeCloudTableState(tableState) {")
+    && walletPreferencesApi.includes("mergeRecentIds(source.recentSearchItems, recentSearchItemsFromLegacy(source))")
+    && walletPreferencesApi.includes("function tableStateForClient(tableState) {")
+    && walletPreferencesApi.includes("...legacyRecentSearchStateFromItems(canonical.recentSearchItems)")
+    && walletPreferencesApi.includes("? tableStateForClient(row.table_state) : null"),
+  "Wallet preference reads must fold legacy player/agent histories into canonical mixed recents and derive legacy response arrays without storing duplicates.",
 );
 
 invariant(
@@ -235,4 +238,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves and recovers the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");

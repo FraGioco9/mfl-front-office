@@ -1,23 +1,13 @@
 const { signedWalletFromRequest } = require("./_wallet-proof");
-const { supabaseConfig, supabaseRequest } = require("./_supabase");
+const { supabaseConfig } = require("./_supabase");
+const { touchWalletLastSeen } = require("./_wallet-presence");
 
 async function writeSupabaseOptIn(wallet) {
-  const now = new Date().toISOString();
-  const rows = await supabaseRequest("wallet_opt_ins?on_conflict=wallet_address", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify([{
-      wallet_address: wallet,
-      last_seen_at: now,
-    }]),
-  });
-
+  const { rows } = await touchWalletLastSeen(wallet);
   return {
     recorded: true,
     storage: "supabase",
-    wallet_count: Array.isArray(rows) ? rows.length : 0,
+    wallet_count: rows.length,
   };
 }
 
