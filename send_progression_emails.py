@@ -83,11 +83,48 @@ def load_players(db_path: Path) -> dict[str, dict[str, Any]]:
             "name",
             "positions",
             *[column for column in STAT_COLUMNS if column in columns],
+            *[
+                f"{column}_prog_all"
+                for column in STAT_COLUMNS
+                if f"{column}_prog_all" in columns
+            ],
         ]
         rows = connection.execute(f"SELECT {', '.join(needed)} FROM players").fetchall()
         return {str(row["player_id"]): dict(row) for row in rows}
     finally:
         connection.close()
+
+
+def authoritative_change(
+    previous: dict[str, Any],
+    current: dict[str, Any],
+    column: str,
+) -> tuple[int, int] | None:
+    old_value = parse_int(previous.get(column))
+    new_value = parse_int(current.get(column))
+    progression_column = f"{column}_prog_all"
+    old_progression = parse_int(previous.get(progression_column))
+    new_progression = parse_int(current.get(progression_column))
+
+    # The progression endpoint is the authoritative event source. Its
+    # cumulative *_prog_all counters can advance before the absolute /players
+    # attribute snapshot does, so relying only on new_value > old_value drops
+    # valid progression notifications.
+    if old_progression is not None and new_progression is not None:
+        delta = new_progression - old_progression
+        if delta <= 0:
+            return None
+        if new_value is not None:
+            return new_value - delta, new_value
+        if old_value is not None:
+            return old_value, old_value + delta
+        return None
+
+    # Preserve compatibility with older database artifacts that predate the
+    # cumulative progression columns.
+    if old_value is not None and new_value is not None and new_value > old_value:
+        return old_value, new_value
+    return None
 
 
 def changed_players(previous_db: Path, current_db: Path) -> dict[str, PlayerImprovement]:
@@ -102,24 +139,29 @@ def changed_players(previous_db: Path, current_db: Path) -> dict[str, PlayerImpr
 
         changes: list[tuple[str, int, int]] = []
         for column in STAT_COLUMNS:
-            if column not in current or column not in previous:
-                continue
-            old_value = parse_int(previous.get(column))
-            new_value = parse_int(current.get(column))
-            if old_value is not None and new_value is not None and new_value > old_value:
-                changes.append((column, old_value, new_value))
+            change = authoritative_change(previous, current, column)
+            if change is not None:
+                changes.append((column, change[0], change[1]))
 
         if not changes:
             continue
 
+        overall_change = next(
+            (
+                (old_value, new_value)
+                for column, old_value, new_value in changes
+                if column == "overall"
+            ),
+            None,
+        )
         improvements[player_id] = PlayerImprovement(
             player_id=player_id,
             name=str(current.get("name") or f"Player {player_id}"),
             wallet_address=normalize_wallet(current.get("wallet_address")),
             wallet_name=str(current.get("wallet_name") or current.get("wallet_address") or ""),
             positions=str(current.get("positions") or ""),
-            old_overall=parse_int(previous.get("overall")),
-            new_overall=parse_int(current.get("overall")),
+            old_overall=(overall_change[0] if overall_change else parse_int(previous.get("overall"))),
+            new_overall=(overall_change[1] if overall_change else parse_int(current.get("overall"))),
             changes=tuple(changes),
         )
 
