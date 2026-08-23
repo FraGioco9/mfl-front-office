@@ -288,9 +288,10 @@
 
     if (event.key === "Escape") {
       const active = document.activeElement;
-      if (active instanceof HTMLElement && active !== document.body) active.blur();
       pointerFocusedControl = null;
       endNavigationIntent();
+      if (active instanceof HTMLInputElement && active.id === "pagerCurrentPageInput") return;
+      if (active instanceof HTMLElement && active !== document.body) active.blur();
     } else if (!event.metaKey && !event.ctrlKey && !event.altKey) {
       pointerFocusedControl = null;
     }
