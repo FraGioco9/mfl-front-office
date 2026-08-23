@@ -50,8 +50,8 @@ includes(
 );
 includes(
   buildSource,
-  "const artifacts = optimizeGlobalSearchRuntimeArtifacts(\n  optimizePersistenceRuntimeArtifacts(",
-  "Global Search optimization must compose outside the existing Step 12 pipeline without replacing it.",
+  "optimizeGlobalSearchRuntimeArtifacts(\n    optimizePersistenceRuntimeArtifacts(",
+  "Global Search optimization must remain outside the existing Step 12 pipeline even when later optimizers wrap it.",
 );
 includes(
   optimizerSource,
