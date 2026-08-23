@@ -30,6 +30,7 @@
   let frozenSelectionLabel = "";
   let lastKnownSelectionCount = 0;
   let navigationSourceControlSnapshot = null;
+  let unregisterEscapeHandler = null;
 
   function selectionBar() {
     const bar = document.getElementById("selectionBar");
@@ -106,6 +107,13 @@
     return Array.from(document.querySelectorAll('[id$="Modal"]')).some((modal) => (
       modal instanceof HTMLElement && !modal.hidden
     ));
+  }
+
+  function editableEscapeTarget(target) {
+    return target instanceof HTMLInputElement
+      || target instanceof HTMLSelectElement
+      || target instanceof HTMLTextAreaElement
+      || (target instanceof HTMLElement && target.isContentEditable);
   }
 
   function selectionActionModalOpen() {
@@ -401,46 +409,50 @@
     queueMicrotask(() => completeActionClick(action, sequence));
   }
 
-  function onKeyDown(event) {
-    if (event.key !== "Escape") return;
-
+  function handleEscape(event) {
     if (modalIsOpen("addWatchlistModal")) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
       const closeButton = document.getElementById("closeAddWatchlistButton");
       if (closeButton instanceof HTMLButtonElement) closeButton.click();
       schedule();
-      return;
+      return true;
     }
 
-    if (anyModalIsOpen()) return;
+    if (anyModalIsOpen()) return false;
+    if (editableEscapeTarget(event.target)) return false;
 
     const selectedCount = applicationSelectionCount();
-    if (selectedCount <= 0) return;
+    if (selectedCount <= 0) return false;
 
-    event.preventDefault();
-    event.stopImmediatePropagation();
     prepareToastAnchor();
     dismissSelectionBar(selectedCount);
     clearApplicationSelection(null);
     schedule();
+    return true;
+  }
+
+  function bindEscapeHandler() {
+    if (unregisterEscapeHandler) return true;
+    const register = window.__mflControlInteractionsRuntime?.registerEscapeHandler;
+    if (typeof register !== "function") return false;
+    unregisterEscapeHandler = register("selection-stack", handleEscape, { priority: 100 });
+    return true;
   }
 
   function clearForRouteTransition() {
-  if (destroyed || applicationSelectionCount() <= 0) return false;
-  clearApplicationSelection(null);
-  schedule();
-  return true;
-}
+    if (destroyed || applicationSelectionCount() <= 0) return false;
+    clearApplicationSelection(null);
+    schedule();
+    return true;
+  }
 
-function rebind() {
+  function rebind() {
     if (destroyed) return;
+    bindEscapeHandler();
     schedule();
   }
 
   window.addEventListener("pointerdown", onPointerDown, true);
   window.addEventListener("click", onClick, true);
-  document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
   rebind();
@@ -451,12 +463,13 @@ function rebind() {
     if (exitTimer) clearTimeout(exitTimer);
     if (toastAnchorTimer) clearTimeout(toastAnchorTimer);
     observer?.disconnect();
+    unregisterEscapeHandler?.();
+    unregisterEscapeHandler = null;
     navigationSourceControlSnapshot = null;
     frozenSelectionLabel = "";
     lastKnownSelectionCount = 0;
     window.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("click", onClick, true);
-    document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     document.documentElement.style.removeProperty("--selection-center-x");

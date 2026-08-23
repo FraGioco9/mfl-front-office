@@ -5,9 +5,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, interactions, tableRuntime] = await Promise.all([
+const [controls, interactions, selectionStack, tableRuntime] = await Promise.all([
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
+  read("./selection-stack-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -26,12 +27,22 @@ for (const required of [
   invariant(controls.includes(required), `Editable pager styling is missing ${required}`);
 }
 
-const pagerEscapeExemption = 'if (active instanceof HTMLInputElement && active.id === "pagerCurrentPageInput") return;';
-const genericEscapeBlur = "if (active instanceof HTMLElement && active !== document.body) active.blur();";
-invariant(interactions.includes(pagerEscapeExemption), "Global Escape handling must leave pager cancellation to the pager input owner.");
 invariant(
-  interactions.indexOf(pagerEscapeExemption) < interactions.indexOf(genericEscapeBlur),
-  "Pager Escape exemption must run before the global generic blur.",
+  interactions.includes('window.addEventListener("keydown", onEscapeCapture, true);'),
+  "Global Escape ownership must run at window capture before document-level focus fallback.",
+);
+invariant(
+  !interactions.includes("pagerCurrentPageInput"),
+  "Global Escape ownership must remain generic rather than hard-coding the pager input.",
+);
+const globalEscapeStart = interactions.indexOf("function onEscapeCapture(event) {");
+const globalKeyDownStart = interactions.indexOf("function onKeyDown(event) {", globalEscapeStart);
+invariant(globalEscapeStart >= 0 && globalKeyDownStart > globalEscapeStart, "Global Escape capture must remain structurally isolated.");
+const globalEscapeCapture = interactions.slice(globalEscapeStart, globalKeyDownStart);
+invariant(!globalEscapeCapture.includes(".blur()"), "Global Escape dispatch must not blur the pager before its local cancel owner runs.");
+invariant(
+  selectionStack.includes("if (editableEscapeTarget(event.target)) return false;"),
+  "Selection-level Escape ownership must defer to focused editable controls such as the pager input.",
 );
 
 for (const required of [
@@ -87,4 +98,4 @@ const inputKeydown = tableRuntime.slice(inputKeydownStart, inputKeydownEnd);
 invariant(inputKeydown.includes('event.key !== "Enter"'), "Pager input keydown must continue to commit Enter.");
 invariant(!inputKeydown.includes('"Escape"'), "Pager Escape must not depend on the later input-target keydown phase.");
 
-console.log("Editable pager window-capture Escape cancellation validation passed.");
+console.log("Editable pager window-capture Escape cancellation validation passed with global editable-control priority.");

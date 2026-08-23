@@ -27,6 +27,8 @@
   let suppressClickControl = null;
   let suppressClickTimer = 0;
   let navigationIntentToken = "";
+  let escapeHandlerSequence = 0;
+  const escapeHandlers = new Map();
 
   function disableSearchSpellcheck() {
     document.querySelectorAll(SEARCH_INPUT_SELECTOR).forEach((field) => {
@@ -102,6 +104,34 @@
     const token = navigationIntentToken;
     navigationIntentToken = "";
     if (token) navigationController()?.handoff?.(token);
+  }
+
+  function registerEscapeHandler(key, handler, options = {}) {
+    const id = String(key || "").trim();
+    if (!id || typeof handler !== "function") return () => {};
+    const priorityValue = Number(options.priority);
+    const priority = Number.isFinite(priorityValue) ? priorityValue : 0;
+    const sequence = ++escapeHandlerSequence;
+    escapeHandlers.set(id, { handler, priority, sequence });
+
+    return () => {
+      const current = escapeHandlers.get(id);
+      if (current?.sequence === sequence) escapeHandlers.delete(id);
+    };
+  }
+
+  function dispatchEscapeHandlers(event) {
+    const ordered = Array.from(escapeHandlers.values())
+      .sort((left, right) => right.priority - left.priority || left.sequence - right.sequence);
+
+    for (const entry of ordered) {
+      try {
+        if (entry.handler(event) === true) return true;
+      } catch (error) {
+        console.warn("Global Escape handler failed.", error);
+      }
+    }
+    return false;
   }
 
   function buttonGestureFromTarget(target) {
@@ -279,6 +309,15 @@
     endNavigationIntent();
   }
 
+  function onEscapeCapture(event) {
+    if (event.key !== "Escape") return;
+    pointerFocusedControl = null;
+    endNavigationIntent();
+    if (!dispatchEscapeHandlers(event)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
   function onKeyDown(event) {
     if (event.key === "Enter" && visibleModalBackdrop() && !openSelect()) {
       event.preventDefault();
@@ -286,13 +325,7 @@
       return;
     }
 
-    if (event.key === "Escape") {
-      const active = document.activeElement;
-      pointerFocusedControl = null;
-      endNavigationIntent();
-      if (active instanceof HTMLInputElement && active.id === "pagerCurrentPageInput") return;
-      if (active instanceof HTMLElement && active !== document.body) active.blur();
-    } else if (!event.metaKey && !event.ctrlKey && !event.altKey) {
+    if (!event.metaKey && !event.ctrlKey && !event.altKey) {
       pointerFocusedControl = null;
     }
   }
@@ -309,6 +342,7 @@
   document.addEventListener("pointermove", onPointerMove, true);
   document.addEventListener("pointerup", onPointerUp, true);
   document.addEventListener("pointercancel", onPointerCancel, true);
+  window.addEventListener("keydown", onEscapeCapture, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("keydown", onEnterBubble);
   document.addEventListener("focusin", onFocusIn, true);
@@ -318,16 +352,21 @@
     clearGesture();
     clearClickSuppression();
     endNavigationIntent();
+    escapeHandlers.clear();
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointermove", onPointerMove, true);
     document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("pointercancel", onPointerCancel, true);
+    window.removeEventListener("keydown", onEscapeCapture, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("keydown", onEnterBubble);
     document.removeEventListener("focusin", onFocusIn, true);
   }
 
-  window.__mflControlInteractionsRuntime = Object.freeze({ destroy });
+  window.__mflControlInteractionsRuntime = Object.freeze({
+    registerEscapeHandler,
+    destroy,
+  });
 })();
