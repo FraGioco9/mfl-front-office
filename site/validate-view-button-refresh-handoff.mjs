@@ -16,7 +16,7 @@ includes(bootstrap, "primeViewButtons(normalizedPage, view);", "Bootstrap must k
 includes(core, "window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);", "The application core must keep the shared static UI runtime as the table view-button owner.");
 includes(staticUi, "function sharedViewOrderMatches(container, orderedButtons)", "Runtime view synchronization must detect an already-correct rendered order.");
 includes(staticUi, "if (button.hidden !== shouldHide) button.hidden = shouldHide;", "Runtime view synchronization must leave unchanged visibility alone.");
-includes(staticUi, "if (button.textContent !== label) button.textContent = label;", "Runtime view synchronization must leave an unchanged Attributes/Squad label alone.");
+includes(staticUi, "if (button.textContent !== label) {", "Runtime view synchronization must guard an unchanged Attributes/Squad label.");
 includes(staticUi, "if (!sharedViewOrderMatches(container, orderedButtons))", "Runtime view synchronization must guard DOM reordering behind an order mismatch.");
 
 const guardIndex = staticUi.indexOf("if (!sharedViewOrderMatches(container, orderedButtons))");
