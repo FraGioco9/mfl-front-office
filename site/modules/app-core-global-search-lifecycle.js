@@ -1,5 +1,6 @@
 // @ts-check
 
+import { splitSearchApplicationCoreRuntime } from "./app-core-search-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 
 const OPEN_SEARCH = `async function openSearch() {
@@ -89,8 +90,8 @@ export function normalizeGlobalSearchOpenLifecycle(artifacts) {
     "typed Global Search applies one ten-result cap after players clubs and agents are combined",
   );
 
-  return Object.freeze({
+  return splitSearchApplicationCoreRuntime(Object.freeze({
     ...artifacts,
     core,
-  });
+  }));
 }
