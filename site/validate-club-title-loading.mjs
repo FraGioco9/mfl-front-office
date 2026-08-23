@@ -4,6 +4,8 @@ import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build
 import { optimizeCachedRouteRuntimeArtifacts } from "./modules/app-core-cached-route-performance.js";
 import { optimizeIncrementalTableRuntimeArtifacts } from "./modules/app-core-incremental-table-performance.js";
 import { optimizeMflStatsRuntimeArtifacts } from "./modules/app-core-mfl-stats-performance.js";
+import { optimizeTableChromeRuntimeArtifacts } from "./modules/app-core-table-chrome-performance.js";
+import { optimizeTableLoadingRuntimeArtifacts } from "./modules/app-core-table-loading-performance.js";
 import { optimizeTableRenderPerformanceArtifacts } from "./modules/app-core-table-render-performance.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -33,10 +35,14 @@ const [
   read("./route-core-loader-runtime.js"),
 ]);
 
-const artifacts = optimizeCachedRouteRuntimeArtifacts(
-  optimizeMflStatsRuntimeArtifacts(
-    optimizeTableRenderPerformanceArtifacts(
-      optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(coreSource)),
+const artifacts = optimizeTableChromeRuntimeArtifacts(
+  optimizeTableLoadingRuntimeArtifacts(
+    optimizeCachedRouteRuntimeArtifacts(
+      optimizeMflStatsRuntimeArtifacts(
+        optimizeTableRenderPerformanceArtifacts(
+          optimizeIncrementalTableRuntimeArtifacts(normalizeBuiltApplicationCoreArtifacts(coreSource)),
+        ),
+      ),
     ),
   ),
 );
