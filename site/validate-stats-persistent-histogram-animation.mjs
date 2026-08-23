@@ -54,12 +54,21 @@ includes(
   ":is(#databaseStatsDistribution, #mflStatsAgeDistribution).mflStatsDistributionAnimating",
   "Only the persistent distribution containers may own the Stats rise animation.",
 );
-includes(histogramStyles, "animation: mflStatsDistributionRise 220ms ease-out;", "The persistent container must own the single 220ms rise animation.");
+includes(histogramStyles, "animation: mflStatsDistributionRise 220ms ease-out both;", "The persistent container must own the single 220ms rise animation and finish in its visible state.");
+includes(histogramStyles, ".mflStatsHistogramPersistent > .mflStatsHistogramItem {", "The persistent histogram stylesheet must own item layout directly.");
+includes(histogramStyles, ".mflStatsHistogramPersistent .mflStatsHistogramBar {", "The persistent histogram stylesheet must own bar geometry directly.");
+includes(histogramStyles, "transform: scaleY(1);", "Stats columns must be fully visible by default outside the active animation.");
+includes(
+  histogramStyles,
+  ".mflStatsDistributionAnimating .mflStatsHistogramFillPersistent",
+  "Only an actively animating persistent container may apply inherited rise progress to a fill.",
+);
 includes(
   histogramStyles,
   "transform: scaleY(var(--mfl-stats-rise-progress));",
-  "Histogram fills must derive their transform from inherited parent progress.",
+  "Actively animating histogram fills must derive their transform from inherited parent progress.",
 );
+includes(histogramStyles, ".mflStatsHistogramPersistent .mflStatsHistogramLabel {", "The persistent histogram stylesheet must own label layout directly.");
 includes(histogramStyles, "@keyframes mflStatsDistributionRise", "The shared persistent rise keyframes must exist.");
 excludes(histogramStyles, ".mflStatsHistogram {", "The new stylesheet must not override the legacy histogram class.");
 excludes(histogramStyles, ".mflStatsHistogramFill {", "The new stylesheet must not override the legacy fill class.");
@@ -81,4 +90,4 @@ includes(
   "The canonical application-core build must apply the persistent MFL Stats animation normalizer.",
 );
 
-console.log("Database Stats and MFL Stats keep one inherited animation timeline on their persistent distribution containers.");
+console.log("Database Stats and MFL Stats keep one inherited animation timeline with a fully visible non-animated fallback.");
