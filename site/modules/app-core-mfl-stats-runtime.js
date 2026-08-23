@@ -137,14 +137,26 @@ function renderMflStatsDistribution(packableRows) {
     }
   });
 
+  const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
+  const totalPackable = packableRows.length;
+  const distributionSignature = JSON.stringify([
+    state.mflStatsOverallFilter,
+    state.mflStatsDistributionMode,
+    totalPackable,
+    rows,
+  ]);
+  if (mflStatsAgeDistribution.dataset.mflStatsRenderSignature === distributionSignature
+      && mflStatsAgeDistribution.firstElementChild) {
+    return;
+  }
+  mflStatsAgeDistribution.dataset.mflStatsRenderSignature = distributionSignature;
+
   if (!counts.size) {
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
   }
 
   const maxCount = Math.max(...counts.values());
-  const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
-  const totalPackable = packableRows.length;
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
