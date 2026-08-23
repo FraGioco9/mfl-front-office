@@ -142,10 +142,8 @@ function normalizeTableRequestLoadingBoundary(artifacts) {
 }
 
 function normalizePagerQuickJumpLifecycle(artifacts) {
-  const core = String(artifacts?.core || "");
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
   const table = String(routeChunks.table || "");
-  if (!core) throw new Error("Cannot normalize pager quick-jump behavior without shared application core.");
   if (!table) throw new Error("Cannot normalize pager quick-jump behavior without the Table route chunk.");
 
   const pagerRuntime = `const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";
@@ -284,37 +282,22 @@ installPagerQuickJumpControl();
 syncPagerQuickJump(1, 1);
 `;
 
-  const normalizedCore = replaceRequired(
-    core,
-    `watchlistButton?.addEventListener("click", (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  toggleWatchlistDropdown();
-});
-
-pageSizeSelect.addEventListener("change", () => {`,
-    `watchlistButton?.addEventListener("click", (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  toggleWatchlistDropdown();
-});
-
-${pagerRuntime}
-pageSizeSelect.addEventListener("change", () => {`,
-    "canonical pager quick-jump control installation",
-  );
-
-  const normalizedTable = replaceRequired(
+  let normalizedTable = replaceRequired(
     table,
+    "function tableRenderTableOwner() {\n",
+    `${pagerRuntime}\nfunction tableRenderTableOwner() {\n`,
+    "Table route core owns the editable current-page control",
+  );
+  normalizedTable = replaceRequired(
+    normalizedTable,
     '  pageText.textContent = `Page ${state.page} of ${totalPages}`;',
     "  syncPagerQuickJump(state.page, totalPages);",
-    "table pager renders through the canonical editable current-page control",
+    "table pager renders through the editable current-page control",
   );
   routeChunks.table = normalizedTable;
 
   return Object.freeze({
     ...artifacts,
-    core: normalizedCore,
     routeChunks: Object.freeze(routeChunks),
   });
 }
