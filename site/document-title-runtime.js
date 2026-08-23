@@ -69,6 +69,10 @@
     return { pageName: fallbackRoutePageName(), options: {} };
   }
 
+  function currentPageName() {
+    return normalizedPageName(currentRouteRequest()?.pageName);
+  }
+
   function routeIdentityForRequest(request) {
     const pageName = normalizedPageName(request?.pageName);
     const options = request?.options || {};
