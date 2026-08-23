@@ -21,6 +21,20 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     const playerId = String(params.get("player") || "").trim();
     const savedId = String(params.get("saved") || "").trim();
     const shareId = String(params.get("share") || "").trim();
+    const queryKeys = Array.from(params.keys());
+    const validQueryKeys = queryKeys.every((key) => key === "player" || key === "saved" || key === "share");
+    const hasEvaluationSelection = Boolean(playerId || savedId || shareId);
+
+    if (search && (!validQueryKeys || !hasEvaluationSelection)) {
+      return {
+        pageName: "evaluation",
+        options: {
+          plain: true,
+          replaceUrl: "/evaluation",
+        },
+      };
+    }
+
     return {
       pageName: "evaluation",
       options: {
@@ -31,7 +45,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
       },
     };
   }`,
-    "Evaluation route preserves its complete query state",
+    "Evaluation route preserves valid selection query state and canonicalizes malformed query strings",
   );
 
   normalizedCore = replaceRequired(
