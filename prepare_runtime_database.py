@@ -15,6 +15,13 @@ from typing import Any
 
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 EXCLUDED_WALLET_NAMES = ("mfl", "mfl wallet", "mfl trade")
+RUNTIME_TABLES = frozenset({
+    "runtime_player_search",
+    "runtime_agents",
+    "runtime_clubs",
+    "runtime_database_stats",
+    "runtime_metadata",
+})
 
 
 def normalize_search(value: Any) -> str:
@@ -42,16 +49,60 @@ def normalize_wallet_name(value: Any) -> str:
     return "".join(output).strip()
 
 
-def required_tables(connection: sqlite3.Connection) -> None:
-    tables = {
+def table_names(connection: sqlite3.Connection) -> set[str]:
+    return {
         str(row[0])
         for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         ).fetchall()
     }
-    missing = {"players", "wallets"} - tables
+
+
+def required_tables(connection: sqlite3.Connection) -> None:
+    missing = {"players", "wallets"} - table_names(connection)
     if missing:
         raise RuntimeError(f"Database is missing required table(s): {', '.join(sorted(missing))}")
+
+
+def validate_runtime_connection(connection: sqlite3.Connection) -> str:
+    """Validate the prepared runtime schema without changing the database."""
+    required_tables(connection)
+    missing = RUNTIME_TABLES - table_names(connection)
+    if missing:
+        raise RuntimeError(
+            f"Database is missing runtime table(s): {', '.join(sorted(missing))}"
+        )
+
+    generated_at_row = connection.execute(
+        "SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1"
+    ).fetchone()
+    generated_at = str(generated_at_row[0] if generated_at_row else "").strip()
+    if not generated_at:
+        raise RuntimeError("Runtime database is missing runtime_metadata generated_at")
+    try:
+        parsed = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise RuntimeError(
+            f"Runtime database has invalid generated_at: {generated_at}"
+        ) from error
+    if parsed.tzinfo is None:
+        raise RuntimeError(
+            f"Runtime database generated_at must include a timezone: {generated_at}"
+        )
+    return generated_at
+
+
+def validate_runtime_database(database_path: Path) -> str:
+    """Open an already-prepared runtime database read-only and validate its contract."""
+    if not database_path.is_file():
+        raise FileNotFoundError(f"Database not found: {database_path}")
+
+    database_uri = f"{database_path.resolve().as_uri()}?mode=ro"
+    connection = sqlite3.connect(database_uri, uri=True)
+    try:
+        return validate_runtime_connection(connection)
+    finally:
+        connection.close()
 
 
 def prepare_runtime_database(database_path: Path) -> None:
@@ -249,6 +300,7 @@ def prepare_runtime_database(database_path: Path) -> None:
         connection.execute("ANALYZE")
         connection.execute("PRAGMA optimize")
         connection.commit()
+        validate_runtime_connection(connection)
     finally:
         connection.close()
 
@@ -264,8 +316,22 @@ def main() -> int:
         type=Path,
         help="Path to the SQLite database (default: mfl_database.db).",
     )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate an already-prepared runtime database without modifying it.",
+    )
     args = parser.parse_args()
     database_path = args.database.resolve()
+    if args.validate_only:
+        generated_at = validate_runtime_database(database_path)
+        size_mb = database_path.stat().st_size / (1024 * 1024)
+        print(
+            f"Validated runtime SQLite database: {database_path} "
+            f"({size_mb:.1f} MB, generatedAt {generated_at})"
+        )
+        return 0
+
     prepare_runtime_database(database_path)
     size_mb = database_path.stat().st_size / (1024 * 1024)
     print(f"Prepared runtime SQLite database: {database_path} ({size_mb:.1f} MB)")
