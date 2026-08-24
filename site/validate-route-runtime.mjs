@@ -86,7 +86,11 @@ excludes(entry, "const deferredRuntimePromise =", "Inactive specialized runtimes
 
 includes(coreSource, "setPageWithRouteRuntime", "Canonical app-core must gate setPage before destination commit.");
 includes(coreSource, "ownerBeforeRuntime", "The canonical route gate must redispatch when a loaded runtime replaces setPage.");
-includes(coreSource, "window.__mflCancelIncrementalRouteRequest?.();", "Canonical app-core must cancel obsolete route data before lazy runtime loading.");
+includes(coreSource, "window.__mflCancelIncrementalRouteRequest?.();", "Canonical app-core must cancel obsolete route data through the global navigation transition owner.");
+invariant(
+  coreSource.split("window.__mflCancelIncrementalRouteRequest?.();").length - 1 === 2,
+  "Global page/view transitions must own obsolete incremental-request cancellation before destination commit.",
+);
 includes(coreSource, "window.__mflEnsureRouteCore", "Canonical app-core must await route-owned core code before committing its destination.");
 includes(coreSource, "routeCorePromise", "Canonical app-core must overlap route-core download with route-runtime loading.");
 includes(coreSource, "loadingController?.routeReady?.(pageName, incomingOptions)", "Canonical setPage gate must consult full destination readiness before acquiring route loading.");

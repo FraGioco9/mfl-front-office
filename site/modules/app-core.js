@@ -2976,6 +2976,7 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
     : "";
   try {
     const sequence = ++navigationTransitionSequence;
+    window.__mflCancelIncrementalRouteRequest?.();
     const transition = commitPageTransition(pageName, updateHash, options);
     await waitForViewTransitionPaint();
     if (sequence !== navigationTransitionSequence) return null;
@@ -2992,6 +2993,7 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
     ? navigation.begin("view-transition")
     : "";
   try {
+    window.__mflCancelIncrementalRouteRequest?.();
     const transition = stageViewTransition(pageName, viewName, options);
     if (!transition) return null;
     await waitForViewTransitionPaint();
@@ -13744,7 +13746,6 @@ async function startApp() {
           if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {
             await waitForLoadingPaint();
           }
-          window.__mflCancelIncrementalRouteRequest?.();
           const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
             ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
             : null;

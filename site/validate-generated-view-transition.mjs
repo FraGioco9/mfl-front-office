@@ -66,17 +66,19 @@ const pageRunner = section(
   "global page transition runner",
 );
 const pageRunnerNavigation = pageRunner.indexOf('navigation.begin("page-transition")');
+const pageRunnerCancel = pageRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", pageRunnerNavigation);
 const pageRunnerCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
 const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerCommit);
 const pageRunnerLoad = pageRunner.indexOf('typeof loader === "function" ? await loader(transition)', pageRunnerPaint);
 const pageRunnerRelease = pageRunner.indexOf("navigation?.end?.(navigationToken)", pageRunnerLoad);
 invariant(
   pageRunnerNavigation >= 0
-    && pageRunnerCommit > pageRunnerNavigation
+    && pageRunnerCancel > pageRunnerNavigation
+    && pageRunnerCommit > pageRunnerCancel
     && pageRunnerPaint > pageRunnerCommit
     && pageRunnerLoad > pageRunnerPaint
     && pageRunnerRelease > pageRunnerLoad,
-  "The global page transition runner must own navigation state through commit, paint, and its loader callback.",
+  "The global page transition runner must abort obsolete route data before commit, then own navigation state through commit, paint, and its loader callback.",
 );
 
 const viewRunner = section(
@@ -86,17 +88,19 @@ const viewRunner = section(
   "global view transition runner",
 );
 const viewRunnerNavigation = viewRunner.indexOf('navigation.begin("view-transition")');
+const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", viewRunnerNavigation);
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
 const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
 const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerLoad);
 invariant(
   viewRunnerNavigation >= 0
-    && viewRunnerStage > viewRunnerNavigation
+    && viewRunnerCancel > viewRunnerNavigation
+    && viewRunnerStage > viewRunnerCancel
     && viewRunnerPaint > viewRunnerStage
     && viewRunnerLoad > viewRunnerPaint
     && viewRunnerRelease > viewRunnerLoad,
-  "The global view transition runner must own navigation state through commit, paint, and its loader callback.",
+  "The global view transition runner must abort obsolete route data before staging the new view, then own navigation state through paint and its loader callback.",
 );
 
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");

@@ -51,7 +51,6 @@ const busyBegin = gate.indexOf("loadingController.begin(loadingController.reason
 const loadingPaintOwner = gate.indexOf('const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");', busyBegin);
 const loadingPaintCondition = gate.indexOf('if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {', loadingPaintOwner);
 const loadingPaint = gate.indexOf("await waitForLoadingPaint();", loadingPaintCondition);
-const cancelRequest = gate.indexOf("window.__mflCancelIncrementalRouteRequest?.();", loaderOwner);
 const routeCoreLoad = gate.indexOf("window.__mflEnsureRouteCore", loaderOwner);
 const routeRuntimeLoad = gate.indexOf("await window.__mflEnsureRouteRuntime", loaderOwner);
 const skipDuplicateTransition = gate.indexOf("skipNavigationTransition: true", loaderOwner);
@@ -70,18 +69,21 @@ invariant(
     && loadingPaintOwner > busyBegin
     && loadingPaintCondition > loadingPaintOwner
     && loadingPaint > loadingPaintCondition
-    && cancelRequest > loadingPaint
     && routeCoreLoad > loadingPaint
     && routeRuntimeLoad > loadingPaint,
-  "The committed route must decide full readiness first, paint only when route loading is active, then continue cancellation, lazy dependency loading, and final rendering.",
+  "The committed route must decide full readiness first, paint only when route loading is active, then continue lazy dependency loading and final rendering after transition-owned cancellation.",
 );
 invariant(
   gate.slice(busyStart, loadingPaintOwner).includes("!routeReady && !routeLoadingActive"),
   "A fully ready route or an already-active canonical route load must not create a duplicate busy token.",
 );
 invariant(
-  gate.slice(loadingPaintCondition, cancelRequest).includes("busyToken || routeLoadingActive"),
+  gate.slice(loadingPaintCondition, routeCoreLoad).includes("busyToken || routeLoadingActive"),
   "Only an active route-loading lifecycle may delay lazy work for the loading paint boundary.",
+);
+invariant(
+  !gate.includes("window.__mflCancelIncrementalRouteRequest?.();"),
+  "Lazy route loading must not retain a second incremental-request cancellation owner.",
 );
 invariant(
   skipDuplicateTransition > routeRuntimeLoad && downstreamSetPage > skipDuplicateTransition,
