@@ -84,32 +84,41 @@ jobs:
           mkdir -p previous-database
 
           PREVIOUS_RUN_ID=""
-          while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+          PREVIOUS_ARTIFACT_ID=""
+          PREVIOUS_CREATED_AT=""
+
+          while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
+            [ -n "$ARTIFACT_ID" ] || continue
             [ -n "$RUN_ID" ] || continue
 
-            ARTIFACT_NAME="$(
-              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
-                --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' \
-                | head -n 1
-            )"
+            rm -rf previous-database/*
+            echo "Checking mfl_database artifact $ARTIFACT_ID from run $RUN_ID ($CREATED_AT)."
 
-            if [ "$ARTIFACT_NAME" = "mfl_database" ]; then
+            if ! gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir previous-database; then
+              echo "Artifact $ARTIFACT_ID could not be downloaded; trying the next candidate."
+              continue
+            fi
+
+            if python prepare_runtime_database.py previous-database/mfl_database.db --validate-only; then
               PREVIOUS_RUN_ID="$RUN_ID"
-              echo "Using previous database from run $RUN_ID ($CREATED_AT)."
+              PREVIOUS_ARTIFACT_ID="$ARTIFACT_ID"
+              PREVIOUS_CREATED_AT="$CREATED_AT"
               break
             fi
+
+            echo "Artifact $ARTIFACT_ID does not contain a valid prepared mfl_database.db; trying the next candidate."
           done < <(
-            gh run list \
-              --status success \
-              --limit 100 \
-              --json databaseId,createdAt \
-              --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
+              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.id | tostring), (.workflow_run.id | tostring)] | @tsv' \
+              | sort -r
           )
 
           if [ -n "$PREVIOUS_RUN_ID" ]; then
-            gh run download "$PREVIOUS_RUN_ID" --name mfl_database --dir previous-database
+            echo "Using previous database artifact $PREVIOUS_ARTIFACT_ID from run $PREVIOUS_RUN_ID ($PREVIOUS_CREATED_AT)."
           else
-            echo "No previous database found; progression emails will be skipped."
+            rm -rf previous-database/*
+            echo "No valid previous database artifact found; progression emails will be skipped."
           fi
 
       - name: Rebuild database
