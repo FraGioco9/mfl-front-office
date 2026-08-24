@@ -145,7 +145,9 @@
       "openSavedEvaluationsModal",
     ]);
     const blockedEvents = [
-      "pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu",
+      "pointerdown", "pointerup", "pointercancel",
+      "mousedown", "mouseup", "touchstart", "touchend", "touchcancel",
+      "click", "dblclick", "auxclick", "contextmenu",
       "pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove",
     ];
     const scrollGestureEvents = new Set(["pointerdown", "mousedown", "touchstart", "pointermove", "mousemove"]);
@@ -156,6 +158,12 @@
     ].join(", ");
     const activeTokens = new Map();
     const subscribers = new Set();
+    const deferredEndTokens = new Set();
+    const blockedPointerIds = new Set();
+    let fallbackMouseGestureBlocked = false;
+    let fallbackTouchGestureBlocked = false;
+    let blockedGestureReleasePending = false;
+    let blockedGestureReleaseTimer = 0;
     let sequence = 0;
     let interactionListenersBound = false;
     let currentSnapshot = Object.freeze({
@@ -209,7 +217,12 @@
     }
 
     function end(token) {
-      if (token && activeTokens.delete(token)) applyState();
+      if (!token || !activeTokens.has(token)) return;
+      if (blockedInteractionGestureActive()) {
+        deferredEndTokens.add(token);
+        return;
+      }
+      if (activeTokens.delete(token)) applyState();
     }
 
     async function run(callback, reason = "loading") {
@@ -234,6 +247,80 @@
       return () => subscribers.delete(callback);
     }
 
+    function pointerEventsSupported() {
+      return typeof window.PointerEvent === "function";
+    }
+
+    function blockedInteractionGestureActive() {
+      return blockedPointerIds.size > 0
+        || fallbackMouseGestureBlocked
+        || fallbackTouchGestureBlocked
+        || blockedGestureReleasePending;
+    }
+
+    function beginBlockedInteractionGesture(event) {
+      if (event.type === "pointerdown") {
+        blockedPointerIds.add(event.pointerId);
+        return;
+      }
+      if (pointerEventsSupported()) return;
+      if (event.type === "mousedown" && event.button === 0) fallbackMouseGestureBlocked = true;
+      if (event.type === "touchstart") fallbackTouchGestureBlocked = true;
+    }
+
+    function blockedInteractionGestureEndOwned(event) {
+      if (event.type === "pointerup" || event.type === "pointercancel") {
+        return blockedPointerIds.has(event.pointerId);
+      }
+      if (pointerEventsSupported()) return false;
+      if (event.type === "mouseup") return fallbackMouseGestureBlocked;
+      if (event.type === "touchend" || event.type === "touchcancel") return fallbackTouchGestureBlocked;
+      return false;
+    }
+
+    function flushDeferredInteractionEnds() {
+      if (blockedInteractionGestureActive() || !deferredEndTokens.size) return;
+      let changed = false;
+      deferredEndTokens.forEach((token) => {
+        if (activeTokens.delete(token)) changed = true;
+      });
+      deferredEndTokens.clear();
+      if (changed) applyState();
+    }
+
+    function scheduleBlockedInteractionGestureRelease() {
+      if (blockedGestureReleaseTimer) return;
+      blockedGestureReleaseTimer = window.setTimeout(() => {
+        blockedGestureReleaseTimer = 0;
+        blockedGestureReleasePending = false;
+        flushDeferredInteractionEnds();
+      }, 0);
+    }
+
+    function finishBlockedInteractionGesture(event) {
+      if (event.type === "pointerup" || event.type === "pointercancel") {
+        blockedPointerIds.delete(event.pointerId);
+      } else if (!pointerEventsSupported() && event.type === "mouseup") {
+        fallbackMouseGestureBlocked = false;
+      } else if (!pointerEventsSupported() && (event.type === "touchend" || event.type === "touchcancel")) {
+        fallbackTouchGestureBlocked = Boolean(event.touches?.length);
+      }
+      blockedGestureReleasePending = true;
+      scheduleBlockedInteractionGestureRelease();
+    }
+
+    function clearBlockedInteractionGestures() {
+      blockedPointerIds.clear();
+      fallbackMouseGestureBlocked = false;
+      fallbackTouchGestureBlocked = false;
+      blockedGestureReleasePending = false;
+      if (blockedGestureReleaseTimer) {
+        window.clearTimeout(blockedGestureReleaseTimer);
+        blockedGestureReleaseTimer = 0;
+      }
+      flushDeferredInteractionEnds();
+    }
+
     function eventTargetsBusyScrollSurface(event) {
       if (!scrollGestureEvents.has(event.type)) return false;
       const target = event.target instanceof Element ? event.target : null;
@@ -241,7 +328,22 @@
     }
 
     function blockInteraction(event) {
-      if (!activeTokens.size || eventTargetsBusyScrollSurface(event)) return;
+      if (!activeTokens.size) return;
+      if (pointerEventsSupported() && ["mouseup", "touchend", "touchcancel"].includes(event.type)) return;
+      if (blockedInteractionGestureEndOwned(event)) {
+        const loadingSettledMidGesture = deferredEndTokens.size > 0;
+        finishBlockedInteractionGesture(event);
+        if (loadingSettledMidGesture) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        return;
+      }
+      if (eventTargetsBusyScrollSurface(event)) {
+        beginBlockedInteractionGesture(event);
+        return;
+      }
+      beginBlockedInteractionGesture(event);
       event.preventDefault();
       event.stopImmediatePropagation();
     }
@@ -250,12 +352,14 @@
       if (interactionListenersBound) return;
       interactionListenersBound = true;
       blockedEvents.forEach((eventName) => document.addEventListener(eventName, blockInteraction, true));
+      window.addEventListener("blur", clearBlockedInteractionGestures, true);
     }
 
     function unbindInteractionBlockers() {
       if (!interactionListenersBound) return;
       interactionListenersBound = false;
       blockedEvents.forEach((eventName) => document.removeEventListener(eventName, blockInteraction, true));
+      window.removeEventListener("blur", clearBlockedInteractionGestures, true);
     }
 
     function globalFunction(name) {
