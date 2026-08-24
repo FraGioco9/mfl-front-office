@@ -29,18 +29,18 @@ await migrate("./modules/app-core.js", (source) => {
     if (end < 0) throw new Error("Could not find the end of the duplicate Club render-cache block.");
     next = next.slice(0, start) + next.slice(end);
   } else if (next.includes("clubViewRenderCache")
-      || next.includes("captureClubView(")
       || next.includes("restoreCachedClubView(")) {
     throw new Error("Club render-cache ownership is partially migrated.");
   }
 
-  if (next.includes("      captureClubView(nextView);\n")) {
-    next = replaceExactlyOnce(
-      next,
-      "      captureClubView(nextView);\n",
-      "",
-      "dead Club snapshot capture call",
-    );
+  const captureCall = "      captureClubView(nextView);\n";
+  const captureCount = next.split(captureCall).length - 1;
+  if (captureCount > 0) {
+    next = next.replaceAll(captureCall, "");
+    console.log(`Removed ${captureCount} dead Club snapshot capture call(s).`);
+  }
+  if (next.includes("captureClubView(")) {
+    throw new Error("A Club snapshot capture reference remains after migration.");
   }
   return next;
 });
