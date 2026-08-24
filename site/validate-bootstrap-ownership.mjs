@@ -275,8 +275,18 @@ includes(
 );
 includes(
   bootstrapCore,
-  "if (routeDestinationReady(pageName, options) || routeLoadingActive()) {",
-  "Fully ready page destinations and nested page transitions must bypass duplicate route loading.",
+  "function routeLoadingOwnerReusable() {",
+  "Refresh startup and user-triggered route loading must have distinct ownership until the initial route resolves.",
+);
+includes(
+  bootstrapCore,
+  'document.documentElement.classList.contains("mflInitialRouteResolved")',
+  "Route-loading reuse must be gated by completed initial-route ownership.",
+);
+includes(
+  bootstrapCore,
+  "if (routeDestinationReady(pageName, options) || routeLoadingOwnerReusable()) {",
+  "Fully ready page destinations and post-startup nested page transitions may bypass duplicate route loading without borrowing the unresolved refresh owner.",
 );
 includes(
   appCoreSource,
@@ -310,8 +320,8 @@ excludes(
 );
 includes(
   bootstrapCore,
-  "if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();",
-  "Nested canonical route-loading owners must reuse the active page-transition lifecycle instead of stacking tokens.",
+  "if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingOwnerReusable()) return callback();",
+  "Nested canonical route-loading owners may reuse an active lifecycle only after refresh startup ownership has resolved.",
 );
 includes(
   bootstrapCore,

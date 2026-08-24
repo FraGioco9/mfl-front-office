@@ -101,7 +101,8 @@ invariant(
   "Application startup must not retain a separate user-visible loading reason.",
 );
 invariant(
-  bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
+  bootstrapCore.includes("if (routeDestinationReady(pageName, options) || routeLoadingOwnerReusable()) {")
+    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
   "SPA route loading must remain active through the final route paint.",
 );
 invariant(
@@ -169,9 +170,11 @@ invariant(
   !bootstrapCore.includes("window.__mflWithInteractionBusy")
     && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
-    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
+    && bootstrapCore.includes("function routeLoadingOwnerReusable() {")
+    && bootstrapCore.includes('document.documentElement.classList.contains("mflInitialRouteResolved")')
+    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingOwnerReusable()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "Legacy uncached route/data loads must retain non-blocking route/data notification without an explicit global operation-busy helper.",
+  "Legacy uncached route/data loads must reuse route-loading only after initial route ownership has resolved, so refresh-time user navigation gets its own lifetime.",
 );
 invariant(
   appCoreSource.includes("evaluationSaveButton.disabled = true;")

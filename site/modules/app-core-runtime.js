@@ -1666,6 +1666,11 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
   const navigationToken = typeof navigation?.begin === "function"
     ? navigation.begin("view-transition")
     : "";
+  const loadingController = Reflect.get(window, "__mflInteractionBusy");
+  const refreshLoadingToken = !document.documentElement.classList.contains("mflInitialRouteResolved")
+    && typeof loadingController?.begin === "function"
+    ? loadingController.begin(loadingController.reason)
+    : "";
   try {
     window.__mflCancelIncrementalRouteRequest?.();
     const transition = stageViewTransition(pageName, viewName, options);
@@ -1673,11 +1678,15 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
     await waitForViewTransitionPaint();
     if (!stagedViewTransitionIsCurrent(transition)) return null;
     if (typeof loader === "function") {
-      pendingViewTransition = null;
-      return await loader(transition);
+      try {
+        return await loader(transition);
+      } finally {
+        if (pendingViewTransition === transition) pendingViewTransition = null;
+      }
     }
     return transition;
   } finally {
+    if (refreshLoadingToken) loadingController?.end?.(refreshLoadingToken);
     if (navigationToken) navigation?.end?.(navigationToken);
   }
 }
@@ -6507,24 +6516,21 @@ function activateViewButton(button) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
   }
-  void (async () => {
-    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
-    if (pageName === "club" && !clubTarget?.clubId) return;
-    const clubPath = clubTarget?.clubId
-      ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
-      : "";
-    const transition = await runViewTransition(pageName, viewName, {
-      walletAddress: state.currentAgentWalletAddress,
-      watchlistId: state.currentWatchlistId,
-      ...(clubTarget?.clubId ? {
-        clubId: clubTarget.clubId,
-        path: clubPath,
-      } : {}),
-    });
-    if (!transition) return;
-    if (!state.incrementalMode) pendingViewTransition = null;
+  const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
+  if (pageName === "club" && !clubTarget?.clubId) return;
+  const clubPath = clubTarget?.clubId
+    ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
+    : "";
+  void runViewTransition(pageName, viewName, {
+    walletAddress: state.currentAgentWalletAddress,
+    watchlistId: state.currentWatchlistId,
+    ...(clubTarget?.clubId ? {
+      clubId: clubTarget.clubId,
+      path: clubPath,
+    } : {}),
+  }, async () => {
     await setView(viewName);
-  })();
+  });
 }
 
 function clearPointerCommittedViewButton() {
