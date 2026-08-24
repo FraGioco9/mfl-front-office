@@ -13,6 +13,10 @@ import {
   TABLE_VIEW_COLUMNS,
   VIEW_BY_SLUG,
 } from "./modules/app-config.js";
+import {
+  firstPaintRouteConfigProjectionSource,
+  normalizeIndexFirstPaintConfigProjection,
+} from "./sync-release-projections.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -101,6 +105,15 @@ invariant(runtimeSandbox.window.__mflUniformWidth?.name === "Uniform Width", "Un
 
 same(evaluateInitializer(indexSource, "TABLE_VIEW_CONFIG"), TABLE_VIEW_CONFIG, "index first-paint view config");
 same(evaluateInitializer(indexSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "index first-paint view slug map");
+const generatedFirstPaintConfig = firstPaintRouteConfigProjectionSource();
+invariant(
+  indexSource.includes(generatedFirstPaintConfig),
+  "index first-paint route/view config must be the generated projection of modules/app-config.js.",
+);
+invariant(
+  normalizeIndexFirstPaintConfigProjection(indexSource) === indexSource,
+  "index first-paint route/view config projection must already be synchronized.",
+);
 
 const bootstrapWindow = {
   __mflAppConfig: { release },
@@ -172,4 +185,4 @@ invariant(
   invariant(!routeCoreSource.includes(legacyOwner), `Route core must not retain duplicate config owner: ${legacyOwner}`);
 });
 
-console.log("Canonical app configuration and release facade validation passed.");
+console.log("Canonical app configuration and generated first-paint/release facade validation passed.");
