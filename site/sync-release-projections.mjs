@@ -29,9 +29,13 @@ function javascriptPropertyKey(value) {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
 }
 
+function javascriptArray(values) {
+  return `[${Array.from(values, (value) => JSON.stringify(value)).join(", ")}]`;
+}
+
 export function firstPaintRouteConfigProjectionSource() {
   const tableViewLines = Object.entries(TABLE_VIEW_CONFIG).map(([page, config]) => (
-    `          ${javascriptPropertyKey(page)}: Object.freeze({ order: ${JSON.stringify(Array.from(config.order))}, fallback: ${JSON.stringify(config.fallback)} }),`
+    `          ${javascriptPropertyKey(page)}: Object.freeze({ order: ${javascriptArray(config.order)}, fallback: ${JSON.stringify(config.fallback)} }),`
   ));
   const viewSlugLines = Object.entries(VIEW_BY_SLUG).map(([slug, view]) => (
     `          ${javascriptPropertyKey(slug)}: ${JSON.stringify(view)},`
