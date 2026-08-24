@@ -75,7 +75,12 @@ includes(
 );
 includes(
   styles,
-  "line-height: var(--mfl-page-title-line-height);\n  white-space: pre;",
+  "line-height: var(--mfl-page-title-line-height);",
+  "Agent title line-height must remain stable before and after hydration.",
+);
+includes(
+  styles,
+  "white-space: pre;",
   "Agent title literal separator spaces must be preserved before and after hydration.",
 );
 

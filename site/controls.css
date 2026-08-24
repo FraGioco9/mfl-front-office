@@ -40,6 +40,9 @@
   .mflStatsDistributionModeButton,
   .playerAttributeViewButton
 ).active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
   cursor: default;
 }
 

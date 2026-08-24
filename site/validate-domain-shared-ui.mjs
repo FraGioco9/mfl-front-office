@@ -6,6 +6,7 @@ const validators = [
   "validate-dropdown-style-ownership.mjs",
   "validate-filter-popup-interactions.mjs",
   "validate-control-style-ownership.mjs",
+  "validate-css-ownership-consolidation.mjs",
   "validate-global-escape-ownership.mjs",
   "validate-motion-ownership.mjs",
   "validate-modal-entrance-lifecycle.mjs",

@@ -322,6 +322,7 @@ body[data-page="club"] #progressionPage .rowsField {
   min-height: 32px;
   margin: var(--mfl-page-title-margin-block-start) 0 var(--mfl-page-title-margin-block-end);
   line-height: var(--mfl-page-title-line-height);
+  font-size: 20px;
   white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;

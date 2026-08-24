@@ -48,8 +48,13 @@ invariant(
   controls.includes('):not(.active) {\n  cursor: pointer;\n}'),
   "Canonical shared controls must define the non-active cursor in controls.css.",
 );
+const activeControlStart = controls.indexOf(").active {");
+const activeControlEnd = activeControlStart >= 0 ? controls.indexOf("\n}", activeControlStart) : -1;
+const activeControlRule = activeControlStart >= 0 && activeControlEnd > activeControlStart
+  ? controls.slice(activeControlStart, activeControlEnd + 2)
+  : "";
 invariant(
-  controls.includes(').active {\n  cursor: default;\n}'),
+  activeControlRule.includes("cursor: default;"),
   "Canonical shared controls must define the active cursor in controls.css.",
 );
 invariant(
