@@ -1,9 +1,0 @@
-file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-source-owned-club-startup.mjs:8
-  if (!source.includes(before)) throw new Error(`Missing ${label}.`);
-                                      ^
-
-Error: Missing GENERIC_TABLE_LOADING_SHELL canonical source ownership.
-    at replaceRequired (file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-source-owned-club-startup.mjs:8:39)
-    at file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-source-owned-club-startup.mjs:83:10
-
-Node.js v22.23.2

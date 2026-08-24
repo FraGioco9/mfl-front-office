@@ -176,20 +176,6 @@ export function splitApplicationCoreRuntime(source) {
 
   core = replaceRequired(
     core,
-    `  if (pageName === "agents") {
-    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
-  } else {
-    tablePageTitle.textContent = tableTitleForPage(pageName);
-  }`,
-    `  if (pageName === "agents") {
-    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
-  } else if (pageName !== "club") {
-    tablePageTitle.textContent = tableTitleForPage(pageName);
-  }`,
-    "Club view title stability",
-  );
-  core = replaceRequired(
-    core,
     `      if (route.scope === "club") {
         const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
         tablePageTitle.textContent = club?.name || "Club";
