@@ -40,3 +40,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Centralize route dependency resolution"
           git push origin HEAD:refactor/canonical-route-dependency-plan
+
+# Temporary one-shot workflow; removed by the migration commit.
