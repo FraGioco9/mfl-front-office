@@ -104,7 +104,7 @@ const dependencyResolver = `  function uniqueDependencies(values) {
       core: Object.freeze(uniqueDependencies(core)),
       preCore: Object.freeze(uniqueDependencies(preCore)),
       postCore: Object.freeze(uniqueDependencies(postCore)),
-      runtimeKey: \`${page}:\${view === "stats" ? "stats" : "default"}\`,
+      runtimeKey: \`\${page}:\${view === "stats" ? "stats" : "default"}\`,
       table,
       watchlist,
       databaseStats,
@@ -132,13 +132,13 @@ let coreLoader = await read("route-core-loader-runtime.js");
 coreLoader = replaceRequired(
   coreLoader,
   `     *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },`,
-  `     *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },\n   *     dependencyPlan?: (pageName: string, options?: Record<string, unknown>) => { core: readonly string[] },`,
+  `     *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },\n   *     routeDependencyPlan?: (pageName: string, options?: Record<string, unknown>) => { core: readonly string[] },`,
   "route-core config dependency type",
 );
 coreLoader = replaceRequired(
   coreLoader,
   `    || typeof routeConfig.initialRequest !== "function") {`,
-  `    || typeof routeConfig.initialRequest !== "function"\n    || typeof routeConfig.dependencyPlan !== "function") {`,
+  `    || typeof routeConfig.initialRequest !== "function"\n    || typeof routeConfig.routeDependencyPlan !== "function") {`,
   "route-core canonical config requirement",
 );
 const oldCoreDependencies = `  function routeCoreDependencies(pageName, options = {}) {
@@ -158,7 +158,7 @@ coreLoader = replaceRequired(coreLoader, oldCoreDependencies, "", "local route-c
 coreLoader = replaceRequired(
   coreLoader,
   `  async function ensure(pageName, options = {}) {\n    const dependencies = routeCoreDependencies(pageName, options);`,
-  `  async function ensure(pageName, options = {}) {\n    const dependencies = routeConfig.dependencyPlan(pageName, options).core;`,
+  `  async function ensure(pageName, options = {}) {\n    const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;`,
   "route-core canonical dependency consumption",
 );
 await writeFile(coreLoaderPath, coreLoader);
