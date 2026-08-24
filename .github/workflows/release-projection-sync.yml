@@ -8,8 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - site/patch-toast-migration-check.mjs
-      - site/migrate-remove-global-loading-toast.mjs
+      - site/fix-loading-toast-removal-source.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -37,27 +36,24 @@ jobs:
         with:
           node-version: 22
 
-      - name: Fix migration verification
-        run: node site/patch-toast-migration-check.mjs
-
-      - name: Remove global Loading toast runtime
-        run: node site/migrate-remove-global-loading-toast.mjs
+      - name: Clean loading-toast removal source
+        run: node site/fix-loading-toast-removal-source.mjs
 
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated source
+      - name: Commit cleaned source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -A -- site/modules/app-entry.js site/loading.css site/responsive.css site/loading-toast-runtime.js site/validate-loading-ownership.mjs site/validate-home-summary-first-paint.mjs site/validate-evaluation-search-lifecycle.mjs site/validate-z-index-ownership.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/responsive.css site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Global Loading toast removal and release projections are current."
+            echo "Loading-toast removal source and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Remove global Loading toast runtime"
+          git commit -m "Clean Loading-toast removal source"
           git push origin "HEAD:$HEAD_BRANCH"
