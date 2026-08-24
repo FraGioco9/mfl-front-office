@@ -1,2 +1,0 @@
-Temporary Site quality trigger for cache-aware view loading. Remove before merge.
-Second validation pass after source-binding correction.
