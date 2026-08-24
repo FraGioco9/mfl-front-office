@@ -24,6 +24,10 @@ function requestOrigin(request) {
   return forwardedHost ? `${protocol}://${forwardedHost}` : "https://mfl-front-office.vercel.app";
 }
 
+function evaluationShellPath() {
+  return path.resolve(__dirname, "..", "index.html");
+}
+
 function evaluationCanonicalUrl(origin, shareId, playerId) {
   const url = new URL("/evaluation", origin);
   const normalizedId = normalizeEvaluationId(shareId);
@@ -101,7 +105,7 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  const indexHtml = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf8");
+  const indexHtml = fs.readFileSync(evaluationShellPath(), "utf8");
   const html = renderPreviewHtml(indexHtml, metadata, canonicalUrl, imageUrl);
   response.status(200);
   if (request.method === "HEAD") {
@@ -113,5 +117,6 @@ module.exports = async function handler(request, response) {
 
 module.exports.htmlEscape = htmlEscape;
 module.exports.renderPreviewHtml = renderPreviewHtml;
+module.exports.evaluationShellPath = evaluationShellPath;
 module.exports.evaluationCanonicalUrl = evaluationCanonicalUrl;
 module.exports.evaluationPreviewImageUrl = evaluationPreviewImageUrl;
