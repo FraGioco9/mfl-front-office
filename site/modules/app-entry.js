@@ -302,24 +302,21 @@ function installClubRouteRuntimeGate() {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return;
 
-    const loadClub = async () => {
-      const loadingController = runtimeWindow.__mflInteractionBusy;
-      const token = loadingController?.begin?.(loadingController.reason) || "";
-      try {
-        const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"
-          ? runtimeWindow.__mflEnsureRouteCore("club", { view })
-          : Promise.resolve();
-        const routeRuntimePromise = ensureRouteRuntime("club", { view });
-        await Promise.all([routeCorePromise, routeRuntimePromise]);
+    const loadClub = async (transition = null) => {
+      const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"
+        ? runtimeWindow.__mflEnsureRouteCore("club", { view })
+        : Promise.resolve();
+      const routeRuntimePromise = ensureRouteRuntime("club", { view });
+      await Promise.all([routeCorePromise, routeRuntimePromise]);
 
-        const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
-        if (typeof routeOwner !== "function") {
-          throw new Error("Club route owner is unavailable.");
-        }
-        return await routeOwner.call(runtimeWindow, normalizedClubId, view);
-      } finally {
-        if (token) loadingController?.end?.(token);
+      const transitionIsCurrent = Reflect.get(runtimeWindow, "__mflNavigationTransitionIsCurrent");
+      if (transition && typeof transitionIsCurrent === "function" && !transitionIsCurrent(transition)) return null;
+
+      const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
+      if (typeof routeOwner !== "function") {
+        throw new Error("Club route owner is unavailable.");
       }
+      return await routeOwner.call(runtimeWindow, normalizedClubId, view);
     };
 
     const runTransition = runtimeWindow.__mflRunPageTransition;

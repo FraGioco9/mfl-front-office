@@ -1601,6 +1601,7 @@ function stageViewTransition(pageName, viewName, options = {}) {
   if (!nextView) return null;
 
   const transition = {
+    kind: "view",
     sequence: ++navigationTransitionSequence,
     pageName: String(pageName || ""),
     viewName: nextView,
@@ -1621,11 +1622,28 @@ function stageViewTransition(pageName, viewName, options = {}) {
 function stagedViewTransitionIsCurrent(transition) {
   return Boolean(
     transition
+    && transition.kind === "view"
     && transition.sequence === navigationTransitionSequence
     && pendingViewTransition === transition
     && state.view === transition.viewName
     && currentNavigationPath() === transition.targetPath
   );
+}
+
+function pageTransitionIsCurrent(transition) {
+  return Boolean(
+    transition
+    && transition.kind === "page"
+    && transition.sequence === navigationTransitionSequence
+    && (!transition.targetPath || currentNavigationPath() === transition.targetPath)
+  );
+}
+
+function navigationTransitionIsCurrent(transition) {
+  if (!transition) return true;
+  return transition.kind === "view"
+    ? stagedViewTransitionIsCurrent(transition)
+    : pageTransitionIsCurrent(transition);
 }
 
 function takeStagedViewTransition(pageName, viewName) {
@@ -1647,42 +1665,67 @@ function waitForViewTransitionPaint() {
 
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   const navigation = Reflect.get(window, "__mflNavigation");
-  const navigationToken = typeof navigation?.begin === "function"
-    ? navigation.begin("page-transition")
-    : "";
+  const loadingController = Reflect.get(window, "__mflInteractionBusy");
+  const navigationToken = typeof navigation?.beginLatest === "function"
+    ? navigation.beginLatest("page-transition")
+    : typeof navigation?.begin === "function"
+      ? navigation.begin("page-transition")
+      : "";
+  let loadingToken = "";
   try {
     const sequence = ++navigationTransitionSequence;
     window.__mflCancelIncrementalRouteRequest?.();
-    const transition = commitPageTransition(pageName, updateHash, options);
+    const transition = {
+      ...commitPageTransition(pageName, updateHash, options),
+      kind: "page",
+      sequence,
+    };
+    loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
     await waitForViewTransitionPaint();
-    if (sequence !== navigationTransitionSequence) return null;
-    if (transition.targetPath && currentNavigationPath() !== transition.targetPath) return null;
-    return typeof loader === "function" ? await loader(transition) : transition;
+    if (!pageTransitionIsCurrent(transition)) return null;
+    const result = typeof loader === "function" ? await loader(transition) : transition;
+    if (!pageTransitionIsCurrent(transition)) return null;
+    if (loadingToken) await waitForViewTransitionPaint();
+    return result;
   } finally {
+    if (loadingToken) loadingController?.end?.(loadingToken);
     if (navigationToken) navigation?.end?.(navigationToken);
   }
 }
 
 async function runViewTransition(pageName, viewName, options = {}, loader = null) {
   const navigation = Reflect.get(window, "__mflNavigation");
-  const navigationToken = typeof navigation?.begin === "function"
-    ? navigation.begin("view-transition")
-    : "";
+  const loadingController = Reflect.get(window, "__mflInteractionBusy");
+  const navigationToken = typeof navigation?.beginLatest === "function"
+    ? navigation.beginLatest("view-transition")
+    : typeof navigation?.begin === "function"
+      ? navigation.begin("view-transition")
+      : "";
+  let loadingToken = "";
   try {
     window.__mflCancelIncrementalRouteRequest?.();
     const transition = stageViewTransition(pageName, viewName, options);
     if (!transition) return null;
+    loadingToken = loadingController?.beginRouteTransition?.(pageName, {
+      ...options,
+      view: viewName,
+    }) || "";
     await waitForViewTransitionPaint();
     if (!stagedViewTransitionIsCurrent(transition)) return null;
     if (typeof loader === "function") {
       try {
-        return await loader(transition);
+        const result = await loader(transition);
+        if (!stagedViewTransitionIsCurrent(transition)) return null;
+        if (loadingToken) await waitForViewTransitionPaint();
+        return result;
       } finally {
         if (pendingViewTransition === transition) pendingViewTransition = null;
       }
     }
+    if (loadingToken) await waitForViewTransitionPaint();
     return transition;
   } finally {
+    if (loadingToken) loadingController?.end?.(loadingToken);
     if (navigationToken) navigation?.end?.(navigationToken);
   }
 }
@@ -1691,6 +1734,7 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
 Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
 Reflect.set(window, "__mflRunViewTransition", runViewTransition);
 Reflect.set(window, "__mflRunPageTransition", runPageTransition);
+Reflect.set(window, "__mflNavigationTransitionIsCurrent", navigationTransitionIsCurrent);
 Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);
 
 function resetPageScroll() {
@@ -8781,42 +8825,33 @@ async function startApp() {
     let previousTableStateSaved = false;
 
     if (!runtimeReady) {
-      const loadCommittedRoute = async () => {
+      const stagedTransition = incomingOptions.skipNavigationTransition === true
+        ? pendingViewTransition
+        : null;
+      const loadCommittedRoute = async (transition = stagedTransition) => {
         const ownerBeforeRuntime = setPage;
-        const loadingController = window.__mflInteractionBusy;
-        const routeReady = loadingController?.routeReady?.(pageName, incomingOptions) === true;
-        const routeLoadingActive = loadingController?.snapshot?.().reasons?.includes?.(loadingController.reason) === true;
-        const busyToken = !routeReady && !routeLoadingActive && loadingController?.begin
-          ? loadingController.begin(loadingController.reason)
-          : "";
-        try {
-          const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");
-          if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {
-            await waitForLoadingPaint();
-          }
-          const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
-            ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
-            : null;
-          if (typeof window.__mflEnsureRouteRuntime === "function") {
-            await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
-          }
-          if (routeCorePromise) await routeCorePromise;
-
-          const committedOptions = {
-            ...incomingOptions,
-            skipNavigationTransition: true,
-            ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
-          };
-          if (setPage !== ownerBeforeRuntime) {
-            return setPage.call(this, pageName, updateHash, {
-              ...committedOptions,
-              __mflRouteRuntimeReady: true,
-            });
-          }
-          return originalRouteRuntimeSetPage.call(this, pageName, updateHash, committedOptions);
-        } finally {
-          if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
+        const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
+          ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
+          : null;
+        if (typeof window.__mflEnsureRouteRuntime === "function") {
+          await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
         }
+        if (routeCorePromise) await routeCorePromise;
+
+        if (transition && !navigationTransitionIsCurrent(transition)) return null;
+
+        const committedOptions = {
+          ...incomingOptions,
+          skipNavigationTransition: true,
+          ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+        };
+        if (setPage !== ownerBeforeRuntime) {
+          return setPage.call(this, pageName, updateHash, {
+            ...committedOptions,
+            __mflRouteRuntimeReady: true,
+          });
+        }
+        return originalRouteRuntimeSetPage.call(this, pageName, updateHash, committedOptions);
       };
 
       if (incomingOptions.skipNavigationTransition === true) {

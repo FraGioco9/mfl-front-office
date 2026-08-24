@@ -159,7 +159,7 @@ const pageRunnerEnd = coreSource.indexOf("async function runViewTransition", pag
 const pageRunner = coreSource.slice(pageRunnerStart, pageRunnerEnd);
 const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
 const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
-const pageLoadIndex = pageRunner.indexOf('return typeof loader === "function" ? await loader(transition) : transition;');
+const pageLoadIndex = pageRunner.indexOf('const result = typeof loader === "function" ? await loader(transition) : transition;');
 invariant(
   pageCommitIndex >= 0 && pagePaintIndex > pageCommitIndex && pageLoadIndex > pagePaintIndex,
   "Global page transitions must commit, paint, then load.",

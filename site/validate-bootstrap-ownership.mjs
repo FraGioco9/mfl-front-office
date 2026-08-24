@@ -244,7 +244,6 @@ includes(
 );
 for (const reason of [
   "startup",
-  "setPage",
   "route-runtime",
   "databaseStatsData",
   "mflStatsData",
@@ -275,18 +274,23 @@ includes(
 );
 includes(
   bootstrapCore,
-  "wrapRoutePageGlobal();",
-  "Page transitions must install the readiness-aware setPage loading owner.",
+  "function beginRouteTransition(pageName, options = {}) {",
+  "Page/view transitions must replace route-loading ownership through one destination-aware transition method.",
+);
+includes(
+  bootstrapCore,
+  "reason !== ROUTE_LOADING_REASON && reason !== INITIAL_ROUTE_BOOTSTRAP_REASON",
+  "The first real navigation must supersede both stale route loading and the refresh bootstrap presentation token.",
+);
+excludes(
+  bootstrapCore,
+  "function wrapRoutePageGlobal() {",
+  "setPage must not retain a second route-loading owner outside the canonical page/view transition runners.",
 );
 excludes(
   bootstrapCore,
   "function routeLoadingOwnerReusable() {",
   "Refresh must not retain a special route-loading reuse branch once bootstrap presentation is separated from route loading.",
-);
-includes(
-  bootstrapCore,
-  "if (routeDestinationReady(pageName, options) || routeLoadingActive()) {",
-  "Refresh and in-app page transitions must use the same ready-or-active route-loading reuse rule.",
 );
 includes(
   appCoreSource,
@@ -420,6 +424,21 @@ excludes(
 
 includes(
   bootstrapCore,
+  'function beginLatest(reason = "navigation") {',
+  "A newly committed navigation must replace stale navigation-pending tokens instead of accumulating them.",
+);
+includes(
+  appCoreSource,
+  'navigation.beginLatest("page-transition")',
+  "Page transitions must supersede prior navigation-pending ownership.",
+);
+includes(
+  appCoreSource,
+  'navigation.beginLatest("view-transition")',
+  "View transitions must supersede prior navigation-pending ownership.",
+);
+includes(
+  bootstrapCore,
   'const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";',
   "Navigation must have one named project-wide workflow.",
 );
@@ -492,17 +511,17 @@ excludes(
 
 includes(
   appCoreSource,
-  'navigation.begin("page-transition")',
+  'navigation.beginLatest("page-transition")',
   "Canonical page transitions must acquire the shared navigation lifecycle.",
 );
 includes(
   appCoreSource,
-  'navigation.begin("view-transition")',
+  'navigation.beginLatest("view-transition")',
   "Canonical view transitions must acquire the shared navigation lifecycle.",
 );
 includes(
   appCoreSource,
-  "return typeof loader === \"function\" ? await loader(transition) : transition;",
+  "const result = typeof loader === \"function\" ? await loader(transition) : transition;",
   "Page transition navigation state must remain active until its owned loader settles.",
 );
 includes(

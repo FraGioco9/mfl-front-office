@@ -93,6 +93,15 @@
       return token;
     }
 
+    function beginLatest(reason = "navigation") {
+      const normalizedReason = String(reason || "navigation");
+      const token = `${normalizedReason}-${++sequence}`;
+      activeTokens.clear();
+      activeTokens.set(token, normalizedReason);
+      applyState();
+      return token;
+    }
+
     function beginIntent(target, reason = "navigation-intent") {
       return navigationControl(target) ? begin(reason) : "";
     }
@@ -120,6 +129,7 @@
       activeControl,
       navigationControl,
       begin,
+      beginLatest,
       beginIntent,
       end,
       handoff,
@@ -242,24 +252,26 @@
       return currentSnapshot.reasons.includes(ROUTE_LOADING_REASON);
     }
 
-    function wrapRoutePageGlobal() {
-      const original = globalFunction("setPage");
-      if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
-      const wrapped = async (...args) => {
-        const pageName = args[0];
-        const options = args[2] && typeof args[2] === "object" && !Array.isArray(args[2]) ? args[2] : {};
-        if (routeDestinationReady(pageName, options) || routeLoadingActive()) {
-          return original.apply(window, args);
-        }
-        return run(async () => {
-          const result = await original.apply(window, args);
-          await waitForRoutePaint();
-          return result;
-        }, ROUTE_LOADING_REASON);
-      };
-      Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
-      Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
-      return replaceGlobalFunction("setPage", original, wrapped);
+    function beginRouteTransition(pageName, options = {}) {
+      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+      const destinationReady = routeDestinationReady(pageName, normalizedOptions);
+      let changed = false;
+
+      activeTokens.forEach((reason, token) => {
+        if (reason !== ROUTE_LOADING_REASON && reason !== INITIAL_ROUTE_BOOTSTRAP_REASON) return;
+        activeTokens.delete(token);
+        changed = true;
+      });
+
+      let token = "";
+      if (!destinationReady) {
+        token = `${ROUTE_LOADING_REASON}-${++sequence}`;
+        activeTokens.set(token, ROUTE_LOADING_REASON);
+        changed = true;
+      }
+
+      if (changed) applyState();
+      return token;
     }
 
     function wrapLoadingGlobal(name, reason = name) {
@@ -303,7 +315,6 @@
       }
       syncStoredAccessFlags();
 
-      wrapRoutePageGlobal();
       [
         "loadSharedEvaluation",
         "loadSavedEvaluation",
@@ -315,6 +326,7 @@
       name: UNIFORM_LOADING_WORKFLOW_NAME,
       reason: ROUTE_LOADING_REASON,
       begin,
+      beginRouteTransition,
       end,
       run,
       waitForRoutePaint,

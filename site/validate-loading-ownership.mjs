@@ -78,7 +78,6 @@ invariant(
 );
 
 for (const alias of [
-  "setPage",
   "route-runtime",
   "databaseStatsData",
   "mflStatsData",
@@ -103,9 +102,12 @@ invariant(
   "Application startup must not retain a separate user-visible loading reason.",
 );
 invariant(
-  bootstrapCore.includes("if (routeDestinationReady(pageName, options) || routeLoadingActive()) {")
-    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
-  "Refresh and SPA navigation must enter the same readiness-aware route-loading path through the final paint.",
+  bootstrapCore.includes("function beginRouteTransition(pageName, options = {}) {")
+    && bootstrapCore.includes("reason !== ROUTE_LOADING_REASON && reason !== INITIAL_ROUTE_BOOTSTRAP_REASON")
+    && bootstrapCore.includes("activeTokens.delete(token);")
+    && bootstrapCore.includes("if (!destinationReady) {")
+    && bootstrapCore.includes("beginRouteTransition,"),
+  "Every canonical route transition must atomically replace stale refresh/route loading ownership before the latest destination loads.",
 );
 invariant(
   !bootstrapCore.includes('document.createElement("style")'),
@@ -127,9 +129,10 @@ invariant(
   "Background Global Search warm-up must not delay visible route readiness.",
 );
 invariant(
-  appEntry.includes("const loadingController = runtimeWindow.__mflInteractionBusy;")
-    && appEntry.includes("loadingController?.begin?.(loadingController.reason)"),
-  "Lazy Club navigation must consume the canonical route-loading reason from the loading controller.",
+  appEntry.includes('const transitionIsCurrent = Reflect.get(runtimeWindow, "__mflNavigationTransitionIsCurrent");')
+    && appEntry.includes('if (transition && typeof transitionIsCurrent === "function" && !transitionIsCurrent(transition)) return null;')
+    && !appEntry.includes("loadingController?.begin?.(loadingController.reason)"),
+  "Lazy Club navigation must inherit route loading from the global transition and reject stale runtime completion before rendering.",
 );
 invariant(
   !appEntry.includes('begin?.("route-loading")')
@@ -171,11 +174,13 @@ invariant(
 invariant(
   !bootstrapCore.includes("window.__mflWithInteractionBusy")
     && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")
+    && !bootstrapCore.includes("function wrapRoutePageGlobal() {")
+    && bootstrapCore.includes('function beginLatest(reason = "navigation") {')
     && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "Uncached refresh and SPA route/data loads must share the same canonical nested route-loading reuse contract.",
+  "Nested route/data work may reuse only the latest transition-owned route token; page/view transitions themselves must replace stale route ownership.",
 );
 invariant(
   appCoreSource.includes("evaluationSaveButton.disabled = true;")
