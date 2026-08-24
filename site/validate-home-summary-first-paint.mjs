@@ -13,18 +13,39 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
-const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, releaseJson] = await Promise.all([
+const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, buildNormalizer, releaseJson] = await Promise.all([
   read("./index.html"),
   read("./styles-base.css"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
   read("./loading-toast-runtime.js"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./release.json"),
 ]);
 const release = JSON.parse(releaseJson);
 const preBootstrap = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release));
 const eagerCore = String(normalizeBuiltApplicationCoreArtifacts(coreSource).core || "");
+
+for (const required of [
+  "let summaryLoadPromise = null;",
+  "let summaryLoaded = false;",
+  "let summarySnapshot = null;",
+  "function homeSummaryCacheReady() {",
+  'Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({',
+  "function routeDataCacheReady(pageName, options = {}) {",
+  'Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({',
+  'if (pageName === "home") void loadSummary();',
+]) {
+  includes(coreSource, required, `Canonical app-core must own Home summary/cache lifecycle through ${required}`);
+}
+excludes(buildNormalizer, "normalizeHomeSummaryLifecycle", "Build normalization must not rewrite Home summary/cache lifecycle.");
+excludes(buildNormalizer, "homeSummaryArtifacts", "The obsolete Home summary build artifact must stay removed.");
+includes(
+  buildNormalizer,
+  "const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);",
+  "Global Search normalization must consume stats-navigation artifacts directly after Home lifecycle becomes source-owned.",
+);
 
 includes(
   indexHtml,

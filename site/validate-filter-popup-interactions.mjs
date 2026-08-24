@@ -159,7 +159,7 @@ invariant(
 for (const required of [
   "const statsNavigationArtifacts = Object.freeze({",
   'core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),',
-  "const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(statsNavigationArtifacts);",
+  "const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }
@@ -173,7 +173,9 @@ invariant(
     && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
     && !buildNormalizer.includes("pagerCurrentPageArtifacts")
     && !buildNormalizer.includes("normalizeTableControlCellAlignment")
-    && !buildNormalizer.includes("tableControlCellArtifacts"),
+    && !buildNormalizer.includes("tableControlCellArtifacts")
+    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
+    && !buildNormalizer.includes("homeSummaryArtifacts"),
   "Build normalization must not reintroduce Filters summary/close, page/view transition, editable-pager, or Table control-cell rewrites.",
 );
 
