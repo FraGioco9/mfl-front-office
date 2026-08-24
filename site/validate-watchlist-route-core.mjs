@@ -72,12 +72,15 @@ excludes(watchlistCore, "function normalizeWatchlists(watchlists, legacyIds = []
 includes(coreSource, 'const visible = state.currentPage === "watchlist" && hasWalletOptIn();', "The Watchlist switcher must remain visible only on the Watchlist page.");
 excludes(appEntry, "WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS", "Retired Watchlist compatibility UI must not return to the runtime graph.");
 excludes(appEntry, "/watchlist-ui-runtime.js", "The retired Watchlist UI compatibility runtime must stay removed.");
-includes(appEntry, "const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist/My Players route coordination must remain shared between both pages.");
-includes(appEntry, "if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);", "Watchlist/My Players route coordination must still load on both pages.");
+includes(appConfig, "watchlistMyPlayersPost: Object.freeze([", "Watchlist/My Players route coordination must remain a canonical shared dependency group.");
+includes(appConfig, 'const watchlist = page === "watchlist" || page === "myplayers";', "The canonical route plan must classify both Watchlist and My Players for shared coordination.");
+includes(appConfig, "if (watchlist) postCore.push(...data.routes.runtimeScripts.watchlistMyPlayersPost);", "Watchlist/My Players coordination must remain post-core on both pages.");
+includes(appEntry, "await loadScriptGroup(plan.postCore);", "app-entry must consume canonical post-core Watchlist dependencies.");
 
 includes(appConfig, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Canonical app config must map the Watchlist core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
-includes(routeLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist routes must load Table before Watchlist UI ownership.");
+includes(appConfig, 'core.push("table", "watchlist");', "Watchlist routes must load Table before Watchlist UI ownership.");
+includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "The route-core loader must consume canonical Watchlist dependencies.");
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical Watchlist route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct Watchlist startup must load Table and Watchlist dependencies before startApp.");
 

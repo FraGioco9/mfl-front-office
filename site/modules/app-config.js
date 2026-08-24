@@ -49,6 +49,39 @@ export const ROUTE_CORE_PATHS = Object.freeze({
   watchlist: "/modules/app-core-watchlist-runtime.js",
 });
 
+export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
+  tablePre: Object.freeze([
+    "/filter-controls-runtime.js",
+    "/desktop-table-style-runtime.js",
+    "/shared-table-ui-runtime.js",
+    "/nationality-filter-options-runtime.js",
+    "/table-loading-runtime.js",
+  ]),
+  tablePost: Object.freeze([
+    "/selection-startup-reset-runtime.js",
+    "/selection-stack-runtime.js",
+  ]),
+  watchlistMyPlayersPost: Object.freeze([
+    "/watchlist-myplayers-route-runtime.js",
+  ]),
+  evaluationPre: Object.freeze([
+    "/evaluation-layout-runtime.js",
+    "/evaluation-mfl-usd-input-runtime.js",
+    "/evaluation-discount-rate-runtime.js",
+    "/evaluation-discount-rate-ui-runtime.js",
+  ]),
+  evaluationPost: Object.freeze([
+    "/evaluation-search-state-runtime.js",
+  ]),
+  databaseStats: Object.freeze([
+    "/database-stats-state-runtime.js",
+    "/database-stats-runtime.js",
+  ]),
+  changelog: Object.freeze([
+    "/changelog-history-runtime.js",
+  ]),
+});
+
 export const TABLE_INFRASTRUCTURE_PAGES = Object.freeze([
   "database",
   "mfl",
@@ -151,6 +184,7 @@ const BROWSER_DATA = Object.freeze({
     clubViewSlugs: CLUB_VIEW_SLUGS,
     mflWalletAddress: MFL_WALLET_ADDRESS,
     corePaths: ROUTE_CORE_PATHS,
+    runtimeScripts: ROUTE_RUNTIME_SCRIPTS,
     tableInfrastructurePages: TABLE_INFRASTRUCTURE_PAGES,
   }),
   table: Object.freeze({
@@ -397,6 +431,60 @@ export function browserConfigRuntimeSource(release) {
     return notFoundRequest(path, "Page");
   }
 
+  function uniqueDependencies(values) {
+    return Array.from(new Set(values));
+  }
+
+  function routeDependencyPlan(pageName, options = {}) {
+    const page = normalizePageName(pageName);
+    const view = normalizeView(options);
+    const table = tablePageSet.has(page) && !(page === "database" && view === "stats");
+    const watchlist = page === "watchlist" || page === "myplayers";
+    const databaseStats = page === "database" && view === "stats";
+    const core = [];
+    const preCore = [];
+    const postCore = [];
+
+    if (page === "mflstats" || (page === "mfl" && view === "stats")) {
+      core.push("table", "mflstats");
+    } else if (page === "club") {
+      core.push("table", "club");
+    } else if (page === "watchlist") {
+      core.push("table", "watchlist");
+    } else if (table) {
+      core.push("table");
+    } else if (data.routes.corePaths[page]) {
+      core.push(page);
+    }
+
+    if (table) {
+      preCore.push(...data.routes.runtimeScripts.tablePre);
+      postCore.push(...data.routes.runtimeScripts.tablePost);
+    }
+    if (databaseStats) preCore.push(...data.routes.runtimeScripts.databaseStats);
+    if (watchlist) postCore.push(...data.routes.runtimeScripts.watchlistMyPlayersPost);
+    if (page === "evaluation") {
+      preCore.push(...data.routes.runtimeScripts.evaluationPre);
+      postCore.push(...data.routes.runtimeScripts.evaluationPost);
+    }
+    if (page === "changelog") {
+      preCore.push(...data.routes.runtimeScripts.changelog);
+      postCore.push(...data.routes.runtimeScripts.changelog);
+    }
+
+    return Object.freeze({
+      pageName: page,
+      view,
+      core: Object.freeze(uniqueDependencies(core)),
+      preCore: Object.freeze(uniqueDependencies(preCore)),
+      postCore: Object.freeze(uniqueDependencies(postCore)),
+      runtimeKey: page + ":" + (view === "stats" ? "stats" : "default"),
+      table,
+      watchlist,
+      databaseStats,
+    });
+  }
+
   function initialRequest(pathname = location.pathname) {
     return canonicalRequest(pathname);
   }
@@ -429,6 +517,7 @@ export function browserConfigRuntimeSource(release) {
     canonicalTablePath,
     canonicalRequest,
     initialRequest,
+    routeDependencyPlan,
     usesTableInfrastructure,
     notFoundKindForPath,
     clubPath,

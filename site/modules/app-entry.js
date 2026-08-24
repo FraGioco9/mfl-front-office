@@ -113,76 +113,27 @@ const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/global-search-runtime.js",
 ]);
 
-const TABLE_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/filter-controls-runtime.js",
-  "/desktop-table-style-runtime.js",
-  "/shared-table-ui-runtime.js",
-  "/nationality-filter-options-runtime.js",
-  "/table-loading-runtime.js",
-]);
-
-const TABLE_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/selection-startup-reset-runtime.js",
-  "/selection-stack-runtime.js",
-]);
-
-const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/watchlist-myplayers-route-runtime.js",
-]);
-
-const EVALUATION_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/evaluation-layout-runtime.js",
-  "/evaluation-mfl-usd-input-runtime.js",
-  "/evaluation-discount-rate-runtime.js",
-  "/evaluation-discount-rate-ui-runtime.js",
-]);
-
-const EVALUATION_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/evaluation-search-state-runtime.js",
-]);
-
-const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-state-runtime.js",
-  "/database-stats-runtime.js",
-]);
-
-const CHANGELOG_RUNTIME_SCRIPTS = Object.freeze([
-  "/changelog-history-runtime.js",
-]);
-
 const initialPathname = String(window.location.pathname || "/");
+
+function routeConfig() {
+  const routes = Reflect.get(window, "__mflAppConfig")?.routes;
+  if (!routes
+    || typeof routes.normalizePageName !== "function"
+    || typeof routes.initialRequest !== "function"
+    || typeof routes.routeDependencyPlan !== "function") {
+    throw new Error("Canonical route configuration is unavailable.");
+  }
+  return routes;
+}
 
 /** @param {string} pageName */
 function normalizeRoutePageName(pageName) {
-  const normalizer = Reflect.get(window, "__mflNormalizeRoutePageName");
-  if (typeof normalizer !== "function") throw new Error("Route page-name normalizer is unavailable.");
-  return String(normalizer(pageName) || "home");
-}
-
-/** @param {Record<string, unknown>} [options] */
-function routeView(options = {}) {
-  const normalizer = Reflect.get(window, "__mflNormalizeRouteView");
-  if (typeof normalizer !== "function") throw new Error("Route view normalizer is unavailable.");
-  return String(normalizer(options) || "");
+  return String(routeConfig().normalizePageName(pageName) || "home");
 }
 
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
-function routeNeedsTable(pageName, options = {}) {
-  const page = normalizeRoutePageName(pageName);
-  const classifier = Reflect.get(window, "__mflRouteUsesTableInfrastructure");
-  if (typeof classifier !== "function") throw new Error("Table-route classifier is unavailable.");
-  if (!classifier(page)) return false;
-  return page !== "database" || routeView(options) !== "stats";
-}
-
-/** @param {string} pageName */
-function routeNeedsWatchlist(pageName) {
-  return ["watchlist", "myplayers"].includes(normalizeRoutePageName(pageName));
-}
-
-/** @param {string} pageName @param {Record<string, unknown>} [options] */
-function routeNeedsDatabaseStats(pageName, options = {}) {
-  return normalizeRoutePageName(pageName) === "database" && routeView(options) === "stats";
+function routeDependencyPlan(pageName, options = {}) {
+  return routeConfig().routeDependencyPlan(pageName, options);
 }
 
 /** @param {readonly string[]} paths */
@@ -190,43 +141,18 @@ function uniqueScripts(paths) {
   return Array.from(new Set(paths));
 }
 
-/** @param {string} pageName @param {Record<string, unknown>} [options] */
-function preCoreScriptsForRoute(pageName, options = {}) {
-  const page = normalizeRoutePageName(pageName);
-  const scripts = [];
-  if (routeNeedsTable(page, options)) scripts.push(...TABLE_PRE_CORE_RUNTIME_SCRIPTS);
-  if (routeNeedsDatabaseStats(page, options)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
-  if (page === "evaluation") scripts.push(...EVALUATION_PRE_CORE_RUNTIME_SCRIPTS);
-  if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
-  return uniqueScripts(scripts);
-}
-
-/** @param {string} pageName @param {Record<string, unknown>} [options] */
-function postCoreScriptsForRoute(pageName, options = {}) {
-  const page = normalizeRoutePageName(pageName);
-  const scripts = [];
-  if (routeNeedsTable(page, options)) scripts.push(...TABLE_POST_CORE_RUNTIME_SCRIPTS);
-  if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);
-  if (page === "evaluation") scripts.push(...EVALUATION_POST_CORE_RUNTIME_SCRIPTS);
-  if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
-  return uniqueScripts(scripts);
-}
-
 function initialRouteRuntimeRequest() {
-  const classifier = Reflect.get(window, "__mflInitialRouteRuntimeRequest");
-  if (typeof classifier !== "function") throw new Error("Initial route runtime classifier is unavailable.");
-  const request = classifier(initialPathname);
+  const request = routeConfig().initialRequest(initialPathname);
   const options = request?.options && typeof request.options === "object" && !Array.isArray(request.options)
     ? request.options
     : {};
   return { pageName: normalizeRoutePageName(request?.pageName), options };
 }
-
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
 const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
 const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
   ...UNIVERSAL_RUNTIME_SCRIPTS,
-  ...preCoreScriptsForRoute(initialRouteRuntime.pageName, initialRouteRuntime.options),
+  ...routeDependencyPlan(initialRouteRuntime.pageName, initialRouteRuntime.options).preCore,
 ]));
 
 /** @type {Window & {
@@ -405,40 +331,37 @@ function installClubRouteRuntimeGate() {
 async function finalizeRouteRuntimeNow(page, options = {}) {
   if (!applicationCoreLoaded) await applicationCoreLoadedPromise;
 
-  if (page === "evaluation") installEvaluationRecentStateBridge();
-  await loadScriptGroup(postCoreScriptsForRoute(page, options));
+  const plan = routeDependencyPlan(page, options);
+  if (plan.pageName === "evaluation") installEvaluationRecentStateBridge();
+  await loadScriptGroup(plan.postCore);
 
-  if (routeNeedsTable(page, options)) {
+  if (plan.table) {
     runtimeWindow.__mflFilterControlsRuntime?.sync?.();
     runtimeWindow.__mflSelectionStartupResetRuntime?.rebind?.();
   }
-  if (routeNeedsWatchlist(page)) runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
-  if (routeNeedsDatabaseStats(page, options)) {
+  if (plan.watchlist) runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
+  if (plan.databaseStats) {
     runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
     runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
   }
-  if (page === "evaluation") {
+  if (plan.pageName === "evaluation") {
     runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
     runtimeWindow.__mflEvaluationSearchStateRuntime?.sync?.();
   }
-  if (page === "changelog" && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
+  if (plan.pageName === "changelog" && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
 
   installCoreBridges();
 }
-
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
 async function ensureRouteRuntimeNow(pageName, options = {}) {
-  const page = normalizeRoutePageName(pageName);
-  await loadScriptGroup(preCoreScriptsForRoute(page, options));
-  await finalizeRouteRuntimeNow(page, options);
+  const plan = routeDependencyPlan(pageName, options);
+  await loadScriptGroup(plan.preCore);
+  await finalizeRouteRuntimeNow(plan.pageName, options);
 }
-
 /** @param {string} page @param {Record<string, unknown>} [options] */
 function routeRuntimeKey(page, options = {}) {
-  const view = routeView(options);
-  return `${page}:${view === "stats" ? "stats" : "default"}`;
+  return routeDependencyPlan(page, options).runtimeKey;
 }
-
 /** @param {string} key @param {Promise<void>} promise */
 function trackRouteRuntimePromise(key, promise) {
   const pending = promise.catch((error) => {

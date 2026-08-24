@@ -9,6 +9,7 @@
    *     normalizeView?: (options?: Record<string, unknown>) => string,
    *     usesTableInfrastructure?: (pageName: string) => boolean,
    *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
+   *     routeDependencyPlan?: (pageName: string, options?: Record<string, unknown>) => { core: readonly string[] },
    *   },
    * },
    * __mflReleaseVersion?: string,
@@ -54,7 +55,8 @@
     || typeof routeConfig.normalizePageName !== "function"
     || typeof routeConfig.normalizeView !== "function"
     || typeof routeConfig.usesTableInfrastructure !== "function"
-    || typeof routeConfig.initialRequest !== "function") {
+    || typeof routeConfig.initialRequest !== "function"
+    || typeof routeConfig.routeDependencyPlan !== "function") {
     throw new Error("Canonical route configuration is unavailable.");
   }
 
@@ -125,20 +127,8 @@
   const initialRouteRuntimeRequest = (pathname = location.pathname) => routeConfig.initialRequest(pathname);
   const routeUsesTableInfrastructure = (pageName) => routeConfig.usesTableInfrastructure(pageName);
 
-  function routeCoreDependencies(pageName, options = {}) {
-    const page = normalizeRoutePageName(pageName);
-    const view = routeView(options);
-    if (page === "database" && view === "stats") return [];
-    if (page === "mflstats") return ["table", "mflstats"];
-    if (page === "mfl" && view === "stats") return ["table", "mflstats"];
-    if (page === "club") return ["table", "club"];
-    if (page === "watchlist") return ["table", "watchlist"];
-    if (routeUsesTableInfrastructure(page)) return ["table"];
-    return ROUTE_CORE_PATHS[page] ? [page] : [];
-  }
-
   async function ensure(pageName, options = {}) {
-    const dependencies = routeCoreDependencies(pageName, options);
+    const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;
     for (const dependency of dependencies) {
       await ensureSingle(dependency);
     }

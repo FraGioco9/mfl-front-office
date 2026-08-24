@@ -116,6 +116,7 @@ if (generatedCore !== null) {
 }
 
 const entry = await readSite("modules/app-entry.js");
+const appConfig = await readSite("modules/app-config.js");
 const routeCoreLoader = await readSite("route-core-loader-runtime.js");
 includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must use the build-time application core.");
 includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \"mfl_core\"", "The prebuilt core must use its dedicated cache-key query parameter.");
@@ -131,8 +132,9 @@ excludes(entry, "CORE_RUNTIME_CACHE_KEY", "The prebuilt core must not be copied 
 excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser HTTP caching instead of a duplicate string cache.");
 excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
 excludes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "The production prebuilt core must not be fetched as text.");
-includes(entry, "\"/filter-controls-runtime.js\"", "app-entry.js must own route-scoped filter behavior.");
-includes(entry, "\"/table-loading-runtime.js\"", "app-entry.js must load the canonical table-loading owner.");
+includes(appConfig, "\"/filter-controls-runtime.js\"", "Canonical app config must own route-scoped filter behavior.");
+includes(appConfig, "\"/table-loading-runtime.js\"", "Canonical app config must own the table-loading dependency.");
+includes(entry, "routeDependencyPlan(initialRouteRuntime.pageName, initialRouteRuntime.options).preCore", "app-entry.js must consume the canonical initial-route dependency plan.");
 excludes(entry, "\"/table-width-runtime.js\"", "Uniform Width must stay static-only and must not be dynamically loaded again by app-entry.js.");
 for (const retiredRuntime of [
   "table-view-runtime.js",

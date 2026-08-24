@@ -7,16 +7,18 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [controls, selectionStack, appEntry, tableRuntime, staticUi] = await Promise.all([
+const [controls, selectionStack, appEntry, appConfig, tableRuntime, staticUi] = await Promise.all([
   read("./control-interactions-runtime.js"),
   read("./selection-stack-runtime.js"),
   read("./modules/app-entry.js"),
+  read("./modules/app-config.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./static-ui-runtime.js"),
 ]);
 
 includes(appEntry, '"/control-interactions-runtime.js"', "The global control-interaction runtime must remain universally loaded.");
-includes(appEntry, '"/selection-stack-runtime.js"', "Selection Stack must remain a post-Table runtime.");
+includes(appConfig, '"/selection-stack-runtime.js"', "Selection Stack must remain a canonical post-Table runtime dependency.");
+includes(appEntry, "await loadScriptGroup(plan.postCore);", "app-entry must consume canonical post-core runtime dependencies.");
 
 includes(controls, "const escapeHandlers = new Map();", "Global Escape ownership must have one shared handler registry.");
 includes(controls, "function registerEscapeHandler(key, handler, options = {}) {", "Global Escape ownership must expose feature registration.");

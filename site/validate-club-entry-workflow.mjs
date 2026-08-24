@@ -9,11 +9,12 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeLoader, appEntry, buildNormalizer] = await Promise.all([
+const [coreSource, routeLoader, appEntry, buildNormalizer, appConfig] = await Promise.all([
   read("./modules/app-core.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-entry.js"),
   read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-config.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -28,14 +29,19 @@ includes(
   "Direct startup must preload the resolved initial route core before startApp.",
 );
 includes(
-  routeLoader,
-  "function routeCoreDependencies(pageName, options = {})",
-  "The route-core loader must remain the single route-core dependency owner.",
+  appConfig,
+  "function routeDependencyPlan(pageName, options = {})",
+  "Canonical app config must remain the single route dependency owner.",
+);
+includes(
+  appConfig,
+  'core.push("table", "club");',
+  "Club startup must preserve ordered Table and Club route-core dependencies.",
 );
 includes(
   routeLoader,
-  'if (page === "club") return ["table", "club"];',
-  "Club startup must preserve ordered Table and Club route-core dependencies.",
+  "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;",
+  "The route-core loader must consume the canonical Club dependency plan.",
 );
 excludes(
   routeLoader,

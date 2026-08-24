@@ -110,19 +110,19 @@ includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route pla
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
 
 includes(appConfig, 'table: "/modules/app-core-table-runtime.js"', "Canonical app config must map the Table chunk.");
+includes(appConfig, "function routeDependencyPlan(pageName, options = {})", "Canonical app config must own Table route dependency decisions.");
+includes(appConfig, 'core.push("table", "club");', "Club must load the Table core before the Club core.");
+includes(appConfig, 'const table = tablePageSet.has(page) && !(page === "database" && view === "stats");', "Database Stats must not load the Table core.");
+includes(appConfig, 'if (page === "mflstats" || (page === "mfl" && view === "stats")) {', "MFL Stats and its internal alias must share the same canonical Table-first dependency branch.");
+includes(appConfig, 'core.push("table", "mflstats");', "MFL Stats must load the shared Table core before its route renderer.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
-includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club must load the Table core before the Club core.");
-includes(routeLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must not load the Table core.");
-includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["table", "mflstats"];', "MFL Stats must load the shared Table core before its route renderer.");
-includes(routeLoader, 'if (page === "mflstats") return ["table", "mflstats"];', "The internal MFL Stats route alias must retain the same Table-first dependency order.");
+includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "The route-core loader must consume canonical Table dependencies.");
 includes(routeLoader, "for (const dependency of dependencies)", "Route-core dependencies must execute in declared order.");
+excludes(routeLoader, "function routeCoreDependencies", "The route-core loader must not duplicate Table dependency decisions.");
 
-const routeNeedsTableStart = appEntry.indexOf("function routeNeedsTable(pageName, options = {}) {");
-const routeNeedsTableEnd = appEntry.indexOf("function routeNeedsWatchlist(pageName)", routeNeedsTableStart);
-invariant(routeNeedsTableStart >= 0 && routeNeedsTableEnd > routeNeedsTableStart, "app-entry must retain a stable Table runtime decision facade.");
-const routeNeedsTableSection = appEntry.slice(routeNeedsTableStart, routeNeedsTableEnd);
-includes(routeNeedsTableSection, 'Reflect.get(window, "__mflRouteUsesTableInfrastructure")', "app-entry must reuse central table-route membership.");
-excludes(routeNeedsTableSection, '["mfl", "agents", "progression", "watchlist", "myplayers", "club"]', "app-entry must not duplicate the table-capable page list.");
+includes(appEntry, "function routeDependencyPlan(pageName, options = {})", "app-entry must retain a stable canonical route dependency facade.");
+includes(appEntry, "return routeConfig().routeDependencyPlan(pageName, options);", "app-entry must reuse canonical Table route membership and runtime decisions.");
+excludes(appEntry, "function routeNeedsTable", "app-entry must not retain a duplicate Table runtime decision facade.");
 
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical initial route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct table startup must load canonical route dependencies before startApp.");

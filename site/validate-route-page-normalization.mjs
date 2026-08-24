@@ -300,22 +300,22 @@ includes(
 );
 
 const entryNormalizeStart = entry.indexOf("function normalizeRoutePageName(pageName) {");
-const entryNormalizeEnd = entry.indexOf("function routeView(options = {})", entryNormalizeStart);
+const entryNormalizeEnd = entry.indexOf("function routeDependencyPlan(pageName, options = {})", entryNormalizeStart);
 invariant(entryNormalizeStart >= 0 && entryNormalizeEnd > entryNormalizeStart, "app-entry must retain a stable route page-name facade.");
 const entryNormalizeSection = entry.slice(entryNormalizeStart, entryNormalizeEnd);
-includes(entryNormalizeSection, 'Reflect.get(window, "__mflNormalizeRoutePageName")', "app-entry must delegate page-name normalization.");
+includes(entryNormalizeSection, "return String(routeConfig().normalizePageName(pageName) || \"home\");", "app-entry must delegate page-name normalization to canonical route config.");
 
-const entryViewStart = entry.indexOf("function routeView(options = {}) {");
-const entryViewEnd = entry.indexOf("function routeNeedsTable(", entryViewStart);
-invariant(entryViewStart >= 0 && entryViewEnd > entryViewStart, "app-entry must retain a stable route-view facade.");
-const entryViewSection = entry.slice(entryViewStart, entryViewEnd);
-includes(entryViewSection, 'Reflect.get(window, "__mflNormalizeRouteView")', "app-entry must delegate route-view normalization.");
+const entryPlanStart = entry.indexOf("function routeDependencyPlan(pageName, options = {})");
+const entryPlanEnd = entry.indexOf("function uniqueScripts(paths) {", entryPlanStart);
+invariant(entryPlanStart >= 0 && entryPlanEnd > entryPlanStart, "app-entry must retain a stable route dependency facade.");
+const entryPlanSection = entry.slice(entryPlanStart, entryPlanEnd);
+includes(entryPlanSection, "return routeConfig().routeDependencyPlan(pageName, options);", "app-entry must delegate route view/dependency classification to canonical route config.");
 
 const entryInitialStart = entry.indexOf("function initialRouteRuntimeRequest() {");
 const entryInitialEnd = entry.indexOf("const initialRouteRuntime =", entryInitialStart);
 invariant(entryInitialStart >= 0 && entryInitialEnd > entryInitialStart, "app-entry must retain a stable initial-route facade.");
 const entryInitialSection = entry.slice(entryInitialStart, entryInitialEnd);
-includes(entryInitialSection, 'Reflect.get(window, "__mflInitialRouteRuntimeRequest")', "app-entry must delegate initial-route classification.");
+includes(entryInitialSection, "const request = routeConfig().initialRequest(initialPathname);", "app-entry must delegate initial-route classification to canonical route config.");
 
 const entryClubPathStart = entry.indexOf("function clubRoutePath(clubId, view) {");
 const entryClubPathEnd = entry.indexOf("function installClubRouteRuntimeGate()", entryClubPathStart);

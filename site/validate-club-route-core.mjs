@@ -145,8 +145,10 @@ includes(appConfig, 'notFoundRequest(path, "Club")', "Invalid Club URLs must cla
 excludes(appConfig, "initialClubLikePath", "Startup must not retain a Club-only redirect owner.");
 includes(appConfig, 'club: "/modules/app-core-club-runtime.js"', "The route config must map Club to its generated chunk.");
 
-includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
-includes(routeLoader, "function routeCoreDependencies(pageName, options = {})", "The route-core loader must retain dependency composition ownership.");
+includes(appConfig, "function routeDependencyPlan(pageName, options = {})", "Canonical app config must own route dependency composition.");
+includes(appConfig, 'core.push("table", "club");', "Club navigation must resolve Table before the Club route owner.");
+includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "The route-core loader must consume canonical Club dependencies.");
+excludes(routeLoader, "function routeCoreDependencies", "The route-core loader must not retain dependency composition ownership.");
 excludes(routeLoader, "function installClubRouteGate()", "The route-core loader must not own a Club navigation gate.");
 excludes(routeLoader, "__mflRunPageTransition", "The route-core loader must not know about page-transition ownership.");
 excludes(routeLoader, "__mflOpenClubPageRoute", "The route-core loader must not invoke route implementations.");
