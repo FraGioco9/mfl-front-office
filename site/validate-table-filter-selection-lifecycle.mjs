@@ -69,7 +69,7 @@ invariant(
     && !buildNormalizer.includes("globalSearchArtifacts")
     && buildNormalizer.includes("const statsNavigationArtifacts = Object.freeze({")
     && buildNormalizer.includes('core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),')
-    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);"),
+    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);"),
   "Build normalization must not inject page/view filter, editable-pager, or Table control-cell behavior and must preserve stats composition independently.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');

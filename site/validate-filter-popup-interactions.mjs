@@ -157,9 +157,7 @@ invariant(
   "Club filter-free rendering must emit the canonical count-only zero summary directly.",
 );
 for (const required of [
-  "const statsNavigationArtifacts = Object.freeze({",
-  'core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),',
-  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);",
+  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }

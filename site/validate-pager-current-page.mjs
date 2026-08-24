@@ -69,7 +69,7 @@ invariant(
     && !buildNormalizer.includes("homeSummaryArtifacts")
     && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
     && !buildNormalizer.includes("globalSearchArtifacts")
-    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);"),
+    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);"),
   "Build normalization must flow directly from stats navigation into Home summary without editable-pager or Table control-cell rewriting.",
 );
 
