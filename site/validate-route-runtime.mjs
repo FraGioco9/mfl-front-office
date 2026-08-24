@@ -11,6 +11,7 @@ const excludes = (source, value, message) => invariant(!source.includes(value), 
 
 const bootstrap = await read("./bootstrap.js");
 const entry = await read("./modules/app-entry.js");
+const appConfig = await read("./modules/app-config.js");
 const buildNormalizer = await read("./modules/app-core-build-normalizer.js");
 const routeChunks = await read("./modules/app-core-route-chunks.js");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
@@ -29,8 +30,20 @@ includes(bootstrapExecution, 'loadRuntime("/route-core-loader-runtime.js")', "Th
 includes(bootstrapExecution, 'loadRuntime("/dropdowns-runtime.js")', "Dropdown ownership must remain universal.");
 includes(bootstrapExecution, 'loadRuntime("/bootstrap-core.js")', "bootstrap-core must remain universal.");
 
+includes(entry, "const UNIVERSAL_RUNTIME_SCRIPTS", "app-entry.js must retain the universal runtime group.");
+includes(appConfig, "export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({", "Canonical app config must own route-specific runtime groups.");
 for (const group of [
-  "UNIVERSAL_RUNTIME_SCRIPTS",
+  "tablePre:",
+  "tablePost:",
+  "watchlistMyPlayersPost:",
+  "evaluationPre:",
+  "evaluationPost:",
+  "databaseStats:",
+  "changelog:",
+]) {
+  includes(appConfig, group, `Canonical app config must declare route runtime group ${group}.`);
+}
+for (const retiredLocalOwner of [
   "TABLE_PRE_CORE_RUNTIME_SCRIPTS",
   "TABLE_POST_CORE_RUNTIME_SCRIPTS",
   "WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS",
@@ -39,7 +52,7 @@ for (const group of [
   "DATABASE_STATS_RUNTIME_SCRIPTS",
   "CHANGELOG_RUNTIME_SCRIPTS",
 ]) {
-  includes(entry, `const ${group}`, `app-entry.js must declare ${group}.`);
+  excludes(entry, retiredLocalOwner, `app-entry.js must not duplicate canonical route dependency ownership through ${retiredLocalOwner}.`);
 }
 
 const universalBlock = entry.match(/const UNIVERSAL_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
@@ -49,10 +62,14 @@ for (const forbidden of ["table-width-runtime", "filter-controls-runtime", "watc
 includes(universalBlock, "global-search-runtime.js", "Global Search must stay universal and early.");
 
 includes(entry, "initialPreCoreRuntimeScripts", "Initial startup must preload only universal plus active-route owners.");
-includes(entry, "preCoreScriptsForRoute", "Route-specific pre-core owners must be resolved explicitly.");
-includes(entry, "postCoreScriptsForRoute", "Route-specific post-core owners must be resolved explicitly.");
+includes(appConfig, "function routeDependencyPlan(pageName, options = {})", "Canonical app config must resolve route-specific dependencies explicitly.");
+includes(entry, "return routeConfig().routeDependencyPlan(pageName, options);", "app-entry.js must consume the canonical route dependency plan.");
+excludes(entry, "function preCoreScriptsForRoute", "app-entry.js must not retain a second pre-core dependency resolver.");
+excludes(entry, "function postCoreScriptsForRoute", "app-entry.js must not retain a second post-core dependency resolver.");
 includes(entry, "async function finalizeRouteRuntimeNow(page, options = {})", "Route finalization must be separable from pre-core loading for the already-primed initial route.");
-includes(entry, "await loadScriptGroup(preCoreScriptsForRoute(page, options));\n  await finalizeRouteRuntimeNow(page, options);", "Lazy SPA routes must still load their pre-core owners before finalization.");
+includes(entry, "await loadScriptGroup(plan.preCore);\n  await finalizeRouteRuntimeNow(plan.pageName, options);", "Lazy SPA routes must load canonical pre-core dependencies before finalization.");
+includes(entry, "await loadScriptGroup(plan.postCore);", "Route finalization must load canonical post-core dependencies.");
+includes(entry, "return routeDependencyPlan(page, options).runtimeKey;", "Route runtime promise reuse must use the canonical dependency-plan cache key.");
 includes(entry, "finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options)", "Initial startup must finalize its already-loaded route owners without rerunning pre-core resolution.");
 includes(entry, "trackRouteRuntimePromise(", "Initial and lazy route completion must share the same runtime promise cache.");
 excludes(entry, "await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);", "Initial startup must not rerun the full lazy route runtime path after pre-core owners are already loaded.");
@@ -77,8 +94,10 @@ includes(routeChunks, "Evaluation save and share services", "The first split mus
 includes(routeChunks, "Evaluation saved-list renderer", "Saved Evaluation list rendering must be route-owned without extracting shared modal helpers.");
 includes(routeChunks, "MFL Stats renderer", "MFL Stats rendering must be split from routes that never use it.");
 includes(routeChunks, "MFL Stats distribution interaction", "MFL Stats distribution interaction must load with its renderer.");
-includes(routeCoreLoader, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "The route-core loader must map Evaluation to its generated chunk.");
-includes(routeCoreLoader, 'mflstats: "/modules/app-core-mfl-stats-runtime.js"', "The route-core loader must map MFL Stats to its generated chunk.");
+includes(appConfig, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "Canonical app config must map Evaluation to its generated chunk.");
+includes(appConfig, 'mflstats: "/modules/app-core-mfl-stats-runtime.js"', "Canonical app config must map MFL Stats to its generated chunk.");
+includes(routeCoreLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "Route-core loading must consume the canonical dependency plan.");
+excludes(routeCoreLoader, "function routeCoreDependencies", "Route-core loading must not retain a duplicate dependency resolver.");
 excludes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Route-core loading must not rebuild missing chunks from raw source in the browser.");
 excludes(routeCoreLoader, 'fetch(assetUrl("/modules/app-core.js")', "Route-core loading must not fetch the raw application core in the browser.");
 includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");

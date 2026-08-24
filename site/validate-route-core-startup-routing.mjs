@@ -10,6 +10,7 @@ const excludes = (source, value, message) => invariant(!source.includes(value), 
 const appCoreSource = await read("./modules/app-core.js");
 const appCoreExecution = appCoreSource.replace(/\/\/[^\n]*/g, "");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
+const appConfig = await read("./modules/app-config.js");
 
 includes(
   appCoreExecution,
@@ -33,12 +34,14 @@ for (const duplicateOwner of [
   excludes(appCoreExecution, duplicateOwner, `Startup route-core ownership must not be duplicated through ${duplicateOwner}.`);
 }
 
-includes(routeCoreLoader, "function routeCoreDependencies(pageName, options = {})", "The route-core loader must remain the central dependency owner.");
-includes(routeCoreLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must continue to skip table core startup.");
-includes(routeCoreLoader, 'if (page === "mflstats") return ["table", "mflstats"];', "Direct MFL Stats entry must resolve Table before its dedicated Stats core.");
-includes(routeCoreLoader, 'if (page === "mfl" && view === "stats") return ["table", "mflstats"];', "MFL Stats view navigation must resolve Table before its dedicated Stats core.");
-includes(routeCoreLoader, 'if (page === "club") return ["table", "club"];', "Club startup must continue to resolve Table before Club core.");
-includes(routeCoreLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist startup must continue to resolve Table before Watchlist core.");
+includes(appConfig, "function routeDependencyPlan(pageName, options = {})", "Canonical app config must remain the central dependency owner.");
+includes(appConfig, 'const table = tablePageSet.has(page) && !(page === "database" && view === "stats");', "Database Stats must continue to skip Table core/runtime infrastructure.");
+includes(appConfig, 'if (page === "mflstats" || (page === "mfl" && view === "stats")) {', "MFL Stats routes must share one canonical dependency branch.");
+includes(appConfig, 'core.push("table", "mflstats");', "MFL Stats must resolve Table before its dedicated Stats core.");
+includes(appConfig, 'core.push("table", "club");', "Club startup must preserve ordered Table and Club route-core dependencies.");
+includes(appConfig, 'core.push("table", "watchlist");', "Watchlist startup must preserve ordered Table and Watchlist route-core dependencies.");
+includes(routeCoreLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "The route-core loader must consume canonical core dependencies.");
+excludes(routeCoreLoader, "function routeCoreDependencies", "The route-core loader must not retain a second dependency owner.");
 includes(routeCoreLoader, "function preloadRouteCore(pageName) {", "Route-core startup must support network-only preloading without executing a lazy core.");
 includes(routeCoreLoader, 'preloadRouteCore("evaluation");', "Evaluation startup should retain early network priming through a preload.");
 excludes(routeCoreLoader, 'void ensure("evaluation")', "Evaluation core must not execute before the shared application core has initialized its facade bindings.");
