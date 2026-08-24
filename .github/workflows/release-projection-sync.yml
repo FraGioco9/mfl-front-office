@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - site/migrate-refresh-navigation-authority.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,37 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate refresh navigation authority
-        run: node site/migrate-refresh-navigation-authority.mjs
-
-      - name: Build canonical application core
-        working-directory: site
-        run: node build-app-core.mjs
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit refresh navigation authority
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- \
-            site/modules/app-core.js \
-            site/modules/app-core-runtime.js \
-            site/modules/app-core-table-runtime.js \
-            site/modules/app-core-evaluation-runtime.js \
-            site/modules/app-core-mfl-stats-runtime.js \
-            site/validate-app-core-startup-handshake.mjs \
-            site/bootstrap.js \
-            site/bootstrap-core.js \
-            site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Refresh navigation authority and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Keep refresh startup on latest navigation"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
