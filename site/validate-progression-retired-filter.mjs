@@ -58,9 +58,16 @@ invariant(
 );
 
 invariant(
-  runnerSource.includes('def prepare_progression_batches(\n    players: list[dict[str, Any]],\n    interval: str,')
-    && runnerSource.includes('candidate_url_length = len(progression_url(candidate, interval))'),
-  "Production progression batching must honor the requested interval for active and retired batches.",
+  rebuildSource.includes('def progression_url(player_ids: list[int], interval: str) -> str:')
+    && rebuildSource.includes('def prepare_progression_batches(\n    players: list[dict[str, Any]],\n    interval: str,')
+    && rebuildSource.includes('candidate_url_length = len(progression_url(candidate, interval))'),
+  "Canonical paged progression batching must honor the requested interval for active and retired batches.",
+);
+invariant(
+  !runnerSource.includes('def progression_url(')
+    && !runnerSource.includes('def prepare_progression_batches(')
+    && !runnerSource.includes('paged.prepare_progression_batches ='),
+  "Production runner must consume the canonical paged progression planner instead of replacing it.",
 );
 
-console.log("Progression retired-player ALL cache, activity, and sorting validation passed.");
+console.log("Progression retired-player ALL cache, activity, sorting, and canonical batch ownership validation passed.");
