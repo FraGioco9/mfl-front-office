@@ -134,7 +134,7 @@ for (const required of [
 }
 
 for (const required of [
-  'const storedPageState = !clubTarget && tablePages.has(pageName)',
+  'const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)',
   "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
   "? tableStateWithoutPageFilters(pageName, storedPageState)",
   "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
