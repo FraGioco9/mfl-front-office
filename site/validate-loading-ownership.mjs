@@ -61,6 +61,33 @@ invariant(
   bootstrapCore.includes("return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;"),
   "Legacy route/data reasons must collapse into the canonical route-loading reason.",
 );
+const operationBusyStart = bootstrapCore.indexOf("const OPERATION_BUSY_REASONS = new Set([");
+const operationBusyEnd = bootstrapCore.indexOf("]);", operationBusyStart);
+const operationBusySource = bootstrapCore.slice(operationBusyStart, operationBusyEnd);
+invariant(
+  operationBusyStart >= 0
+    && operationBusyEnd > operationBusyStart
+    && operationBusySource.includes('"interaction-loading"')
+    && operationBusySource.includes('"createSharedEvaluationFromPayload"')
+    && operationBusySource.includes('"createSharedEvaluation"')
+    && operationBusySource.includes('"createSavedEvaluation"')
+    && operationBusySource.includes('"linkWallet"')
+    && !operationBusySource.includes("ROUTE_LOADING_REASON")
+    && !operationBusySource.includes('"loadSharedEvaluation"')
+    && !operationBusySource.includes('"loadSavedEvaluation"')
+    && !operationBusySource.includes('"openSavedEvaluationsModal"'),
+  "Only explicit persistent/interaction operations may own the global busy blocker; route and read-only data loading must remain non-blocking.",
+);
+invariant(
+  bootstrapCore.includes("busy: reasons.some((reason) => OPERATION_BUSY_REASONS.has(reason)),")
+    && bootstrapCore.includes("dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),"),
+  "Loading snapshots must classify exclusive operation busy separately from local data loading.",
+);
+invariant(
+  bootstrapCore.includes("ROUTE_LOADING_REASON,\n      \"interaction-loading\",\n      \"loadSharedEvaluation\",\n      \"loadSavedEvaluation\",\n      \"openSavedEvaluationsModal\",")
+    || bootstrapCore.includes('ROUTE_LOADING_REASON,\n      "interaction-loading",\n      "loadSharedEvaluation",\n      "loadSavedEvaluation",\n      "openSavedEvaluationsModal",'),
+  "Normal route/data loading must remain observable without entering exclusive operation-busy state.",
+);
 for (const alias of [
   "setPage",
   "route-runtime",
@@ -176,11 +203,12 @@ invariant(
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
 invariant(
-  bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {')
+  bootstrapCore.includes('window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");')
+    && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "The shared interaction-busy bridge must preserve explicit reasons while reusing an active canonical route-loading lifecycle.",
+  "Legacy uncached route/data loads must default to non-blocking route loading while the explicit operation-busy helper remains exclusive.",
 );
 
 for (const [name, source] of [
@@ -277,4 +305,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Unified route loading ownership, controller-owned route reason, mixed saved-Evaluation toast suppression, loading-toast entrance, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");
+console.log("Separated non-blocking route/data loading from exclusive operation busy while preserving controller-owned route identity, route-ready startup, local loading subscribers, and mutation interaction protection.");

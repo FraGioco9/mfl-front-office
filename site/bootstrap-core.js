@@ -144,6 +144,13 @@
       "loadSavedEvaluation",
       "openSavedEvaluationsModal",
     ]);
+    const OPERATION_BUSY_REASONS = new Set([
+      "interaction-loading",
+      "createSharedEvaluationFromPayload",
+      "createSharedEvaluation",
+      "createSavedEvaluation",
+      "linkWallet",
+    ]);
     const blockedEvents = [
       "pointerdown", "pointerup", "pointercancel",
       "mousedown", "mouseup", "touchstart", "touchend", "touchcancel",
@@ -180,7 +187,7 @@
     function makeSnapshot() {
       const reasons = Object.freeze(Array.from(activeTokens.values()));
       return Object.freeze({
-        busy: reasons.length > 0,
+        busy: reasons.some((reason) => OPERATION_BUSY_REASONS.has(reason)),
         dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),
         reasons,
       });
@@ -426,7 +433,7 @@
 
       const currentWithInteractionBusy = globalFunction("withInteractionBusy");
       if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
-        const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {
+        const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {
           const normalizedReason = loadingReason(reason);
           if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();
           return run(callback, normalizedReason);

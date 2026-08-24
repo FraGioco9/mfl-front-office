@@ -300,8 +300,13 @@ excludes(
 );
 includes(
   bootstrapCore,
-  'const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {',
-  "The shared busy bridge must retain explicit reason ownership.",
+  "const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {",
+  "Legacy uncached route/data loads must default to the non-blocking route-loading lifecycle.",
+);
+includes(
+  bootstrapCore,
+  'window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");',
+  "The explicit operation-busy helper must retain exclusive interaction-loading ownership.",
 );
 includes(
   bootstrapCore,
