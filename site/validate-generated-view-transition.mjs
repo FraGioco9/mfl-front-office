@@ -185,7 +185,7 @@ const incrementalView = section(
 );
 const stagedTake = incrementalView.indexOf("const stagedTransition = takeStagedViewTransition(pageName, nextView);");
 const fallbackTransition = incrementalView.indexOf("await runViewTransition(pageName, nextView", stagedTake);
-const request = incrementalView.indexOf("requestIncrementalRoute(route, 1)", stagedTake);
+const request = incrementalView.indexOf("requestIncrementalRoute(route, 1, { preservePager: true })", stagedTake);
 invariant(
   stagedTake >= 0 && fallbackTransition > stagedTake && request > fallbackTransition,
   "Programmatic generated view switches must use the global transition runner before requesting data.",
