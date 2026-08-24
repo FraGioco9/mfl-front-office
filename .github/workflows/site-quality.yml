@@ -115,7 +115,7 @@ jobs:
           echo "Run repository validation: $quality"
 
       - uses: actions/setup-python@v5
-        if: steps.changes.outputs.builder == 'true'
+        if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
         with:
           python-version: "3.12"
 
@@ -129,8 +129,8 @@ jobs:
         working-directory: .
         run: python -c "import rebuild_database; import rebuild_database_runner"
 
-      - name: Database builder regression tests
-        if: steps.changes.outputs.builder == 'true'
+      - name: Python regression tests
+        if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
         working-directory: .
         run: python -m unittest discover -v -p "test_*.py"
 
