@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - migrate_runtime_database_validation.py
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,24 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate runtime database validation ownership
-        run: python3 migrate_runtime_database_validation.py
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated source
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- prepare_runtime_database.py site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Runtime database validation and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Make runtime database preparation single-owner"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
