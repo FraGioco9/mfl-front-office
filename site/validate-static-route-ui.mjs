@@ -115,7 +115,8 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitia
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
 
-includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must remain available only after navigation commits.");
+includes(tableLoading, "function show({", "Table loading must remain available only after navigation commits.");
+includes(tableLoading, "preservePager = pagerPreservedDuringLoading(),", "Post-commit Table loading must own pager-preservation decisions instead of static route chrome.");
 includes(tableLoading, 'if (destroyed || (!forceRoute && !tableRouteActive())) return false;', "Passive route detection must guard table loading.");
 includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPresent)', "Final real rows must not be overwritten while busy state unwinds.");
 includes(tableLoading, 'Reflect.get(window, "__mflPrimeTableRows")', "Table loading must reuse the bootstrap skeleton renderer.");
