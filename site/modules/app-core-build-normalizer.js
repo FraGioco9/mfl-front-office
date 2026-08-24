@@ -11,6 +11,7 @@ import { normalizeEvaluationRouteLifecycle } from "./app-core-evaluation-route-l
 import { normalizeEvaluationSavedValuationCache } from "./app-core-evaluation-saved-valuation-cache.js";
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
+import { normalizePlayerListingLifecycle } from "./app-core-player-listing-lifecycle.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
@@ -27,7 +28,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const evaluationSearchArtifacts = normalizeEvaluationSearchLifecycle(evaluationArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
-  const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
+  const playerListingArtifacts = normalizePlayerListingLifecycle(playerArtifacts);
+  const tableArtifacts = splitTableApplicationCoreRuntime(playerListingArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
