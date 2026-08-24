@@ -104,7 +104,7 @@ const dependencyResolver = `  function uniqueDependencies(values) {
       core: Object.freeze(uniqueDependencies(core)),
       preCore: Object.freeze(uniqueDependencies(preCore)),
       postCore: Object.freeze(uniqueDependencies(postCore)),
-      runtimeKey: \`\${page}:\${view === "stats" ? "stats" : "default"}\`,
+      runtimeKey: \`\\${page}:\${view === "stats" ? "stats" : "default"}\`,
       table,
       watchlist,
       databaseStats,

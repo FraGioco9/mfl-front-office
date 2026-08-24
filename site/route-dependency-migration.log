@@ -1,0 +1,8 @@
+file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-canonical-route-dependency-plan.mjs?fixed=1787566518347:107
+      runtimeKey: \`\\${page}:\${view === "stats" ? "stats" : "default"}\`,
+                        ^
+
+ReferenceError: page is not defined
+    at file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-canonical-route-dependency-plan.mjs?fixed=1787566518347:107:25
+
+Node.js v22.23.2
