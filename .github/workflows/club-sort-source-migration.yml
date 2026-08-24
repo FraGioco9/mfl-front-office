@@ -1,0 +1,42 @@
+name: Club sort source migration
+
+on:
+  push:
+    branches:
+      - refactor/source-owned-club-sort
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/source-owned-club-sort
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply source-owned Club sort migration
+        run: node site/migrate-source-owned-club-sort.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-source-owned-club-sort.mjs
+          rm -f .github/workflows/club-sort-source-migration.yml
+      - name: Persist source migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Club sort behavior is already source-owned."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Move Club sort lifecycle into source"
+          git push origin HEAD:refactor/source-owned-club-sort
