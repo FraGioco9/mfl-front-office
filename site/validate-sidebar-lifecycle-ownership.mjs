@@ -31,6 +31,7 @@ for (const staleOwner of [
   '"sidebarCollapsed"',
   "menuButton.style.pointerEvents",
   "menuButton.style.cursor",
+  "setPageWithoutRouteLoading",
 ]) {
   invariant(!builtRuntime.includes(staleOwner), `Built runtime must not contain legacy pinned-sidebar ownership: ${staleOwner}`);
 }
@@ -64,6 +65,21 @@ invariant(
   "Built runtime page transitions must not depend on the legacy sidebar helper.",
 );
 invariant(
+  shared.includes("function sidebarNavigationOptions(pageName) {")
+    && shared.includes("async function navigateSidebarButton(button) {")
+    && shared.includes('  const button = event.target.closest("#sidebar .navButton[data-page]");')
+    && shared.includes("  await setPage(pageName, true, options);"),
+  "Built shared core must delegate every sidebar destination through one owner that resolves the current setPage route owner at activation time.",
+);
+invariant(
+  !shared.includes('navButtons.forEach((button) => {\n  button.addEventListener("click", async (event) => {'),
+  "Built shared core must not bind sidebar navigation to startup-time per-button click handlers.",
+);
+invariant(
+  (shared.match(/#sidebar \.navButton\[data-page\]/g) || []).length === 1,
+  "Built shared core must bind exactly one delegated sidebar page-navigation selector.",
+);
+invariant(
   styles.includes(".menuButton {")
     && styles.includes("  color: #ffffff;\n  padding: 0;")
     && styles.includes("  pointer-events: none;")
@@ -79,6 +95,11 @@ invariant(
 invariant(
   sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
   "Pinned-sidebar cleanup must use the dedicated structural owner.",
+);
+invariant(
+  sidebarNormalizer.includes("canonical delegated sidebar navigation")
+    && sidebarNormalizer.includes("CANONICAL_SIDEBAR_NAVIGATION_BINDING"),
+  "Pinned-sidebar lifecycle normalization must own the delegated navigation contract instead of adding a runtime repair layer.",
 );
 invariant(
   routeSplitter.includes("let core = normalizePinnedSidebarApplicationCoreRuntime(source);"),
@@ -129,5 +150,4 @@ invariant(
 
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle, stable white Menu color, and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
-
+console.log("Built pinned-sidebar lifecycle, delegated refresh-safe navigation, stable white Menu color, and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");

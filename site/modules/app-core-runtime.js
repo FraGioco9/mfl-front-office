@@ -6928,27 +6928,33 @@ evaluationPlayerPageButton.addEventListener("auxclick", preventEvaluationPlayerP
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
-const setPageWithoutRouteLoading = setPage;
+function sidebarNavigationOptions(pageName) {
+  const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
+  return tablePages.has(pageName)
+    ? { view: preferredViewForPage(pageName) }
+    : pageName === "evaluation"
+      ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
+      : {};
+}
 
-navButtons.forEach((button) => {
-  button.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const pageName = button.dataset.page;
-    const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
-    const options = tablePages.has(pageName)
-      ? { view: preferredViewForPage(pageName) }
-      : pageName === "evaluation"
-        ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
-        : {};
-    const target = pagePath(pageName, options);
-    if (button.classList.contains("active") && target === `${location.pathname}${location.search}`) return;
-    if (pageName === "evaluation") preparePlainEvaluationReentry();
-    if (reuseCachedEvaluationRoute) {
-      await setPageWithoutRouteLoading(pageName, true, options);
-      return;
-    }
-    await setPage(pageName, true, options);
-  });
+async function navigateSidebarButton(button) {
+  const pageName = String(button?.dataset?.page || "");
+  if (!pageName) return;
+
+  const options = sidebarNavigationOptions(pageName);
+  const target = pagePath(pageName, options);
+  if (button.classList.contains("active") && target === currentNavigationPath()) return;
+  if (pageName === "evaluation") preparePlainEvaluationReentry();
+
+  await setPage(pageName, true, options);
+}
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const button = event.target.closest("#sidebar .navButton[data-page]");
+  if (!(button instanceof HTMLAnchorElement) || !sidebar.contains(button)) return;
+  event.preventDefault();
+  void navigateSidebarButton(button);
 });
 
 

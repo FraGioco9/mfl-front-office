@@ -82,9 +82,11 @@ invariant(
     && shared.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
     && shared.includes("? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }")
     && shared.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
-    && shared.includes("await setPageWithoutRouteLoading(pageName, true, options);")
-    && shared.includes("await setPage(pageName, true, options);"),
-  "Every plain Evaluation entry must clear the previous player before setPage can update route state or expose the destination, including history/back re-entry.",
+    && shared.includes("function sidebarNavigationOptions(pageName) {")
+    && shared.includes("async function navigateSidebarButton(button) {")
+    && shared.includes("await setPage(pageName, true, options);")
+    && !shared.includes("setPageWithoutRouteLoading"),
+  "Every plain Evaluation entry must clear the previous player before the current delegated setPage owner can update route state or expose the destination, including history/back re-entry.",
 );
 
 const evaluationPageStart = shared.indexOf("  if (evaluationPageActive) {");
@@ -99,7 +101,7 @@ invariant(
     && evaluationPageSource.includes('window.__mflInteractionBusy?.begin?.("evaluation-loading")')
     && evaluationPageSource.includes('if (!cachedEvaluationReentry) {\n      document.documentElement.classList.remove("mflEvaluationReady");')
     && !evaluationPageSource.includes("preparePlainEvaluationReentry();")
-    && evaluationPageSource.includes("if (!cachedEvaluationReentry) {\n        await finishEvaluationReadiness();")
+    && evaluationPageSource.includes('if (!cachedEvaluationReentry) {\n        await finishEvaluationReadiness();')
     && evaluationPageSource.includes("evaluationPageCacheReady = true;"),
   "Cached plain Evaluation re-entry must skip repeated loading/readiness, with stale-selection clearing owned before destination visibility rather than inside the visible Evaluation block.",
 );
@@ -203,4 +205,4 @@ invariant(
   "Every bordered tableShell must own its single outer bottom edge without a duplicate last-row cell border.",
 );
 
-console.log("Evaluation refresh hydration, selected-route action stability, invalid-link recovery including missing-player payloads, cached plain-route re-entry, pre-paint empty history/navigation return, recent-player cache reuse, first-paint timing, clear-focus ownership, and shared table-edge validation passed.");
+console.log("Evaluation refresh hydration, selected-route action stability, invalid-link recovery including missing-player payloads, cached plain-route re-entry through delegated sidebar navigation, pre-paint empty history/navigation return, recent-player cache reuse, first-paint timing, clear-focus ownership, and shared table-edge validation passed.");

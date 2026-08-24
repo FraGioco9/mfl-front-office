@@ -202,11 +202,9 @@ const evaluationCacheMarkers = [
   'document.documentElement.classList.remove("mflEvaluationReady");',
   "await finishEvaluationReadiness();",
   "evaluationPageCacheReady = true;",
-  "const setPageWithoutRouteLoading = setPage;",
   'const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;',
   "reuseCachedRoute: reuseCachedEvaluationRoute",
   'if (pageName === "evaluation") preparePlainEvaluationReentry();',
-  "await setPageWithoutRouteLoading(pageName, true, options);",
   "await setPage(pageName, true, options);",
   'if (pageName === "evaluation") {\n    if (options.plain) {',
 ];
@@ -221,6 +219,16 @@ for (const marker of evaluationCacheMarkers) {
     `Generated shared/Evaluation artifacts must preserve cached plain-route re-entry through ${marker}`,
   );
 }
+invariant(
+  generatedSharedCore.includes("function sidebarNavigationOptions(pageName) {")
+    && generatedSharedCore.includes("async function navigateSidebarButton(button) {")
+    && generatedSharedCore.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
+    && generatedSharedCore.includes("reuseCachedRoute: reuseCachedEvaluationRoute")
+    && generatedSharedCore.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
+    && generatedSharedCore.includes("await setPage(pageName, true, options);")
+    && !generatedEvaluationLifecycle.includes("setPageWithoutRouteLoading"),
+  "Cached plain-Evaluation re-entry must preserve its cache hint while navigating through the current delegated setPage owner instead of a startup-time route snapshot.",
+);
 invariant(
   searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
     && !searchRuntime.includes("MutationObserver")
@@ -241,4 +249,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");
+console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, delegated cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");

@@ -53,6 +53,58 @@ const PINNED_SIDEBAR_COMPATIBILITY_TAIL = `
     keepSidebarExpanded();
       }, { once: true });`;
 
+const EARLY_SIDEBAR_NAVIGATION_BINDING = `const setPageWithoutRouteLoading = setPage;
+
+navButtons.forEach((button) => {
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const pageName = button.dataset.page;
+    const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
+    const options = tablePages.has(pageName)
+      ? { view: preferredViewForPage(pageName) }
+      : pageName === "evaluation"
+        ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
+        : {};
+    const target = pagePath(pageName, options);
+    if (button.classList.contains("active") && target === \`\${location.pathname}\${location.search}\`) return;
+    if (pageName === "evaluation") preparePlainEvaluationReentry();
+    if (reuseCachedEvaluationRoute) {
+      await setPageWithoutRouteLoading(pageName, true, options);
+      return;
+    }
+    await setPage(pageName, true, options);
+  });
+});`;
+
+const CANONICAL_SIDEBAR_NAVIGATION_BINDING = `function sidebarNavigationOptions(pageName) {
+  const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
+  return tablePages.has(pageName)
+    ? { view: preferredViewForPage(pageName) }
+    : pageName === "evaluation"
+      ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
+      : {};
+}
+
+async function navigateSidebarButton(button) {
+  const pageName = String(button?.dataset?.page || "");
+  if (!pageName) return;
+
+  const options = sidebarNavigationOptions(pageName);
+  const target = pagePath(pageName, options);
+  if (button.classList.contains("active") && target === currentNavigationPath()) return;
+  if (pageName === "evaluation") preparePlainEvaluationReentry();
+
+  await setPage(pageName, true, options);
+}
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const button = event.target.closest("#sidebar .navButton[data-page]");
+  if (!(button instanceof HTMLAnchorElement) || !sidebar.contains(button)) return;
+  event.preventDefault();
+  void navigateSidebarButton(button);
+});`;
+
 export function normalizePinnedSidebarApplicationCoreRuntime(source) {
   let core = String(source || "").replace(/\r\n?/g, "\n");
   if (!core.trim()) {
@@ -105,6 +157,13 @@ export function normalizePinnedSidebarApplicationCoreRuntime(source) {
 
   core = replaceRequired(
     core,
+    EARLY_SIDEBAR_NAVIGATION_BINDING,
+    CANONICAL_SIDEBAR_NAVIGATION_BINDING,
+    "canonical delegated sidebar navigation",
+  );
+
+  core = replaceRequired(
+    core,
     PINNED_SIDEBAR_COMPATIBILITY_PREFIX,
     `(() => {
   function routeViewFromPath() {`,
@@ -133,6 +192,7 @@ export function normalizePinnedSidebarApplicationCoreRuntime(source) {
     '"sidebarCollapsed"',
     "menuButton.style.pointerEvents",
     "menuButton.style.cursor",
+    "setPageWithoutRouteLoading",
   ]) {
     if (core.includes(staleOwner)) {
       throw new Error(`Legacy pinned-sidebar runtime ownership remains after normalization: ${staleOwner}`);
