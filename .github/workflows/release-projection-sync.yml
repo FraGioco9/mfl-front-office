@@ -7,14 +7,10 @@ on:
       - site/sync-release-projections.mjs
       - site/build-app-core.mjs
       - site/modules/app-config.js
-      - site/migrate-canonical-ui-metadata.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
       - .github/workflows/release-projection-sync.yml
-  push:
-    branches:
-      - refactor/canonical-first-paint-ui-metadata
   workflow_dispatch:
 
 permissions:
@@ -38,9 +34,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate canonical UI metadata
-        run: node site/migrate-canonical-ui-metadata.mjs
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
@@ -50,12 +43,12 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html site/modules/app-config.js site/modules/app-core.js site/sync-release-projections.mjs site/validate-app-config.mjs site/validate-mfl-stats-first-paint.mjs site/validate-route-runtime.mjs
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
             echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Canonicalize first-paint UI metadata"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
