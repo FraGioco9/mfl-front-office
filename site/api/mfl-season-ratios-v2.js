@@ -62,7 +62,7 @@ async function loadRatiosFromSupabase() {
   return rows;
 }
 
-module.exports = async function handler(request, response) {
+async function handler(request, response) {
   response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
   response.setHeader("CDN-Cache-Control", "no-store, max-age=0");
   response.setHeader("Vercel-CDN-Cache-Control", "no-store, max-age=0");
@@ -93,4 +93,8 @@ module.exports = async function handler(request, response) {
     console.error(message);
     response.status(500).json({ error: message });
   }
-};
+}
+
+module.exports = handler;
+module.exports.loadRatiosFromSupabase = loadRatiosFromSupabase;
+module.exports.normalizeRows = normalizeRows;

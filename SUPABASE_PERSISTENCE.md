@@ -69,7 +69,7 @@ Stored values:
 
 ### `evaluation_shares`
 
-Owner: `site/api/evaluation-share.js`.
+Write/lifecycle owner: `site/api/evaluation-share.js`. Active-share lookup owner: `site/api/_evaluation-share-preview.js`, reused by `site/api/evaluation-share.js`, the public shared-link metadata endpoint `site/api/evaluation-preview.js`, and the dynamic social-card endpoint `site/api/evaluation-preview-image.js`.
 
 Stored values:
 - `id`: share identifier.
@@ -79,7 +79,11 @@ Stored values:
 - `created_at`: share ordering metadata.
 - `expires_at`: mandatory expiry and active-share filtering.
 
-All fields have direct sharing/lifecycle ownership and are retained.
+The preview lookup selects only `id`, `player_id`, `payload`, and `expires_at`; it never exposes or selects the creator wallet. Only after that active share has been validated, the preview owner resolves the player's current public `name`, `age`, and `retirement_years` from the packaged public player database (`mfl_database.db`). Name and age keep the card aligned with the public player identity shown by the site. For valuation, the saved `overallValues` array is also the canonical saved Expected Seasons horizon because the Evaluation page creates exactly one Overall entry per raw expected season. Public age/retirement context is therefore only a backward-compatibility fallback when a legacy payload does not contain that horizon.
+
+Preview metadata and the dynamic 2400x1260 social card are derived from the validated public share payload plus that public player context. Overall and Position come from the explicitly shared Evaluation inputs. Present Value is the same sum of the Present Value column shown in the Evaluation summary table, using the saved share horizon, shared Evaluation inputs, discount/first-season settings, and late-season reward rates. Invalid or expired links fall back to generic metadata/card output before any player lookup, and saved/private `evaluation_saves` data is never queried by either preview path.
+
+All persisted fields have direct sharing/lifecycle ownership and are retained.
 
 ### `mfl_season_ratios`
 

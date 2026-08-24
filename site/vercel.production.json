@@ -6,6 +6,12 @@
     "api/data.js": {
       "includeFiles": "api/data-files/mfl_database.db",
       "maxDuration": 60
+    },
+    "api/evaluation-preview.js": {
+      "includeFiles": "{index.html,api/data-files/mfl_database.db}"
+    },
+    "api/evaluation-preview-image.js": {
+      "includeFiles": "{api/data-files/mfl_database.db,node_modules/@expo-google-fonts/titillium-web/**/*.ttf}"
     }
   },
   "headers": [
@@ -27,6 +33,7 @@
   ],
   "rewrites": [
     { "source": "/releases.json", "destination": "/api/releases" },
+    { "source": "/evaluation", "destination": "/api/evaluation-preview" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
