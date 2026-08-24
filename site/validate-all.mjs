@@ -63,6 +63,7 @@ const validators = [
   "validate-club-title-loading.mjs",
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
+  "validate-render-reuse-contract.mjs",
   "validate-table-route-core.mjs",
   "validate-pager-current-page.mjs",
   "validate-agent-title-loading.mjs",
