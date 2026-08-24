@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/migrate-remove-global-loading-toast.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -35,21 +36,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Remove global Loading toast runtime
+        run: node site/migrate-remove-global-loading-toast.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit normalized projections
+      - name: Commit migrated source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -A -- site/modules/app-entry.js site/loading.css site/responsive.css site/loading-toast-runtime.js site/validate-loading-ownership.mjs site/validate-home-summary-first-paint.mjs site/validate-evaluation-search-lifecycle.mjs site/validate-z-index-ownership.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Release projections are current."
+            echo "Global Loading toast removal and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Remove global Loading toast runtime"
           git push origin "HEAD:$HEAD_BRANCH"
