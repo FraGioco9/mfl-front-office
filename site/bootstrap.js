@@ -13,7 +13,7 @@
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const APP_CONFIG = Reflect.get(window, "__mflAppConfig");
-  if (!APP_CONFIG?.routes || !APP_CONFIG?.table) {
+  if (!APP_CONFIG?.routes || !APP_CONFIG?.table || !APP_CONFIG?.ui) {
     throw new Error("Bootstrap requires canonical pre-bootstrap app configuration.");
   }
   const TABLE_VIEW_BY_SLUG = APP_CONFIG.routes.viewBySlug;
@@ -25,31 +25,15 @@
   const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);
   const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;
   const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;
-  const MFL_STATS_FILTER_LABELS = Object.freeze([
-    ["all", "All"],
-    ["90-94", "90-94"],
-    ["legendary", "Legendary"],
-    ["85-89", "85-89"],
-    ["80-84", "80-84"],
-    ["rare", "Rare"],
-    ["75-79", "75-79"],
-    ["70-74", "70-74"],
-    ["uncommon", "Uncommon"],
-    ["65-69", "65-69"],
-    ["60-64", "60-64"],
-    ["limited", "Limited"],
-    ["55-59", "55-59"],
-    ["50-54", "50-54"],
-    ["common", "Common"],
-  ]);
-  const SETTINGS_DATE_FORMAT_LABELS = Object.freeze([
-    ["DMY", "DD/MM/YYYY"],
-    ["MDY", "MM/DD/YYYY"],
-  ]);
-  const SETTINGS_TIME_FORMAT_LABELS = Object.freeze([
-    ["24h", "24h"],
-    ["12h", "12h"],
-  ]);
+  const MFL_STATS_FILTER_LABELS = Object.freeze(
+    APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label])),
+  );
+  const SETTINGS_DATE_FORMAT_LABELS = Object.freeze(
+    APP_CONFIG.ui.settingsDateFormats.map(({ value, label }) => Object.freeze([value, label])),
+  );
+  const SETTINGS_TIME_FORMAT_LABELS = Object.freeze(
+    APP_CONFIG.ui.settingsTimeFormats.map(({ value, label }) => Object.freeze([value, label])),
+  );
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 

@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { MFL_STATS_OVERALL_FILTERS } from "./modules/app-config.js";
+
 const read = async (path) => (await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -31,23 +33,7 @@ const filterStart = indexHtml.indexOf('<div id="mflStatsOverallFilters" class="m
 const filterEnd = filterStart >= 0 ? indexHtml.indexOf("</div>", filterStart) : -1;
 invariant(filterStart >= 0 && filterEnd > filterStart, "MFL Stats Overall Filters must exist in the base HTML.");
 const filterHtml = indexHtml.slice(filterStart, filterEnd);
-const expectedFilters = [
-  ["all", "All"],
-  ["90-94", "90-94"],
-  ["legendary", "Legendary"],
-  ["85-89", "85-89"],
-  ["80-84", "80-84"],
-  ["rare", "Rare"],
-  ["75-79", "75-79"],
-  ["70-74", "70-74"],
-  ["uncommon", "Uncommon"],
-  ["65-69", "65-69"],
-  ["60-64", "60-64"],
-  ["limited", "Limited"],
-  ["55-59", "55-59"],
-  ["50-54", "50-54"],
-  ["common", "Common"],
-];
+const expectedFilters = MFL_STATS_OVERALL_FILTERS.map(({ id, label }) => [id, label]);
 let previousIndex = -1;
 for (const [value, label] of expectedFilters) {
   const marker = `data-static-value="${value}">${label}</button>`;

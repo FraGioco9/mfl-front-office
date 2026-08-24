@@ -2,12 +2,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { TABLE_VIEW_CONFIG, VIEW_BY_SLUG } from "./modules/app-config.js";
+import { MFL_STATS_OVERALL_FILTERS, TABLE_VIEW_CONFIG, VIEW_BY_SLUG } from "./modules/app-config.js";
 
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
 // Keep this projection inline in index.html so route/view state remains zero-request before first paint.
 const FIRST_PAINT_CONFIG_START = "        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG";
 const FIRST_PAINT_CONFIG_END = "        // END GENERATED FIRST-PAINT ROUTE CONFIG";
+const MFL_STATS_FILTERS_START = "              <!-- BEGIN GENERATED MFL STATS FILTERS -->";
+const MFL_STATS_FILTERS_END = "              <!-- END GENERATED MFL STATS FILTERS -->";
 
 function semanticVersion(value) {
   const version = String(value || "").trim();
@@ -54,6 +56,13 @@ export function firstPaintRouteConfigProjectionSource() {
   ].join("\n");
 }
 
+export function mflStatsFilterButtonsProjectionSource() {
+  const buttons = MFL_STATS_OVERALL_FILTERS.map((filter, index) => (
+    `              <button class="mflStatsFilterButton${index === 0 ? " active" : ""}" type="button" data-static-value="${filter.id}">${filter.label}</button>`
+  ));
+  return [MFL_STATS_FILTERS_START, ...buttons, MFL_STATS_FILTERS_END].join("\n");
+}
+
 export function normalizeBootstrapReleaseProjection(source, version, label = "bootstrap") {
   const releaseVersion = semanticVersion(version);
   const replacement = label === "bootstrap-core.js"
@@ -96,6 +105,25 @@ export function normalizeIndexFirstPaintConfigProjection(source) {
   );
 }
 
+export function normalizeIndexMflStatsFiltersProjection(source) {
+  const input = String(source || "");
+  const generatedPattern = /^              <!-- BEGIN GENERATED MFL STATS FILTERS -->[\s\S]*?^              <!-- END GENERATED MFL STATS FILTERS -->$/gm;
+  const generatedMatches = input.match(generatedPattern) || [];
+  if (generatedMatches.length > 1) {
+    throw new Error(`index MFL Stats filter projection expected exactly one owned projection, found ${generatedMatches.length}.`);
+  }
+  if (generatedMatches.length === 1) {
+    return input.replace(generatedPattern, mflStatsFilterButtonsProjectionSource());
+  }
+
+  return replaceExactlyOnce(
+    input,
+    /^              <button class="mflStatsFilterButton active" type="button" data-static-value="all">All<\/button>[\s\S]*?^              <button class="mflStatsFilterButton" type="button" data-static-value="common">Common<\/button>$/gm,
+    mflStatsFilterButtonsProjectionSource(),
+    "index legacy MFL Stats filter projection",
+  );
+}
+
 async function writeIfChanged(path, content) {
   const current = await readFile(path, "utf8");
   if (current === content) return false;
@@ -109,7 +137,7 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
   const targets = [
     ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap.js")],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version))],
+    ["index.html", (source) => normalizeIndexMflStatsFiltersProjection(normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)))],
   ];
 
   const results = [];
