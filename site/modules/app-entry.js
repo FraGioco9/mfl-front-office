@@ -116,7 +116,7 @@ const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
 const initialPathname = String(window.location.pathname || "/");
 
 function routeConfig() {
-  const routes = window.__mflAppConfig?.routes;
+  const routes = Reflect.get(window, "__mflAppConfig")?.routes;
   if (!routes
     || typeof routes.normalizePageName !== "function"
     || typeof routes.initialRequest !== "function"
