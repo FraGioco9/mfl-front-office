@@ -12,22 +12,22 @@ const [core, evaluation] = await Promise.all([
 ]);
 
 includes(
-  core,
+  evaluation,
   "function detachEvaluationSnapshotForEdit() {",
-  "Evaluation edits must share one canonical saved/shared snapshot-detach helper.",
+  "Evaluation edits must share one canonical route-owned saved/shared snapshot-detach helper.",
 );
 includes(
-  core,
+  evaluation,
   'const savedEvaluationActive = Boolean(state.evaluationSavedId || evaluationSavedIdFromUrl());',
   "Saved Evaluation route identity must be detected from state or URL before an edit.",
 );
 includes(
-  core,
+  evaluation,
   'const sharedEvaluationActive = Boolean(state.evaluationShareId || evaluationShareIdFromUrl());',
   "Shared Evaluation route identity must be detected from state or URL before an edit.",
 );
 includes(
-  core,
+  evaluation,
   'state.evaluationSavedId = "";\n  state.evaluationShareId = "";\n  replaceEvaluationUrlWithBasicPlayer(playerId);\n  updateEvaluationFooterActions();',
   "Editing a saved/shared Evaluation must clear snapshot identity, replace the URL with the base player route, and refresh footer actions.",
 );
@@ -45,6 +45,10 @@ includes(
   evaluation,
   'function queueEvaluationSettingsSave() {\n  detachEvaluationSnapshotForEdit();\n  saveEvaluationSettingsLocally();',
   "Effective Evaluation settings edits must detach saved/shared route identity before persistence.",
+);
+invariant(
+  !core.includes("function detachEvaluationSnapshotForEdit() {"),
+  "Evaluation snapshot detach implementation must not consume the shared-core size budget.",
 );
 
 console.log("Evaluation snapshot edit route validation passed: first effective edits leave saved/shared routes without reload.");
