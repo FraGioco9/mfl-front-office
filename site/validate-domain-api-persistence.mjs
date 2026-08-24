@@ -2,6 +2,7 @@ const validators = [
   "validate-shared-api-logic.mjs",
   "validate-supabase-persistence.mjs",
   "validate-wallet-core.mjs",
+  "validate-evaluation-share-preview.mjs",
 ];
 
 for (const validator of validators) {

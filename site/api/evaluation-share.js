@@ -6,6 +6,9 @@ const {
   generateEvaluationId,
   normalizeEvaluationPayload,
 } = require("./_evaluation-payload");
+const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
+const { readActiveEvaluationShare } = require("./_evaluation-share-preview");
+const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
 
 async function activeShareRows(wallet) {
   const rows = await supabaseRequest(`evaluation_shares?select=id,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.asc`);
@@ -33,6 +36,25 @@ async function pruneOldestActiveShare(wallet) {
   });
 }
 
+async function snapshotPresentValue(payload) {
+  let ratioRows = [];
+
+  if (!payload.ignoreDiscountRate) {
+    try {
+      ratioRows = await loadRatiosFromSupabase();
+    } catch (error) {
+      console.warn("Could not load live MFL season ratios while creating Evaluation share.", error);
+      return payload;
+    }
+  }
+
+  const presentValue = evaluationPresentValueTotalFromSharePayload(payload, {}, ratioRows);
+  if (Number.isFinite(presentValue)) {
+    payload.summaryPresentValue = presentValue;
+  }
+  return payload;
+}
+
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
@@ -50,13 +72,14 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      const payload = normalizeEvaluationPayload(await readJsonBody(request));
+      const payload = normalizeEvaluationPayload(await readJsonBody(request), { includeSummaryMetrics: true });
 
       if (!payload) {
         response.status(400).json({ error: "Invalid evaluation share payload." });
         return;
       }
 
+      await snapshotPresentValue(payload);
       await pruneOldestActiveShare(wallet);
 
       const id = generateEvaluationId();
@@ -93,9 +116,7 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      const playerFilter = playerId ? `&player_id=eq.${encodeURIComponent(playerId)}` : "";
-      const rows = await supabaseRequest(`evaluation_shares?select=id,player_id,payload,expires_at&id=eq.${encodeURIComponent(id)}${playerFilter}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
-      const row = Array.isArray(rows) ? rows[0] : null;
+      const row = await readActiveEvaluationShare(id, playerId);
 
       if (!row) {
         response.status(404).json({ error: "Evaluation share not found or expired." });
@@ -104,9 +125,9 @@ module.exports = async function handler(request, response) {
 
       response.status(200).json({
         id: row.id,
-        playerId: row.player_id,
+        playerId: row.playerId,
         payload: row.payload,
-        expiresAt: row.expires_at,
+        expiresAt: row.expiresAt,
       });
       return;
     }

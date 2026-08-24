@@ -13,7 +13,9 @@
     "check": "npm run lint && npm run typecheck && npm run build:core && npm run verify:generated && npm run validate"
   },
   "dependencies": {
-    "@onflow/fcl": "1.21.11"
+    "@expo-google-fonts/titillium-web": "0.4.1",
+    "@onflow/fcl": "1.21.11",
+    "pureimage": "0.4.20"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
