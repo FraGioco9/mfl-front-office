@@ -33,14 +33,13 @@ await migrate("./modules/app-core.js", (source) => {
     throw new Error("Club render-cache ownership is partially migrated.");
   }
 
-  const captureCall = "      captureClubView(nextView);\n";
-  const captureCount = next.split(captureCall).length - 1;
-  if (captureCount > 0) {
-    next = next.replaceAll(captureCall, "");
-    console.log(`Removed ${captureCount} dead Club snapshot capture call(s).`);
+  const captureCalls = next.match(/^\s*captureClubView\([^\n;]*\);\n/gm) || [];
+  if (captureCalls.length) {
+    next = next.replace(/^\s*captureClubView\([^\n;]*\);\n/gm, "");
+    console.log(`Removed ${captureCalls.length} dead Club snapshot capture call(s).`);
   }
-  if (next.includes("captureClubView(")) {
-    throw new Error("A Club snapshot capture reference remains after migration.");
+  if (next.includes("captureClubView(") || next.includes("cloneClubRows(")) {
+    throw new Error("A Club snapshot-cache reference remains after migration.");
   }
   return next;
 });
