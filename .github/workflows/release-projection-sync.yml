@@ -48,7 +48,7 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/modules/app-core.js site/modules/app-core-route-chunks.js site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/modules/app-core.js site/modules/app-core-route-chunks.js site/validate-club-route-core.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
             echo "Club cache ownership and release projections are current."
             exit 0
