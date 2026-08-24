@@ -243,7 +243,9 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflWatchlistMyPlayersRouteRuntime?: { install?: () => boolean },
  * __mflChangelogHistoryReady?: Promise<boolean>,
  * __mflAppStartPromise?: Promise<void>,
+ * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
  * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+ * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
  * __mflRunPageTransition?: (pageName: string, updateHash?: boolean, options?: Record<string, unknown>, loader?: (() => unknown)) => Promise<unknown>,
  * __mflMarkApplicationCoreLoaded?: () => void,
  * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
@@ -356,18 +358,26 @@ function clubRoutePath(clubId, view) {
 }
 
 function installClubRouteRuntimeGate() {
-  const current = runtimeWindow.mflOpenClubPage;
-  if (typeof current !== "function" || current.__mflRouteRuntimeGate) return false;
+  if (runtimeWindow.mflOpenClubPage?.__mflRouteRuntimeGate) return false;
 
-  const gated = /** @type {typeof current} */ (async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
+  const gated = async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
-    if (!normalizedClubId) return current.call(runtimeWindow, clubId, view);
+    if (!normalizedClubId) return;
 
     const loadClub = async () => {
       const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-loading") || "";
       try {
-        await ensureRouteRuntime("club", { view });
-        return await current.call(runtimeWindow, normalizedClubId, view);
+        const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"
+          ? runtimeWindow.__mflEnsureRouteCore("club", { view })
+          : Promise.resolve();
+        const routeRuntimePromise = ensureRouteRuntime("club", { view });
+        await Promise.all([routeCorePromise, routeRuntimePromise]);
+
+        const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
+        if (typeof routeOwner !== "function") {
+          throw new Error("Club route owner is unavailable.");
+        }
+        return await routeOwner.call(runtimeWindow, normalizedClubId, view);
       } finally {
         if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
       }
@@ -384,7 +394,7 @@ function installClubRouteRuntimeGate() {
       }, loadClub);
     }
     return loadClub();
-  });
+  };
   Object.defineProperty(gated, "__mflRouteRuntimeGate", { value: true });
   runtimeWindow.mflOpenClubPage = gated;
   return true;
@@ -448,6 +458,7 @@ function ensureRouteRuntime(pageName, options = {}) {
 }
 
 runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
+installClubRouteRuntimeGate();
 
 async function start() {
   const release = entryRelease;
