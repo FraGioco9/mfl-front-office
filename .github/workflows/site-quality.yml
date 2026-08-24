@@ -132,7 +132,7 @@ jobs:
       - name: Database builder regression tests
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
-        run: python -m unittest -v test_progression_emails.py test_rebuild_request_auth.py
+        run: python -m unittest discover -v -p "test_*.py"
 
       - uses: actions/setup-node@v4
         if: steps.changes.outputs.quality == 'true'
