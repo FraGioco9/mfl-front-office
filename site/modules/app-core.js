@@ -1135,8 +1135,11 @@ function updateAccountState() {
   }
   updateEvaluationFooterActions();
   if (evaluationLoadButton) {
-    evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
-    evaluationButtons.hidden = Boolean(state.evaluationPlayerId) ? evaluationButtons.hidden : !walletLinked;
+    const evaluationRouteSelected = Boolean(
+      state.evaluationPlayerId || evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+    );
+    evaluationLoadButton.hidden = evaluationRouteSelected || !walletLinked;
+    evaluationButtons.hidden = evaluationRouteSelected ? false : !walletLinked;
   }
   syncHomeLoginButton();
 }
@@ -1807,7 +1810,7 @@ function redirectSavedEvaluationLinkToBasicEvaluation() {
   return true;
 }
 
-function resetInvalidEvaluationLinkToPlainEvaluation() {
+async function recoverInvalidEvaluationLink() {
   if (window.location.pathname !== "/evaluation") {
     return false;
   }
@@ -1816,10 +1819,29 @@ function resetInvalidEvaluationLinkToPlainEvaluation() {
     return false;
   }
 
+  const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+  let playerRow = candidatePlayerId ? rowByPlayerId(candidatePlayerId) : null;
+
+  if (candidatePlayerId && !playerRow) {
+    try {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: candidatePlayerId,
+      }, 1, { force: true });
+      playerRow = rowByPlayerId(candidatePlayerId);
+    } catch {
+      playerRow = null;
+    }
+  }
+
+  const playerId = playerRow ? candidatePlayerId : "";
   state.evaluationSavedId = "";
   state.evaluationShareId = "";
-  state.evaluationPlayerId = null;
-  window.history.replaceState({}, "", "/evaluation");
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", playerId ? basicEvaluationPathForPlayer(playerId) : "/evaluation");
   return true;
 }
 
@@ -1870,7 +1892,7 @@ function currentEvaluationSharePayload() {
   };
 }
 
-function applySharedEvaluationPayload(payload) {
+async function applySharedEvaluationPayload(payload) {
   const data = normalizeSharedEvaluationPayload(payload);
 
   if (!data.playerId) {
@@ -1892,9 +1914,8 @@ function applySharedEvaluationPayload(payload) {
     state.evaluationSummaryPositions[data.playerId] = data.summaryPosition;
   }
 
-  evaluationSearchInput.value = "";
   renderEvaluationMflPerUsdControl(false);
-  renderEvaluationPage();
+  await renderEvaluationPage();
 }
 
 async function loadSharedEvaluation(shareId) {
@@ -1921,12 +1942,23 @@ async function loadSharedEvaluation(shareId) {
     }
 
     const data = await response.json();
+    const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
+    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+      const playerPayload = await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: payloadPlayerId,
+      }, 1, { force: true });
+      if (!playerPayload) return;
+    }
     state.evaluationShareId = id;
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
-    renderEmptyEvaluationSelection(true);
+    await recoverInvalidEvaluationLink();
+    await renderEvaluationPage();
   } finally {
     state.evaluationShareLoading = false;
   }
@@ -2076,12 +2108,12 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
     clearEvaluationSearchFocus();
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
-    resetInvalidEvaluationLinkToPlainEvaluation();
+    await recoverInvalidEvaluationLink();
     updateEvaluationFooterActions();
-    renderEmptyEvaluationSelection(true);
+    await renderEvaluationPage();
   } finally {
     state.evaluationSavedLoading = false;
   }
@@ -2456,7 +2488,40 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 }
 
 function pageTargetFromPath(path) {
-  const cleanPath = String(path || "").split("?")[0];
+  const requestedPath = String(path || "");
+  const cleanPath = requestedPath.split("?")[0];
+
+  if (cleanPath === "/evaluation") {
+    const queryIndex = requestedPath.indexOf("?");
+    const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";
+    const params = new URLSearchParams(search);
+    const playerId = String(params.get("player") || "").trim();
+    const savedId = String(params.get("saved") || "").trim();
+    const shareId = String(params.get("share") || "").trim();
+    const queryKeys = Array.from(params.keys());
+    const validQueryKeys = queryKeys.every((key) => key === "player" || key === "saved" || key === "share");
+    const hasEvaluationSelection = Boolean(playerId || savedId || shareId);
+
+    if (search && (!validQueryKeys || !hasEvaluationSelection)) {
+      return {
+        pageName: "evaluation",
+        options: {
+          plain: true,
+          replaceUrl: "/evaluation",
+        },
+      };
+    }
+
+    return {
+      pageName: "evaluation",
+      options: {
+        path: search ? `/evaluation?${search}` : "/evaluation",
+        ...(playerId ? { playerId } : {}),
+        ...(savedId ? { savedId } : {}),
+        ...(shareId ? { shareId } : {}),
+      },
+    };
+  }
 
   if (!hasWalletOptIn()) {
     if (/^\/my-players(?:\/[^/]+)?$/.test(cleanPath)) {
@@ -2580,6 +2645,11 @@ function pagePath(pageName, options = {}) {
   if (pageName === "evaluation") {
     if (options.plain) {
       return "/evaluation";
+    }
+
+    const explicitPath = String(options.path || "");
+    if (explicitPath === "/evaluation" || explicitPath.startsWith("/evaluation?")) {
+      return explicitPath;
     }
 
     const playerId = options.playerId || evaluationPlayerIdFromUrl();
@@ -3038,6 +3108,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
       state.evaluationPlayerId = null;
+      state.evaluationOverallRows = {};
+      state.evaluationSummaryPositions = {};
       evaluationSearchInput.value = "";
     }
     try {
@@ -6970,6 +7042,23 @@ function rememberEvaluationResult(playerId) {
 }
 
 function renderEmptyEvaluationSelection(showRecentResults = true) {
+  const evaluationRouteParams = new URLSearchParams(window.location.search);
+  const pendingEvaluationRoute = window.location.pathname === "/evaluation" && Boolean(
+    evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")
+  );
+
+  if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+    return;
+  }
+
+  evaluationSearchInput.placeholder = "Search ID or player name";
   evaluationPanel.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
@@ -7036,6 +7125,11 @@ function renderEvaluationSearchResults() {
       state.evaluationPlayerId = playerId;
       rememberEvaluationResult(playerId);
       evaluationSearchInput.value = entry.nameDisplay;
+      try {
+        sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);
+      } catch {
+        // Session storage is an optional first-paint cache only.
+      }
       evaluationSearchResults.hidden = true;
       syncEvaluationPlayerUrl(playerId);
       try {
@@ -7415,14 +7509,69 @@ async function renderEvaluationPage() {
     return;
   }
 
-  const row = rowByPlayerId(state.evaluationPlayerId);
+  let row = rowByPlayerId(state.evaluationPlayerId);
+  const pendingEvaluationRoute = Boolean(
+    evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+  );
+  const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || "").trim();
+
+  if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+  }
+
+  if (!row) {
+    const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+    if (routePlayerId) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: routePlayerId,
+      }, 1, { force: true });
+      state.evaluationPlayerId = routePlayerId;
+      row = rowByPlayerId(routePlayerId);
+    }
+  }
 
   if (row) {
-    evaluationSearchInput.value = formatCellValue(row, "name");
+    const evaluationPlayerName = formatCellValue(row, "name");
+    evaluationSearchInput.value = evaluationPlayerName;
+    try {
+      const evaluationRoute = new URL(window.location.href);
+      const evaluationIdentities = [
+        ["player", String(evaluationRoute.searchParams.get("player") || state.evaluationPlayerId || "").trim()],
+        ["saved", String(evaluationRoute.searchParams.get("saved") || state.evaluationSavedId || "").trim()],
+        ["share", String(evaluationRoute.searchParams.get("share") || state.evaluationShareId || "").trim()],
+      ];
+      evaluationIdentities.forEach(([kind, id]) => {
+        if (id) sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:${kind}:${id}`, evaluationPlayerName);
+      });
+    } catch {
+      // Session storage is an optional first-paint cache only.
+    }
     syncEvaluationSearchClearButton();
   }
 
-  if (!row || getValue(row, "retirement_years") === 0) {
+  if (!row) {
+    if (pendingEvaluationRoute) {
+      if (firstPaintEvaluationPlayerName) {
+        evaluationSearchInput.value = firstPaintEvaluationPlayerName;
+        syncEvaluationSearchClearButton();
+      }
+      return;
+    }
+    renderEmptyEvaluationSelection(false);
+    return;
+  }
+
+  if (getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
     syncEvaluationPlayerUrl(null);
     renderEmptyEvaluationSelection(true);
@@ -8034,6 +8183,11 @@ function renderPlayerPage(playerId) {
     const targetPath = pagePath("evaluation", { playerId: id });
 
     rememberEvaluationResult(id);
+    try {
+      sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);
+    } catch {
+      // Session storage is an optional first-paint cache only.
+    }
 
     if (event.ctrlKey || event.metaKey || event.button === 1) {
       window.open(targetPath, "_blank", "noopener");
@@ -11132,7 +11286,11 @@ navButtons.forEach((button) => {
   button.addEventListener("click", async (event) => {
     event.preventDefault();
     const pageName = button.dataset.page;
-    const options = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
+    const options = tablePages.has(pageName)
+      ? { view: preferredViewForPage(pageName) }
+      : pageName === "evaluation"
+        ? { plain: true }
+        : {};
     const target = pagePath(pageName, options);
     if (button.classList.contains("active") && target === `${location.pathname}${location.search}`) return;
     await setPage(pageName, true, options);
@@ -11365,7 +11523,7 @@ async function startApp() {
   const startupDependencies = [earlyGlobalSearch];
   if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);
   if (initialTarget.pageName === "home") startupDependencies.push(startupSummaryPromise);
-  if (["watchlist", "myplayers", "settings", "player"].includes(initialTarget.pageName)) {
+  if (["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)) {
     startupDependencies.push(startupWalletPreferencesPromise);
   }
   await Promise.allSettled(startupDependencies);

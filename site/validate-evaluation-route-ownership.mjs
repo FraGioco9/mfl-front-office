@@ -7,10 +7,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCoreSource, splitter, routeLifecycle, buildNormalizer] = await Promise.all([
+const [appCoreSource, splitter, buildNormalizer] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-evaluation-chunk.js"),
-  read("./modules/app-core-evaluation-route-lifecycle.js"),
   read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
@@ -134,10 +133,12 @@ invariant(
   "Evaluation ownership must use a dedicated structural splitter stage.",
 );
 invariant(
-  routeLifecycle.includes('const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";')
-    && routeLifecycle.includes("...(savedId ? { savedId } : {})")
-    && routeLifecycle.includes("...(shareId ? { shareId } : {})"),
-  "Evaluation route lifecycle must extract and retain player, saved, and shared query identity.",
+  appCoreSource.includes('const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";')
+    && appCoreSource.includes("...(savedId ? { savedId } : {})")
+    && appCoreSource.includes("...(shareId ? { shareId } : {})")
+    && appCoreSource.includes("async function recoverInvalidEvaluationLink()")
+    && appCoreSource.includes("await applySharedEvaluationPayload(data.payload);"),
+  "Canonical Evaluation source must own route identity, invalid-link recovery, and final saved/shared payload rendering.",
 );
 invariant(
   shared.includes('const requestedPath = String(path || "");')
@@ -145,16 +146,18 @@ invariant(
     && shared.includes('const explicitPath = String(options.path || "");'),
   "Built shared routing must preserve the exact Evaluation URL through refresh and page-path resolution.",
 );
-const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
-const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
+const routeSplitIndex = buildNormalizer.indexOf("splitApplicationCoreRuntime(canonicalSource)");
+const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(routeArtifacts)");
 const settingsSplitIndex = buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationArtifacts)");
 invariant(
-  evaluationRouteIndex >= 0
-    && evaluationSplitIndex > evaluationRouteIndex
+  routeSplitIndex >= 0
+    && evaluationSplitIndex > routeSplitIndex
     && settingsSplitIndex > evaluationSplitIndex
+    && !buildNormalizer.includes("normalizeEvaluationRouteLifecycle")
+    && !buildNormalizer.includes("evaluationRouteArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationSearchLifecycle")
     && !buildNormalizer.includes("evaluationSearchArtifacts"),
-  "Evaluation routing must preserve query identity before route splitting, with source-owned search behavior flowing directly into later route splitters.",
+  "Source-owned Evaluation route/search behavior must flow directly through structural route splitting before later splitters.",
 );
 
 new Function(shared);
