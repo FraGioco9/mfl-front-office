@@ -1,0 +1,42 @@
+name: Evaluation route splitter repair
+
+on:
+  push:
+    branches:
+      - refactor/source-owned-evaluation-route
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/source-owned-evaluation-route
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Restore splitter from main and apply one helper rename
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout origin/main -- site/modules/app-core-route-chunks.js
+          node site/repair-evaluation-route-splitter.mjs
+      - name: Persist repaired splitter
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add site/modules/app-core-route-chunks.js
+          if git diff --cached --quiet; then
+            echo "Evaluation splitter is already repaired."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Use source-owned Evaluation recovery helper"
+          git push origin HEAD:refactor/source-owned-evaluation-route
