@@ -97,10 +97,7 @@ function renderSettingsPage(renderOptions = {}) {
   }
   if (settingsDateFormatOptions) {
     settingsDateFormatOptions.replaceChildren();
-    [
-      ["DMY", "DD/MM/YYYY"],
-      ["MDY", "MM/DD/YYYY"],
-    ].forEach(([value, label]) => {
+    (window.__mflAppConfig?.ui?.settingsDateFormats || []).forEach(({ value, label }) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `settingsToggleButton ${normalizeSettingsDateFormat(state.settingsDateFormat) === value ? "active" : ""}`;
@@ -112,10 +109,7 @@ function renderSettingsPage(renderOptions = {}) {
 
   if (settingsTimeFormatOptions) {
     settingsTimeFormatOptions.replaceChildren();
-    [
-      ["24h", "24h"],
-      ["12h", "12h"],
-    ].forEach(([value, label]) => {
+    (window.__mflAppConfig?.ui?.settingsTimeFormats || []).forEach(({ value, label }) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `settingsToggleButton ${normalizeSettingsTimeFormat(state.settingsTimeFormat) === value ? "active" : ""}`;

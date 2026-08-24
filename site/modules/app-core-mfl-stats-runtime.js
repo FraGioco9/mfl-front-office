@@ -1,21 +1,5 @@
 // Generated MFL Stats core chunk from modules/app-core.js. Do not edit directly.
-const mflStatsOverallFilterOptions = [
-  { id: "all", label: "All", min: null, max: null },
-  { id: "90-94", label: "90-94", min: 90, max: 94 },
-  { id: "legendary", label: "Legendary", min: 85, max: 94 },
-  { id: "85-89", label: "85-89", min: 85, max: 89 },
-  { id: "80-84", label: "80-84", min: 80, max: 84 },
-  { id: "rare", label: "Rare", min: 75, max: 84 },
-  { id: "75-79", label: "75-79", min: 75, max: 79 },
-  { id: "70-74", label: "70-74", min: 70, max: 74 },
-  { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
-  { id: "65-69", label: "65-69", min: 65, max: 69 },
-  { id: "60-64", label: "60-64", min: 60, max: 64 },
-  { id: "limited", label: "Limited", min: 55, max: 64 },
-  { id: "55-59", label: "55-59", min: 55, max: 59 },
-  { id: "50-54", label: "50-54", min: 50, max: 54 },
-  { id: "common", label: "Common", min: null, max: 54 },
-];
+const mflStatsOverallFilterOptions = window.__mflAppConfig?.ui?.mflStatsOverallFilters || [];
 
 function mflStatsFilterById(filterId = state.mflStatsOverallFilter) {
   return mflStatsOverallFilterOptions.find((filter) => filter.id === filterId) || mflStatsOverallFilterOptions[0];
