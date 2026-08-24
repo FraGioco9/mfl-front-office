@@ -12,6 +12,9 @@ on:
       - site/bootstrap-core.js
       - site/index.html
       - .github/workflows/release-projection-sync.yml
+  push:
+    branches:
+      - refactor/canonical-first-paint-ui-metadata
   workflow_dispatch:
 
 permissions:
