@@ -1,4 +1,5 @@
 // Temporary one-shot validator ownership migration; removed by its workflow before commit.
+// Trigger after the workflow exists on this branch.
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
