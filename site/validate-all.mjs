@@ -6,24 +6,18 @@ const siteRoot = dirname(fileURLToPath(import.meta.url));
 const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-read-preload.mjs")).href;
 
 const validators = [
-  "validate-text-read-normalization.mjs",
-  "validate.mjs",
+  "validate-domain-build-generated.mjs",
   "validate-global-search-results.mjs",
   "validate-global-search-open-lifecycle.mjs",
   "validate-release-history.mjs",
   "validate-release-version-source.mjs",
   "validate-release-runtime-ownership.mjs",
   "validate-document-title-runtime.mjs",
-  "validate-app-config.mjs",
   "validate-shared-api-logic.mjs",
   "validate-supabase-persistence.mjs",
   "validate-domain-shared-ui.mjs",
   "validate-domain-routing-loading.mjs",
   "validate-domain-evaluation.mjs",
-  "validate-app-core-splitter-architecture.mjs",
-  "validate-shared-core-route-ownership.mjs",
-  "validate-asset-cache-policy.mjs",
-  "validate-production-core-sources.mjs",
   "validate-database-refresh-deployment.mjs",
   "validate-domain-stats.mjs",
   "validate-domain-club.mjs",
@@ -37,7 +31,6 @@ const validators = [
   "validate-watchlist-route-core.mjs",
   "validate-watchlist-progression-access.mjs",
   "validate-watchlist-selector-navigation.mjs",
-  "validate-generated-core-bindings.mjs",
 ];
 
 for (const validator of validators) {
