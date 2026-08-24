@@ -129,10 +129,10 @@ jobs:
         working-directory: .
         run: python -c "import rebuild_database; import rebuild_database_runner"
 
-      - name: Progression email regression tests
+      - name: Database builder regression tests
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
-        run: python -m unittest -v test_progression_emails.py
+        run: python -m unittest -v test_progression_emails.py test_rebuild_request_auth.py
 
       - uses: actions/setup-node@v4
         if: steps.changes.outputs.quality == 'true'
