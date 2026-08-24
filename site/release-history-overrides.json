@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.5",
+    "Restore progression email delivery and streamline Site quality validation"
+  ],
+  [
     "v1.124.4",
     "Minimize Supabase persistence and add authenticated last-visit tracking"
   ],
