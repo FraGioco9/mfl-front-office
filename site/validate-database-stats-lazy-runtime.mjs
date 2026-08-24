@@ -8,6 +8,7 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const entry = await read("./modules/app-entry.js");
+const appConfig = await read("./modules/app-config.js");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 const statsRuntime = await read("./database-stats-runtime.js");
@@ -16,7 +17,7 @@ const controls = await read("./controls.css");
 const styles = await read("./styles.css");
 const coreSource = await read("./modules/app-core.js");
 
-const statsBlock = entry.match(/const DATABASE_STATS_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
+const statsBlock = appConfig.match(/databaseStats: Object\.freeze\(\[([\s\S]*?)\]\),/)?.[1] || "";
 
 includes(statsBlock, "/database-stats-state-runtime.js", "The Database Stats route must load its lightweight state owner with the domain runtime.");
 includes(statsBlock, "/database-stats-runtime.js", "The Database Stats route must load the single Database Stats domain runtime.");
@@ -30,8 +31,8 @@ for (const retiredRuntime of [
 excludes(entry, "DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS", "Ordinary Database table routes must not preload a separate Stats bridge.");
 
 includes(
-  entry,
-  'return normalizeRoutePageName(pageName) === "database" && routeView(options) === "stats";',
+  appConfig,
+  'const databaseStats = page === "database" && view === "stats";',
   "Database Stats runtime loading must require the Stats view explicitly.",
 );
 includes(
@@ -45,9 +46,14 @@ includes(
   "Database startup classification must come from the canonical route configuration.",
 );
 includes(
-  routeCoreLoader,
-  'if (page === "database" && view === "stats") return [];',
+  appConfig,
+  'const table = tablePageSet.has(page) && !(page === "database" && view === "stats");',
   "Database Stats route-core dependency classification must preserve the canonical Stats view.",
+);
+includes(
+  routeCoreLoader,
+  "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;",
+  "Database Stats route-core loading must consume the canonical dependency plan.",
 );
 
 includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats state owner must expose route rendering after navigation.");
