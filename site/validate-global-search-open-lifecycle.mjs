@@ -21,7 +21,9 @@ invariant(
     && !buildNormalizer.includes("statsNavigationArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
     && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && buildNormalizer.includes("const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);"),
+    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
+    && !buildNormalizer.includes("evaluationLoadArtifacts")
+    && buildNormalizer.includes("return normalizeEvaluationSavedValuationCache(clubSortArtifacts);"),
   "Canonical application-core builds must consume source-owned Global Search, Stats navigation, and Evaluation recent-readiness behavior before later transforms.",
 );
 

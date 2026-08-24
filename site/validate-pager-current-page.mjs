@@ -71,7 +71,9 @@ invariant(
     && !buildNormalizer.includes("globalSearchArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
     && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && buildNormalizer.includes("const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);"),
+    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
+    && !buildNormalizer.includes("evaluationLoadArtifacts")
+    && buildNormalizer.includes("return normalizeEvaluationSavedValuationCache(clubSortArtifacts);"),
   "Build normalization must flow directly through source-owned readiness behavior without editable-pager or Table control-cell rewriting.",
 );
 

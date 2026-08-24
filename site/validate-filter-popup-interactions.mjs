@@ -157,12 +157,14 @@ invariant(
   "Club filter-free rendering must emit the canonical count-only zero summary directly.",
 );
 for (const required of [
-  "const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);",
+  "return normalizeEvaluationSavedValuationCache(clubSortArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }
 invariant(
-  !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
+  !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
+    && !buildNormalizer.includes("evaluationLoadArtifacts")
+    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
     && !buildNormalizer.includes("evaluationRecentArtifacts")
     && !buildNormalizer.includes("normalizeFilterSummaryLifecycle")
     && !buildNormalizer.includes("filterSummaryArtifacts")
