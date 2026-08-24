@@ -7179,7 +7179,8 @@ async function startApp() {
   applyStoredWalletPermission();
   updateAccountState();
   updateMenuVisibility();
-  await showHomeShell(initialTarget.pageName, false, initialTarget.options);
+  const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);
 
   void Promise.allSettled([startupSummaryPromise, startupWalletPreferencesPromise]).then(() => {
     applyStoredWalletPermission();

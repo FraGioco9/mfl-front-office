@@ -53,15 +53,23 @@ includes(generatedCore, "&& hasWalletOptIn()", "Startup must refresh Progression
 includes(generatedCore, "? loadWalletPermissions({ force: true })", "Initial Progression startup must force a live permission revalidation instead of trusting stale cache state.");
 includes(generatedCore, "if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);", "The Progression permission refresh must join the initial route barrier.");
 includes(generatedCore, "await Promise.allSettled(startupDependencies);", "Initial route dependencies must settle through the canonical startup barrier.");
-includes(generatedCore, "await showHomeShell(initialTarget.pageName, false, initialTarget.options);", "The initial route must render only after its route-required startup dependency barrier.");
+includes(generatedCore, 'const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);', "Startup must re-read the canonical route after its dependency barrier so newer refresh-time navigation stays authoritative.");
+includes(generatedCore, "await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);", "Refresh startup must settle the currently authoritative route after its dependency barrier.");
 
 const markerIndex = generatedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();");
 const startupPromiseIndex = generatedCore.indexOf("window.__mflAppStartPromise = (async () => {");
 const permissionRefreshIndex = generatedCore.indexOf("? loadWalletPermissions({ force: true })");
 const startupBarrierIndex = generatedCore.indexOf("await Promise.allSettled(startupDependencies);");
-const initialRouteIndex = generatedCore.indexOf("await showHomeShell(initialTarget.pageName, false, initialTarget.options);");
+const authoritativeTargetIndex = generatedCore.indexOf('const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);');
+const authoritativeRouteIndex = generatedCore.indexOf("await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);");
 invariant(markerIndex >= 0 && startupPromiseIndex > markerIndex, "The built core must mark initialization before publishing startup work.");
-invariant(permissionRefreshIndex >= 0 && startupBarrierIndex > permissionRefreshIndex && initialRouteIndex > startupBarrierIndex, "Progression permission must settle before the initial route can run its authorization redirect.");
+invariant(
+  permissionRefreshIndex >= 0
+    && startupBarrierIndex > permissionRefreshIndex
+    && authoritativeTargetIndex > startupBarrierIndex
+    && authoritativeRouteIndex > authoritativeTargetIndex,
+  "Startup dependencies must settle before the live canonical route is re-read and rendered.",
+);
 
 const appStartAwaitIndex = entry.indexOf("await runtimeWindow.__mflAppStartPromise;");
 const routePaintIndex = entry.indexOf("await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();");
@@ -78,3 +86,7 @@ invariant(
 );
 
 console.log("Prebuilt application-core startup handshake and route-ready background warm-up validation passed.");
+invariant(
+  !generatedCore.includes("await showHomeShell(initialTarget.pageName, false, initialTarget.options);"),
+  "Refresh startup must never replay the route captured before its dependency barrier.",
+);
