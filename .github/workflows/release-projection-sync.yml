@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - site/patch-retired-busy-validators.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,24 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Update retired busy validators
-        run: node site/patch-retired-busy-validators.mjs
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit validator cleanup
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/validate.mjs site/validate-z-index-ownership.mjs site/validate-stats-animation-owner.mjs site/validate-modal-entrance-lifecycle.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Retired busy validators and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update retired busy validators"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
