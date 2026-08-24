@@ -12,6 +12,9 @@ on:
       - site/bootstrap-core.js
       - site/index.html
       - .github/workflows/release-projection-sync.yml
+  push:
+    branches:
+      - refactor/shared-render-reuse-contract
   workflow_dispatch:
 
 permissions:
@@ -35,21 +38,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Migrate shared render reuse
+        run: node site/migrate-shared-render-reuse.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit normalized projections
+      - name: Commit migrated source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/modules/app-core.js site/modules/app-core-player-chunk.js site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Release projections are current."
+            echo "Render reuse source and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Migrate shared render reuse source"
           git push origin "HEAD:$HEAD_BRANCH"
