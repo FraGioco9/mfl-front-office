@@ -95,6 +95,21 @@ const state = {
   mflStatsDistributionMode: "overall",
 };
 
+function createRenderReuseGuard() {
+  let committedSignature = "";
+  return Object.freeze({
+    matches(nextSignature, structureReady = true) {
+      return Boolean(structureReady) && committedSignature === String(nextSignature || "");
+    },
+    commit(nextSignature) {
+      committedSignature = String(nextSignature || "");
+    },
+    invalidate() {
+      committedSignature = "";
+    },
+  });
+}
+
 const flagColumn = "nationality_flag";
 const baseColumns = ["player_id", flagColumn, "name", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
@@ -7509,10 +7524,37 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
   return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
 
+const evaluationTableRenderReuse = createRenderReuseGuard();
+
+function evaluationTableRenderSignature(row) {
+  const playerId = String(getValue(row, "player_id") || "");
+  return JSON.stringify([
+    state.columns,
+    row,
+    state.evaluationIgnoreDiscountRate,
+    state.evaluationIgnoreFirstSeason,
+    state.evaluationMflPerUsd,
+    state.evaluationLateSeasonRewardRates,
+    state.evaluationOverallRows[playerId] || null,
+    state.evaluationSummaryPositions[playerId] || "",
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+  ]);
+}
+
 function renderEvaluationTable(row) {
   const rawExpectedSeasons = expectedEvaluationSeasons(row);
   const seasonOffset = state.evaluationIgnoreFirstSeason ? 1 : 0;
   const expectedSeasons = Math.max(0, rawExpectedSeasons - seasonOffset);
+  const renderSignature = evaluationTableRenderSignature(row);
+  const reusableTable = evaluationPanel
+    && !evaluationPanel.hidden
+    && Boolean(evaluationSummaryBody?.firstElementChild)
+    && evaluationTableBody?.children.length === expectedSeasons;
+  if (evaluationTableRenderReuse.matches(renderSignature, reusableTable)) {
+    updateEvaluationFooterActions();
+    return;
+  }
   const playerName = formatCellValue(row, "name");
   const currentAge = Number(getValue(row, "age"));
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
@@ -7623,6 +7665,7 @@ function renderEvaluationTable(row) {
   evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach((button) => {
     button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
   });
+  evaluationTableRenderReuse.commit(renderSignature);
 }
 async function renderEvaluationPage() {
   syncEvaluationSearchClearButton();
@@ -8247,13 +8290,44 @@ async function copyPlayerId(id) {
     showToast("Could not copy player ID.");
   }
 }
+const playerDetailRenderReuse = createRenderReuseGuard();
+
+function playerDetailRenderSignature(row, playerId, attributeView) {
+  const key = String(playerId || "").trim();
+  return JSON.stringify([
+    key,
+    state.columns,
+    row,
+    attributeView,
+    Boolean(hasWalletOptIn()),
+    normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),
+    Boolean(state.walletPermissionAllowed),
+    Boolean(state.watchlistPlayerIds.has(key)),
+    playerNote(key),
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+    state.trainingAdjustments[key] || null,
+  ]);
+}
+
 function renderPlayerPage(playerId) {
   const row = rowByPlayerId(playerId);
 
   if (!row) {
-    playerDetail.innerHTML = `<div class="emptyState">Player ${escapeHtml(playerId || "")} was not found.</div>`;
+    playerDetailRenderReuse.invalidate();
+    window.__mflStaticUiRuntime?.showNotFound?.("Player");
     return;
   }
+  const normalizedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);
+  if (playerDetailRenderReuse.matches(
+    renderSignature,
+    playerDetail.firstElementChild?.classList.contains("playerHero"),
+  )) {
+    document.documentElement.dataset.initialEntityVerified = "player";
+    return;
+  }
+  document.documentElement.dataset.initialEntityVerified = "player";
 
   const playerName = formatCellValue(row, "name");
   const id = formatCellValue(row, "player_id");
@@ -8292,7 +8366,7 @@ function renderPlayerPage(playerId) {
     infoCardsData.push(["Rev Share", escapeHtml(revenueShare)]);
   }
   const infoCards = infoCardsData.map(([label, value]) => `<div${label === "Contract" ? " class=\"contractDetailCard\"" : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
-  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
     .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
@@ -8413,6 +8487,7 @@ function renderPlayerPage(playerId) {
       setPlayerNote(id, notesInput.value);
     });
   }
+  playerDetailRenderReuse.commit(renderSignature);
 }
 
 
