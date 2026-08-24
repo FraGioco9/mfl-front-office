@@ -13,21 +13,22 @@ for (const required of [
   "const currentBody = elements().body;",
   "const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);",
   "const body = preserveRenderedRows",
-  ": prepareLoadingSurface({ preservePager: activeRequestPreservesPager });",
+  ": prepareLoadingSurface();",
   "if (body && !preserveRenderedRows) primeLoadingRows();",
-  "if ((snapshot.dataLoading || requestActive()) && shouldPreserveRenderedRows()) return;",
-  "preservePager: activeRequestPreservesPager || pagerPreservedDuringLoading(),",
+  "hidePager();",
+  "if (shouldPreserveRenderedRows()) return;",
+  "show({ replaceExisting: true });",
 ]) {
   invariant(runtime.includes(required), `Background table loading stability is missing ${required}`);
 }
 
-const beginStart = runtime.indexOf("function beginRequest(routeScope, options = {}) {");
+const beginStart = runtime.indexOf("function beginRequest(routeScope) {");
 const beginEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginStart);
 const beginSource = runtime.slice(beginStart, beginEnd);
 invariant(
   beginStart >= 0
     && beginEnd > beginStart
-    && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface({ preservePager: activeRequestPreservesPager })")
+    && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")
     && beginSource.includes("if (body && !preserveRenderedRows) primeLoadingRows();"),
   "A post-route background request must decide whether to preserve rendered rows before preparing loading placeholders.",
 );
@@ -38,15 +39,16 @@ const syncSource = runtime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({"),
+    && syncSource.indexOf("hidePager();") < syncSource.indexOf("shouldPreserveRenderedRows()")
+    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({ replaceExisting: true })"),
   "Global loading-state updates must not replace a settled table unless a navigation is actually pending.",
 );
 
 invariant(
-  runtime.includes("function pagerPreservedDuringLoading(body = elements().body) {")
-    && runtime.includes("activeRequestPreservesPager = options.preservePager === true;")
-    && runtime.includes("preservePager: activeRequestPreservesPager || pagerPreservedDuringLoading(),"),
-  "View-transition loading may preserve pager chrome without changing the existing row-preservation contract.",
+  runtime.includes("function hidePager() {")
+    && runtime.includes("if (page) page.hidden = true;")
+    && !runtime.includes("preservePager"),
+  "Every active Table load must hide pager chrome even when settled rows remain rendered.",
 );
 
-console.log("Settled table rows remain visible during background loading, while first-load and navigation loading placeholders retain canonical ownership and view transitions keep pager chrome stable.");
+console.log("Settled table rows remain visible during background loading, while every active Table load hides pager chrome until the request settles.");

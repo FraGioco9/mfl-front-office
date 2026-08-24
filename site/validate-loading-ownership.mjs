@@ -191,6 +191,14 @@ invariant(
   "Global Loading toast/footer-lock presentation must stay removed from startup and loading CSS.",
 );
 invariant(
+  tableLoading.includes("function hidePager() {")
+    && tableLoading.includes("if (page) page.hidden = true;")
+    && tableLoading.includes("if (snapshot.dataLoading || requestActive()) {")
+    && tableLoading.includes("hidePager();")
+    && !tableLoading.includes("preservePager"),
+  "Table loading must hide nav.pager for the full active request/loading window, including cached-row preservation."
+);
+invariant(
   tableLoading.includes("controller.subscribe(sync)")
     && !tableLoading.includes("new MutationObserver")
     && !tableLoading.includes('document.createElement("style")'),
