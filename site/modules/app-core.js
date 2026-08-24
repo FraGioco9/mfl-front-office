@@ -3147,10 +3147,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
-  const previousTablePage = tablePageKey();
-  if (previousTablePage) {
-    state.tablePageStates[previousTablePage] = currentTablePageState();
-    saveTableState();
+  if (options.__mflPreviousTableStateSaved !== true) {
+    const previousTablePage = tablePageKey();
+    if (previousTablePage) {
+      state.tablePageStates[previousTablePage] = currentTablePageState();
+      saveTableState();
+    }
   }
 
 
@@ -8823,12 +8825,20 @@ function buildHeader() {
     if (columnClass) {
       cell.classList.add(...columnClass.split(" "));
     }
-    const isSorted = state.sortKey === column;
+    const clubPositionSort = state.currentPage === "club" && column === "positions";
+    const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
     label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
     cell.appendChild(label);
 
-    if (sortableColumns.has(column)) {
+    if (clubPositionSort) {
+      const arrow = document.createElement("span");
+      arrow.className = "sortArrow asc";
+      arrow.setAttribute("aria-hidden", "true");
+      cell.appendChild(arrow);
+    }
+
+    if (state.currentPage !== "club" && sortableColumns.has(column)) {
       cell.classList.add("sortable");
 
       if (isSorted) {
@@ -9277,8 +9287,6 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
   if (pageName === "club") {
     state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
     state.page = 1;
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
     state.selectedPlayerIds = new Set();
     state.pendingTableControlRestore = null;
     return;
@@ -12137,8 +12145,6 @@ async function startApp() {
     state.view = view;
     state.page = 1;
     state.pageSize = Number(payload.pageSize || state.pageSize);
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
     if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
     if (typeof updateViewButtons === "function") updateViewButtons();
     if (typeof buildHeader === "function") buildHeader();
@@ -12353,13 +12359,8 @@ async function startApp() {
           clubId: activeClubId,
           path: route,
           replace: !updateHistory,
-          sortKey: "positions",
-          sortDirection: "asc",
         });
         if (!transition) return;
-      } else {
-        state.sortKey = "positions";
-        state.sortDirection = "asc";
       }
       setClubSwitching(true);
 
@@ -12391,8 +12392,6 @@ async function startApp() {
       settingsPage.hidden = true;
       changelogPage.hidden = true;
       state.page = 1;
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
       state.pageSize = Math.max(100, clubRows().length || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
       if (typeof filterRules !== "undefined" && filterRules) filterRules.replaceChildren();
@@ -12857,8 +12856,6 @@ async function startApp() {
     } else if (clubTarget) {
       state.view = clubTarget.view;
       state.page = 1;
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
     }
 
     if (pageName === "agents") {
@@ -13149,10 +13146,12 @@ async function startApp() {
     }
 
     const previousPage = state.currentPage;
-    const previousTablePage = tablePageKey();
-    if (previousTablePage) {
-      state.tablePageStates[previousTablePage] = currentTablePageState();
-      saveTableState();
+    if (options.__mflPreviousTableStateSaved !== true) {
+      const previousTablePage = tablePageKey();
+      if (previousTablePage) {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
     }
 
     const route = prepareIncrementalRoute(pageName, {
@@ -13744,6 +13743,7 @@ async function startApp() {
   const routeRuntimeSetPage = async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    let previousTableStateSaved = false;
 
     if (!runtimeReady) {
       const loadCommittedRoute = async () => {
@@ -13768,6 +13768,7 @@ async function startApp() {
           const committedOptions = {
             ...incomingOptions,
             skipNavigationTransition: true,
+            ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
           };
           if (setPage !== ownerBeforeRuntime) {
             return setPage.call(this, pageName, updateHash, {
@@ -13784,6 +13785,13 @@ async function startApp() {
       if (incomingOptions.skipNavigationTransition === true) {
         return loadCommittedRoute();
       }
+
+      const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
+      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
+      previousTableStateSaved = true;
 
       const runTransition = Reflect.get(window, "__mflRunPageTransition");
       if (typeof runTransition !== "function") {

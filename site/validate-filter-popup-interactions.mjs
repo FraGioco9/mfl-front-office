@@ -156,7 +156,7 @@ invariant(
   "Canonical Club filter-free rendering must emit the count-only zero summary directly.",
 );
 for (const required of [
-  "return clubSortArtifacts;",
+  "return watchlistArtifacts;",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }
