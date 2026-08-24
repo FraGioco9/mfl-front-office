@@ -21,11 +21,12 @@ jobs:
         with:
           node-version: 22
       - name: Apply canonical route dependency migration
-        run: node site/migrate-canonical-route-dependency-plan.mjs
+        run: node site/run-canonical-route-dependency-migration.mjs
       - name: Remove temporary migration scaffolding
         shell: bash
         run: |
           rm -f site/migrate-canonical-route-dependency-plan.mjs
+          rm -f site/run-canonical-route-dependency-migration.mjs
           rm -f .github/workflows/route-dependency-plan-migration.yml
       - name: Persist canonical route dependency plan
         shell: bash
