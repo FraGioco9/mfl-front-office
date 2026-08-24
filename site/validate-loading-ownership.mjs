@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading] = await Promise.all([
+const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading, appCoreSource] = await Promise.all([
   read("./styles.css"),
   read("./loading.css"),
   read("./bootstrap-core.js"),
@@ -13,6 +13,7 @@ const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, t
   read("./route-core-loader-runtime.js"),
   read("./loading-toast-runtime.js"),
   read("./table-loading-runtime.js"),
+  read("./modules/app-core.js"),
 ]);
 
 invariant(
