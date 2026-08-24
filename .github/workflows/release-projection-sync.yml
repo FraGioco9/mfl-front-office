@@ -12,9 +12,6 @@ on:
       - site/bootstrap-core.js
       - site/index.html
       - .github/workflows/release-projection-sync.yml
-  push:
-    branches:
-      - refactor/shared-render-reuse-contract
   workflow_dispatch:
 
 permissions:
@@ -38,48 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate shared render reuse
-        continue-on-error: true
-        run: node site/migrate-shared-render-reuse.mjs
-
-      - name: Remove obsolete Player splitter rewrite
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("site/modules/app-core-player-chunk.js")
-          source = path.read_text()
-          label = '    "Player not-found route surface",\n  );\n'
-          start_marker = '  playerRenderer = replaceRequired(\n    playerRenderer,\n    `  if (!row) {'
-          start = source.find(start_marker)
-          if start < 0:
-              if '"Player not-found route surface"' not in source:
-                  print("Player splitter rewrite is already removed.")
-                  raise SystemExit(0)
-              raise SystemExit("Could not locate the Player splitter rewrite start.")
-          end = source.find(label, start)
-          if end < 0:
-              raise SystemExit("Could not locate the Player splitter rewrite end.")
-          end += len(label)
-          path.write_text(source[:start] + source[end:])
-          print("Removed obsolete Player not-found splitter rewrite.")
-          PY
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated source
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/modules/app-core.js site/modules/app-core-player-chunk.js site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Render reuse source and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Migrate shared render reuse source"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
