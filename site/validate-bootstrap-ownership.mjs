@@ -259,7 +259,7 @@ includes(
   "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
   "All legacy route reasons must publish the canonical route-loading reason.",
 );
-for (const name of ["setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"]) {
+for (const name of ["setPage", "setView", "switchWatchlist", "ensureProgressionData"]) {
   includes(
     bootstrapCore,
     `"${name}"`,
