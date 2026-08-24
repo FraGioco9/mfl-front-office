@@ -290,7 +290,7 @@ export function splitApplicationCoreRuntime(source) {
 
   const evaluationRouteOnly = extractRequiredFunctions(
     core,
-    ["resetInvalidEvaluationLinkToPlainEvaluation"],
+    ["recoverInvalidEvaluationLink"],
     "Evaluation dependency-closed helper",
   );
   core = evaluationRouteOnly.core;
