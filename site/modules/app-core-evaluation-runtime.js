@@ -908,7 +908,23 @@ function handleEvaluationSearchInput() {
   })();
 }
 
+function detachEvaluationSnapshotForEdit() {
+  const savedEvaluationActive = Boolean(state.evaluationSavedId || evaluationSavedIdFromUrl());
+  const sharedEvaluationActive = Boolean(state.evaluationShareId || evaluationShareIdFromUrl());
+  if (!savedEvaluationActive && !sharedEvaluationActive) {
+    return false;
+  }
+
+  const playerId = String(state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "").trim();
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  replaceEvaluationUrlWithBasicPlayer(playerId);
+  updateEvaluationFooterActions();
+  return true;
+}
+
 function queueEvaluationSettingsSave() {
+  detachEvaluationSnapshotForEdit();
   saveEvaluationSettingsLocally();
   queueCloudTableStateSave();
 }

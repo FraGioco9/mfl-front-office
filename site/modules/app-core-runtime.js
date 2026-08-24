@@ -1145,6 +1145,8 @@ function replaceEvaluationUrlWithBasicPlayer(playerId = state.evaluationPlayerId
   }
 }
 
+
+
 function resetEvaluationToDefaultForPlayer(playerId = state.evaluationPlayerId) {
   const id = String(playerId || "").trim();
 
@@ -5160,6 +5162,7 @@ function adjustEvaluationOverall(playerId, season, delta) {
     return;
   }
 
+  detachEvaluationSnapshotForEdit();
   const expectedSeasons = expectedEvaluationSeasons(row);
   const values = evaluationOverallValues(row, expectedSeasons);
   const index = season - 1;
@@ -5367,6 +5370,7 @@ function renderEvaluationTable(row) {
       window.getSelection()?.removeAllRanges();
     });
     select.addEventListener("change", () => {
+      detachEvaluationSnapshotForEdit();
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
       renderEvaluationTable(row);
     });
