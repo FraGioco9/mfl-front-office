@@ -134,8 +134,11 @@ invariant(
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
 invariant(
-  bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);'),
-  "The shared interaction-busy bridge must preserve explicit loading reasons from cache-aware request owners.",
+  bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {')
+    && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
+    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
+    && bootstrapCore.includes("return run(callback, normalizedReason);"),
+  "The shared interaction-busy bridge must preserve explicit reasons while reusing an active canonical route-loading lifecycle.",
 );
 
 for (const [name, source] of [
