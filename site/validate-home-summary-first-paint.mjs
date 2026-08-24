@@ -45,7 +45,7 @@ excludes(buildNormalizer, "normalizeGlobalSearchOpenLifecycle", "Build normaliza
 excludes(buildNormalizer, "globalSearchArtifacts", "The obsolete Global Search build artifact must stay removed.");
 includes(
   buildNormalizer,
-  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);",
+  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);",
   "Global Search normalization must consume stats-navigation artifacts directly after Home lifecycle becomes source-owned.",
 );
 

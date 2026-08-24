@@ -17,8 +17,10 @@ invariant(
     && !buildNormalizer.includes("globalSearchArtifacts")
     && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
     && !buildNormalizer.includes("homeSummaryArtifacts")
-    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);"),
-  "Canonical application-core builds must consume source-owned Global Search behavior before later readiness transforms.",
+    && !buildNormalizer.includes("normalizeStatsNavigationLifecycle")
+    && !buildNormalizer.includes("statsNavigationArtifacts")
+    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);"),
+  "Canonical application-core builds must consume source-owned Global Search and Stats navigation behavior before later readiness transforms.",
 );
 
 invariant(
