@@ -58,7 +58,6 @@ invariant(
 );
 for (const alias of [
   "setPage",
-  "setView",
   "switchWatchlist",
   "route-runtime",
   "ensureProgressionData",
@@ -123,6 +122,10 @@ invariant(
 invariant(
   !bootstrapCore.includes('"requestIncrementalRoute",'),
   "Incremental requests must not be blanket-wrapped outside their cache-aware request owner.",
+);
+invariant(
+  !bootstrapCore.includes('"setView",'),
+  "View transitions must not be blanket-wrapped outside their cache-aware transition owners.",
 );
 invariant(
   bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);'),

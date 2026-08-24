@@ -133,7 +133,6 @@
     const ROUTE_LOADING_ALIASES = new Set([
       "startup",
       "setPage",
-      "setView",
       "switchWatchlist",
       "route-runtime",
       "ensureProgressionData",
@@ -314,7 +313,6 @@
 
       [
         "setPage",
-        "setView",
         "switchWatchlist",
         "ensureProgressionData",
       ].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));
