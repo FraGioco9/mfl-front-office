@@ -161,7 +161,7 @@ function drawSummaryStrip(context, metadata) {
     context,
     x + columnWidths[0] + columnWidths[1] + columnWidths[2],
     columnWidths[3],
-    "Present Value",
+    "Value",
     formatEvaluationPreviewCurrency(metadata.presentValue) || "-",
     { preferredSize: 44 },
   );

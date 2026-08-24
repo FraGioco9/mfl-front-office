@@ -86,6 +86,7 @@ function validatePng(image, label) {
   }
 }
 
+const indexHtml = readText("index.html");
 const previewApi = readText("api/evaluation-preview.js");
 const previewImageApi = readText("api/evaluation-preview-image.js");
 const previewCard = readText("api/_evaluation-preview-card.js");
@@ -139,8 +140,8 @@ assert(
 );
 assert(
   previewOwner.includes("evaluationPresentValueTotalFromSharePayload(payload, {")
-    && previewOwner.includes("Present Value"),
-  "Shared preview metadata must expose the same Present Value represented by the Evaluation summary table.",
+    && previewOwner.includes("Value"),
+  "Shared preview metadata must expose the same Value represented by the Evaluation summary table.",
 );
 assert(shareApi.includes("readActiveEvaluationShare"), "Evaluation share hydration must reuse the active-share lookup owner.");
 assert(
@@ -163,6 +164,10 @@ for (const requiredMeta of [
 ]) {
   assert(previewApi.includes(requiredMeta), `Evaluation preview HTML must include ${requiredMeta}.`);
 }
+assert((indexHtml.match(/<th>Value<\/th>/g) || []).length === 2, "Both Evaluation tables must label the discounted result as Value.");
+assert(!indexHtml.includes("<th>Present Value</th>"), "Evaluation tables must not expose the old Present Value label.");
+assert(previewOwner.includes("`Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must label the metric as Value.");
+assert(!previewOwner.includes("`Present Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must not expose the old Present Value label.");
 assert(previewApi.includes("htmlEscape"), "Evaluation preview metadata must be HTML-escaped before injection.");
 assert(previewApi.includes("GENERIC_PREVIEW"), "Plain, invalid, or unavailable Evaluations must use generic metadata.");
 assert(previewApi.includes("if (shareId && supabaseConfig())"), "Only shared Evaluation URLs may query Supabase for preview metadata.");
@@ -207,11 +212,11 @@ assert(!previewCard.includes("24 HOUR PUBLIC SHARE"), "Dynamic cards must not sh
 assert(previewCard.includes('"Shared Evaluation"'), "Dynamic cards may retain one concise shared-Evaluation context label.");
 assert(previewCard.includes("metadata.playerName"), "Dynamic Evaluation preview card must render the current public player name.");
 assert(previewCard.includes("Player #${"), "Dynamic Evaluation preview card must retain the player identifier as secondary context.");
-for (const field of ["Overall", "Position", "Age", "Present Value"]) {
+for (const field of ["Overall", "Position", "Age", "Value"]) {
   assert(previewCard.includes(`"${field}"`), `Dynamic Evaluation preview card must render ${field}.`);
 }
 assert(!previewCard.includes('"TOTAL VALUE"'), "Dynamic Evaluation preview card must not label the summary metric as Total Value.");
-assert(previewCard.includes("formatEvaluationPreviewCurrency"), "Dynamic Evaluation preview card must use the Evaluation currency format for Present Value.");
+assert(previewCard.includes("formatEvaluationPreviewCurrency"), "Dynamic Evaluation preview card must use the Evaluation currency format for Value.");
 
 for (const [cssToken, rendererToken] of [
   ["--page-bg: #101418", 'pageBg: "#101418"'],

@@ -117,7 +117,7 @@ function evaluationSharePreviewFromContext(row, publicPlayer = {}, ratioRows = [
   if (overall !== null) details.push(`Overall ${overall}`);
   if (position) details.push(`Position ${position}`);
   if (age !== null) details.push(`Age ${age}`);
-  if (presentValue !== null) details.push(`Present Value ${formatEvaluationPreviewCurrency(presentValue)}`);
+  if (presentValue !== null) details.push(`Value ${formatEvaluationPreviewCurrency(presentValue)}`);
 
   return {
     title: `${subject} Evaluation - MFL Front Office`,
