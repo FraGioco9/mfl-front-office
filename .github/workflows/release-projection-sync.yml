@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/migrate-pager-view-transition-stability.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -35,21 +36,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Migrate pager view-transition loading ownership
+        run: node site/migrate-pager-view-transition-stability.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit normalized projections
+      - name: Commit migrated source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/loading.css site/table-loading-runtime.js site/modules/app-core.js site/validate-loading-ownership.mjs site/validate-table-loading-state.mjs site/validate-table-background-loading-stability.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Release projections are current."
+            echo "Pager view-transition ownership and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Keep pager stable across table view loading"
           git push origin "HEAD:$HEAD_BRANCH"
