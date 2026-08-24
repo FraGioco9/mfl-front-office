@@ -1,0 +1,42 @@
+name: Evaluation Load validator ownership migration
+
+on:
+  push:
+    branches:
+      - refactor/source-owned-evaluation-load
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/source-owned-evaluation-load
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update Evaluation Load ownership validators
+        run: node site/migrate-evaluation-load-validator-ownership.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-evaluation-load-validator-ownership.mjs
+          rm -f .github/workflows/evaluation-load-validator-ownership-migration.yml
+      - name: Persist validator ownership migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Evaluation Load validators are already source-owned."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Evaluation Load ownership validators"
+          git push origin HEAD:refactor/source-owned-evaluation-load
