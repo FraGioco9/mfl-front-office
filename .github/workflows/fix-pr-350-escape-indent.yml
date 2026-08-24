@@ -1,0 +1,59 @@
+name: Fix PR 350 Escape indentation
+
+on:
+  push:
+    branches:
+      - fix/mfl-usd-edit-cancel
+    paths:
+      - .github/workflows/fix-pr-350-escape-indent.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mfl-usd-edit-cancel
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fix canonical Escape block and regenerate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('site/modules/app-core.js')
+          source = path.read_text()
+          old = '''
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancelEvaluationMflPerUsd();
+          }
+          });'''
+          new = '''
+            if (event.key === "Escape") {
+              event.preventDefault();
+              cancelEvaluationMflPerUsd();
+            }
+          });'''
+          if old not in source:
+              raise SystemExit('Malformed Escape block not found')
+          path.write_text(source.replace(old, new, 1))
+          PY
+
+          (cd site && npm run build:core)
+          rm .github/workflows/fix-pr-350-escape-indent.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix MFL/USD Escape handler indentation"
+          git push origin HEAD:fix/mfl-usd-edit-cancel
