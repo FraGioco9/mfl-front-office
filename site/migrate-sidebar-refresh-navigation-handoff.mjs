@@ -30,9 +30,9 @@ bootstrap = replaceOnce(
 
 bootstrap = replaceOnce(
   bootstrap,
-  `    function end(token) {\n      if (token && activeTokens.delete(token)) applyState();\n    }`,
-  `    function end(token) {\n      if (!token || !activeTokens.has(token)) return;\n      if (blockedInteractionGestureActive()) {\n        deferredEndTokens.add(token);\n        return;\n      }\n      if (activeTokens.delete(token)) applyState();\n    }`,
-  "interaction token release",
+  `    function end(token) {\n      if (token && activeTokens.delete(token)) applyState();\n    }\n\n    async function run(callback, reason = "loading") {`,
+  `    function end(token) {\n      if (!token || !activeTokens.has(token)) return;\n      if (blockedInteractionGestureActive()) {\n        deferredEndTokens.add(token);\n        return;\n      }\n      if (activeTokens.delete(token)) applyState();\n    }\n\n    async function run(callback, reason = "loading") {`,
+  "loading interaction token release",
 );
 
 bootstrap = replaceOnce(
