@@ -17,6 +17,7 @@ const clubCore = String(artifacts.routeChunks?.club || "");
 invariant(sharedCore, "The shared application core must exist.");
 invariant(clubCore, "The Club route chunk must exist.");
 
+// Keep cache ownership singular: Club route code may consume shared reuse, but must not recreate a private payload snapshot layer.
 for (const retiredOwner of [
   "clubViewRenderCache",
   "clubViewRenderCacheKey(",
