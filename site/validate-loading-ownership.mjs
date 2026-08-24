@@ -86,6 +86,31 @@ invariant(
   "SPA route loading must remain active through the final route paint.",
 );
 invariant(
+  bootstrapCore.includes('"pointerdown", "pointerup", "pointercancel"')
+    && bootstrapCore.includes('"mousedown", "mouseup", "touchstart", "touchend", "touchcancel"'),
+  "Busy interaction ownership must observe both ends of pointer, mouse, and touch gestures.",
+);
+invariant(
+  bootstrapCore.includes("if (eventTargetsBusyScrollSurface(event)) {\n        beginBlockedInteractionGesture(event);\n        return;\n      }"),
+  "Busy interaction ownership must remember gestures that start on permitted scroll surfaces without disabling their scroll gesture.",
+);
+invariant(
+  bootstrapCore.includes("if (blockedInteractionGestureActive()) {\n        deferredEndTokens.add(token);\n        return;\n      }"),
+  "A loading token that settles during a blocked gesture must remain active through its terminal click.",
+);
+invariant(
+  bootstrapCore.includes("let blockedGestureReleasePending = false;")
+    && bootstrapCore.includes("function scheduleBlockedInteractionGestureRelease() {")
+    && bootstrapCore.includes("blockedGestureReleaseTimer = window.setTimeout(() => {")
+    && bootstrapCore.includes("blockedGestureReleasePending = false;\n        flushDeferredInteractionEnds();"),
+  "Gesture ownership must settle on the next task so the browser's terminal click cannot cross from loading ownership into sidebar navigation.",
+);
+invariant(
+  bootstrapCore.includes('window.addEventListener("blur", clearBlockedInteractionGestures, true);')
+    && bootstrapCore.includes('window.removeEventListener("blur", clearBlockedInteractionGestures, true);'),
+  "Blocked gesture ownership must clear safely if the window loses focus so loading cannot remain stuck.",
+);
+invariant(
   !bootstrapCore.includes('document.createElement("style")'),
   "bootstrap-core.js must not inject loading CSS at runtime.",
 );
