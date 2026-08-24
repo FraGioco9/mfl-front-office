@@ -1,4 +1,4 @@
-// Temporary one-shot validator migration; remove before merge.
+// Temporary one-shot validator migration; remove before merge after it commits the handoff updates.
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
