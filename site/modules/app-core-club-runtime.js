@@ -17,8 +17,6 @@
   let activeClubId = "";
   let activeClubTitle = null;
   let openingClub = false;
-  const clubViewRenderCache = new Map();
-
   const clubTitleIdentityPromises = new Map();
 
   function normalizedClubTitleIdentity(value, fallbackClubId = "") {
@@ -142,74 +140,6 @@
   }
 
 
-  function clubViewRenderCacheKey(clubId = activeClubId, view = state.view) {
-    return String(clubId || "") + ":" + String(view || "attributes");
-  }
-
-  function cloneClubRows(rows) {
-    return rows.map((row) => Array.isArray(row)
-      ? [...row]
-      : row && typeof row === "object"
-        ? { ...row }
-        : row);
-  }
-
-  function captureClubView(view = state.view) {
-    if (!activeClubId || state.currentPage !== CLUB_PAGE || !Array.isArray(state.rows)) return;
-    const route = (typeof incrementalRouteTarget === "function"
-      ? incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })
-      : null) || {
-      pageName: CLUB_PAGE,
-      scope: CLUB_PAGE,
-      view,
-      clubId: activeClubId,
-      access: "public",
-    };
-    clubViewRenderCache.set(clubViewRenderCacheKey(activeClubId, view), {
-      route: { ...route },
-      payload: {
-        columns: Array.isArray(state.columns) ? [...state.columns] : [],
-        rows: cloneClubRows(state.rows),
-        page: 1,
-        pageSize: state.pageSize,
-        totalRows: state.incrementalTotalRows,
-        sourceRows: state.incrementalSourceRows,
-        generatedAt: state.manifest?.generated_at || null,
-      },
-    });
-  }
-
-  function restoreCachedClubView(view) {
-    if (typeof cachedClubViewPayload !== "function"
-      || typeof applyIncrementalPayload !== "function") return false;
-    const route = (typeof incrementalRouteTarget === "function"
-      ? incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })
-      : null) || {
-      pageName: CLUB_PAGE,
-      scope: CLUB_PAGE,
-      view,
-      clubId: activeClubId,
-      access: "public",
-    };
-    const snapshot = clubViewRenderCache.get(clubViewRenderCacheKey(activeClubId, view));
-    const payload = snapshot?.payload || cachedClubViewPayload(route);
-    if (!payload) return false;
-    applyIncrementalPayload(snapshot?.route || route, {
-      ...payload,
-      columns: Array.isArray(payload.columns) ? [...payload.columns] : [],
-      rows: Array.isArray(payload.rows) ? cloneClubRows(payload.rows) : [],
-    });
-    state.currentPage = CLUB_PAGE;
-    state.view = view;
-    state.page = 1;
-    state.pageSize = Number(payload.pageSize || state.pageSize);
-    if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
-    if (typeof updateViewButtons === "function") updateViewButtons();
-    if (typeof buildHeader === "function") buildHeader();
-    if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
-    applyClubPresentation();
-    return true;
-  }
   const initialClubRoute = clubRoute();
 
   function normalizedPath() {
@@ -414,7 +344,6 @@
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
-      captureClubView(nextView);
     } finally {
       openingClub = false;
       await finishClubSwitch();
