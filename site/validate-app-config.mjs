@@ -111,14 +111,37 @@ invariant(
   String(bootstrapRelease) === String(release.version),
   "bootstrap first-paint release projection must resolve from the canonical app configuration.",
 );
-const bootstrapViewBySlug = plain(evaluateInitializer(bootstrapSource, "TABLE_VIEW_BY_SLUG"));
-same(bootstrapViewBySlug, VIEW_BY_SLUG, "bootstrap first-paint view slug projection");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_BASE_COLUMNS"), TABLE_BASE_COLUMNS, "bootstrap base columns");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_STAT_COLUMNS"), TABLE_STAT_COLUMNS, "bootstrap stat columns");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_CONTRACT_COLUMNS"), TABLE_CONTRACT_COLUMNS, "bootstrap contract columns");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_AGENT_PAGES"), TABLE_JOINED_AGENCY_PAGES, "bootstrap joined-agency pages");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_CLASSES"), TABLE_COLUMN_CLASSES, "bootstrap column classes");
-same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_LABELS"), TABLE_COLUMN_LABELS, "bootstrap column labels");
+invariant(
+  bootstrapSource.includes('const APP_CONFIG = Reflect.get(window, "__mflAppConfig");')
+    && bootstrapSource.includes('throw new Error("Bootstrap requires canonical pre-bootstrap app configuration.");'),
+  "Bootstrap must require the parser-blocking canonical app configuration before first-paint hydration.",
+);
+for (const canonicalAlias of [
+  "const TABLE_VIEW_BY_SLUG = APP_CONFIG.routes.viewBySlug;",
+  "const FIRST_PAINT_BASE_COLUMNS = APP_CONFIG.table.baseColumns;",
+  "const FIRST_PAINT_STAT_COLUMNS = APP_CONFIG.table.statColumns;",
+  "const FIRST_PAINT_CONTRACT_COLUMNS = APP_CONFIG.table.contractColumns;",
+  "const FIRST_PAINT_AGENT_PAGES = new Set(APP_CONFIG.table.joinedAgencyPages);",
+  "const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);",
+  "const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;",
+  "const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;",
+  "return APP_CONFIG.routes.tableViews;",
+]) {
+  invariant(bootstrapSource.includes(canonicalAlias), `Bootstrap must consume canonical config through: ${canonicalAlias}`);
+}
+for (const retiredOwner of [
+  "const TABLE_VIEW_BY_SLUG = Object.freeze(",
+  "const FIRST_PAINT_BASE_COLUMNS = Object.freeze(",
+  "const FIRST_PAINT_STAT_COLUMNS = Object.freeze(",
+  "const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze(",
+  "const FIRST_PAINT_AGENT_PAGES = new Set([",
+  "const FIRST_PAINT_SORTABLE_COLUMNS = new Set([",
+  "const FIRST_PAINT_COLUMN_CLASSES = Object.freeze(",
+  "const FIRST_PAINT_COLUMN_LABELS = Object.freeze(",
+  'Reflect.get(window, "__mflTableViewConfig")',
+]) {
+  invariant(!bootstrapSource.includes(retiredOwner), `Bootstrap must not restore duplicate first-paint config owner: ${retiredOwner}`);
+}
 
 same(evaluateInitializer(staticUiSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "static UI view slug projection");
 invariant(
