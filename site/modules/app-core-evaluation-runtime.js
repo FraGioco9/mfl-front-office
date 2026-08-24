@@ -1254,10 +1254,10 @@ evaluationMflUsdInput.addEventListener("keydown", (event) => {
     commitEvaluationMflPerUsd();
   }
 
-if (event.key === "Escape") {
-  event.preventDefault();
-  cancelEvaluationMflPerUsd();
-}
+  if (event.key === "Escape") {
+    event.preventDefault();
+    cancelEvaluationMflPerUsd();
+  }
 });
 
 setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);
