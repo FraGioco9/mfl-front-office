@@ -28,8 +28,7 @@ await migrate("./modules/app-core.js", (source) => {
     const end = next.indexOf(endMarker, start);
     if (end < 0) throw new Error("Could not find the end of the duplicate Club render-cache block.");
     next = next.slice(0, start) + next.slice(end);
-  } else if (next.includes("clubViewRenderCache")
-      || next.includes("restoreCachedClubView(")) {
+  } else if (next.includes("clubViewRenderCache")) {
     throw new Error("Club render-cache ownership is partially migrated.");
   }
 
@@ -38,8 +37,15 @@ await migrate("./modules/app-core.js", (source) => {
     next = next.replace(/^\s*captureClubView\([^\n;]*\);\n/gm, "");
     console.log(`Removed ${captureCalls.length} dead Club snapshot capture call(s).`);
   }
-  if (next.includes("captureClubView(") || next.includes("cloneClubRows(")) {
-    throw new Error("A Club snapshot-cache reference remains after migration.");
+  const restoreShortcuts = next.match(/^\s*if \(restoreCachedClubView\([^\n;]*\)\) return;\n/gm) || [];
+  if (restoreShortcuts.length) {
+    next = next.replace(/^\s*if \(restoreCachedClubView\([^\n;]*\)\) return;\n/gm, "");
+    console.log(`Removed ${restoreShortcuts.length} dead Club restore shortcut(s).`);
+  }
+  for (const retiredSymbol of ["captureClubView(", "cloneClubRows(", "restoreCachedClubView("]) {
+    if (next.includes(retiredSymbol)) {
+      throw new Error(`A Club snapshot-cache reference remains after migration: ${retiredSymbol}`);
+    }
   }
   return next;
 });
