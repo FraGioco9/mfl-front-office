@@ -3,6 +3,7 @@ import vm from "node:vm";
 
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
+// Keep render signatures limited to measured heavy DOM rebuilds; small routes should not acquire cache state for trivial writes.
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
