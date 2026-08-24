@@ -40,10 +40,13 @@ routeChunks = replaceRequired(
   constantValue("VERIFIED_CLUB_TITLE_READY_CALLBACK"),
   "Club verified title callback structural ownership",
 );
+const settlementTail = "\n\n      state.currentPage = CLUB_PAGE;";
+const blockingSettlement = constantValue("BLOCKING_TITLE_SETTLEMENT").replace(settlementTail, "");
+const rosterSettlement = constantValue("ROSTER_OWNED_TITLE_SETTLEMENT").replace(settlementTail, "");
 routeChunks = replaceRequired(
   routeChunks,
-  constantValue("BLOCKING_TITLE_SETTLEMENT"),
-  constantValue("ROSTER_OWNED_TITLE_SETTLEMENT"),
+  blockingSettlement,
+  rosterSettlement,
   "Club roster-owned title settlement structural ownership",
 );
 const finalRenderStrip = `  club = replaceRequired(
