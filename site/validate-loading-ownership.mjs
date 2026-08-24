@@ -128,6 +128,11 @@ invariant(
   "View transitions must not be blanket-wrapped outside their cache-aware transition owners.",
 );
 invariant(
+  appCoreSource.includes('window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage')
+    && appCoreSource.includes('return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'),
+  "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
+);
+invariant(
   bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);'),
   "The shared interaction-busy bridge must preserve explicit loading reasons from cache-aware request owners.",
 );

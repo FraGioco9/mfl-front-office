@@ -13350,7 +13350,7 @@ async function startApp() {
       return loadAndRender();
     }
 
-    return withInteractionBusy(loadAndRender);
+    return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);
   };
 })();
 

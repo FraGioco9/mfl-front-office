@@ -652,7 +652,11 @@ export function splitApplicationCoreRuntime(source) {
           dataPayload = await requestIncrementalRoute(dataRoute, 1);
         }
       };
-      await withInteractionBusy(loadClubData);
+      if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {
+        await loadClubData();
+      } else {
+        await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);
+      }
       if (!dataPayload) return;`,
     `      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
         || clubTitleIdentityFromSearchIndex(activeClubId);

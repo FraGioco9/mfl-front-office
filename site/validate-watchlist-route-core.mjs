@@ -150,6 +150,11 @@ includes(
   "Uncached Club views must enter canonical route loading at the source-owned view boundary.",
 );
 includes(
+  coreSource,
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "The generated Club loader facade must preserve canonical route-loading ownership for uncached view data.",
+);
+includes(
   bootstrapCore,
   'Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });',
   "Uniform Loading Workflow wrappers must expose their delegate so route runtimes can recognize an already-wrapped owner.",
