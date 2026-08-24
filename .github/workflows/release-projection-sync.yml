@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/migrate-retire-global-operation-busy.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -35,21 +36,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Retire global operation busy blocker
+        run: node site/migrate-retire-global-operation-busy.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit normalized projections
+      - name: Commit migrated source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -A -- site/bootstrap-core.js site/loading.css site/controls.css site/evaluation-discount-rate-ui-runtime.js site/validate-loading-ownership.mjs site/validate-bootstrap-ownership.mjs site/validate-control-style-ownership.mjs site/validate-stats-animation-owner.mjs site/validate-modal-entrance-lifecycle.mjs site/LOADING_CONTRACT.md site/bootstrap.js site/index.html
           if git diff --cached --quiet; then
-            echo "Release projections are current."
+            echo "Global operation busy cleanup and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Retire global operation busy blocker"
           git push origin "HEAD:$HEAD_BRANCH"
