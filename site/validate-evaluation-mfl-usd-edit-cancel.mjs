@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+// Keep MFL/USD edits draft-only until the user explicitly confirms them.
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
