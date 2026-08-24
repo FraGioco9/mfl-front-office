@@ -56,7 +56,7 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
 
   const renderer = extractRequiredSection(
     core,
-    "function renderPlayerPage(playerId) {",
+    "const playerDetailRenderReuse = createRenderReuseGuard();",
     "function showModal(modal) {",
     "Player page renderer owner",
   );
