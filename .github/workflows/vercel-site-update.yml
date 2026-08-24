@@ -77,7 +77,7 @@ jobs:
           rm -rf site/api/data-files
           mkdir -p site/api/data-files
           mv mfl_database.db site/api/data-files/mfl_database.db
-          python prepare_runtime_database.py site/api/data-files/mfl_database.db
+          python prepare_runtime_database.py site/api/data-files/mfl_database.db --validate-only
 
           test -s site/api/data-files/mfl_database.db
           test -f site/api/_database.js
