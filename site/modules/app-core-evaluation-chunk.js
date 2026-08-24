@@ -7,6 +7,7 @@ import {
   normalizeApplicationCoreSource,
   replaceRequired,
 } from "./app-core-splitter-utils.js";
+import { normalizeEvaluationSnapshotEditRoute } from "./app-core-evaluation-snapshot-edit-route.js";
 
 const ADVANCED_SETTINGS_BACKDROP_BINDING = "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);";
 const EVALUATION_ROUTE_INITIALIZATION = `renderEvaluationMflPerUsdControl(false);
@@ -20,7 +21,9 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
     throw new Error("Evaluation route chunk must exist before Evaluation ownership splitting.");
   }
 
-  let core = normalizeApplicationCoreSource(input.core, "Evaluation ownership");
+  let core = normalizeEvaluationSnapshotEditRoute(
+    normalizeApplicationCoreSource(input.core, "Evaluation ownership"),
+  );
   const evaluationParts = [existingEvaluation];
 
   core = replaceRequired(
