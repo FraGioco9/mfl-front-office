@@ -8092,7 +8092,7 @@ async function startApp() {
     };
 
     if (incrementalRouteIsCached(route, 1)) return loadAndRender();
-    return withInteractionBusy(loadAndRender);
+    return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
