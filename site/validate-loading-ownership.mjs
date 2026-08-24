@@ -108,12 +108,14 @@ invariant(
   "Background Global Search warm-up must not delay visible route readiness.",
 );
 invariant(
-  appEntry.includes('begin?.("route-loading")'),
-  "Lazy Club navigation must use the same route-loading reason as refresh startup.",
+  appEntry.includes("const loadingController = runtimeWindow.__mflInteractionBusy;")
+    && appEntry.includes("loadingController?.begin?.(loadingController.reason)"),
+  "Lazy Club navigation must consume the canonical route-loading reason from the loading controller.",
 );
 invariant(
-  !appEntry.includes('begin?.("route-runtime")'),
-  "Lazy Club navigation must not retain a second route-runtime loading identity.",
+  !appEntry.includes('begin?.("route-loading")')
+    && !appEntry.includes('begin?.("route-runtime")'),
+  "Lazy Club navigation must not duplicate route-loading identities outside the controller.",
 );
 invariant(
   !routeLoader.includes(".begin?.("),
@@ -151,8 +153,9 @@ invariant(
   "Loading toast must not classify route transitions by obsolete per-function reasons.",
 );
 invariant(
-  !loadingUi.includes('"route-loading",'),
-  "Canonical route-loading must remain a real Loading toast reason, not a suppressed coordination reason.",
+  !loadingUi.includes('const ROUTE_LOADING_REASON = "route-loading";')
+    && loadingUi.includes('const routeLoadingReason = String(controller?.reason || "");'),
+  "Loading toast must consume the controller-owned route-loading identity instead of defining a duplicate reason string.",
 );
 invariant(
   loadingUi.includes("function snapshotNeedsToast(snapshot) {")
@@ -213,4 +216,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Unified route loading ownership, mixed saved-Evaluation toast suppression, loading-toast entrance, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");
+console.log("Unified route loading ownership, controller-owned route reason, mixed saved-Evaluation toast suppression, loading-toast entrance, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");

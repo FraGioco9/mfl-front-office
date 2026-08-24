@@ -227,8 +227,13 @@ includes(
 
 includes(
   loadingToastRuntime,
+  'const routeLoadingReason = String(controller?.reason || "");',
+  "Loading toast coordination must consume the controller-owned route identity for route-only snapshots.",
+);
+excludes(
+  loadingToastRuntime,
   'const ROUTE_LOADING_REASON = "route-loading";',
-  "Loading toast coordination must identify route-only loading snapshots.",
+  "Loading toast must not define its own route-loading reason.",
 );
 includes(
   loadingToastRuntime,

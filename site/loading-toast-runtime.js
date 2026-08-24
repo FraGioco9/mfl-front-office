@@ -6,7 +6,6 @@
   const TOAST_ID = "mflLoadingToast";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
-  const ROUTE_LOADING_REASON = "route-loading";
   const TOAST_ENTER_DURATION_MS = 180;
   const TOAST_COORDINATION_REASONS = new Set([
     "evaluation-load",
@@ -154,8 +153,11 @@
   }
 
   function routeOnlySnapshot(snapshot) {
+    const routeLoadingReason = String(controller?.reason || "");
     const reasons = Array.isArray(snapshot?.reasons) ? snapshot.reasons : [];
-    return reasons.length > 0 && reasons.every((reason) => String(reason || "") === ROUTE_LOADING_REASON);
+    return Boolean(routeLoadingReason)
+      && reasons.length > 0
+      && reasons.every((reason) => String(reason || "") === routeLoadingReason);
   }
 
   function currentRouteDataCacheReady() {
