@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - site/migrate-dead-club-render-cache.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,24 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate Club cache ownership
-        run: node site/migrate-dead-club-render-cache.mjs
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated source
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/modules/app-core.js site/modules/app-core-route-chunks.js site/validate-club-route-core.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Club cache ownership and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Remove dead Club render cache"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
