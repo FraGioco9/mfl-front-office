@@ -605,7 +605,7 @@ function primeInitialTableStructure(page, view) {
 
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
-      ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetired", "databaseStatsRetiringOne"]
+      ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
         .forEach(setLoadingValue);
       document.getElementById("databaseStatsDistribution")?.replaceChildren();
       return;
