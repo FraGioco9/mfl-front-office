@@ -59,6 +59,8 @@ body[data-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pag
   display: none;
 }
 
+/* Table loading runtime owns ordinary pager loading visibility so view changes can preserve rendered pager chrome. */
+
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {
