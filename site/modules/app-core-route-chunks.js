@@ -673,7 +673,9 @@ export function splitApplicationCoreRuntime(source) {
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;
       renderClubTitle();
       void clubTitleReady.then((resolvedTitle) => {
-        if (!resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+        if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
+        document.documentElement.dataset.initialEntityVerified = "club";
+        if (state.currentPage !== CLUB_PAGE) return;
         activeClubTitle = resolvedTitle;
         renderClubTitle();
       });
@@ -686,13 +688,21 @@ export function splitApplicationCoreRuntime(source) {
           })
         : false;
       if (!dataLoaded) return;
-      const resolvedClubTitle = await clubTitleReady;
-      if (resolvedClubTitle && String(activeClubId) === nextClubId) {
-        activeClubTitle = resolvedClubTitle;
+      const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
+      if (loadedClubTitle) {
+        activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+        document.documentElement.dataset.initialEntityVerified = "club";
       }
-      if (!resolvedClubTitle && clubRows().length === 0) {
-        window.__mflStaticUiRuntime?.showNotFound?.("Club");
-        return;
+      if (!loadedClubTitle && clubRows().length === 0) {
+        const resolvedClubTitle = await clubTitleReady;
+        if (!resolvedClubTitle) {
+          window.__mflStaticUiRuntime?.showNotFound?.("Club");
+          return;
+        }
+        activeClubTitle = resolvedClubTitle;
+        document.documentElement.dataset.initialEntityVerified = "club";
+      } else if (clubRows().length > 0) {
+        document.documentElement.dataset.initialEntityVerified = "club";
       }`,
     "Club page canonical incremental loader, title readiness, and missing-entity surface",
   );
@@ -729,16 +739,6 @@ export function splitApplicationCoreRuntime(source) {
     "Club private loading completion",
   );
 
-  club = replaceRequired(
-    club,
-    `      if (typeof buildHeader === "function") buildHeader();
-      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
-      applyClubPresentation();
-      captureClubView(nextView);`,
-    `      applyClubPresentation();
-      captureClubView(nextView);`,
-    "Club page canonical render ownership",
-  );
 
   const privateClubViewListener = extractRequiredSection(
     club,
