@@ -2,36 +2,6 @@
 
 import { replaceRequired } from "./app-core-splitter-utils.js";
 
-const DIRECT_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeShell === "function") {
-    const originalShowHomeShell = showHomeShell;
-    let initialClubHandled = false;
-    showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
-      if (!initialClubHandled) {
-        initialClubHandled = true;
-        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
-        return;
-      }
-      return originalShowHomeShell.apply(this, arguments);
-    };
-  }`;
-
-const PUBLIC_GATE_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeShell === "function") {
-    const originalShowHomeShell = showHomeShell;
-    let initialClubHandled = false;
-    showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
-      if (!initialClubHandled) {
-        initialClubHandled = true;
-        const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);
-        if (normalizedPath() !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
-        const navigateClub = window.mflOpenClubPage;
-        if (typeof navigateClub !== "function") throw new Error("Club navigation gate is unavailable during startup.");
-        await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
-        return;
-      }
-      return originalShowHomeShell.apply(this, arguments);
-    };
-  }`;
-
 const BLOCKING_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
       const resolvedClubTitle = await clubTitleReady;
       if (resolvedClubTitle && String(activeClubId) === nextClubId) {
@@ -305,12 +275,6 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
 
   let normalizedClub = replaceRequired(
     club,
-    DIRECT_INITIAL_CLUB_STARTUP,
-    PUBLIC_GATE_INITIAL_CLUB_STARTUP,
-    "shared public Club navigation gate for refresh",
-  );
-  normalizedClub = replaceRequired(
-    normalizedClub,
     CLUB_TITLE_READY_CALLBACK,
     VERIFIED_CLUB_TITLE_READY_CALLBACK,
     "Club first-paint identity verification",
