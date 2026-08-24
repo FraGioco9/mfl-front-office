@@ -40,3 +40,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update Evaluation Load ownership validators"
           git push origin HEAD:refactor/source-owned-evaluation-load
+
+# Temporary workflow; remove after validator ownership is migrated.
