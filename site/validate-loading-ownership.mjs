@@ -36,8 +36,9 @@ for (const required of [
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 invariant(
-  !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager"),
-  "Pager loading visibility must be owned by the table loading runtime, not blanket navigation/busy CSS.",
+  loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
+    && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),
+  "Table view navigation must hide nav.pager immediately while the Table runtime keeps it hidden through active data loading, without restoring global interaction-busy ownership.",
 );
 
 for (const required of [
