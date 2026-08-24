@@ -16,7 +16,9 @@ const normalizedCore = normalizeGlobalSearchOpenLifecycle({ core: sourceCore }).
 
 invariant(
   buildNormalizer.includes('import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";')
-    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);")
+    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);")
+    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
+    && !buildNormalizer.includes("homeSummaryArtifacts")
     && buildNormalizer.includes("normalizeEvaluationRecentReadiness(globalSearchArtifacts)"),
   "Canonical application-core builds must apply Global Search lifecycle normalization before later readiness transforms.",
 );

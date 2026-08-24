@@ -4,11 +4,12 @@ import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [staticUi, bootstrap, selectionStack, appCore] = await Promise.all([
+const [staticUi, bootstrap, selectionStack, appCore, buildNormalizer] = await Promise.all([
   read("./static-ui-runtime.js"),
   read("./bootstrap.js"),
   read("./selection-stack-runtime.js"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCore);
 const generated = [String(artifacts.core || ""), ...Object.values(artifacts.routeChunks || {}).map(String)].join("\n");
@@ -42,16 +43,32 @@ invariant(
   "Table restore must clear only destination filter/selection state and consume the page-reset marker after controls synchronize.",
 );
 invariant(
-  generated.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
-    && generated.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
-    && generated.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
-    && generated.includes('if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;')
+  appCore.includes('const storedPageState = !clubTarget && tablePages.has(pageName)')
+    && appCore.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
+    && appCore.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
+    && appCore.includes('if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;')
+    && generated.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
     && generated.includes('route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);'),
-  "Destination incremental requests must be built from reset filter state so loaded players match the reset controls.",
+  "Canonical source must build destination incremental requests from reset filter state before the generated route request runs.",
 );
 invariant(
-  generated.includes('if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }'),
-  "Same-page table view switches must snapshot live quick-filter controls before synchronous destination chrome can read persisted state.",
+  appCore.includes('if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }')
+    && generated.includes('if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }'),
+  "Canonical source and generated runtime must snapshot live quick-filter controls before synchronous destination chrome can read persisted state.",
+);
+invariant(
+  !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
+    && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
+    && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
+    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
+    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
+    && !buildNormalizer.includes("tableControlCellArtifacts")
+    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
+    && !buildNormalizer.includes("homeSummaryArtifacts")
+    && buildNormalizer.includes("const statsNavigationArtifacts = Object.freeze({")
+    && buildNormalizer.includes('core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),')
+    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);"),
+  "Build normalization must not inject page/view filter, editable-pager, or Table control-cell behavior and must preserve stats composition independently.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
 const liveFilterSnapshot = generated.indexOf('saveTableStateLocally(currentTableState());', activeViewNoOp);

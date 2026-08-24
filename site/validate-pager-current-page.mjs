@@ -5,10 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, interactions, selectionStack, tableRuntime] = await Promise.all([
+const [controls, interactions, selectionStack, appCore, buildNormalizer, tableRuntime] = await Promise.all([
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
   read("./selection-stack-runtime.js"),
+  read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -43,6 +45,30 @@ invariant(!globalEscapeCapture.includes(".blur()"), "Global Escape dispatch must
 invariant(
   selectionStack.includes("if (editableEscapeTarget(event.target)) return false;"),
   "Selection-level Escape ownership must defer to focused editable controls such as the pager input.",
+);
+
+for (const required of [
+  'const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";',
+  "let pagerEditRevision = 0;",
+  "function cancelPagerCurrentPageEdit(input) {",
+  "function installPagerEscapeCapture() {",
+  "function syncPagerCurrentPage(currentPage, totalPages) {",
+  "function installPagerCurrentPageControl() {",
+  "installPagerCurrentPageControl();",
+  "syncPagerCurrentPage(1, 1);",
+  "syncPagerCurrentPage(state.page, totalPages);",
+]) {
+  invariant(appCore.includes(required), `Canonical app-core must own editable pager behavior through ${required}`);
+}
+invariant(
+  !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
+    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
+    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
+    && !buildNormalizer.includes("tableControlCellArtifacts")
+    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
+    && !buildNormalizer.includes("homeSummaryArtifacts")
+    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);"),
+  "Build normalization must flow directly from stats navigation into Home summary without editable-pager or Table control-cell rewriting.",
 );
 
 for (const required of [

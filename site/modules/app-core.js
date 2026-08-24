@@ -2837,6 +2837,7 @@ function renderTableLoadingShell(pageName) {
   window.__mflTableLoadingRuntime?.show?.();
 }
 async function setPage(pageName, updateHash = true, options = {}) {
+  if (pageName === "home") void loadSummary();
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
     await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
     return;
@@ -3083,21 +3084,50 @@ function updateSummaryCounts(playerCount, walletCount) {
   homeWallets.textContent = wallets ? formatCount(wallets) : "-";
 }
 
+let summaryLoadPromise = null;
+let summaryLoaded = false;
+let summarySnapshot = null;
+
+function homeSummaryCacheReady() {
+  return summaryLoaded && Boolean(summarySnapshot);
+}
+
+Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({
+  isReady: homeSummaryCacheReady,
+}));
+
 async function loadSummary() {
-  try {
-    const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
-    state.manifest = data.manifest || null;
-    const summary = data.summary || {};
-    updateSummaryCounts(summary.playerCount, summary.walletCount);
-    updateStatusDate(summary.generatedAt);
+  if (summaryLoaded && summarySnapshot) {
+    updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
     return true;
-  } catch (error) {
-    console.error(error?.message || "Could not load the database summary.");
-    updateSummaryCounts(0, 0);
-    return false;
   }
+  if (summaryLoadPromise) return summaryLoadPromise;
+
+  summaryLoadPromise = (async () => {
+    try {
+      const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
+      state.manifest = data.manifest || null;
+      const summary = data.summary || {};
+      summarySnapshot = Object.freeze({
+        playerCount: summary.playerCount,
+        walletCount: summary.walletCount,
+      });
+      updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
+      updateStatusDate(summary.generatedAt);
+      summaryLoaded = true;
+      return true;
+    } catch (error) {
+      console.error(error?.message || "Could not load the database summary.");
+      updateSummaryCounts(0, 0);
+      return false;
+    }
+  })();
+
+  const result = await summaryLoadPromise;
+  summaryLoadPromise = null;
+  return result;
 }
 
 function tablePageKey(pageName = state.currentPage) {
@@ -8569,7 +8599,7 @@ function activeFilterCountFromSavedRules(rules = []) {
 }
 
 function updateFilterSummary(count = activeFilterCount()) {
-  filterSummary.textContent = `${count} active`;
+  filterSummary.textContent = String(count);
 }
 
 function selectedFilterColumns(exceptRule = null) {
@@ -9002,8 +9032,8 @@ function closeFilters(commitChanges = false) {
   }
 
   state.filterDraftRules = null;
+  document.body.classList.remove("filtersOpen");
   hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     openFiltersButton.focus();
   });
 }
@@ -9717,7 +9747,164 @@ function openSelectedPlayerLinks() {
   });
 }
 
+const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";
+const PAGER_TOTAL_PAGES_ID = "pagerTotalPages";
+let suppressedPagerButtonClick = null;
+let pagerEditRevision = 0;
+let pagerEscapeCaptureInstalled = false;
+
+function pagerCurrentPageControl() {
+  let input = document.getElementById(PAGER_CURRENT_PAGE_INPUT_ID);
+  let total = document.getElementById(PAGER_TOTAL_PAGES_ID);
+  if (input instanceof HTMLInputElement && total instanceof HTMLElement && pageText.contains(input) && pageText.contains(total)) {
+    return { input, total };
+  }
+
+  input = document.createElement("input");
+  input.id = PAGER_CURRENT_PAGE_INPUT_ID;
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.autocomplete = "off";
+  input.setAttribute("role", "spinbutton");
+  input.setAttribute("aria-label", "Current page");
+
+  total = document.createElement("span");
+  total.id = PAGER_TOTAL_PAGES_ID;
+
+  pageText.replaceChildren(document.createTextNode("Page "), input, document.createTextNode(" of "), total);
+  return { input, total };
+}
+
+function resetPagerCurrentPage(input) {
+  const current = input.dataset.currentPage || String(state.page || 1);
+  input.value = current;
+  input.dataset.dirty = "false";
+  input.setAttribute("aria-valuenow", current);
+}
+
+function cancelPagerCurrentPageEdit(input) {
+  pagerEditRevision += 1;
+  input.dataset.cancelCommit = "true";
+  resetPagerCurrentPage(input);
+  input.blur();
+}
+
+function installPagerEscapeCapture() {
+  if (pagerEscapeCaptureInstalled) return;
+  pagerEscapeCaptureInstalled = true;
+  window.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (event.key !== "Escape" || !(target instanceof HTMLInputElement) || target.id !== PAGER_CURRENT_PAGE_INPUT_ID) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    cancelPagerCurrentPageEdit(target);
+  }, true);
+}
+
+function syncPagerCurrentPage(currentPage, totalPages) {
+  const controls = pagerCurrentPageControl();
+  const total = Math.max(1, Number.parseInt(String(totalPages || 1), 10) || 1);
+  const current = Math.min(total, Math.max(1, Number.parseInt(String(currentPage || 1), 10) || 1));
+  controls.input.dataset.currentPage = String(current);
+  controls.input.dataset.totalPages = String(total);
+  controls.input.setAttribute("aria-valuemin", "1");
+  controls.input.setAttribute("aria-valuemax", String(total));
+  controls.input.setAttribute("aria-valuenow", String(current));
+  controls.total.textContent = String(total);
+  if (document.activeElement !== controls.input) {
+    controls.input.value = String(current);
+    controls.input.dataset.dirty = "false";
+    delete controls.input.dataset.cancelCommit;
+  }
+}
+
+async function commitPagerCurrentPage(input) {
+  const total = Math.max(1, Number.parseInt(input.dataset.totalPages || "1", 10) || 1);
+  const current = Math.min(total, Math.max(1, Number.parseInt(input.dataset.currentPage || String(state.page || 1), 10) || 1));
+  const raw = input.value.trim();
+  const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;
+  const target = Math.min(total, Math.max(1, parsed));
+
+  input.value = String(target);
+  input.dataset.dirty = "false";
+  input.setAttribute("aria-valuenow", String(target));
+  if (target === current) return;
+
+  if (state.incrementalMode) {
+    input.disabled = true;
+    try {
+      await reloadIncrementalPage(target);
+    } finally {
+      input.disabled = false;
+    }
+    return;
+  }
+
+  state.page = target;
+  renderTable();
+}
+
+function installPagerCurrentPageControl() {
+  const controls = pagerCurrentPageControl();
+  installPagerEscapeCapture();
+  if (controls.input.dataset.pagerCurrentPageBound === "true") return;
+  controls.input.dataset.pagerCurrentPageBound = "true";
+
+  controls.input.addEventListener("focus", () => {
+    pagerEditRevision += 1;
+    delete controls.input.dataset.cancelCommit;
+    controls.input.select();
+  });
+
+  controls.input.addEventListener("input", () => {
+    const raw = controls.input.value;
+    const negative = raw.trimStart().startsWith("-");
+    const digits = raw.replace(/\\D+/g, "");
+    const normalized = negative ? "-" + digits : digits;
+    if (normalized !== raw) controls.input.value = normalized;
+    controls.input.dataset.dirty = "true";
+  });
+
+  controls.input.addEventListener("blur", () => {
+    const revision = pagerEditRevision;
+    queueMicrotask(() => {
+      if (revision !== pagerEditRevision || controls.input.dataset.cancelCommit === "true") {
+        delete controls.input.dataset.cancelCommit;
+        resetPagerCurrentPage(controls.input);
+        return;
+      }
+      void commitPagerCurrentPage(controls.input);
+    });
+  });
+
+  controls.input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    event.stopPropagation();
+    controls.input.blur();
+  });
+
+  [prevButton, nextButton].forEach((button) => {
+    button.addEventListener("pointerdown", () => {
+      suppressedPagerButtonClick = document.activeElement === controls.input && controls.input.dataset.dirty === "true"
+        ? button
+        : null;
+    }, true);
+    button.addEventListener("click", (event) => {
+      if (suppressedPagerButtonClick !== button) return;
+      suppressedPagerButtonClick = null;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  });
+}
+
+installPagerCurrentPageControl();
+syncPagerCurrentPage(1, 1);
+
+
 function renderTable() {
+  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -9743,7 +9930,10 @@ function renderTable() {
     selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
     selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
     selectionInput.dataset.playerId = String(playerId);
-    selectionCell.appendChild(selectionInput);
+    const selectionContent = document.createElement("span");
+    selectionContent.className = "tableControlCellContent tableControlCellContentCentered";
+    selectionContent.appendChild(selectionInput);
+    selectionCell.appendChild(selectionContent);
     tableRow.appendChild(selectionCell);
 
     currentViewColumns().forEach((column) => {
@@ -9783,14 +9973,24 @@ function renderTable() {
       } else if (column === flagColumn) {
         cell.classList.add("flagCell");
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
+        const flagContent = document.createElement("span");
+        flagContent.className = "tableControlCellContent tableControlCellContentCentered";
+        while (cell.firstChild) flagContent.appendChild(cell.firstChild);
+        cell.appendChild(flagContent);
       } else if (column === "player_id") {
-        cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+        const idContent = document.createElement("span");
+        idContent.className = "tableControlCellContent";
+        idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+        cell.appendChild(idContent);
       } else if (column === "age") {
+        const ageContent = document.createElement("span");
+        ageContent.className = "tableControlCellContent";
         const ageValue = document.createElement("span");
         ageValue.className = "playerAgeValue";
         ageValue.textContent = formatCellValue(row, column);
-        cell.appendChild(ageValue);
-        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
+        ageContent.appendChild(ageValue);
+        appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");
+        cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
       } else if (column === "active_contract_club_division") {
@@ -9856,7 +10056,7 @@ function renderTable() {
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount();
-  pageText.textContent = `Page ${state.page} of ${totalPages}`;
+  syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
   updateSelectionBar();
@@ -10101,6 +10301,46 @@ function incrementalRouteIsCached(route, page = 1) {
   return Boolean(cachedIncrementalPayload(route, page));
 }
 
+function databaseStatsDataCacheReady() {
+  const total = document.getElementById("databaseStatsTotalPlayers");
+  if (!(total instanceof HTMLElement)) return false;
+  const value = String(total.textContent || "").trim();
+  return Boolean(value) && value !== "-";
+}
+
+function settingsDataCacheReady() {
+  if (typeof hasWalletOptIn !== "function" || !hasWalletOptIn()) return true;
+  return state.walletPreferencesLoaded === true && state.walletSettingsLoaded === true;
+}
+
+function routeDataCacheReady(pageName, options = {}) {
+  const page = String(pageName || "home");
+  const routeOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+
+  if (page === "home") return homeSummaryCacheReady();
+  if (page === "notfound" || page === "changelog") return true;
+  if (page === "settings") return settingsDataCacheReady();
+  if (page === "database" && normalizeViewForPage(routeOptions.view, "database") === "stats") {
+    return databaseStatsDataCacheReady();
+  }
+
+  const route = incrementalRouteTarget(page, routeOptions);
+  if (!route) return false;
+  return route.scope === "empty" || incrementalRouteIsCached(route, 1);
+}
+
+function currentRouteDataCacheReady() {
+  if (!document.documentElement.classList.contains("mflInitialRouteResolved")) return false;
+  const target = pageTargetFromPath(window.location.pathname + window.location.search);
+  if (!target?.pageName) return false;
+  return routeDataCacheReady(target.pageName, target.options || {});
+}
+
+Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({
+  isReady: routeDataCacheReady,
+  isCurrentRouteReady: currentRouteDataCacheReady,
+}));
+
 function applyIncrementalPayload(route, payload) {
   rememberClubViewPayload(route, payload);
   const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
@@ -10194,6 +10434,8 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
+  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
+
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
     const controller = new AbortController();
@@ -10244,14 +10486,22 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   try {
     payload = await requestPromise;
   } catch (error) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
     throw error;
   }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+  }
   if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
-  applyIncrementalPayload(route, payload);
-  state.incrementalLastKey = requestKey;
-  state.incrementalLastLoadedAt = Date.now();
-  return payload;
+  try {
+    applyIncrementalPayload(route, payload);
+    state.incrementalLastKey = requestKey;
+    state.incrementalLastLoadedAt = Date.now();
+    return payload;
+  } finally {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+  }
 }
 
 async function withInteractionBusy(callback) { return callback(); }
@@ -10317,6 +10567,10 @@ function activateViewButton(button) {
   const activePageName = state.currentPage === "mflstats" ? "mfl" : state.currentPage;
   const activeViewName = state.currentPage === "mflstats" ? "stats" : state.view;
   if (pageName === activePageName && viewName === activeViewName) return;
+
+  if (pageName === activePageName && tablePages.has(pageName)) {
+    saveTableStateLocally(currentTableState());
+  }
 
   if (pageName === "club") return;
 
@@ -12237,9 +12491,14 @@ async function startApp() {
 
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    const savedPageState = !clubTarget && tablePages.has(pageName)
+    const storedPageState = !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     if (savedPageState) {
       restoreSavedTableState(pageName, { view: options.view, deferRules: true });
     } else if (clubTarget) {

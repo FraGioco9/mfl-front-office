@@ -18,6 +18,7 @@ const validators = [
   "validate-shared-api-logic.mjs",
   "validate-supabase-persistence.mjs",
   "validate-css-priority.mjs",
+  "validate-responsive-layout.mjs",
   "validate-runtime-style-ownership.mjs",
   "validate-sidebar-lifecycle-ownership.mjs",
   "validate-dropdown-style-ownership.mjs",
