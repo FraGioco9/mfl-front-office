@@ -157,12 +157,14 @@ invariant(
   "Club filter-free rendering must emit the canonical count-only zero summary directly.",
 );
 for (const required of [
-  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);",
+  "const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }
 invariant(
-  !buildNormalizer.includes("normalizeFilterSummaryLifecycle")
+  !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
+    && !buildNormalizer.includes("evaluationRecentArtifacts")
+    && !buildNormalizer.includes("normalizeFilterSummaryLifecycle")
     && !buildNormalizer.includes("filterSummaryArtifacts")
     && !buildNormalizer.includes("normalizePageFilterResetBeforeRequest")
     && !buildNormalizer.includes("normalizeViewFilterStateBeforeTransition")
@@ -176,7 +178,7 @@ invariant(
     && !buildNormalizer.includes("homeSummaryArtifacts")
     && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
     && !buildNormalizer.includes("globalSearchArtifacts"),
-  "Build normalization must not reintroduce Filters summary/close, page/view transition, editable-pager, or Table control-cell rewrites.",
+  "Build normalization must not reintroduce Evaluation recent-readiness, Filters summary/close, page/view transition, editable-pager, or Table control-cell rewrites.",
 );
 
 for (const required of [
