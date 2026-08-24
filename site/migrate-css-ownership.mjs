@@ -161,8 +161,12 @@ const finalTableTitleRule = ruleRange(styles, ".tablePageTitle")?.text || "";
 if (!finalTableTitleRule.includes("font-size: 20px;")) {
   throw new Error("styles.css must own table-title font size.");
 }
-const playerTitleRule = ruleRange(stylesBase, ".playerTitle")?.text || "";
-if (!playerTitleRule.includes("font-size: 20px;") || !playerTitleRule.includes("margin: 14px 0 12px;")) {
+const preservedPlayerTitleTypography = `.playerTitle {
+  margin: 14px 0 12px;
+  font-size: 20px;
+  line-height: 1.2;
+}`;
+if (!stylesBase.includes(preservedPlayerTitleTypography)) {
   throw new Error("Player title base typography must remain unchanged.");
 }
 
