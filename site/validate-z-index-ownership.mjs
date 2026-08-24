@@ -227,7 +227,6 @@ invariant(dropdowns.match(/z-index: var\(--mfl-z-dropdown\);/g)?.length === 2, "
 invariant(responsive.includes("z-index: var(--mfl-z-navigation-mobile);"), "Mobile navigation must consume the mobile navigation level.");
 invariant(loading.includes("z-index: var(--mfl-z-busy-shield);"), "Interaction shield must consume the busy-shield level.");
 invariant(loading.includes("z-index: var(--mfl-z-toast);"), "Normal toasts must consume the global toast level.");
-invariant(loading.includes("z-index: var(--mfl-z-topmost);"), "Loading toast must consume the highest non-popup level.");
 
 const modalStart = base.indexOf(".modalBackdrop {");
 const modalEnd = base.indexOf("}", modalStart);

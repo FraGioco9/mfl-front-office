@@ -5,13 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading, appCoreSource] = await Promise.all([
+const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource] = await Promise.all([
   read("./styles.css"),
   read("./loading.css"),
   read("./bootstrap-core.js"),
   read("./modules/app-entry.js"),
   read("./route-core-loader-runtime.js"),
-  read("./loading-toast-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./modules/app-core.js"),
 ]);
@@ -33,8 +32,6 @@ for (const required of [
   "html.mflInteractionBusy body::after",
   "html.mflDataLoading #progressionPage #watchlistPlayerCount",
   "html.mflTableScrolling #progressionPage .tableScroller tbody",
-  ".siteFooter.mflLoadingLocked",
-  "#mflLoadingToast",
 ]) {
   invariant(loadingStyles.includes(required), `loading.css is missing canonical loading rule: ${required}`);
 }
@@ -211,79 +208,18 @@ invariant(
   "Legacy uncached route/data loads must default to non-blocking route loading while the explicit operation-busy helper remains exclusive.",
 );
 
-for (const [name, source] of [
-  ["loading-toast-runtime.js", loadingUi],
-  ["table-loading-runtime.js", tableLoading],
-]) {
-  invariant(
-    source.includes("controller.subscribe(sync)"),
-    `${name} must subscribe directly to the canonical loading controller.`,
-  );
-  invariant(
-    !source.includes("new MutationObserver"),
-    `${name} must not infer loading state through MutationObserver.`,
-  );
-  invariant(
-    !source.includes('document.createElement("style")'),
-    `${name} must not inject deterministic loading CSS at runtime.`,
-  );
-}
-
 invariant(
-  loadingUi.includes("const TOAST_COORDINATION_REASONS = new Set(["),
-  "Loading toast must keep non-route coordination reasons separate from real loading reasons.",
+  !appEntry.includes('/loading-toast-runtime.js')
+    && !loadingStyles.includes('#mflLoadingToast')
+    && !loadingStyles.includes('mflLoadingLocked')
+    && !loadingStyles.includes('data-mfl-retiring-toast'),
+  "Global Loading toast/footer-lock presentation must stay removed from startup and loading CSS.",
 );
 invariant(
-  !loadingUi.includes('"setPage"')
-    && !loadingUi.includes('"setView"')
-    && !loadingUi.includes('"switchWatchlist"')
-    && !loadingUi.includes('"route-runtime"')
-    && !loadingUi.includes('"requestIncrementalRoute"'),
-  "Loading toast must not classify route transitions by obsolete per-function reasons.",
-);
-invariant(
-  !loadingUi.includes('const ROUTE_LOADING_REASON = "route-loading";')
-    && loadingUi.includes('const routeLoadingReason = String(controller?.reason || "");'),
-  "Loading toast must consume the controller-owned route-loading identity instead of defining a duplicate reason string.",
-);
-invariant(
-  loadingUi.includes("function snapshotNeedsToast(snapshot) {")
-    && loadingUi.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))"),
-  "Loading toast must require at least one non-coordination busy reason before becoming visible.",
-);
-invariant(
-  loadingUi.includes("function savedEvaluationRouteActive() {")
-    && loadingUi.includes('window.location.pathname !== "/evaluation"')
-    && loadingUi.includes('new URLSearchParams(window.location.search).get("saved")')
-    && loadingUi.includes("function snapshotHasReason(snapshot, targetReason) {")
-    && loadingUi.includes('snapshotHasReason(snapshot, "evaluation-load")')
-    && loadingUi.match(/toastSuppressed\(snapshot\)/g)?.length >= 3,
-  "Saved Evaluation loading must suppress the global Loading toast for direct routes and mixed evaluation-load plus route-loading operations.",
-);
-invariant(
-  loadingUi.includes("const TOAST_ENTER_DURATION_MS = 180;")
-    && loadingUi.includes("function animateLoadingToastIn(toast) {")
-    && loadingUi.includes("{ opacity: 0 },")
-    && loadingUi.includes("{ opacity: 1 },")
-    && loadingUi.includes("animateLoadingToastIn(toast);"),
-  "Loading toast must use the canonical 180ms one-shot opacity entrance without changing its anchored position.",
-);
-invariant(
-  loadingUi.includes("const initialRouteResolved = document.documentElement.classList.contains(\"mflInitialRouteResolved\");"),
-  "Footer readiness must follow the visible route instead of application-wide background warm-up.",
-);
-invariant(
-  !loadingUi.includes('document.documentElement.dataset.mflReady !== "true"'),
-  "Footer interaction must not remain locked for background application warm-up.",
-);
-
-invariant(
-  !loadingUi.includes("syncToastHosts"),
-  "Loading UI must not maintain toast layering through DOM-reparent observers.",
-);
-invariant(
-  !loadingUi.includes("STYLE_ID"),
-  "Loading UI must not retain a runtime stylesheet owner.",
+  tableLoading.includes("controller.subscribe(sync)")
+    && !tableLoading.includes("new MutationObserver")
+    && !tableLoading.includes('document.createElement("style")'),
+  "Table loading must remain the direct local subscriber without runtime style injection or DOM-observer loading inference.",
 );
 invariant(
   !tableLoading.includes("observer.observe"),
@@ -305,4 +241,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Separated non-blocking route/data loading from exclusive operation busy while preserving controller-owned route identity, route-ready startup, local loading subscribers, and mutation interaction protection.");
+console.log("Non-blocking route/data loading, exclusive operation busy, local table loading, and absence of global Loading-toast/footer-lock ownership validation passed.");

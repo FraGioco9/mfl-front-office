@@ -13,12 +13,11 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
-const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, loadingToastRuntime, coreSource, buildNormalizer, releaseJson] = await Promise.all([
+const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, coreSource, buildNormalizer, releaseJson] = await Promise.all([
   read("./index.html"),
   read("./styles-base.css"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
-  read("./loading-toast-runtime.js"),
   read("./modules/app-core.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./release.json"),
@@ -232,42 +231,6 @@ includes(
   "The MFL Front Office brand link must navigate through the Home page owner.",
 );
 
-includes(
-  loadingToastRuntime,
-  'const routeLoadingReason = String(controller?.reason || "");',
-  "Loading toast coordination must consume the controller-owned route identity for route-only snapshots.",
-);
-excludes(
-  loadingToastRuntime,
-  'const ROUTE_LOADING_REASON = "route-loading";',
-  "Loading toast must not define its own route-loading reason.",
-);
-includes(
-  loadingToastRuntime,
-  'const cache = Reflect.get(window, "__mflRouteDataCache");',
-  "The loading toast must consume the shared route-data cache contract instead of page-specific cache rules.",
-);
-includes(
-  loadingToastRuntime,
-  'if (routeOnlySnapshot(snapshot) && currentRouteDataCacheReady()) {',
-  "A destination rendered completely from cache must suppress the Loading toast.",
-);
-includes(
-  loadingToastRuntime,
-  "let remainingFrames = 3;",
-  "Toast eligibility must be checked after the destination transition has committed its route-specific state.",
-);
-excludes(
-  loadingToastRuntime,
-  "HOME_NAVIGATION_SELECTOR",
-  "Cached-route toast suppression must not depend on Home-specific controls.",
-);
-excludes(
-  loadingToastRuntime,
-  "cachedHomeNavigationIntent",
-  "Cached-route toast suppression must not retain the old Home-only intent state.",
-);
-
 const loaderStart = eagerCore.indexOf("let summaryLoadPromise = null;");
 const loaderEnd = eagerCore.indexOf("\nfunction tablePageKey", loaderStart);
 invariant(loaderStart >= 0 && loaderEnd > loaderStart, "Could not isolate the generated Home summary loader for behavioral validation.");
@@ -318,4 +281,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, cached Home counts repaint without refetching, and any fully cached route suppresses the Loading toast.");
+console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, and cached Home counts repaint without refetching.");
