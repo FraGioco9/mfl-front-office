@@ -31,7 +31,6 @@ invariant(
 
 for (const required of [
   "html.mflInteractionBusy body::after",
-  "html.mflNavigationPending #progressionPage nav.pager",
   "html.mflDataLoading #progressionPage #watchlistPlayerCount",
   "html.mflTableScrolling #progressionPage .tableScroller tbody",
   ".siteFooter.mflLoadingLocked",
@@ -40,6 +39,11 @@ for (const required of [
   invariant(loadingStyles.includes(required), `loading.css is missing canonical loading rule: ${required}`);
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
+invariant(
+  !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
+    && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),
+  "Pager loading visibility must be owned by the table loading runtime, not blanket navigation/busy CSS.",
+);
 
 for (const required of [
   'const ROUTE_LOADING_REASON = "route-loading";',

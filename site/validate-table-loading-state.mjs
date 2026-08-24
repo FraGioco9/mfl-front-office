@@ -53,8 +53,12 @@ for (const required of [
   'const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);',
   "let nextRequestToken = 0;",
   "let activeRequestToken = 0;",
+  "let activeRequestPreservesPager = false;",
+  "function pagerPreservedDuringLoading(body = elements().body) {",
   "function requestActive() {",
-  "function beginRequest(routeScope) {",
+  "function beginRequest(routeScope, options = {}) {",
+  "activeRequestPreservesPager = options.preservePager === true;",
+  "prepareLoadingSurface({ preservePager: activeRequestPreservesPager })",
   'const scope = String(routeScope || "").toLowerCase();',
   "!TABLE_ROUTE_SCOPES.has(scope)",
   "activeRequestToken = token;",
@@ -62,14 +66,14 @@ for (const required of [
   "requestToken !== activeRequestToken",
   "activeRequestToken = 0;",
   "if (requestActive()) return false;",
-  "if (snapshot.dataLoading || requestActive()) show({ replaceExisting: true });",
+  "preservePager: activeRequestPreservesPager || pagerPreservedDuringLoading(),",
   "finishRequest,",
   "requestActive,",
   'if (body.dataset.staticLoading === "true" && realRowsPresent) return false;',
 ]) {
   invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
 }
-const beginRequestStart = runtime.indexOf("function beginRequest(routeScope) {");
+const beginRequestStart = runtime.indexOf("function beginRequest(routeScope, options = {}) {");
 const beginRequestEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginRequestStart);
 const beginRequestSource = runtime.slice(beginRequestStart, beginRequestEnd);
 invariant(
@@ -172,13 +176,18 @@ invariant(
   "Final table-loading release must atomically hand off the Club header before clearing the loading tbody marker.",
 );
 
-const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';
+const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, {';
 const requestFinishMarker = 'window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);';
 invariant(
   appCoreSource.includes(requestBoundaryMarker)
+    && appCoreSource.includes("preservePager: options.preservePager === true,")
     && appCoreSource.includes(requestFinishMarker)
     && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;'),
   "Canonical application source must directly own the Table request loading boundary and active-request render guard.",
+);
+invariant(
+  appCoreSource.includes("requestIncrementalRoute(route, 1, { preservePager: true })"),
+  "View transitions must explicitly preserve the rendered pager while the destination view loads.",
 );
 invariant(
   !buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")

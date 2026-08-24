@@ -11,6 +11,7 @@
   let unsubscribe = null;
   let nextRequestToken = 0;
   let activeRequestToken = 0;
+  let activeRequestPreservesPager = false;
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -44,6 +45,15 @@
 
   function hasRealRows(body) {
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
+  }
+
+  function pagerPreservedDuringLoading(body = elements().body) {
+    if (requestActive()) return activeRequestPreservesPager;
+    const root = document.documentElement;
+    return body instanceof HTMLTableSectionElement
+      && hasRealRows(body)
+      && root.classList.contains("mflInitialRouteResolved")
+      && root.classList.contains("mflNavigationPending");
   }
 
   function shouldPreserveRenderedRows(body = elements().body) {
@@ -117,14 +127,15 @@
     return true;
   }
 
-  function prepareLoadingSurface() {
+  function prepareLoadingSurface(options = {}) {
     ensureCanonicalHeader();
     neutralizeSelectionHeader();
     const { body, empty } = elements();
     if (!body) return null;
+    const preservePager = options.preservePager === true || pagerPreservedDuringLoading(body);
 
     const page = pager();
-    if (page) page.hidden = true;
+    if (page && !preservePager) page.hidden = true;
     if (empty) {
       empty.hidden = true;
       empty.textContent = "";
@@ -136,14 +147,17 @@
     return !destroyed && activeRequestToken !== 0;
   }
 
-  function beginRequest(routeScope) {
+  function beginRequest(routeScope, options = {}) {
     const scope = String(routeScope || "").toLowerCase();
     if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return 0;
     const token = ++nextRequestToken;
     activeRequestToken = token;
+    activeRequestPreservesPager = options.preservePager === true;
     const currentBody = elements().body;
     const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);
-    const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
+    const body = preserveRenderedRows
+      ? currentBody
+      : prepareLoadingSurface({ preservePager: activeRequestPreservesPager });
     if (body && !preserveRenderedRows) primeLoadingRows();
     return token;
   }
@@ -184,14 +198,20 @@
     return true;
   }
 
-  function show({ replaceExisting = false, forceRoute = false } = {}) {
+  function show({
+    replaceExisting = false,
+    forceRoute = false,
+    preservePager = pagerPreservedDuringLoading(),
+  } = {}) {
     if (destroyed || (!forceRoute && !tableRouteActive())) return false;
-    const body = forceRoute ? elements().body : prepareLoadingSurface();
+    const body = forceRoute
+      ? elements().body
+      : prepareLoadingSurface({ preservePager });
     if (!body) return false;
     if (forceRoute) {
       neutralizeSelectionHeader();
       const page = pager();
-      if (page) page.hidden = true;
+      if (page && !preservePager) page.hidden = true;
       const { empty } = elements();
       if (empty) {
         empty.hidden = true;
@@ -214,8 +234,10 @@
       delete body.dataset.staticLoading;
       body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
     }
+    const snapshot = loadingSnapshot();
     const page = pager();
-    if (page && !loadingSnapshot().dataLoading) page.hidden = false;
+    if (page && !snapshot.dataLoading) page.hidden = false;
+    if (!snapshot.dataLoading) activeRequestPreservesPager = false;
     return true;
   }
 
@@ -226,7 +248,12 @@
       return;
     }
     if ((snapshot.dataLoading || requestActive()) && shouldPreserveRenderedRows()) return;
-    if (snapshot.dataLoading || requestActive()) show({ replaceExisting: true });
+    if (snapshot.dataLoading || requestActive()) {
+      show({
+        replaceExisting: true,
+        preservePager: activeRequestPreservesPager || pagerPreservedDuringLoading(),
+      });
+    }
     else release();
   }
 
@@ -248,6 +275,7 @@
   function destroy() {
     destroyed = true;
     activeRequestToken = 0;
+    activeRequestPreservesPager = false;
     unsubscribe?.();
     unsubscribe = null;
     release();
