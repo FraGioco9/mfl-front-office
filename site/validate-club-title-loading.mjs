@@ -17,7 +17,7 @@ const [
   loadingCss,
   generatedEagerCore,
   generatedClubCore,
-  routeLoader,
+  appEntry,
 ] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
@@ -26,7 +26,7 @@ const [
   read("./loading.css"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-club-runtime.js"),
-  read("./route-core-loader-runtime.js"),
+  read("./modules/app-entry.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -67,22 +67,22 @@ excludes(
 );
 
 includes(
-  routeLoader,
-  "function installClubRouteGate()",
+  appEntry,
+  "function installClubRouteRuntimeGate()",
   "Club links and refresh must share the public Club route gate.",
 );
 includes(
-  routeLoader,
-  'const routeCorePromise = ensure("club", { view });',
+  appEntry,
+  'runtimeWindow.__mflEnsureRouteCore("club", { view })',
   "The public Club gate must ensure Club core readiness.",
 );
 includes(
-  routeLoader,
-  'runtimeWindow.__mflEnsureRouteRuntime("club", { view })',
+  appEntry,
+  'const routeRuntimePromise = ensureRouteRuntime("club", { view });',
   "The public Club gate must ensure Club runtime readiness.",
 );
 includes(
-  routeLoader,
+  appEntry,
   "await Promise.all([routeCorePromise, routeRuntimePromise]);",
   "Club core and runtime ownership must settle together before rendering.",
 );
