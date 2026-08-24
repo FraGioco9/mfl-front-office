@@ -1144,6 +1144,14 @@ function renderEvaluationMflPerUsdControl(editing = false) {
   }
 }
 
+function cancelEvaluationMflPerUsd() {
+  if (evaluationMflUsdEditor.hidden) {
+    return;
+  }
+
+  renderEvaluationMflPerUsdControl(false);
+}
+
 function commitEvaluationMflPerUsd() {
   if (evaluationMflUsdEditor.hidden) {
     return;
@@ -1239,7 +1247,7 @@ evaluationMflUsdIncreaseButton.addEventListener("mousedown", (event) => event.pr
 evaluationMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
 evaluationMflUsdIncreaseButton.addEventListener("click", () => adjustEvaluationMflPerUsdDraft(1));
 evaluationMflUsdDecreaseButton.addEventListener("click", () => adjustEvaluationMflPerUsdDraft(-1));
-evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);
+evaluationMflUsdInput.addEventListener("blur", cancelEvaluationMflPerUsd);
 evaluationMflUsdInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -1248,8 +1256,7 @@ evaluationMflUsdInput.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape") {
     event.preventDefault();
-    evaluationMflUsdInput.value = state.evaluationMflPerUsd.toFixed(2);
-    renderEvaluationMflPerUsdControl(false);
+    cancelEvaluationMflPerUsd();
   }
 });
 
