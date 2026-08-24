@@ -1679,6 +1679,18 @@ function resetPageScroll() {
   }
 }
 
+let evaluationPageCacheReady = false;
+
+function preparePlainEvaluationReentry() {
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
+  state.evaluationPlayerId = null;
+  state.evaluationOverallRows = {};
+  state.evaluationSummaryPositions = {};
+  evaluationSearchInput.value = "";
+  renderEmptyEvaluationSelection(false, true);
+}
+
 
 
 
@@ -1844,18 +1856,6 @@ function setView() {
   return typeof __mflTableSetViewOwner === "function"
     ? __mflTableSetViewOwner.apply(this, arguments)
     : undefined;
-}
-
-let evaluationPageCacheReady = false;
-
-function preparePlainEvaluationReentry() {
-  state.evaluationShareId = "";
-  state.evaluationSavedId = "";
-  state.evaluationPlayerId = null;
-  state.evaluationOverallRows = {};
-  state.evaluationSummaryPositions = {};
-  evaluationSearchInput.value = "";
-  renderEmptyEvaluationSelection(false, true);
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
