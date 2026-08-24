@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - migrate_progression_artifact_restore.py
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,27 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate progression artifact restore
-        run: |
-          python3 migrate_progression_artifact_restore.py
-          cp .github/workflows/full-database-refresh.yml full_database_refresh_migrated.txt
-          git checkout -- .github/workflows/full-database-refresh.yml
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migration snapshot
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- full_database_refresh_migrated.txt site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Migration snapshot and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Export progression artifact restore migration"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
