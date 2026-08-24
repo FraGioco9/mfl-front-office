@@ -74,7 +74,7 @@ invariant(
     && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
     && !buildNormalizer.includes("evaluationLoadArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return clubSortArtifacts;"),
+    && buildNormalizer.includes("return watchlistArtifacts;"),
   "Build normalization must flow directly through source-owned readiness behavior without editable-pager or Table control-cell rewriting.",
 );
 

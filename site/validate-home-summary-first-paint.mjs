@@ -50,7 +50,7 @@ excludes(buildNormalizer, "evaluationLoadArtifacts", "The obsolete Evaluation Lo
 excludes(buildNormalizer, "normalizeEvaluationSavedValuationCache", "Build normalization must not rewrite Saved Valuation Cache behavior.");
 includes(
   buildNormalizer,
-  "return clubSortArtifacts;",
+  "return watchlistArtifacts;",
   "Club-sort artifacts must be the final application-core build output after Saved Valuation Cache becomes source-owned.",
 );
 

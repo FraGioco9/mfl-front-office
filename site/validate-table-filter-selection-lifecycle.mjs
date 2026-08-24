@@ -74,7 +74,7 @@ invariant(
     && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
     && !buildNormalizer.includes("evaluationLoadArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return clubSortArtifacts;"),
+    && buildNormalizer.includes("return watchlistArtifacts;"),
   "Build normalization must not inject page/view filter, editable-pager, Table control-cell, Stats navigation, or Evaluation recent-readiness behavior.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');

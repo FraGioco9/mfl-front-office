@@ -18,7 +18,7 @@ const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
 
 invariant(
   !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return clubSortArtifacts;"),
+    && buildNormalizer.includes("return watchlistArtifacts;"),
   "Saved Evaluation valuation/cache behavior must be source-owned with Club sort as the terminal build artifact.",
 );
 
