@@ -174,16 +174,9 @@ const playerTableShell = indexHtml.match(/<section class="tableShell" aria-label
 invariant(playerTableShell.includes('<div class="playerTableScroller">'), "The static Players table must start with its final Uniform Width scroller.");
 invariant(!playerTableShell.includes('class="tableScroller"'), "The Players table must never enter the legacy generic scroller width cascade.");
 
-const canonicalContractColumns = [
-  "overall",
-  "active_contract_club_name",
-  "active_contract_club_division",
-  "active_contract_revenue_share",
-];
-const canonicalContractBlock = canonicalContractColumns.map((column) => `    "${column}",`).join("\n");
 for (const required of [
   "function primeInitialTableStructure(page, view) {",
-  'const FIRST_PAINT_SORTABLE_COLUMNS = new Set([',
+  "const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);",
   'selectionInput.id = "selectVisiblePlayersInput";',
   'head.dataset.mflHeaderSignature = signature;',
   'Reflect.set(window, "__mflPrimeTableHeaderSignature", firstPaintTableHeaderSignature);',
@@ -198,8 +191,9 @@ invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not s
 invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(!bootstrap.includes('selectionHeader.className = "selectionCell col-select";'), "Selection width must belong to the colgroup, not the header cell.");
 invariant(
-  bootstrap.includes(`const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([\n${canonicalContractBlock}\n  ]);`),
-  "Contracts first paint must use canonical semantic column order.",
+  bootstrap.includes("const FIRST_PAINT_CONTRACT_COLUMNS = APP_CONFIG.table.contractColumns;")
+    && bootstrap.includes('const viewColumns = normalizedView === "contracts" ? FIRST_PAINT_CONTRACT_COLUMNS : FIRST_PAINT_STAT_COLUMNS;'),
+  "Contracts first paint must consume the canonical semantic column order from app config.",
 );
 invariant(
   bootstrap.includes('const targetClasses = ["col-select", ...columns.map((column) => firstPaintTableColumnClass(column))];')

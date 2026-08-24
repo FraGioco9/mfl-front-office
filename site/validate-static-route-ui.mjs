@@ -100,8 +100,9 @@ includes(staticUi, "document.body.appendChild(tooltipPortal);", "Generic tooltip
 includes(styles, ".mflGlobalTooltip {", "The global tooltip portal must have canonical static styling.");
 includes(styles, "z-index: var(--mfl-z-topmost);", "Global tooltip portals must consume the canonical topmost stacking level.");
 
-includes(bootstrap, "const TABLE_VIEW_BY_SLUG = Object.freeze({", "Bootstrap table chrome must understand canonical route view slugs directly.");
+includes(bootstrap, "const TABLE_VIEW_BY_SLUG = APP_CONFIG.routes.viewBySlug;", "Bootstrap table chrome must consume canonical route view slugs from the pre-bootstrap app config.");
 includes(bootstrap, "function tableViewFromUrl(page, urlLike = window.location.href) {", "Bootstrap table chrome must resolve its view from the destination URL.");
+includes(bootstrap, "const routeView = TABLE_VIEW_BY_SLUG[routeSlug] || \"\";", "Bootstrap table chrome must resolve destination slugs through the canonical route-view map.");
 includes(bootstrap, "const requestedView = tableViewFromUrl(normalizedPage, urlLike);", "Table chrome must make the live route authoritative.");
 const primeTableChromeStart = bootstrap.indexOf("function primeTableChrome(page, urlLike = window.location.href, options = {}) {");
 const primeTableChromeEnd = primeTableChromeStart >= 0 ? bootstrap.indexOf('\n  Reflect.set(window, "__mflPrimeTableChrome"', primeTableChromeStart) : -1;
