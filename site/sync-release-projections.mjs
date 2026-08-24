@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { TABLE_VIEW_CONFIG, VIEW_BY_SLUG } from "./modules/app-config.js";
 
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
+// Keep this projection inline in index.html so route/view state remains zero-request before first paint.
 const FIRST_PAINT_CONFIG_START = "        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG";
 const FIRST_PAINT_CONFIG_END = "        // END GENERATED FIRST-PAINT ROUTE CONFIG";
 
