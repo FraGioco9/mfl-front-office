@@ -7,10 +7,14 @@ on:
       - site/sync-release-projections.mjs
       - site/build-app-core.mjs
       - site/modules/app-config.js
+      - site/migrate-mfl-stats-split-boundary.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
       - .github/workflows/release-projection-sync.yml
+  push:
+    branches:
+      - refactor/canonical-first-paint-ui-metadata
   workflow_dispatch:
 
 permissions:
@@ -34,6 +38,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Migrate MFL Stats splitter boundary
+        run: node site/migrate-mfl-stats-split-boundary.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
@@ -43,12 +50,12 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html site/modules/app-core-route-chunks.js
           if git diff --cached --quiet; then
             echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Canonicalize MFL Stats splitter boundary"
           git push origin "HEAD:$HEAD_BRANCH"
