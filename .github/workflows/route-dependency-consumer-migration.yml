@@ -1,0 +1,45 @@
+name: Route dependency consumer migration
+
+on:
+  push:
+    branches:
+      - refactor/canonical-route-dependency-plan
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/canonical-route-dependency-plan
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Migrate route dependency consumers
+        run: node site/migrate-route-dependency-consumers.mjs
+      - name: Remove migration diagnostics and scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-route-dependency-consumers.mjs
+          rm -f site/migrate-canonical-route-dependency-plan.mjs
+          rm -f site/run-canonical-route-dependency-migration.mjs
+          rm -f site/route-dependency-migration.log
+          rm -f .github/workflows/route-dependency-consumer-migration.yml
+      - name: Persist route dependency consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Route dependency consumers are already canonical."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Consume canonical route dependency plan"
+          git push origin HEAD:refactor/canonical-route-dependency-plan
