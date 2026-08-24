@@ -508,15 +508,11 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   box-shadow: none;
 }
 
-html.mflInteractionBusy #pagerCurrentPageInput,
-html.mflDataLoading #pagerCurrentPageInput,
-body[aria-busy="true"] #pagerCurrentPageInput {
+html.mflDataLoading #pagerCurrentPageInput {
   pointer-events: none;
 }
 
-html.mflInteractionBusy #pageSizeSelect,
-html.mflDataLoading #pageSizeSelect,
-body[aria-busy="true"] #pageSizeSelect {
+html.mflDataLoading #pageSizeSelect {
   outline: 0;
   border-color: var(--border-strong);
   background: var(--surface);

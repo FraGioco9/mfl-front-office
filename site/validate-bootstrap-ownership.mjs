@@ -303,10 +303,10 @@ includes(
   "const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {",
   "Legacy uncached route/data loads must default to the non-blocking route-loading lifecycle.",
 );
-includes(
+excludes(
   bootstrapCore,
-  'window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");',
-  "The explicit operation-busy helper must retain exclusive interaction-loading ownership.",
+  "window.__mflWithInteractionBusy",
+  "Persistent operations must not retain a global interaction-busy helper.",
 );
 includes(
   bootstrapCore,
@@ -316,8 +316,32 @@ includes(
 includes(
   bootstrapCore,
   "return run(callback, normalizedReason);",
-  "Non-duplicate explicit loading reasons must still enter the shared busy controller.",
+  "Non-duplicate route/data loading reasons must still enter the shared loading controller.",
 );
+for (const retiredBusyOwner of [
+  "OPERATION_BUSY_REASONS",
+  'const BUSY_CLASS = "mflInteractionBusy";',
+  "bindInteractionBlockers",
+  "blockedInteractionGestureActive",
+  '"interaction-loading"',
+  '"createSharedEvaluationFromPayload"',
+  '"createSharedEvaluation"',
+  '"createSavedEvaluation"',
+  '"linkWallet"',
+]) {
+  excludes(bootstrapCore, retiredBusyOwner, "Global operation-busy ownership must stay removed through " + retiredBusyOwner + ".");
+}
+for (const localMutationOwner of [
+  "evaluationSaveButton.disabled = true;",
+  "evaluationSaveButton.disabled = false;",
+  "evaluationShareButton.disabled = true;",
+  "evaluationShareButton.disabled = false;",
+  "state.walletOptInInProgress = true;",
+  "linkWalletButton.disabled = true;",
+  'linkWalletButton.textContent = "Loading...";',
+]) {
+  includes(appCoreSource, localMutationOwner, "Persistent mutations must retain local working-state ownership through " + localMutationOwner);
+}
 includes(
   appCoreSource,
   "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",

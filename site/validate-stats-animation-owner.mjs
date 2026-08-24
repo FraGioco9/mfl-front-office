@@ -150,34 +150,13 @@ includes(
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
-const busyAnimationStart = loadingStyles.indexOf("html.mflInteractionBusy body *,");
-const busyAnimationEnd = loadingStyles.indexOf("html.mflInitialChromePreparing", busyAnimationStart);
-const busyAnimationBlock = loadingStyles.slice(busyAnimationStart, busyAnimationEnd);
-invariant(busyAnimationStart >= 0 && busyAnimationEnd > busyAnimationStart, "Global busy animation ownership must remain explicit.");
-includes(
-  busyAnimationBlock,
-  "animation-play-state: paused;",
-  "Loading must pause existing CSS animations instead of removing and restarting Stats bar animations.",
-);
-excludes(
-  busyAnimationBlock,
-  "animation: none;",
-  "Global busy state must not recreate CSS animations when loading ends.",
-);
-
+console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, loading-safe animation timelines, and prepared local MFL filter derivation without synthetic loading.");
+invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");
 const chromeAnimationStart = loadingStyles.indexOf("html.mflInitialChromePreparing");
-const chromeAnimationEnd = loadingStyles.indexOf("html.mflInteractionBusy body main,", chromeAnimationStart);
+const chromeAnimationEnd = loadingStyles.indexOf('html:not(.mflInitialRouteResolved)[data-initial-table-page="club"]', chromeAnimationStart);
 const chromeAnimationBlock = loadingStyles.slice(chromeAnimationStart, chromeAnimationEnd);
 invariant(chromeAnimationStart >= 0 && chromeAnimationEnd > chromeAnimationStart, "Initial chrome animation ownership must remain explicit.");
-includes(
-  chromeAnimationBlock,
-  "animation-play-state: paused;",
-  "Initial chrome preparation must pause animations without recreating them at first route readiness.",
-);
-excludes(
-  chromeAnimationBlock,
-  "animation: none;",
-  "Initial chrome preparation must not restart Stats animations when readiness settles.",
-);
+includes(chromeAnimationBlock, "animation-play-state: paused;", "Initial chrome preparation must pause animations without recreating them at first route readiness.");
+excludes(chromeAnimationBlock, "animation: none;", "Initial chrome preparation must not restart Stats animations when readiness settles.");
 
-console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, loading-safe animation timelines, and prepared local MFL filter derivation without synthetic loading.");
+console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, first-paint-safe animation timelines, and prepared local MFL filter derivation without global busy state.");
