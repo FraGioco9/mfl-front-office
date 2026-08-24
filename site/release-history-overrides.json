@@ -1,5 +1,9 @@
 [
   [
+    "v1.125.0",
+    "Consolidate application architecture, loading ownership, validation, and database refresh reliability"
+  ],
+  [
     "v1.124.5",
     "Restore progression email delivery and streamline Site quality validation"
   ],

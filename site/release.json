@@ -1,4 +1,4 @@
 {
-  "version": "1.125.0",
-  "description": "Consolidate application architecture, loading ownership, validation, and database refresh reliability"
+  "version": "1.125.1",
+  "description": "Stabilize navigation loading, pager visibility, and Evaluation editing behavior"
 }
