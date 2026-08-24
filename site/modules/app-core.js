@@ -11768,6 +11768,8 @@ async function startApp() {
   setupChangelogSections();
   loadSavedTableState();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  commitPageTransition(initialTarget.pageName, false, initialTarget.options);
+  const startupNavigationSequence = navigationTransitionSequence;
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
@@ -11796,8 +11798,13 @@ async function startApp() {
   applyStoredWalletPermission();
   updateAccountState();
   updateMenuVisibility();
-  const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
-  await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);
+  if (navigationTransitionSequence === startupNavigationSequence) {
+    const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+    await showHomeShell(authoritativeTarget.pageName, false, {
+      ...authoritativeTarget.options,
+      skipNavigationTransition: true,
+    });
+  }
 
   void Promise.allSettled([startupSummaryPromise, startupWalletPreferencesPromise]).then(() => {
     applyStoredWalletPermission();
