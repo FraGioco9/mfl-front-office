@@ -92,15 +92,21 @@ const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteR
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
 const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
-const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerLoad);
+const viewRunnerLoaderCall = viewRunner.indexOf("return await loader(transition);", viewRunnerLoad);
+const viewRunnerPendingCleanup = viewRunner.indexOf("if (pendingViewTransition === transition) pendingViewTransition = null;", viewRunnerLoaderCall);
+const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerPendingCleanup);
 invariant(
   viewRunnerNavigation >= 0
     && viewRunnerCancel > viewRunnerNavigation
     && viewRunnerStage > viewRunnerCancel
     && viewRunnerPaint > viewRunnerStage
     && viewRunnerLoad > viewRunnerPaint
-    && viewRunnerRelease > viewRunnerLoad,
-  "The global view transition runner must abort obsolete route data before staging the new view, then own navigation state through paint and its loader callback.",
+    && viewRunnerLoaderCall > viewRunnerLoad
+    && viewRunnerPendingCleanup > viewRunnerLoaderCall
+    && viewRunnerRelease > viewRunnerPendingCleanup
+    && !viewRunner.includes("refreshLoadingToken")
+    && !viewRunner.includes("mflInitialRouteResolved"),
+  "Shared view navigation must keep its proven click lifecycle unchanged, with no refresh-only loading branch.",
 );
 
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");
@@ -154,6 +160,11 @@ invariant(
   "MFL Stats view activation must stay on the canonical MFL page/view navigation path.",
 );
 invariant(
+  activation.includes('void runViewTransition(pageName, viewName, {')
+    && activation.includes('}, async () => {\n    await setView(viewName);\n  });'),
+  "Shared table view clicks must keep one transition open through destination loading instead of releasing navigation before setView begins.",
+);
+invariant(
   !activation.includes('if (pageName === "club") return;'),
   "Club view buttons must not be excluded from the shared view activation owner.",
 );
@@ -170,7 +181,7 @@ invariant(
 for (const [transitionMarker, loaderMarker, label] of [
   ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
-  ["await runViewTransition(pageName, viewName", "await setView(viewName);", "shared table view"],
+  ["void runViewTransition(pageName, viewName", "await setView(viewName);", "shared table view"],
 ]) {
   const transitionIndex = activation.indexOf(transitionMarker);
   const loaderIndex = activation.indexOf(loaderMarker, transitionIndex);

@@ -1673,8 +1673,11 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
     await waitForViewTransitionPaint();
     if (!stagedViewTransitionIsCurrent(transition)) return null;
     if (typeof loader === "function") {
-      pendingViewTransition = null;
-      return await loader(transition);
+      try {
+        return await loader(transition);
+      } finally {
+        if (pendingViewTransition === transition) pendingViewTransition = null;
+      }
     }
     return transition;
   } finally {
@@ -6507,24 +6510,21 @@ function activateViewButton(button) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
   }
-  void (async () => {
-    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
-    if (pageName === "club" && !clubTarget?.clubId) return;
-    const clubPath = clubTarget?.clubId
-      ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
-      : "";
-    const transition = await runViewTransition(pageName, viewName, {
-      walletAddress: state.currentAgentWalletAddress,
-      watchlistId: state.currentWatchlistId,
-      ...(clubTarget?.clubId ? {
-        clubId: clubTarget.clubId,
-        path: clubPath,
-      } : {}),
-    });
-    if (!transition) return;
-    if (!state.incrementalMode) pendingViewTransition = null;
+  const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
+  if (pageName === "club" && !clubTarget?.clubId) return;
+  const clubPath = clubTarget?.clubId
+    ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
+    : "";
+  void runViewTransition(pageName, viewName, {
+    walletAddress: state.currentAgentWalletAddress,
+    watchlistId: state.currentWatchlistId,
+    ...(clubTarget?.clubId ? {
+      clubId: clubTarget.clubId,
+      path: clubPath,
+    } : {}),
+  }, async () => {
     await setView(viewName);
-  })();
+  });
 }
 
 function clearPointerCommittedViewButton() {
@@ -7153,6 +7153,8 @@ async function startApp() {
   setupChangelogSections();
   loadSavedTableState();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  commitPageTransition(initialTarget.pageName, false, initialTarget.options);
+  const startupNavigationSequence = navigationTransitionSequence;
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
@@ -7179,7 +7181,17 @@ async function startApp() {
   applyStoredWalletPermission();
   updateAccountState();
   updateMenuVisibility();
-  await showHomeShell(initialTarget.pageName, false, initialTarget.options);
+
+  const initialRouteRuntimeReadyPromise = Reflect.get(window, "__mflInitialRouteRuntimeReadyPromise");
+  if (!initialRouteRuntimeReadyPromise || typeof initialRouteRuntimeReadyPromise.then !== "function") {
+    throw new Error("Initial route runtime readiness gate is unavailable.");
+  }
+  await initialRouteRuntimeReadyPromise;
+
+  if (navigationTransitionSequence === startupNavigationSequence) {
+    const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+    await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);
+  }
 
   void Promise.allSettled([startupSummaryPromise, startupWalletPreferencesPromise]).then(() => {
     applyStoredWalletPermission();

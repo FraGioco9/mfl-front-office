@@ -230,7 +230,12 @@ includes(
 includes(
   bootstrapCore,
   'const ROUTE_LOADING_REASON = "route-loading";',
-  "Refresh and in-app navigation must share one route-loading identity.",
+  "Runtime refresh rendering and in-app navigation must share one route-loading identity once the core route starts.",
+);
+includes(
+  bootstrapCore,
+  'const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";',
+  "Pre-core refresh presentation must use a bootstrap-only loading identity so it cannot change SPA route ownership semantics.",
 );
 includes(
   bootstrapCore,
@@ -273,10 +278,15 @@ includes(
   "wrapRoutePageGlobal();",
   "Page transitions must install the readiness-aware setPage loading owner.",
 );
+excludes(
+  bootstrapCore,
+  "function routeLoadingOwnerReusable() {",
+  "Refresh must not retain a special route-loading reuse branch once bootstrap presentation is separated from route loading.",
+);
 includes(
   bootstrapCore,
   "if (routeDestinationReady(pageName, options) || routeLoadingActive()) {",
-  "Fully ready page destinations and nested page transitions must bypass duplicate route loading.",
+  "Refresh and in-app page transitions must use the same ready-or-active route-loading reuse rule.",
 );
 includes(
   appCoreSource,
@@ -311,7 +321,7 @@ excludes(
 includes(
   bootstrapCore,
   "if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();",
-  "Nested canonical route-loading owners must reuse the active page-transition lifecycle instead of stacking tokens.",
+  "Nested refresh and in-app route-loading work must share the same canonical active-owner reuse rule.",
 );
 includes(
   bootstrapCore,

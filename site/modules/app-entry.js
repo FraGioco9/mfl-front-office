@@ -168,6 +168,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflWatchlistMyPlayersRouteRuntime?: { install?: () => boolean },
  * __mflChangelogHistoryReady?: Promise<boolean>,
  * __mflAppStartPromise?: Promise<void>,
+ * __mflInitialRouteRuntimeReadyPromise?: Promise<void>,
  * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
  * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
  * __mflIsRouteRuntimeReady?: (pageName: string, options?: Record<string, unknown>) => boolean,
@@ -193,6 +194,16 @@ let applicationCoreLoadedResolve = () => {};
 const applicationCoreLoadedPromise = new Promise((resolve) => {
   applicationCoreLoadedResolve = () => resolve(undefined);
 });
+/** @type {() => void} */
+let initialRouteRuntimeReadyResolve = () => {};
+/** @type {(reason?: unknown) => void} */
+let initialRouteRuntimeReadyReject = () => {};
+const initialRouteRuntimeReadyPromise = new Promise((resolve, reject) => {
+  initialRouteRuntimeReadyResolve = () => resolve(undefined);
+  initialRouteRuntimeReadyReject = reject;
+});
+initialRouteRuntimeReadyPromise.catch(() => {});
+runtimeWindow.__mflInitialRouteRuntimeReadyPromise = initialRouteRuntimeReadyPromise;
 const routeRuntimeEnsurePromises = new Map();
 const routeRuntimeReadyKeys = new Set();
 let evaluationRecentStateBridgeInstalled = false;
@@ -404,10 +415,16 @@ async function start() {
 
   await loadApplicationCore();
   const initialRouteKey = routeRuntimeKey(initialRouteRuntime.pageName, initialRouteRuntime.options);
-  await trackRouteRuntimePromise(
-    initialRouteKey,
-    finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options),
-  );
+  try {
+    await trackRouteRuntimePromise(
+      initialRouteKey,
+      finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options),
+    );
+    initialRouteRuntimeReadyResolve();
+  } catch (error) {
+    initialRouteRuntimeReadyReject(error);
+    throw error;
+  }
 
   if (runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;

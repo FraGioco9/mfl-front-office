@@ -8,6 +8,7 @@
   const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";
   const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
   const ROUTE_LOADING_REASON = "route-loading";
+  const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -137,6 +138,7 @@
       "evaluationRouteLoading",
     ]);
     const DATA_LOADING_REASONS = new Set([
+      INITIAL_ROUTE_BOOTSTRAP_REASON,
       ROUTE_LOADING_REASON,
       "loadSharedEvaluation",
       "loadSavedEvaluation",
@@ -347,7 +349,7 @@
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;
   window.__mflInteractionBusy = createInteractionBusyController();
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
-  const initialRouteToken = window.__mflInteractionBusy.begin(ROUTE_LOADING_REASON);
+  const initialRouteToken = window.__mflInteractionBusy.begin(INITIAL_ROUTE_BOOTSTRAP_REASON);
   let initialRouteFinished = false;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;

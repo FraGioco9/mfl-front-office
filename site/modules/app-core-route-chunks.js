@@ -263,23 +263,27 @@ export function splitApplicationCoreRuntime(source) {
   );
   core = replaceRequired(
     core,
-    `    const transition = await runViewTransition(pageName, viewName, {
-      walletAddress: state.currentAgentWalletAddress,
-      watchlistId: state.currentWatchlistId,
-    });`,
-    `    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
-    if (pageName === "club" && !clubTarget?.clubId) return;
-    const clubPath = clubTarget?.clubId
-      ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
-      : "";
-    const transition = await runViewTransition(pageName, viewName, {
-      walletAddress: state.currentAgentWalletAddress,
-      watchlistId: state.currentWatchlistId,
-      ...(clubTarget?.clubId ? {
-        clubId: clubTarget.clubId,
-        path: clubPath,
-      } : {}),
-    });`,
+    `  void runViewTransition(pageName, viewName, {
+    walletAddress: state.currentAgentWalletAddress,
+    watchlistId: state.currentWatchlistId,
+  }, async () => {
+    await setView(viewName);
+  });`,
+    `  const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
+  if (pageName === "club" && !clubTarget?.clubId) return;
+  const clubPath = clubTarget?.clubId
+    ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
+    : "";
+  void runViewTransition(pageName, viewName, {
+    walletAddress: state.currentAgentWalletAddress,
+    watchlistId: state.currentWatchlistId,
+    ...(clubTarget?.clubId ? {
+      clubId: clubTarget.clubId,
+      path: clubPath,
+    } : {}),
+  }, async () => {
+    await setView(viewName);
+  });`,
     "Club shared view transition identity",
   );
 
