@@ -618,7 +618,7 @@ export function splitApplicationCoreRuntime(source) {
   clubSearch = extractRequiredSection(
     club,
     '  if (typeof renderSearchResultsNow === "function") {',
-    '  if (initialClubRoute && typeof showHomeShell === "function") {',
+    '  document.addEventListener("click", (event) => {',
     "Club route-local search wrapper",
   );
   club = clubSearch.core;

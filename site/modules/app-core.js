@@ -652,7 +652,21 @@ function pageCanUseProgressionData(pageName) {
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
   syncHomeLoginButton();
   updateAccountState();
-  const result = await setPage(pageName, updateUrl, options);
+
+  let result;
+  if (pageName === "club") {
+    const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
+    const clubId = String(options?.clubId || route?.clubId || "").trim();
+    const view = String(options?.view || route?.view || "attributes");
+    const navigateClub = window.mflOpenClubPage;
+    if (!clubId || typeof navigateClub !== "function") {
+      throw new Error("Club navigation gate is unavailable during startup.");
+    }
+    result = await navigateClub(clubId, view);
+  } else {
+    result = await setPage(pageName, updateUrl, options);
+  }
+
   syncHomeLoginButton();
   updateMenuVisibility();
   return result;
@@ -2466,6 +2480,18 @@ function pageTargetFromPath(path) {
   }
 
   const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
+  const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);
+
+  if (clubRoute) {
+    return {
+      pageName: "club",
+      options: {
+        clubId: clubRoute.clubId,
+        view: clubRoute.view,
+        path: clubRoute.path,
+      },
+    };
+  }
 
   if (cleanPath === "/mfl/stats") {
     return {
@@ -11876,18 +11902,6 @@ async function startApp() {
 
 
   function hideClubPageControls() {
-    const views = document.querySelector("#progressionPage .views");
-    if (views) {
-      const orderedViews = ["attributes", "contracts", "current", "all"];
-      orderedViews.forEach((viewName) => {
-        const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
-        if (button) views.appendChild(button);
-      });
-      views.querySelectorAll(".viewButton").forEach((button) => {
-        button.hidden = !CLUB_VIEWS.has(button.dataset.view);
-      });
-    }
-
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");
@@ -12091,18 +12105,7 @@ async function startApp() {
     };
   }
 
-  if (initialClubRoute && typeof showHomeShell === "function") {
-    const originalShowHomeShell = showHomeShell;
-    let initialClubHandled = false;
-    showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
-      if (!initialClubHandled) {
-        initialClubHandled = true;
-        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
-        return;
-      }
-      return originalShowHomeShell.apply(this, arguments);
-    };
-  }
+
 
   document.addEventListener("click", (event) => {
     if (state.currentPage !== CLUB_PAGE) return;

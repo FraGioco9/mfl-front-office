@@ -9,11 +9,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeLoader, appEntry, clubEntryLifecycle] = await Promise.all([
+const [coreSource, routeLoader, appEntry, buildNormalizer] = await Promise.all([
   read("./modules/app-core.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./modules/app-core-club-entry-lifecycle.js"),
+  read("./modules/app-core-build-normalizer.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -139,6 +139,20 @@ excludes(
   "Direct refresh must never bypass the public Club gate.",
 );
 
-excludes(clubEntryLifecycle, "!important", "Unified Club entry must not add CSS priority overrides.");
+excludes(
+  buildNormalizer,
+  "normalizeClubEntryLifecycle",
+  "Build normalization must not rewrite source-owned Club entry behavior.",
+);
+excludes(
+  buildNormalizer,
+  "clubEntryArtifacts",
+  "Build composition must not retain an intermediate Club entry rewrite artifact.",
+);
+includes(
+  buildNormalizer,
+  "const clubSortArtifacts = normalizeClubSortLifecycle(clubStartupArtifacts);",
+  "Club sorting must consume the startup artifacts directly after source-owned Club entry migration.",
+);
 
-console.log("Club entry workflow validation passed: one app-entry gate owns lazy Club navigation while the route-core loader only resolves dependencies.");
+console.log("Club entry workflow validation passed: canonical source owns startup route resolution and shell entry while app-entry owns the single lazy Club gate.");

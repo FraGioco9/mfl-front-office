@@ -432,8 +432,6 @@
 
 
 
-
-
   window.addEventListener("popstate", () => {
     const path = normalizedPath();
     const route = clubRoute(path);
