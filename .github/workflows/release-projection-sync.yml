@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/migrate-latest-navigation-cancellation.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -35,21 +36,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Migrate latest-navigation cancellation
+        run: node site/migrate-latest-navigation-cancellation.mjs
+
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit normalized projections
+      - name: Commit migrated source
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/modules/app-core.js site/validate-generated-view-transition.mjs site/validate-page-route-gate-transition.mjs site/validate-route-runtime.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Release projections are current."
+            echo "Latest-navigation cancellation and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Normalize release projections"
+          git commit -m "Cancel obsolete route data before navigation commit"
           git push origin "HEAD:$HEAD_BRANCH"
