@@ -6,7 +6,6 @@ import threading
 import traceback
 from collections.abc import Callable
 from typing import Any
-from urllib.parse import urlparse
 
 import rebuild_database as rebuild
 import run_flow_rebuild as pipeline
@@ -17,31 +16,16 @@ PLAYER_REQUESTS_PER_MINUTE = 80
 PROGRESSION_REQUESTS_PER_MINUTE = 80
 PROGRESSION_MAX_URL_LENGTH = 5000
 MFL_API_TOKEN_ENVIRONMENT_VARIABLE = "MFL_API_TOKEN"
-MFL_API_HOSTS = {
-    "api.playmfl.com",
-    "z519wdyajg.execute-api.us-east-1.amazonaws.com",
-}
 
 
 def install_mfl_api_authentication() -> None:
-    """Add the configured MFL API token to requests handled by the rebuild pipeline."""
+    """Configure the canonical rebuild HTTP owner with the production MFL API token."""
     token = os.environ.get(MFL_API_TOKEN_ENVIRONMENT_VARIABLE, "").strip()
     if not token:
         raise RuntimeError(
             f"{MFL_API_TOKEN_ENVIRONMENT_VARIABLE} is required for database rebuilds"
         )
-
-    original_request = pipeline.Request
-
-    def authenticated_request(url: Any, *args: Any, **kwargs: Any) -> Any:
-        hostname = (urlparse(str(url)).hostname or "").lower()
-        if hostname in MFL_API_HOSTS:
-            headers = dict(kwargs.get("headers") or {})
-            headers["X-MFL-Api-Token"] = token
-            kwargs["headers"] = headers
-        return original_request(url, *args, **kwargs)
-
-    pipeline.Request = authenticated_request
+    pipeline.configure_mfl_api_token(token)
 
 
 def print_failure(stage: str, error: BaseException) -> None:

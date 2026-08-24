@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import populate_seasons_from_flow as flow_module
@@ -36,6 +36,12 @@ FLOW_WORKERS = 20
 REQUEST_TIMEOUT_SECONDS = 60
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 90.0
+MFL_API_TOKEN_HEADER = "X-MFL-Api-Token"
+MFL_API_HOSTS = frozenset({
+    "api.playmfl.com",
+    "z519wdyajg.execute-api.us-east-1.amazonaws.com",
+})
+_mfl_api_token = ""
 
 flow_module.FLOW_STATIC_PLAYER_BATCH_SIZE = FLOW_BATCH_SIZE
 flow_module.MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 1000
@@ -102,12 +108,30 @@ def timed(stage_name: str, function: Callable[..., Any], *args: Any, **kwargs: A
     return result, elapsed
 
 
+def configure_mfl_api_token(token: str) -> None:
+    """Configure the token used for MFL-owned HTTP hosts."""
+    global _mfl_api_token
+    _mfl_api_token = str(token or "").strip()
+
+
+def request_headers(url: str) -> dict[str, str]:
+    """Build canonical rebuild request headers, including scoped MFL authentication."""
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "mfl-front-office-rebuild/4.1",
+    }
+    hostname = (urlparse(str(url)).hostname or "").lower()
+    if _mfl_api_token and hostname in MFL_API_HOSTS:
+        headers[MFL_API_TOKEN_HEADER] = _mfl_api_token
+    return headers
+
+
 def request_json(url: str, request_name: str, limiter: RateLimiter | None = None) -> Any:
     last_error: Exception | None = None
     for attempt in range(MAX_RETRIES + 1):
         if limiter:
             limiter.wait()
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "mfl-front-office-rebuild/4.1"})
+        request = Request(url, headers=request_headers(url))
         try:
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))
