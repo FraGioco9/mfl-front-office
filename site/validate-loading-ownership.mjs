@@ -59,9 +59,7 @@ invariant(
 );
 for (const alias of [
   "setPage",
-  "switchWatchlist",
   "route-runtime",
-  "ensureProgressionData",
   "databaseStatsData",
   "mflStatsData",
   "evaluationRouteLoading",
@@ -119,6 +117,21 @@ invariant(
 invariant(
   !routeLoader.includes(".begin?.("),
   "The route-core dependency loader must not own interaction loading state after navigation ownership is consolidated in app-entry.",
+);
+for (const name of ["switchWatchlist", "ensureProgressionData"]) {
+  invariant(
+    !bootstrapCore.includes(`"${name}"`),
+    `${name} must not retain a bootstrap blanket route-loading alias or wrapper.`,
+  );
+}
+invariant(
+  appCoreSource.includes("function switchWatchlist(watchlistId) {")
+    && appCoreSource.includes("saveTableState();\n  applyFilters();"),
+  "Direct Watchlist switching must remain a source-owned local state/filter transition.",
+);
+invariant(
+  appCoreSource.includes("const loaded = await ensureProgressionData();"),
+  "The legacy full-data fallback must remain internal to the canonical setPage owner.",
 );
 invariant(
   !bootstrapCore.includes('"requestIncrementalRoute",'),

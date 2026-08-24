@@ -132,9 +132,7 @@
     const DATA_LOADING_CLASS = "mflDataLoading";
     const ROUTE_LOADING_ALIASES = new Set([
       "startup",
-      "switchWatchlist",
       "route-runtime",
-      "ensureProgressionData",
       "databaseStatsData",
       "mflStatsData",
       "evaluationRouteLoading",
@@ -347,10 +345,6 @@
       syncStoredAccessFlags();
 
       wrapRoutePageGlobal();
-      [
-        "switchWatchlist",
-        "ensureProgressionData",
-      ].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));
       [
         "loadSharedEvaluation",
         "loadSavedEvaluation",
