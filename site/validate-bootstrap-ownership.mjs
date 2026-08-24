@@ -240,7 +240,6 @@ includes(
 for (const reason of [
   "startup",
   "setPage",
-  "setView",
   "switchWatchlist",
   "route-runtime",
   "ensureProgressionData",
@@ -259,7 +258,7 @@ includes(
   "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
   "All legacy route reasons must publish the canonical route-loading reason.",
 );
-for (const name of ["setPage", "setView", "switchWatchlist", "ensureProgressionData"]) {
+for (const name of ["setPage", "switchWatchlist", "ensureProgressionData"]) {
   includes(
     bootstrapCore,
     `"${name}"`,
@@ -276,6 +275,11 @@ excludes(
   '"requestIncrementalRoute",',
   "Incremental route requests must not receive a blanket outer route-loading wrapper.",
 );
+excludes(
+  bootstrapCore,
+  '"setView",',
+  "View transitions must not receive a blanket outer route-loading wrapper.",
+);
 includes(
   bootstrapCore,
   'const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);',
@@ -289,7 +293,17 @@ includes(
 includes(
   appCoreSource,
   'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
-  "Uncached incremental route requests must enter the controller-owned route-loading reason.",
+  "Uncached incremental route requests and table view transitions must enter the controller-owned route-loading reason.",
+);
+includes(
+  appCoreSource,
+  "if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {",
+  "Cached Club view transitions must bypass route loading.",
+);
+includes(
+  appCoreSource,
+  'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "Uncached Club view transitions must enter the controller-owned route-loading reason.",
 );
 includes(
   bootstrapCore,

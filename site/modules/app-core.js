@@ -12376,7 +12376,11 @@ async function startApp() {
           dataPayload = await requestIncrementalRoute(dataRoute, 1);
         }
       };
-      await withInteractionBusy(loadClubData);
+      if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {
+        await loadClubData();
+      } else {
+        await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);
+      }
       if (!dataPayload) return;
 
       state.currentPage = CLUB_PAGE;
@@ -13346,7 +13350,7 @@ async function startApp() {
       return loadAndRender();
     }
 
-    return withInteractionBusy(loadAndRender);
+    return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);
   };
 })();
 

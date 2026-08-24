@@ -102,7 +102,7 @@ includes(
   'const ROUTE_LOADING_REASON = "route-loading";',
   "Watchlist page, view, and direct list-switch transitions must share the canonical route-loading lifecycle.",
 );
-for (const reason of ["setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData"]) {
+for (const reason of ["setPage", "switchWatchlist", "route-runtime", "ensureProgressionData"]) {
   includes(
     bootstrapCore,
     `"${reason}"`,
@@ -132,7 +132,27 @@ includes(
 includes(
   bootstrapCore,
   "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
-  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners with route loading.",
+  "The global loading bridge must wrap direct Watchlist switches and remaining page owners with route loading.",
+);
+excludes(
+  bootstrapCore,
+  '"setView",',
+  "Watchlist view transitions must use cache-aware source ownership instead of a blanket loading wrapper.",
+);
+includes(
+  coreSource,
+  "if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {",
+  "Cached Club views must bypass route loading at the source-owned view boundary.",
+);
+includes(
+  coreSource,
+  'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "Uncached Club views must enter canonical route loading at the source-owned view boundary.",
+);
+includes(
+  coreSource,
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "The generated Club loader facade must preserve canonical route-loading ownership for uncached view data.",
 );
 includes(
   bootstrapCore,

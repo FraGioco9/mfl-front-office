@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading] = await Promise.all([
+const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading, appCoreSource] = await Promise.all([
   read("./styles.css"),
   read("./loading.css"),
   read("./bootstrap-core.js"),
@@ -13,6 +13,7 @@ const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, t
   read("./route-core-loader-runtime.js"),
   read("./loading-toast-runtime.js"),
   read("./table-loading-runtime.js"),
+  read("./modules/app-core.js"),
 ]);
 
 invariant(
@@ -58,7 +59,6 @@ invariant(
 );
 for (const alias of [
   "setPage",
-  "setView",
   "switchWatchlist",
   "route-runtime",
   "ensureProgressionData",
@@ -123,6 +123,15 @@ invariant(
 invariant(
   !bootstrapCore.includes('"requestIncrementalRoute",'),
   "Incremental requests must not be blanket-wrapped outside their cache-aware request owner.",
+);
+invariant(
+  !bootstrapCore.includes('"setView",'),
+  "View transitions must not be blanket-wrapped outside their cache-aware transition owners.",
+);
+invariant(
+  appCoreSource.includes('window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage')
+    && appCoreSource.includes('return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'),
+  "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
 invariant(
   bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);'),
