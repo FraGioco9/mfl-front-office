@@ -171,6 +171,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflAppStartPromise?: Promise<void>,
  * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
  * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+ * __mflIsRouteRuntimeReady?: (pageName: string, options?: Record<string, unknown>) => boolean,
  * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
  * __mflRunPageTransition?: (pageName: string, updateHash?: boolean, options?: Record<string, unknown>, loader?: (() => unknown)) => Promise<unknown>,
  * __mflMarkApplicationCoreLoaded?: () => void,
@@ -194,6 +195,7 @@ const applicationCoreLoadedPromise = new Promise((resolve) => {
   applicationCoreLoadedResolve = () => resolve(undefined);
 });
 const routeRuntimeEnsurePromises = new Map();
+const routeRuntimeReadyKeys = new Set();
 let evaluationRecentStateBridgeInstalled = false;
 /** @type {Promise<unknown>} */
 let initialGlobalSearchWarmupPromise = Promise.resolve();
@@ -364,12 +366,20 @@ function routeRuntimeKey(page, options = {}) {
 }
 /** @param {string} key @param {Promise<void>} promise */
 function trackRouteRuntimePromise(key, promise) {
-  const pending = promise.catch((error) => {
+  const pending = promise.then(() => {
+    routeRuntimeReadyKeys.add(key);
+  }).catch((error) => {
     routeRuntimeEnsurePromises.delete(key);
+    routeRuntimeReadyKeys.delete(key);
     throw error;
   });
   routeRuntimeEnsurePromises.set(key, pending);
   return pending;
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function routeRuntimeReady(pageName, options = {}) {
+  return routeRuntimeReadyKeys.has(routeRuntimeKey(normalizeRoutePageName(pageName), options));
 }
 
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
@@ -382,6 +392,7 @@ function ensureRouteRuntime(pageName, options = {}) {
 }
 
 runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
+runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady;
 installClubRouteRuntimeGate();
 
 async function start() {

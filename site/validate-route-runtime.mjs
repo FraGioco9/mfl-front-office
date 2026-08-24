@@ -74,6 +74,8 @@ includes(entry, "finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRo
 includes(entry, "trackRouteRuntimePromise(", "Initial and lazy route completion must share the same runtime promise cache.");
 excludes(entry, "await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);", "Initial startup must not rerun the full lazy route runtime path after pre-core owners are already loaded.");
 includes(entry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime", "SPA navigation must expose the route runtime gate to app-core.");
+includes(entry, "runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady", "SPA navigation must expose settled route-runtime readiness.");
+includes(entry, "const routeRuntimeReadyKeys = new Set();", "Route runtime readiness must track settled dependency plans explicitly.");
 includes(entry, "runtimeWindow.__mflMarkApplicationCoreLoaded = markApplicationCoreLoaded", "app-core must be able to close the startup race before startApp runs.");
 includes(entry, "installClubRouteRuntimeGate", "Club navigation must use the same route runtime gate.");
 includes(entry, "__mflFilterControlsRuntime?.sync?.()", "Late-loaded filter controls must synchronize immediately.");
@@ -87,6 +89,8 @@ includes(coreSource, "ownerBeforeRuntime", "The canonical route gate must redisp
 includes(coreSource, "window.__mflCancelIncrementalRouteRequest?.();", "Canonical app-core must cancel obsolete route data before lazy runtime loading.");
 includes(coreSource, "window.__mflEnsureRouteCore", "Canonical app-core must await route-owned core code before committing its destination.");
 includes(coreSource, "routeCorePromise", "Canonical app-core must overlap route-core download with route-runtime loading.");
+includes(coreSource, "loadingController?.routeReady?.(pageName, incomingOptions)", "Canonical setPage gate must consult full destination readiness before acquiring route loading.");
+includes(coreSource, "routeLoadingActive", "Canonical setPage gate must avoid duplicate route-loading tokens when an outer transition already owns loading.");
 includes(coreSource, "window.__mflMarkApplicationCoreLoaded?.();", "Canonical app-core must mark itself loaded before startApp.");
 
 includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");
@@ -101,6 +105,8 @@ excludes(routeCoreLoader, "function routeCoreDependencies", "Route-core loading 
 excludes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Route-core loading must not rebuild missing chunks from raw source in the browser.");
 excludes(routeCoreLoader, 'fetch(assetUrl("/modules/app-core.js")', "Route-core loading must not fetch the raw application core in the browser.");
 includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");
+includes(routeCoreLoader, "runtimeWindow.__mflIsRouteCoreReady = isReady", "The route-core loader must expose settled dependency readiness.");
+includes(routeCoreLoader, "const loadedRouteCorePages = new Set();", "Route-core readiness must track successfully loaded dependency owners explicitly.");
 includes(routeCoreLoader, "runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();", "Late route-core functions must receive the same interaction-busy wrappers as startup functions.");
 excludes(routeCoreLoader, 'ensure("mflstats")', "MFL Stats must not execute before the shared core has created its permanent DOM references.");
 excludes(routeCoreLoader, "setInterval", "Route-core loading must remain event/promise driven.");
