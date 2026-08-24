@@ -9,14 +9,15 @@
         const root = document.documentElement;
         root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
 
+        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG
         const TABLE_VIEW_CONFIG = Object.freeze({
-          database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
-          mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
-          progression: Object.freeze({ order: ["current", "all"], fallback: "current" }),
-          agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
-          watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
-          myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
-          club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
+          database: Object.freeze({ order: ["attributes","contracts","stats"], fallback: "attributes" }),
+          mfl: Object.freeze({ order: ["attributes","stats"], fallback: "attributes" }),
+          progression: Object.freeze({ order: ["current","all"], fallback: "current" }),
+          agents: Object.freeze({ order: ["attributes","contracts","next","current","all"], fallback: "attributes" }),
+          watchlist: Object.freeze({ order: ["attributes","next","contracts","current","all"], fallback: "current" }),
+          myplayers: Object.freeze({ order: ["attributes","next","contracts","current","all"], fallback: "attributes" }),
+          club: Object.freeze({ order: ["attributes","contracts","current","all"], fallback: "attributes" }),
         });
         const VIEW_BY_SLUG = Object.freeze({
           attributes: "attributes",
@@ -27,6 +28,7 @@
           "current-season": "current",
           "all-time": "all",
         });
+        // END GENERATED FIRST-PAINT ROUTE CONFIG
         window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
 
         const pathParts = String(window.location.pathname || "/").split("/").filter(Boolean);
