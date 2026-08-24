@@ -1,0 +1,42 @@
+name: Evaluation cache validator ownership migration
+
+on:
+  push:
+    branches:
+      - refactor/source-owned-evaluation-recent-readiness
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/source-owned-evaluation-recent-readiness
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update Evaluation cache ownership validator
+        run: node site/migrate-evaluation-cache-validator-ownership.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-evaluation-cache-validator-ownership.mjs
+          rm -f .github/workflows/evaluation-cache-validator-ownership-migration.yml
+      - name: Persist validator migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Evaluation cache validator is already source-owned."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Evaluation cache ownership validator"
+          git push origin HEAD:refactor/source-owned-evaluation-recent-readiness
