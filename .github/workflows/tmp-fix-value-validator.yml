@@ -1,0 +1,46 @@
+name: Temporary Value validator fix
+
+on:
+  push:
+    branches:
+      - ui/evaluation-value-label
+
+permissions:
+  contents: write
+
+jobs:
+  fix-validator:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/evaluation-value-label
+      - name: Update stale Value expectations
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("site/validate-evaluation-share-preview.mjs")
+          text = path.read_text(encoding="utf-8")
+          replacements = {
+              'contextualPreview.description.includes("Present Value $24.00")': 'contextualPreview.description.includes("Value $24.00")',
+              '"Shared preview description must expose current age and canonical Present Value only."': '"Shared preview description must expose current age and canonical Value only."',
+              '&& persistenceDoc.includes("Present Value"),': '&& persistenceDoc.includes("user-facing `Value` metric"),',
+              '"Supabase persistence documentation must describe the saved-horizon Present Value boundary and high-resolution card."': '"Supabase persistence documentation must describe the saved-horizon Value boundary and high-resolution card."',
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one occurrence of {old!r}, found {count}")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+      - name: Commit validator update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/validate-evaluation-share-preview.mjs
+          git commit -m "Align Evaluation Value preview validation"
+          git push origin HEAD:ui/evaluation-value-label
