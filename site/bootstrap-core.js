@@ -144,6 +144,13 @@
       "loadSavedEvaluation",
       "openSavedEvaluationsModal",
     ]);
+    const OPERATION_BUSY_REASONS = new Set([
+      "interaction-loading",
+      "createSharedEvaluationFromPayload",
+      "createSharedEvaluation",
+      "createSavedEvaluation",
+      "linkWallet",
+    ]);
     const blockedEvents = [
       "pointerdown", "pointerup", "pointercancel",
       "mousedown", "mouseup", "touchstart", "touchend", "touchcancel",
@@ -180,7 +187,7 @@
     function makeSnapshot() {
       const reasons = Object.freeze(Array.from(activeTokens.values()));
       return Object.freeze({
-        busy: reasons.length > 0,
+        busy: reasons.some((reason) => OPERATION_BUSY_REASONS.has(reason)),
         dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),
         reasons,
       });
