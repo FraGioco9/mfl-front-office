@@ -313,7 +313,11 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .globalSearchControl #playerSearchInput:focus-visible:not(:disabled),
 #pageSizeSelect:hover:not(:disabled),
 #pageSizeSelect:focus:not(:disabled),
-#pageSizeSelect:focus-visible:not(:disabled) {
+#pageSizeSelect:focus-visible:not(:disabled),
+.evaluationMflUsdInput:focus:not(:disabled),
+.evaluationMflUsdInput:focus-visible:not(:disabled),
+.advancedMflUsdInput:focus:not(:disabled),
+.advancedMflUsdInput:focus-visible:not(:disabled) {
   outline: 0;
   border-color: var(--primary-hover);
   background: var(--row-hover);
