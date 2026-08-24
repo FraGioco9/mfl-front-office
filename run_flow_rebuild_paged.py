@@ -18,6 +18,7 @@ pipeline.flow_module.PLAYERS_URL = pipeline.PLAYERS_URL
 pipeline.flow_module._impl.PLAYERS_URL = pipeline.PLAYERS_URL
 
 FIRST_PLAYER_ID = 42
+PROGRESSION_MAX_URL_LENGTH = 5000
 PREVIOUS_DATABASE_PATH = Path("previous-database/mfl_database.db")
 ALL_PROGRESSION_COLUMNS = tuple(
     f"{attribute}_prog_all" for attribute in pipeline.ATTRIBUTES
@@ -231,11 +232,22 @@ def _owner_wallet_address(player: dict[str, Any]) -> str:
     return str(owner.get("walletAddress") or "").strip().lower()
 
 
+def progression_url(player_ids: list[int], interval: str) -> str:
+    """Return the canonical progression request URL for a planned player batch."""
+    query = pipeline.urlencode(
+        {
+            "playersIds": ",".join(str(player_id) for player_id in player_ids),
+            "interval": interval,
+        }
+    )
+    return f"{pipeline.PROGRESSIONS_URL}?{query}"
+
+
 def prepare_progression_batches(
     players: list[dict[str, Any]],
     interval: str,
 ) -> tuple[tuple[int, ...], ...]:
-    """Build immutable progression batches from non-special-wallet players."""
+    """Build canonical progression batches bounded by player count and URL length."""
     excluded_wallets = {
         pipeline.MFL_WALLET_ADDRESS.lower(),
         pipeline.MFL_TRADE_WALLET_ADDRESS.lower(),
@@ -249,17 +261,43 @@ def prepare_progression_batches(
         for player_id, player in unique_players.items()
         if _owner_wallet_address(player) not in excluded_wallets
     )
-    batches = tuple(
-        tuple(eligible_ids[index:index + pipeline.PROGRESSION_BATCH_SIZE])
-        for index in range(0, len(eligible_ids), pipeline.PROGRESSION_BATCH_SIZE)
-    )
+
+    batches: list[tuple[int, ...]] = []
+    current: list[int] = []
+    for player_id in eligible_ids:
+        candidate = [*current, player_id]
+        candidate_url_length = len(progression_url(candidate, interval))
+        if current and (
+            len(candidate) > pipeline.PROGRESSION_BATCH_SIZE
+            or candidate_url_length > PROGRESSION_MAX_URL_LENGTH
+        ):
+            batches.append(tuple(current))
+            current = [player_id]
+        else:
+            current = candidate
+
+        current_url_length = len(progression_url(current, interval))
+        if current_url_length > PROGRESSION_MAX_URL_LENGTH:
+            raise RuntimeError(
+                f"Progression {interval} URL exceeds {PROGRESSION_MAX_URL_LENGTH} characters "
+                f"for player {player_id}"
+            )
+
+    if current:
+        batches.append(tuple(current))
+
     excluded_count = len(unique_players) - len(eligible_ids)
-    pipeline.log(
-        f"Progression {interval} batches ready: {len(batches)} predetermined batches of up to "
-        f"{pipeline.PROGRESSION_BATCH_SIZE} from {len(eligible_ids)} players; "
-        f"excluded {excluded_count} MFL/MFL Trade players"
+    longest_url = max(
+        (len(progression_url(list(batch), interval)) for batch in batches),
+        default=0,
     )
-    return batches
+    pipeline.log(
+        f"Progression {interval} batches ready: {len(batches)} batches from "
+        f"{len(eligible_ids)} players; longest URL {longest_url}/"
+        f"{PROGRESSION_MAX_URL_LENGTH} characters; excluded {excluded_count} "
+        "MFL/MFL Trade players"
+    )
+    return tuple(batches)
 
 
 def fetch_player_sources_and_prepare_progressions(
