@@ -9,7 +9,12 @@ const validators = await readFile(new URL("./validate-all.mjs", import.meta.url)
 if (normalizer.includes("normalizeStatsNavigationLifecycle") || normalizer.includes("statsNavigationArtifacts")) {
   throw new Error("Build normalization must not rewrite source-owned Stats navigation.");
 }
-if (!source.includes('state.view === "stats"') || !source.includes('await setPage("database", false, { view: viewName, skipNavigationLoading: true })')) {
+if (
+  !source.includes('state.currentPage === "database"\n      && state.view === "stats"\n      && pageName === "database"')
+  || !source.includes('(viewName === "attributes" || viewName === "contracts")')
+  || !source.includes('runViewTransition("database", viewName, { statePageName: "database" }')
+  || !source.includes('view: viewName,\n        skipNavigationTransition: true,\n        skipNavigationLoading: true,')
+) {
   throw new Error("Canonical app-core source must own the Database Stats exit to table views.");
 }
 if (!runtime.includes('state.currentPage === "database"\n      && state.view === "stats"')) {
