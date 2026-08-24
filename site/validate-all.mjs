@@ -7,25 +7,15 @@ const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-rea
 
 const validators = [
   "validate-domain-build-generated.mjs",
-  "validate-global-search-results.mjs",
-  "validate-global-search-open-lifecycle.mjs",
+  "validate-domain-route-features.mjs",
   "validate-domain-release-deployment.mjs",
-  "validate-document-title-runtime.mjs",
   "validate-domain-api-persistence.mjs",
   "validate-domain-shared-ui.mjs",
   "validate-domain-routing-loading.mjs",
   "validate-domain-evaluation.mjs",
   "validate-domain-stats.mjs",
   "validate-domain-club.mjs",
-  "validate-settings-route-core.mjs",
-  "validate-player-route-core.mjs",
-  "validate-render-reuse-contract.mjs",
   "validate-domain-table.mjs",
-  "validate-agent-title-loading.mjs",
-  "validate-progression-retired-filter.mjs",
-  "validate-watchlist-route-core.mjs",
-  "validate-watchlist-progression-access.mjs",
-  "validate-watchlist-selector-navigation.mjs",
 ];
 
 for (const validator of validators) {
