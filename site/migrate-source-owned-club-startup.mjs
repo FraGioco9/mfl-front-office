@@ -8,6 +8,12 @@ const replaceRequired = (source, before, after, label) => {
   if (!source.includes(before)) throw new Error(`Missing ${label}.`);
   return source.replace(before, after);
 };
+const replaceOwned = (source, before, after, label) => {
+  if (source.includes(before)) return source.replace(before, after);
+  if (after && source.includes(after)) return source;
+  if (!after && !source.includes(before)) return source;
+  throw new Error(`Missing ${label}.`);
+};
 
 const lifecycle = await read("modules/app-core-club-startup-lifecycle.js");
 function constantValue(name) {
@@ -31,10 +37,8 @@ function constantValue(name) {
   throw new Error(`Unterminated literal for ${name}.`);
 }
 
-// These three behaviors are shaped by the Club structural splitter before the
-// old startup normalizer sees them, so source ownership belongs in that splitter.
 let routeChunks = await read("modules/app-core-route-chunks.js");
-routeChunks = replaceRequired(
+routeChunks = replaceOwned(
   routeChunks,
   constantValue("CLUB_TITLE_READY_CALLBACK"),
   constantValue("VERIFIED_CLUB_TITLE_READY_CALLBACK"),
@@ -43,7 +47,7 @@ routeChunks = replaceRequired(
 const settlementTail = "\n\n      state.currentPage = CLUB_PAGE;";
 const blockingSettlement = constantValue("BLOCKING_TITLE_SETTLEMENT").replace(settlementTail, "");
 const rosterSettlement = constantValue("ROSTER_OWNED_TITLE_SETTLEMENT").replace(settlementTail, "");
-routeChunks = replaceRequired(
+routeChunks = replaceOwned(
   routeChunks,
   blockingSettlement,
   rosterSettlement,
@@ -60,11 +64,33 @@ const finalRenderStrip = `  club = replaceRequired(
     "Club page canonical render ownership",
   );
 `;
-routeChunks = replaceRequired(
+routeChunks = replaceOwned(
   routeChunks,
   finalRenderStrip,
   "",
   "Club final roster render remains canonical through structural splitting",
+);
+
+const clubTitleStabilityTransform = `  core = replaceRequired(
+    core,
+    \`  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }\`,
+    \`  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else if (pageName !== "club") {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }\`,
+    "Club view title stability",
+  );
+`;
+routeChunks = replaceOwned(
+  routeChunks,
+  clubTitleStabilityTransform,
+  "",
+  "Club loading-shell title stability stays canonical",
 );
 await writeFile(resolve(siteRoot, "modules/app-core-route-chunks.js"), routeChunks);
 
@@ -74,7 +100,6 @@ const directReplacements = [
   ["GENERIC_PREPARE_SAVED_PAGE_STATE", "CLUB_FREE_PREPARE_SAVED_PAGE_STATE"],
   ["GENERIC_INCREMENTAL_LOADING_FILTERS", "CLUB_FREE_INCREMENTAL_LOADING_FILTERS"],
   ["GENERIC_INCREMENTAL_PAYLOAD_RENDER", "CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER"],
-  ["GENERIC_TABLE_LOADING_SHELL", "CLUB_AWARE_TABLE_LOADING_SHELL"],
   ["TABLE_CONTROL_SYNC_START", "CLUB_FREE_TABLE_CONTROL_SYNC_START"],
 ];
 
@@ -87,6 +112,17 @@ for (const [beforeName, afterName] of directReplacements) {
     `${beforeName} canonical source ownership`,
   );
 }
+
+const rawGenericLoadingShell = constantValue("GENERIC_TABLE_LOADING_SHELL").replace(
+  '} else if (pageName !== "club") {',
+  '} else {',
+);
+core = replaceRequired(
+  core,
+  rawGenericLoadingShell,
+  constantValue("CLUB_AWARE_TABLE_LOADING_SHELL"),
+  "Club-aware canonical Table loading shell",
+);
 
 const tableRestoreBefore = constantValue("TABLE_RESTORE_START").replace("tableRestoreSavedTableStateOwner", "restoreSavedTableState");
 const tableRestoreAfter = constantValue("CLUB_FREE_TABLE_RESTORE_START").replace("tableRestoreSavedTableStateOwner", "restoreSavedTableState");
