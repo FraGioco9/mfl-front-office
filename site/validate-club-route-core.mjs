@@ -78,7 +78,15 @@ includes(tableCore, 'else if (pageName !== "club") {', "The shared Table view re
 excludes(sharedCore, 'tablePageTitle.textContent = club?.name || "Club";', "Incremental Club payloads must not replace the loaded Club title.");
 
 includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
-includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk may retain its route-local snapshot state without owning view activation.");
+for (const retiredClubSnapshotOwner of [
+  "const clubViewRenderCache = new Map();",
+  "function clubViewRenderCacheKey(",
+  "function cloneClubRows(",
+  "function captureClubView(",
+  "function restoreCachedClubView(",
+]) {
+  excludes(clubCore, retiredClubSnapshotOwner, `Club must not restore duplicate snapshot owner: ${retiredClubSnapshotOwner}`);
+}
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
 includes(clubCore, "let activeClubTitle = null;", "The Club chunk must retain the loaded Club title identity across view switches.");
@@ -94,11 +102,11 @@ includes(clubCore, "ignoreCurrentClubRoute: true,", "Initial Club hydration must
 excludes(clubCore, "await withInteractionBusy(loadClubData);", "Club must not retain a second private interaction-busy data loader.");
 excludes(clubCore, "renderIncrementalLoadingState(CLUB_PAGE, dataRoute);", "Club must not render a second private loading state outside Uniform Loading.");
 excludes(clubCore, "const loadClubData = async () => {", "Club must not retain a bespoke initial data request owner.");
-includes(
-  clubCore,
-  'incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })',
-  "Club route-local snapshots must use the same explicit Club route identity as network requests.",
-);
+includes(sharedCore, "const clubViewPayloadCache = new Map();", "Shared incremental core must retain the canonical Club payload cache.");
+includes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Shared incremental core must own Club payload cache writes.");
+includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremental core must own Club payload cache reads.");
+includes(sharedCore, "rememberClubViewPayload(route, payload);", "Applying a Club payload must populate the canonical shared cache.");
+includes(sharedCore, "const clubPayload = cachedClubViewPayload(route);", "Cached Club re-entry must consult the canonical shared cache.");
 excludes(
   clubCore,
   'mflLoadIncrementalRoutePage("club", { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true })',

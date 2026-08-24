@@ -12436,7 +12436,6 @@ async function startApp() {
       sortKey: "positions",
       sortDirection: "asc",
     }, async () => {
-      if (restoreCachedClubView(nextView)) return;
       setClubSwitching(true);
       try {
         if (typeof window.mflLoadIncrementalRoutePage === "function") {
