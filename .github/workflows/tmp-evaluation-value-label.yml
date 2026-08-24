@@ -1,0 +1,96 @@
+name: Temporary Evaluation Value label rename
+
+on:
+  push:
+    branches:
+      - ui/evaluation-value-label
+
+permissions:
+  contents: write
+
+jobs:
+  patch-labels:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/evaluation-value-label
+      - name: Rename user-facing Present Value labels
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new, expected=None):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if expected is not None and count != expected:
+                  raise SystemExit(f"{path}: expected {expected} occurrences of {old!r}, found {count}")
+              if count == 0:
+                  raise SystemExit(f"{path}: no occurrence of {old!r}")
+              file.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace("site/index.html", "<th>Present Value</th>", "<th>Value</th>", 2)
+          replace(
+              "site/api/_evaluation-preview-card.js",
+              '    "Present Value",\n',
+              '    "Value",\n',
+              1,
+          )
+          replace(
+              "site/api/_evaluation-share-preview.js",
+              'details.push(`Present Value ${formatEvaluationPreviewCurrency(presentValue)}`);',
+              'details.push(`Value ${formatEvaluationPreviewCurrency(presentValue)}`);',
+              1,
+          )
+
+          validator = Path("site/validate-evaluation-share-preview.mjs")
+          text = validator.read_text(encoding="utf-8")
+          text = text.replace(
+              'const previewApi = readText("api/evaluation-preview.js");',
+              'const indexHtml = readText("index.html");\nconst previewApi = readText("api/evaluation-preview.js");',
+              1,
+          )
+          text = text.replace(
+              '    && previewOwner.includes("Present Value"),\n  "Shared preview metadata must expose the same Present Value represented by the Evaluation summary table.",',
+              '    && previewOwner.includes("Value"),\n  "Shared preview metadata must expose the same Value represented by the Evaluation summary table.",',
+              1,
+          )
+          text = text.replace(
+              'for (const field of ["Overall", "Position", "Age", "Present Value"]) {',
+              'for (const field of ["Overall", "Position", "Age", "Value"]) {',
+              1,
+          )
+          text = text.replace(
+              '"Dynamic Evaluation preview card must use the Evaluation currency format for Present Value."',
+              '"Dynamic Evaluation preview card must use the Evaluation currency format for Value."',
+              1,
+          )
+          marker = 'assert(previewApi.includes("htmlEscape"), "Evaluation preview metadata must be HTML-escaped before injection.");'
+          insert = '''assert((indexHtml.match(/<th>Value<\\/th>/g) || []).length === 2, "Both Evaluation tables must label the discounted result as Value.");
+          assert(!indexHtml.includes("<th>Present Value</th>"), "Evaluation tables must not expose the old Present Value label.");
+          assert(previewOwner.includes("`Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must label the metric as Value.");
+          assert(!previewOwner.includes("`Present Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must not expose the old Present Value label.");
+          '''
+          if marker not in text:
+              raise SystemExit("validator marker not found")
+          text = text.replace(marker, insert + marker, 1)
+          validator.write_text(text, encoding="utf-8")
+
+          doc = Path("SUPABASE_PERSISTENCE.md")
+          doc_text = doc.read_text(encoding="utf-8")
+          old = "Present Value is the same sum of the Present Value column shown in the Evaluation summary table, using the saved share horizon, shared Evaluation inputs, discount/first-season settings, and late-season reward rates."
+          new = "The user-facing `Value` metric is the same discounted present-value sum shown in the Evaluation summary table, using the saved share horizon, shared Evaluation inputs, discount/first-season settings, and late-season reward rates."
+          if old not in doc_text:
+              raise SystemExit("persistence wording not found")
+          doc.write_text(doc_text.replace(old, new, 1), encoding="utf-8")
+      - name: Commit label rename
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/index.html site/api/_evaluation-preview-card.js site/api/_evaluation-share-preview.js site/validate-evaluation-share-preview.mjs SUPABASE_PERSISTENCE.md
+          git commit -m "Rename Evaluation Present Value label"
+          git push origin HEAD:ui/evaluation-value-label
