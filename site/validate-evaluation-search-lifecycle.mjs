@@ -195,34 +195,47 @@ invariant(
     && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
   "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
 );
+const evaluationCacheMarkers = [
+  "let evaluationPageCacheReady = false;",
+  "function preparePlainEvaluationReentry() {",
+  'state.evaluationShareId = "";',
+  'state.evaluationSavedId = "";',
+  "state.evaluationPlayerId = null;",
+  "state.evaluationOverallRows = {};",
+  "state.evaluationSummaryPositions = {};",
+  'evaluationSearchInput.value = "";',
+  "renderEmptyEvaluationSelection(false, true);",
+  "function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false) {",
+  'const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(',
+  "const cachedEvaluationReentry = plainEvaluationRoute",
+  "options.reuseCachedRoute === true",
+  "evaluationPageCacheReady;",
+  'document.documentElement.classList.remove("mflEvaluationReady");',
+  "await finishEvaluationReadiness();",
+  "evaluationPageCacheReady = true;",
+  "const setPageWithoutRouteLoading = setPage;",
+  'const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;',
+  "reuseCachedRoute: reuseCachedEvaluationRoute",
+  'if (pageName === "evaluation") preparePlainEvaluationReentry();',
+  "await setPageWithoutRouteLoading(pageName, true, options);",
+  "await setPage(pageName, true, options);",
+  'if (pageName === "evaluation") {\n    if (options.plain) {',
+];
+const generatedEvaluationLifecycle = `${generatedSharedCore}\n${generatedEvaluationCore}`;
+for (const marker of evaluationCacheMarkers) {
+  invariant(
+    appCoreSource.includes(marker),
+    `Canonical Evaluation source must own cached plain-route re-entry through ${marker}`,
+  );
+  invariant(
+    generatedEvaluationLifecycle.includes(marker),
+    `Generated shared/Evaluation artifacts must preserve cached plain-route re-entry through ${marker}`,
+  );
+}
 invariant(
-  generatedSharedCore.includes("let evaluationPageCacheReady = false;")
-    && generatedSharedCore.includes("function preparePlainEvaluationReentry() {")
-    && generatedSharedCore.includes('state.evaluationShareId = "";')
-    && generatedSharedCore.includes('state.evaluationSavedId = "";')
-    && generatedSharedCore.includes("state.evaluationPlayerId = null;")
-    && generatedSharedCore.includes("state.evaluationOverallRows = {};")
-    && generatedSharedCore.includes("state.evaluationSummaryPositions = {};")
-    && generatedSharedCore.includes('evaluationSearchInput.value = "";')
-    && generatedSharedCore.includes("renderEmptyEvaluationSelection(false, true);")
-    && generatedSharedCore.includes("function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false) {")
-    && generatedSharedCore.includes('const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(')
-    && generatedSharedCore.includes("const cachedEvaluationReentry = plainEvaluationRoute")
-    && generatedSharedCore.includes("options.reuseCachedRoute === true")
-    && generatedSharedCore.includes("evaluationPageCacheReady;")
-    && generatedSharedCore.includes('document.documentElement.classList.remove("mflEvaluationReady");')
-    && generatedSharedCore.includes("await finishEvaluationReadiness();")
-    && generatedSharedCore.includes("evaluationPageCacheReady = true;")
-    && generatedSharedCore.includes("const setPageWithoutRouteLoading = setPage;")
-    && generatedSharedCore.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
-    && generatedSharedCore.includes("reuseCachedRoute: reuseCachedEvaluationRoute")
-    && generatedSharedCore.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
-    && generatedSharedCore.includes("await setPageWithoutRouteLoading(pageName, true, options);")
-    && generatedSharedCore.includes("await setPage(pageName, true, options);")
-    && generatedSharedCore.includes('if (pageName === "evaluation") {\n    if (options.plain) {')
-    && searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
+  searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
     && !searchRuntime.includes("MutationObserver")
-    && !generatedSharedCore.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
+    && !generatedEvaluationLifecycle.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
   "Plain Evaluation re-entry must clear stale player chrome before first paint, reuse the completed in-session route without Uniform Loading/readiness work, and keep first visit/refresh on the normal loading path.",
 );
 invariant(
