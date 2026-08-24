@@ -16,6 +16,12 @@ const sharedCore = String(artifacts.core || "");
 const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
 
 invariant(
+  !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
+    && buildNormalizer.includes("return clubSortArtifacts;"),
+  "Saved Evaluation valuation/cache behavior must be source-owned with Club sort as the terminal build artifact.",
+);
+
+invariant(
   controls.includes(".evaluationSearchControl:hover #evaluationSearchInput:not(:disabled),")
     && controls.includes("#evaluationSearchInput:focus:not(:disabled),")
     && !controls.includes("#evaluationSearchInput:hover:not(:disabled),")
