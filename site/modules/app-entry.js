@@ -231,7 +231,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
- * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, waitForRoutePaint?: () => Promise<void>, installCoreBridge?: () => void },
+ * __mflInteractionBusy?: { reason?: string, begin?: (reason?: string) => string, end?: (token?: string) => void, waitForRoutePaint?: () => Promise<void>, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
@@ -365,7 +365,8 @@ function installClubRouteRuntimeGate() {
     if (!normalizedClubId) return;
 
     const loadClub = async () => {
-      const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-loading") || "";
+      const loadingController = runtimeWindow.__mflInteractionBusy;
+      const token = loadingController?.begin?.(loadingController.reason) || "";
       try {
         const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"
           ? runtimeWindow.__mflEnsureRouteCore("club", { view })
@@ -379,7 +380,7 @@ function installClubRouteRuntimeGate() {
         }
         return await routeOwner.call(runtimeWindow, normalizedClubId, view);
       } finally {
-        if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
+        if (token) loadingController?.end?.(token);
       }
     };
 
