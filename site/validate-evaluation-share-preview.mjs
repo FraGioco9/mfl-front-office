@@ -325,9 +325,9 @@ assert(contextualPreview.presentValue === summaryPresentValue, "Shared preview m
 assert(contextualPreview.title === "Mario Rossi Evaluation - MFL Front Office", "Shared preview title must identify the player by name.");
 assert(
   contextualPreview.description.includes("Age 34")
-    && contextualPreview.description.includes("Present Value $24.00")
+    && contextualPreview.description.includes("Value $24.00")
     && !contextualPreview.description.includes("Age 99"),
-  "Shared preview description must expose current age and canonical Present Value only.",
+  "Shared preview description must expose current age and canonical Value only.",
 );
 
 assert(
@@ -335,8 +335,8 @@ assert(
     && persistenceDoc.includes("never exposes or selects the creator wallet")
     && persistenceDoc.includes("saved `overallValues` array")
     && persistenceDoc.includes("2400x1260")
-    && persistenceDoc.includes("Present Value"),
-  "Supabase persistence documentation must describe the saved-horizon Present Value boundary and high-resolution card.",
+    && persistenceDoc.includes("user-facing `Value` metric"),
+  "Supabase persistence documentation must describe the saved-horizon Value boundary and high-resolution card.",
 );
 
 const genericImage = await renderEvaluationPreviewPng({
