@@ -166,7 +166,11 @@ includes(appEntry, 'const routeRuntimePromise = ensureRouteRuntime("club", { vie
 includes(appEntry, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
 includes(appEntry, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
 includes(appEntry, "return await routeOwner.call(runtimeWindow, normalizedClubId, view);", "The Club gate must keep Uniform Loading active until the route renderer settles.");
-includes(appEntry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;\ninstallClubRouteRuntimeGate();", "The single Club gate must exist before application-core startup begins.");
+includes(appEntry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;", "The route-runtime gate API must exist before application startup.");
+includes(appEntry, "runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady;", "The route-runtime readiness API must exist before application startup.");
+const clubGateInstall = appEntry.indexOf("installClubRouteRuntimeGate();", appEntry.indexOf("runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady;"));
+const appStartup = appEntry.indexOf("void start().catch(showStartupError);", clubGateInstall);
+invariant(clubGateInstall >= 0 && appStartup > clubGateInstall, "The single Club gate must exist before application-core startup begins.");
 excludes(appEntry, 'const slugByView = new Map([', "Club navigation must not duplicate Club view-to-slug mapping.");
 const clubGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
 const clubGateEnd = appEntry.indexOf("async function finalizeRouteRuntimeNow", clubGateStart);
