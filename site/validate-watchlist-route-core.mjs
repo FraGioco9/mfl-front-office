@@ -102,7 +102,7 @@ includes(
   'const ROUTE_LOADING_REASON = "route-loading";',
   "Watchlist page, view, and direct list-switch transitions must share the canonical route-loading lifecycle.",
 );
-for (const reason of ["setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData", "requestIncrementalRoute"]) {
+for (const reason of ["setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData"]) {
   includes(
     bootstrapCore,
     `"${reason}"`,
@@ -113,6 +113,21 @@ includes(
   bootstrapCore,
   "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
   "Watchlist route aliases must publish only the canonical route-loading identity.",
+);
+excludes(
+  bootstrapCore,
+  '"requestIncrementalRoute",',
+  "Watchlist incremental requests must not receive a blanket outer route-loading wrapper.",
+);
+includes(
+  coreSource,
+  "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",
+  "Cached Watchlist incremental requests must reuse cached data without entering route loading.",
+);
+includes(
+  coreSource,
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "Uncached Watchlist incremental requests must still enter the controller-owned route-loading lifecycle.",
 );
 includes(
   bootstrapCore,
