@@ -17,7 +17,8 @@ invariant(
     && !buildNormalizer.includes("modalArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
     && !buildNormalizer.includes("evaluationLoadArtifacts")
-    && buildNormalizer.includes("return normalizeEvaluationSavedValuationCache(clubSortArtifacts);"),
+    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
+    && buildNormalizer.includes("return clubSortArtifacts;"),
   "Build composition must consume source-owned modal and Evaluation Load behavior directly before the remaining Saved Valuation Cache transform.",
 );
 

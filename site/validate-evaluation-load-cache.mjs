@@ -7,13 +7,20 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, appCoreSource] = await Promise.all([
+const [controls, appCoreSource, buildNormalizer] = await Promise.all([
   read("./controls.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const sharedCore = String(artifacts.core || "");
 const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
+
+invariant(
+  !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
+    && buildNormalizer.includes("return clubSortArtifacts;"),
+  "Saved Evaluation valuation/cache behavior must be source-owned with Club sort as the terminal build artifact.",
+);
 
 invariant(
   controls.includes(".evaluationSearchControl:hover #evaluationSearchInput:not(:disabled),")

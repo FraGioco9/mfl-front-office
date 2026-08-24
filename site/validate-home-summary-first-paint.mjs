@@ -47,10 +47,11 @@ excludes(buildNormalizer, "normalizeEvaluationRecentReadiness", "Build normaliza
 excludes(buildNormalizer, "evaluationRecentArtifacts", "The obsolete Evaluation recent-readiness build artifact must stay removed.");
 excludes(buildNormalizer, "normalizeEvaluationLoadLifecycle", "Build normalization must not rewrite Evaluation Load behavior.");
 excludes(buildNormalizer, "evaluationLoadArtifacts", "The obsolete Evaluation Load build artifact must stay removed.");
+excludes(buildNormalizer, "normalizeEvaluationSavedValuationCache", "Build normalization must not rewrite Saved Valuation Cache behavior.");
 includes(
   buildNormalizer,
-  "return normalizeEvaluationSavedValuationCache(clubSortArtifacts);",
-  "Saved Valuation Cache normalization must consume Club-sort artifacts directly after Evaluation Load becomes source-owned.",
+  "return clubSortArtifacts;",
+  "Club-sort artifacts must be the final application-core build output after Saved Valuation Cache becomes source-owned.",
 );
 
 includes(
