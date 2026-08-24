@@ -1,4 +1,4 @@
-// Temporary one-shot Club startup source migration; removed before merge.
+// Temporary one-shot Club startup source migration; remove before merge after the source rewrite commits.
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
