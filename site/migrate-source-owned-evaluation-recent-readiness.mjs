@@ -1,4 +1,4 @@
-// Temporary one-shot migration; remove before merge.
+// Temporary one-shot migration; remove before merge after source rewrite commits.
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { normalizeEvaluationRecentReadiness } from "./modules/app-core-evaluation-recent-readiness.js";
