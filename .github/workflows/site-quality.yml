@@ -115,7 +115,7 @@ jobs:
           echo "Run repository validation: $quality"
 
       - uses: actions/setup-python@v5
-        if: steps.changes.outputs.builder == 'true'
+        if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
         with:
           python-version: "3.12"
 
@@ -133,6 +133,11 @@ jobs:
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
         run: python -m unittest -v test_progression_emails.py
+
+      - name: Full database refresh workflow regression tests
+        if: steps.changes.outputs.workflow == 'true'
+        working-directory: .
+        run: python -m unittest -v test_full_database_refresh_workflow.py
 
       - uses: actions/setup-node@v4
         if: steps.changes.outputs.quality == 'true'
