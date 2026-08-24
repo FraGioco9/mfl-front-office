@@ -8139,10 +8139,19 @@ function setupBackdropClickClose(modal, closeCallback) {
 async function openSearch() {
   showModal(searchModal);
   playerSearchInput.value = "";
-  renderSearchResultsNow();
+
+  const renderAuthoritativeRecentSearches = async () => {
+    const renderRecent = window.__mflGlobalSearchRuntime?.recent;
+    if (typeof renderRecent !== "function") return false;
+    return Boolean(await renderRecent());
+  };
+
+  void renderAuthoritativeRecentSearches().then((rendered) => {
+    if (!rendered && !playerSearchInput.value.trim()) renderSearchResultsNow();
+  });
   window.setTimeout(() => playerSearchInput.focus(), 0);
   await ensureSearchIndexes();
-  renderSearchResultsNow();
+  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();
 }
 
 function closeSearch() {
@@ -8222,9 +8231,10 @@ function bestSearchResults(query) {
       || String(a.label).localeCompare(String(b.label))
     ));
 
-  // Preserve each category so player matches cannot crowd agents out before
-  // the club-search enhancer merges players -> clubs -> agents.
-  return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];
+  // Keep category priority while giving typed Global Search one shared ten-result budget.
+  // The club-search enhancer will insert clubs between players and agents before applying
+  // the same overall cap.
+  return [...playerResults, ...agentResults].slice(0, 10);
 }
 
 function agentSearchResultByWallet(walletAddress) {
@@ -12892,7 +12902,7 @@ async function startApp() {
           .filter(Boolean);
 
     const existingResults = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"));
-    const clubResults = clubs.slice(0, 5).map(clubSearchResult);
+    const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);
 
     if (!query) {
       const resultsByKey = new Map(
@@ -12918,10 +12928,10 @@ async function startApp() {
     const playerResults = existingResults.filter((result) => !result.dataset.searchKey?.startsWith("agent:"));
     const agentResults = existingResults.filter((result) => result.dataset.searchKey?.startsWith("agent:"));
     const mergedResults = [
-      ...playerResults.slice(0, 5),
+      ...playerResults,
       ...clubResults,
-      ...agentResults.slice(0, 5),
-    ];
+      ...agentResults,
+    ].slice(0, 10);
 
     if (mergedResults.length) {
       playerSearchResults.replaceChildren(...mergedResults);

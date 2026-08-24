@@ -1,34 +1,32 @@
 import { readFile } from "node:fs/promises";
-import { normalizeGlobalSearchOpenLifecycle } from "./modules/app-core-global-search-lifecycle.js";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [sourceCore, buildNormalizer, lifecycleNormalizer] = await Promise.all([
+const [sourceCore, buildNormalizer] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-build-normalizer.js"),
-  read("./modules/app-core-global-search-lifecycle.js"),
 ]);
 
-const normalizedCore = normalizeGlobalSearchOpenLifecycle({ core: sourceCore }).core;
+const normalizedCore = sourceCore;
 
 invariant(
-  buildNormalizer.includes('import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";')
-    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);")
+  !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
+    && !buildNormalizer.includes("globalSearchArtifacts")
     && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
     && !buildNormalizer.includes("homeSummaryArtifacts")
-    && buildNormalizer.includes("normalizeEvaluationRecentReadiness(globalSearchArtifacts)"),
-  "Canonical application-core builds must apply Global Search lifecycle normalization before later readiness transforms.",
+    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);"),
+  "Canonical application-core builds must consume source-owned Global Search behavior before later readiness transforms.",
 );
 
 invariant(
-  lifecycleNormalizer.includes("const renderAuthoritativeRecentSearches = async () => {")
-    && lifecycleNormalizer.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
-    && lifecycleNormalizer.includes("return Boolean(await renderRecent());")
-    && lifecycleNormalizer.includes("if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();"),
-  "Global Search open lifecycle must delegate the empty-state render to the canonical recent-five runtime before falling back to mutable live search indexes.",
+  sourceCore.includes("const renderAuthoritativeRecentSearches = async () => {")
+    && sourceCore.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
+    && sourceCore.includes("return Boolean(await renderRecent());")
+    && sourceCore.includes("if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();"),
+  "Canonical Global Search source must delegate the empty-state render to the recent-five runtime before falling back to mutable live search indexes.",
 );
 
 invariant(

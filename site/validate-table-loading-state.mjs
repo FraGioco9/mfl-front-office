@@ -191,7 +191,9 @@ invariant(
     && !buildNormalizer.includes("tableControlCellArtifacts")
     && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
     && !buildNormalizer.includes("homeSummaryArtifacts")
-    && buildNormalizer.includes("const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(statsNavigationArtifacts);"),
+    && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
+    && !buildNormalizer.includes("globalSearchArtifacts")
+    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);"),
   "The build normalizer must not inject Table request loading or control-cell behavior after source authoring.",
 );
 

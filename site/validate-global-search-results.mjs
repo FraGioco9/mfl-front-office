@@ -110,7 +110,7 @@ invariant(
     && runtime.includes('parameters.set("playerIds", identifiers.playerIds.join(","));')
     && runtime.includes('parameters.set("walletAddresses", identifiers.walletAddresses.join(","));')
     && runtime.includes('parameters.set("clubIds", identifiers.clubIds.join(","));')
-    && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal);")
+    && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal)")
     && runtime.includes("recentLoadedForSession = true;\n        recentLoadFailed = false;\n        publishCanonicalRecentPayload();")
     && runtime.includes("function publishCanonicalRecentPayload() {")
     && runtime.includes('applySearchPayload(canonicalRecentPayload, "all");')
@@ -204,8 +204,10 @@ invariant(
 
 invariant(
   core.includes("async function openSearch() {")
-    && core.includes("await ensureSearchIndexes();\n  renderSearchResultsNow();"),
-  "Regression coverage must account for the core Global Search open lifecycle rendering again after indexes are ready.",
+    && core.includes("const renderAuthoritativeRecentSearches = async () => {")
+    && core.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
+    && core.includes("await ensureSearchIndexes();\n  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();"),
+  "Canonical Global Search open lifecycle must restore authoritative recents again after indexes are ready, with the live renderer only as fallback.",
 );
 
 invariant(

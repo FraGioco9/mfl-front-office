@@ -31,7 +31,7 @@ const styles = css.get("styles.css") || "";
 const dropdowns = css.get("dropdowns.css") || "";
 const responsive = css.get("responsive.css") || "";
 const loading = css.get("loading.css") || "";
-const modalLifecycle = await readFile(join(siteRoot, "modules/app-core-global-search-lifecycle.js"), "utf8");
+const canonicalCore = await readFile(join(siteRoot, "modules/app-core.js"), "utf8");
 const generatedCore = await readFile(join(siteRoot, "modules/app-core-runtime.js"), "utf8");
 
 const tokenOrder = [
@@ -239,7 +239,7 @@ for (const required of [
   "background: rgba(0, 0, 0, 0.45);",
 ]) invariant(modalRule.includes(required), `Original modal backdrop rendering must retain ${required}`);
 
-for (const source of [stacking, modalLifecycle, generatedCore]) {
+for (const source of [stacking, canonicalCore, generatedCore]) {
   invariant(
     !source.includes("showPopover")
       && !source.includes("hidePopover")
