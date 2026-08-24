@@ -502,11 +502,41 @@ function bindContractTeamLink(playerId) {
     }, true);
   }
 
+const playerDetailRenderReuse = createRenderReuseGuard();
+
+function playerDetailRenderSignature(row, playerId, attributeView) {
+  const key = String(playerId || "").trim();
+  return JSON.stringify([
+    key,
+    state.columns,
+    row,
+    attributeView,
+    Boolean(hasWalletOptIn()),
+    normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),
+    Boolean(state.walletPermissionAllowed),
+    Boolean(state.watchlistPlayerIds.has(key)),
+    playerNote(key),
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+    state.trainingAdjustments[key] || null,
+  ]);
+}
+
 function renderPlayerPageOwner(playerId) {
   const row = rowByPlayerId(playerId);
 
   if (!row) {
+    playerDetailRenderReuse.invalidate();
     window.__mflStaticUiRuntime?.showNotFound?.("Player");
+    return;
+  }
+  const normalizedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);
+  if (playerDetailRenderReuse.matches(
+    renderSignature,
+    playerDetail.firstElementChild?.classList.contains("playerHero"),
+  )) {
+    document.documentElement.dataset.initialEntityVerified = "player";
     return;
   }
   document.documentElement.dataset.initialEntityVerified = "player";
@@ -548,7 +578,7 @@ function renderPlayerPageOwner(playerId) {
     infoCardsData.push(["Rev Share", escapeHtml(revenueShare)]);
   }
   const infoCards = infoCardsData.map(([label, value]) => `<div${label === "Contract" ? " class=\"contractDetailCard\"" : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
-  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
     .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
@@ -669,6 +699,7 @@ function renderPlayerPageOwner(playerId) {
       setPlayerNote(id, notesInput.value);
     });
   }
+  playerDetailRenderReuse.commit(renderSignature);
 }
 
 function renderPlayerPageWithStableContractLinkOwner(playerId) {
