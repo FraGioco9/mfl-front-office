@@ -8116,10 +8116,12 @@ function showModal(modal) {
     return;
   }
 
-  modal.classList.remove("modalClosing");
+  modal.classList.remove("modalClosing", "modalOpen");
   modal.hidden = false;
   window.requestAnimationFrame(() => {
-    modal.classList.add("modalOpen");
+    window.requestAnimationFrame(() => {
+      modal.classList.add("modalOpen");
+    });
   });
 }
 

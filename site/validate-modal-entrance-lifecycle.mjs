@@ -5,24 +5,26 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [evaluationLoadLifecycle, normalizer, runtime, loadingStyles] = await Promise.all([
+const [source, evaluationLoadLifecycle, runtime, loadingStyles] = await Promise.all([
+  read("./modules/app-core.js"),
   read("./modules/app-core-evaluation-load-lifecycle.js"),
-  read("./modules/app-core-modal-entrance-lifecycle.js"),
   read("./modules/app-core-runtime.js"),
   read("./loading.css"),
 ]);
 
 invariant(
-  evaluationLoadLifecycle.includes('import { normalizeModalEntranceLifecycle } from "./app-core-modal-entrance-lifecycle.js";')
-    && evaluationLoadLifecycle.includes("const modalArtifacts = normalizeModalEntranceLifecycle(artifacts);")
-    && evaluationLoadLifecycle.includes("...modalArtifacts,"),
-  "Evaluation Load normalization must apply the canonical modal entrance lifecycle inside the shared core pipeline.",
+  !evaluationLoadLifecycle.includes("normalizeModalEntranceLifecycle")
+    && !evaluationLoadLifecycle.includes("modalArtifacts")
+    && evaluationLoadLifecycle.includes('const source = String(artifacts?.core || "");')
+    && evaluationLoadLifecycle.includes("const routeChunks = { ...(artifacts?.routeChunks || {}) };")
+    && evaluationLoadLifecycle.includes("...artifacts,"),
+  "Evaluation Load normalization must consume source-owned modal behavior directly from the incoming artifacts.",
 );
 
-for (const source of [normalizer, runtime]) {
+for (const modalSource of [source, runtime]) {
   invariant(
-    source.includes('modal.classList.remove("modalClosing", "modalOpen");')
-      && source.includes("window.requestAnimationFrame(() => {\n    window.requestAnimationFrame(() => {\n      modal.classList.add(\"modalOpen\");"),
+    modalSource.includes('modal.classList.remove("modalClosing", "modalOpen");')
+      && modalSource.includes("window.requestAnimationFrame(() => {\n    window.requestAnimationFrame(() => {\n      modal.classList.add(\"modalOpen\");"),
     "Modal opening must preserve one painted closed-state frame before modalOpen is applied.",
   );
 }
@@ -38,4 +40,4 @@ invariant(
   "Busy loading must suppress ordinary transitions without suppressing modal entrance transitions.",
 );
 
-console.log("Modal first-open paint boundary and busy-state transition preservation validation passed.");
+console.log("Source-owned modal first-open paint boundary and busy-state transition preservation validation passed.");
