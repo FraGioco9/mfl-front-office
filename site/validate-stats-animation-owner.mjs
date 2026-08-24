@@ -150,7 +150,6 @@ includes(
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
-console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, loading-safe animation timelines, and prepared local MFL filter derivation without synthetic loading.");
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");
 const chromeAnimationStart = loadingStyles.indexOf("html.mflInitialChromePreparing");
 const chromeAnimationEnd = loadingStyles.indexOf('html:not(.mflInitialRouteResolved)[data-initial-table-page="club"]', chromeAnimationStart);

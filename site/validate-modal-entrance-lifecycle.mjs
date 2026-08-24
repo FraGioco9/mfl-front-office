@@ -30,7 +30,6 @@ for (const modalSource of [source, runtime]) {
   );
 }
 
-console.log("Source-owned modal first-open paint boundary and busy-state transition preservation validation passed.");
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Modal entrance transitions must not depend on a retired global operation-busy CSS owner.");
 
 console.log("Source-owned modal first-open paint boundary remains independent from loading-state transition suppression.");

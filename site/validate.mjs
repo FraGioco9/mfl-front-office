@@ -69,9 +69,9 @@ includes(bootstrap, "function primeStaticButtonGroup", "bootstrap.js must own de
 excludes(bootstrap, "preloadAsset", "bootstrap.js must not create app-entry preload hints after document parsing.");
 excludes(bootstrap, "data-mfl-bootstrap-preload", "bootstrap.js must not retain dynamic preload bookkeeping.");
 
-includes(bootstrapCore, "function createInteractionBusyController()", "bootstrap-core must own global startup interaction blocking.");
-includes(bootstrapCore, "function bindInteractionBlockers()", "Busy interaction listeners must be attached only while busy.");
-includes(bootstrapCore, "function unbindInteractionBlockers()", "Busy interaction listeners must be removable while idle.");
+includes(bootstrapCore, "function createInteractionBusyController()", "bootstrap-core must own the canonical route/data loading controller.");
+excludes(bootstrapCore, "function bindInteractionBlockers()", "The retired whole-site busy blocker must not restore interaction listeners.");
+excludes(bootstrapCore, "function unbindInteractionBlockers()", "The retired whole-site busy blocker must not restore idle listener cleanup.");
 includes(bootstrapCore, "import(new URL(\"/modules/app-entry.js\"", "bootstrap-core must import the modular application entrypoint.");
 excludes(bootstrapCore, "fetch(\"/release.json\"", "bootstrap-core must not block startup on release.json.");
 excludes(bootstrapCore, "normalizeSingleRenderCore", "bootstrap-core must not rewrite the application core in the browser.");
