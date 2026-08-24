@@ -618,7 +618,7 @@ export function splitApplicationCoreRuntime(source) {
   clubSearch = extractRequiredSection(
     club,
     '  if (typeof renderSearchResultsNow === "function") {',
-    '  function hideClubPageControls() {',
+    '  document.addEventListener("click", (event) => {',
     "Club route-local search wrapper",
   );
   club = clubSearch.core;
