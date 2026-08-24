@@ -203,11 +203,12 @@ invariant(
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
 invariant(
-  bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {')
+  bootstrapCore.includes('window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");')
+    && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "The shared interaction-busy bridge must preserve explicit reasons while reusing an active canonical route-loading lifecycle.",
+  "Legacy uncached route/data loads must default to non-blocking route loading while the explicit operation-busy helper remains exclusive.",
 );
 
 for (const [name, source] of [

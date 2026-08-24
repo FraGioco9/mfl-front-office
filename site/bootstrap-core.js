@@ -433,7 +433,7 @@
 
       const currentWithInteractionBusy = globalFunction("withInteractionBusy");
       if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
-        const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {
+        const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {
           const normalizedReason = loadingReason(reason);
           if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();
           return run(callback, normalizedReason);
