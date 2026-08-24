@@ -37,23 +37,26 @@ jobs:
           node-version: 22
 
       - name: Migrate progression artifact restore
-        run: python3 migrate_progression_artifact_restore.py
+        run: |
+          python3 migrate_progression_artifact_restore.py
+          cp .github/workflows/full-database-refresh.yml full_database_refresh_migrated.txt
+          git checkout -- .github/workflows/full-database-refresh.yml
 
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated source
+      - name: Commit migration snapshot
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- .github/workflows/full-database-refresh.yml site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- full_database_refresh_migrated.txt site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Progression artifact restore and release projections are current."
+            echo "Migration snapshot and release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Restore previous database artifact reliably"
+          git commit -m "Export progression artifact restore migration"
           git push origin "HEAD:$HEAD_BRANCH"
