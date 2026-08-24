@@ -6344,9 +6344,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
-  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, {
-    preservePager: options.preservePager === true,
-  }) || 0;
+  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
@@ -8116,7 +8114,7 @@ async function startApp() {
 
     const loadAndRender = async () => {
       try {
-        const payload = await requestIncrementalRoute(route, 1, { preservePager: true });
+        const payload = await requestIncrementalRoute(route, 1);
         if (!payload) return;
         state.incrementalApplying = true;
         try {

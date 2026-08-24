@@ -36,8 +36,9 @@ for (const required of [
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 invariant(
-  !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager"),
-  "Pager loading visibility must be owned by the table loading runtime, not blanket navigation/busy CSS.",
+  loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
+    && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),
+  "Table view navigation must hide nav.pager immediately while the Table runtime keeps it hidden through active data loading, without restoring global interaction-busy ownership.",
 );
 
 for (const required of [
@@ -189,6 +190,14 @@ invariant(
     && !loadingStyles.includes('mflLoadingLocked')
     && !loadingStyles.includes('data-mfl-retiring-toast'),
   "Global Loading toast/footer-lock presentation must stay removed from startup and loading CSS.",
+);
+invariant(
+  tableLoading.includes("function hidePager() {")
+    && tableLoading.includes("if (page) page.hidden = true;")
+    && tableLoading.includes("if (snapshot.dataLoading || requestActive()) {")
+    && tableLoading.includes("hidePager();")
+    && !tableLoading.includes("preservePager"),
+  "Table loading must hide nav.pager for the full active request/loading window, including cached-row preservation."
 );
 invariant(
   tableLoading.includes("controller.subscribe(sync)")
