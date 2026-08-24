@@ -2,6 +2,9 @@ import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 import {
+  MFL_STATS_OVERALL_FILTERS,
+  SETTINGS_DATE_FORMAT_OPTIONS,
+  SETTINGS_TIME_FORMAT_OPTIONS,
   TABLE_BASE_COLUMNS,
   TABLE_COLUMN_CLASSES,
   TABLE_COLUMN_LABELS,
@@ -15,7 +18,9 @@ import {
 } from "./modules/app-config.js";
 import {
   firstPaintRouteConfigProjectionSource,
+  mflStatsFilterButtonsProjectionSource,
   normalizeIndexFirstPaintConfigProjection,
+  normalizeIndexMflStatsFiltersProjection,
 } from "./sync-release-projections.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -67,6 +72,7 @@ const [
   staticUiSource,
   routeCoreSource,
   tableWidthSource,
+  appCoreSource,
 ] = await Promise.all([
   read("./release.json"),
   read("./index.html"),
@@ -74,6 +80,7 @@ const [
   read("./static-ui-runtime.js"),
   read("./route-core-loader-runtime.js"),
   read("./table-width-runtime.js"),
+  read("./modules/app-core.js"),
 ]);
 
 const release = JSON.parse(releaseSource);
@@ -98,6 +105,9 @@ same(runtimeConfig.table.joinedAgencyPages, TABLE_JOINED_AGENCY_PAGES, "pre-boot
 same(runtimeConfig.table.sortableColumns, TABLE_SORTABLE_COLUMNS, "pre-bootstrap sortable columns");
 same(runtimeConfig.table.columnLabels, TABLE_COLUMN_LABELS, "pre-bootstrap column labels");
 same(runtimeConfig.table.columnClasses, TABLE_COLUMN_CLASSES, "pre-bootstrap column classes");
+same(runtimeConfig.ui.mflStatsOverallFilters, MFL_STATS_OVERALL_FILTERS, "pre-bootstrap MFL Stats filter config");
+same(runtimeConfig.ui.settingsDateFormats, SETTINGS_DATE_FORMAT_OPTIONS, "pre-bootstrap Settings date-format config");
+same(runtimeConfig.ui.settingsTimeFormats, SETTINGS_TIME_FORMAT_OPTIONS, "pre-bootstrap Settings time-format config");
 same(runtimeSandbox.window.__mflRelease, release, "pre-bootstrap release facade");
 invariant(runtimeSandbox.window.__mflReleaseVersion === release.version, "Pre-bootstrap release version facade must come from release.json.");
 invariant(runtimeSandbox.window.__mflTableViewConfig === runtimeConfig.routes.tableViews, "Legacy table-view facade must point to canonical config.");
@@ -113,6 +123,15 @@ invariant(
 invariant(
   normalizeIndexFirstPaintConfigProjection(indexSource) === indexSource,
   "index first-paint route/view config projection must already be synchronized.",
+);
+const generatedMflStatsFilters = mflStatsFilterButtonsProjectionSource();
+invariant(
+  indexSource.includes(generatedMflStatsFilters),
+  "index MFL Stats filters must be the generated projection of modules/app-config.js.",
+);
+invariant(
+  normalizeIndexMflStatsFiltersProjection(indexSource) === indexSource,
+  "index MFL Stats filter projection must already be synchronized.",
 );
 
 const bootstrapWindow = {
@@ -138,6 +157,9 @@ for (const canonicalAlias of [
   "const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);",
   "const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;",
   "const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;",
+  "APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label]))",
+  "APP_CONFIG.ui.settingsDateFormats.map(({ value, label }) => Object.freeze([value, label]))",
+  "APP_CONFIG.ui.settingsTimeFormats.map(({ value, label }) => Object.freeze([value, label]))",
   "return APP_CONFIG.routes.tableViews;",
 ]) {
   invariant(bootstrapSource.includes(canonicalAlias), `Bootstrap must consume canonical config through: ${canonicalAlias}`);
@@ -152,8 +174,28 @@ for (const retiredOwner of [
   "const FIRST_PAINT_COLUMN_CLASSES = Object.freeze(",
   "const FIRST_PAINT_COLUMN_LABELS = Object.freeze(",
   'Reflect.get(window, "__mflTableViewConfig")',
+  "const MFL_STATS_FILTER_LABELS = Object.freeze([",
+  "const SETTINGS_DATE_FORMAT_LABELS = Object.freeze([",
+  "const SETTINGS_TIME_FORMAT_LABELS = Object.freeze([",
 ]) {
   invariant(!bootstrapSource.includes(retiredOwner), `Bootstrap must not restore duplicate first-paint config owner: ${retiredOwner}`);
+}
+
+invariant(
+  appCoreSource.includes("const mflStatsOverallFilterOptions = window.__mflAppConfig?.ui?.mflStatsOverallFilters || [];"),
+  "MFL Stats runtime source must consume canonical filter metadata.",
+);
+invariant(
+  appCoreSource.includes("(window.__mflAppConfig?.ui?.settingsDateFormats || []).forEach(({ value, label }) => {")
+    && appCoreSource.includes("(window.__mflAppConfig?.ui?.settingsTimeFormats || []).forEach(({ value, label }) => {"),
+  "Settings runtime source must consume canonical format metadata.",
+);
+for (const retiredRuntimeOwner of [
+  "const mflStatsOverallFilterOptions = [",
+  '["DMY", "DD/MM/YYYY"]',
+  '["24h", "24h"]',
+]) {
+  invariant(!appCoreSource.includes(retiredRuntimeOwner), `Application core must not restore duplicate UI metadata owner: ${retiredRuntimeOwner}`);
 }
 
 same(evaluateInitializer(staticUiSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "static UI view slug projection");
@@ -185,4 +227,4 @@ invariant(
   invariant(!routeCoreSource.includes(legacyOwner), `Route core must not retain duplicate config owner: ${legacyOwner}`);
 });
 
-console.log("Canonical app configuration and generated first-paint/release facade validation passed.");
+console.log("Canonical app configuration and generated first-paint/UI/release facade validation passed.");

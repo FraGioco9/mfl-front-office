@@ -38,6 +38,34 @@ export const CLUB_VIEW_SLUGS = Object.freeze({
 
 export const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
 
+export const MFL_STATS_OVERALL_FILTERS = Object.freeze([
+  Object.freeze({ id: "all", label: "All", min: null, max: null }),
+  Object.freeze({ id: "90-94", label: "90-94", min: 90, max: 94 }),
+  Object.freeze({ id: "legendary", label: "Legendary", min: 85, max: 94 }),
+  Object.freeze({ id: "85-89", label: "85-89", min: 85, max: 89 }),
+  Object.freeze({ id: "80-84", label: "80-84", min: 80, max: 84 }),
+  Object.freeze({ id: "rare", label: "Rare", min: 75, max: 84 }),
+  Object.freeze({ id: "75-79", label: "75-79", min: 75, max: 79 }),
+  Object.freeze({ id: "70-74", label: "70-74", min: 70, max: 74 }),
+  Object.freeze({ id: "uncommon", label: "Uncommon", min: 65, max: 74 }),
+  Object.freeze({ id: "65-69", label: "65-69", min: 65, max: 69 }),
+  Object.freeze({ id: "60-64", label: "60-64", min: 60, max: 64 }),
+  Object.freeze({ id: "limited", label: "Limited", min: 55, max: 64 }),
+  Object.freeze({ id: "55-59", label: "55-59", min: 55, max: 59 }),
+  Object.freeze({ id: "50-54", label: "50-54", min: 50, max: 54 }),
+  Object.freeze({ id: "common", label: "Common", min: null, max: 54 }),
+]);
+
+export const SETTINGS_DATE_FORMAT_OPTIONS = Object.freeze([
+  Object.freeze({ value: "DMY", label: "DD/MM/YYYY" }),
+  Object.freeze({ value: "MDY", label: "MM/DD/YYYY" }),
+]);
+
+export const SETTINGS_TIME_FORMAT_OPTIONS = Object.freeze([
+  Object.freeze({ value: "24h", label: "24h" }),
+  Object.freeze({ value: "12h", label: "12h" }),
+]);
+
 export const ROUTE_CORE_PATHS = Object.freeze({
   evaluation: "/modules/app-core-evaluation-runtime.js",
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
@@ -197,6 +225,11 @@ const BROWSER_DATA = Object.freeze({
     columnLabels: TABLE_COLUMN_LABELS,
     columnClasses: TABLE_COLUMN_CLASSES,
   }),
+  ui: Object.freeze({
+    mflStatsOverallFilters: MFL_STATS_OVERALL_FILTERS,
+    settingsDateFormats: SETTINGS_DATE_FORMAT_OPTIONS,
+    settingsTimeFormats: SETTINGS_TIME_FORMAT_OPTIONS,
+  }),
 });
 
 /** @param {{version?: unknown, description?: unknown}} release */
@@ -211,6 +244,7 @@ export function browserConfigRuntimeSource(release) {
     release: { version, description },
     routes: BROWSER_DATA.routes,
     table: BROWSER_DATA.table,
+    ui: BROWSER_DATA.ui,
   });
 
   return `// Generated from modules/app-config.js and release.json. Do not edit directly.
@@ -529,7 +563,7 @@ export function browserConfigRuntimeSource(release) {
     columnsFor,
     columnClass,
   });
-  const appConfig = Object.freeze({ release: data.release, routes, table });
+  const appConfig = Object.freeze({ release: data.release, routes, table, ui: data.ui });
 
   window.__mflAppConfig = appConfig;
   window.__mflReleaseVersion = data.release.version;

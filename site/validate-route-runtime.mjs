@@ -160,7 +160,7 @@ excludes(evaluationCore, "async function openSavedEvaluationsModal()", "The dire
 excludes(normalizedCore, "const mflStatsOverallFilterOptions = [", "MFL Stats filter/render ownership must not remain in the shared core.");
 excludes(normalizedCore, 'mflStatsDistributionModeButtons?.addEventListener("click", (event) => {', "MFL Stats distribution interaction must not bind on unrelated routes.");
 includes(normalizedCore, "function rowHasHiddenMflJoinedAgencyDate(row)", "Shared table filtering must retain its MFL row-visibility helper.");
-includes(mflStatsCore, "const mflStatsOverallFilterOptions = [", "The MFL Stats chunk must own its filter definitions.");
+includes(mflStatsCore, "const mflStatsOverallFilterOptions = window.__mflAppConfig?.ui?.mflStatsOverallFilters || [];", "The MFL Stats chunk must consume canonical filter definitions.");
 includes(mflStatsCore, "function renderMflStatsPage()", "The MFL Stats chunk must own the page renderer.");
 includes(mflStatsCore, 'mflStatsDistributionModeButtons?.addEventListener("click", (event) => {', "The MFL Stats chunk must own distribution interaction binding.");
 excludes(mflStatsCore, "function rowHasHiddenMflJoinedAgencyDate(row)", "Shared table filtering helpers must not become MFL Stats-only.");
