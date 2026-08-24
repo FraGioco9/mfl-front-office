@@ -345,7 +345,7 @@ export function splitApplicationCoreRuntime(source) {
 
   extracted = extractRequiredSection(
     core,
-    "const mflStatsOverallFilterOptions = [",
+    "const mflStatsOverallFilterOptions = window.__mflAppConfig?.ui?.mflStatsOverallFilters || [];",
     "function rowHasHiddenMflJoinedAgencyDate(row) {",
     "MFL Stats renderer",
   );
