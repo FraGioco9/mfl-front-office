@@ -36,8 +36,21 @@ function constantValue(name) {
   throw new Error(`Unterminated literal for ${name}.`);
 }
 
-const replacements = [
-  ["EVALUATION_LOAD_FACADE", "EVALUATION_LOAD_FACADE_WITH_BUSY"],
+function templateDeclaration(name, value) {
+  const escaped = String(value).replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${");
+  return `const ${name} = \`${escaped}\`;`;
+}
+
+let routeChunks = await read("modules/app-core-route-chunks.js");
+routeChunks = replaceRequired(
+  routeChunks,
+  templateDeclaration("EVALUATION_SAVED_MODAL_FACADE", constantValue("EVALUATION_LOAD_FACADE")),
+  templateDeclaration("EVALUATION_SAVED_MODAL_FACADE", constantValue("EVALUATION_LOAD_FACADE_WITH_BUSY")),
+  "source-owned Saved Evaluations shared facade",
+);
+await writeFile(resolve(siteRoot, "modules/app-core-route-chunks.js"), routeChunks);
+
+const sourceReplacements = [
   ["EVALUATION_LOAD_CLOSE_BINDING", "EVALUATION_LOAD_CLOSE_BINDING_WITH_ESCAPE"],
   ["EVALUATION_CREATE_SAVED_START", "EVALUATION_CREATE_SAVED_START_WITH_CACHE"],
   ["EVALUATION_LOAD_LIST_NAME", "EVALUATION_LOAD_LIST_NAME_WITH_CACHE"],
@@ -54,12 +67,12 @@ const replacements = [
 ];
 
 let core = await read("modules/app-core.js");
-replacements.forEach(([beforeName, afterName], index) => {
+sourceReplacements.forEach(([beforeName, afterName], index) => {
   core = replaceRequired(
     core,
     constantValue(beforeName),
     constantValue(afterName),
-    `Evaluation Load source replacement ${index + 1}: ${beforeName}`,
+    `Evaluation Load canonical-source replacement ${index + 1}: ${beforeName}`,
   );
 });
 await writeFile(resolve(siteRoot, "modules/app-core.js"), core);
@@ -83,4 +96,4 @@ build = replaceRequired(
 await writeFile(resolve(siteRoot, "modules/app-core-build-normalizer.js"), build);
 
 await rm(resolve(siteRoot, "modules/app-core-evaluation-load-lifecycle.js"));
-console.log(`Canonical Evaluation Load migration applied with ${replacements.length} source transformations.`);
+console.log(`Canonical Evaluation Load migration applied: 1 structural facade + ${sourceReplacements.length} canonical-source transformations.`);
