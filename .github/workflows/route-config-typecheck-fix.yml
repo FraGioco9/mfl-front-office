@@ -1,0 +1,38 @@
+name: Route config typecheck fix
+
+on:
+  push:
+    branches:
+      - refactor/canonical-route-dependency-plan
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/canonical-route-dependency-plan
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Correct route config typecheck
+        run: node site/fix-route-config-typecheck.mjs
+      - name: Remove temporary correction scaffolding
+        shell: bash
+        run: |
+          rm -f site/fix-route-config-typecheck.mjs
+          rm -f .github/workflows/route-config-typecheck-fix.yml
+      - name: Persist typecheck correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Fix route dependency plan typecheck"
+          git push origin HEAD:refactor/canonical-route-dependency-plan
