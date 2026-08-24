@@ -69,8 +69,10 @@ invariant(
     && !buildNormalizer.includes("globalSearchArtifacts")
     && !buildNormalizer.includes("normalizeStatsNavigationLifecycle")
     && !buildNormalizer.includes("statsNavigationArtifacts")
-    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);"),
-  "Build normalization must not inject page/view filter, editable-pager, Table control-cell, or Stats navigation behavior.",
+    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
+    && !buildNormalizer.includes("evaluationRecentArtifacts")
+    && buildNormalizer.includes("const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);"),
+  "Build normalization must not inject page/view filter, editable-pager, Table control-cell, Stats navigation, or Evaluation recent-readiness behavior.",
 );
 const activeViewNoOp = generated.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
 const liveFilterSnapshot = generated.indexOf('saveTableStateLocally(currentTableState());', activeViewNoOp);

@@ -193,8 +193,10 @@ invariant(
     && !buildNormalizer.includes("homeSummaryArtifacts")
     && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
     && !buildNormalizer.includes("globalSearchArtifacts")
-    && buildNormalizer.includes("const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);"),
-  "The build normalizer must not inject Table request loading or control-cell behavior after source authoring.",
+    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
+    && !buildNormalizer.includes("evaluationRecentArtifacts")
+    && buildNormalizer.includes("const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);"),
+  "The build normalizer must not inject Table request loading, control-cell, or Evaluation recent-readiness behavior after source authoring.",
 );
 
 const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);

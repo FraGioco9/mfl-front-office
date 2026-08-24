@@ -43,10 +43,12 @@ excludes(buildNormalizer, "normalizeHomeSummaryLifecycle", "Build normalization 
 excludes(buildNormalizer, "homeSummaryArtifacts", "The obsolete Home summary build artifact must stay removed.");
 excludes(buildNormalizer, "normalizeGlobalSearchOpenLifecycle", "Build normalization must not rewrite Global Search open behavior.");
 excludes(buildNormalizer, "globalSearchArtifacts", "The obsolete Global Search build artifact must stay removed.");
+excludes(buildNormalizer, "normalizeEvaluationRecentReadiness", "Build normalization must not rewrite Evaluation recent-readiness behavior.");
+excludes(buildNormalizer, "evaluationRecentArtifacts", "The obsolete Evaluation recent-readiness build artifact must stay removed.");
 includes(
   buildNormalizer,
-  "const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);",
-  "Global Search normalization must consume stats-navigation artifacts directly after Home lifecycle becomes source-owned.",
+  "const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);",
+  "Later Evaluation Load normalization must consume Club-sort artifacts directly after recent-readiness becomes source-owned.",
 );
 
 includes(
