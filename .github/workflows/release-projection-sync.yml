@@ -6,6 +6,7 @@ on:
       - site/release.json
       - site/sync-release-projections.mjs
       - site/build-app-core.mjs
+      # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
       - site/bootstrap.js
       - site/bootstrap-core.js
