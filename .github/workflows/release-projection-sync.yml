@@ -8,7 +8,6 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
-      - site/migrate-static-route-pager-validation.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
       - site/index.html
@@ -36,24 +35,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Migrate pager route validation ownership
-        run: node site/migrate-static-route-pager-validation.mjs
-
       - name: Normalize release projections
         run: node site/sync-release-projections.mjs
 
-      - name: Commit migrated validation
+      - name: Commit normalized projections
         shell: bash
         env:
           HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -euo pipefail
-          git add -- site/validate-static-route-ui.mjs site/bootstrap.js site/bootstrap-core.js site/index.html
+          git add -- site/bootstrap.js site/bootstrap-core.js site/index.html
           if git diff --cached --quiet; then
-            echo "Pager validation and release projections are current."
+            echo "Release projections are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Align pager route validation ownership"
+          git commit -m "Normalize release projections"
           git push origin "HEAD:$HEAD_BRANCH"
