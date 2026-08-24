@@ -2,13 +2,26 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const read = async (relativePath) => String(await readFile(new URL(relativePath, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-function ruleRange(source, selector) {
+function exactRuleStarts(source, selector) {
   const marker = `${selector} {`;
-  const start = source.indexOf(marker);
-  if (start < 0) return null;
-  if (source.indexOf(marker, start + marker.length) >= 0) {
-    throw new Error(`Found duplicate rule marker: ${selector}`);
+  const starts = [];
+  let offset = 0;
+  while (offset < source.length) {
+    const index = source.indexOf(marker, offset);
+    if (index < 0) break;
+    if (index === 0 || source[index - 1] === "\n") starts.push(index);
+    offset = index + marker.length;
   }
+  return starts;
+}
+
+function ruleRange(source, selector) {
+  const starts = exactRuleStarts(source, selector);
+  if (!starts.length) return null;
+  if (starts.length > 1) {
+    throw new Error(`Found duplicate exact rule start: ${selector}`);
+  }
+  const start = starts[0];
   const end = source.indexOf("\n}", start);
   if (end < 0) throw new Error(`Could not find end of rule: ${selector}`);
   return { start, end: end + 2, text: source.slice(start, end + 2) };
@@ -62,7 +75,7 @@ stylesBase = replaceInsideRule(
   "Search layout",
 );
 
-for (const selector of [
+const retiredGenericSelectors = [
   ".searchButton:hover",
   ".navButton:hover",
   ".navButton.active",
@@ -74,7 +87,8 @@ for (const selector of [
   ".mflStatsDistributionModeButton:hover:not(.active)",
   ".mflStatsDistributionModeButton.active",
   ".playerAttributeViewButton.active",
-]) {
+];
+for (const selector of retiredGenericSelectors) {
   stylesBase = removeRuleIfPresent(stylesBase, selector);
 }
 
@@ -114,24 +128,10 @@ if (!tableTitleRule.text.includes("  font-size: 20px;")) {
   );
 }
 
-for (const retiredSelector of [
-  ".searchButton:hover {",
-  ".navButton:hover {",
-  ".navButton.active {",
-  ".viewButton.active {",
-  ".viewButton.active:hover:not(:disabled) {",
-  ".mflStatsFilterButton:hover:not(.active) {",
-  ".mflStatsFilterButton.active {",
-  ".mflStatsDistributionModeButton:hover:not(.active) {",
-  ".mflStatsDistributionModeButton.active {",
-  ".playerAttributeViewButton.active {",
-]) {
-  if (stylesBase.includes(retiredSelector)) {
+for (const retiredSelector of retiredGenericSelectors) {
+  if (ruleRange(stylesBase, retiredSelector)) {
     throw new Error(`Duplicate shared-control owner remains in styles-base.css: ${retiredSelector}`);
   }
-}
-if (stylesBase.includes(".searchButton:hover:not(:disabled),\n.viewButton:not(.active):hover:not(:disabled) {")) {
-  throw new Error("Duplicate Search/View hover owner remains in styles-base.css.");
 }
 if (stylesBase.includes(".tablePageTitle,\n.playerTitle {")) {
   throw new Error("Table title typography remains split with player-title ownership.");
