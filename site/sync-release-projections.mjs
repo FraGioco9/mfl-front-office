@@ -2,7 +2,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { TABLE_VIEW_CONFIG, VIEW_BY_SLUG } from "./modules/app-config.js";
+
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
+const FIRST_PAINT_CONFIG_START = "        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG";
+const FIRST_PAINT_CONFIG_END = "        // END GENERATED FIRST-PAINT ROUTE CONFIG";
 
 function semanticVersion(value) {
   const version = String(value || "").trim();
@@ -18,6 +22,31 @@ function replaceExactlyOnce(source, pattern, replacement, label) {
     throw new Error(`${label} expected exactly one owned projection, found ${matches.length}.`);
   }
   return source.replace(pattern, replacement);
+}
+
+function javascriptPropertyKey(value) {
+  const key = String(value || "");
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
+}
+
+export function firstPaintRouteConfigProjectionSource() {
+  const tableViewLines = Object.entries(TABLE_VIEW_CONFIG).map(([page, config]) => (
+    `          ${javascriptPropertyKey(page)}: Object.freeze({ order: ${JSON.stringify(Array.from(config.order))}, fallback: ${JSON.stringify(config.fallback)} }),`
+  ));
+  const viewSlugLines = Object.entries(VIEW_BY_SLUG).map(([slug, view]) => (
+    `          ${javascriptPropertyKey(slug)}: ${JSON.stringify(view)},`
+  ));
+
+  return [
+    FIRST_PAINT_CONFIG_START,
+    "        const TABLE_VIEW_CONFIG = Object.freeze({",
+    ...tableViewLines,
+    "        });",
+    "        const VIEW_BY_SLUG = Object.freeze({",
+    ...viewSlugLines,
+    "        });",
+    FIRST_PAINT_CONFIG_END,
+  ].join("\n");
 }
 
 export function normalizeBootstrapReleaseProjection(source, version, label = "bootstrap") {
@@ -43,6 +72,25 @@ export function normalizeIndexReleaseProjection(source, version) {
   );
 }
 
+export function normalizeIndexFirstPaintConfigProjection(source) {
+  const input = String(source || "");
+  const generatedPattern = /^        \/\/ BEGIN GENERATED FIRST-PAINT ROUTE CONFIG[\s\S]*?^        \/\/ END GENERATED FIRST-PAINT ROUTE CONFIG$/gm;
+  const generatedMatches = input.match(generatedPattern) || [];
+  if (generatedMatches.length > 1) {
+    throw new Error(`index first-paint route config projection expected exactly one owned projection, found ${generatedMatches.length}.`);
+  }
+  if (generatedMatches.length === 1) {
+    return input.replace(generatedPattern, firstPaintRouteConfigProjectionSource());
+  }
+
+  return replaceExactlyOnce(
+    input,
+    /^        const TABLE_VIEW_CONFIG = Object\.freeze\(\{[\s\S]*?^        const VIEW_BY_SLUG = Object\.freeze\(\{[\s\S]*?^        \}\);$/gm,
+    firstPaintRouteConfigProjectionSource(),
+    "index legacy first-paint route config projection",
+  );
+}
+
 async function writeIfChanged(path, content) {
   const current = await readFile(path, "utf8");
   if (current === content) return false;
@@ -56,7 +104,7 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
   const targets = [
     ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap.js")],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexReleaseProjection(source, version)],
+    ["index.html", (source) => normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version))],
   ];
 
   const results = [];
