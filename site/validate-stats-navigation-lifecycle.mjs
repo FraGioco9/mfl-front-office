@@ -1,16 +1,16 @@
 import { readFile } from "node:fs/promises";
 
 const normalizer = await readFile(new URL("./modules/app-core-build-normalizer.js", import.meta.url), "utf8");
-const owner = await readFile(new URL("./modules/app-core-stats-navigation-lifecycle.js", import.meta.url), "utf8");
+const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
 const runtime = await readFile(new URL("./modules/app-core-runtime.js", import.meta.url), "utf8");
 const stateRuntime = await readFile(new URL("./database-stats-state-runtime.js", import.meta.url), "utf8");
 const validators = await readFile(new URL("./validate-all.mjs", import.meta.url), "utf8");
 
-if (!normalizer.includes("normalizeStatsNavigationLifecycle")) {
-  throw new Error("Stats navigation normalization is not part of the canonical application-core normalizer.");
+if (normalizer.includes("normalizeStatsNavigationLifecycle") || normalizer.includes("statsNavigationArtifacts")) {
+  throw new Error("Build normalization must not rewrite source-owned Stats navigation.");
 }
-if (!owner.includes('state.view === "stats"') || !owner.includes('await setPage("database", false')) {
-  throw new Error("Database Stats does not own an explicit canonical exit to table views.");
+if (!source.includes('state.view === "stats"') || !source.includes('await setPage("database", false, { view: viewName, skipNavigationLoading: true })')) {
+  throw new Error("Canonical app-core source must own the Database Stats exit to table views.");
 }
 if (!runtime.includes('state.currentPage === "database"\n      && state.view === "stats"')) {
   throw new Error("Generated application core is missing the Database Stats exit branch.");

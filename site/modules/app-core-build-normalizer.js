@@ -12,7 +12,6 @@ import { normalizeEvaluationSavedValuationCache } from "./app-core-evaluation-sa
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
-import { normalizeStatsNavigationLifecycle } from "./app-core-stats-navigation-lifecycle.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
@@ -34,11 +33,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
-  const statsNavigationArtifacts = Object.freeze({
-    ...clubSortArtifacts,
-    core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),
-  });
-  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(statsNavigationArtifacts);
+  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(clubSortArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
   return normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
 }
