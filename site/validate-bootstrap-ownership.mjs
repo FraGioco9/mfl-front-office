@@ -258,17 +258,32 @@ includes(
   "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
   "All legacy route reasons must publish the canonical route-loading reason.",
 );
-for (const name of ["setPage", "switchWatchlist", "ensureProgressionData"]) {
+for (const name of ["switchWatchlist", "ensureProgressionData"]) {
   includes(
     bootstrapCore,
     `"${name}"`,
-    `The Uniform Loading Workflow must wrap ${name} regardless of cache state.`,
+    `The remaining direct route-data owner ${name} must retain canonical route loading until its cache contract is migrated.`,
   );
 }
 includes(
   bootstrapCore,
+  "function routeDestinationReady(pageName, options = {}) {",
+  "The Uniform Loading Workflow must own one full destination-readiness predicate.",
+);
+includes(
+  bootstrapCore,
+  "wrapRoutePageGlobal();",
+  "Page transitions must install the readiness-aware setPage loading owner.",
+);
+includes(
+  bootstrapCore,
+  "if (routeDestinationReady(pageName, options) || routeLoadingActive()) {",
+  "Fully ready page destinations and nested page transitions must bypass duplicate route loading.",
+);
+includes(
+  bootstrapCore,
   "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
-  "Every page/view transition and direct Watchlist switch must enter canonical route loading.",
+  "Direct Watchlist/progression data owners must retain canonical route loading until their cache contracts are migrated.",
 );
 excludes(
   bootstrapCore,
@@ -282,8 +297,18 @@ excludes(
 );
 includes(
   bootstrapCore,
-  'const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);',
-  "The shared busy bridge must preserve an explicitly requested canonical loading reason.",
+  'const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {',
+  "The shared busy bridge must retain explicit reason ownership.",
+);
+includes(
+  bootstrapCore,
+  "if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();",
+  "Nested canonical route-loading owners must reuse the active page-transition lifecycle instead of stacking tokens.",
+);
+includes(
+  bootstrapCore,
+  "return run(callback, normalizedReason);",
+  "Non-duplicate explicit loading reasons must still enter the shared busy controller.",
 );
 includes(
   appCoreSource,
