@@ -7,9 +7,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, appCoreSource] = await Promise.all([
+const [controls, appCoreSource, buildNormalizer] = await Promise.all([
   read("./controls.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const sharedCore = String(artifacts.core || "");
