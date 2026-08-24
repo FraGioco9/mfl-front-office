@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/patch-toast-migration-check.mjs
       - site/migrate-remove-global-loading-toast.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
@@ -35,6 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Fix migration verification
+        run: node site/patch-toast-migration-check.mjs
 
       - name: Remove global Loading toast runtime
         run: node site/migrate-remove-global-loading-toast.mjs
