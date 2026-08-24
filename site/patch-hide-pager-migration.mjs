@@ -13,5 +13,10 @@ const assertionAfter = `  \"View transitions must explicitly preserve the render
 if (!source.includes(assertionBefore)) throw new Error("Could not find pager migration validator assertion match.");
 source = source.replace(assertionBefore, assertionAfter);
 
+const verificationBefore = `  [\"app-core.js\", appCore],\n  [\"table-loading-runtime.js\", runtime],\n  [\"validate-generated-view-transition.mjs\", generatedViewValidator],\n  [\"validate-static-route-ui.mjs\", staticRouteValidator],\n  [\"validate-table-background-loading-stability.mjs\", backgroundValidator],\n  [\"validate-table-loading-state.mjs\", tableLoadingValidator],`;
+const verificationAfter = `  [\"app-core.js\", appCore],\n  [\"table-loading-runtime.js\", runtime],`;
+if (!source.includes(verificationBefore)) throw new Error("Could not find pager migration verification list.");
+source = source.replace(verificationBefore, verificationAfter);
+
 await writeFile(path, source);
-console.log("Corrected Table loading and validator source matches in the one-time pager migration.");
+console.log("Corrected Table loading source matches and narrowed one-time pager migration verification to production owners.");
