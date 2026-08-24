@@ -31,10 +31,41 @@ function constantValue(name) {
   throw new Error(`Unterminated literal for ${name}.`);
 }
 
+// These three behaviors are shaped by the Club structural splitter before the
+// old startup normalizer sees them, so source ownership belongs in that splitter.
+let routeChunks = await read("modules/app-core-route-chunks.js");
+routeChunks = replaceRequired(
+  routeChunks,
+  constantValue("CLUB_TITLE_READY_CALLBACK"),
+  constantValue("VERIFIED_CLUB_TITLE_READY_CALLBACK"),
+  "Club verified title callback structural ownership",
+);
+routeChunks = replaceRequired(
+  routeChunks,
+  constantValue("BLOCKING_TITLE_SETTLEMENT"),
+  constantValue("ROSTER_OWNED_TITLE_SETTLEMENT"),
+  "Club roster-owned title settlement structural ownership",
+);
+const finalRenderStrip = `  club = replaceRequired(
+    club,
+    \`      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      applyClubPresentation();
+      captureClubView(nextView);\`,
+    \`      applyClubPresentation();
+      captureClubView(nextView);\`,
+    "Club page canonical render ownership",
+  );
+`;
+routeChunks = replaceRequired(
+  routeChunks,
+  finalRenderStrip,
+  "",
+  "Club final roster render remains canonical through structural splitting",
+);
+await writeFile(resolve(siteRoot, "modules/app-core-route-chunks.js"), routeChunks);
+
 const directReplacements = [
-  ["CLUB_TITLE_READY_CALLBACK", "VERIFIED_CLUB_TITLE_READY_CALLBACK"],
-  ["BLOCKING_TITLE_SETTLEMENT", "ROSTER_OWNED_TITLE_SETTLEMENT"],
-  ["CLUB_FINAL_RENDER", "CLUB_FINAL_ROSTER_RENDER"],
   ["CLUB_APPLY_FILTER_OVERRIDE", null],
   ["RESTORE_STANDARD_CONTROLS", null],
   ["GENERIC_PREPARE_SAVED_PAGE_STATE", "CLUB_FREE_PREPARE_SAVED_PAGE_STATE"],
@@ -83,4 +114,4 @@ build = replaceRequired(
 await writeFile(resolve(siteRoot, "modules/app-core-build-normalizer.js"), build);
 await rm(resolve(siteRoot, "modules/app-core-club-startup-lifecycle.js"));
 
-console.log("Moved 12 Club startup transformations into canonical source ownership.");
+console.log("Moved 12 Club startup transformations into canonical source and structural ownership.");
