@@ -1,0 +1,40 @@
+name: Table route dependency validator migration
+
+on:
+  push:
+    branches:
+      - refactor/canonical-route-dependency-plan
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/canonical-route-dependency-plan
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update Table route dependency validator
+        run: node site/migrate-table-route-dependency-validator.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-table-route-dependency-validator.mjs
+          rm -f .github/workflows/table-route-dependency-validator-migration.yml
+      - name: Persist validator migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Table route dependency ownership validator"
+          git push origin HEAD:refactor/canonical-route-dependency-plan
+
+# Second push ensures branch workflow registration before execution.
