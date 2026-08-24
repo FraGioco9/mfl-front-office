@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/patch-hide-pager-migration.mjs
       - site/migrate-hide-pager-during-loading.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
@@ -35,6 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Patch pager loading migration
+        run: node site/patch-hide-pager-migration.mjs
 
       - name: Hide pager during Table loading
         run: node site/migrate-hide-pager-during-loading.mjs
