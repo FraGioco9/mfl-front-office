@@ -2992,11 +2992,6 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
   const navigationToken = typeof navigation?.begin === "function"
     ? navigation.begin("view-transition")
     : "";
-  const loadingController = Reflect.get(window, "__mflInteractionBusy");
-  const refreshLoadingToken = !document.documentElement.classList.contains("mflInitialRouteResolved")
-    && typeof loadingController?.begin === "function"
-    ? loadingController.begin(loadingController.reason)
-    : "";
   try {
     window.__mflCancelIncrementalRouteRequest?.();
     const transition = stageViewTransition(pageName, viewName, options);
@@ -3012,7 +3007,6 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
     }
     return transition;
   } finally {
-    if (refreshLoadingToken) loadingController?.end?.(refreshLoadingToken);
     if (navigationToken) navigation?.end?.(navigationToken);
   }
 }
@@ -11804,12 +11798,16 @@ async function startApp() {
   applyStoredWalletPermission();
   updateAccountState();
   updateMenuVisibility();
+
+  const initialRouteRuntimeReadyPromise = Reflect.get(window, "__mflInitialRouteRuntimeReadyPromise");
+  if (!initialRouteRuntimeReadyPromise || typeof initialRouteRuntimeReadyPromise.then !== "function") {
+    throw new Error("Initial route runtime readiness gate is unavailable.");
+  }
+  await initialRouteRuntimeReadyPromise;
+
   if (navigationTransitionSequence === startupNavigationSequence) {
     const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
-    await showHomeShell(authoritativeTarget.pageName, false, {
-      ...authoritativeTarget.options,
-      skipNavigationTransition: true,
-    });
+    await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);
   }
 
   void Promise.allSettled([startupSummaryPromise, startupWalletPreferencesPromise]).then(() => {

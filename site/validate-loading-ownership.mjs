@@ -43,6 +43,7 @@ invariant(
 
 for (const required of [
   'const ROUTE_LOADING_REASON = "route-loading";',
+  'const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";',
   "const ROUTE_LOADING_ALIASES = new Set([",
   "function loadingReason(reason) {",
   "const subscribers = new Set();",
@@ -89,8 +90,9 @@ for (const alias of [
   );
 }
 invariant(
-  bootstrapCore.includes('const initialRouteToken = window.__mflInteractionBusy.begin(ROUTE_LOADING_REASON);'),
-  "Refresh startup must enter the same route-loading reason used by SPA navigation.",
+  bootstrapCore.includes('const initialRouteToken = window.__mflInteractionBusy.begin(INITIAL_ROUTE_BOOTSTRAP_REASON);')
+    && bootstrapCore.includes("INITIAL_ROUTE_BOOTSTRAP_REASON,\n      ROUTE_LOADING_REASON,"),
+  "Pre-core refresh presentation must stay data-loading without impersonating the canonical SPA route-loading owner.",
 );
 invariant(
   bootstrapCore.includes('window.addEventListener("mfl:route-ready", finishInitialRoute, { once: true });'),
@@ -101,9 +103,9 @@ invariant(
   "Application startup must not retain a separate user-visible loading reason.",
 );
 invariant(
-  bootstrapCore.includes("if (routeDestinationReady(pageName, options) || routeLoadingOwnerReusable()) {")
+  bootstrapCore.includes("if (routeDestinationReady(pageName, options) || routeLoadingActive()) {")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
-  "SPA route loading must remain active through the final route paint.",
+  "Refresh and SPA navigation must enter the same readiness-aware route-loading path through the final paint.",
 );
 invariant(
   !bootstrapCore.includes('document.createElement("style")'),
@@ -168,13 +170,12 @@ invariant(
 );
 invariant(
   !bootstrapCore.includes("window.__mflWithInteractionBusy")
+    && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")
     && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
-    && bootstrapCore.includes("function routeLoadingOwnerReusable() {")
-    && bootstrapCore.includes('document.documentElement.classList.contains("mflInitialRouteResolved")')
-    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingOwnerReusable()) return callback();")
+    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "Legacy uncached route/data loads must reuse route-loading only after initial route ownership has resolved, so refresh-time user navigation gets its own lifetime.",
+  "Uncached refresh and SPA route/data loads must share the same canonical nested route-loading reuse contract.",
 );
 invariant(
   appCoreSource.includes("evaluationSaveButton.disabled = true;")

@@ -88,31 +88,25 @@ const viewRunner = section(
   "global view transition runner",
 );
 const viewRunnerNavigation = viewRunner.indexOf('navigation.begin("view-transition")');
-const viewRunnerLoadingController = viewRunner.indexOf('Reflect.get(window, "__mflInteractionBusy")', viewRunnerNavigation);
-const viewRunnerRefreshGuard = viewRunner.indexOf('!document.documentElement.classList.contains("mflInitialRouteResolved")', viewRunnerLoadingController);
-const viewRunnerLoadingBegin = viewRunner.indexOf("loadingController.begin(loadingController.reason)", viewRunnerRefreshGuard);
-const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", viewRunnerLoadingBegin);
+const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", viewRunnerNavigation);
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
 const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
 const viewRunnerLoaderCall = viewRunner.indexOf("return await loader(transition);", viewRunnerLoad);
 const viewRunnerPendingCleanup = viewRunner.indexOf("if (pendingViewTransition === transition) pendingViewTransition = null;", viewRunnerLoaderCall);
-const viewRunnerLoadingRelease = viewRunner.indexOf("loadingController?.end?.(refreshLoadingToken)", viewRunnerPendingCleanup);
-const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerLoadingRelease);
+const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerPendingCleanup);
 invariant(
   viewRunnerNavigation >= 0
-    && viewRunnerLoadingController > viewRunnerNavigation
-    && viewRunnerRefreshGuard > viewRunnerLoadingController
-    && viewRunnerLoadingBegin > viewRunnerRefreshGuard
-    && viewRunnerCancel > viewRunnerLoadingBegin
+    && viewRunnerCancel > viewRunnerNavigation
     && viewRunnerStage > viewRunnerCancel
     && viewRunnerPaint > viewRunnerStage
     && viewRunnerLoad > viewRunnerPaint
     && viewRunnerLoaderCall > viewRunnerLoad
     && viewRunnerPendingCleanup > viewRunnerLoaderCall
-    && viewRunnerLoadingRelease > viewRunnerPendingCleanup
-    && viewRunnerRelease > viewRunnerLoadingRelease,
-  "Refresh-time view navigation must acquire its own route-loading owner before staging the destination, retain staged ownership through its loader, then release loading and navigation after the destination settles.",
+    && viewRunnerRelease > viewRunnerPendingCleanup
+    && !viewRunner.includes("refreshLoadingToken")
+    && !viewRunner.includes("mflInitialRouteResolved"),
+  "Shared view navigation must keep its proven click lifecycle unchanged, with no refresh-only loading branch.",
 );
 
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");

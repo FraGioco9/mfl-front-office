@@ -8,6 +8,7 @@
   const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";
   const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
   const ROUTE_LOADING_REASON = "route-loading";
+  const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -137,6 +138,7 @@
       "evaluationRouteLoading",
     ]);
     const DATA_LOADING_REASONS = new Set([
+      INITIAL_ROUTE_BOOTSTRAP_REASON,
       ROUTE_LOADING_REASON,
       "loadSharedEvaluation",
       "loadSavedEvaluation",
@@ -240,18 +242,13 @@
       return currentSnapshot.reasons.includes(ROUTE_LOADING_REASON);
     }
 
-    function routeLoadingOwnerReusable() {
-      return document.documentElement.classList.contains("mflInitialRouteResolved")
-        && routeLoadingActive();
-    }
-
     function wrapRoutePageGlobal() {
       const original = globalFunction("setPage");
       if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
       const wrapped = async (...args) => {
         const pageName = args[0];
         const options = args[2] && typeof args[2] === "object" && !Array.isArray(args[2]) ? args[2] : {};
-        if (routeDestinationReady(pageName, options) || routeLoadingOwnerReusable()) {
+        if (routeDestinationReady(pageName, options) || routeLoadingActive()) {
           return original.apply(window, args);
         }
         return run(async () => {
@@ -286,7 +283,7 @@
       if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
         const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {
           const normalizedReason = loadingReason(reason);
-          if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingOwnerReusable()) return callback();
+          if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();
           return run(callback, normalizedReason);
         };
         Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyWrapped", { value: true });
@@ -352,7 +349,7 @@
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;
   window.__mflInteractionBusy = createInteractionBusyController();
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
-  const initialRouteToken = window.__mflInteractionBusy.begin(ROUTE_LOADING_REASON);
+  const initialRouteToken = window.__mflInteractionBusy.begin(INITIAL_ROUTE_BOOTSTRAP_REASON);
   let initialRouteFinished = false;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;

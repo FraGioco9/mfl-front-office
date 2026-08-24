@@ -55,25 +55,32 @@ function validateRefreshNavigationOwnership(source, label) {
   includes(source, "? loadWalletPermissions({ force: true })", `${label} initial Progression startup must force a live permission revalidation instead of trusting stale cache state.`);
   includes(source, "if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);", `${label} Progression permission refresh must join the initial route barrier.`);
   includes(source, "await Promise.allSettled(startupDependencies);", `${label} initial route dependencies must settle through the canonical startup barrier.`);
+  includes(source, 'const initialRouteRuntimeReadyPromise = Reflect.get(window, "__mflInitialRouteRuntimeReadyPromise");', `${label} startup must consume the app-entry initial-route runtime gate.`);
+  includes(source, 'throw new Error("Initial route runtime readiness gate is unavailable.");', `${label} startup must fail explicitly if the final route-runtime gate is missing.`);
+  includes(source, "await initialRouteRuntimeReadyPromise;", `${label} refresh rendering must wait until final route runtimes and loading bridges are installed.`);
   includes(source, "commitPageTransition(initialTarget.pageName, false, initialTarget.options);", `${label} startup must seed live page/view state from the refresh URL before any startup dependency can yield.`);
   includes(source, "const startupNavigationSequence = navigationTransitionSequence;", `${label} startup must snapshot navigation ownership after seeding the refresh route.`);
   includes(source, "if (navigationTransitionSequence === startupNavigationSequence) {", `${label} startup must render only while it still owns navigation.`);
   includes(source, 'const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);', `${label} startup must re-read the canonical route after its dependency barrier.`);
-  includes(source, "await showHomeShell(authoritativeTarget.pageName, false, {", `${label} startup must render the authoritative route without creating a competing transition.`);
-  includes(source, "...authoritativeTarget.options,", `${label} startup must preserve the authoritative route options.`);
-  includes(source, "skipNavigationTransition: true,", `${label} startup render must not cancel or supersede a refresh-time page/view transition.`);
+  includes(source, "await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);", `${label} refresh must execute the authoritative route through the same normal setPage transition used by in-app navigation.`);
+  const startAppStartIndex = source.indexOf("async function startApp() {");
+  const startAppEndIndex = source.indexOf("\n}\n\n(() => {", startAppStartIndex);
+  const startAppSection = startAppStartIndex >= 0 && startAppEndIndex > startAppStartIndex
+    ? source.slice(startAppStartIndex, startAppEndIndex + 2)
+    : "";
+  excludes(startAppSection, "skipNavigationTransition: true,", `${label} refresh must not bypass the normal navigation transition lifecycle.`);
   excludes(source, "await showHomeShell(initialTarget.pageName, false, initialTarget.options);", `${label} refresh startup must never replay the route captured before its dependency barrier.`);
-  excludes(source, "await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);", `${label} refresh startup must never perform an unguarded authoritative render.`);
 
   const initialTargetIndex = source.indexOf('const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);');
   const routeSeedIndex = source.indexOf("commitPageTransition(initialTarget.pageName, false, initialTarget.options);");
   const ownershipSnapshotIndex = source.indexOf("const startupNavigationSequence = navigationTransitionSequence;");
   const permissionRefreshIndex = source.indexOf("? loadWalletPermissions({ force: true })");
   const startupBarrierIndex = source.indexOf("await Promise.allSettled(startupDependencies);");
+  const runtimeGateLookupIndex = source.indexOf('const initialRouteRuntimeReadyPromise = Reflect.get(window, "__mflInitialRouteRuntimeReadyPromise");');
+  const runtimeGateAwaitIndex = source.indexOf("await initialRouteRuntimeReadyPromise;", runtimeGateLookupIndex);
   const ownershipGuardIndex = source.indexOf("if (navigationTransitionSequence === startupNavigationSequence) {");
   const authoritativeTargetIndex = source.indexOf('const authoritativeTarget = pageTargetFromPath(`${location.pathname}${location.search}`);');
-  const authoritativeRouteIndex = source.indexOf("await showHomeShell(authoritativeTarget.pageName, false, {");
-  const transitionBypassIndex = source.indexOf("skipNavigationTransition: true,", authoritativeRouteIndex);
+  const authoritativeRouteIndex = source.indexOf("await showHomeShell(authoritativeTarget.pageName, false, authoritativeTarget.options);");
 
   invariant(
     initialTargetIndex >= 0
@@ -81,22 +88,35 @@ function validateRefreshNavigationOwnership(source, label) {
       && ownershipSnapshotIndex > routeSeedIndex
       && permissionRefreshIndex > ownershipSnapshotIndex
       && startupBarrierIndex > permissionRefreshIndex
-      && ownershipGuardIndex > startupBarrierIndex
+      && runtimeGateLookupIndex > startupBarrierIndex
+      && runtimeGateAwaitIndex > runtimeGateLookupIndex
+      && ownershipGuardIndex > runtimeGateAwaitIndex
       && authoritativeTargetIndex > ownershipGuardIndex
-      && authoritativeRouteIndex > authoritativeTargetIndex
-      && transitionBypassIndex > authoritativeRouteIndex,
-    `${label} startup must seed refresh route state before yielding, then render only if startup still owns navigation after its dependency barrier.`,
+      && authoritativeRouteIndex > authoritativeTargetIndex,
+    `${label} startup must seed refresh route state before yielding, wait for final route-runtime ownership, then use the normal navigation path only if startup still owns the route.`,
   );
 }
 
 validateRefreshNavigationOwnership(coreSource, "Canonical app-core");
 validateRefreshNavigationOwnership(generatedCore, "Built app-core");
 
+includes(entry, "runtimeWindow.__mflInitialRouteRuntimeReadyPromise = initialRouteRuntimeReadyPromise;", "app-entry must publish the initial route runtime gate before loading the core.");
+includes(entry, "initialRouteRuntimeReadyResolve();", "app-entry must resolve the initial route runtime gate after final route runtime installation.");
+includes(entry, "initialRouteRuntimeReadyReject(error);", "app-entry must reject the initial route runtime gate if route runtime installation fails.");
+
 const markerIndex = generatedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();");
 const startupPromiseIndex = generatedCore.indexOf("window.__mflAppStartPromise = (async () => {");
 invariant(markerIndex >= 0 && startupPromiseIndex > markerIndex, "The built core must mark initialization before publishing startup work.");
 
+const routeRuntimeFinalizeIndex = entry.indexOf("await trackRouteRuntimePromise(");
+const routeRuntimeGateResolveIndex = entry.indexOf("initialRouteRuntimeReadyResolve();", routeRuntimeFinalizeIndex);
 const appStartAwaitIndex = entry.indexOf("await runtimeWindow.__mflAppStartPromise;");
+invariant(
+  routeRuntimeFinalizeIndex >= 0
+    && routeRuntimeGateResolveIndex > routeRuntimeFinalizeIndex
+    && appStartAwaitIndex > routeRuntimeGateResolveIndex,
+  "app-entry must install the initial route runtime, release the refresh gate, then await the core startup that performs the canonical route transition.",
+);
 const routePaintIndex = entry.indexOf("await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();");
 const routeReadyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
 const globalSearchPreloadIndex = entry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
@@ -110,4 +130,4 @@ invariant(
   "Refresh startup must finish its route, paint it, publish route readiness, then finish shared background warm-up before app-wide readiness.",
 );
 
-console.log("Prebuilt application-core startup handshake, refresh navigation ownership, and route-ready background warm-up validation passed.");
+console.log("Prebuilt application-core startup handshake, unified refresh/SPA navigation ownership, and route-ready background warm-up validation passed.");
