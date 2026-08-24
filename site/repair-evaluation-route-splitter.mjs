@@ -1,4 +1,5 @@
 // Temporary one-shot repair; remove before merge.
+// Trigger after the repair workflow exists on this branch.
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
