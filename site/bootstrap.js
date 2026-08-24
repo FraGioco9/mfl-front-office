@@ -12,85 +12,19 @@
   const EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
-  const TABLE_VIEW_BY_SLUG = Object.freeze({
-    attributes: "attributes",
-    squad: "attributes",
-    stats: "stats",
-    "next-overall": "next",
-    contracts: "contracts",
-    "current-season": "current",
-    "all-time": "all",
-  });
+  const APP_CONFIG = Reflect.get(window, "__mflAppConfig");
+  if (!APP_CONFIG?.routes || !APP_CONFIG?.table) {
+    throw new Error("Bootstrap requires canonical pre-bootstrap app configuration.");
+  }
+  const TABLE_VIEW_BY_SLUG = APP_CONFIG.routes.viewBySlug;
   const TABLE_VIEW_SLUGS = new Set(Object.keys(TABLE_VIEW_BY_SLUG));
-  const FIRST_PAINT_BASE_COLUMNS = Object.freeze([
-    "player_id",
-    "nationality_flag",
-    "name",
-    "age",
-    "positions",
-    "player_seasons",
-  ]);
-  const FIRST_PAINT_STAT_COLUMNS = Object.freeze([
-    "overall",
-    "pace",
-    "shooting",
-    "passing",
-    "dribbling",
-    "defense",
-    "physical",
-  ]);
-  const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([
-    "overall",
-    "active_contract_club_name",
-    "active_contract_club_division",
-    "active_contract_revenue_share",
-  ]);
-  const FIRST_PAINT_AGENT_PAGES = new Set(["myplayers", "agents", "mfl"]);
-  const FIRST_PAINT_SORTABLE_COLUMNS = new Set([
-    "player_id",
-    "name",
-    "age",
-    "player_seasons",
-    "owned_since",
-    "active_contract_revenue_share",
-    "active_contract_club_division",
-    ...FIRST_PAINT_STAT_COLUMNS,
-  ]);
-  const FIRST_PAINT_COLUMN_CLASSES = Object.freeze({
-    player_id: "col-id",
-    nationality_flag: "col-flag",
-    name: "col-name",
-    age: "col-age",
-    positions: "col-positions",
-    player_seasons: "col-seasons",
-    wallet_name: "col-agent",
-    owned_since: "col-agent",
-    active_contract_revenue_share: "col-contract-revenue",
-    active_contract_club_name: "col-contract-club",
-    active_contract_club_division: "col-contract-division",
-    player_link: "col-link",
-  });
-  const FIRST_PAINT_COLUMN_LABELS = Object.freeze({
-    player_id: "ID",
-    nationality_flag: "",
-    name: "Name",
-    age: "Age",
-    positions: "Positions",
-    player_seasons: "Seasons",
-    overall: "Overall",
-    pace: "Pace",
-    shooting: "Shooting",
-    passing: "Passing",
-    dribbling: "Dribbling",
-    defense: "Defense",
-    physical: "Physical",
-    wallet_name: "Agent",
-    owned_since: "Joined Agency",
-    active_contract_revenue_share: "Rev. Share",
-    active_contract_club_name: "Club Name",
-    active_contract_club_division: "Division",
-    player_link: "",
-  });
+  const FIRST_PAINT_BASE_COLUMNS = APP_CONFIG.table.baseColumns;
+  const FIRST_PAINT_STAT_COLUMNS = APP_CONFIG.table.statColumns;
+  const FIRST_PAINT_CONTRACT_COLUMNS = APP_CONFIG.table.contractColumns;
+  const FIRST_PAINT_AGENT_PAGES = new Set(APP_CONFIG.table.joinedAgencyPages);
+  const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);
+  const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;
+  const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;
   const MFL_STATS_FILTER_LABELS = Object.freeze([
     ["all", "All"],
     ["90-94", "90-94"],
@@ -132,8 +66,7 @@
   root.classList.remove("mflInitialRouteResolved");
 
   function tableViewConfig() {
-    const config = Reflect.get(window, "__mflTableViewConfig");
-    return config && typeof config === "object" ? config : {};
+    return APP_CONFIG.routes.tableViews;
   }
 
   function routeParts(urlLike = window.location.href) {
@@ -672,7 +605,7 @@ function primeInitialTableStructure(page, view) {
 
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
-      ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
+      ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetired", "databaseStatsRetiringOne"]
         .forEach(setLoadingValue);
       document.getElementById("databaseStatsDistribution")?.replaceChildren();
       return;
