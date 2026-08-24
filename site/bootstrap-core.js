@@ -128,7 +128,6 @@
   }
 
   function createInteractionBusyController() {
-    const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const ROUTE_LOADING_ALIASES = new Set([
       "startup",
@@ -139,40 +138,13 @@
     ]);
     const DATA_LOADING_REASONS = new Set([
       ROUTE_LOADING_REASON,
-      "interaction-loading",
       "loadSharedEvaluation",
       "loadSavedEvaluation",
       "openSavedEvaluationsModal",
     ]);
-    const OPERATION_BUSY_REASONS = new Set([
-      "interaction-loading",
-      "createSharedEvaluationFromPayload",
-      "createSharedEvaluation",
-      "createSavedEvaluation",
-      "linkWallet",
-    ]);
-    const blockedEvents = [
-      "pointerdown", "pointerup", "pointercancel",
-      "mousedown", "mouseup", "touchstart", "touchend", "touchcancel",
-      "click", "dblclick", "auxclick", "contextmenu",
-      "pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove",
-    ];
-    const scrollGestureEvents = new Set(["pointerdown", "mousedown", "touchstart", "pointermove", "mousemove"]);
-    const busyScrollSurfaceSelector = [
-      "main", ".tableScroller", ".sidebar", ".views", ".playerAttributeViews",
-      ".advancedPlayerTableSection", ".mflStatsAgeDistribution", ".evaluationLoadList",
-      ".searchBody", ".filterBuilder", ".advancedSettingsBody",
-    ].join(", ");
     const activeTokens = new Map();
     const subscribers = new Set();
-    const deferredEndTokens = new Set();
-    const blockedPointerIds = new Set();
-    let fallbackMouseGestureBlocked = false;
-    let fallbackTouchGestureBlocked = false;
-    let blockedGestureReleasePending = false;
-    let blockedGestureReleaseTimer = 0;
     let sequence = 0;
-    let interactionListenersBound = false;
     let currentSnapshot = Object.freeze({
       busy: false,
       dataLoading: false,
@@ -187,7 +159,7 @@
     function makeSnapshot() {
       const reasons = Object.freeze(Array.from(activeTokens.values()));
       return Object.freeze({
-        busy: reasons.some((reason) => OPERATION_BUSY_REASONS.has(reason)),
+        busy: false,
         dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),
         reasons,
       });
@@ -206,12 +178,7 @@
 
     function applyState() {
       currentSnapshot = makeSnapshot();
-      if (currentSnapshot.busy) bindInteractionBlockers();
-      else unbindInteractionBlockers();
-      document.documentElement.classList.toggle(BUSY_CLASS, currentSnapshot.busy);
       document.documentElement.classList.toggle(DATA_LOADING_CLASS, currentSnapshot.dataLoading);
-      document.documentElement.dataset.interactionBusy = currentSnapshot.busy ? "true" : "false";
-      if (document.body) document.body.setAttribute("aria-busy", currentSnapshot.busy ? "true" : "false");
       notifySubscribers(currentSnapshot);
     }
 
@@ -224,12 +191,7 @@
     }
 
     function end(token) {
-      if (!token || !activeTokens.has(token)) return;
-      if (blockedInteractionGestureActive()) {
-        deferredEndTokens.add(token);
-        return;
-      }
-      if (activeTokens.delete(token)) applyState();
+      if (token && activeTokens.delete(token)) applyState();
     }
 
     async function run(callback, reason = "loading") {
@@ -252,121 +214,6 @@
       subscribers.add(callback);
       if (options.immediate !== false) callback(currentSnapshot);
       return () => subscribers.delete(callback);
-    }
-
-    function pointerEventsSupported() {
-      return typeof window.PointerEvent === "function";
-    }
-
-    function blockedInteractionGestureActive() {
-      return blockedPointerIds.size > 0
-        || fallbackMouseGestureBlocked
-        || fallbackTouchGestureBlocked
-        || blockedGestureReleasePending;
-    }
-
-    function beginBlockedInteractionGesture(event) {
-      if (event.type === "pointerdown") {
-        blockedPointerIds.add(event.pointerId);
-        return;
-      }
-      if (pointerEventsSupported()) return;
-      if (event.type === "mousedown" && event.button === 0) fallbackMouseGestureBlocked = true;
-      if (event.type === "touchstart") fallbackTouchGestureBlocked = true;
-    }
-
-    function blockedInteractionGestureEndOwned(event) {
-      if (event.type === "pointerup" || event.type === "pointercancel") {
-        return blockedPointerIds.has(event.pointerId);
-      }
-      if (pointerEventsSupported()) return false;
-      if (event.type === "mouseup") return fallbackMouseGestureBlocked;
-      if (event.type === "touchend" || event.type === "touchcancel") return fallbackTouchGestureBlocked;
-      return false;
-    }
-
-    function flushDeferredInteractionEnds() {
-      if (blockedInteractionGestureActive() || !deferredEndTokens.size) return;
-      let changed = false;
-      deferredEndTokens.forEach((token) => {
-        if (activeTokens.delete(token)) changed = true;
-      });
-      deferredEndTokens.clear();
-      if (changed) applyState();
-    }
-
-    function scheduleBlockedInteractionGestureRelease() {
-      if (blockedGestureReleaseTimer) return;
-      blockedGestureReleaseTimer = window.setTimeout(() => {
-        blockedGestureReleaseTimer = 0;
-        blockedGestureReleasePending = false;
-        flushDeferredInteractionEnds();
-      }, 0);
-    }
-
-    function finishBlockedInteractionGesture(event) {
-      if (event.type === "pointerup" || event.type === "pointercancel") {
-        blockedPointerIds.delete(event.pointerId);
-      } else if (!pointerEventsSupported() && event.type === "mouseup") {
-        fallbackMouseGestureBlocked = false;
-      } else if (!pointerEventsSupported() && (event.type === "touchend" || event.type === "touchcancel")) {
-        fallbackTouchGestureBlocked = Boolean(event.touches?.length);
-      }
-      blockedGestureReleasePending = true;
-      scheduleBlockedInteractionGestureRelease();
-    }
-
-    function clearBlockedInteractionGestures() {
-      blockedPointerIds.clear();
-      fallbackMouseGestureBlocked = false;
-      fallbackTouchGestureBlocked = false;
-      blockedGestureReleasePending = false;
-      if (blockedGestureReleaseTimer) {
-        window.clearTimeout(blockedGestureReleaseTimer);
-        blockedGestureReleaseTimer = 0;
-      }
-      flushDeferredInteractionEnds();
-    }
-
-    function eventTargetsBusyScrollSurface(event) {
-      if (!scrollGestureEvents.has(event.type)) return false;
-      const target = event.target instanceof Element ? event.target : null;
-      return Boolean(target?.closest(busyScrollSurfaceSelector));
-    }
-
-    function blockInteraction(event) {
-      if (!activeTokens.size) return;
-      if (pointerEventsSupported() && ["mouseup", "touchend", "touchcancel"].includes(event.type)) return;
-      if (blockedInteractionGestureEndOwned(event)) {
-        const loadingSettledMidGesture = deferredEndTokens.size > 0;
-        finishBlockedInteractionGesture(event);
-        if (loadingSettledMidGesture) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        }
-        return;
-      }
-      if (eventTargetsBusyScrollSurface(event)) {
-        beginBlockedInteractionGesture(event);
-        return;
-      }
-      beginBlockedInteractionGesture(event);
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
-
-    function bindInteractionBlockers() {
-      if (interactionListenersBound) return;
-      interactionListenersBound = true;
-      blockedEvents.forEach((eventName) => document.addEventListener(eventName, blockInteraction, true));
-      window.addEventListener("blur", clearBlockedInteractionGestures, true);
-    }
-
-    function unbindInteractionBlockers() {
-      if (!interactionListenersBound) return;
-      interactionListenersBound = false;
-      blockedEvents.forEach((eventName) => document.removeEventListener(eventName, blockInteraction, true));
-      window.removeEventListener("blur", clearBlockedInteractionGestures, true);
     }
 
     function globalFunction(name) {
@@ -413,7 +260,7 @@
       return replaceGlobalFunction("setPage", original, wrapped);
     }
 
-    function wrapBusyGlobal(name, reason = name) {
+    function wrapLoadingGlobal(name, reason = name) {
       const original = globalFunction(name);
       if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
       const normalizedReason = loadingReason(reason);
@@ -428,7 +275,6 @@
     }
 
     function installCoreBridge() {
-      window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
       window.__mflSyncStoredAccessFlags = syncStoredAccessFlags;
 
       const currentWithInteractionBusy = globalFunction("withInteractionBusy");
@@ -460,11 +306,7 @@
         "loadSharedEvaluation",
         "loadSavedEvaluation",
         "openSavedEvaluationsModal",
-        "createSharedEvaluationFromPayload",
-        "createSharedEvaluation",
-        "createSavedEvaluation",
-        "linkWallet",
-      ].forEach((name) => wrapBusyGlobal(name));
+      ].forEach((name) => wrapLoadingGlobal(name));
     }
 
     return Object.freeze({

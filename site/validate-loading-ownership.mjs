@@ -29,7 +29,6 @@ invariant(
 );
 
 for (const required of [
-  "html.mflInteractionBusy body::after",
   "html.mflDataLoading #progressionPage #watchlistPlayerCount",
   "html.mflTableScrolling #progressionPage .tableScroller tbody",
 ]) {
@@ -37,8 +36,7 @@ for (const required of [
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 invariant(
-  !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
-    && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),
+  !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager"),
   "Pager loading visibility must be owned by the table loading runtime, not blanket navigation/busy CSS.",
 );
 
@@ -58,33 +56,25 @@ invariant(
   bootstrapCore.includes("return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;"),
   "Legacy route/data reasons must collapse into the canonical route-loading reason.",
 );
-const operationBusyStart = bootstrapCore.indexOf("const OPERATION_BUSY_REASONS = new Set([");
-const operationBusyEnd = bootstrapCore.indexOf("]);", operationBusyStart);
-const operationBusySource = bootstrapCore.slice(operationBusyStart, operationBusyEnd);
 invariant(
-  operationBusyStart >= 0
-    && operationBusyEnd > operationBusyStart
-    && operationBusySource.includes('"interaction-loading"')
-    && operationBusySource.includes('"createSharedEvaluationFromPayload"')
-    && operationBusySource.includes('"createSharedEvaluation"')
-    && operationBusySource.includes('"createSavedEvaluation"')
-    && operationBusySource.includes('"linkWallet"')
-    && !operationBusySource.includes("ROUTE_LOADING_REASON")
-    && !operationBusySource.includes('"loadSharedEvaluation"')
-    && !operationBusySource.includes('"loadSavedEvaluation"')
-    && !operationBusySource.includes('"openSavedEvaluationsModal"'),
-  "Only explicit persistent/interaction operations may own the global busy blocker; route and read-only data loading must remain non-blocking.",
-);
-invariant(
-  bootstrapCore.includes("busy: reasons.some((reason) => OPERATION_BUSY_REASONS.has(reason)),")
+  !bootstrapCore.includes("OPERATION_BUSY_REASONS")
+    && !bootstrapCore.includes('const BUSY_CLASS = "mflInteractionBusy";')
+    && !bootstrapCore.includes("bindInteractionBlockers")
+    && !bootstrapCore.includes("blockInteraction(event)")
+    && !bootstrapCore.includes("blockedInteractionGestureActive")
+    && bootstrapCore.includes("busy: false,")
     && bootstrapCore.includes("dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),"),
-  "Loading snapshots must classify exclusive operation busy separately from local data loading.",
+  "The loading controller must publish route/data readiness without a global operation-busy blocker.",
 );
 invariant(
-  bootstrapCore.includes("ROUTE_LOADING_REASON,\n      \"interaction-loading\",\n      \"loadSharedEvaluation\",\n      \"loadSavedEvaluation\",\n      \"openSavedEvaluationsModal\",")
-    || bootstrapCore.includes('ROUTE_LOADING_REASON,\n      "interaction-loading",\n      "loadSharedEvaluation",\n      "loadSavedEvaluation",\n      "openSavedEvaluationsModal",'),
-  "Normal route/data loading must remain observable without entering exclusive operation-busy state.",
+  !bootstrapCore.includes('"interaction-loading"')
+    && !bootstrapCore.includes('"createSharedEvaluationFromPayload"')
+    && !bootstrapCore.includes('"createSharedEvaluation"')
+    && !bootstrapCore.includes('"createSavedEvaluation"')
+    && !bootstrapCore.includes('"linkWallet"'),
+  "Persistent mutations must not be wrapped as global loading/busy reasons.",
 );
+
 for (const alias of [
   "setPage",
   "route-runtime",
@@ -112,31 +102,6 @@ invariant(
 invariant(
   bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
   "SPA route loading must remain active through the final route paint.",
-);
-invariant(
-  bootstrapCore.includes('"pointerdown", "pointerup", "pointercancel"')
-    && bootstrapCore.includes('"mousedown", "mouseup", "touchstart", "touchend", "touchcancel"'),
-  "Busy interaction ownership must observe both ends of pointer, mouse, and touch gestures.",
-);
-invariant(
-  bootstrapCore.includes("if (eventTargetsBusyScrollSurface(event)) {\n        beginBlockedInteractionGesture(event);\n        return;\n      }"),
-  "Busy interaction ownership must remember gestures that start on permitted scroll surfaces without disabling their scroll gesture.",
-);
-invariant(
-  bootstrapCore.includes("if (blockedInteractionGestureActive()) {\n        deferredEndTokens.add(token);\n        return;\n      }"),
-  "A loading token that settles during a blocked gesture must remain active through its terminal click.",
-);
-invariant(
-  bootstrapCore.includes("let blockedGestureReleasePending = false;")
-    && bootstrapCore.includes("function scheduleBlockedInteractionGestureRelease() {")
-    && bootstrapCore.includes("blockedGestureReleaseTimer = window.setTimeout(() => {")
-    && bootstrapCore.includes("blockedGestureReleasePending = false;\n        flushDeferredInteractionEnds();"),
-  "Gesture ownership must settle on the next task so the browser's terminal click cannot cross from loading ownership into sidebar navigation.",
-);
-invariant(
-  bootstrapCore.includes('window.addEventListener("blur", clearBlockedInteractionGestures, true);')
-    && bootstrapCore.includes('window.removeEventListener("blur", clearBlockedInteractionGestures, true);'),
-  "Blocked gesture ownership must clear safely if the window loses focus so loading cannot remain stuck.",
 );
 invariant(
   !bootstrapCore.includes('document.createElement("style")'),
@@ -200,12 +165,22 @@ invariant(
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
 invariant(
-  bootstrapCore.includes('window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");')
+  !bootstrapCore.includes("window.__mflWithInteractionBusy")
     && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "Legacy uncached route/data loads must default to non-blocking route loading while the explicit operation-busy helper remains exclusive.",
+  "Legacy uncached route/data loads must retain non-blocking route/data notification without an explicit global operation-busy helper.",
+);
+invariant(
+  appCoreSource.includes("evaluationSaveButton.disabled = true;")
+    && appCoreSource.includes("evaluationSaveButton.disabled = false;")
+    && appCoreSource.includes("evaluationShareButton.disabled = true;")
+    && appCoreSource.includes("evaluationShareButton.disabled = false;")
+    && appCoreSource.includes("state.walletOptInInProgress = true;")
+    && appCoreSource.includes("linkWalletButton.disabled = true;")
+    && appCoreSource.includes('linkWalletButton.textContent = "Loading...";'),
+  "Persistent Evaluation and wallet mutations must retain local duplicate-submit protection and working feedback.",
 );
 
 invariant(
@@ -241,4 +216,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Non-blocking route/data loading, exclusive operation busy, local table loading, and absence of global Loading-toast/footer-lock ownership validation passed.");
+console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");

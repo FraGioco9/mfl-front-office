@@ -12,7 +12,6 @@
     let keyboardFocusMetric = null;
     let hideTimer = 0;
     let showFrame = 0;
-    let idleFrame = 0;
     let showEpoch = 0;
     let keyboardFocusMode = false;
     let showScrollX = 0;
@@ -28,8 +27,6 @@
       document.body?.dataset.page === "evaluation"
       || /^\/evaluation\/?$/i.test(window.location.pathname)
     );
-
-    const interactionBusy = () => document.documentElement.classList.contains("mflInteractionBusy");
 
     function cancelPendingShow() {
       showEpoch += 1;
@@ -102,7 +99,7 @@
     }
 
     function show(metric) {
-      if (!(metric instanceof HTMLElement) || !evaluationActive() || interactionBusy()) return;
+      if (!(metric instanceof HTMLElement) || !evaluationActive()) return;
       const text = String(metric.dataset.tooltip || "").trim();
       if (!text) {
         hide(true);
@@ -125,27 +122,10 @@
       const epoch = showEpoch;
       showFrame = requestAnimationFrame(() => {
         showFrame = 0;
-        if (epoch !== showEpoch || portal !== tooltip || activeMetric !== metric || !evaluationActive() || interactionBusy()) return;
+        if (epoch !== showEpoch || portal !== tooltip || activeMetric !== metric || !evaluationActive()) return;
         tooltip.classList.add("visible");
         position();
       });
-    }
-
-    function scheduleIdleSync() {
-      if (idleFrame) return;
-      const retry = () => {
-        idleFrame = 0;
-        if (!evaluationActive()) {
-          clearAll(true);
-          return;
-        }
-        if (interactionBusy()) {
-          idleFrame = requestAnimationFrame(retry);
-          return;
-        }
-        sync();
-      };
-      idleFrame = requestAnimationFrame(retry);
     }
 
     function sync() {
@@ -153,11 +133,6 @@
         hoverMetric = null;
         keyboardFocusMetric = null;
         hide(true);
-        return;
-      }
-      if (interactionBusy()) {
-        hide(true);
-        scheduleIdleSync();
         return;
       }
       const next = keyboardFocusMetric || hoverMetric;
@@ -176,8 +151,7 @@
       const metric = metricFrom(event.target);
       if (!metric) return;
       hoverMetric = metric;
-      if (interactionBusy()) scheduleIdleSync();
-      else sync();
+      sync();
     }
 
     function onPointerMove(event) {
@@ -185,8 +159,7 @@
       const metric = metricFrom(event.target);
       if (metric === hoverMetric) return;
       hoverMetric = metric;
-      if (interactionBusy()) scheduleIdleSync();
-      else sync();
+      sync();
     }
 
     function onPointerOut(event) {
@@ -277,8 +250,6 @@
 
     function destroy() {
       clearAll(true);
-      if (idleFrame) cancelAnimationFrame(idleFrame);
-      idleFrame = 0;
       window.removeEventListener("pointerover", onPointerOver, true);
       window.removeEventListener("pointermove", onPointerMove, true);
       window.removeEventListener("pointerout", onPointerOut, true);

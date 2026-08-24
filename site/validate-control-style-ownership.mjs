@@ -50,7 +50,7 @@ for (const required of [
   ".evaluationSearchClearButton",
   ".playerSearchClearButton",
   ".modalBackdrop .filtersHeader > .popupCloseButton",
-  "html.mflInteractionBusy #pageSizeSelect",
+  "html.mflDataLoading #pageSizeSelect",
 ]) {
   invariant(controls.includes(required), `controls.css is missing canonical shared rule: ${required}`);
 }
@@ -80,6 +80,7 @@ for (const required of [
 }
 
 invariant(!controls.includes("!important"), "controls.css must not introduce !important overrides.");
+invariant(!controls.includes("mflInteractionBusy") && !controls.includes("aria-busy"), "Shared controls must not retain global operation-busy selectors after local mutation ownership replaces the site-wide blocker.");
 invariant(!footer.includes("!important"), "footer.css must not introduce !important overrides.");
 
 for (const duplicate of [
@@ -87,7 +88,7 @@ for (const duplicate of [
   "#sidebar .navButton.active",
   ".modalBackdrop .filtersHeader > .popupCloseButton",
   ".trainingStatControls .popupAddButton::before",
-  "html.mflInteractionBusy #pageSizeSelect",
+  "html.mflDataLoading #pageSizeSelect",
 ]) {
   invariant(!styles.includes(duplicate), `styles.css must not duplicate shared-control ownership through ${duplicate}`);
 }

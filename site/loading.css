@@ -1,57 +1,11 @@
 /* Canonical loading and first-paint state presentation for MFL Front Office. */
 
-html.mflInteractionBusy,
-html.mflInteractionBusy body {
-  cursor: wait;
-}
-
-html.mflInteractionBusy body *,
-html.mflInteractionBusy body *::before,
-html.mflInteractionBusy body *::after {
-  pointer-events: none;
-  animation-play-state: paused;
-}
-
-html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *),
-html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *)::before,
-html.mflInteractionBusy body *:not(.modalBackdrop, .modalBackdrop *)::after {
-  transition: none;
-}
-
 html.mflInitialChromePreparing body:has(> #appShell),
 html.mflInitialChromePreparing body:has(> #appShell) *,
 html.mflInitialChromePreparing body:has(> #appShell) *::before,
 html.mflInitialChromePreparing body:has(> #appShell) *::after {
   transition: none;
   animation-play-state: paused;
-}
-
-html.mflInteractionBusy body main,
-html.mflInteractionBusy body .tableScroller,
-html.mflInteractionBusy body .evaluationLoadList,
-html.mflInteractionBusy body .searchBody,
-html.mflInteractionBusy body .filterBuilder,
-html.mflInteractionBusy body .advancedSettingsBody,
-html.mflInteractionBusy body .sidebar,
-html.mflInteractionBusy body .views,
-html.mflInteractionBusy body .playerAttributeViews,
-html.mflInteractionBusy body .advancedPlayerTableSection,
-html.mflInteractionBusy body .mflStatsAgeDistribution {
-  pointer-events: auto;
-}
-
-html.mflInteractionBusy body::after {
-  content: "";
-  display: block;
-  visibility: visible;
-  position: fixed;
-  inset: 0;
-  z-index: var(--mfl-z-busy-shield);
-  background: transparent;
-  pointer-events: auto;
-  cursor: wait;
-  transition: none;
-  animation: none;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager),

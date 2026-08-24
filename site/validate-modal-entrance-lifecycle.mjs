@@ -30,15 +30,6 @@ for (const modalSource of [source, runtime]) {
   );
 }
 
-const busyPointerRule = loadingStyles.match(
-  /html\.mflInteractionBusy body \*,\nhtml\.mflInteractionBusy body \*::before,\nhtml\.mflInteractionBusy body \*::after \{([^}]*)\}/,
-)?.[1] || "";
-invariant(
-  busyPointerRule
-    && !busyPointerRule.includes("transition: none;")
-    && loadingStyles.includes("*:not(.modalBackdrop, .modalBackdrop *)")
-    && loadingStyles.includes("transition: none;"),
-  "Busy loading must suppress ordinary transitions without suppressing modal entrance transitions.",
-);
+invariant(!loadingStyles.includes("mflInteractionBusy"), "Modal entrance transitions must not depend on a retired global operation-busy CSS owner.");
 
-console.log("Source-owned modal first-open paint boundary and busy-state transition preservation validation passed.");
+console.log("Source-owned modal first-open paint boundary remains independent from loading-state transition suppression.");
