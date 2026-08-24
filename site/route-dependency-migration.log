@@ -1,9 +1,0 @@
-file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-canonical-route-dependency-plan.mjs?fixed=1787566606187:8
-  if (!source.includes(before)) throw new Error(`Missing ${label}.`);
-                                      ^
-
-Error: Missing route-core config dependency type.
-    at replaceRequired (file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-canonical-route-dependency-plan.mjs?fixed=1787566606187:8:39)
-    at file:///home/runner/work/mfl-front-office/mfl-front-office/site/migrate-canonical-route-dependency-plan.mjs?fixed=1787566606187:132:14
-
-Node.js v22.23.2
