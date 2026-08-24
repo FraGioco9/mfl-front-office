@@ -8,6 +8,7 @@ on:
       - site/build-app-core.mjs
       # Canonical UI metadata changes can alter generated first-paint HTML.
       - site/modules/app-config.js
+      - site/patch-operation-busy-migration-syntax.mjs
       - site/migrate-retire-global-operation-busy.mjs
       - site/bootstrap.js
       - site/bootstrap-core.js
@@ -35,6 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Fix operation busy migration syntax
+        run: node site/patch-operation-busy-migration-syntax.mjs
 
       - name: Retire global operation busy blocker
         run: node site/migrate-retire-global-operation-busy.mjs
