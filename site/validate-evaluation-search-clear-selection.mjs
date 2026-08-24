@@ -5,10 +5,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [layoutRuntime, searchRuntime, searchLifecycleNormalizer, indexHtml] = await Promise.all([
+const [layoutRuntime, searchRuntime, appCoreSource, indexHtml] = await Promise.all([
   read("./evaluation-layout-runtime.js"),
   read("./evaluation-search-state-runtime.js"),
-  read("./modules/app-core-evaluation-search-lifecycle.js"),
+  read("./modules/app-core.js"),
   read("./index.html"),
 ]);
 
@@ -68,12 +68,18 @@ invariant(
   "The Evaluation search-state owner must retain its delegated clear fallback.",
 );
 
+const canonicalClearStart = appCoreSource.indexOf("function clearEvaluationSearch() {");
+const canonicalClearEnd = appCoreSource.indexOf("\n}\nfunction handleEvaluationSearchInput()", canonicalClearStart);
+const canonicalClearSource = canonicalClearStart >= 0 && canonicalClearEnd > canonicalClearStart
+  ? appCoreSource.slice(canonicalClearStart, canonicalClearEnd)
+  : "";
 invariant(
-  searchLifecycleNormalizer.includes("EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS")
-    && searchLifecycleNormalizer.includes("resetEvaluationSelection();\n  renderEvaluationSearchResults();\n  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();")
-    && !searchLifecycleNormalizer.includes("activateEvaluationSearch")
-    && !searchLifecycleNormalizer.includes("requestAnimationFrame(activateEvaluationSearch)"),
-  "Clicking the Evaluation clear X must select the empty search directly after the core reset through the canonical search-state owner.",
+  canonicalClearSource.includes("resetEvaluationSelection();")
+    && canonicalClearSource.includes("renderEvaluationSearchResults();")
+    && canonicalClearSource.includes("window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();")
+    && !canonicalClearSource.includes("evaluationSearchInput.focus()")
+    && appCoreSource.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());'),
+  "Clicking the Evaluation clear X must select the empty search directly after the canonical core reset through the search-state owner without stealing pointer focus.",
 );
 
 invariant(

@@ -1200,7 +1200,6 @@ evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());
 evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
-
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
   renderEvaluationPage();

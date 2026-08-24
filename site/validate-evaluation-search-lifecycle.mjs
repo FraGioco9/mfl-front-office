@@ -49,6 +49,12 @@ invariant(
   !generatedEvaluationCore.includes('evaluationSearchInput.addEventListener("blur", () => {'),
   "The generated Evaluation route core must not install a second blur handler that hides typed results.",
 );
+invariant(
+  !appCoreSource.includes('evaluationSearchInput.addEventListener("blur", () => {')
+    && appCoreSource.includes("window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();")
+    && appCoreSource.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());'),
+  "Canonical Evaluation source must own typed-result persistence and Clear focus behavior before route splitting.",
+);
 const pointerDownStart = searchRuntime.indexOf("function onPointerDown(event)");
 const pointerDownEnd = searchRuntime.indexOf("function onFocus(event)", pointerDownStart);
 const pointerDownSource = pointerDownStart >= 0 && pointerDownEnd > pointerDownStart
