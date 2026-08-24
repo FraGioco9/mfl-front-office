@@ -1,0 +1,37 @@
+name: Route readiness bootstrap validator migration
+
+on:
+  push:
+    branches:
+      - refactor/route-readiness-aware-pages
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/route-readiness-aware-pages
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update bootstrap validator
+        run: node site/migrate-route-readiness-bootstrap-validator.mjs
+      - name: Remove temporary migration files
+        shell: bash
+        run: |
+          rm -f site/migrate-route-readiness-bootstrap-validator.mjs
+          rm -f .github/workflows/route-readiness-bootstrap-validator-migration.yml
+      - name: Persist validator migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update route readiness bootstrap validator"
+          git push origin HEAD:refactor/route-readiness-aware-pages
