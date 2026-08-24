@@ -1,0 +1,18 @@
+const validators = [
+  "validate-table-route-core.mjs",
+  "validate-pager-current-page.mjs",
+  "validate-table-column-layout.mjs",
+  "validate-table-filter-selection-lifecycle.mjs",
+];
+
+for (const validator of validators) {
+  console.log(`[table] ${validator}`);
+  try {
+    await import(new URL(`./${validator}`, import.meta.url));
+  } catch (error) {
+    console.error(`[table] FAILED ${validator}`);
+    throw error;
+  }
+}
+
+console.log(`Table validator domain passed: ${validators.length} validators in one process.`);
