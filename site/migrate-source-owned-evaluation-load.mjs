@@ -1,4 +1,5 @@
 // Temporary one-shot source migration; remove before merge.
+// Trigger after the workflow exists on this branch.
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
