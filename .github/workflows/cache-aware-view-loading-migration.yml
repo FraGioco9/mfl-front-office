@@ -1,0 +1,38 @@
+name: Cache-aware view loading migration
+
+on:
+  push:
+    branches:
+      - refactor/cache-aware-view-loading
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cache-aware-view-loading
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Migrate cache-aware view loading
+        run: node site/migrate-cache-aware-view-loading.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-cache-aware-view-loading.mjs
+          rm -f .github/workflows/cache-aware-view-loading-migration.yml
+      - name: Persist migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Make view loading cache-aware"
+          git push origin HEAD:refactor/cache-aware-view-loading
