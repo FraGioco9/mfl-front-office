@@ -147,14 +147,14 @@ invariant(
 );
 const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
 const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
-const evaluationSearchIndex = buildNormalizer.indexOf("normalizeEvaluationSearchLifecycle(evaluationArtifacts)");
-const settingsSplitIndex = buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts)");
+const settingsSplitIndex = buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationArtifacts)");
 invariant(
   evaluationRouteIndex >= 0
     && evaluationSplitIndex > evaluationRouteIndex
-    && evaluationSearchIndex > evaluationSplitIndex
-    && settingsSplitIndex > evaluationSearchIndex,
-  "Evaluation routing must preserve query identity before route splitting, then normalize search before later route splitters.",
+    && settingsSplitIndex > evaluationSplitIndex
+    && !buildNormalizer.includes("normalizeEvaluationSearchLifecycle")
+    && !buildNormalizer.includes("evaluationSearchArtifacts"),
+  "Evaluation routing must preserve query identity before route splitting, with source-owned search behavior flowing directly into later route splitters.",
 );
 
 new Function(shared);
