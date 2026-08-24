@@ -1,5 +1,9 @@
 [
   [
+    "v1.125.1",
+    "Stabilize navigation loading, pager visibility, and Evaluation editing behavior"
+  ],
+  [
     "v1.125.0",
     "Consolidate application architecture, loading ownership, validation, and database refresh reliability"
   ],
