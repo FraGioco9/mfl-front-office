@@ -21,25 +21,40 @@ jobs:
         with:
           node-version: 22
       - name: Apply canonical route dependency migration
-        run: node site/run-canonical-route-dependency-migration.mjs
-      - name: Remove temporary migration scaffolding
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          node site/run-canonical-route-dependency-migration.mjs > site/route-dependency-migration.log 2>&1
+          status=$?
+          cat site/route-dependency-migration.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ]; then
+            rm -f site/route-dependency-migration.log
+          else
+            rm -f .github/workflows/route-dependency-plan-migration.yml
+          fi
+          exit 0
+      - name: Remove successful migration scaffolding
+        if: steps.apply.outputs.status == '0'
         shell: bash
         run: |
           rm -f site/migrate-canonical-route-dependency-plan.mjs
           rm -f site/run-canonical-route-dependency-migration.mjs
           rm -f .github/workflows/route-dependency-plan-migration.yml
-      - name: Persist canonical route dependency plan
+      - name: Persist migration result
         shell: bash
         run: |
           set -euo pipefail
           git add -A
           if git diff --cached --quiet; then
-            echo "Route dependencies are already canonical."
+            echo "Route dependency migration produced no changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Centralize route dependency resolution"
           git push origin HEAD:refactor/canonical-route-dependency-plan
-
-# Temporary one-shot workflow; removed by the migration commit.
+      - name: Fail after persisting diagnostics
+        if: steps.apply.outputs.status != '0'
+        run: exit 1
