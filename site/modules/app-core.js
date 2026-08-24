@@ -2932,7 +2932,21 @@ function renderTableLoadingShell(pageName) {
   tableBody.replaceChildren();
   window.__mflTableLoadingRuntime?.show?.();
 }
+let evaluationPageCacheReady = false;
+
+function preparePlainEvaluationReentry() {
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
+  state.evaluationPlayerId = null;
+  state.evaluationOverallRows = {};
+  state.evaluationSummaryPositions = {};
+  evaluationSearchInput.value = "";
+  renderEmptyEvaluationSelection(false, true);
+}
+
 async function setPage(pageName, updateHash = true, options = {}) {
+  const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
+  if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
     await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
@@ -3101,20 +3115,22 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (evaluationPageActive) {
-    const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
-    document.documentElement.classList.remove("mflEvaluationReady");
-    document.body.classList.add("evaluationPageLoading");
-    if (options.plain) {
-      state.evaluationShareId = "";
-      state.evaluationSavedId = "";
-      state.evaluationPlayerId = null;
-      state.evaluationOverallRows = {};
-      state.evaluationSummaryPositions = {};
-      evaluationSearchInput.value = "";
+    const plainEvaluationRoute = options.plain || isPlainEvaluationUrl();
+    const cachedEvaluationReentry = plainEvaluationRoute
+      && options.reuseCachedRoute === true
+      && evaluationPageCacheReady;
+    const evaluationBusyToken = cachedEvaluationReentry
+      ? ""
+      : window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    if (!cachedEvaluationReentry) {
+      document.documentElement.classList.remove("mflEvaluationReady");
+      document.body.classList.add("evaluationPageLoading");
     }
     try {
       await renderEvaluationPage();
-      await finishEvaluationReadiness();
+      if (!cachedEvaluationReentry) {
+        await finishEvaluationReadiness();
+      }
       if (document.body.classList.contains("loading")) {
         await finishLoading();
       }
@@ -3123,6 +3139,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
       if (shouldResetScroll) {
         resetPageScroll();
       }
+      evaluationPageCacheReady = true;
       document.documentElement.classList.add("mflEvaluationReady");
       window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
       return;
@@ -7041,9 +7058,9 @@ function rememberEvaluationResult(playerId) {
   saveTableState();
 }
 
-function renderEmptyEvaluationSelection(showRecentResults = true) {
+function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false) {
   const evaluationRouteParams = new URLSearchParams(window.location.search);
-  const pendingEvaluationRoute = window.location.pathname === "/evaluation" && Boolean(
+  const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(
     evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")
   );
 
@@ -11282,17 +11299,25 @@ evaluationPlayerPageButton.addEventListener("auxclick", preventEvaluationPlayerP
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
+const setPageWithoutRouteLoading = setPage;
+
 navButtons.forEach((button) => {
   button.addEventListener("click", async (event) => {
     event.preventDefault();
     const pageName = button.dataset.page;
+    const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
     const options = tablePages.has(pageName)
       ? { view: preferredViewForPage(pageName) }
       : pageName === "evaluation"
-        ? { plain: true }
+        ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
         : {};
     const target = pagePath(pageName, options);
     if (button.classList.contains("active") && target === `${location.pathname}${location.search}`) return;
+    if (pageName === "evaluation") preparePlainEvaluationReentry();
+    if (reuseCachedEvaluationRoute) {
+      await setPageWithoutRouteLoading(pageName, true, options);
+      return;
+    }
     await setPage(pageName, true, options);
   });
 });
@@ -11506,6 +11531,7 @@ async function startApp() {
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
@@ -13455,6 +13481,8 @@ async function startApp() {
     return true;
   }
 
+  let evaluationRecentStateHydrated = false;
+
   function installEvaluationRecentStateOwnership() {
     if (typeof restoreRecentEvaluationState !== "function"
       || typeof persistRecentSearchStates !== "function"
@@ -13469,6 +13497,7 @@ async function startApp() {
         ? savedState.recentEvaluationPlayerIds
         : [];
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
+      evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
         void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
       }
@@ -13514,7 +13543,26 @@ async function startApp() {
       Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
       finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
     }
+    window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
+  }
+
+  async function ensureEvaluationRecentStateHydrated() {
+    const pendingStartup = window.__mflWalletPreferencesStartupPromise;
+    if (pendingStartup && typeof pendingStartup.then === "function") {
+      await Promise.resolve(pendingStartup).catch(() => undefined);
+    }
+
+    if (evaluationRecentStateHydrated) return true;
+    if (!state.linkedWalletAddress
+      || typeof hasWalletProof !== "function"
+      || !hasWalletProof()
+      || typeof loadWalletPreferences !== "function") {
+      return false;
+    }
+
+    await loadWalletPreferences({ force: true });
+    return evaluationRecentStateHydrated;
   }
 
   window.__mflCoreContracts = Object.freeze({
@@ -13535,6 +13583,7 @@ async function startApp() {
     installEvaluationEmptySearchOwner,
     installEvaluationRecentWriteOwner,
     installEvaluationRecentStateOwnership,
+    ensureEvaluationRecentStateHydrated,
   });
 })();
 ;(() => {
