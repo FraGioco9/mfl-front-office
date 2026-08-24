@@ -43,9 +43,14 @@ invariant(gateStart >= 0 && gateEnd > gateStart, "Could not locate the generated
 
 const gate = generatedCore.slice(gateStart, gateEnd);
 const loaderOwner = gate.indexOf("const loadCommittedRoute = async () => {");
-const busyStart = gate.indexOf('window.__mflInteractionBusy.begin("route-runtime")', loaderOwner);
-const loadingPaintOwner = gate.indexOf('const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");', busyStart);
-const loadingPaint = gate.indexOf("await waitForLoadingPaint();", loadingPaintOwner);
+const loadingController = gate.indexOf("const loadingController = window.__mflInteractionBusy;", loaderOwner);
+const routeReady = gate.indexOf("const routeReady = loadingController?.routeReady?.(pageName, incomingOptions) === true;", loadingController);
+const routeLoadingActive = gate.indexOf("const routeLoadingActive = loadingController?.snapshot?.().reasons?.includes?.(loadingController.reason) === true;", routeReady);
+const busyStart = gate.indexOf("const busyToken = !routeReady && !routeLoadingActive && loadingController?.begin", routeLoadingActive);
+const busyBegin = gate.indexOf("loadingController.begin(loadingController.reason)", busyStart);
+const loadingPaintOwner = gate.indexOf('const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");', busyBegin);
+const loadingPaintCondition = gate.indexOf('if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {', loadingPaintOwner);
+const loadingPaint = gate.indexOf("await waitForLoadingPaint();", loadingPaintCondition);
 const cancelRequest = gate.indexOf("window.__mflCancelIncrementalRouteRequest?.();", loaderOwner);
 const routeCoreLoad = gate.indexOf("window.__mflEnsureRouteCore", loaderOwner);
 const routeRuntimeLoad = gate.indexOf("await window.__mflEnsureRouteRuntime", loaderOwner);
@@ -57,13 +62,26 @@ const transitionCall = gate.indexOf('return runTransition(String(pageName || "")
 
 invariant(loaderOwner >= 0, "The route-runtime gate must separate lazy loading from navigation ownership.");
 invariant(
-  busyStart > loaderOwner
-    && loadingPaintOwner > busyStart
-    && loadingPaint > loadingPaintOwner
+  loadingController > loaderOwner
+    && routeReady > loadingController
+    && routeLoadingActive > routeReady
+    && busyStart > routeLoadingActive
+    && busyBegin > busyStart
+    && loadingPaintOwner > busyBegin
+    && loadingPaintCondition > loadingPaintOwner
+    && loadingPaint > loadingPaintCondition
     && cancelRequest > loadingPaint
     && routeCoreLoad > loadingPaint
     && routeRuntimeLoad > loadingPaint,
-  "The committed route must paint its loading state before cancellation, lazy route loading, or final rendering can continue.",
+  "The committed route must decide full readiness first, paint only when route loading is active, then continue cancellation, lazy dependency loading, and final rendering.",
+);
+invariant(
+  gate.slice(busyStart, loadingPaintOwner).includes("!routeReady && !routeLoadingActive"),
+  "A fully ready route or an already-active canonical route load must not create a duplicate busy token.",
+);
+invariant(
+  gate.slice(loadingPaintCondition, cancelRequest).includes("busyToken || routeLoadingActive"),
+  "Only an active route-loading lifecycle may delay lazy work for the loading paint boundary.",
 );
 invariant(
   skipDuplicateTransition > routeRuntimeLoad && downstreamSetPage > skipDuplicateTransition,
@@ -71,17 +89,17 @@ invariant(
 );
 invariant(
   committedBypass > downstreamSetPage && bypassLoad > committedBypass && transitionCall > bypassLoad,
-  "A page or view transition that already painted must enter lazy loading directly instead of starting a second page transition.",
+  "A page or view transition that already committed must enter the readiness-aware lazy loader directly instead of starting a second page transition.",
 );
 invariant(
   gate.slice(committedBypass, transitionCall).includes("skipNavigationTransition === true"),
   "The route-runtime gate must explicitly recognize already-committed navigation.",
 );
 invariant(
-  !gate.slice(0, loaderOwner).includes('begin("route-runtime")')
+  !gate.slice(0, loaderOwner).includes("loadingController.begin")
     && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteCore")
     && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteRuntime"),
   "No busy or lazy-loading owner may run before the committed-route loader.",
 );
 
-console.log("Page route gate paints route chrome and loading before lazy work; MFL Stats resolves as the canonical MFL Stats view and retains only a renderer fallback.");
+console.log("Page route gate resolves destination readiness before loading paint/lazy work; MFL Stats resolves as the canonical MFL Stats view and retains only a renderer fallback.");
