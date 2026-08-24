@@ -187,8 +187,10 @@ invariant(
     && !buildNormalizer.includes("tableRequestLoadingArtifacts")
     && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
     && !buildNormalizer.includes("pagerCurrentPageArtifacts")
-    && buildNormalizer.includes("const tableControlCellArtifacts = normalizeTableControlCellAlignment(statsNavigationArtifacts);"),
-  "The build normalizer must not inject Table request loading behavior after source authoring.",
+    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
+    && !buildNormalizer.includes("tableControlCellArtifacts")
+    && buildNormalizer.includes("const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(statsNavigationArtifacts);"),
+  "The build normalizer must not inject Table request loading or control-cell behavior after source authoring.",
 );
 
 const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);

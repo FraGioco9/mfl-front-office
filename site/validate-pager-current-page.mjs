@@ -63,8 +63,10 @@ for (const required of [
 invariant(
   !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
     && !buildNormalizer.includes("pagerCurrentPageArtifacts")
-    && buildNormalizer.includes("const tableControlCellArtifacts = normalizeTableControlCellAlignment(statsNavigationArtifacts);"),
-  "Build normalization must compose Table cell alignment directly after stats navigation without editable pager rewriting.",
+    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
+    && !buildNormalizer.includes("tableControlCellArtifacts")
+    && buildNormalizer.includes("const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(statsNavigationArtifacts);"),
+  "Build normalization must flow directly from stats navigation into Home summary without editable-pager or Table control-cell rewriting.",
 );
 
 for (const required of [

@@ -17,7 +17,6 @@ import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { normalizeStatsNavigationLifecycle } from "./app-core-stats-navigation-lifecycle.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
-import { normalizeTableControlCellAlignment } from "./app-core-table-cell-alignment.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
@@ -41,8 +40,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
     ...clubSortArtifacts,
     core: normalizeStatsNavigationLifecycle(String(clubSortArtifacts.core || "")),
   });
-  const tableControlCellArtifacts = normalizeTableControlCellAlignment(statsNavigationArtifacts);
-  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableControlCellArtifacts);
+  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(statsNavigationArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);

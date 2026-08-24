@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, tableSplitter, appConfig, routeLoader, buildCore, appEntry] = await Promise.all([
+const [coreSource, tableSplitter, buildNormalizerSource, appConfig, routeLoader, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
@@ -93,6 +94,18 @@ includes(tableCore, "cancelPagerCurrentPageEdit(target);", "Escape must restore 
 includes(tableCore, 'input.dataset.cancelCommit = "true";', "Escape must suppress any pending blur commit before the pager field loses focus.");
 includes(tableCore, "const target = Math.min(total, Math.max(1, parsed));", "Pager input must clamp typed values to the live 1..total page range.");
 includes(tableCore, "syncPagerCurrentPage(state.page, totalPages);", "Table rendering must keep the editable pager synchronized with page state.");
+for (const required of [
+  'selectionContent.className = "tableControlCellContent tableControlCellContentCentered";',
+  'flagContent.className = "tableControlCellContent tableControlCellContentCentered";',
+  'idContent.className = "tableControlCellContent";',
+  'ageContent.className = "tableControlCellContent";',
+  'appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");',
+]) {
+  includes(coreSource, required, `Canonical app-core must own Table control-cell alignment through ${required}`);
+  includes(tableCore, required, `Generated Table core must preserve source-owned control-cell alignment through ${required}`);
+}
+excludes(buildNormalizerSource, "normalizeTableControlCellAlignment", "Build normalization must not rewrite Table control-cell alignment.");
+excludes(buildNormalizerSource, "app-core-table-cell-alignment.js", "The obsolete Table control-cell normalizer must stay removed from build composition.");
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route player/search formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
 
