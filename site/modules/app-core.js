@@ -3050,12 +3050,31 @@ function renderTableLoadingShell(pageName) {
     return;
   }
 
-  restoreSavedTableState(pageName);
-  globalThis.syncQuickFilterLabels?.();
+  const clubPage = pageName === "club";
+  if (clubPage) {
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    const quickFilters = document.querySelector("#progressionPage .quickFilters");
+    if (quickFilters) quickFilters.hidden = true;
+    const controlsBar = document.querySelector("#progressionPage .controlsBar");
+    if (controlsBar) controlsBar.hidden = true;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = true;
+    });
+  } else {
+    restoreSavedTableState(pageName);
+    globalThis.syncQuickFilterLabels?.();
+  }
+
   updateViewButtons();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
-  } else {
+  } else if (pageName !== "club") {
     tablePageTitle.textContent = tableTitleForPage(pageName);
   }
   emptyState.hidden = true;
@@ -9255,6 +9274,16 @@ function tableStateWithoutPageFilters(pageName, savedState) {
 }
 
 function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {
+  if (pageName === "club") {
+    state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    state.selectedPlayerIds = new Set();
+    state.pendingTableControlRestore = null;
+    return;
+  }
+
   const storedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
   const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
@@ -9278,6 +9307,11 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
 }
 
 function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  if (pageName === "club") {
+    state.pendingTableControlRestore = null;
+    return false;
+  }
+
   const restored = state.pendingTableControlRestore;
   if (!restored || restored.pageName !== pageName) return false;
 
@@ -9797,6 +9831,24 @@ function appliedTableFilterSignature(rules) {
 }
 
 function applyFilters(options = {}) {
+  if (state.currentPage === "club") {
+    state.tableSourceRowsCount = state.rows.length;
+    state.filteredRows = [...state.rows];
+    state.filteredRows.sort(compareRows);
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    if (filterSummary) filterSummary.textContent = "0";
+    emptyState.textContent = "No players found for this club.";
+    syncActiveWatchlistFromSet();
+    renderTable();
+    return;
+  }
+
   const rules = readFilterRules();
   const filterSignature = appliedTableFilterSignature(rules);
   if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
@@ -12215,15 +12267,7 @@ async function startApp() {
     });
   }
 
-  function restoreStandardControls() {
-    const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    if (quickFilters) quickFilters.hidden = false;
-    const controlsBar = document.querySelector("#progressionPage .controlsBar");
-    if (controlsBar) controlsBar.hidden = false;
-    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
-      pager.hidden = false;
-    });
-  }
+
 
 
   function applyClubPresentation() {
@@ -12376,28 +12420,7 @@ async function startApp() {
     };
   }
 
-  if (typeof applyFilters === "function") {
-    const originalApplyFilters = applyFilters;
-    applyFilters = function applyFiltersWithClubRows(options = {}) {
-      if (state.currentPage !== CLUB_PAGE || !activeClubId) {
-        const result = originalApplyFilters.apply(this, arguments);
-        restoreStandardControls();
-        return result;
-      }
 
-      const originalRows = state.rows;
-      state.rows = clubRows();
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
-      try {
-        const result = originalApplyFilters.call(this, { ...options, save: false });
-        state.tableSourceRowsCount = state.rows.length;
-        return result;
-      } finally {
-        state.rows = originalRows;
-      }
-    };
-  }
 
 
   if (typeof renderSearchResultsNow === "function") {
@@ -12821,7 +12844,7 @@ async function startApp() {
 
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    const storedPageState = !clubTarget && tablePages.has(pageName)
+    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
     const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
@@ -12927,7 +12950,7 @@ async function startApp() {
     });
 
     if (tableRoute) {
-      globalThis.syncQuickFilterLabels?.();
+      if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();
       if (route.scope === "club") {
         const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
         tablePageTitle.textContent = club?.name || "Club";
@@ -13301,15 +13324,19 @@ async function startApp() {
     const loadAndRender = async () => {
       const payload = await requestIncrementalRoute(route, 1);
       if (!payload) return false;
-      if (tablePages.has(pageName)) {
+      const clubPage = pageName === "club";
+      if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
+      }
+      if (clubPage) {
+        state.currentPage = "club";
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        originalApplyFilters.call(this, { save: false });
+        if (!clubPage) originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }

@@ -149,10 +149,20 @@ excludes(
   "clubEntryArtifacts",
   "Build composition must not retain an intermediate Club entry rewrite artifact.",
 );
+excludes(
+  buildNormalizer,
+  "normalizeClubStartupLifecycle",
+  "Build normalization must not rewrite source-owned Club startup behavior.",
+);
+excludes(
+  buildNormalizer,
+  "clubStartupArtifacts",
+  "Build composition must not retain an intermediate Club startup rewrite artifact.",
+);
 includes(
   buildNormalizer,
-  "const clubSortArtifacts = normalizeClubSortLifecycle(clubStartupArtifacts);",
-  "Club sorting must consume the startup artifacts directly after source-owned Club entry migration.",
+  "const clubSortArtifacts = normalizeClubSortLifecycle(watchlistArtifacts);",
+  "Club sorting must consume the structural watchlist artifacts directly after Club entry and startup become source-owned.",
 );
 
 console.log("Club entry workflow validation passed: canonical source owns startup route resolution and shell entry while app-entry owns the single lazy Club gate.");

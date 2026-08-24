@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, appCore, clubStartup, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, appCore, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./index.html"),
   read("./bootstrap.js"),
   read("./controls.css"),
@@ -14,7 +14,6 @@ const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, bui
   read("./dropdowns-runtime.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core.js"),
-  read("./modules/app-core-club-startup-lifecycle.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -135,7 +134,7 @@ for (const required of [
 }
 
 for (const required of [
-  'const storedPageState = !clubTarget && tablePages.has(pageName)',
+  'const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)',
   "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
   "? tableStateWithoutPageFilters(pageName, storedPageState)",
   "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
@@ -152,9 +151,9 @@ for (const required of [
   invariant(appCore.includes(required), `Canonical source must preserve Filters summary/close ownership through ${required}`);
 }
 invariant(
-  clubStartup.includes('if (filterSummary) filterSummary.textContent = "0";')
-    && !clubStartup.includes('if (filterSummary) filterSummary.textContent = "0 active";'),
-  "Club filter-free rendering must emit the canonical count-only zero summary directly.",
+  appCore.includes('if (filterSummary) filterSummary.textContent = "0";')
+    && !appCore.includes('if (filterSummary) filterSummary.textContent = "0 active";'),
+  "Canonical Club filter-free rendering must emit the count-only zero summary directly.",
 );
 for (const required of [
   "return clubSortArtifacts;",
@@ -162,7 +161,9 @@ for (const required of [
   invariant(buildNormalizer.includes(required), `Build normalization must preserve independent stats/Table composition through ${required}`);
 }
 invariant(
-  !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
+  !buildNormalizer.includes("normalizeClubStartupLifecycle")
+    && !buildNormalizer.includes("clubStartupArtifacts")
+    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
     && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
     && !buildNormalizer.includes("evaluationLoadArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
