@@ -5,20 +5,20 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [source, evaluationLoadLifecycle, runtime, loadingStyles] = await Promise.all([
+const [source, buildNormalizer, runtime, loadingStyles] = await Promise.all([
   read("./modules/app-core.js"),
-  read("./modules/app-core-evaluation-load-lifecycle.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-runtime.js"),
   read("./loading.css"),
 ]);
 
 invariant(
-  !evaluationLoadLifecycle.includes("normalizeModalEntranceLifecycle")
-    && !evaluationLoadLifecycle.includes("modalArtifacts")
-    && evaluationLoadLifecycle.includes('const source = String(artifacts?.core || "");')
-    && evaluationLoadLifecycle.includes("const routeChunks = { ...(artifacts?.routeChunks || {}) };")
-    && evaluationLoadLifecycle.includes("...artifacts,"),
-  "Evaluation Load normalization must consume source-owned modal behavior directly from the incoming artifacts.",
+  !buildNormalizer.includes("normalizeModalEntranceLifecycle")
+    && !buildNormalizer.includes("modalArtifacts")
+    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
+    && !buildNormalizer.includes("evaluationLoadArtifacts")
+    && buildNormalizer.includes("return normalizeEvaluationSavedValuationCache(clubSortArtifacts);"),
+  "Build composition must consume source-owned modal and Evaluation Load behavior directly before the remaining Saved Valuation Cache transform.",
 );
 
 for (const modalSource of [source, runtime]) {

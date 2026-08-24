@@ -195,7 +195,9 @@ invariant(
     && !buildNormalizer.includes("globalSearchArtifacts")
     && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
     && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && buildNormalizer.includes("const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(clubSortArtifacts);"),
+    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
+    && !buildNormalizer.includes("evaluationLoadArtifacts")
+    && buildNormalizer.includes("return normalizeEvaluationSavedValuationCache(clubSortArtifacts);"),
   "The build normalizer must not inject Table request loading, control-cell, or Evaluation recent-readiness behavior after source authoring.",
 );
 
