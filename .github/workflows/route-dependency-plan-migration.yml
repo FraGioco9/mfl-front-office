@@ -1,0 +1,42 @@
+name: Route dependency plan migration
+
+on:
+  push:
+    branches:
+      - refactor/canonical-route-dependency-plan
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/canonical-route-dependency-plan
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply canonical route dependency migration
+        run: node site/migrate-canonical-route-dependency-plan.mjs
+      - name: Remove temporary migration scaffolding
+        shell: bash
+        run: |
+          rm -f site/migrate-canonical-route-dependency-plan.mjs
+          rm -f .github/workflows/route-dependency-plan-migration.yml
+      - name: Persist canonical route dependency plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Route dependencies are already canonical."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Centralize route dependency resolution"
+          git push origin HEAD:refactor/canonical-route-dependency-plan
