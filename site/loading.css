@@ -106,33 +106,9 @@ html.mflTableScrolling #progressionPage .tableScroller tbody {
   pointer-events: none;
 }
 
-.siteFooter.mflLoadingLocked,
-.siteFooter.mflLoadingLocked * {
-  pointer-events: none;
-  cursor: default;
-  transition: none;
-  animation: none;
-}
-
-.siteFooter.mflLoadingLocked a,
-.siteFooter.mflLoadingLocked a:hover,
-.siteFooter.mflLoadingLocked a:focus,
-.siteFooter.mflLoadingLocked a:focus-visible,
-.siteFooter.mflLoadingLocked a:active {
-  color: var(--text);
-  text-decoration: none;
-  transform: none;
-  box-shadow: none;
-  outline: none;
-}
-
-.toastMessage:not(#mflLoadingToast) {
+.toastMessage {
   bottom: var(--mfl-toast-bottom, 88px);
   z-index: var(--mfl-z-toast);
-}
-
-#mflLoadingToast {
-  z-index: var(--mfl-z-topmost);
 }
 
 html.mflSelectionStartupResetPending #selectionBar {
@@ -140,8 +116,3 @@ html.mflSelectionStartupResetPending #selectionBar {
   pointer-events: none;
 }
 
-#mflLoadingToast,
-.toastMessage[data-mfl-retiring-toast="true"] {
-  pointer-events: none;
-  user-select: none;
-}

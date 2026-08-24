@@ -755,16 +755,7 @@ html:not(.mflInitialRouteResolved):is(
     scroll-padding-inline: 10px;
   }
 
-  #mflLoadingToast {
-    width: min(360px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
-    max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
-    min-height: 44px;
-    bottom: calc(18px + env(safe-area-inset-bottom) + var(--mfl-visual-viewport-bottom, 0px));
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  .selectionBar {
+    .selectionBar {
     width: min(520px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
     bottom: calc(12px + env(safe-area-inset-bottom));
   }

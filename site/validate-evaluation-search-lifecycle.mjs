@@ -7,10 +7,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [searchRuntime, controlInteractions, loadingToastRuntime, discountRateRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
+const [searchRuntime, controlInteractions, discountRateRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
   read("./evaluation-search-state-runtime.js"),
   read("./control-interactions-runtime.js"),
-  read("./loading-toast-runtime.js"),
   read("./evaluation-discount-rate-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
@@ -121,16 +120,6 @@ invariant(
     && loadSource.includes("return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);")
     && loadSource.includes("if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);"),
   "Evaluation Load must enter Uniform Loading synchronously before lazy route-core work and remain busy through the saved-evaluation request.",
-);
-const toastReasonsStart = loadingToastRuntime.indexOf("const TOAST_COORDINATION_REASONS = new Set([");
-const toastReasonsEnd = loadingToastRuntime.indexOf("]);", toastReasonsStart);
-const toastReasonsSource = toastReasonsStart >= 0 && toastReasonsEnd > toastReasonsStart
-  ? loadingToastRuntime.slice(toastReasonsStart, toastReasonsEnd)
-  : "";
-invariant(
-  loadingToastRuntime.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))")
-    && toastReasonsSource.includes('"evaluation-load"'),
-  "Evaluation Load must stay in Uniform Loading without showing the Loading toast.",
 );
 invariant(
   discountRateRuntime.includes("let rateTextObserver = null;")
