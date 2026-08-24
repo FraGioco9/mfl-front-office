@@ -132,7 +132,6 @@
     const DATA_LOADING_CLASS = "mflDataLoading";
     const ROUTE_LOADING_ALIASES = new Set([
       "startup",
-      "setPage",
       "switchWatchlist",
       "route-runtime",
       "ensureProgressionData",
@@ -273,6 +272,38 @@
       return Reflect.set(window, name, replacement);
     }
 
+    function routeDestinationReady(pageName, options = {}) {
+      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+      const dataReady = window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
+      const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
+      const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
+      return dataReady && coreReady && runtimeReady;
+    }
+
+    function routeLoadingActive() {
+      return currentSnapshot.reasons.includes(ROUTE_LOADING_REASON);
+    }
+
+    function wrapRoutePageGlobal() {
+      const original = globalFunction("setPage");
+      if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
+      const wrapped = async (...args) => {
+        const pageName = args[0];
+        const options = args[2] && typeof args[2] === "object" && !Array.isArray(args[2]) ? args[2] : {};
+        if (routeDestinationReady(pageName, options) || routeLoadingActive()) {
+          return original.apply(window, args);
+        }
+        return run(async () => {
+          const result = await original.apply(window, args);
+          await waitForRoutePaint();
+          return result;
+        }, ROUTE_LOADING_REASON);
+      };
+      Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+      Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
+      return replaceGlobalFunction("setPage", original, wrapped);
+    }
+
     function wrapBusyGlobal(name, reason = name) {
       const original = globalFunction(name);
       if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
@@ -293,7 +324,11 @@
 
       const currentWithInteractionBusy = globalFunction("withInteractionBusy");
       if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
-        const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);
+        const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => {
+          const normalizedReason = loadingReason(reason);
+          if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();
+          return run(callback, normalizedReason);
+        };
         Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyWrapped", { value: true });
         Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyOriginal", { value: currentWithInteractionBusy });
         replaceGlobalFunction("withInteractionBusy", currentWithInteractionBusy, wrappedWithInteractionBusy);
@@ -311,8 +346,8 @@
       }
       syncStoredAccessFlags();
 
+      wrapRoutePageGlobal();
       [
-        "setPage",
         "switchWatchlist",
         "ensureProgressionData",
       ].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));
@@ -336,6 +371,7 @@
       waitForRoutePaint,
       subscribe,
       snapshot: () => currentSnapshot,
+      routeReady: routeDestinationReady,
       isBusy: () => currentSnapshot.busy,
       isDataLoading: () => currentSnapshot.dataLoading,
       installCoreBridge,

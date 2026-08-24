@@ -13752,12 +13752,15 @@ async function startApp() {
     if (!runtimeReady) {
       const loadCommittedRoute = async () => {
         const ownerBeforeRuntime = setPage;
-        const busyToken = window.__mflInteractionBusy?.begin
-          ? window.__mflInteractionBusy.begin("route-runtime")
+        const loadingController = window.__mflInteractionBusy;
+        const routeReady = loadingController?.routeReady?.(pageName, incomingOptions) === true;
+        const routeLoadingActive = loadingController?.snapshot?.().reasons?.includes?.(loadingController.reason) === true;
+        const busyToken = !routeReady && !routeLoadingActive && loadingController?.begin
+          ? loadingController.begin(loadingController.reason)
           : "";
         try {
           const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");
-          if (busyToken && typeof waitForLoadingPaint === "function") {
+          if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {
             await waitForLoadingPaint();
           }
           window.__mflCancelIncrementalRouteRequest?.();

@@ -75,11 +75,16 @@ includes(
   "The single Club gate must invoke the private Club route owner only after dependencies are ready.",
 );
 
-const gateInstall = appEntry.indexOf("runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;\ninstallClubRouteRuntimeGate();");
-const startupCall = appEntry.indexOf("void start().catch(showStartupError);");
+const ensureRuntimeExport = appEntry.indexOf("runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;");
+const runtimeReadinessExport = appEntry.indexOf("runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady;", ensureRuntimeExport);
+const gateInstall = appEntry.indexOf("installClubRouteRuntimeGate();", runtimeReadinessExport);
+const startupCall = appEntry.indexOf("void start().catch(showStartupError);", gateInstall);
 invariant(
-  gateInstall >= 0 && startupCall > gateInstall,
-  "The public Club gate must be installed before application startup can enter a direct Club route.",
+  ensureRuntimeExport >= 0
+    && runtimeReadinessExport > ensureRuntimeExport
+    && gateInstall > runtimeReadinessExport
+    && startupCall > gateInstall,
+  "The route-runtime APIs and public Club gate must be installed before application startup can enter a direct Club route.",
 );
 
 const routeParserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
@@ -181,4 +186,4 @@ includes(
   "Build composition must return the structural watchlist artifacts directly after Club sort becomes source-owned.",
 );
 
-console.log("Club entry workflow validation passed: canonical source owns startup route resolution and shell entry while app-entry owns the single lazy Club gate.");
+console.log("Club entry workflow validation passed: canonical source owns startup route resolution and shell entry while app-entry installs route-runtime readiness and the single lazy Club gate before startup.");

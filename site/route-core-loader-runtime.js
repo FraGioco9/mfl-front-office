@@ -15,12 +15,14 @@
    * __mflReleaseVersion?: string,
    * __mflInteractionBusy?: { installCoreBridge?: () => void },
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+   * __mflIsRouteCoreReady?: (pageName: string, options?: Record<string, unknown>) => boolean,
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
    * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
    * __mflRouteUsesTableInfrastructure?: (pageName: string) => boolean,
    * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+   *   isReady?: (pageName: string, options?: Record<string, unknown>) => boolean,
    *   normalizePageName?: (pageName: string) => string,
    *   normalizeView?: (options?: Record<string, unknown>) => string,
    *   usesTableInfrastructure?: (pageName: string) => boolean,
@@ -31,6 +33,9 @@
 
   if (typeof runtimeWindow.__mflRouteCoreRuntime?.ensure === "function") {
     runtimeWindow.__mflEnsureRouteCore = runtimeWindow.__mflRouteCoreRuntime.ensure;
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.isReady === "function") {
+      runtimeWindow.__mflIsRouteCoreReady = runtimeWindow.__mflRouteCoreRuntime.isReady;
+    }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizePageName === "function") {
       runtimeWindow.__mflNormalizeRoutePageName = runtimeWindow.__mflRouteCoreRuntime.normalizePageName;
     }
@@ -62,6 +67,7 @@
 
   const ROUTE_CORE_PATHS = routeConfig.corePaths;
   const routeCorePromises = new Map();
+  const loadedRouteCorePages = new Set();
 
   function assetUrl(path) {
     return new URL(String(path || "").replace(/^\/+/, ""), `${location.origin}/`).href;
@@ -104,6 +110,7 @@
     const path = ROUTE_CORE_PATHS[pageName];
     if (!path) return;
     await loadExternalRouteCore(path);
+    loadedRouteCorePages.add(pageName);
     runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   }
 
@@ -134,13 +141,20 @@
     }
   }
 
+  function isReady(pageName, options = {}) {
+    const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;
+    return dependencies.every((dependency) => !ROUTE_CORE_PATHS[dependency] || loadedRouteCorePages.has(dependency));
+  }
+
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
   runtimeWindow.__mflNormalizeRouteView = routeView;
   runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;
   runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
   runtimeWindow.__mflEnsureRouteCore = ensure;
+  runtimeWindow.__mflIsRouteCoreReady = isReady;
   runtimeWindow.__mflRouteCoreRuntime = Object.freeze({
     ensure,
+    isReady,
     normalizePageName: normalizeRoutePageName,
     normalizeView: routeView,
     usesTableInfrastructure: routeUsesTableInfrastructure,
