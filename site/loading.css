@@ -96,11 +96,6 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   display: none;
 }
 
-html.mflNavigationPending #progressionPage nav.pager,
-html.mflInteractionBusy #progressionPage nav.pager {
-  display: none;
-}
-
 html.mflDataLoading #progressionPage #watchlistPlayerCount {
   display: none;
 }
