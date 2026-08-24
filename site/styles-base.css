@@ -136,17 +136,10 @@ p {
   width: min(560px, 100%);
   min-width: 420px;
   height: 40px;
-  border-color: var(--border-strong);
-  background: var(--surface-muted);
-  color: var(--text);
   text-align: left;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.searchButton:hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
 
 .searchButton span {
   color: var(--text-soft);
@@ -537,7 +530,6 @@ body[data-page="home"] .topbar .stats {
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.tablePageTitle,
 .playerTitle {
   margin: 14px 0 12px;
   font-size: 20px;
@@ -643,10 +635,6 @@ body[data-page="home"] .topbar .stats {
 }
 
 
-.navButton:hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
 
 body.guest .navButton[data-page="progression"] {
   display: none;
@@ -657,11 +645,6 @@ body.filtersOpen .navButton:hover {
   background: var(--surface);
 }
 
-.navButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
 
 .pageView[hidden] {
   display: none;
@@ -854,11 +837,6 @@ body:not(.pinnedSidebarVisible) .siteFooter {
   line-height: 1;
 }
 
-.viewButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
 
 .watchlistSwitcher {
   position: relative;
@@ -1076,16 +1054,7 @@ button:hover:not(:disabled) {
   background: var(--primary-hover);
 }
 
-.searchButton:hover:not(:disabled),
-.viewButton:not(.active):hover:not(:disabled) {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
 
-.viewButton.active:hover:not(:disabled) {
-  border-color: var(--primary);
-  background: var(--primary);
-}
 
 .menuButton:hover:not(:disabled) {
   border-color: transparent;
@@ -2369,11 +2338,6 @@ button.playerIdText:active {
   white-space: nowrap;
 }
 
-.playerAttributeViewButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
 
 .playerAttributeCard strong {
   display: flex;
@@ -3966,16 +3930,7 @@ button.playerIdText:active {
   white-space: nowrap;
 }
 
-.mflStatsFilterButton:hover:not(.active) {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
 
-.mflStatsFilterButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
 
 .mflStatsCards {
   display: grid;
@@ -4057,16 +4012,7 @@ button.playerIdText:active {
   font-weight: 800;
 }
 
-.mflStatsDistributionModeButton:hover:not(.active) {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
 
-.mflStatsDistributionModeButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
 
 .mflStatsAgeDistribution {
   height: clamp(240px, calc(100vh - 380px), 450px);
