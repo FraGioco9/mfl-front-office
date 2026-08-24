@@ -144,30 +144,33 @@ includes(appConfig, 'all: "all-time"', "Canonical Club All Time must map to /all
 includes(appConfig, 'notFoundRequest(path, "Club")', "Invalid Club URLs must classify as typed Club not-found routes.");
 excludes(appConfig, "initialClubLikePath", "Startup must not retain a Club-only redirect owner.");
 includes(appConfig, 'club: "/modules/app-core-club-runtime.js"', "The route config must map Club to its generated chunk.");
-includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
-includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
-includes(routeLoader, 'runTransition("club", true', "The primary Club gate must enter the global page transition before lazy loading.");
-includes(routeLoader, 'path: clubRoutePath(normalizedClubId, view)', "Primary Club navigation must use the canonical app-config URL facade.");
-includes(routeLoader, 'return routeConfig.clubPath(clubId, view);', "The primary Club gate must delegate URL construction to canonical app config.");
-includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club loading must start its ordered route-core dependency request inside the global loader callback.");
-includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club loading must overlap core and table-runtime loading.");
-includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
-includes(routeLoader, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
-includes(routeLoader, "return await routeOwner.call(runtimeWindow, normalizedClubId, view);", "The primary Club gate must keep Uniform Loading active until the Club route renderer settles.");
-excludes(routeLoader, "window.history.pushState", "The primary Club lazy gate must not own history outside the global transition.");
-excludes(routeLoader, "window.history.replaceState", "The primary Club lazy gate must not own history outside the global transition.");
 
-includes(appEntry, "function installClubRouteRuntimeGate()", "The fallback Club gate must remain compatible with lazy route-runtime loading.");
-includes(appEntry, "const runTransition = runtimeWindow.__mflRunPageTransition;", "The fallback Club gate must reuse the same global page transition runner.");
-includes(appEntry, 'return runTransition("club", true, {', "The fallback Club gate must commit through the global transition before its loader callback.");
-includes(appEntry, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "Fallback Club navigation must use canonical app config for URL construction.");
-excludes(appEntry, 'const slugByView = new Map([', "Fallback Club navigation must not duplicate Club view-to-slug mapping.");
-const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
-const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
-const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
-includes(fallbackGate, "return await current.call(runtimeWindow, normalizedClubId, view);", "The fallback Club gate must keep Uniform Loading active until the Club route renderer settles.");
-excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
-excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
+includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
+includes(routeLoader, "function routeCoreDependencies(pageName, options = {})", "The route-core loader must retain dependency composition ownership.");
+excludes(routeLoader, "function installClubRouteGate()", "The route-core loader must not own a Club navigation gate.");
+excludes(routeLoader, "__mflRunPageTransition", "The route-core loader must not know about page-transition ownership.");
+excludes(routeLoader, "__mflOpenClubPageRoute", "The route-core loader must not invoke route implementations.");
+excludes(routeLoader, "__mflEnsureRouteRuntime", "The route-core loader must not coordinate runtime-script loading.");
+
+includes(appEntry, "function installClubRouteRuntimeGate()", "app-entry must own the single stable Club lazy-navigation gate.");
+includes(appEntry, "const runTransition = runtimeWindow.__mflRunPageTransition;", "The Club gate must reuse the global page transition runner.");
+includes(appEntry, 'return runTransition("club", true, {', "The Club gate must commit through the global transition before its loader callback.");
+includes(appEntry, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "Club navigation must use canonical app config for URL construction.");
+includes(appEntry, 'path: clubRoutePath(normalizedClubId, view)', "Club navigation must use the canonical app-config URL facade.");
+includes(appEntry, 'return routeBuilder(clubId, view);', "The Club gate must delegate URL construction to canonical app config.");
+includes(appEntry, 'const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"', "Club loading must start its ordered route-core dependency request inside the global loader callback.");
+includes(appEntry, 'runtimeWindow.__mflEnsureRouteCore("club", { view })', "Club loading must request the canonical Club core dependency graph.");
+includes(appEntry, 'const routeRuntimePromise = ensureRouteRuntime("club", { view });', "Club loading must overlap core and table-runtime loading.");
+includes(appEntry, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
+includes(appEntry, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
+includes(appEntry, "return await routeOwner.call(runtimeWindow, normalizedClubId, view);", "The Club gate must keep Uniform Loading active until the route renderer settles.");
+includes(appEntry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;\ninstallClubRouteRuntimeGate();", "The single Club gate must exist before application-core startup begins.");
+excludes(appEntry, 'const slugByView = new Map([', "Club navigation must not duplicate Club view-to-slug mapping.");
+const clubGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
+const clubGateEnd = appEntry.indexOf("async function finalizeRouteRuntimeNow", clubGateStart);
+const clubGate = appEntry.slice(clubGateStart, clubGateEnd);
+excludes(clubGate, "history.pushState", "The Club gate must not own history directly.");
+excludes(clubGate, "history.replaceState", "The Club gate must not own history directly.");
 
 includes(coreSource, 'const initialRouteTarget = pageTargetFromPath(window.location.pathname);', "Direct startup must classify the initial Club route through the canonical parser.");
 includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Club startup must load its route owner through the canonical dependency gate before startApp.");
@@ -181,4 +184,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club canonical view links, typed not-found handling, shared click/refresh navigation, shared switching, Uniform Loading, and API contract validation passed.");
+console.log("Club canonical view links, typed not-found handling, single lazy gate, shared switching, Uniform Loading, and API contract validation passed.");

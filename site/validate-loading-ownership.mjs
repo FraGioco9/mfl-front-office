@@ -108,12 +108,16 @@ invariant(
   "Background Global Search warm-up must not delay visible route readiness.",
 );
 invariant(
-  routeLoader.includes('begin?.("route-loading")'),
-  "Lazy route-core navigation must use the same route-loading reason as refresh startup.",
+  appEntry.includes('begin?.("route-loading")'),
+  "Lazy Club navigation must use the same route-loading reason as refresh startup.",
 );
 invariant(
-  !routeLoader.includes('begin?.("route-runtime")'),
-  "Lazy route-core navigation must not retain a second route-runtime loading identity.",
+  !appEntry.includes('begin?.("route-runtime")'),
+  "Lazy Club navigation must not retain a second route-runtime loading identity.",
+);
+invariant(
+  !routeLoader.includes(".begin?.("),
+  "The route-core dependency loader must not own interaction loading state after navigation ownership is consolidated in app-entry.",
 );
 
 for (const [name, source] of [

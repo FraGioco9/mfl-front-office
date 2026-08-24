@@ -9,14 +9,10 @@
    *     normalizeView?: (options?: Record<string, unknown>) => string,
    *     usesTableInfrastructure?: (pageName: string) => boolean,
    *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
-   *     clubPath?: (clubId: string, view?: string) => string,
    *   },
    * },
    * __mflReleaseVersion?: string,
-   * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
-   * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
-   * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
-   * __mflRunPageTransition?: (pageName: string, updateHash?: boolean, options?: Record<string, unknown>, loader?: ((transition: unknown) => unknown)) => Promise<unknown>,
+   * __mflInteractionBusy?: { installCoreBridge?: () => void },
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
    * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
@@ -29,7 +25,6 @@
    *   usesTableInfrastructure?: (pageName: string) => boolean,
    *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * },
-   * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
   const runtimeWindow = window;
 
@@ -59,8 +54,7 @@
     || typeof routeConfig.normalizePageName !== "function"
     || typeof routeConfig.normalizeView !== "function"
     || typeof routeConfig.usesTableInfrastructure !== "function"
-    || typeof routeConfig.initialRequest !== "function"
-    || typeof routeConfig.clubPath !== "function") {
+    || typeof routeConfig.initialRequest !== "function") {
     throw new Error("Canonical route configuration is unavailable.");
   }
 
@@ -150,52 +144,6 @@
     }
   }
 
-  function clubRoutePath(clubId, view = "attributes") {
-    return routeConfig.clubPath(clubId, view);
-  }
-
-  function installClubRouteGate() {
-    if (runtimeWindow.mflOpenClubPage?.__mflRouteRuntimeGate) return;
-
-    const gated = async function mflOpenClubPageWithRouteCore(clubId, view = "attributes") {
-      const normalizedClubId = String(clubId || "").trim();
-      if (!normalizedClubId) return;
-
-      const loadClub = async () => {
-        const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-loading") || "";
-        try {
-          const routeCorePromise = ensure("club", { view });
-          const routeRuntimePromise = typeof runtimeWindow.__mflEnsureRouteRuntime === "function"
-            ? runtimeWindow.__mflEnsureRouteRuntime("club", { view })
-            : Promise.resolve();
-          await Promise.all([routeCorePromise, routeRuntimePromise]);
-
-          const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
-          if (typeof routeOwner !== "function") {
-            throw new Error("Club route owner is unavailable.");
-          }
-          return await routeOwner.call(runtimeWindow, normalizedClubId, view);
-        } finally {
-          if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
-        }
-      };
-
-      const runTransition = runtimeWindow.__mflRunPageTransition;
-      if (typeof runTransition === "function") {
-        return runTransition("club", true, {
-          clubId: normalizedClubId,
-          view,
-          path: clubRoutePath(normalizedClubId, view),
-          sortKey: "positions",
-          sortDirection: "asc",
-        }, loadClub);
-      }
-      return loadClub();
-    };
-    Object.defineProperty(gated, "__mflRouteRuntimeGate", { value: true });
-    runtimeWindow.mflOpenClubPage = gated;
-  }
-
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
   runtimeWindow.__mflNormalizeRouteView = routeView;
   runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;
@@ -208,7 +156,6 @@
     usesTableInfrastructure: routeUsesTableInfrastructure,
     initialRouteRequest: initialRouteRuntimeRequest,
   });
-  installClubRouteGate();
 
   if (/^\/evaluation\/?$/i.test(location.pathname)) {
     preloadRouteCore("evaluation");

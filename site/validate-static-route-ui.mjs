@@ -16,7 +16,6 @@ const [
   databaseStatsState,
   entry,
   coreSource,
-  routeCoreLoader,
   styles,
   dropdowns,
 ] = await Promise.all([
@@ -28,7 +27,6 @@ const [
   read("./database-stats-state-runtime.js"),
   read("./modules/app-entry.js"),
   read("./modules/app-core.js"),
-  read("./route-core-loader-runtime.js"),
   read("./styles.css"),
   read("./dropdowns.css"),
 ]);
@@ -204,12 +202,12 @@ for (const forbiddenOwner of [
 }
 includes(databaseStatsState, "async function renderStatsRoute() {", "Database Stats state runtime may retain passive rendering/persistence ownership only.");
 
-const clubGateStart = routeCoreLoader.indexOf("const gated = async function mflOpenClubPageWithRouteCore");
-const clubGateEnd = routeCoreLoader.indexOf("Object.defineProperty(gated", clubGateStart);
-const clubGate = routeCoreLoader.slice(clubGateStart, clubGateEnd);
+const clubGateStart = entry.indexOf("function installClubRouteRuntimeGate() {");
+const clubGateEnd = entry.indexOf("async function finalizeRouteRuntimeNow", clubGateStart);
+const clubGate = entry.slice(clubGateStart, clubGateEnd);
 includes(clubGate, 'runTransition("club", true', "Club lazy route loading must start through the global page transition runner.");
-excludes(clubGate, "history.pushState", "Club route-core gate must not push history independently.");
-excludes(clubGate, "history.replaceState", "Club route-core gate must not replace history independently.");
+excludes(clubGate, "history.pushState", "Club navigation gate must not push history independently.");
+excludes(clubGate, "history.replaceState", "Club navigation gate must not replace history independently.");
 
 includes(styles, "--mfl-pager-block-padding: 12px;", "Pager spacing must have one global 12px setting.");
 includes(styles, "padding-block: var(--mfl-pager-block-padding);", "All pagers must consume the global block-padding setting.");

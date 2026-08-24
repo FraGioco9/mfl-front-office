@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeLoader, clubEntryLifecycle] = await Promise.all([
+const [coreSource, routeLoader, appEntry, clubEntryLifecycle] = await Promise.all([
   read("./modules/app-core.js"),
   read("./route-core-loader-runtime.js"),
+  read("./modules/app-entry.js"),
   read("./modules/app-core-club-entry-lifecycle.js"),
 ]);
 
@@ -28,13 +29,51 @@ includes(
 );
 includes(
   routeLoader,
-  "function installClubRouteGate()",
-  "The public Club gate must exist before application startup.",
+  "function routeCoreDependencies(pageName, options = {})",
+  "The route-core loader must remain the single route-core dependency owner.",
 );
 includes(
   routeLoader,
   'if (page === "club") return ["table", "club"];',
-  "The public Club gate must preserve ordered Table and Club route-core dependencies.",
+  "Club startup must preserve ordered Table and Club route-core dependencies.",
+);
+excludes(
+  routeLoader,
+  "function installClubRouteGate()",
+  "The route-core dependency loader must not own a second Club navigation transition.",
+);
+
+includes(
+  appEntry,
+  "function installClubRouteRuntimeGate()",
+  "app-entry must own the single public Club lazy-navigation gate.",
+);
+includes(
+  appEntry,
+  'const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"',
+  "The public Club gate must start route-core loading from app-entry.",
+);
+includes(
+  appEntry,
+  'const routeRuntimePromise = ensureRouteRuntime("club", { view });',
+  "The public Club gate must start route-runtime loading from app-entry.",
+);
+includes(
+  appEntry,
+  "await Promise.all([routeCorePromise, routeRuntimePromise]);",
+  "The single Club gate must overlap core and runtime loading before rendering.",
+);
+includes(
+  appEntry,
+  "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;",
+  "The single Club gate must invoke the private Club route owner only after dependencies are ready.",
+);
+
+const gateInstall = appEntry.indexOf("runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;\ninstallClubRouteRuntimeGate();");
+const startupCall = appEntry.indexOf("void start().catch(showStartupError);");
+invariant(
+  gateInstall >= 0 && startupCall > gateInstall,
+  "The public Club gate must be installed before application startup can enter a direct Club route.",
 );
 
 const routeParserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
@@ -102,4 +141,4 @@ excludes(
 
 excludes(clubEntryLifecycle, "!important", "Unified Club entry must not add CSS priority overrides.");
 
-console.log("Club entry workflow validation passed: direct Club URLs resolve before Home fallback and refresh shares the public Club gate with in-site navigation.");
+console.log("Club entry workflow validation passed: one app-entry gate owns lazy Club navigation while the route-core loader only resolves dependencies.");

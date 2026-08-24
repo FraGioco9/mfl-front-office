@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
 const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
-const routeCoreLoader = await readFile(new URL("./route-core-loader-runtime.js", import.meta.url), "utf8");
+const appEntry = await readFile(new URL("./modules/app-entry.js", import.meta.url), "utf8");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const generatedSources = new Map([
   ["core", String(artifacts.core || "")],
@@ -240,24 +240,24 @@ invariant(
   "Club must not retain a private loading lifecycle outside Uniform Loading.",
 );
 
-const clubGateStart = routeCoreLoader.indexOf("const gated = async function mflOpenClubPageWithRouteCore");
-const clubGateEnd = routeCoreLoader.indexOf("Object.defineProperty(gated", clubGateStart);
-const clubGate = routeCoreLoader.slice(clubGateStart, clubGateEnd);
+const clubGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
+const clubGateEnd = appEntry.indexOf("async function finalizeRouteRuntimeNow", clubGateStart);
+const clubGate = appEntry.slice(clubGateStart, clubGateEnd);
 invariant(
   clubGate.includes('runTransition("club", true'),
-  "The Club route-core gate must enter through the global page transition runner.",
+  "The Club app-entry gate must enter through the global page transition runner.",
 );
 invariant(
   clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-loading")'),
-  "The Club route-core gate must retain canonical route loading after transition ownership is committed.",
+  "The Club app-entry gate must retain canonical route loading after transition ownership is committed.",
 );
 invariant(
   !clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime")'),
-  "The Club route-core gate must not retain a second lazy route-runtime loading identity.",
+  "The Club app-entry gate must not retain a second lazy route-runtime loading identity.",
 );
 invariant(
   !clubGate.includes("history.pushState") && !clubGate.includes("history.replaceState"),
-  "The Club route-core gate must not own history outside the global transition.",
+  "The Club app-entry gate must not own history outside the global transition.",
 );
 
 invariant(
