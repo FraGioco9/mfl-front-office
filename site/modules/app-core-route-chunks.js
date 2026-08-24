@@ -385,7 +385,7 @@ export function splitApplicationCoreRuntime(source) {
   );
   club = insertBeforeRequiredMarker(
     club,
-    "  function clubViewRenderCacheKey(",
+    "  const initialClubRoute = clubRoute();",
     `  const clubTitleIdentityPromises = new Map();
 
   function normalizedClubTitleIdentity(value, fallbackClubId = "") {
