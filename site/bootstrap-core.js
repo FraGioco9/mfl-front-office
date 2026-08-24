@@ -137,7 +137,6 @@
       "switchWatchlist",
       "route-runtime",
       "ensureProgressionData",
-      "requestIncrementalRoute",
       "databaseStatsData",
       "mflStatsData",
       "evaluationRouteLoading",
@@ -295,7 +294,7 @@
 
       const currentWithInteractionBusy = globalFunction("withInteractionBusy");
       if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
-        const wrappedWithInteractionBusy = (callback) => run(callback, "interaction-loading");
+        const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);
         Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyWrapped", { value: true });
         Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyOriginal", { value: currentWithInteractionBusy });
         replaceGlobalFunction("withInteractionBusy", currentWithInteractionBusy, wrappedWithInteractionBusy);
@@ -318,7 +317,6 @@
         "setView",
         "switchWatchlist",
         "ensureProgressionData",
-        "requestIncrementalRoute",
       ].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));
       [
         "loadSharedEvaluation",

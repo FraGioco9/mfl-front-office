@@ -62,7 +62,6 @@ for (const alias of [
   "switchWatchlist",
   "route-runtime",
   "ensureProgressionData",
-  "requestIncrementalRoute",
   "databaseStatsData",
   "mflStatsData",
   "evaluationRouteLoading",
@@ -120,6 +119,14 @@ invariant(
 invariant(
   !routeLoader.includes(".begin?.("),
   "The route-core dependency loader must not own interaction loading state after navigation ownership is consolidated in app-entry.",
+);
+invariant(
+  !bootstrapCore.includes('"requestIncrementalRoute",'),
+  "Incremental requests must not be blanket-wrapped outside their cache-aware request owner.",
+);
+invariant(
+  bootstrapCore.includes('const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);'),
+  "The shared interaction-busy bridge must preserve explicit loading reasons from cache-aware request owners.",
 );
 
 for (const [name, source] of [

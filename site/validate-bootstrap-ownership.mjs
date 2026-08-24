@@ -244,7 +244,6 @@ for (const reason of [
   "switchWatchlist",
   "route-runtime",
   "ensureProgressionData",
-  "requestIncrementalRoute",
   "databaseStatsData",
   "mflStatsData",
   "evaluationRouteLoading",
@@ -271,6 +270,26 @@ includes(
   bootstrapCore,
   "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
   "Every page/view transition and direct Watchlist switch must enter canonical route loading.",
+);
+excludes(
+  bootstrapCore,
+  '"requestIncrementalRoute",',
+  "Incremental route requests must not receive a blanket outer route-loading wrapper.",
+);
+includes(
+  bootstrapCore,
+  'const wrappedWithInteractionBusy = (callback, reason = "interaction-loading") => run(callback, reason);',
+  "The shared busy bridge must preserve an explicitly requested canonical loading reason.",
+);
+includes(
+  appCoreSource,
+  "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",
+  "Cached incremental route requests must bypass the busy boundary.",
+);
+includes(
+  appCoreSource,
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  "Uncached incremental route requests must enter the controller-owned route-loading reason.",
 );
 includes(
   bootstrapCore,
