@@ -3,6 +3,7 @@ const validators = [
   "validate-supabase-persistence.mjs",
   "validate-wallet-core.mjs",
   "validate-evaluation-share-preview.mjs",
+  "validate-evaluation-preview-shell-path.mjs",
 ];
 
 for (const validator of validators) {
