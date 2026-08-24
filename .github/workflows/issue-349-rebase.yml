@@ -1,0 +1,29 @@
+name: Issue 349 current-main reapply
+
+on:
+  push:
+    branches:
+      - fix/loading-navigation-supersession
+    paths:
+      - .github/workflows/issue-349-rebase.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reapply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/loading-navigation-supersession
+
+      - name: Reapply validated implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git cherry-pick cae33fdb224f3ecf973dfd72ff1ba1a08ce22670
+          git push origin HEAD:fix/loading-navigation-supersession
