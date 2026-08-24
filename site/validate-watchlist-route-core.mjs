@@ -102,13 +102,9 @@ includes(
   'const ROUTE_LOADING_REASON = "route-loading";',
   "Watchlist page, view, and direct list-switch transitions must share the canonical route-loading lifecycle.",
 );
-for (const reason of ["setPage", "switchWatchlist", "route-runtime", "ensureProgressionData"]) {
-  includes(
-    bootstrapCore,
-    `"${reason}"`,
-    `Watchlist loading classification must retain ${reason} as a canonical route-loading alias or wrapped route owner.`,
-  );
-}
+includes(bootstrapCore, '"route-runtime"', "Legacy route-runtime requests must still normalize into canonical route loading.");
+excludes(bootstrapCore, '"switchWatchlist"', "Direct Watchlist switching must not retain a blanket route-loading alias.");
+excludes(bootstrapCore, '"ensureProgressionData"', "The setPage-owned full-data fallback must not retain a separate route-loading alias.");
 includes(
   bootstrapCore,
   "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
@@ -129,10 +125,15 @@ includes(
   'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
   "Uncached Watchlist incremental requests must still enter the controller-owned route-loading lifecycle.",
 );
-includes(
+excludes(
   bootstrapCore,
   "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
-  "The global loading bridge must wrap direct Watchlist switches and remaining page owners with route loading.",
+  "The global loading bridge must not blanket-wrap direct Watchlist or fallback progression operations.",
+);
+includes(
+  coreSource,
+  "function switchWatchlist(watchlistId) {",
+  "Direct Watchlist switching must remain a local source-owned operation.",
 );
 excludes(
   bootstrapCore,
@@ -221,7 +222,7 @@ includes(
 includes(
   watchlistRouteRuntime,
   "wrappedSwitchWatchlist = function switchWatchlistWithSingleLoad(...args) {",
-  "Direct Watchlist changes may retain request deduping, but their final owner must be wrapped by the Uniform Loading Workflow.",
+  "Direct Watchlist changes may retain single-filter deduping without acquiring route-loading presentation.",
 );
 excludes(
   watchlistRouteRuntime,

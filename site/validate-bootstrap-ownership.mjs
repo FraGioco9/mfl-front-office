@@ -240,9 +240,7 @@ includes(
 for (const reason of [
   "startup",
   "setPage",
-  "switchWatchlist",
   "route-runtime",
-  "ensureProgressionData",
   "databaseStatsData",
   "mflStatsData",
   "evaluationRouteLoading",
@@ -259,10 +257,10 @@ includes(
   "All legacy route reasons must publish the canonical route-loading reason.",
 );
 for (const name of ["switchWatchlist", "ensureProgressionData"]) {
-  includes(
+  excludes(
     bootstrapCore,
     `"${name}"`,
-    `The remaining direct route-data owner ${name} must retain canonical route loading until its cache contract is migrated.`,
+    `${name} must not retain a bootstrap blanket route-loading alias or wrapper after Step 3 consolidation.`,
   );
 }
 includes(
@@ -281,9 +279,14 @@ includes(
   "Fully ready page destinations and nested page transitions must bypass duplicate route loading.",
 );
 includes(
-  bootstrapCore,
-  "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
-  "Direct Watchlist/progression data owners must retain canonical route loading until their cache contracts are migrated.",
+  appCoreSource,
+  "function switchWatchlist(watchlistId) {",
+  "Direct Watchlist switching must remain source-owned after blanket loading removal.",
+);
+includes(
+  appCoreSource,
+  "const loaded = await ensureProgressionData();",
+  "The legacy full-data fallback must remain enclosed by canonical setPage ownership.",
 );
 excludes(
   bootstrapCore,
