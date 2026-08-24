@@ -60,3 +60,45 @@ await migrate("./modules/app-core-route-chunks.js", (source) => {
   }
   return source;
 });
+
+await migrate("./validate-club-route-core.mjs", (source) => {
+  let next = source;
+  const legacySnapshotAssertion = 'includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk may retain its route-local snapshot state without owning view activation.");';
+  const canonicalSnapshotAssertions = `for (const retiredClubSnapshotOwner of [
+  "const clubViewRenderCache = new Map();",
+  "function clubViewRenderCacheKey(",
+  "function cloneClubRows(",
+  "function captureClubView(",
+  "function restoreCachedClubView(",
+]) {
+  excludes(clubCore, retiredClubSnapshotOwner, \`Club must not restore duplicate snapshot owner: \${retiredClubSnapshotOwner}\`);
+}`;
+  if (next.includes(legacySnapshotAssertion)) {
+    next = replaceExactlyOnce(
+      next,
+      legacySnapshotAssertion,
+      canonicalSnapshotAssertions,
+      "Club duplicate snapshot validator assertion",
+    );
+  }
+
+  const legacyRouteSnapshotAssertion = `includes(
+  clubCore,
+  'incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })',
+  "Club route-local snapshots must use the same explicit Club route identity as network requests.",
+);`;
+  const sharedCacheAssertions = `includes(sharedCore, "const clubViewPayloadCache = new Map();", "Shared incremental core must retain the canonical Club payload cache.");
+includes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Shared incremental core must own Club payload cache writes.");
+includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremental core must own Club payload cache reads.");
+includes(sharedCore, "rememberClubViewPayload(route, payload);", "Applying a Club payload must populate the canonical shared cache.");
+includes(sharedCore, "const clubPayload = cachedClubViewPayload(route);", "Cached Club re-entry must consult the canonical shared cache.");`;
+  if (next.includes(legacyRouteSnapshotAssertion)) {
+    next = replaceExactlyOnce(
+      next,
+      legacyRouteSnapshotAssertion,
+      sharedCacheAssertions,
+      "Club route-local snapshot validator block",
+    );
+  }
+  return next;
+});
