@@ -63,13 +63,25 @@ function mflStatsDistributionValue`);
 const EVALUATION_SAVED_MODAL_FACADE = `let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("evaluation");
+  evaluationSearchInput.blur();
+  if (document.activeElement === evaluationLoadButton) evaluationLoadButton.blur();
+  const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
+  const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && activeWallet
+    && String(window.__mflSavedEvaluationsSessionCacheWallet || "") === activeWallet
+    && Array.isArray(window.__mflSavedEvaluationsSessionCache);
+  const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
+  try {
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+      await window.__mflEnsureRouteCore("evaluation");
+    }
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+      throw new Error("Evaluation route core is not loaded.");
+    }
+    return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
+  } finally {
+    if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
-    throw new Error("Evaluation route core is not loaded.");
-  }
-  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
 }`;
 
 const CLUB_SEARCH_BRIDGE = `;(() => {
