@@ -233,7 +233,7 @@ jobs:
           PY
 
       - name: Upload marketplace state
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mfl_marketplace_state
           path: marketplace-output/mfl_marketplace_listings.json

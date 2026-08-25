@@ -60,7 +60,7 @@ jobs:
           --preview-output progression-email-preview.html
 
       - name: Upload email preview
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: progression-email-preview
           path: progression-email-preview.html
