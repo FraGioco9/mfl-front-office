@@ -1,0 +1,261 @@
+name: Issue 349 cross-shell handoff fix
+
+on:
+  push:
+    branches:
+      - fix/loading-navigation-supersession
+    paths:
+      - .github/workflows/issue-349-cross-shell-handoff.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/loading-navigation-supersession
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply canonical cross-shell navigation ownership fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('site/modules/app-core.js')
+          source = path.read_text()
+
+          def replace_once(old, new, label):
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              source = source.replace(old, new, 1)
+
+          replace_once(
+          '''function navigationTransitionIsCurrent(transition) {
+            if (!transition) return true;
+            return transition.kind === "view"
+              ? stagedViewTransitionIsCurrent(transition)
+              : pageTransitionIsCurrent(transition);
+          }
+          ''',
+          '''function navigationTransitionIsCurrent(transition) {
+            if (!transition) return true;
+            return transition.kind === "view"
+              ? stagedViewTransitionIsCurrent(transition)
+              : pageTransitionIsCurrent(transition);
+          }
+
+          function pageNavigationIsCurrent(options = {}) {
+            const transition = options && typeof options === "object"
+              ? options.__mflNavigationTransition
+              : null;
+            return !transition || navigationTransitionIsCurrent(transition);
+          }
+          ''',
+          'page navigation ownership helper')
+
+          replace_once(
+          '''async function setPage(pageName, updateHash = true, options = {}) {
+            const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
+          ''',
+          '''async function setPage(pageName, updateHash = true, options = {}) {
+            if (!pageNavigationIsCurrent(options)) return null;
+            const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
+          ''',
+          'base setPage entry guard')
+
+          replace_once(
+          '''    const loaded = await ensureProgressionData();
+
+              if (!loaded) {
+          ''',
+          '''    const loaded = await ensureProgressionData();
+              if (!pageNavigationIsCurrent(options)) return null;
+
+              if (!loaded) {
+          ''',
+          'progression data stale guard')
+
+          replace_once(
+          '''    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
+              await ensureWatchlistRoute(options);
+            }
+
+            state.currentPage = pageName;
+          ''',
+          '''    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
+              await ensureWatchlistRoute(options);
+              if (!pageNavigationIsCurrent(options)) return null;
+            }
+
+            if (!pageNavigationIsCurrent(options)) return null;
+            state.currentPage = pageName;
+          ''',
+          'watchlist/final commit stale guard')
+
+          replace_once(
+          '''      await renderEvaluationPage();
+              if (!cachedEvaluationReentry) {
+                await finishEvaluationReadiness();
+              }
+          ''',
+          '''      await renderEvaluationPage();
+              if (!pageNavigationIsCurrent(options)) return null;
+              if (!cachedEvaluationReentry) {
+                await finishEvaluationReadiness();
+                if (!pageNavigationIsCurrent(options)) return null;
+              }
+          ''',
+          'evaluation stale guard')
+
+          replace_once(
+          '''      const stagedTransition = incomingOptions.skipNavigationTransition === true
+                ? pendingViewTransition
+                : null;
+          ''',
+          '''      const stagedTransition = incomingOptions.__mflNavigationTransition
+                || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
+          ''',
+          'route gate inherited transition')
+
+          replace_once(
+          '''        const committedOptions = {
+                  ...incomingOptions,
+                  skipNavigationTransition: true,
+                  ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+                };
+          ''',
+          '''        const committedOptions = {
+                  ...incomingOptions,
+                  skipNavigationTransition: true,
+                  ...(transition ? { __mflNavigationTransition: transition } : {}),
+                  ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+                };
+          ''',
+          'route gate transition forwarding')
+
+          stable_home = '''  function enforceHomePage() {
+              if (window.location.pathname !== "/") return;
+              homePage.hidden = false;
+              progressionPage.hidden = true;
+              mflStatsPage.hidden = true;
+              myPlayersLockedPage.hidden = true;
+              evaluationPage.hidden = true;
+              playerPage.hidden = true;
+              settingsPage.hidden = true;
+              changelogPage.hidden = true;
+              document.body.dataset.page = "home";
+              navButtons.forEach((button) => button.classList.remove("active"));
+            }
+
+            if (typeof setPage === "function") {
+              const originalSetPage = setPage;
+              setPage = async function setPageWithStableHome(pageName) {
+                const result = await originalSetPage.apply(this, arguments);
+                if (pageName === "home") {
+                  enforceHomePage();
+                  window.requestAnimationFrame(enforceHomePage);
+                }
+                return result;
+              };
+            }
+
+          '''
+          if source.count(stable_home) != 1:
+              raise SystemExit(f'stable home wrapper: expected 1 match, found {source.count(stable_home)}')
+          source = source.replace(stable_home, '', 1)
+
+          watchlist_old = '''      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+              keepSidebarExpanded();
+              if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
+              return result;
+          '''
+          watchlist_new = '''      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+              if (result === null || !pageNavigationIsCurrent(nextOptions)) return result;
+              keepSidebarExpanded();
+              if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
+              return result;
+          '''
+          if source.count(watchlist_old) == 1:
+              source = source.replace(watchlist_old, watchlist_new, 1)
+
+          path.write_text(source)
+
+          validator = Path('site/validate-page-route-gate-transition.mjs')
+          check = validator.read_text()
+          check = check.replace(
+          '''assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.skipNavigationTransition === true[\\s\\S]*?pendingViewTransition/, "Skip-transition view loads must retain their staged transition identity through lazy runtime loading.");
+          ''',
+          '''assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.__mflNavigationTransition[\\s\\S]*?pendingViewTransition/, "Lazy route loads must retain an inherited page/view transition identity through runtime loading.");
+          ''')
+          marker = '''assert.match(routeSetPageSection, /const loadCommittedRoute = async \\(transition = stagedTransition\\) => \\{/, "The lazy route gate must receive the owning page/view transition.");
+          '''
+          addition = marker + '''assert.match(routeSetPageSection, /__mflNavigationTransition: transition/, "The lazy route gate must forward the owning transition into downstream page renderers.");
+          '''
+          if marker not in check:
+              raise SystemExit('validator route gate marker missing')
+          check = check.replace(marker, addition, 1)
+          console_marker = 'console.log("Lazy route gate stale-completion guard and latest-navigation loading supersession validation passed.");\n'
+          extra = '''
+          const baseSetPageStart = appCoreSource.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
+          const baseSetPageEnd = appCoreSource.indexOf("function updateStatusDate", baseSetPageStart);
+          const baseSetPage = appCoreSource.slice(baseSetPageStart, baseSetPageEnd);
+          assert.match(baseSetPage, /if \\(!pageNavigationIsCurrent\\(options\\)\\) return null;/, "Every page renderer must reject a stale owning navigation before mutating destination UI.");
+          const progressionAwait = baseSetPage.indexOf("const loaded = await ensureProgressionData();");
+          const progressionGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", progressionAwait);
+          const finalPageCommit = baseSetPage.indexOf("state.currentPage = pageName;", progressionGuard);
+          assert.ok(progressionAwait >= 0 && progressionGuard > progressionAwait && finalPageCommit > progressionGuard, "Table data completion must be rejected when a newer non-table navigation has won.");
+          const watchlistAwait = baseSetPage.indexOf("await ensureWatchlistRoute(options);");
+          const watchlistGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", watchlistAwait);
+          assert.ok(watchlistAwait >= 0 && watchlistGuard > watchlistAwait, "Watchlist route completion must be rejected after navigation supersession.");
+          const evaluationAwait = baseSetPage.indexOf("await renderEvaluationPage();");
+          const evaluationGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", evaluationAwait);
+          assert.ok(evaluationAwait >= 0 && evaluationGuard > evaluationAwait, "Non-table Evaluation completion must not reclaim UI after a table navigation wins.");
+          assert.doesNotMatch(appCoreSource, /setPageWithStableHome/, "Home must use the canonical page transition owner instead of a post-load wrapper that can reclaim stale UI.");
+          assert.doesNotMatch(appCoreSource, /requestAnimationFrame\\(enforceHomePage\\)/, "A completed stale Home load must never schedule a later page-shell reclaim.");
+
+          ''' + console_marker
+          if console_marker not in check:
+              raise SystemExit('validator console marker missing')
+          check = check.replace(console_marker, extra, 1)
+          validator.write_text(check)
+          PY
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Validate cross-shell supersession
+        working-directory: site
+        run: |
+          node validate-page-route-gate-transition.mjs
+          node validate-loading-ownership.mjs
+          node validate-static-route-ui.mjs
+          node validate-generated-view-transition.mjs
+          npm run lint
+          npm run typecheck
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js site/modules/app-core-runtime.js site/validate-page-route-gate-transition.mjs
+          git diff --cached --check
+          git commit -m "Keep cross-shell navigation authoritative"
+          git push origin HEAD:fix/loading-navigation-supersession
