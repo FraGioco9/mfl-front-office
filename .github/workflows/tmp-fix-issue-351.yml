@@ -65,27 +65,8 @@ jobs:
               'wallet load revision snapshot',
           )
 
-          old_wallet = '''      if (data.evaluationSettings) {
-        applyEvaluationSettingsPayload(data.evaluationSettings);
-        saveEvaluationSettingsLocally();
-        renderEvaluationMflPerUsdControl(false);
-        if (state.currentPage === "evaluation") {
-          renderEvaluationPage();
-        }
-      }'''
-          new_wallet = '''      if (data.evaluationSettings) {
-        const latestMflPerUsd = state.evaluationMflPerUsd;
-        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;
-        applyEvaluationSettingsPayload(data.evaluationSettings);
-        if (preserveLatestMflPerUsd) {
-          state.evaluationMflPerUsd = latestMflPerUsd;
-        }
-        saveEvaluationSettingsLocally();
-        renderEvaluationMflPerUsdControl(false);
-        if (state.currentPage === "evaluation") {
-          renderEvaluationPage();
-        }
-      }'''
+          old_wallet = '      if (data.evaluationSettings) {\n        applyEvaluationSettingsPayload(data.evaluationSettings);\n        saveEvaluationSettingsLocally();\n        renderEvaluationMflPerUsdControl(false);\n        if (state.currentPage === "evaluation") {\n          renderEvaluationPage();\n        }\n      }'
+          new_wallet = '      if (data.evaluationSettings) {\n        const latestMflPerUsd = state.evaluationMflPerUsd;\n        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;\n        applyEvaluationSettingsPayload(data.evaluationSettings);\n        if (preserveLatestMflPerUsd) {\n          state.evaluationMflPerUsd = latestMflPerUsd;\n        }\n        saveEvaluationSettingsLocally();\n        renderEvaluationMflPerUsdControl(false);\n        if (state.currentPage === "evaluation") {\n          renderEvaluationPage();\n        }\n      }'
           replace_once(old_wallet, new_wallet, 'wallet hydration preservation')
 
           start = source.index('async function applySharedEvaluationPayload(payload) {')
