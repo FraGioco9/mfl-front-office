@@ -235,3 +235,23 @@ invariant(
 );
 
 console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");
+
+const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
+const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
+const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
+const coreReadyProbe = routeDestinationReadySection.indexOf("const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;");
+const runtimeReadyProbe = routeDestinationReadySection.indexOf("const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;");
+const dependencyGuard = routeDestinationReadySection.indexOf("if (!coreReady || !runtimeReady) return false;");
+const dataReadyProbe = routeDestinationReadySection.indexOf("window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true");
+invariant(
+  routeDestinationReadyStart >= 0
+    && coreReadyProbe >= 0
+    && runtimeReadyProbe > coreReadyProbe
+    && dependencyGuard > runtimeReadyProbe
+    && dataReadyProbe > dependencyGuard,
+  "Destination data readiness must never execute before lazy route core/runtime dependencies are ready.",
+);
+invariant(
+  !routeDestinationReadySection.includes("const dataReady ="),
+  "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
+);

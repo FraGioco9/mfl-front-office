@@ -241,12 +241,12 @@
     }
 
     function routeDestinationReady(pageName, options = {}) {
-      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
-      const dataReady = window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
-      const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
-      const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
-      return dataReady && coreReady && runtimeReady;
-    }
+  const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
+  const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
+  if (!coreReady || !runtimeReady) return false;
+  return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
+}
 
     function routeLoadingActive() {
       return currentSnapshot.reasons.includes(ROUTE_LOADING_REASON);
