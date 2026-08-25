@@ -129,6 +129,11 @@ replace_once(
 
 validator_path = Path("site/validate-evaluation-search-lifecycle.mjs")
 validator = validator_path.read_text()
+old_render_end = 'const renderEnd = appCoreSource.indexOf("let evaluationRecentSearchPrimed", renderStart);'
+new_render_end = 'const renderEnd = appCoreSource.indexOf("let evaluationEmptySearchFocusScheduled", renderStart);'
+if validator.count(old_render_end) != 1:
+    raise SystemExit(f"Evaluation render validator boundary mismatch: expected 1, found {validator.count(old_render_end)}")
+validator = validator.replace(old_render_end, new_render_end, 1)
 old = '''invariant(
   searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
   "Direct Evaluation startup must request the local recent-results Loading… state only when Evaluation is the active initial route.",
