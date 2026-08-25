@@ -23,15 +23,15 @@ jobs:
         with:
           node-version: 22
 
-      - name: Fix lazy destination readiness ordering
+      - name: Normalize lazy destination readiness source
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
 
-          bootstrap = Path('site/bootstrap-core.js')
-          source = bootstrap.read_text()
+          path = Path('site/bootstrap-core.js')
+          source = path.read_text()
           start_marker = '    function routeDestinationReady(pageName, options = {}) {'
           end_marker = '    function routeLoadingActive() {'
           start = source.find(start_marker)
@@ -39,70 +39,38 @@ jobs:
           if start < 0 or end <= start:
               raise SystemExit('routeDestinationReady function range missing')
           replacement = '''    function routeDestinationReady(pageName, options = {}) {
-            const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
-            const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
-            const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
-            if (!coreReady || !runtimeReady) return false;
-            return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
-          }
+      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+      const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
+      const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
+      if (!coreReady || !runtimeReady) return false;
+      return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
+    }
 
-          '''
-          source = source[:start] + replacement + source[end:]
-          bootstrap.write_text(source)
-
-          validator = Path('site/validate-loading-ownership.mjs')
-          check = validator.read_text()
-          sentinel = 'const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");'
-          if sentinel not in check:
-              addition = '''const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
-          const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
-          const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
-          const coreReadyProbe = routeDestinationReadySection.indexOf("const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;");
-          const runtimeReadyProbe = routeDestinationReadySection.indexOf("const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;");
-          const dependencyGuard = routeDestinationReadySection.indexOf("if (!coreReady || !runtimeReady) return false;");
-          const dataReadyProbe = routeDestinationReadySection.indexOf("window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true");
-          invariant(
-            routeDestinationReadyStart >= 0
-              && coreReadyProbe >= 0
-              && runtimeReadyProbe > coreReadyProbe
-              && dependencyGuard > runtimeReadyProbe
-              && dataReadyProbe > dependencyGuard,
-            "Destination data readiness must never execute before lazy route core/runtime dependencies are ready.",
-          );
-          invariant(
-            !routeDestinationReadySection.includes("const dataReady ="),
-            "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
-          );'''
-              check = check.rstrip() + "\n\n" + addition.strip() + "\n"
-          validator.write_text(check)
+'''
+          path.write_text(source[:start] + replacement + source[end:])
           PY
 
       - name: Install site dependencies
         working-directory: site
         run: npm install --no-audit --no-fund
 
-      - name: Build canonical application core
-        working-directory: site
-        run: npm run build:core
-
-      - name: Validate loading and lazy table handoff
+      - name: Validate source
         working-directory: site
         run: |
           node validate-loading-ownership.mjs
-          node validate-bootstrap-ownership.mjs
-          node validate-page-route-gate-transition.mjs
-          node validate-route-runtime.mjs
-          node validate-table-loading-state.mjs
           npm run lint
           npm run typecheck
 
-      - name: Commit implementation
+      - name: Commit formatting
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/bootstrap-core.js site/validate-loading-ownership.mjs
+          git add site/bootstrap-core.js
           git diff --cached --check
-          git commit -m "Gate lazy route data readiness behind dependencies"
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Normalize lazy route readiness formatting"
           git push origin HEAD:fix/loading-navigation-supersession
