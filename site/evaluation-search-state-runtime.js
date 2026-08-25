@@ -5,7 +5,6 @@
   const LEGACY_RECENT_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
   const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
   const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";
-  const RECENT_LOADING_REASON = "evaluation-recent-searches";
 
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
@@ -14,7 +13,7 @@
   let recentPayload = null;
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
-  let recentLoadingToken = "";
+  let recentLoadingActive = false;
   let directPointerFocus = false;
   let directPointerFocusResetTimer = 0;
 
@@ -60,15 +59,27 @@
     }
   }
 
-  function beginRecentLoadingGate(field = input()) {
-    if (recentLoadingToken || !active() || !(field instanceof HTMLInputElement) || field.value.trim()) return;
-    recentLoadingToken = window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON) || "";
+  function recentLoadingMessageVisible() {
+    const results = document.getElementById("evaluationSearchResults");
+    if (!(results instanceof HTMLElement) || results.hidden || results.children.length !== 1) return false;
+    const hint = results.firstElementChild;
+    return hint instanceof HTMLElement
+      && hint.classList.contains("searchHint")
+      && hint.textContent === "Loading…";
   }
 
-  function endRecentLoadingGate() {
-    if (!recentLoadingToken) return;
-    window.__mflInteractionBusy?.end?.(recentLoadingToken);
-    recentLoadingToken = "";
+  function renderRecentLoadingMessage(field = input()) {
+    if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return false;
+    if (recentLoadingActive && recentLoadingMessageVisible()) return true;
+    const results = document.getElementById("evaluationSearchResults");
+    if (!(results instanceof HTMLElement)) return false;
+    const hint = document.createElement("div");
+    hint.className = "searchHint";
+    hint.textContent = "Loading…";
+    results.replaceChildren(hint);
+    results.hidden = false;
+    recentLoadingActive = true;
+    return true;
   }
 
   function waitForSupabaseRecentState() {
@@ -221,15 +232,23 @@
   }
 
   function renderEmptySearchFromCore() {
-    if (!active()) return false;
+    if (!active()) {
+      recentLoadingActive = false;
+      return false;
+    }
     const field = input();
-    if (!(field instanceof HTMLInputElement) || field.value.trim()) return false;
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) {
+      recentLoadingActive = false;
+      return false;
+    }
     try {
       coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
+      recentLoadingActive = false;
       return false;
     }
+    recentLoadingActive = false;
     syncClearButton(field);
     return true;
   }
@@ -267,7 +286,10 @@
 
   function primeRecentSearchData({ force = false, showLoading = false } = {}) {
     const field = input();
-    if (recentPrimePromise) return recentPrimePromise;
+    if (recentPrimePromise) {
+      if (showLoading) renderRecentLoadingMessage(field);
+      return recentPrimePromise;
+    }
 
     const currentIds = recentEvaluationPlayerIds();
     const currentSignature = currentIds.join(",");
@@ -276,7 +298,7 @@
       return Promise.resolve(renderEmptySearchFromCore());
     }
 
-    if (showLoading) beginRecentLoadingGate(field);
+    if (showLoading) renderRecentLoadingMessage(field);
     recentPrimePromise = waitForSupabaseRecentState()
       .then(() => {
         const ids = recentEvaluationPlayerIds();
@@ -296,11 +318,14 @@
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
-        return false;
+        return renderEmptySearchFromCore();
       })
       .finally(() => {
         recentPrimePromise = null;
-        if (showLoading) endRecentLoadingGate();
+        const fieldNow = input();
+        if (!active() || !(fieldNow instanceof HTMLInputElement) || fieldNow.value.trim()) {
+          recentLoadingActive = false;
+        }
       });
     return recentPrimePromise;
   }
@@ -309,7 +334,9 @@
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
     installCoreBridges();
-    return primeRecentSearchData({ force, showLoading });
+    const currentSignature = recentEvaluationPlayerIds().join(",");
+    const hasReadyRecentPayload = !force && recentPayload && recentPayloadSignature === currentSignature;
+    return primeRecentSearchData({ force, showLoading: showLoading || !hasReadyRecentPayload });
   }
 
   function sync() {
@@ -361,6 +388,27 @@
     directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
   }
 
+  function onRecentLoadingFocusCapture(event) {
+    const field = input();
+    if (!(field instanceof HTMLInputElement)
+      || event.target !== field
+      || !recentLoadingActive
+      || field.value.trim()) return;
+    event.stopImmediatePropagation();
+    clearDirectPointerFocus();
+    syncClearButton(field);
+  }
+
+  function onRecentLoadingBlurCapture(event) {
+    const field = input();
+    if (!(field instanceof HTMLInputElement)
+      || event.target !== field
+      || !recentLoadingActive
+      || field.value.trim()) return;
+    event.stopImmediatePropagation();
+    syncClearButton(field);
+  }
+
   function onFocus(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
@@ -372,6 +420,7 @@
     clearDirectPointerFocus();
     syncClearButton(field);
     if (!field.value.trim()) {
+      if (recentLoadingActive) return;
       void restoreEmptyRecentResults(false);
       return;
     }
@@ -389,7 +438,11 @@
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncClearButton(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false);
+    if (field.value.trim()) {
+      recentLoadingActive = false;
+      return;
+    }
+    void restoreEmptyRecentResults(false);
   }
 
   function onClick(event) {
@@ -433,6 +486,8 @@
   installCoreBridges();
   syncClearButton();
   document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("focus", onRecentLoadingFocusCapture, true);
+  document.addEventListener("blur", onRecentLoadingBlurCapture, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -447,6 +502,8 @@
   function destroy() {
     destroyed = true;
     document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("focus", onRecentLoadingFocusCapture, true);
+    document.removeEventListener("blur", onRecentLoadingBlurCapture, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
@@ -460,8 +517,8 @@
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
+    recentLoadingActive = false;
     recentWriteSequence += 1;
-    endRecentLoadingGate();
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
