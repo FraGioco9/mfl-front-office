@@ -134,7 +134,7 @@ jobs:
         working-directory: .
         run: python -m unittest discover -v -p "test_*.py"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.changes.outputs.quality == 'true'
         with:
           node-version: 22
