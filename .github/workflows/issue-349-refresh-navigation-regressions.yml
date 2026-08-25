@@ -1,0 +1,74 @@
+name: Issue 349 refresh navigation regressions
+
+on:
+  push:
+    branches:
+      - fix/loading-navigation-supersession
+    paths:
+      - .github/workflows/issue-349-refresh-navigation-regressions.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/loading-navigation-supersession
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Apply canonical refresh/navigation fixes
+        run: node .github/scripts/issue-349-refresh-navigation-regressions.mjs
+
+      - name: Build canonical application core
+        working-directory: site
+        run: node build-app-core.mjs
+
+      - name: Check syntax and focused regressions
+        working-directory: site
+        run: |
+          node --check modules/app-core.js
+          node --check modules/app-core-runtime.js
+          node validate-loading-ownership.mjs
+          node validate-static-route-ui.mjs
+          node validate-stats-animation-owner.mjs
+          node validate-generated-view-transition.mjs
+          node validate-page-route-gate-transition.mjs
+          node validate-route-runtime.mjs
+          node validate-domain-routing-loading.mjs
+
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+
+      - name: Verify clean patch
+        run: git diff --check
+
+      - name: Commit application fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/index.html site/loading.css site/modules/app-core.js site/modules/app-core-runtime.js site/validate-loading-ownership.mjs site/validate-static-route-ui.mjs site/validate-stats-animation-owner.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "Fix refresh navigation handoff interactions"
+          git push origin HEAD:fix/loading-navigation-supersession
