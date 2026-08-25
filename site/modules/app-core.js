@@ -2970,6 +2970,13 @@ function navigationTransitionIsCurrent(transition) {
     : pageTransitionIsCurrent(transition);
 }
 
+function pageNavigationIsCurrent(options = {}) {
+  const transition = options && typeof options === "object"
+    ? options.__mflNavigationTransition
+    : null;
+  return !transition || navigationTransitionIsCurrent(transition);
+}
+
 function takeStagedViewTransition(pageName, viewName) {
   const transition = pendingViewTransition;
   if (
@@ -3147,6 +3154,7 @@ function renderTableLoadingShell(pageName) {
   window.__mflTableLoadingRuntime?.show?.();
 }
 async function setPage(pageName, updateHash = true, options = {}) {
+  if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
@@ -3241,6 +3249,9 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
     const loaded = await ensureProgressionData();
 
+    if (!pageNavigationIsCurrent(options)) return null;
+
+
     if (!loaded) {
       return;
     }
@@ -3250,8 +3261,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
     state.currentPage = pageName;
     state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
     await ensureWatchlistRoute(options);
+    if (!pageNavigationIsCurrent(options)) return null;
   }
 
+  if (!pageNavigationIsCurrent(options)) return null;
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
@@ -3332,8 +3345,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
     }
     try {
       await renderEvaluationPage();
+      if (!pageNavigationIsCurrent(options)) return null;
       if (!cachedEvaluationReentry) {
         await finishEvaluationReadiness();
+      if (!pageNavigationIsCurrent(options)) return null;
       }
       if (document.body.classList.contains("loading")) {
         await finishLoading();
@@ -12118,6 +12133,7 @@ async function startApp() {
       const routeView = pageName === "watchlist" && !requestedView ? routeViewFromPath() : "";
       const nextOptions = routeView ? { ...options, view: routeView } : options;
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+      if (result === null || !pageNavigationIsCurrent(nextOptions)) return result;
       keepSidebarExpanded();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
       return result;
@@ -13794,9 +13810,8 @@ async function startApp() {
     let previousTableStateSaved = false;
 
     if (!runtimeReady) {
-      const stagedTransition = incomingOptions.skipNavigationTransition === true
-        ? pendingViewTransition
-        : null;
+      const stagedTransition = incomingOptions.__mflNavigationTransition
+        || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
         const ownerBeforeRuntime = setPage;
         const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
@@ -13812,6 +13827,7 @@ async function startApp() {
         const committedOptions = {
           ...incomingOptions,
           skipNavigationTransition: true,
+          ...(transition ? { __mflNavigationTransition: transition } : {}),
           ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
         };
         if (setPage !== ownerBeforeRuntime) {
@@ -13943,31 +13959,6 @@ window.__mflAppStartPromise = (async () => {
     };
   }
 
-  function enforceHomePage() {
-    if (window.location.pathname !== "/") return;
-    homePage.hidden = false;
-    progressionPage.hidden = true;
-    mflStatsPage.hidden = true;
-    myPlayersLockedPage.hidden = true;
-    evaluationPage.hidden = true;
-    playerPage.hidden = true;
-    settingsPage.hidden = true;
-    changelogPage.hidden = true;
-    document.body.dataset.page = "home";
-    navButtons.forEach((button) => button.classList.remove("active"));
-  }
-
-  if (typeof setPage === "function") {
-    const originalSetPage = setPage;
-    setPage = async function setPageWithStableHome(pageName) {
-      const result = await originalSetPage.apply(this, arguments);
-      if (pageName === "home") {
-        enforceHomePage();
-        window.requestAnimationFrame(enforceHomePage);
-      }
-      return result;
-    };
-  }
 
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;

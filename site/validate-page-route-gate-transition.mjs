@@ -7,8 +7,9 @@ const routeSetPageSection = routeSetPageAssignmentIndex >= 0
   ? appCoreSource.slice(appCoreSource.lastIndexOf(";(() => {", routeSetPageAssignmentIndex), routeSetPageAssignmentIndex + "setPage = routeRuntimeSetPage;".length)
   : "";
 assert.ok(routeSetPageAssignmentIndex >= 0, "Could not locate the lazy setPage route gate.");
-assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\.skipNavigationTransition === true[\s\S]*?pendingViewTransition/, "Skip-transition view loads must retain their staged transition identity through lazy runtime loading.");
+assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\.__mflNavigationTransition[\s\S]*?pendingViewTransition/, "Lazy route loads must retain an inherited page/view transition identity through runtime loading.");
 assert.match(routeSetPageSection, /const loadCommittedRoute = async \(transition = stagedTransition\) => \{/, "The lazy route gate must receive the owning page/view transition.");
+assert.match(routeSetPageSection, /__mflNavigationTransition: transition/, "The lazy route gate must forward the owning transition into downstream page renderers.");
 const runtimeAwait = routeSetPageSection.indexOf("if (routeCorePromise) await routeCorePromise;");
 const staleGuard = routeSetPageSection.indexOf("if (transition && !navigationTransitionIsCurrent(transition)) return null;", runtimeAwait);
 const downstreamCommit = routeSetPageSection.indexOf("const committedOptions = {", staleGuard);
@@ -32,5 +33,23 @@ const viewCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest
 const viewCommit = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
 const viewLoading = viewRunner.indexOf("loadingController?.beginRouteTransition?.(pageName", viewCommit);
 assert.ok(viewCancel >= 0 && viewCommit > viewCancel && viewLoading > viewCommit, "View navigation must abort obsolete data before committing the destination, then replace route-loading ownership for that destination.");
+
+
+const baseSetPageStart = appCoreSource.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
+const baseSetPageEnd = appCoreSource.indexOf("function updateStatusDate", baseSetPageStart);
+const baseSetPage = appCoreSource.slice(baseSetPageStart, baseSetPageEnd);
+assert.match(baseSetPage, /if \(!pageNavigationIsCurrent\(options\)\) return null;/, "Every page renderer must reject a stale owning navigation before mutating destination UI.");
+const progressionAwait = baseSetPage.indexOf("const loaded = await ensureProgressionData();");
+const progressionGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", progressionAwait);
+const finalPageCommit = baseSetPage.indexOf("state.currentPage = pageName;", progressionGuard);
+assert.ok(progressionAwait >= 0 && progressionGuard > progressionAwait && finalPageCommit > progressionGuard, "Table data completion must be rejected when a newer non-table navigation has won.");
+const watchlistAwait = baseSetPage.indexOf("await ensureWatchlistRoute(options);");
+const watchlistGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", watchlistAwait);
+assert.ok(watchlistAwait >= 0 && watchlistGuard > watchlistAwait, "Watchlist route completion must be rejected after navigation supersession.");
+const evaluationAwait = baseSetPage.indexOf("await renderEvaluationPage();");
+const evaluationGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", evaluationAwait);
+assert.ok(evaluationAwait >= 0 && evaluationGuard > evaluationAwait, "Non-table Evaluation completion must not reclaim UI after a table navigation wins.");
+assert.doesNotMatch(appCoreSource, /setPageWithStableHome/, "Home must use the canonical page transition owner instead of a post-load wrapper that can reclaim stale UI.");
+assert.doesNotMatch(appCoreSource, /requestAnimationFrame\(enforceHomePage\)/, "A completed stale Home load must never schedule a later page-shell reclaim.");
 
 console.log("Lazy route gate stale-completion guard and latest-navigation loading supersession validation passed.");
