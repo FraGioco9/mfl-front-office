@@ -1,4 +1,4 @@
-const { PassThrough } = require("node:stream");
+const { PassThrough, Readable } = require("node:stream");
 const PImage = require("pureimage");
 const { formatEvaluationPreviewCurrency } = require("./_evaluation-preview-value");
 
@@ -27,6 +27,25 @@ const COLORS = Object.freeze({
   primary: "#4aa3df",
 });
 
+const FLAG_CODE_BY_NATIONALITY = Object.freeze({
+  ALBANIA: "AL", ALGERIA: "DZ", ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT",
+  BELGIUM: "BE", BOSNIA_AND_HERZEGOVINA: "BA", BRAZIL: "BR", CAMEROON: "CM",
+  CANADA: "CA", CAPE_VERDE_ISLANDS: "CV", CHILE: "CL", COLOMBIA: "CO", CONGO_DR: "CD",
+  COSTA_RICA: "CR", COTE_D_IVOIRE: "CI", CROATIA: "HR", CURACAO: "CW", CZECH_REPUBLIC: "CZ",
+  CZECHIA: "CZ", DENMARK: "DK", ECUADOR: "EC", EGYPT: "EG",
+  ENGLAND: "1f3f4-e0067-e0062-e0065-e006e-e0067-e007f", FINLAND: "FI", FRANCE: "FR",
+  GEORGIA: "GE", GERMANY: "DE", GHANA: "GH", HAITI: "HT", HUNGARY: "HU", IRAN: "IR",
+  IRAQ: "IQ", ITALY: "IT", IVORY_COAST: "CI", JAPAN: "JP", JORDAN: "JO",
+  KOREA_REPUBLIC: "KR", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL", NEW_ZEALAND: "NZ",
+  NIGERIA: "NG", NORWAY: "NO", PANAMA: "PA", PARAGUAY: "PY", PERU: "PE", POLAND: "PL",
+  PORTUGAL: "PT", QATAR: "QA", REPUBLIC_OF_IRELAND: "IE", ROMANIA: "RO", RUSSIA: "RU",
+  SAUDI_ARABIA: "SA", SCOTLAND: "1f3f4-e0067-e0062-e0073-e0063-e0074-e007f", SENEGAL: "SN",
+  SERBIA: "RS", SLOVAKIA: "SK", SLOVENIA: "SI", SOUTH_AFRICA: "ZA", SOUTH_KOREA: "KR",
+  SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH", TUNISIA: "TN", TURKEY: "TR", UKRAINE: "UA",
+  UNITED_KINGDOM: "GB", UNITED_STATES: "US", UNITED_STATES_OF_AMERICA: "US", URUGUAY: "UY",
+  USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e007f",
+});
+
 const FONT_PATHS = Object.freeze([
   [400, require.resolve("@expo-google-fonts/titillium-web/400Regular/TitilliumWeb_400Regular.ttf")],
   [600, require.resolve("@expo-google-fonts/titillium-web/600SemiBold/TitilliumWeb_600SemiBold.ttf")],
@@ -34,6 +53,7 @@ const FONT_PATHS = Object.freeze([
 ]);
 
 let fontsRegistered = false;
+const nationalityFlagPromises = new Map();
 
 function registerPreviewFonts() {
   if (fontsRegistered) return;
@@ -53,6 +73,44 @@ function cardText(value) {
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function twemojiCodepointsForNationality(nationality) {
+  const key = cardText(nationality)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const code = FLAG_CODE_BY_NATIONALITY[key] || "";
+  if (!code) return "";
+  return code.includes("-")
+    ? code
+    : code
+      .toUpperCase()
+      .split("")
+      .map((character) => (127397 + character.charCodeAt(0)).toString(16))
+      .join("-");
+}
+
+async function loadNationalityFlag(nationality) {
+  const codepoints = twemojiCodepointsForNationality(nationality);
+  if (!codepoints) return null;
+  if (nationalityFlagPromises.has(codepoints)) return nationalityFlagPromises.get(codepoints);
+
+  const pending = (async () => {
+    try {
+      const response = await fetch(
+        `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoints}.png`,
+        { headers: { Accept: "image/png" } },
+      );
+      if (!response.ok) return null;
+      const bytes = Buffer.from(await response.arrayBuffer());
+      return await PImage.decodePNGFromStream(Readable.from([bytes]));
+    } catch {
+      return null;
+    }
+  })();
+  nationalityFlagPromises.set(codepoints, pending);
+  return pending;
 }
 
 function fontFamilyForWeight(weight) {
@@ -154,8 +212,8 @@ function drawSummaryStrip(context, metadata) {
     fillRect(context, cursor, y + 28, 1, height - 56, COLORS.border);
   });
 
-  drawMetric(context, x, columnWidths[0], "Overall", metadata.overall);
-  drawMetric(context, x + columnWidths[0], columnWidths[1], "Position", metadata.position || "-");
+  drawMetric(context, x, columnWidths[0], "Position", metadata.position || "-");
+  drawMetric(context, x + columnWidths[0], columnWidths[1], "Overall", metadata.overall);
   drawMetric(context, x + columnWidths[0] + columnWidths[1], columnWidths[2], "Age", metadata.age);
   drawMetric(
     context,
@@ -165,6 +223,19 @@ function drawSummaryStrip(context, metadata) {
     formatEvaluationPreviewCurrency(metadata.presentValue) || "-",
     { preferredSize: 44 },
   );
+}
+
+async function drawNationalityLine(context, metadata) {
+  const nationality = cardText(metadata.nationality);
+  if (!nationality) return;
+  const y = 276;
+  const flag = await loadNationalityFlag(nationality);
+  if (flag) {
+    context.drawImage(flag, px(72), px(y), px(30), px(30));
+    drawText(context, `- ${nationality}`, 111, y + 1, 400, 26, COLORS.soft);
+    return;
+  }
+  drawText(context, nationality, 72, y + 1, 400, 26, COLORS.soft);
 }
 
 async function imageToPngBuffer(image) {
@@ -201,8 +272,9 @@ async function renderEvaluationPreviewPng(metadata = {}) {
     const playerName = cardText(metadata.playerName);
     const playerLabel = playerName || `Player ${cardText(metadata.playerId)}`;
     const playerSize = fittedFontSize(context, playerLabel, 700, 72, 44, 1060);
-    drawText(context, playerLabel, 70, 145, 700, playerSize, COLORS.text);
-    drawText(context, `Player #${cardText(metadata.playerId)}`, 72, 246, 400, 29, COLORS.soft);
+    drawText(context, playerLabel, 70, 130, 700, playerSize, COLORS.text);
+    drawText(context, `Player #${cardText(metadata.playerId)}`, 72, 224, 400, 29, COLORS.soft);
+    await drawNationalityLine(context, metadata);
     drawSummaryStrip(context, metadata);
   } else {
     drawText(context, "Player Evaluation", 70, 153, 700, 70, COLORS.text);
