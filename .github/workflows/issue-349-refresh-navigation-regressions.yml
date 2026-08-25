@@ -22,12 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
 
       - name: Install site dependencies
         working-directory: site
-        run: npm ci
+        run: npm install
 
       - name: Apply canonical refresh/navigation fixes
         run: node .github/scripts/issue-349-refresh-navigation-regressions.mjs
