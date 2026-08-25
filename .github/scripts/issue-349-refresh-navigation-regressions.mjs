@@ -69,7 +69,7 @@ await update("site/bootstrap-core.js", (input) => {
   source = replaceOnce(
     source,
     '    document.documentElement.classList.remove("mflSingleRenderPending");\n    document.documentElement.classList.add("mflInitialRouteResolved");',
-    '    document.documentElement.classList.remove("mflSingleRenderPending", "mflInitialRouteSuperseded");\n    document.documentElement.classList.add("mflInitialRouteResolved");',
+    '    document.documentElement.classList.remove("mflSingleRenderPending");\n    document.documentElement.classList.remove("mflInitialRouteSuperseded");\n    document.documentElement.classList.add("mflInitialRouteResolved");',
     "initial route supersession cleanup",
   );
   return source;
@@ -137,7 +137,7 @@ await update("site/validate-bootstrap-ownership.mjs", (source) => {
     ");",
     "includes(",
     "  bootstrapCore,",
-    "  'document.documentElement.classList.remove(\"mflSingleRenderPending\", \"mflInitialRouteSuperseded\");',",
+    "  'document.documentElement.classList.remove(\"mflInitialRouteSuperseded\");',",
     '  "Initial-route completion must clean the temporary startup supersession marker after runtime route ownership is established.",',
     ");",
     "",
