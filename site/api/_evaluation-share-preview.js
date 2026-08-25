@@ -1,9 +1,6 @@
 const { queryOne } = require("./_database");
 const { normalizeEvaluationId } = require("./_evaluation-payload");
-const {
-  evaluationPresentValueTotalFromSharePayload,
-  formatEvaluationPreviewCurrency,
-} = require("./_evaluation-preview-value");
+const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
 const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
 const { supabaseRequest } = require("./_supabase");
 
@@ -15,6 +12,8 @@ const GENERIC_PREVIEW = Object.freeze({
   playerName: "",
   overall: null,
   position: "",
+  positions: "",
+  nationality: "",
   age: null,
   presentValue: null,
 });
@@ -31,6 +30,27 @@ function normalizedPosition(value) {
   return String(value || "").trim().replace(/[^a-zA-Z0-9 -]/g, "").slice(0, 12);
 }
 
+function normalizedPositions(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .replace(/[^A-Z0-9, /-]/g, "")
+    .slice(0, 48);
+}
+
+function normalizedNationality(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[_\s]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
+    .slice(0, 64);
+}
+
 function roundedMetric(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
@@ -43,22 +63,40 @@ function numericMetric(value) {
 
 function publicPlayerPreview(playerIdValue) {
   const playerId = normalizedPlayerId(playerIdValue);
-  if (!playerId) return { playerId: "", playerName: "", age: null, retirementYears: null };
+  if (!playerId) {
+    return {
+      playerId: "",
+      playerName: "",
+      positions: "",
+      nationality: "",
+      age: null,
+      retirementYears: null,
+    };
+  }
 
   try {
     const row = queryOne(
-      "SELECT name, age, retirement_years FROM players WHERE player_id = ? LIMIT 1",
+      "SELECT name, age, retirement_years, nationality, positions FROM players WHERE player_id = ? LIMIT 1",
       [playerId],
     );
     return {
       playerId,
       playerName: normalizedPlayerName(row?.name),
+      positions: normalizedPositions(row?.positions),
+      nationality: normalizedNationality(row?.nationality),
       age: roundedMetric(row?.age),
       retirementYears: roundedMetric(row?.retirement_years),
     };
   } catch (error) {
     console.warn("Could not read public player context for Evaluation preview.", error);
-    return { playerId, playerName: "", age: null, retirementYears: null };
+    return {
+      playerId,
+      playerName: "",
+      positions: "",
+      nationality: "",
+      age: null,
+      retirementYears: null,
+    };
   }
 }
 
@@ -94,6 +132,8 @@ function evaluationSharePreviewFromContext(row, publicPlayer = {}, ratioRows = [
       || payload.player_name,
   );
   const playerName = normalizedPlayerName(publicPlayer.playerName) || payloadPlayerName;
+  const positions = normalizedPositions(publicPlayer.positions);
+  const nationality = normalizedNationality(publicPlayer.nationality);
   const position = normalizedPosition(payload.summaryPosition || payload.summary_position);
   const values = Array.isArray(payload.overallValues)
     ? payload.overallValues
@@ -112,21 +152,23 @@ function evaluationSharePreviewFromContext(row, publicPlayer = {}, ratioRows = [
     retirementYears: publicPlayer.retirementYears,
   }, ratioRows);
   const subject = playerName || `Player ${playerId}`;
-
-  const details = [];
-  if (overall !== null) details.push(`Overall ${overall}`);
-  if (position) details.push(`Position ${position}`);
-  if (age !== null) details.push(`Age ${age}`);
-  if (presentValue !== null) details.push(`Value ${formatEvaluationPreviewCurrency(presentValue)}`);
+  const identitySuffix = playerName ? ` (#${playerId})` : "";
+  const descriptionDetails = [];
+  if (age !== null) descriptionDetails.push(`${age} yo`);
+  if (overall !== null) descriptionDetails.push(`${overall} rated`);
+  if (positions || position) descriptionDetails.push(positions || position);
+  if (nationality) descriptionDetails.push(`from ${nationality}`);
 
   return {
     title: `${subject} Evaluation - MFL Front Office`,
-    description: `Shared MFL Front Office Evaluation for ${subject}${playerName ? ` (#${playerId})` : ""}${details.length ? ` - ${details.join(" · ")}` : ""}.`,
+    description: `MFL Front Office Evaluation for ${subject}${identitySuffix}${descriptionDetails.length ? ` - ${descriptionDetails.join(" ")}` : ""}`,
     isShared: true,
     playerId,
     playerName,
     overall,
     position,
+    positions,
+    nationality,
     age,
     presentValue,
   };
