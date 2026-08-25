@@ -109,8 +109,9 @@ invariant(
     && savedLoad.includes("data = await response.json();")
     && savedLoad.includes("rememberSavedEvaluationCacheEntry(data);")
     && savedLoad.includes("data = rememberSavedEvaluationCacheEntry(data) || data;")
-    && savedLoad.includes("await applySharedEvaluationPayload(data.payload);"),
-  "Opening a Saved Evaluation must reuse its cached full payload, refresh its cached valuation after row hydration, and fetch only when that saved ID is not cached.",
+    && savedLoad.includes("await applySharedEvaluationPayload(data.payload, {")
+    && savedLoad.includes("mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,"),
+  "Opening a Saved Evaluation must reuse its cached full payload, refresh its cached valuation after row hydration, preserve newer MFL/USD commits during hydration, and fetch only when that saved ID is not cached.",
 );
 
 const saveStart = evaluationCore.indexOf("async function createSavedEvaluation()");
@@ -143,4 +144,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape closes the modal, cached rows retain names and valuations across page changes, saved hydration refreshes cached data, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape closes the modal, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");

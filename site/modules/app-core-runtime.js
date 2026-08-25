@@ -63,6 +63,7 @@ const state = {
   evaluationIgnoreDiscountRate: false,
   evaluationIgnoreFirstSeason: false,
   evaluationMflPerUsd: 400,
+  evaluationMflPerUsdRevision: 0,
   evaluationLateSeasonRewardRates: [80, 80, 60],
   evaluationSummaryPositions: {},
   evaluationShareId: "",
@@ -3573,6 +3574,7 @@ async function loadWalletPreferences(options = {}) {
   }
 
   state.walletPreferencesLoading = true;
+  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
   const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
     const localWatchlists = loadLocalWalletWatchlist();
@@ -3627,7 +3629,12 @@ async function loadWalletPreferences(options = {}) {
         applySettingsPayload(data.settings);
       }
       if (data.evaluationSettings) {
+        const latestMflPerUsd = state.evaluationMflPerUsd;
+        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;
         applyEvaluationSettingsPayload(data.evaluationSettings);
+        if (preserveLatestMflPerUsd) {
+          state.evaluationMflPerUsd = latestMflPerUsd;
+        }
         saveEvaluationSettingsLocally();
         if (state.currentPage === "evaluation" && typeof renderEvaluationMflPerUsdControl === "function") {
           renderEvaluationMflPerUsdControl(false);
@@ -4819,6 +4826,11 @@ function saveEvaluationMflPerUsd(value) {
   } catch {
     // Evaluation still recalculates for this page if the browser blocks storage.
   }
+}
+
+function commitEvaluationMflPerUsdValue(value) {
+  saveEvaluationMflPerUsd(value);
+  state.evaluationMflPerUsdRevision += 1;
 }
 
 function loadEvaluationMflPerUsd() {

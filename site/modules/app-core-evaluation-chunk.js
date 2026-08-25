@@ -40,7 +40,12 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
   core = replaceRequired(
     core,
     `      if (data.evaluationSettings) {
+        const latestMflPerUsd = state.evaluationMflPerUsd;
+        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;
         applyEvaluationSettingsPayload(data.evaluationSettings);
+        if (preserveLatestMflPerUsd) {
+          state.evaluationMflPerUsd = latestMflPerUsd;
+        }
         saveEvaluationSettingsLocally();
         renderEvaluationMflPerUsdControl(false);
         if (state.currentPage === "evaluation") {
@@ -48,7 +53,12 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
         }
       }`,
     `      if (data.evaluationSettings) {
+        const latestMflPerUsd = state.evaluationMflPerUsd;
+        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;
         applyEvaluationSettingsPayload(data.evaluationSettings);
+        if (preserveLatestMflPerUsd) {
+          state.evaluationMflPerUsd = latestMflPerUsd;
+        }
         saveEvaluationSettingsLocally();
         if (state.currentPage === "evaluation" && typeof renderEvaluationMflPerUsdControl === "function") {
           renderEvaluationMflPerUsdControl(false);
