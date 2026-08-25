@@ -448,7 +448,7 @@ export function splitSettingsApplicationCoreRuntime(artifacts) {
 
   sharedCore = insertBeforeRequiredMarker(
     sharedCore,
-    "async function setPage(pageName, updateHash = true, options = {}) {",
+    "function applySettingsPayload(settings = {}) {",
     SETTINGS_SHARED_NAVIGATION_RUNTIME,
     "Settings unsaved navigation guard",
   );
