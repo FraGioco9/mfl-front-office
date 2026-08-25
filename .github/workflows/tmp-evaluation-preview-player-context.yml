@@ -24,25 +24,24 @@ jobs:
           path = Path("site/validate-evaluation-share-preview.mjs")
           text = path.read_text(encoding="utf-8")
 
-          def replace(old, new, expected=1):
+          def replace(old, new):
               global text
               count = text.count(old)
-              if count != expected:
-                  raise SystemExit(f"Expected {expected} occurrences of {old!r}, found {count}")
-              text = text.replace(old, new)
+              if count != 1:
+                  raise SystemExit(f"Expected one occurrence of {old!r}, found {count}")
+              text = text.replace(old, new, 1)
 
           replace(
-              'previewOwner.includes("SELECT name, age, retirement_years FROM players WHERE player_id = ? LIMIT 1")',
-              'previewOwner.includes("SELECT name, age, retirement_years, nationality, positions FROM players WHERE player_id = ? LIMIT 1")',
+              "SELECT name, age, retirement_years FROM players WHERE player_id = ? LIMIT 1",
+              "SELECT name, age, retirement_years, nationality, positions FROM players WHERE player_id = ? LIMIT 1",
           )
           replace(
-              '''  previewOwner.includes("evaluationPresentValueTotalFromSharePayload(payload, {")
-                && previewOwner.includes("Value"),
-              "Shared preview metadata must expose the same Value represented by the Evaluation summary table.",''',
-              '''  previewOwner.includes("evaluationPresentValueTotalFromSharePayload(payload, {")
-                && previewOwner.includes("positions")
-                && previewOwner.includes("nationality"),
-              "Shared preview metadata must retain canonical valuation while adding public positions and nationality context.",''',
+              '    && previewOwner.includes("Value"),',
+              '    && previewOwner.includes("positions")\n    && previewOwner.includes("nationality"),',
+          )
+          replace(
+              '  "Shared preview metadata must expose the same Value represented by the Evaluation summary table.",',
+              '  "Shared preview metadata must retain canonical valuation while adding public positions and nationality context.",',
           )
           replace(
               '''assert(previewOwner.includes("`Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must label the metric as Value.");
@@ -80,14 +79,12 @@ jobs:
           replace(
               '''  playerName: "Mario Rossi",
             age: 34,
-            retirementYears: 0,
-          });''',
+            retirementYears: 0,''',
               '''  playerName: "Mario Rossi",
             positions: "CB, RB",
             nationality: "ITALY",
             age: 34,
-            retirementYears: 0,
-          });''',
+            retirementYears: 0,''',
           )
           replace(
               '''assert(contextualPreview.playerName === "Mario Rossi", "Shared preview metadata must use the current public player name.");
