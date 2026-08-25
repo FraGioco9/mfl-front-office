@@ -186,8 +186,12 @@ function currentEvaluationSharePayload() {
   };
 }
 
-async function applySharedEvaluationPayload(payload) {
+async function applySharedEvaluationPayload(payload, options = {}) {
   const data = normalizeSharedEvaluationPayload(payload);
+  const mflPerUsdRevisionAtLoadStart = Number.isInteger(options.mflPerUsdRevisionAtLoadStart)
+    ? options.mflPerUsdRevisionAtLoadStart
+    : state.evaluationMflPerUsdRevision;
+  const latestMflPerUsd = state.evaluationMflPerUsd;
 
   if (!data.playerId) {
     throw new Error("Evaluation player is not available.");
@@ -207,6 +211,10 @@ async function applySharedEvaluationPayload(payload) {
     state.evaluationSummaryPositions[data.playerId] = data.summaryPosition;
   }
 
+  if (state.evaluationMflPerUsdRevision !== mflPerUsdRevisionAtLoadStart) {
+    state.evaluationMflPerUsd = latestMflPerUsd;
+  }
+
   renderEvaluationMflPerUsdControl(false);
   await renderEvaluationPage();
 }
@@ -220,6 +228,7 @@ async function loadSharedEvaluation(shareId) {
   }
 
   state.evaluationShareLoading = true;
+  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
 
   try {
     const requestUrl = new URL("/api/evaluation-share", window.location.origin);
@@ -247,7 +256,9 @@ async function loadSharedEvaluation(shareId) {
       if (!playerPayload) throw new Error("Evaluation player is not available.");
     }
     state.evaluationShareId = id;
-    await applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload, {
+      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
+    });
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
     await recoverInvalidEvaluationLink();
@@ -456,6 +467,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
   }
 
   state.evaluationSavedLoading = true;
+  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
 
   try {
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
@@ -499,7 +511,9 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
     clearEvaluationSearchFocus();
-    await applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload, {
+      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
+    });
   } catch {
     showToast("Saved evaluation could not be loaded.");
     await recoverInvalidEvaluationLink();
@@ -1064,7 +1078,7 @@ function applyAdvancedSettings() {
   const parsedValue = parseEvaluationMflPerUsd(advancedMflUsdInput.value);
 
   if (parsedValue) {
-    saveEvaluationMflPerUsd(parsedValue);
+    commitEvaluationMflPerUsdValue(parsedValue);
   }
 
   syncAdvancedRewardRateDrafts();
@@ -1160,7 +1174,7 @@ function commitEvaluationMflPerUsd() {
   const parsedValue = parseEvaluationMflPerUsd(evaluationMflUsdInput.value);
 
   if (parsedValue) {
-    saveEvaluationMflPerUsd(parsedValue);
+    commitEvaluationMflPerUsdValue(parsedValue);
   }
 
   renderEvaluationMflPerUsdControl(false);
@@ -1169,7 +1183,7 @@ function commitEvaluationMflPerUsd() {
 }
 
 function resetEvaluationMflPerUsd() {
-  saveEvaluationMflPerUsd(DEFAULT_EVALUATION_MFL_PER_USD);
+  commitEvaluationMflPerUsdValue(DEFAULT_EVALUATION_MFL_PER_USD);
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
   queueEvaluationSettingsSave();

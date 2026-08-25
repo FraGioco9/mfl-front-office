@@ -119,13 +119,14 @@ invariant(
 
 invariant(
   shared.includes('["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)')
-    && evaluation.includes("async function applySharedEvaluationPayload(payload) {")
+    && evaluation.includes("async function applySharedEvaluationPayload(payload, options = {}) {")
     && evaluation.includes("await renderEvaluationPage();\n}\n\nasync function loadSharedEvaluation")
-    && evaluation.includes("await applySharedEvaluationPayload(data.payload);")
+    && evaluation.includes("await applySharedEvaluationPayload(data.payload, {")
+    && evaluation.includes("mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,")
     && evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
     && evaluation.includes("playerId: payloadPlayerId,")
     && !evaluation.includes('evaluationSearchInput.value = "";\n  renderEvaluationMflPerUsdControl(false);'),
-  "Evaluation startup must keep loading active through wallet/settings hydration and the final player/saved/shared render without blanking the player name.",
+  "Evaluation startup must keep loading active through wallet/settings hydration and the final revision-aware player/saved/shared render without blanking the player name.",
 );
 
 invariant(
