@@ -14,7 +14,7 @@ for (const required of [
   "const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);",
   "const body = preserveRenderedRows",
   ": prepareLoadingSurface();",
-  "if (body && !preserveRenderedRows) primeLoadingRows();",
+  "if (body && !preserveRenderedRows && !loadingRowsMatchCurrentStructure(body)) primeLoadingRows();",
   "hidePager();",
   "if (shouldPreserveRenderedRows()) return;",
   "show({ replaceExisting: true });",
@@ -29,8 +29,8 @@ invariant(
   beginStart >= 0
     && beginEnd > beginStart
     && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")
-    && beginSource.includes("if (body && !preserveRenderedRows) primeLoadingRows();"),
-  "A post-route background request must decide whether to preserve rendered rows before preparing loading placeholders.",
+    && beginSource.includes("if (body && !preserveRenderedRows && !loadingRowsMatchCurrentStructure(body)) primeLoadingRows();"),
+  "A post-route background request must decide whether to preserve rendered rows and reuse a structurally valid loading tbody before preparing new placeholders.",
 );
 
 const syncStart = runtime.indexOf("function sync(snapshot = loadingSnapshot()) {");
@@ -51,4 +51,4 @@ invariant(
   "Every active Table load must hide pager chrome even when settled rows remain rendered.",
 );
 
-console.log("Settled table rows remain visible during background loading, while every active Table load hides pager chrome until the request settles.");
+console.log("Settled table rows remain visible during background loading, structurally valid refresh placeholders are reused, and every active Table load hides pager chrome until the request settles.");
