@@ -96,6 +96,7 @@ function ensureSettingsPageStructure() {
   if (!settingsPage) return;
   settingsPage.querySelector("[data-settings-intro]")?.remove();
   settingsPage.querySelector("[data-settings-global-actions]")?.remove();
+  window.__mflPrimeSettingsActions?.();
 
   if (settingsEmailDiscardButton) {
     settingsEmailDiscardButton.hidden = false;
@@ -106,6 +107,24 @@ function ensureSettingsPageStructure() {
     settingsEmailSaveButton.hidden = false;
     settingsEmailSaveButton.textContent = "Save";
     settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");
+  }
+}
+
+function primeSettingsFreshFirstPaint() {
+  window.__mflPrimeRouteSkeleton?.(settingsPage);
+  if (settingsEmailAddressInput) {
+    settingsEmailAddressInput.value = "";
+    settingsEmailAddressInput.classList.remove("invalid");
+  }
+  settingsEmailOptions?.replaceChildren();
+}
+
+function renderSettingsIdentity() {
+  const walletAddress = normalizeWalletAddress(state.linkedWalletAddress || "");
+  if (settingsAgentName) settingsAgentName.textContent = accountName();
+  if (settingsWalletAddress) {
+    settingsWalletAddress.textContent = walletAddress || "-";
+    settingsWalletAddress.title = walletAddress || "";
   }
 }
 
@@ -179,11 +198,13 @@ function updateSettingsEmailDraftActions() {
     settingsEmailDiscardButton.hidden = false;
     settingsEmailDiscardButton.disabled = !dirty || saving;
     settingsEmailDiscardButton.textContent = "Discard";
+    settingsEmailDiscardButton.onclick = discardSettingsEmailAddressDraft;
   }
   if (settingsEmailSaveButton) {
     settingsEmailSaveButton.hidden = false;
     settingsEmailSaveButton.disabled = !dirty || !draftIsValid || saving;
     settingsEmailSaveButton.textContent = saving ? "Saving..." : "Save";
+    settingsEmailSaveButton.onclick = saveSettingsEmailAddressDraft;
   }
 }
 
@@ -205,13 +226,7 @@ function renderSettingsPage(renderOptions = {}) {
   if (!settingsPage) return;
   ensureSettingsDraftBaseline();
   ensureSettingsPageStructure();
-
-  const walletAddress = normalizeWalletAddress(state.linkedWalletAddress || "");
-  if (settingsAgentName) settingsAgentName.textContent = accountName();
-  if (settingsWalletAddress) {
-    settingsWalletAddress.textContent = walletAddress || "-";
-    settingsWalletAddress.title = walletAddress || "";
-  }
+  renderSettingsIdentity();
 
   if (settingsDateFormatOptions) {
     settingsDateFormatOptions.replaceChildren();
@@ -241,7 +256,7 @@ function renderSettingsPage(renderOptions = {}) {
         syncSettingsDraftDirty();
         renderSettingsPage({ preserveEmailDraft: true });
       });
-      settingsTimeFormatOptions.appendChild(button);
+    settingsTimeFormatOptions.appendChild(button);
     });
   }
 

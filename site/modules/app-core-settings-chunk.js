@@ -18,7 +18,13 @@ const SETTINGS_ROUTE_ONLY_FUNCTIONS = [
   "validSettingsEmailAddress",
 ];
 
-const SETTINGS_SHARED_NAVIGATION_RUNTIME = `function settingsRestoreDraftBaselineForNavigation() {
+const SETTINGS_SHARED_NAVIGATION_RUNTIME = `function settingsRouteActive() {
+  return state.currentPage === "settings"
+    || document.body?.dataset?.page === "settings"
+    || settingsPage?.hidden === false;
+}
+
+function settingsRestoreDraftBaselineForNavigation() {
   const baseline = state.settingsDraftBaseline || currentSettingsPayload();
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(baseline.receiveEmailsFor);
   state.settingsEmailAddress = normalizeSettingsEmailAddress(baseline.emailAddress);
@@ -28,15 +34,8 @@ const SETTINGS_SHARED_NAVIGATION_RUNTIME = `function settingsRestoreDraftBaselin
   state.settingsDraftDirty = false;
 }
 
-async function settingsResetFromSupabaseForNavigation() {
-  settingsRestoreDraftBaselineForNavigation();
-  clearPendingSettingsLocally();
-  state.settingsDraftDirty = false;
-
-  if (!state.linkedWalletAddress || !hasWalletProof()) {
-    state.settingsDraftBaseline = currentSettingsPayload();
-    return;
-  }
+async function settingsRefreshCommittedFromSupabase(options = {}) {
+  if (!state.linkedWalletAddress || !hasWalletProof()) return false;
 
   try {
     const response = await fetch("/api/wallet-preferences", {
@@ -44,20 +43,50 @@ async function settingsResetFromSupabaseForNavigation() {
       headers: walletProofHeaders(true),
     });
     const data = await response.json().catch(() => ({}));
-    if (response.ok) {
-      state.settingsDraftDirty = false;
-      applySettingsPayload(data.settings || {});
-    }
+    if (!response.ok) return false;
+
+    const force = options.force === true;
+    const render = options.render !== false;
+    const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
+    if (activeDraft && !force) return false;
+    state.settingsDraftDirty = false;
+    applySettingsPayload(data.settings || {}, { render });
+    state.settingsDraftBaseline = currentSettingsPayload();
+    state.settingsDraftDirty = false;
+    return true;
   } catch {
     // The last committed in-memory baseline remains the safe fallback.
+    return false;
+  }
+}
+
+function settingsResetFromSupabaseForNavigation() {
+  settingsRestoreDraftBaselineForNavigation();
+  clearPendingSettingsLocally();
+  state.settingsDraftBaseline = currentSettingsPayload();
+  state.settingsDraftDirty = false;
+}
+
+async function settingsPrepareCommittedForEntry() {
+  clearPendingSettingsLocally();
+  state.settingsDraftDirty = false;
+
+  const startupHydrationPending = Reflect.get(window, "__mflSettingsStartupWalletPreferencesPending") === true;
+  const startupHydration = Reflect.get(window, "__mflWalletPreferencesStartupPromise");
+  if (startupHydrationPending && startupHydration && typeof startupHydration.then === "function") {
+    await startupHydration;
+    Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", false);
+  } else {
+    Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", false);
+    await settingsRefreshCommittedFromSupabase({ force: true, render: false });
   }
 
   state.settingsDraftBaseline = currentSettingsPayload();
   state.settingsDraftDirty = false;
 }
 
-async function settingsConfirmNavigation(pageName, updateHash = true) {
-  const leavingSettings = state.currentPage === "settings" && pageName !== "settings";
+function settingsConfirmNavigation(pageName, updateHash = true) {
+  const leavingSettings = settingsRouteActive() && pageName !== "settings";
   if (!leavingSettings) return true;
 
   if (state.settingsDraftDirty) {
@@ -68,12 +97,12 @@ async function settingsConfirmNavigation(pageName, updateHash = true) {
     }
   }
 
-  await settingsResetFromSupabaseForNavigation();
+  settingsResetFromSupabaseForNavigation();
   return true;
 }
 
 window.addEventListener("beforeunload", (event) => {
-  if (state.currentPage !== "settings" || !state.settingsDraftDirty) return;
+  if (!settingsRouteActive() || !state.settingsDraftDirty) return;
   event.preventDefault();
   event.returnValue = "";
 });`;
@@ -175,6 +204,7 @@ function ensureSettingsPageStructure() {
   if (!settingsPage) return;
   settingsPage.querySelector("[data-settings-intro]")?.remove();
   settingsPage.querySelector("[data-settings-global-actions]")?.remove();
+  window.__mflPrimeSettingsActions?.();
 
   if (settingsEmailDiscardButton) {
     settingsEmailDiscardButton.hidden = false;
@@ -185,6 +215,24 @@ function ensureSettingsPageStructure() {
     settingsEmailSaveButton.hidden = false;
     settingsEmailSaveButton.textContent = "Save";
     settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");
+  }
+}
+
+function primeSettingsFreshFirstPaint() {
+  window.__mflPrimeRouteSkeleton?.(settingsPage);
+  if (settingsEmailAddressInput) {
+    settingsEmailAddressInput.value = "";
+    settingsEmailAddressInput.classList.remove("invalid");
+  }
+  settingsEmailOptions?.replaceChildren();
+}
+
+function renderSettingsIdentity() {
+  const walletAddress = normalizeWalletAddress(state.linkedWalletAddress || "");
+  if (settingsAgentName) settingsAgentName.textContent = accountName();
+  if (settingsWalletAddress) {
+    settingsWalletAddress.textContent = walletAddress || "-";
+    settingsWalletAddress.title = walletAddress || "";
   }
 }
 
@@ -279,11 +327,13 @@ function normalizeSettingsRouteRuntime(source) {
     settingsEmailDiscardButton.hidden = false;
     settingsEmailDiscardButton.disabled = !dirty || saving;
     settingsEmailDiscardButton.textContent = "Discard";
+    settingsEmailDiscardButton.onclick = discardSettingsEmailAddressDraft;
   }
   if (settingsEmailSaveButton) {
     settingsEmailSaveButton.hidden = false;
     settingsEmailSaveButton.disabled = !dirty || !draftIsValid || saving;
     settingsEmailSaveButton.textContent = saving ? "Saving..." : "Save";
+    settingsEmailSaveButton.onclick = saveSettingsEmailAddressDraft;
   }
 }`,
     "Settings global draft actions",
@@ -315,13 +365,7 @@ function normalizeSettingsRouteRuntime(source) {
   if (!settingsPage) return;
   ensureSettingsDraftBaseline();
   ensureSettingsPageStructure();
-
-  const walletAddress = normalizeWalletAddress(state.linkedWalletAddress || "");
-  if (settingsAgentName) settingsAgentName.textContent = accountName();
-  if (settingsWalletAddress) {
-    settingsWalletAddress.textContent = walletAddress || "-";
-    settingsWalletAddress.title = walletAddress || "";
-  }
+  renderSettingsIdentity();
 
   if (settingsDateFormatOptions) {
     settingsDateFormatOptions.replaceChildren();
@@ -351,7 +395,7 @@ function normalizeSettingsRouteRuntime(source) {
         syncSettingsDraftDirty();
         renderSettingsPage({ preserveEmailDraft: true });
       });
-      settingsTimeFormatOptions.appendChild(button);
+    settingsTimeFormatOptions.appendChild(button);
     });
   }
 
@@ -386,9 +430,17 @@ export function splitSettingsApplicationCoreRuntime(artifacts) {
 
   sharedCore = replaceRequiredFunction(
     sharedCore,
+    "settingsDataCacheReady",
+    `function settingsDataCacheReady() {
+  return false;
+}`,
+    "Settings never-cache route data contract",
+  );
+  sharedCore = replaceRequiredFunction(
+    sharedCore,
     "settingsEmailDraftIsActive",
     `function settingsEmailDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  return settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }`,
     "Settings email draft hydration guard",
   );
@@ -396,47 +448,70 @@ export function splitSettingsApplicationCoreRuntime(artifacts) {
     sharedCore,
     "settingsEmailOptionsDraftIsActive",
     `function settingsEmailOptionsDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  return settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }`,
     "Settings notification draft hydration guard",
   );
   sharedCore = replaceRequiredFunction(
     sharedCore,
     "applySettingsPayload",
-    `function applySettingsPayload(settings = {}) {
+    `function applySettingsPayload(settings = {}, options = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  const renderSettings = options.render !== false;
+  const suppressStartupRender = Reflect.get(window, "__mflSettingsStartupWalletPreferencesPending") === true;
   state.walletSettingsLoaded = true;
-  const preserveDraft = state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  const preserveDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
   if (!preserveDraft) {
     state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
     state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
     state.settingsEmailAddressDraft = state.settingsEmailAddress;
     state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
     state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
-    if (state.currentPage === "settings") {
+    if (settingsRouteActive()) {
       state.settingsDraftBaseline = currentSettingsPayload();
       state.settingsDraftDirty = false;
     }
   }
-  if (state.currentPage === "settings") renderSettingsPage({ preserveEmailDraft: preserveDraft });
+  if (renderSettings && settingsRouteActive() && !suppressStartupRender) renderSettingsPage({ preserveEmailDraft: preserveDraft });
 }`,
     "Settings draft-safe wallet hydration",
   );
 
   sharedCore = insertBeforeRequiredMarker(
     sharedCore,
-    "function applySettingsPayload(settings = {}) {",
+    "function applySettingsPayload(settings = {}, options = {}) {",
     SETTINGS_SHARED_NAVIGATION_RUNTIME,
     "Settings unsaved navigation guard",
   );
   sharedCore = replaceRequired(
     sharedCore,
-    `async function setPage(pageName, updateHash = true, options = {}) {
-  if (!pageNavigationIsCurrent(options)) return null;`,
-    `async function setPage(pageName, updateHash = true, options = {}) {
-  if (!pageNavigationIsCurrent(options)) return null;
-  if (!await settingsConfirmNavigation(pageName, updateHash)) return null;`,
-    "Settings leave confirmation gate",
+    `async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
+  const navigation = Reflect.get(window, "__mflNavigation");`,
+    `async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
+  if (!settingsConfirmNavigation(pageName, updateHash)) return null;
+  const navigation = Reflect.get(window, "__mflNavigation");`,
+    "Settings immediate transition confirmation gate",
+  );
+  sharedCore = replaceRequired(
+    sharedCore,
+    `  const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);`,
+    `  const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
+  Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", initialTarget.pageName === "settings");`,
+    "Settings direct-refresh startup hydration ownership",
+  );
+  sharedCore = replaceRequired(
+    sharedCore,
+    `  if (settingsPageActive) {
+    renderSettingsPage();`,
+    `  if (settingsPageActive) {
+    primeSettingsFreshFirstPaint();
+    await waitForViewTransitionPaint();
+    renderSettingsIdentity();
+    await settingsPrepareCommittedForEntry();
+    renderSettingsPage();`,
+    "Settings refresh-equivalent first paint and fresh-load route entry",
   );
 
   const routeOnly = extractRequiredFunctions(sharedCore, SETTINGS_ROUTE_ONLY_FUNCTIONS, "Settings route-only helper");
