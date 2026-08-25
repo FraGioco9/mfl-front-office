@@ -2,13 +2,13 @@ name: Full database refresh
 
 on:
   schedule:
-    # GitHub cron is UTC. Separate CET/CEST candidates are gated against the intended Rome clock time.
-    - cron: "20 8 * * *"
-    - cron: "20 9 * * *"
-    - cron: "15 17 * * *"
-    - cron: "15 18 * * *"
-    - cron: "15 21 * * *"
-    - cron: "15 22 * * *"
+    # Europe/Rome local time. GitHub Actions applies CET/CEST automatically.
+    - cron: "20 10 * * *"
+      timezone: "Europe/Rome"
+    - cron: "15 19 * * *"
+      timezone: "Europe/Rome"
+    - cron: "15 23 * * *"
+      timezone: "Europe/Rome"
   workflow_dispatch:
 
 permissions:
@@ -16,6 +16,8 @@ permissions:
   actions: read
 
 concurrency:
+  # Database and site deployments must never overlap. Scheduled-run telemetry below
+  # separates GitHub scheduler delay from time spent waiting for this shared lock/runner.
   group: database-and-vercel-site
   cancel-in-progress: false
 
@@ -25,56 +27,158 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      - name: Record scheduled-run timing
+        if: github.event_name == 'schedule'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+
+          case "$SCHEDULE_CRON" in
+            "20 10 * * *") INTENDED_HM="10:20" ;;
+            "15 19 * * *") INTENDED_HM="19:15" ;;
+            "15 23 * * *") INTENDED_HM="23:15" ;;
+            *)
+              echo "Unknown Full database refresh schedule: $SCHEDULE_CRON" >&2
+              exit 1
+              ;;
+          esac
+
+          MEASURED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          MEASURED_EPOCH="$(date -d "$MEASURED_AT" +%s)"
+          ROME_DATE="$(TZ=Europe/Rome date +'%Y-%m-%d')"
+          INTENDED_EPOCH="$(TZ=Europe/Rome date -d "$ROME_DATE $INTENDED_HM:00" +%s)"
+
+          # A delayed 23:15 run can begin after local midnight. In that case the
+          # intended occurrence belongs to the previous Rome calendar day.
+          if [ "$INTENDED_EPOCH" -gt "$MEASURED_EPOCH" ]; then
+            ROME_DATE="$(TZ=Europe/Rome date -d 'yesterday' +'%Y-%m-%d')"
+            INTENDED_EPOCH="$(TZ=Europe/Rome date -d "$ROME_DATE $INTENDED_HM:00" +%s)"
+          fi
+
+          INTENDED_AT="$(TZ=Europe/Rome date -d "@$INTENDED_EPOCH" +'%Y-%m-%dT%H:%M:%S%:z')"
+
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
+          CREATED_AT="$(jq -r '.created_at // empty' <<< "$RUN_JSON")"
+          if [ -z "$CREATED_AT" ]; then
+            CREATED_AT="$MEASURED_AT"
+          fi
+
+          JOBS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100")"
+          JOB_STARTED_AT="$(jq -r '.jobs[0].started_at // empty' <<< "$JOBS_JSON")"
+          if [ -z "$JOB_STARTED_AT" ]; then
+            JOB_STARTED_AT="$MEASURED_AT"
+          fi
+
+          CREATED_EPOCH="$(date -d "$CREATED_AT" +%s)"
+          JOB_STARTED_EPOCH="$(date -d "$JOB_STARTED_AT" +%s)"
+          SCHEDULER_DELAY_SECONDS="$((CREATED_EPOCH - INTENDED_EPOCH))"
+          QUEUE_DELAY_SECONDS="$((JOB_STARTED_EPOCH - CREATED_EPOCH))"
+          TOTAL_DELAY_SECONDS="$((JOB_STARTED_EPOCH - INTENDED_EPOCH))"
+
+          SITE_RUNS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/vercel-site-update.yml/runs?per_page=30")"
+          DATABASE_RUNS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full-database-refresh.yml/runs?per_page=30")"
+
+          OVERLAPPING_SITE_RUNS="$(
+            jq --arg start "$CREATED_AT" --arg end "$JOB_STARTED_AT" \
+              '[.workflow_runs[] | select(.created_at <= $end and .updated_at >= $start)] | length' \
+              <<< "$SITE_RUNS_JSON"
+          )"
+          OVERLAPPING_DATABASE_RUNS="$(
+            jq --arg start "$CREATED_AT" --arg end "$JOB_STARTED_AT" --arg run_id "$GITHUB_RUN_ID" \
+              '[.workflow_runs[] | select((.id | tostring) != $run_id and .created_at <= $end and .updated_at >= $start)] | length' \
+              <<< "$DATABASE_RUNS_JSON"
+          )"
+          OVERLAPPING_SHARED_RUNS="$((OVERLAPPING_SITE_RUNS + OVERLAPPING_DATABASE_RUNS))"
+
+          if [ "$SCHEDULER_DELAY_SECONDS" -gt 60 ] && [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
+            if [ "$OVERLAPPING_SHARED_RUNS" -gt 0 ]; then
+              DELAY_SOURCE_HINT="GitHub scheduler delay + shared concurrency wait"
+            else
+              DELAY_SOURCE_HINT="GitHub scheduler delay + runner queue wait"
+            fi
+          elif [ "$SCHEDULER_DELAY_SECONDS" -gt 60 ]; then
+            DELAY_SOURCE_HINT="GitHub scheduler delay"
+          elif [ "$SCHEDULER_DELAY_SECONDS" -lt -60 ]; then
+            DELAY_SOURCE_HINT="GitHub scheduled the run early"
+          elif [ "$QUEUE_DELAY_SECONDS" -gt 60 ] && [ "$OVERLAPPING_SHARED_RUNS" -gt 0 ]; then
+            DELAY_SOURCE_HINT="Shared database/site concurrency wait"
+          elif [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
+            DELAY_SOURCE_HINT="Runner queue wait"
+          else
+            DELAY_SOURCE_HINT="Within 60 seconds of intended start"
+          fi
+
+          TELEMETRY_FILE="$RUNNER_TEMP/full-database-refresh-schedule-telemetry.json"
+          jq -n \
+            --arg timezone "Europe/Rome" \
+            --arg cron "$SCHEDULE_CRON" \
+            --arg intendedAt "$INTENDED_AT" \
+            --arg workflowCreatedAt "$CREATED_AT" \
+            --arg jobStartedAt "$JOB_STARTED_AT" \
+            --arg measuredAt "$MEASURED_AT" \
+            --arg delaySourceHint "$DELAY_SOURCE_HINT" \
+            --argjson schedulerDelaySeconds "$SCHEDULER_DELAY_SECONDS" \
+            --argjson queueOrConcurrencyDelaySeconds "$QUEUE_DELAY_SECONDS" \
+            --argjson totalStartDelaySeconds "$TOTAL_DELAY_SECONDS" \
+            --argjson overlappingSiteUpdateRuns "$OVERLAPPING_SITE_RUNS" \
+            --argjson overlappingDatabaseRefreshRuns "$OVERLAPPING_DATABASE_RUNS" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{
+              timezone: $timezone,
+              cron: $cron,
+              intendedAt: $intendedAt,
+              workflowCreatedAt: $workflowCreatedAt,
+              jobStartedAt: $jobStartedAt,
+              measuredAt: $measuredAt,
+              schedulerDelaySeconds: $schedulerDelaySeconds,
+              queueOrConcurrencyDelaySeconds: $queueOrConcurrencyDelaySeconds,
+              totalStartDelaySeconds: $totalStartDelaySeconds,
+              overlappingSiteUpdateRuns: $overlappingSiteUpdateRuns,
+              overlappingDatabaseRefreshRuns: $overlappingDatabaseRefreshRuns,
+              delaySourceHint: $delaySourceHint,
+              runId: $runId,
+              runAttempt: $runAttempt
+            }' > "$TELEMETRY_FILE"
+
+          cat "$TELEMETRY_FILE"
+          {
+            echo "### Full database refresh schedule timing"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Intended Rome time | \`$INTENDED_AT\` |"
+            echo "| Workflow created | \`$CREATED_AT\` |"
+            echo "| Job started | \`$JOB_STARTED_AT\` |"
+            echo "| Scheduler delay | ${SCHEDULER_DELAY_SECONDS}s |"
+            echo "| Queue/concurrency delay | ${QUEUE_DELAY_SECONDS}s |"
+            echo "| Total start delay | ${TOTAL_DELAY_SECONDS}s |"
+            echo "| Overlapping site-update runs | $OVERLAPPING_SITE_RUNS |"
+            echo "| Overlapping database-refresh runs | $OVERLAPPING_DATABASE_RUNS |"
+            echo "| Delay source hint | $DELAY_SOURCE_HINT |"
+            echo
+            echo "Queue/concurrency delay is measured from workflow creation to job start. An overlapping run in the shared \`database-and-vercel-site\` group makes concurrency the likely cause; otherwise runner availability is the likely cause."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Download current database builder
         uses: actions/checkout@v4
         with:
           path: builder
 
-      - name: Check Rome schedule time
-        id: schedule_gate
-        if: github.event_name == 'schedule'
-        shell: bash
-        env:
-          SCHEDULE_CRON: ${{ github.event.schedule }}
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import os
-          from datetime import datetime, timezone
-          from zoneinfo import ZoneInfo
-
-          parts = os.environ.get("SCHEDULE_CRON", "").split()
-          should_run = False
-          if len(parts) >= 2:
-              minute, hour = int(parts[0]), int(parts[1])
-              now = datetime.now(timezone.utc).replace(
-                  hour=hour,
-                  minute=minute,
-                  second=0,
-                  microsecond=0,
-              )
-              rome = now.astimezone(ZoneInfo("Europe/Rome"))
-              should_run = (rome.hour, rome.minute) in {
-                  (10, 20),
-                  (19, 15),
-                  (23, 15),
-              }
-          print(f"should_run={'true' if should_run else 'false'}")
-          PY
-
       - name: Set up Python
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Restore previous database for email comparison
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: builder
         shell: bash
         env:
@@ -122,14 +226,13 @@ jobs:
           fi
 
       - name: Rebuild database
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: builder
         env:
           MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
         run: python rebuild_database_runner.py
 
       - name: Send progression emails
-        if: (github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true') && hashFiles('builder/previous-database/mfl_database.db') != ''
+        if: hashFiles('builder/previous-database/mfl_database.db') != ''
         working-directory: builder
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -144,12 +247,10 @@ jobs:
         run: python send_progression_emails.py --previous-db previous-database/mfl_database.db --current-db mfl_database.db
 
       - name: Prepare runtime SQLite database
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: builder
         run: python prepare_runtime_database.py mfl_database.db
 
       - name: Upload database
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: mfl_database
@@ -158,7 +259,6 @@ jobs:
 
       - name: Resolve last published site source
         id: production_site
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: builder
         shell: bash
         env:
@@ -184,14 +284,12 @@ jobs:
           echo "sha=$SITE_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Download last published site source
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.production_site.outputs.sha }}
           path: production-site
 
       - name: Install fresh database in published site source
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -221,7 +319,6 @@ jobs:
           fi
 
       - name: Build published application core
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -229,7 +326,6 @@ jobs:
           test -s production-site/site/modules/app-core-runtime.js
 
       - name: Validate database with published site adapter
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -260,7 +356,6 @@ jobs:
           NODE
 
       - name: Record expected database summary
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -297,7 +392,6 @@ jobs:
           PY
 
       - name: Verify published site version is unchanged
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -357,11 +451,9 @@ jobs:
           PY
 
       - name: Install Vercel CLI
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         run: npm install --global vercel@latest
 
       - name: Connect Vercel project
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: production-site
         shell: bash
         env:
@@ -373,14 +465,12 @@ jobs:
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
       - name: Deploy database with unchanged published site
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: production-site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel deploy --prod --yes --force --local-config site/vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
 
       - name: Verify live production database
-        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         env:
           PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
@@ -444,3 +534,12 @@ jobs:
               + last_error
           )
           PY
+
+      - name: Upload scheduled-run timing telemetry
+        if: always() && github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-database-refresh-schedule-${{ github.run_id }}
+          path: ${{ runner.temp }}/full-database-refresh-schedule-telemetry.json
+          if-no-files-found: warn
+          retention-days: 90
