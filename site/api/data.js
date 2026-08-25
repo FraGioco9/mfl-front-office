@@ -29,8 +29,9 @@ module.exports = async function handler(request, response) {
     const accessMode = String(query.access || "");
     const scope = String(query.scope || "").toLowerCase();
     const view = String(query.view || "").toLowerCase();
-    const publicEntityProgression = ["agent", "club"].includes(scope)
-      && ["current", "all"].includes(view);
+    const playerEntityProgression = scope === "player";
+    const publicEntityProgression = playerEntityProgression
+      || (["agent", "club"].includes(scope) && ["current", "all"].includes(view));
     const publicWatchlistProgression = scope === "watchlist"
       && ["current", "all"].includes(view);
     const signedWallet = await signedWalletFromRequest(request);
@@ -40,10 +41,13 @@ module.exports = async function handler(request, response) {
       && await walletAllowed(signedWallet)
     );
     const ownedProgression = accessMode === "owned-progression" && Boolean(signedWallet);
+    const pageRequest = mode === "page" && playerEntityProgression
+      ? { ...request, query: { ...query, includeProgression: "1" } }
+      : request;
 
     let data;
     if (mode === "bootstrap") data = bootstrapData();
-    else if (mode === "page") data = await pagedData(request, signedWallet, fullAccess, ownedProgression);
+    else if (mode === "page") data = await pagedData(pageRequest, signedWallet, fullAccess, ownedProgression);
     else if (mode === "search") data = searchData(request);
     else if (mode === "summary") data = summaryData();
     else if (mode === "filter-options") data = filterOptionsData();
