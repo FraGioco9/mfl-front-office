@@ -35,6 +35,8 @@ const state = {
   settingsEmailAddressDraft: "",
   settingsDateFormat: "DMY",
   settingsTimeFormat: "24h",
+  settingsDraftBaseline: null,
+  settingsDraftDirty: false,
   tablePageStates: {},
   toastTimer: null,
   menuOpen: true,
@@ -1935,6 +1937,7 @@ function setView() {
 
 async function setPage(pageName, updateHash = true, options = {}) {
   if (!pageNavigationIsCurrent(options)) return null;
+  if (!settingsConfirmNavigation(pageName, updateHash)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
@@ -2779,32 +2782,57 @@ function normalizeSettingsEmailAddress(value) {
 
 
 function settingsEmailDraftIsActive() {
-  return state.currentPage === "settings"
-    && settingsEmailAddressInput
-    && (document.activeElement === settingsEmailAddressInput || state.settingsEmailAddressDraft !== state.settingsEmailAddress);
+  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }
 
 function settingsEmailOptionsDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsSaveInFlight;
+  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }
+
+function settingsRestoreDraftBaselineForNavigation() {
+  const baseline = state.settingsDraftBaseline;
+  if (!baseline || typeof baseline !== "object") return;
+  state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(baseline.receiveEmailsFor);
+  state.settingsEmailAddress = normalizeSettingsEmailAddress(baseline.emailAddress);
+  state.settingsEmailAddressDraft = state.settingsEmailAddress;
+  state.settingsDateFormat = normalizeSettingsDateFormat(baseline.dateFormat);
+  state.settingsTimeFormat = normalizeSettingsTimeFormat(baseline.timeFormat);
+  state.settingsDraftDirty = false;
+}
+
+function settingsConfirmNavigation(pageName, updateHash = true) {
+  if (state.currentPage !== "settings" || pageName === "settings" || !state.settingsDraftDirty) return true;
+  const leave = window.confirm("You have unsaved settings changes. Leave without saving?");
+  if (leave) {
+    settingsRestoreDraftBaselineForNavigation();
+    return true;
+  }
+  if (!updateHash) window.history.replaceState({}, "", "/settings");
+  return false;
+}
+
+window.addEventListener("beforeunload", (event) => {
+  if (state.currentPage !== "settings" || !state.settingsDraftDirty) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.walletSettingsLoaded = true;
-  const draftIsActive = settingsEmailDraftIsActive();
-  const emailOptionsDraftIsActive = settingsEmailOptionsDraftIsActive();
-  if (!emailOptionsDraftIsActive) {
+  const preserveDraft = state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  if (!preserveDraft) {
     state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
-  }
-  state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
-  if (!draftIsActive) {
+    state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
     state.settingsEmailAddressDraft = state.settingsEmailAddress;
+    state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
+    state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
+    if (state.currentPage === "settings") {
+      state.settingsDraftBaseline = currentSettingsPayload();
+      state.settingsDraftDirty = false;
+    }
   }
-  state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
-  state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
-  if (state.currentPage === "settings") {
-    renderSettingsPage({ preserveEmailDraft: draftIsActive });
-  }
+  if (state.currentPage === "settings") renderSettingsPage({ preserveEmailDraft: preserveDraft });
 }
 
 function currentSettingsPayload() {
