@@ -29,6 +29,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('site/modules/app-core.js')
           source = path.read_text()
@@ -39,6 +40,12 @@ jobs:
               if count != 1:
                   raise SystemExit(f'{label}: expected 1 match, found {count}')
               source = source.replace(old, new, 1)
+
+          def regex_once(pattern, replacement, label, flags=0):
+              global source
+              source, count = re.subn(pattern, replacement, source, count=1, flags=flags)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
 
           replace_once(
           '''function navigationTransitionIsCurrent(transition) {
@@ -74,49 +81,20 @@ jobs:
           ''',
           'base setPage entry guard')
 
-          replace_once(
-          '''    const loaded = await ensureProgressionData();
+          regex_once(
+              r'(const loaded = await ensureProgressionData\(\);\n)(\s*)(if \(!loaded\) \{)',
+              r'\1\2if (!pageNavigationIsCurrent(options)) return null;\n\n\2\3',
+              'progression data stale guard')
 
-              if (!loaded) {
-          ''',
-          '''    const loaded = await ensureProgressionData();
-              if (!pageNavigationIsCurrent(options)) return null;
+          regex_once(
+              r'(state\.pendingWatchlistRouteId = options\.watchlistId \|\| watchlistIdFromUrl\(\) \|\| "";\n\s*await ensureWatchlistRoute\(options\);)(\n\s*\}\n\n\s*)(state\.currentPage = pageName;)',
+              r'\1\n    if (!pageNavigationIsCurrent(options)) return null;\2if (!pageNavigationIsCurrent(options)) return null;\n  \3',
+              'watchlist/final commit stale guard')
 
-              if (!loaded) {
-          ''',
-          'progression data stale guard')
-
-          replace_once(
-          '''    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-              await ensureWatchlistRoute(options);
-            }
-
-            state.currentPage = pageName;
-          ''',
-          '''    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-              await ensureWatchlistRoute(options);
-              if (!pageNavigationIsCurrent(options)) return null;
-            }
-
-            if (!pageNavigationIsCurrent(options)) return null;
-            state.currentPage = pageName;
-          ''',
-          'watchlist/final commit stale guard')
-
-          replace_once(
-          '''      await renderEvaluationPage();
-              if (!cachedEvaluationReentry) {
-                await finishEvaluationReadiness();
-              }
-          ''',
-          '''      await renderEvaluationPage();
-              if (!pageNavigationIsCurrent(options)) return null;
-              if (!cachedEvaluationReentry) {
-                await finishEvaluationReadiness();
-                if (!pageNavigationIsCurrent(options)) return null;
-              }
-          ''',
-          'evaluation stale guard')
+          regex_once(
+              r'(await renderEvaluationPage\(\);\n)(\s*)(if \(!cachedEvaluationReentry\) \{\n\s*await finishEvaluationReadiness\(\);)(\n\s*\})',
+              r'\1\2if (!pageNavigationIsCurrent(options)) return null;\n\2\3\n      if (!pageNavigationIsCurrent(options)) return null;\4',
+              'evaluation stale guard')
 
           replace_once(
           '''      const stagedTransition = incomingOptions.skipNavigationTransition === true
@@ -144,67 +122,39 @@ jobs:
           ''',
           'route gate transition forwarding')
 
-          stable_home = '''  function enforceHomePage() {
-              if (window.location.pathname !== "/") return;
-              homePage.hidden = false;
-              progressionPage.hidden = true;
-              mflStatsPage.hidden = true;
-              myPlayersLockedPage.hidden = true;
-              evaluationPage.hidden = true;
-              playerPage.hidden = true;
-              settingsPage.hidden = true;
-              changelogPage.hidden = true;
-              document.body.dataset.page = "home";
-              navButtons.forEach((button) => button.classList.remove("active"));
-            }
+          regex_once(
+              r'\n  function enforceHomePage\(\) \{.*?\n  \}\n\n  if \(typeof setPage === "function"\) \{\n    const originalSetPage = setPage;\n    setPage = async function setPageWithStableHome\(pageName\) \{.*?\n    \};\n  \}\n',
+              '\n',
+              'legacy stable Home owner removal',
+              re.S)
 
-            if (typeof setPage === "function") {
-              const originalSetPage = setPage;
-              setPage = async function setPageWithStableHome(pageName) {
-                const result = await originalSetPage.apply(this, arguments);
-                if (pageName === "home") {
-                  enforceHomePage();
-                  window.requestAnimationFrame(enforceHomePage);
-                }
-                return result;
-              };
-            }
-
-          '''
-          if source.count(stable_home) != 1:
-              raise SystemExit(f'stable home wrapper: expected 1 match, found {source.count(stable_home)}')
-          source = source.replace(stable_home, '', 1)
-
-          watchlist_old = '''      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
-              keepSidebarExpanded();
-              if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-              return result;
-          '''
-          watchlist_new = '''      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
-              if (result === null || !pageNavigationIsCurrent(nextOptions)) return result;
-              keepSidebarExpanded();
-              if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-              return result;
-          '''
-          if source.count(watchlist_old) == 1:
-              source = source.replace(watchlist_old, watchlist_new, 1)
+          watchlist_pattern = re.compile(
+              r'(const result = await originalSetPage\.call\(this, pageName, updateHash, nextOptions\);\n)(\s*)(keepSidebarExpanded\(\);\n\s*if \(pageName === "watchlist" && routeView\) enforceWatchlistRouteView\(true\);)'
+          )
+          source, count = watchlist_pattern.subn(
+              r'\1\2if (result === null || !pageNavigationIsCurrent(nextOptions)) return result;\n\2\3',
+              source,
+              count=1,
+          )
+          if count > 1:
+              raise SystemExit('watchlist wrapper guard matched more than once')
 
           path.write_text(source)
 
           validator = Path('site/validate-page-route-gate-transition.mjs')
           check = validator.read_text()
-          check = check.replace(
-          '''assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.skipNavigationTransition === true[\\s\\S]*?pendingViewTransition/, "Skip-transition view loads must retain their staged transition identity through lazy runtime loading.");
-          ''',
-          '''assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.__mflNavigationTransition[\\s\\S]*?pendingViewTransition/, "Lazy route loads must retain an inherited page/view transition identity through runtime loading.");
-          ''')
-          marker = '''assert.match(routeSetPageSection, /const loadCommittedRoute = async \\(transition = stagedTransition\\) => \\{/, "The lazy route gate must receive the owning page/view transition.");
-          '''
-          addition = marker + '''assert.match(routeSetPageSection, /__mflNavigationTransition: transition/, "The lazy route gate must forward the owning transition into downstream page renderers.");
-          '''
-          if marker not in check:
+          old_assert = 'assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.skipNavigationTransition === true[\\s\\S]*?pendingViewTransition/, "Skip-transition view loads must retain their staged transition identity through lazy runtime loading.");\n'
+          new_assert = 'assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\\.__mflNavigationTransition[\\s\\S]*?pendingViewTransition/, "Lazy route loads must retain an inherited page/view transition identity through runtime loading.");\n'
+          if check.count(old_assert) != 1:
+              raise SystemExit('validator staged-transition assertion missing')
+          check = check.replace(old_assert, new_assert, 1)
+
+          marker = 'assert.match(routeSetPageSection, /const loadCommittedRoute = async \\(transition = stagedTransition\\) => \\{/, "The lazy route gate must receive the owning page/view transition.");\n'
+          addition = marker + 'assert.match(routeSetPageSection, /__mflNavigationTransition: transition/, "The lazy route gate must forward the owning transition into downstream page renderers.");\n'
+          if check.count(marker) != 1:
               raise SystemExit('validator route gate marker missing')
           check = check.replace(marker, addition, 1)
+
           console_marker = 'console.log("Lazy route gate stale-completion guard and latest-navigation loading supersession validation passed.");\n'
           extra = '''
           const baseSetPageStart = appCoreSource.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
@@ -225,7 +175,7 @@ jobs:
           assert.doesNotMatch(appCoreSource, /requestAnimationFrame\\(enforceHomePage\\)/, "A completed stale Home load must never schedule a later page-shell reclaim.");
 
           ''' + console_marker
-          if console_marker not in check:
+          if check.count(console_marker) != 1:
               raise SystemExit('validator console marker missing')
           check = check.replace(console_marker, extra, 1)
           validator.write_text(check)
