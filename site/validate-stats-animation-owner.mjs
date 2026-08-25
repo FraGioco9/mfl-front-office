@@ -150,6 +150,7 @@ includes(
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
+// Route loading may change data ownership, but it must not take ownership of hover or component animation behavior.
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");
 excludes(loadingStyles, "html.mflInitialChromePreparing", "Refresh/loading state must not blanket-disable transitions or pause animations; normal hover and component animation ownership must remain active.");
 excludes(loadingStyles, "animation-play-state: paused;", "Refresh/loading must not globally pause animations.");
