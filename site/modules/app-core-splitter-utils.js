@@ -49,7 +49,20 @@ function requiredFunctionRange(source, functionName, label) {
   const syncStart = source.indexOf(syncMarker);
   const start = asyncStart >= 0 ? asyncStart : syncStart;
   const marker = asyncStart >= 0 ? asyncMarker : syncMarker;
-  const openBrace = start >= 0 ? source.indexOf("{", start + marker.length) : -1;
+  const parameterStart = start >= 0 ? start + marker.length - 1 : -1;
+  let parameterDepth = 0;
+  let parameterEnd = -1;
+  for (let index = parameterStart; index >= 0 && index < source.length; index += 1) {
+    if (source[index] === "(") parameterDepth += 1;
+    if (source[index] === ")") {
+      parameterDepth -= 1;
+      if (parameterDepth === 0) {
+        parameterEnd = index;
+        break;
+      }
+    }
+  }
+  const openBrace = parameterEnd >= 0 ? source.indexOf("{", parameterEnd + 1) : -1;
   if (start < 0 || openBrace < 0) {
     throw new Error(`Could not split application core function: ${label}.`);
   }
@@ -107,29 +120,13 @@ export function replaceRequired(source, before, after, label) {
 }
 
 export function replaceRequiredFunction(source, functionName, replacement, label) {
-  const marker = `function ${functionName}(`;
-  const start = source.indexOf(marker);
-  const openBrace = start >= 0 ? source.indexOf("{", start + marker.length) : -1;
-  if (start < 0 || openBrace < 0) {
+  let range;
+  try {
+    range = requiredFunctionRange(source, functionName, label);
+  } catch {
     throw new Error(`Could not normalize application core function: ${label}.`);
   }
-
-  let depth = 0;
-  let end = -1;
-  for (let index = openBrace; index < source.length; index += 1) {
-    if (source[index] === "{") depth += 1;
-    if (source[index] === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        end = index + 1;
-        break;
-      }
-    }
-  }
-  if (end < 0) {
-    throw new Error(`Could not find the end of application core function: ${label}.`);
-  }
-  return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
+  return `${source.slice(0, range.start)}${replacement}${source.slice(range.end)}`;
 }
 
 export function renameRequiredFunctionOwner(source, functionName, ownerName, label = functionName) {
