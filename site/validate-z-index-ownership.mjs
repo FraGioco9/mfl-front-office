@@ -44,10 +44,10 @@ const tokenOrder = [
   "selection",
   "wallet-guard",
   "busy-shield",
-  "toast",
   "topmost",
   "modal",
   "critical-modal",
+  "toast",
 ];
 
 const expectedValues = new Map([
@@ -60,10 +60,10 @@ const expectedValues = new Map([
   ["selection", 700],
   ["wallet-guard", 720],
   ["busy-shield", 740],
-  ["toast", 760],
   ["topmost", 780],
   ["modal", 900],
   ["critical-modal", 1000],
+  ["toast", 1100],
 ]);
 
 const tokenValue = (name) => {
@@ -100,8 +100,10 @@ invariant(
   "Canonical stacking owner must document the local/global stacking boundary.",
 );
 invariant(
-  stacking.includes("every popup/modal layer is above every non-popup application layer"),
-  "Canonical stacking owner must document popup precedence.",
+  stacking.includes("toasts are the")
+    && stacking.includes("final site-owned layer")
+    && stacking.includes("above every popup/modal layer"),
+  "Canonical stacking owner must document toast precedence over popup layers.",
 );
 
 const appShellStart = stacking.indexOf(".appShell {");
@@ -190,7 +192,6 @@ invariant(
 invariant(
   tokenValue("modal") > Math.max(
     tokenValue("topmost"),
-    tokenValue("toast"),
     tokenValue("busy-shield"),
     tokenValue("wallet-guard"),
     tokenValue("selection"),
@@ -202,11 +203,29 @@ invariant(
     tokenValue("content"),
     highestLocalLayer,
   ),
-  "Standard popup layers must render above every non-popup global and component-local z-index layer.",
+  "Standard popup layers must render above every ordinary global and component-local z-index layer.",
 );
 invariant(
   tokenValue("critical-modal") > tokenValue("modal"),
   "Critical popup layers must render above standard popup layers.",
+);
+invariant(
+  tokenValue("toast") > Math.max(
+    tokenValue("critical-modal"),
+    tokenValue("modal"),
+    tokenValue("topmost"),
+    tokenValue("busy-shield"),
+    tokenValue("wallet-guard"),
+    tokenValue("selection"),
+    tokenValue("floating-tooltip"),
+    tokenValue("chrome"),
+    tokenValue("dropdown"),
+    tokenValue("navigation-mobile"),
+    tokenValue("navigation"),
+    tokenValue("content"),
+    highestLocalLayer,
+  ),
+  "Toasts must render above every popup, overlay, and application layer.",
 );
 
 invariant(base.startsWith('@import url("/stacking.css");'), "Base styles must load the canonical stacking contract before site layers consume it.");
@@ -221,12 +240,16 @@ for (const required of [
   "z-index: var(--mfl-z-topmost);",
 ]) invariant(base.includes(required), `Base stacking consumer is missing ${required}`);
 
-invariant(styles.includes("z-index: var(--mfl-z-topmost);"), "Global tooltip must consume the highest non-popup stacking level.");
+invariant(styles.includes("z-index: var(--mfl-z-topmost);"), "Global tooltip must consume the highest ordinary non-popup stacking level.");
 invariant(styles.includes("z-index: var(--mfl-z-chrome);"), "Database Stats popover must consume the shared chrome stacking level.");
 invariant(dropdowns.match(/z-index: var\(--mfl-z-dropdown\);/g)?.length === 2, "Account and Watchlist dropdowns must share one global dropdown level.");
 invariant(responsive.includes("z-index: var(--mfl-z-navigation-mobile);"), "Mobile navigation must consume the mobile navigation level.");
 invariant(!loading.includes("z-index: var(--mfl-z-busy-shield);"), "The retired interaction shield must not consume a global stacking level.");
 invariant(loading.includes("z-index: var(--mfl-z-toast);"), "Normal toasts must consume the global toast level.");
+invariant(
+  generatedCore.includes("document.body.appendChild(toast)"),
+  "Toasts must be attached to body so their global layer can outrank isolated page and popup layers.",
+);
 
 const modalStart = base.indexOf(".modalBackdrop {");
 const modalEnd = base.indexOf("}", modalStart);
@@ -253,4 +276,4 @@ const toastEnd = base.indexOf("}", toastStart);
 const baseToast = base.slice(toastStart, toastEnd);
 invariant(toastStart >= 0 && !baseToast.includes("z-index:"), "Base toast styling must not duplicate the effective toast stacking owner in loading.css.");
 
-console.log(`Global stacking validation passed: page content is isolated at ${tokenValue("content")}, ordinary table headers/rows/cells stay in normal page paint order, Advanced Settings retains scoped sticky table layers, ${localNumericLayers.length} component-local z-index declarations stay below ${tokenValue("navigation")}, and modal ${tokenValue("modal")} / critical modal ${tokenValue("critical-modal")} stay above every non-popup layer without compositor-promotion hacks.`);
+console.log(`Global stacking validation passed: page content is isolated at ${tokenValue("content")}, ordinary table headers/rows/cells stay in normal page paint order, Advanced Settings retains scoped sticky table layers, ${localNumericLayers.length} component-local z-index declarations stay below ${tokenValue("navigation")}, modal ${tokenValue("modal")} / critical modal ${tokenValue("critical-modal")} stay above ordinary layers, and toast ${tokenValue("toast")} stays above every popup and overlay without compositor-promotion hacks.`);
