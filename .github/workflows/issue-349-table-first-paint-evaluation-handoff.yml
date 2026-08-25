@@ -90,7 +90,26 @@ jobs:
           )
           if anchor not in text:
               raise SystemExit("Static route validator insertion anchor missing")
-          validator.write_text(text.replace(anchor, anchor + addition, 1))
+          text = text.replace(anchor, anchor + addition, 1)
+
+          old_contract = (
+              'invariant(\n'
+              '  indexHtml.includes(\'html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=\')\n'
+              '    && indexHtml.includes(\'html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(\')\n'
+              '    && indexHtml.includes(\') #sidebar .navButton[data-page]:not(:hover) {\'),\n'
+              '  "Refresh-only first-paint route chrome must permanently relinquish page/view button ownership when a live navigation supersedes startup, while leaving normal hover styling available.",\n'
+              ');'
+          )
+          new_contract = (
+              'invariant(\n'
+              '  indexHtml.includes(\'html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=\')\n'
+              '    && !indexHtml.includes(\') #sidebar .navButton[data-page]:not(:hover) {\'),\n'
+              '  "Refresh-only table-page chrome must expose the active route directly and relinquish ownership on supersession without a higher-specificity neutral sidebar rule.",\n'
+              ');'
+          )
+          if text.count(old_contract) != 1:
+              raise SystemExit(f"Expected one old first-paint contract, found {text.count(old_contract)}")
+          validator.write_text(text.replace(old_contract, new_contract, 1))
           PY
 
       - name: Run focused route UI validation
