@@ -9,12 +9,14 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, settingsSplitter, appConfig, routeLoader, buildCore] = await Promise.all([
+const [coreSource, settingsSplitter, appConfig, routeLoader, buildCore, indexHtml, bootstrap] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-settings-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
+  read("./index.html"),
+  read("./bootstrap.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
@@ -38,10 +40,16 @@ includes(sharedCore, "function updateSettingsDateFormat(format)", "Shared date-f
 includes(sharedCore, "function updateSettingsTimeFormat(format)", "Shared time-format state must remain available to tables and Player pages.");
 includes(sharedCore, "settingsDraftBaseline: null", "Shared Settings state must retain the last committed Settings snapshot.");
 includes(sharedCore, "settingsDraftDirty: false", "Shared Settings state must track one page-wide dirty flag.");
-includes(sharedCore, "function settingsConfirmNavigation(pageName, updateHash = true)", "Settings must own one canonical SPA leave-confirmation gate.");
+includes(sharedCore, "async function settingsResetFromSupabaseForNavigation()", "Settings must own one read-only committed-state reset before leaving the route.");
+includes(sharedCore, 'const response = await fetch("/api/wallet-preferences", {', "Leaving Settings must reload the committed wallet Settings payload from Supabase.");
+includes(sharedCore, 'cache: "no-store"', "The Settings exit reset must bypass stale browser response caching.");
+includes(sharedCore, "clearPendingSettingsLocally();", "Leaving Settings must clear any unsaved local Settings payload before reading Supabase.");
+includes(sharedCore, "async function settingsConfirmNavigation(pageName, updateHash = true)", "Settings must own one canonical asynchronous SPA leave-confirmation gate.");
+includes(sharedCore, 'const leavingSettings = state.currentPage === "settings" && pageName !== "settings";', "The leave gate must run every time navigation exits Settings.");
 includes(sharedCore, 'window.confirm("You have unsaved settings changes. Leave without saving?")', "Leaving Settings with unsaved changes must require explicit confirmation.");
+includes(sharedCore, "await settingsResetFromSupabaseForNavigation();", "Confirmed Settings exits must restore the committed Supabase state before navigation continues.");
 includes(sharedCore, 'window.addEventListener("beforeunload", (event) => {', "Refresh/tab-close must use the browser unsaved-changes warning contract.");
-includes(sharedCore, "if (!settingsConfirmNavigation(pageName, updateHash)) return null;", "Every setPage navigation away from Settings must pass through the unsaved-changes guard.");
+includes(sharedCore, "if (!await settingsConfirmNavigation(pageName, updateHash)) return null;", "Every setPage navigation away from Settings must pass through the asynchronous unsaved-changes guard.");
 includes(sharedCore, 'const preserveDraft = state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;', "Wallet hydration must not overwrite an active Settings draft.");
 
 includes(settingsCore, "function updateSettingsEmailDraftActions()", "The Settings chunk must own draft action rendering.");
@@ -49,17 +57,27 @@ includes(settingsCore, "function renderSettingsEmailControls(", "The Settings ch
 includes(settingsCore, "function renderSettingsPage(", "The Settings chunk must own the page renderer.");
 includes(settingsCore, "async function saveSettingsDraft()", "The Settings chunk must own one page-wide explicit Save action.");
 includes(settingsCore, "function discardSettingsDraft(options = {})", "The Settings chunk must own one page-wide Discard action.");
-includes(settingsCore, 'discard.id = "settingsDiscardChangesButton";', "The rebuilt Settings page must expose one global Discard control.");
-includes(settingsCore, 'save.id = "settingsSaveChangesButton";', "The rebuilt Settings page must expose one global Save control.");
-includes(settingsCore, 'save.textContent = "Save settings";', "The global Settings Save action must be clearly labelled.");
+includes(settingsCore, "settingsEmailDiscardButton.hidden = false;", "The existing static Discard control must remain visible as the page-wide action.");
+includes(settingsCore, "settingsEmailSaveButton.hidden = false;", "The existing static Save control must remain visible as the page-wide action.");
+includes(settingsCore, 'settingsEmailDiscardButton.setAttribute("aria-label", "Discard all Settings changes");', "The static Discard control must describe its page-wide scope.");
+includes(settingsCore, 'settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");', "The static Save control must describe its page-wide scope.");
 includes(settingsCore, "savePendingSettingsLocally(payload);", "Explicit Settings Save must stage only the committed draft through the existing persistence payload owner.");
 includes(settingsCore, "await saveWalletPreferencesNow();", "Explicit Settings Save must write through the existing wallet-preferences/Supabase owner.");
 includes(settingsCore, 'showToast("Settings saved.");', "Successful explicit Settings persistence must provide completion feedback.");
 includes(settingsCore, 'showToast("Settings changes discarded.");', "Discarding the page-wide draft must provide completion feedback.");
-includes(settingsCore, 'intro.textContent = "Changes stay local to this page until you save them.";', "The rebuilt Settings page must explain its explicit-save contract.");
+excludes(settingsCore, "settingsDiscardChangesButton", "Settings must not create a second late-rendered Discard control.");
+excludes(settingsCore, "settingsSaveChangesButton", "Settings must not create a second late-rendered Save control.");
+excludes(settingsCore, "settingsSaveStatus", "Settings must not add late status text that changes first-paint geometry.");
+excludes(settingsCore, 'intro.textContent = "Changes stay local to this page until you save them.";', "Settings must not add late helper text that shifts the first-paint layout.");
 excludes(settingsCore, "saveSettingsPreferencesAfterChange();", "Settings controls must never persist individually after the page-wide Save/Discard redesign.");
 excludes(settingsCore, "function applySettingsPayload(settings = {})", "Wallet preference state must not become Settings-route-only.");
 excludes(settingsCore, "function updateSettingsDateFormat(format)", "Cross-route date-format state must stay shared.");
+
+includes(indexHtml, 'id="settingsEmailDiscardButton" class="settingsEmailActionButton settingsEmailDiscardButton" type="button">Discard</button>', "Settings Discard must exist in static HTML for correct first-paint geometry.");
+includes(indexHtml, 'id="settingsEmailSaveButton" class="settingsEmailActionButton primary" type="button">Save</button>', "Settings Save must exist in static HTML for correct first-paint geometry.");
+includes(bootstrap, 'primeStaticButtonGroup("settingsDateFormatOptions", SETTINGS_DATE_FORMAT_LABELS, "settingsToggleButton", "DMY");', "Settings date-format buttons must be primed before the lazy Settings runtime loads.");
+includes(bootstrap, 'primeStaticButtonGroup("settingsTimeFormatOptions", SETTINGS_TIME_FORMAT_LABELS, "settingsToggleButton", "24h");', "Settings time-format buttons must be primed before the lazy Settings runtime loads.");
+includes(bootstrap, 'if (target.id === "settingsPage") {\n      primeSettingsControls();', "Direct Settings refresh must prime its static controls before first paint.");
 
 includes(appConfig, 'settings: "/modules/app-core-settings-runtime.js"', "Canonical app config must map Settings to its generated chunk.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
@@ -75,4 +93,4 @@ const settingsBanner = "// Generated Settings core chunk from modules/app-core.j
 invariant(generatedSettings.startsWith(settingsBanner), "Generated Settings runtime must carry the build ownership banner.");
 invariant(generatedSettings.slice(settingsBanner.length).replace(/\s*$/, "") === settingsCore.replace(/\s*$/, ""), "Generated Settings runtime must exactly match the Settings build artifact.");
 
-console.log("Settings route-core splitting, page-wide draft persistence, global Save/Discard, and unsaved-navigation confirmation validation passed.");
+console.log("Settings route-core splitting, explicit Save/Discard, Supabase reset-on-exit, stable first paint, and unsaved-navigation confirmation validation passed.");
