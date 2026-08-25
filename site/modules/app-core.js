@@ -2273,6 +2273,7 @@ function evaluationPresentValueTotalFromPayload(payload) {
   const position = data.summaryPosition || evaluationSummaryPosition(row);
   const discountRate = data.ignoreDiscountRate ? 0 : evaluationDiscountRateValue();
   const mflPerUsd = data.mflPerUsd || state.evaluationMflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD;
+  if (!Number.isFinite(discountRate)) return null;
   let total = 0;
 
   for (let rowIndex = 0; rowIndex < expectedSeasons; rowIndex += 1) {
@@ -7661,6 +7662,7 @@ function renderEvaluationTable(row) {
   const summaryPosition = evaluationSummaryPosition(row);
   const summaryOverall = currentOverall;
   const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();
+  const discountDerivedValuesReady = Number.isFinite(discountRate);
   const fragment = document.createDocumentFragment();
   const mflValues = [];
   const presentValues = [];
@@ -7723,9 +7725,9 @@ function renderEvaluationTable(row) {
   const mflValueTotal = mflValues.length
     ? mflValues.reduce((total, value) => total + value, 0)
     : 0;
-  const presentValueTotal = presentValues.length
-    ? presentValues.reduce((total, value) => total + value, 0)
-    : 0;
+  const presentValueTotal = discountDerivedValuesReady
+    ? (presentValues.length ? presentValues.reduce((total, value) => total + value, 0) : 0)
+    : null;
   const summaryRow = document.createElement("tr");
   [
     playerName,

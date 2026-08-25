@@ -539,6 +539,7 @@ function evaluationPresentValueTotalFromPayload(payload) {
   const position = data.summaryPosition || evaluationSummaryPosition(row);
   const discountRate = data.ignoreDiscountRate ? 0 : evaluationDiscountRateValue();
   const mflPerUsd = data.mflPerUsd || state.evaluationMflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD;
+  if (!Number.isFinite(discountRate)) return null;
   let total = 0;
 
   for (let rowIndex = 0; rowIndex < expectedSeasons; rowIndex += 1) {
