@@ -1,5 +1,9 @@
 [
   [
+    "v1.125.3",
+    "Stabilize Evaluation previews, navigation loading, and marketplace snapshots"
+  ],
+  [
     "v1.125.2",
     "Add rich social previews for shared Evaluation links"
   ],
