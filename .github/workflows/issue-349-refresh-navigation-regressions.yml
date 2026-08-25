@@ -67,7 +67,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/index.html site/loading.css site/modules/app-core.js site/modules/app-core-runtime.js site/validate-loading-ownership.mjs site/validate-static-route-ui.mjs site/validate-stats-animation-owner.mjs
+          git add site/index.html site/loading.css site/bootstrap-core.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-route-chunks.js site/validate-bootstrap-ownership.mjs site/validate-loading-ownership.mjs site/validate-static-route-ui.mjs site/validate-stats-animation-owner.mjs
           git diff --cached --quiet && exit 1
           git commit -m "Fix refresh navigation handoff interactions"
           git push origin HEAD:fix/loading-navigation-supersession
