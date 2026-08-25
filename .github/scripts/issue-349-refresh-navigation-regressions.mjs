@@ -84,7 +84,20 @@ await update("site/validate-stats-animation-owner.mjs", (source) => replaceOnce(
 
 await update("site/validate-static-route-ui.mjs", (source) => {
   const marker = '\nconsole.log("Static route UI validation passed.");';
-  const addition = `\ninvariant(\n  indexHtml.includes('const routeSelector = \\`html:not(.mflInitialRouteResolved):not(.mflNavigationPending)[data-initial-table-page="\\${tablePage}"]\\`;')\n    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflNavigationPending):is(')\n    && indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),\n  "Refresh-only first-paint route chrome must relinquish page/view button ownership as soon as live navigation begins, while leaving normal hover styling available.",\n);\ninvariant(\n  indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),\n  "Initial table-view neutral styling must not override normal hover presentation.",\n);\n`;
+  const addition = [
+    "",
+    "invariant(",
+    "  indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflNavigationPending)[data-initial-table-page=')",
+    "    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflNavigationPending):is(')",
+    "    && indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),",
+    '  "Refresh-only first-paint route chrome must relinquish page/view button ownership as soon as live navigation begins, while leaving normal hover styling available.",',
+    ");",
+    "invariant(",
+    "  indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),",
+    '  "Initial table-view neutral styling must not override normal hover presentation.",',
+    ");",
+    "",
+  ].join("\n");
   if (!source.includes(marker)) throw new Error("Missing static-route validator footer");
   return source.replace(marker, addition + marker);
 });
