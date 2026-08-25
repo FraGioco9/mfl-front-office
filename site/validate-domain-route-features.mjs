@@ -4,6 +4,7 @@ const validators = [
   "validate-document-title-runtime.mjs",
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
+  "validate-player-loading-unknown-position.mjs",
   "validate-render-reuse-contract.mjs",
   "validate-agent-title-loading.mjs",
   "validate-progression-retired-filter.mjs",
