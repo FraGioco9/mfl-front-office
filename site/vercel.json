@@ -12,6 +12,9 @@
     },
     "api/evaluation-preview-image.js": {
       "includeFiles": "{api/data-files/mfl_database.db,node_modules/@expo-google-fonts/titillium-web/**/*.ttf,node_modules/webp-wasm/webp_node_dec.wasm}"
+    },
+    "api/progression-email-portrait.js": {
+      "includeFiles": "node_modules/webp-wasm/webp_node_dec.wasm"
     }
   },
   "headers": [

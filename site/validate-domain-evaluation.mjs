@@ -10,6 +10,7 @@ const validators = [
   "validate-evaluation-discount-derived-loading.mjs",
   "validate-evaluation-snapshot-edit-route.mjs",
   "validate-evaluation-saved-share-icon.mjs",
+  "validate-progression-email-portrait.mjs",
 ];
 
 for (const validator of validators) {
