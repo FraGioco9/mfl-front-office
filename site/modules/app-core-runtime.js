@@ -4829,8 +4829,12 @@ function saveEvaluationMflPerUsd(value) {
 }
 
 function commitEvaluationMflPerUsdValue(value) {
+  const previousMflPerUsd = state.evaluationMflPerUsd;
   saveEvaluationMflPerUsd(value);
   state.evaluationMflPerUsdRevision += 1;
+  if (state.currentPage === "evaluation" && state.evaluationMflPerUsd !== previousMflPerUsd) {
+    void window.__mflEvaluationDiscountRateRuntime?.refresh?.();
+  }
 }
 
 function loadEvaluationMflPerUsd() {
@@ -5312,12 +5316,14 @@ const evaluationTableRenderReuse = createRenderReuseGuard();
 
 function evaluationTableRenderSignature(row) {
   const playerId = String(getValue(row, "player_id") || "");
+  const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();
   return JSON.stringify([
     state.columns,
     row,
     state.evaluationIgnoreDiscountRate,
     state.evaluationIgnoreFirstSeason,
     state.evaluationMflPerUsd,
+    discountRate,
     state.evaluationLateSeasonRewardRates,
     state.evaluationOverallRows[playerId] || null,
     state.evaluationSummaryPositions[playerId] || "",
