@@ -2193,11 +2193,15 @@ td a {
 }
 
 .playerHero {
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 16px;
-  padding: 5px 12px 7px;
+  gap: 12px;
+  height: 125px;
+  min-height: 125px;
+  max-height: 125px;
+  padding: 4px 12px 0;
 }
 
 .playerHero h2,

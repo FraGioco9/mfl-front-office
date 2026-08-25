@@ -5647,7 +5647,19 @@ async function renderEvaluationPage() {
   renderEvaluationTable(row);
 }
 function openPlayerPage(playerId) {
-  setPage("player", true, { playerId: String(playerId) });
+  const key = String(playerId || "").trim();
+  const row = rowByPlayerId(key);
+  const pendingContext = {
+    playerId: key,
+    name: row ? formatCellValue(row, "name") : "",
+    positions: row ? playerPositions(row) : [],
+    overall: row ? statDisplayValue(row, "overall") : "",
+    externalUrl: row ? formatCellValue(row, linkColumn) : "",
+  };
+  window.__mflPlayerFirstPaintPendingContext = pendingContext;
+  window.__mflPlayerFirstPaintRuntime?.beginDetailNavigation?.(pendingContext);
+  window.__mflPlayerFirstPaintRuntime?.renderPending?.(pendingContext);
+  setPage("player", true, { playerId: key });
 }
 
 function removePlayerIdFromAllWatchlists(playerId) {
@@ -6435,6 +6447,7 @@ function applyIncrementalPayload(route, payload) {
   state.tableSourceRowsCount = state.incrementalSourceRows;
   state.dataAccess = route.access;
   state.dataLoaded = true;
+  window.__mflPlayerFirstPaintRuntime?.markDetailPayloadReady?.(route, payload);
   clearRowSortCache();
   if (payload.generatedAt) {
     updateStatusDate(payload.generatedAt);
