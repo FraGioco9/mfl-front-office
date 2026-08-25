@@ -429,16 +429,16 @@
   }
 
   function neutralizeFirstPaintSelectionHeader(head) {
-  const input = head.querySelector("#selectVisiblePlayersInput");
-  if (!(input instanceof HTMLInputElement)) return false;
-  input.checked = false;
-  input.indeterminate = false;
-  input.disabled = false;
-  if (document.activeElement === input) input.blur();
-  return true;
-}
+    const input = head.querySelector("#selectVisiblePlayersInput");
+    if (!(input instanceof HTMLInputElement)) return false;
+    input.checked = false;
+    input.indeterminate = false;
+    input.disabled = false;
+    if (document.activeElement === input) input.blur();
+    return true;
+  }
 
-function primeInitialTableStructure(page, view) {
+  function primeInitialTableStructure(page, view) {
     const colGroup = document.getElementById("tableColGroup");
     const head = document.getElementById("tableHead");
     if (!(colGroup instanceof HTMLTableColElement) && !(colGroup instanceof HTMLElement)) return 0;
@@ -580,11 +580,36 @@ function primeInitialTableStructure(page, view) {
     primeStaticButtonGroup("mflStatsOverallFilters", MFL_STATS_FILTER_LABELS, "mflStatsFilterButton", "all");
   }
 
+  function primeSettingsActions() {
+    const panel = document.querySelector("#settingsPage .settingsPanel");
+    const discard = document.getElementById("settingsEmailDiscardButton");
+    const save = document.getElementById("settingsEmailSaveButton");
+    if (!(panel instanceof HTMLElement) || !(discard instanceof HTMLButtonElement) || !(save instanceof HTMLButtonElement)) return;
+
+    const existingActions = panel.querySelector("[data-settings-page-actions]");
+    const actions = existingActions instanceof HTMLElement ? existingActions : document.createElement("div");
+    if (!(existingActions instanceof HTMLElement)) {
+      actions.className = "settingsEmailAddressRow";
+      actions.setAttribute("data-settings-page-actions", "true");
+      actions.setAttribute("aria-label", "Settings actions");
+    }
+
+    discard.disabled = true;
+    save.disabled = true;
+    discard.classList.remove("active");
+    save.classList.remove("active");
+    actions.append(discard, save);
+    panel.appendChild(actions);
+  }
+
+  Reflect.set(window, "__mflPrimeSettingsActions", primeSettingsActions);
+
   function primeSettingsControls() {
     setLoadingValue("settingsAgentName");
     setLoadingValue("settingsWalletAddress");
     primeStaticButtonGroup("settingsDateFormatOptions", SETTINGS_DATE_FORMAT_LABELS, "settingsToggleButton", "DMY");
     primeStaticButtonGroup("settingsTimeFormatOptions", SETTINGS_TIME_FORMAT_LABELS, "settingsToggleButton", "24h");
+    primeSettingsActions();
   }
 
   function resetStatsShell(target) {
