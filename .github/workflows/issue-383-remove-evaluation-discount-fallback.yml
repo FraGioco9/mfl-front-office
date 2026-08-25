@@ -1,0 +1,46 @@
+name: Issue 383 remove Evaluation discount fallback
+
+on:
+  push:
+    branches:
+      - fix/evaluation-discount-rate-fallback
+    paths:
+      - .github/workflows/issue-383-remove-evaluation-discount-fallback.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/evaluation-discount-rate-fallback
+
+      - name: Remove legacy discount-rate fallback
+        run: python .github/scripts/issue-383-remove-evaluation-discount-fallback.py
+
+      - name: Build generated application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Run focused Evaluation validation
+        working-directory: site
+        run: |
+          node validate-evaluation-discount-derived-loading.mjs
+          node validate-evaluation-route-ownership.mjs
+          node validate-eval-ownership.mjs
+          node validate-evaluation-refresh-hydration.mjs
+          node validate-generated-core-bindings.mjs
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js site/modules/app-core-evaluation-chunk.js site/modules/app-core-evaluation-runtime.js site/modules/app-core-runtime.js site/index.html site/validate-evaluation-route-ownership.mjs site/validate-evaluation-discount-derived-loading.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "Remove legacy Evaluation discount-rate fallback"
+          git push origin HEAD:fix/evaluation-discount-rate-fallback
