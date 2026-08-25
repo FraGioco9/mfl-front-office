@@ -1,4 +1,4 @@
 {
-  "version": "1.125.3",
-  "description": "Stabilize Evaluation previews, navigation loading, and marketplace snapshots"
+  "version": "1.125.4",
+  "description": "Stabilize Evaluation recalculation, Settings persistence, and Player loading"
 }
