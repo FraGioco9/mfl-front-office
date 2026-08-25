@@ -1,0 +1,231 @@
+name: MFL marketplace snapshot
+
+on:
+  pull_request:
+    paths:
+      - "mfl_marketplace_cadence.py"
+      - "mfl_marketplace_snapshot.py"
+      - "mfl_marketplace_events.py"
+      - "test_mfl_marketplace_snapshot.py"
+      - "test_mfl_marketplace_events.py"
+      - ".github/workflows/mfl-marketplace-snapshot.yml"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Marketplace refresh mode
+        required: true
+        default: bootstrap
+        type: choice
+        options:
+          - bootstrap
+          - incremental
+          - reconcile
+      workers:
+        description: Concurrent Flow wallet queries for bootstrap/reconcile
+        required: false
+        default: "20"
+        type: string
+  schedule:
+    - cron: "2-59/5 * * * *"
+      timezone: "Europe/Rome"
+    - cron: "19 4 * * *"
+      timezone: "Europe/Rome"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mfl-marketplace-snapshot-${{ github.event.pull_request.number || 'main-state' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile marketplace process
+        run: >-
+          python -m py_compile
+          mfl_marketplace_cadence.py
+          mfl_marketplace_snapshot.py
+          mfl_marketplace_events.py
+          test_mfl_marketplace_snapshot.py
+          test_mfl_marketplace_events.py
+
+      - name: Run marketplace regression tests
+        run: python -m unittest -v test_mfl_marketplace_snapshot.py test_mfl_marketplace_events.py
+
+      - name: Verify Flow event API against mainnet
+        run: |
+          python - <<'PY'
+          from mfl_marketplace_events import fetch_marketplace_events
+          from mfl_marketplace_snapshot import fetch_sealed_block_height
+
+          end = fetch_sealed_block_height()
+          start = max(1, end - 249)
+          events = fetch_marketplace_events(start, end)
+          print(f"Flow event API smoke test succeeded for blocks {start}-{end}: {len(events)} Storefront events.")
+          PY
+
+  snapshot:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve refresh mode and previous state
+        id: mode
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_MODE: ${{ inputs.mode }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          mkdir -p marketplace-previous
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            MODE="${DISPATCH_MODE}"
+          elif [ "${SCHEDULE_CRON}" = "19 4 * * *" ]; then
+            MODE="reconcile"
+          else
+            MODE="incremental"
+          fi
+
+          STATE_RUN_ID=""
+          if [ "$MODE" = "incremental" ]; then
+            while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+              [ -n "$RUN_ID" ] || continue
+              [ "$RUN_ID" != "$GITHUB_RUN_ID" ] || continue
+              ARTIFACT_NAME="$(
+                gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
+                  --jq '.artifacts[] | select(.name == "mfl_marketplace_state" and .expired == false) | .name' \
+                  | head -n 1
+              )"
+              if [ "$ARTIFACT_NAME" = "mfl_marketplace_state" ]; then
+                STATE_RUN_ID="$RUN_ID"
+                echo "Using marketplace state from run $RUN_ID ($CREATED_AT)."
+                break
+              fi
+            done < <(
+              gh run list \
+                --workflow mfl-marketplace-snapshot.yml \
+                --status success \
+                --limit 100 \
+                --json databaseId,createdAt \
+                --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            )
+
+            if [ -n "$STATE_RUN_ID" ]; then
+              gh run download "$STATE_RUN_ID" \
+                --name mfl_marketplace_state \
+                --dir marketplace-previous
+              test -s marketplace-previous/mfl_marketplace_listings.json
+            elif [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+              echo "No previous state exists; bootstrapping instead."
+              MODE="bootstrap"
+            else
+              echo "Incremental mode requires a previous successful marketplace state." >&2
+              exit 1
+            fi
+          fi
+
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Download latest successful MFL database artifact
+        if: steps.mode.outputs.mode != 'incremental'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p marketplace-database
+          DATABASE_RUN_ID=""
+          while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            [ -n "$RUN_ID" ] || continue
+            ARTIFACT_NAME="$(
+              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
+                --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' \
+                | head -n 1
+            )"
+            if [ "$ARTIFACT_NAME" = "mfl_database" ]; then
+              DATABASE_RUN_ID="$RUN_ID"
+              echo "Using database artifact from run $RUN_ID ($CREATED_AT)."
+              break
+            fi
+          done < <(
+            gh run list \
+              --workflow full-database-refresh.yml \
+              --status success \
+              --limit 100 \
+              --json databaseId,createdAt \
+              --jq '.[] | [.createdAt, .databaseId] | @tsv'
+          )
+          [ -n "$DATABASE_RUN_ID" ] || { echo "No non-expired mfl_database artifact was found." >&2; exit 1; }
+          gh run download "$DATABASE_RUN_ID" --name mfl_database --dir marketplace-database
+          test -s marketplace-database/mfl_database.db
+
+      - name: Update marketplace state
+        env:
+          MARKETPLACE_WORKERS: ${{ inputs.workers }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          set -euo pipefail
+          WORKERS="${MARKETPLACE_WORKERS:-20}"
+          if [ "$MODE" = "incremental" ]; then
+            python mfl_marketplace_events.py \
+              --mode incremental \
+              --previous-state marketplace-previous/mfl_marketplace_listings.json \
+              --output marketplace-output/mfl_marketplace_listings.json
+          else
+            python mfl_marketplace_events.py \
+              --mode "$MODE" \
+              --database marketplace-database/mfl_database.db \
+              --output marketplace-output/mfl_marketplace_listings.json \
+              --workers "$WORKERS"
+          fi
+
+      - name: Validate marketplace state
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("marketplace-output/mfl_marketplace_listings.json").read_text(encoding="utf-8"))
+          if payload.get("schema_version") != 2:
+              raise SystemExit("Marketplace state has an unexpected schema version.")
+          if payload.get("source") != "flow-mainnet-nftstorefront-events":
+              raise SystemExit("Marketplace state has an unexpected source.")
+          if int(payload.get("flow_block_height", 0)) <= 0:
+              raise SystemExit("Marketplace state has no Flow checkpoint.")
+          if not isinstance(payload.get("active_listings"), dict) or not isinstance(payload.get("players"), dict):
+              raise SystemExit("Marketplace state is missing listing/player maps.")
+          if int(payload.get("listing_count", -1)) != len(payload["active_listings"]):
+              raise SystemExit("Marketplace listing count does not match active state.")
+          print(
+              f"Validated {payload['listing_count']} active listings for "
+              f"{payload['listed_player_count']} players at Flow block {payload['flow_block_height']} "
+              f"using {payload['mode']} mode."
+          )
+          PY
+
+      - name: Upload marketplace state
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl_marketplace_state
+          path: marketplace-output/mfl_marketplace_listings.json
+          if-no-files-found: error
+          retention-days: 1
