@@ -1,0 +1,67 @@
+name: Issue 349 Stats first-paint supersession
+
+on:
+  push:
+    branches:
+      - fix/loading-navigation-supersession
+    paths:
+      - .github/workflows/issue-349-stats-first-paint-supersession.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/loading-navigation-supersession
+
+      - name: Release Stats first-paint ownership on navigation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index = Path("site/index.html")
+          text = index.read_text()
+          for page in ("database/stats", "mfl/stats"):
+              old = f'html[data-initial-page="{page}"]:not(.mflInitialRouteResolved)'
+              new = f'html[data-initial-page="{page}"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)'
+              count = text.count(old)
+              if count != 3:
+                  raise SystemExit(f"Expected three first-paint selectors for {page}, found {count}")
+              text = text.replace(old, new)
+          index.write_text(text)
+
+          validator = Path("site/validate-static-route-ui.mjs")
+          text = validator.read_text()
+          anchor = 'includes(indexHtml, \'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage\', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");\n'
+          addition = (
+              'includes(indexHtml, \'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage\', "Database Stats first-paint visibility must relinquish the shell as soon as live navigation supersedes refresh startup.");\n'
+              'includes(indexHtml, \'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage\', "MFL Stats first-paint visibility must use the same supersession boundary as Database Stats.");\n'
+              'excludes(indexHtml, \'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #\', "Database Stats must not keep refresh-only shell ownership after a newer navigation commits.");\n'
+              'excludes(indexHtml, \'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #\', "MFL Stats must not keep refresh-only shell ownership after a newer navigation commits.");\n'
+          )
+          if anchor not in text:
+              raise SystemExit("Static route validator insertion anchor missing")
+          validator.write_text(text.replace(anchor, anchor + addition, 1))
+          PY
+
+      - name: Run focused navigation validation
+        working-directory: site
+        run: |
+          node validate-static-route-ui.mjs
+          node validate-stats-navigation-lifecycle.mjs
+          node validate-bootstrap-ownership.mjs
+          node validate-loading-ownership.mjs
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/index.html site/validate-static-route-ui.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "Release Stats first-paint ownership on navigation"
+          git push origin HEAD:fix/loading-navigation-supersession
