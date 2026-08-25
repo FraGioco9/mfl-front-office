@@ -5192,8 +5192,6 @@ function renderEvaluationSearchResults() {
 
 
 
-let evaluationRecentSearchPrimed = false;
-let evaluationRecentSearchPrimePromise = null;
 let evaluationEmptySearchFocusScheduled = false;
 
 function focusEmptyEvaluationSearchWhenReady() {
@@ -5215,25 +5213,8 @@ function focusEmptyEvaluationSearchWhenReady() {
 
 function primeEmptyEvaluationSearch() {
   focusEmptyEvaluationSearchWhenReady();
-  if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) return evaluationRecentSearchPrimePromise;
-
-  databaseSearchResponseCache.delete("players:");
-  evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
-    .then((loaded) => {
-      if (loaded) {
-        evaluationRecentSearchPrimed = true;
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
-      }
-      return loaded;
-    })
-    .catch((error) => {
-      console.error(error?.message || "Could not load recent Evaluation searches.");
-      return false;
-    })
-    .finally(() => {
-      evaluationRecentSearchPrimePromise = null;
-    });
-  return evaluationRecentSearchPrimePromise;
+  const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+  return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);
 }
 
 function waitForEvaluationDiscountRate() {
@@ -8829,7 +8810,7 @@ async function startApp() {
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
       evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
-        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
+        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false, true);
       }
     };
     Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
@@ -8851,28 +8832,6 @@ async function startApp() {
       return originalSaveTableStateLocally(localState);
     };
 
-    if (typeof primeEmptyEvaluationSearch === "function" && !primeEmptyEvaluationSearch.__mflDataOnly) {
-      const dataOnlyPrimeEmptyEvaluationSearch = function() {
-        const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-        if (typeof prime === "function") return prime(true);
-        return Promise.resolve(true);
-      };
-      Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
-      primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
-    }
-
-    if (typeof finishEvaluationReadiness === "function" && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
-      const originalFinishEvaluationReadiness = finishEvaluationReadiness;
-      const finishEvaluationReadinessWithRecents = async function() {
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
-          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-          if (typeof prime === "function") await prime(false);
-        }
-        return originalFinishEvaluationReadiness.apply(this, arguments);
-      };
-      Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
-      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
-    }
     window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
   }

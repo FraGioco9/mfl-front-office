@@ -353,7 +353,7 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false);
+    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
   function clearDirectPointerFocus() {
@@ -504,7 +504,6 @@
   window.addEventListener("mfl:evaluation-route-active", onRouteActive);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  void restoreEmptyRecentResults(true, active());
 
   function destroy() {
     destroyed = true;
