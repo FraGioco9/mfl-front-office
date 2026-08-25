@@ -11,7 +11,7 @@
       "includeFiles": "{index.html,api/data-files/mfl_database.db}"
     },
     "api/evaluation-preview-image.js": {
-      "includeFiles": "{api/data-files/mfl_database.db,node_modules/@expo-google-fonts/titillium-web/**/*.ttf}"
+      "includeFiles": "{api/data-files/mfl_database.db,node_modules/@expo-google-fonts/titillium-web/**/*.ttf,node_modules/webp-wasm/webp_node_dec.wasm}"
     }
   },
   "headers": [
