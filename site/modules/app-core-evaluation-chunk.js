@@ -68,15 +68,6 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
     "Evaluation wallet-preference UI refresh",
   );
 
-  let extracted = extractRequiredSection(
-    core,
-    "const evaluationConversions = {",
-    "function evaluationDiscountRateValue(",
-    "Evaluation discount-rate conversion data",
-  );
-  core = extracted.core;
-  evaluationParts.push(extracted.chunk);
-
   const routeOnlyHelpers = extractRequiredFunctions(
     core,
     [
@@ -96,7 +87,7 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
   core = routeOnlyHelpers.core;
   evaluationParts.push(...routeOnlyHelpers.chunks);
 
-  extracted = extractRequiredSection(
+  let extracted = extractRequiredSection(
     core,
     "function formatAdvancedPlayerTableValue(value) {",
     "function renderEvaluationMflPerUsdControl(",

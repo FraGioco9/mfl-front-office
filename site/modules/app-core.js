@@ -6739,41 +6739,9 @@ const evaluationTeamEarningsByOverall = {
   34: 0,
   33: 0,
 };
-const evaluationConversions = {
-  1: 300,
-  2: 333,
-  3: 333,
-  4: 300,
-  5: 225,
-  6: 250,
-  7: 333,
-  8: 400,
-  9: 450,
-  10: 500,
-  11: 475,
-  12: 450,
-  13: 450,
-  14: 400,
-};
-
-function evaluationDiscountRateValue(currentSeason = 15, seasonsToAverage = 5) {
-  const lastCompletedSeason = currentSeason - 1;
-  const ratios = [];
-
-  for (let season = lastCompletedSeason - seasonsToAverage + 1; season <= lastCompletedSeason; season += 1) {
-    const previousConversion = evaluationConversions[season - 1];
-    const conversion = evaluationConversions[season];
-
-    if (previousConversion && conversion) {
-      ratios.push(conversion / previousConversion);
-    }
-  }
-
-  if (!ratios.length) {
-    return null;
-  }
-
-  return Math.pow(ratios.reduce((product, ratio) => product * ratio, 1), 1 / ratios.length) - 1;
+function evaluationDiscountRateValue() {
+  const liveRate = window.__mflSupabaseDiscountRateFunction?.();
+  return Number.isFinite(liveRate) ? liveRate : null;
 }
 
 function formatEvaluationRate(value) {

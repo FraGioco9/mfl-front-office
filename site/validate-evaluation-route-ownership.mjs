@@ -21,8 +21,8 @@ invariant(
   "Evaluation discount-rate conversion data must not remain in shared core.",
 );
 invariant(
-  evaluation.includes("const evaluationConversions = {"),
-  "Evaluation route core must own discount-rate conversion data.",
+  !evaluation.includes("const evaluationConversions = {"),
+  "Evaluation route core must not retain legacy hard-coded discount-rate conversion data.",
 );
 invariant(
   !shared.includes("function renderEvaluationMflPerUsdControl("),
