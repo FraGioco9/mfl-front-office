@@ -52,10 +52,10 @@ jobs:
 
           validator = Path('site/validate-loading-ownership.mjs')
           check = validator.read_text()
-          console_marker = 'console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");\n'
-          if check.count(console_marker) != 1:
-              raise SystemExit('validate-loading-ownership console marker missing')
-          addition = '''const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
+          sentinel = 'const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");'
+          if sentinel not in check:
+              addition = '''
+          const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
           const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
           const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
           const coreReadyProbe = routeDestinationReadySection.indexOf("const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;");
@@ -74,9 +74,9 @@ jobs:
             !routeDestinationReadySection.includes("const dataReady ="),
             "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
           );
-
           '''
-          validator.write_text(check.replace(console_marker, addition + console_marker, 1))
+              check = check.rstrip() + "\n" + addition + "\n"
+          validator.write_text(check)
           PY
 
       - name: Install site dependencies
