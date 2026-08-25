@@ -22,15 +22,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: site/package-lock.json
 
       - name: Patch Evaluation loading ownership
         run: python .github/scripts/issue-383-stabilize-evaluation-recent-loading.py
 
       - name: Install site dependencies
         working-directory: site
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build canonical application core
         working-directory: site
