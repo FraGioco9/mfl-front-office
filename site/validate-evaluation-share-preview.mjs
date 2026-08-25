@@ -134,14 +134,15 @@ assert(
 assert(previewOwner.includes("expires_at=gt."), "Evaluation preview lookup must reject expired shares at the query owner.");
 assert(previewOwner.includes("evaluationSharePreview"), "One helper must own shared Evaluation metadata derivation.");
 assert(
-  previewOwner.includes("SELECT name, age, retirement_years FROM players WHERE player_id = ? LIMIT 1")
+  previewOwner.includes("SELECT name, age, retirement_years, nationality, positions FROM players WHERE player_id = ? LIMIT 1")
     && previewOwner.includes("queryOne"),
   "Active shared previews must resolve current public player identity and compatibility context from the packaged player database.",
 );
 assert(
   previewOwner.includes("evaluationPresentValueTotalFromSharePayload(payload, {")
-    && previewOwner.includes("Value"),
-  "Shared preview metadata must expose the same Value represented by the Evaluation summary table.",
+    && previewOwner.includes("positions")
+    && previewOwner.includes("nationality"),
+  "Shared preview metadata must retain canonical valuation while adding public positions and nationality context.",
 );
 assert(shareApi.includes("readActiveEvaluationShare"), "Evaluation share hydration must reuse the active-share lookup owner.");
 assert(
@@ -166,8 +167,14 @@ for (const requiredMeta of [
 }
 assert((indexHtml.match(/<th>Value<\/th>/g) || []).length === 2, "Both Evaluation tables must label the discounted result as Value.");
 assert(!indexHtml.includes("<th>Present Value</th>"), "Evaluation tables must not expose the old Present Value label.");
-assert(previewOwner.includes("`Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must label the metric as Value.");
-assert(!previewOwner.includes("`Present Value ${formatEvaluationPreviewCurrency(presentValue)}`"), "Shared-link metadata must not expose the old Present Value label.");
+assert(
+  previewOwner.includes("MFL Front Office Evaluation for ${subject}${identitySuffix}")
+    && previewOwner.includes("`${age} yo`")
+    && previewOwner.includes("`${overall} rated`")
+    && previewOwner.includes("`from ${nationality}`"),
+  "Shared-link metadata must use the concise player-context description.",
+);
+assert(!previewOwner.includes("Shared MFL Front Office Evaluation for"), "Shared-link metadata must not retain the old description format.");
 assert(previewApi.includes("htmlEscape"), "Evaluation preview metadata must be HTML-escaped before injection.");
 assert(previewApi.includes("GENERIC_PREVIEW"), "Plain, invalid, or unavailable Evaluations must use generic metadata.");
 assert(previewApi.includes("if (shareId && supabaseConfig())"), "Only shared Evaluation URLs may query Supabase for preview metadata.");
@@ -212,6 +219,17 @@ assert(!previewCard.includes("24 HOUR PUBLIC SHARE"), "Dynamic cards must not sh
 assert(previewCard.includes('"Shared Evaluation"'), "Dynamic cards may retain one concise shared-Evaluation context label.");
 assert(previewCard.includes("metadata.playerName"), "Dynamic Evaluation preview card must render the current public player name.");
 assert(previewCard.includes("Player #${"), "Dynamic Evaluation preview card must retain the player identifier as secondary context.");
+assert(
+  previewCard.includes('drawMetric(context, x, columnWidths[0], "Position", metadata.position || "-");')
+    && previewCard.includes('drawMetric(context, x + columnWidths[0], columnWidths[1], "Overall", metadata.overall);'),
+  "Dynamic Evaluation preview card must render Position before Overall.",
+);
+assert(
+  previewCard.includes("drawNationalityLine")
+    && previewCard.includes("metadata.nationality")
+    && previewCard.includes("twemoji@14.0.2/assets/72x72"),
+  "Dynamic Evaluation preview card must render nationality with the canonical Twemoji flag style.",
+);
 for (const field of ["Overall", "Position", "Age", "Value"]) {
   assert(previewCard.includes(`"${field}"`), `Dynamic Evaluation preview card must render ${field}.`);
 }
@@ -316,18 +334,20 @@ const contextualPreview = evaluationSharePreviewFromContext({
 }, {
   playerId: "80000",
   playerName: "Mario Rossi",
+  positions: "CB, RB",
+  nationality: "ITALY",
   age: 34,
   retirementYears: 0,
 });
 assert(contextualPreview.playerName === "Mario Rossi", "Shared preview metadata must use the current public player name.");
+assert(contextualPreview.positions === "CB, RB", "Shared preview metadata must use the current public player positions.");
+assert(contextualPreview.nationality === "Italy", "Shared preview metadata must format the current public player nationality.");
 assert(contextualPreview.age === 34, "Shared preview metadata must use the current public player age instead of a projected payload age.");
 assert(contextualPreview.presentValue === summaryPresentValue, "Shared preview metadata Present Value must equal the Evaluation summary-table Present Value.");
 assert(contextualPreview.title === "Mario Rossi Evaluation - MFL Front Office", "Shared preview title must identify the player by name.");
 assert(
-  contextualPreview.description.includes("Age 34")
-    && contextualPreview.description.includes("Value $24.00")
-    && !contextualPreview.description.includes("Age 99"),
-  "Shared preview description must expose current age and canonical Value only.",
+  contextualPreview.description === "MFL Front Office Evaluation for Mario Rossi (#80000) - 34 yo 82 rated CB, RB from Italy",
+  "Shared preview description must expose current age, overall, positions, and nationality in the canonical sentence.",
 );
 
 assert(
