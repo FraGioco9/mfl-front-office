@@ -953,6 +953,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
   }
 
   function pendingAttributeColumns(context) {
+    if (!context.positions.length) return ["overall"];
     const goalkeeper = context.positions.some((position) => String(position).toUpperCase() === "GK");
     return goalkeeper
       ? ["overall", "goalkeeping"]
