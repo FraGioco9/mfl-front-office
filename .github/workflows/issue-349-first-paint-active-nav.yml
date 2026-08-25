@@ -80,6 +80,12 @@ jobs:
               'invariant(\n  !bootstrapCore.includes("window.__mflWithInteractionBusy")\n    && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")\n    && !bootstrapCore.includes("function wrapRoutePageGlobal() {")\n    && bootstrapCore.includes(\'function beginLatest(reason = "navigation") {\')',
               'const beginLatestStart = bootstrapCore.indexOf(\'function beginLatest(reason = "navigation") {\');\nconst beginLatestEnd = bootstrapCore.indexOf("function beginIntent", beginLatestStart);\nconst beginLatestSection = bootstrapCore.slice(beginLatestStart, beginLatestEnd);\ninvariant(\n  beginLatestStart >= 0\n    && !beginLatestSection.includes(\'classList.add("mflInitialRouteSuperseded")\'),\n  "Navigation intent must not retire refresh first-paint ownership before the live page/view commit has applied its active controls.",\n);\n\ninvariant(\n  !bootstrapCore.includes("window.__mflWithInteractionBusy")\n    && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")\n    && !bootstrapCore.includes("function wrapRoutePageGlobal() {")\n    && bootstrapCore.includes(\'function beginLatest(reason = "navigation") {\')',
           )
+
+          replace_once(
+              "site/validate-bootstrap-ownership.mjs",
+              'includes(\n  bootstrapCore,\n  \'document.documentElement.classList.add("mflInitialRouteSuperseded");\',\n  "The first live page/view navigation must permanently retire refresh-only route chrome before committing the new destination.",\n);',
+              'includes(\n  appCoreSource,\n  \'document.documentElement.classList.add("mflInitialRouteSuperseded");\',\n  "The live page/view transition must retire refresh-only route chrome only after committing the new destination.",\n);',
+          )
           PY
 
       - name: Build canonical application core
@@ -101,7 +107,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/bootstrap-core.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-route-chunks.js site/validate-generated-view-transition.mjs site/validate-loading-ownership.mjs
+          git add site/bootstrap-core.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-route-chunks.js site/validate-generated-view-transition.mjs site/validate-loading-ownership.mjs site/validate-bootstrap-ownership.mjs
           git diff --cached --quiet && exit 1
           git commit -m "Keep active page styled through refresh handoff"
           git push origin HEAD:fix/loading-navigation-supersession
