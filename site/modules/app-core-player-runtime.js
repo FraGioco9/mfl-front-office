@@ -1072,6 +1072,7 @@
     const incoming = normalizeContext(value);
     const playerId = incoming.playerId || playerIdFromLocation();
     if (!playerId) return false;
+    if (playerIdFromLocation() !== playerId) return false;
     const context = mergeContext(readCachedContext(playerId), { ...incoming, playerId });
     readyTransitionPlayerId = playerId;
     const detail = document.getElementById("playerDetail");
