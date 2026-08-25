@@ -83,7 +83,7 @@ await update("site/validate-stats-animation-owner.mjs", (source) => replaceOnce(
 ));
 
 await update("site/validate-static-route-ui.mjs", (source) => {
-  const marker = '\nconsole.log("Static route UI validation passed.");';
+  const marker = '\nconsole.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");';
   const addition = [
     "",
     "invariant(",
