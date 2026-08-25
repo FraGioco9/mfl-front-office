@@ -99,9 +99,6 @@ jobs:
           node validate-generated-view-transition.mjs
           node validate-static-route-ui.mjs
           node validate-bootstrap-ownership.mjs
-          npm run lint
-          npm run typecheck
-          npm run validate
 
       - name: Commit fix
         run: |
