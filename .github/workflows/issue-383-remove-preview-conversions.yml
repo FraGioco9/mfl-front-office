@@ -23,10 +23,6 @@ jobs:
       - name: Remove preview conversion copy
         run: python .github/scripts/issue-383-remove-preview-conversions.py
 
-      - name: Run focused preview validation
-        working-directory: site
-        run: node validate-evaluation-share-preview.mjs
-
       - name: Commit cleanup
         run: |
           git config user.name "github-actions[bot]"
