@@ -1,4 +1,1025 @@
 // Generated Player core chunk from modules/app-core.js. Do not edit directly.
+(() => {
+  "use strict";
+
+  const PLAYER_PORTRAIT_ORIGIN = "https://d13e14gtps4iwl.cloudfront.net";
+  const PLAYER_EXTERNAL_ORIGIN = "https://app.playmfl.com";
+  const PLAYER_PORTRAIT_CROP_HEIGHT_PX = 500;
+  const PLAYER_PORTRAIT_SOURCE_WIDTH_PX = 912;
+  const PLAYER_PORTRAIT_DISPLAY_HEIGHT_PX = 112;
+  const PLAYER_HERO_OVERALL_SIZE_PX = 100;
+  const PLAYER_HERO_ACTION_MENU_WIDTH_PX = 190;
+  const PLAYER_HERO_ACTION_CHEVRON_WIDTH_PX = 34;
+  const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
+  const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
+  const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
+  const PLAYER_NOTE_MAX_LENGTH = 200;
+  const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
+  const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
+  const portraitSources = new Map();
+  let activeHeroActionMenu = null;
+  let pendingDetailPlayerId = "";
+  let readyDetailPlayerId = "";
+  let readyTransitionPlayerId = "";
+
+  function loadingBlank() {
+    return "\u00A0";
+  }
+
+  function normalizePlayerId(value) {
+    const playerId = String(value || "").trim();
+    return /^\d{1,20}$/.test(playerId) ? playerId : "";
+  }
+
+  function playerIdFromLocation() {
+    const match = String(location.pathname || "").match(/^\/players\/(\d{1,20})\/?$/i);
+    return match ? normalizePlayerId(match[1]) : "";
+  }
+
+  function normalizePositions(value) {
+    if (Array.isArray(value)) return value.map((position) => String(position || "").trim()).filter(Boolean);
+    const text = String(value || "").trim();
+    return text ? text.split(",").map((position) => position.trim()).filter(Boolean) : [];
+  }
+
+  function normalizeContext(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const playerId = normalizePlayerId(source.playerId);
+    return {
+      playerId,
+      name: String(source.name || "").trim(),
+      positions: normalizePositions(source.positions),
+      overall: source.overall === null || source.overall === undefined ? "" : String(source.overall).trim(),
+      externalUrl: String(source.externalUrl || (playerId ? PLAYER_EXTERNAL_ORIGIN + "/players/" + playerId : "")).trim(),
+    };
+  }
+
+  function mergeContext(baseValue, nextValue) {
+    const base = normalizeContext(baseValue);
+    const next = normalizeContext(nextValue);
+    return {
+      playerId: next.playerId || base.playerId,
+      name: next.name || base.name,
+      positions: next.positions.length ? next.positions : base.positions,
+      overall: next.overall || base.overall,
+      externalUrl: next.externalUrl || base.externalUrl,
+    };
+  }
+
+  function cacheKey(playerId) {
+    return PLAYER_CONTEXT_CACHE_PREFIX + playerId;
+  }
+
+  function readCachedContext(playerId) {
+    try {
+      return normalizeContext(JSON.parse(sessionStorage.getItem(cacheKey(playerId)) || "null"));
+    } catch {
+      return normalizeContext(null);
+    }
+  }
+
+  function rememberContext(value) {
+    const context = normalizeContext(value);
+    if (!context.playerId) return false;
+    const current = readCachedContext(context.playerId);
+    const merged = mergeContext(current, context);
+    try {
+      sessionStorage.setItem(cacheKey(context.playerId), JSON.stringify(merged));
+    } catch {}
+    return true;
+  }
+
+  function portraitUrl(playerIdValue) {
+    const playerId = normalizePlayerId(playerIdValue);
+    return playerId ? PLAYER_PORTRAIT_ORIGIN + "/players/v2/" + playerId + "/photo.webp" : "";
+  }
+
+  function rarityColor(overall) {
+    const value = Number(overall || 0);
+    if (value >= 95) return "#00ffe9";
+    if (value >= 85) return "#fa53ff";
+    if (value >= 75) return "#0077ff";
+    if (value >= 65) return "#71ff30";
+    if (value >= 55) return "#ecd17f";
+    return "#bebebe";
+  }
+
+  function storedWalletOptIn() {
+    return document.documentElement.dataset.storedWalletOptIn === "true";
+  }
+
+  function storedProgressionAccess() {
+    return document.documentElement.dataset.storedProgressionAccess === "true";
+  }
+
+  function beginDetailNavigation(value) {
+    const context = normalizeContext(value);
+    if (!context.playerId) return false;
+    pendingDetailPlayerId = context.playerId;
+    readyDetailPlayerId = "";
+    return true;
+  }
+
+  function markDetailPayloadReady(route, payload) {
+    const routePlayerId = route?.scope === "player" ? normalizePlayerId(route.playerId) : "";
+    if (!routePlayerId || !payload || !Array.isArray(payload.columns) || !Array.isArray(payload.rows)) return false;
+    const playerIdIndex = payload.columns.indexOf("player_id");
+    const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => payload.columns.indexOf(column));
+    if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
+    const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
+    if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
+    readyDetailPlayerId = routePlayerId;
+    return true;
+  }
+
+  function detailDataReady(row, playerIdValue) {
+    const playerId = normalizePlayerId(playerIdValue);
+    if (!Array.isArray(row) || !playerId || !Array.isArray(state.columns) || !state.columns.length) return false;
+    if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;
+    const playerIdIndex = state.columns.indexOf("player_id");
+    const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => state.columns.indexOf(column));
+    if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
+    const maximumRequiredIndex = Math.max(playerIdIndex, ...requiredIndexes);
+    if (row.length !== state.columns.length || row.length <= maximumRequiredIndex) return false;
+    return normalizePlayerId(row[playerIdIndex]) === playerId;
+  }
+
+  function portraitDisplayHeight() {
+    return PLAYER_PORTRAIT_DISPLAY_HEIGHT_PX;
+  }
+
+  function sizeHeroOverall(overall) {
+    if (!(overall instanceof HTMLElement)) return false;
+    const size = PLAYER_HERO_OVERALL_SIZE_PX;
+    overall.style.flex = "0 0 " + size + "px";
+    overall.style.width = size + "px";
+    overall.style.minWidth = size + "px";
+    overall.style.maxWidth = size + "px";
+    overall.style.height = size + "px";
+    overall.style.minHeight = size + "px";
+    overall.style.maxHeight = size + "px";
+    return true;
+  }
+
+  function applyPortraitGeometry(canvas, sourceWidthValue = PLAYER_PORTRAIT_SOURCE_WIDTH_PX, sourceHeightValue = PLAYER_PORTRAIT_CROP_HEIGHT_PX) {
+    if (!(canvas instanceof HTMLCanvasElement)) return null;
+    const frame = canvas.closest(".playerHeroPortraitFrame");
+    if (!(frame instanceof HTMLElement)) return null;
+
+    const sourceWidth = Math.max(1, Number(sourceWidthValue || PLAYER_PORTRAIT_SOURCE_WIDTH_PX));
+    const sourceHeight = Math.max(1, Number(sourceHeightValue || PLAYER_PORTRAIT_CROP_HEIGHT_PX));
+    const sourceCropHeight = Math.max(1, Math.min(PLAYER_PORTRAIT_CROP_HEIGHT_PX, sourceHeight));
+    const displayHeight = portraitDisplayHeight();
+    const displayWidth = sourceWidth * (displayHeight / sourceCropHeight);
+
+    frame.style.position = "relative";
+    frame.style.flex = "0 0 " + displayWidth + "px";
+    frame.style.width = displayWidth + "px";
+    frame.style.minWidth = displayWidth + "px";
+    frame.style.maxWidth = displayWidth + "px";
+    frame.style.height = displayHeight + "px";
+    frame.style.minHeight = displayHeight + "px";
+    frame.style.maxHeight = displayHeight + "px";
+    frame.style.alignSelf = "flex-end";
+    frame.style.marginBottom = "0";
+    frame.style.overflow = "hidden";
+    frame.style.borderRadius = "6px 6px 0 0";
+    frame.style.background = "transparent";
+
+    canvas.style.display = "block";
+    canvas.style.width = displayWidth + "px";
+    canvas.style.minWidth = displayWidth + "px";
+    canvas.style.maxWidth = displayWidth + "px";
+    canvas.style.height = displayHeight + "px";
+    canvas.style.minHeight = displayHeight + "px";
+    canvas.style.maxHeight = displayHeight + "px";
+    canvas.style.margin = "0";
+    canvas.style.background = "transparent";
+
+    return { sourceWidth, sourceHeight, sourceCropHeight, displayWidth, displayHeight };
+  }
+
+  function drawPortraitCrop(canvas, source) {
+    if (!(canvas instanceof HTMLCanvasElement) || !(source instanceof HTMLImageElement)) return false;
+    const sourceWidth = Number(source.naturalWidth || 0);
+    const sourceHeight = Number(source.naturalHeight || 0);
+    if (!sourceWidth || !sourceHeight) return false;
+
+    const geometry = applyPortraitGeometry(canvas, sourceWidth, sourceHeight);
+    if (!geometry) return false;
+    const { sourceCropHeight, displayWidth, displayHeight } = geometry;
+    const pixelRatio = Math.max(1, Number(window.devicePixelRatio || 1));
+    const rasterWidth = Math.max(1, Math.round(displayWidth * pixelRatio));
+    const rasterHeight = Math.max(1, Math.round(displayHeight * pixelRatio));
+
+    canvas.width = rasterWidth;
+    canvas.height = rasterHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) return false;
+    context.clearRect(0, 0, rasterWidth, rasterHeight);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(
+      source,
+      0,
+      0,
+      sourceWidth,
+      sourceCropHeight,
+      0,
+      0,
+      rasterWidth,
+      rasterHeight,
+    );
+    canvas.dataset.sourceWidth = String(sourceWidth);
+    canvas.dataset.sourceHeight = String(sourceHeight);
+    canvas.dataset.sourceCropHeight = String(sourceCropHeight);
+    canvas.dataset.displayWidth = String(displayWidth);
+    canvas.dataset.displayHeight = String(displayHeight);
+    return true;
+  }
+
+  function loadPortraitCrop(canvas, playerIdValue) {
+    if (!(canvas instanceof HTMLCanvasElement)) return false;
+    const playerId = normalizePlayerId(playerIdValue);
+    const sourceUrl = portraitUrl(playerId);
+    if (!sourceUrl) return false;
+
+    applyPortraitGeometry(canvas);
+    canvas.dataset.playerId = playerId;
+    const existing = portraitSources.get(playerId);
+    if (existing instanceof HTMLImageElement) {
+      if (existing.complete && existing.naturalWidth) drawPortraitCrop(canvas, existing);
+      else existing.addEventListener("load", () => drawPortraitCrop(canvas, existing), { once: true });
+      return true;
+    }
+
+    const image = new Image();
+    image.decoding = "async";
+    image.fetchPriority = "high";
+    image.addEventListener("load", () => drawPortraitCrop(canvas, image), { once: true });
+    image.src = sourceUrl;
+    portraitSources.set(playerId, image);
+    return true;
+  }
+
+  function createHeroMedia(context) {
+    const media = document.createElement("div");
+    media.className = "playerHeroMedia";
+    media.dataset.playerHeroMedia = "true";
+    media.style.display = "inline-flex";
+    media.style.flex = "0 0 auto";
+    media.style.alignItems = "flex-end";
+    media.style.alignSelf = "stretch";
+    media.style.gap = "8px";
+    media.style.minWidth = "0";
+
+    const overall = document.createElement("div");
+    overall.className = "playerHeroOverall";
+    overall.style.display = "grid";
+    overall.style.alignSelf = "center";
+    overall.style.alignContent = "center";
+    overall.style.justifyItems = "center";
+    overall.style.border = "1px solid var(--border)";
+    overall.style.borderRadius = "8px";
+    overall.style.background = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
+    sizeHeroOverall(overall);
+    const overallValue = document.createElement("strong");
+    overallValue.style.color = "var(--text)";
+    overallValue.style.fontSize = "48px";
+    overallValue.style.fontWeight = "800";
+    overallValue.style.lineHeight = "1";
+    overall.appendChild(overallValue);
+
+    const portraitFrame = document.createElement("div");
+    portraitFrame.className = "playerHeroPortraitFrame";
+    portraitFrame.style.alignSelf = "flex-end";
+    portraitFrame.style.marginBottom = "0";
+    const portrait = document.createElement("canvas");
+    portrait.className = "playerHeroPortrait";
+    portrait.setAttribute("role", "img");
+    portrait.setAttribute("aria-label", "Player portrait");
+    portraitFrame.appendChild(portrait);
+
+    media.append(overall, portraitFrame);
+    updateHeroMedia(media, context);
+    return media;
+  }
+
+  function updateHeroMedia(media, contextValue) {
+    if (!(media instanceof HTMLElement)) return false;
+    const context = normalizeContext(contextValue);
+    const overall = media.querySelector(".playerHeroOverall");
+    const overallValue = overall?.querySelector("strong");
+    if (overall instanceof HTMLElement && overallValue instanceof HTMLElement) {
+      overall.style.setProperty("--rarity-color", rarityColor(context.overall));
+      overall.classList.toggle("isPending", !context.overall);
+      overallValue.style.color = context.overall ? "var(--text)" : "var(--text-soft)";
+      overallValue.textContent = context.overall || loadingBlank();
+    }
+
+    const portrait = media.querySelector(".playerHeroPortrait");
+    if (portrait instanceof HTMLCanvasElement) loadPortraitCrop(portrait, context.playerId);
+    return true;
+  }
+
+  function createChevronIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("playerHeroChevronIcon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "m7 10 5 5 5-5");
+    svg.appendChild(path);
+    return svg;
+  }
+
+  function createEvaluateIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("playerHeroMenuIcon", "playerEvaluateIcon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const stem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    stem.setAttribute("d", "M12 3v18");
+    const curve = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    curve.setAttribute("d", "M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5");
+    svg.append(stem, curve);
+    return svg;
+  }
+
+  function styleHeroMenuItem(item) {
+    if (!(item instanceof HTMLElement)) return false;
+    item.style.boxSizing = "border-box";
+    item.style.display = "flex";
+    item.style.alignItems = "center";
+    item.style.justifyContent = "flex-start";
+    item.style.gap = "8px";
+    item.style.width = "100%";
+    item.style.minWidth = "0";
+    item.style.height = "36px";
+    item.style.minHeight = "36px";
+    item.style.maxHeight = "36px";
+    item.style.padding = "0 10px";
+    item.style.border = "1px solid transparent";
+    item.style.borderRadius = "6px";
+    item.style.background = "transparent";
+    item.style.color = "var(--text)";
+    item.style.fontSize = "14px";
+    item.style.lineHeight = "1";
+    item.style.textAlign = "left";
+    item.style.whiteSpace = "nowrap";
+    if (item.dataset.playerHeroMenuHoverBound !== "true") {
+      item.dataset.playerHeroMenuHoverBound = "true";
+      item.addEventListener("mouseenter", () => {
+        item.style.background = "var(--row-hover)";
+        item.style.borderColor = "var(--border)";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.background = "transparent";
+        item.style.borderColor = "transparent";
+      });
+    }
+    const icon = item.querySelector(".playerHeroMenuIcon");
+    if (icon instanceof SVGElement) {
+      icon.style.width = "18px";
+      icon.style.height = "18px";
+      icon.style.flex = "0 0 18px";
+      icon.style.fill = "none";
+      icon.style.stroke = "currentColor";
+      icon.style.strokeWidth = "2";
+      icon.style.strokeLinecap = "round";
+      icon.style.strokeLinejoin = "round";
+    }
+    const star = item.querySelector(".watchlistButtonStar");
+    if (star instanceof HTMLElement) {
+      star.style.display = "inline-flex";
+      star.style.alignItems = "center";
+      star.style.justifyContent = "center";
+      star.style.width = "18px";
+      star.style.height = "18px";
+      star.style.flex = "0 0 18px";
+      star.style.fontSize = "18px";
+      star.style.lineHeight = "1";
+    }
+    return true;
+  }
+
+  function setHeroActionMenuOpen(menu, open) {
+    if (!(menu instanceof HTMLElement)) return false;
+    const wrapper = menu.closest(".playerHeroActionMenu");
+    const toggle = wrapper?.querySelector(".playerHeroActionMenuButton");
+    const icon = toggle?.querySelector(".playerHeroChevronIcon");
+    menu.hidden = false;
+    menu.dataset.open = open ? "true" : "false";
+    menu.style.visibility = open ? "visible" : "hidden";
+    menu.style.opacity = open ? "1" : "0";
+    menu.style.transform = open ? "translateY(0) scale(1)" : "translateY(-4px) scale(0.98)";
+    menu.style.pointerEvents = open ? "auto" : "none";
+    menu.style.transition = open
+      ? "opacity 150ms ease, transform 150ms ease, visibility 0s linear 0s"
+      : "opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms";
+    if (toggle instanceof HTMLElement) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (icon instanceof SVGElement) {
+      icon.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
+      icon.style.transition = "transform 150ms ease";
+    }
+    return true;
+  }
+
+  function applyHeroActionMenuLayout(actions) {
+    if (!(actions instanceof HTMLElement)) return false;
+    const wrapper = actions.querySelector(":scope > .playerHeroActionMenu");
+    if (!(wrapper instanceof HTMLElement)) return false;
+    const primary = wrapper.querySelector(":scope > .playerHeroPrimaryAction");
+    const toggle = wrapper.querySelector(":scope > .playerHeroActionMenuButton");
+    const menu = wrapper.querySelector(":scope > .playerHeroActionMenuDropdown");
+
+    actions.style.gap = "0";
+    wrapper.style.position = "relative";
+    wrapper.style.display = "inline-flex";
+    wrapper.style.alignItems = "stretch";
+    wrapper.style.gap = "4px";
+    wrapper.style.flex = "0 0 " + PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+    wrapper.style.width = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+    wrapper.style.minWidth = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+    wrapper.style.maxWidth = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+
+    if (primary instanceof HTMLElement) {
+      const width = PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX + "px";
+      const height = PLAYER_HERO_ACTION_HEIGHT_PX + "px";
+      const unavailable = primary.getAttribute("aria-disabled") === "true";
+      primary.style.boxSizing = "border-box";
+      primary.style.display = "inline-flex";
+      primary.style.alignItems = "center";
+      primary.style.justifyContent = "center";
+      primary.style.flex = "0 0 " + width;
+      primary.style.width = width;
+      primary.style.minWidth = width;
+      primary.style.maxWidth = width;
+      primary.style.height = height;
+      primary.style.minHeight = height;
+      primary.style.maxHeight = height;
+      primary.style.padding = "0 10px";
+      primary.style.fontSize = "14px";
+      primary.style.lineHeight = "1";
+      primary.style.whiteSpace = "nowrap";
+      primary.style.textDecoration = "none";
+      primary.style.color = unavailable ? "var(--text-soft)" : "var(--text)";
+      primary.style.opacity = unavailable ? "0.5" : "1";
+      primary.style.cursor = unavailable ? "default" : "";
+      primary.style.pointerEvents = unavailable ? "none" : "";
+      primary.style.transition = PLAYER_READY_TRANSITION;
+    }
+
+    if (toggle instanceof HTMLElement) {
+      const width = PLAYER_HERO_ACTION_CHEVRON_WIDTH_PX + "px";
+      const height = PLAYER_HERO_ACTION_HEIGHT_PX + "px";
+      const unavailable = toggle.getAttribute("aria-disabled") === "true";
+      toggle.style.boxSizing = "border-box";
+      toggle.style.display = "grid";
+      toggle.style.placeItems = "center";
+      toggle.style.flex = "0 0 " + width;
+      toggle.style.width = width;
+      toggle.style.minWidth = width;
+      toggle.style.maxWidth = width;
+      toggle.style.height = height;
+      toggle.style.minHeight = height;
+      toggle.style.maxHeight = height;
+      toggle.style.padding = "0";
+      toggle.style.color = unavailable ? "var(--text-soft)" : "var(--text)";
+      toggle.style.opacity = unavailable ? "0.5" : "1";
+      toggle.style.cursor = unavailable ? "default" : "";
+      toggle.style.transition = PLAYER_READY_TRANSITION;
+      const icon = toggle.querySelector(".playerHeroChevronIcon");
+      if (icon instanceof SVGElement) {
+        icon.style.width = "16px";
+        icon.style.height = "16px";
+        icon.style.fill = "none";
+        icon.style.stroke = "currentColor";
+        icon.style.strokeWidth = "2";
+        icon.style.strokeLinecap = "round";
+        icon.style.strokeLinejoin = "round";
+      }
+    }
+
+    if (menu instanceof HTMLElement) {
+      menu.style.position = "absolute";
+      menu.style.top = "calc(100% + 6px)";
+      menu.style.right = "0";
+      menu.style.zIndex = "var(--mfl-z-dropdown)";
+      menu.style.boxSizing = "border-box";
+      menu.style.width = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+      menu.style.padding = "4px";
+      menu.style.border = "1px solid var(--border-strong)";
+      menu.style.borderRadius = "8px";
+      menu.style.background = "var(--surface)";
+      menu.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.16)";
+      menu.style.transformOrigin = "top right";
+      menu.style.willChange = "opacity, transform";
+      menu.querySelectorAll(":scope > .playerHeroActionMenuItem").forEach(styleHeroMenuItem);
+      if (menu.dataset.open !== "true") setHeroActionMenuOpen(menu, false);
+      else setHeroActionMenuOpen(menu, true);
+    }
+    return true;
+  }
+
+  function closeHeroActionMenu(menu = activeHeroActionMenu) {
+    if (!(menu instanceof HTMLElement)) return false;
+    setHeroActionMenuOpen(menu, false);
+    if (activeHeroActionMenu === menu) activeHeroActionMenu = null;
+    return true;
+  }
+
+  function bindHeroActionMenu(container = document) {
+    const actions = container?.querySelector?.(".playerHeroActions");
+    if (!(actions instanceof HTMLElement)) return false;
+    const wrapper = actions.querySelector(":scope > .playerHeroActionMenu");
+    const toggle = wrapper?.querySelector(":scope > .playerHeroActionMenuButton");
+    const menu = wrapper?.querySelector(":scope > .playerHeroActionMenuDropdown");
+    if (!(wrapper instanceof HTMLElement) || !(toggle instanceof HTMLElement) || !(menu instanceof HTMLElement)) return false;
+    toggle.removeAttribute("aria-disabled");
+    applyHeroActionMenuLayout(actions);
+    if (toggle.dataset.playerHeroMenuBound === "true") return true;
+    toggle.dataset.playerHeroMenuBound = "true";
+    toggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = menu.dataset.open !== "true";
+      if (activeHeroActionMenu && activeHeroActionMenu !== menu) closeHeroActionMenu(activeHeroActionMenu);
+      setHeroActionMenuOpen(menu, willOpen);
+      activeHeroActionMenu = willOpen ? menu : null;
+    });
+    menu.querySelectorAll(":scope > .playerHeroActionMenuItem").forEach((item) => {
+      item.addEventListener("click", () => closeHeroActionMenu(menu));
+    });
+    return true;
+  }
+
+  function animateReadyControls(container = document) {
+    const playerId = playerIdFromLocation();
+    if (!playerId || readyTransitionPlayerId !== playerId) return false;
+    readyTransitionPlayerId = "";
+    const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
+      .filter((control) => control instanceof HTMLElement);
+    if (!controls.length) return false;
+    controls.forEach((control) => {
+      control.style.transition = "none";
+      control.style.opacity = "0.5";
+      control.style.color = "var(--text-soft)";
+      if (control.classList.contains("playerAttributeViewButton")) {
+        control.style.backgroundColor = "var(--surface-muted)";
+        control.style.borderColor = "var(--border-strong)";
+      }
+    });
+    controls[0]?.getBoundingClientRect();
+    window.requestAnimationFrame(() => {
+      controls.forEach((control) => {
+        control.style.transition = PLAYER_READY_TRANSITION;
+        control.style.opacity = "1";
+        control.style.removeProperty("color");
+        if (control.classList.contains("playerAttributeViewButton")) {
+          control.style.removeProperty("background-color");
+          control.style.removeProperty("border-color");
+        }
+      });
+    });
+    return true;
+  }
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!(activeHeroActionMenu instanceof HTMLElement)) return;
+    const wrapper = activeHeroActionMenu.closest(".playerHeroActionMenu");
+    if (wrapper instanceof HTMLElement && event.target instanceof Node && wrapper.contains(event.target)) return;
+    closeHeroActionMenu(activeHeroActionMenu);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && activeHeroActionMenu instanceof HTMLElement) closeHeroActionMenu(activeHeroActionMenu);
+  });
+
+  function applyHeroLayout(hero) {
+    if (!(hero instanceof HTMLElement)) return false;
+    const identity = hero.querySelector(":scope > .playerHeroIdentity");
+    const media = hero.querySelector(":scope > .playerHeroMedia");
+    const actions = hero.querySelector(":scope > .playerHeroActions");
+
+    if (media instanceof HTMLElement) {
+      media.style.order = "1";
+      media.style.alignSelf = "stretch";
+    }
+    if (identity instanceof HTMLElement) {
+      identity.style.order = "2";
+      identity.style.flex = "1 1 280px";
+      identity.style.minWidth = "0";
+      identity.style.alignSelf = "center";
+      const eyebrow = identity.querySelector(".playerEyebrow");
+      const title = identity.querySelector(".playerTitle");
+      const positions = identity.querySelector("p");
+      if (eyebrow instanceof HTMLElement) eyebrow.style.fontSize = "14px";
+      if (title instanceof HTMLElement) title.style.fontSize = "28px";
+      if (positions instanceof HTMLElement) positions.style.fontSize = "16px";
+    }
+    if (actions instanceof HTMLElement) {
+      actions.style.order = "3";
+      actions.style.alignSelf = "center";
+      actions.style.marginLeft = "auto";
+      applyHeroActionMenuLayout(actions);
+    }
+
+    const detail = hero.parentElement;
+    if (detail instanceof HTMLElement && detail.id === "playerDetail") detail.style.marginTop = "0";
+    return true;
+  }
+
+  function placeHeroMedia(hero, context) {
+    if (!(hero instanceof HTMLElement)) return false;
+    let media = hero.querySelector(":scope > .playerHeroMedia");
+    const identity = hero.querySelector(":scope > .playerHeroIdentity");
+    if (!(media instanceof HTMLElement)) {
+      media = createHeroMedia(context);
+      hero.insertBefore(media, identity instanceof HTMLElement ? identity : hero.firstChild);
+    } else {
+      updateHeroMedia(media, context);
+      if (identity instanceof HTMLElement && media.nextElementSibling !== identity) hero.insertBefore(media, identity);
+    }
+    applyHeroLayout(hero);
+    return true;
+  }
+
+  function createPendingHeroActions(context) {
+    const actions = document.createElement("div");
+    actions.className = "playerHeroActions playerHeroActionsPending";
+    const wrapper = document.createElement("div");
+    wrapper.className = "playerHeroActionMenu";
+
+    const external = document.createElement("a");
+    external.className = "playerExternalButton playerHeroPrimaryAction";
+    external.textContent = "Open link";
+    external.href = context.externalUrl;
+    external.target = "_blank";
+    external.rel = "noopener noreferrer";
+
+    const toggle = document.createElement("button");
+    toggle.className = "playerHeroActionMenuButton";
+    toggle.type = "button";
+    toggle.setAttribute("aria-label", "More player actions");
+    toggle.setAttribute("aria-haspopup", "menu");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-disabled", "true");
+    toggle.appendChild(createChevronIcon());
+
+    const menu = document.createElement("div");
+    menu.className = "playerHeroActionMenuDropdown";
+    menu.setAttribute("role", "menu");
+    menu.hidden = true;
+
+    const evaluate = document.createElement("button");
+    evaluate.className = "playerEvaluateButton playerHeroActionMenuItem";
+    evaluate.type = "button";
+    evaluate.setAttribute("role", "menuitem");
+    evaluate.append(createEvaluateIcon(), document.createTextNode("Evaluate"));
+    menu.appendChild(evaluate);
+
+    if (storedWalletOptIn()) {
+      const watchlist = document.createElement("button");
+      watchlist.className = "playerWatchlistButton playerHeroActionMenuItem";
+      watchlist.type = "button";
+      watchlist.setAttribute("role", "menuitem");
+      const watchlistReady = Boolean(state.walletPreferencesLoaded);
+      const inWatchlist = watchlistReady && state.watchlistPlayerIds instanceof Set && state.watchlistPlayerIds.has(context.playerId);
+      watchlist.innerHTML = '<span class="watchlistButtonStar" aria-hidden="true">' + (inWatchlist ? "\u2605" : "\u2606") + '</span><span>' + (inWatchlist ? "In watchlist" : "Add to watchlist") + "</span>";
+      menu.appendChild(watchlist);
+    }
+
+    wrapper.append(external, toggle, menu);
+    actions.appendChild(wrapper);
+    applyHeroActionMenuLayout(actions);
+    return actions;
+  }
+
+  function createPendingProfilePanel() {
+    const panel = document.createElement("div");
+    panel.className = "playerPanel playerInfoPanel";
+    const heading = document.createElement("h3");
+    heading.textContent = "Profile";
+    const grid = document.createElement("div");
+    grid.className = "detailGrid";
+    ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"].forEach((label) => {
+      const card = document.createElement("div");
+      if (label === "Contract") card.className = "contractDetailCard";
+      const name = document.createElement("span");
+      name.textContent = label;
+      const value = document.createElement("strong");
+      if (label === "Contract") {
+        const line = document.createElement("span");
+        line.className = "playerContractLine";
+        const team = document.createElement("span");
+        team.className = "playerContractTeam";
+        team.textContent = loadingBlank();
+        const division = document.createElement("span");
+        division.className = "playerContractDivision";
+        division.textContent = loadingBlank();
+        line.append(team, division);
+        value.appendChild(line);
+      } else {
+        value.textContent = loadingBlank();
+      }
+      card.append(name, value);
+      grid.appendChild(card);
+    });
+    panel.append(heading, grid);
+    return panel;
+  }
+
+  function createPendingAttributeViews() {
+    const views = document.createElement("div");
+    views.className = "playerAttributeViews";
+    views.style.visibility = "visible";
+    const items = storedProgressionAccess()
+      ? [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]]
+      : [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"]];
+    items.forEach(([view, label]) => {
+      const button = document.createElement("button");
+      button.className = "playerAttributeViewButton";
+      button.type = "button";
+      button.disabled = true;
+      button.dataset.playerAttributeView = view;
+      button.textContent = label;
+      button.style.transition = PLAYER_READY_TRANSITION;
+      views.appendChild(button);
+    });
+    return views;
+  }
+
+  function pendingAttributeLabels(context) {
+    const goalkeeper = context.positions.some((position) => String(position).toUpperCase() === "GK");
+    return goalkeeper
+      ? ["Overall", "Goalkeeping"]
+      : ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
+  }
+
+  function createPendingAttributesPanel(context) {
+    const panel = document.createElement("div");
+    panel.className = "playerPanel attributesPanel";
+    const header = document.createElement("div");
+    header.className = "playerPanelHeader";
+    const heading = document.createElement("h3");
+    heading.textContent = "Attributes";
+    header.append(heading, createPendingAttributeViews());
+
+    const grid = document.createElement("div");
+    grid.className = "attributeGrid";
+    const labels = pendingAttributeLabels(context);
+    const goalkeeper = labels.length === 2;
+    labels.forEach((label) => {
+      const card = document.createElement("div");
+      const fullWidth = label === "Overall" || (goalkeeper && label === "Goalkeeping");
+      card.className = "playerAttributeCard" + (label === "Overall" ? " featured" : "") + (fullWidth ? " fullWidth" : "");
+      if (label === "Overall") card.style.setProperty("--rarity-color", rarityColor(context.overall));
+      const name = document.createElement("span");
+      name.textContent = label;
+      const strong = document.createElement("strong");
+      const value = document.createElement("span");
+      value.className = "attributeValueText";
+      value.textContent = label === "Overall" ? (context.overall || loadingBlank()) : loadingBlank();
+      strong.appendChild(value);
+      card.append(name, strong);
+      grid.appendChild(card);
+    });
+    panel.append(header, grid);
+    return panel;
+  }
+
+  function stableAttributePanelHtml(row) {
+    return renderPlayerAttributePanel(row);
+  }
+
+  function createPendingNotesPanel(context) {
+    const panel = document.createElement("div");
+    panel.className = "playerPanel playerNotesPanel";
+    const heading = document.createElement("h3");
+    heading.textContent = "Notes";
+    const wrap = document.createElement("div");
+    wrap.className = "playerNotesInputWrap";
+    const input = document.createElement("textarea");
+    input.className = "playerNotesInput";
+    input.placeholder = "Write private notes for this player...";
+    input.maxLength = PLAYER_NOTE_MAX_LENGTH;
+    input.disabled = true;
+    const notesReady = Boolean(state.walletPreferencesLoaded);
+    const note = notesReady && typeof playerNote === "function" ? playerNote(context.playerId) : "";
+    if (note) input.value = note;
+    const count = document.createElement("span");
+    count.className = "playerNotesCount";
+    count.textContent = notesReady ? String(note.length) + "/" + PLAYER_NOTE_MAX_LENGTH : loadingBlank();
+    wrap.append(input, count);
+    panel.append(heading, wrap);
+    return panel;
+  }
+
+  function pendingPitchHtml() {
+    const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
+    return pitchLines + PITCH_ROWS.map((pitchRow) =>
+      '\n      <div class="pitchRow pitchRow' + pitchRow.length + '" style="--pitch-columns: ' + pitchRow.length + '">\n        ' +
+      pitchRow.map(() => '<div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div>').join("") +
+      "\n      </div>"
+    ).join("");
+  }
+
+  function createPendingPlayerGrid(context) {
+    const playerGrid = document.createElement("section");
+    playerGrid.className = "playerGrid playerGridPending";
+    const stack = document.createElement("div");
+    stack.className = "playerStack";
+    stack.append(createPendingProfilePanel(), createPendingAttributesPanel(context));
+    if (storedWalletOptIn()) stack.appendChild(createPendingNotesPanel(context));
+
+    const pitchPanel = document.createElement("div");
+    pitchPanel.className = "playerPanel pitchPanel";
+    const heading = document.createElement("h3");
+    heading.textContent = "Positions";
+    const pitch = document.createElement("div");
+    pitch.className = "pitch";
+    pitch.innerHTML = pendingPitchHtml();
+    pitchPanel.append(heading, pitch);
+
+    playerGrid.append(stack, pitchPanel);
+    return playerGrid;
+  }
+
+  function updatePendingHero(hero, context) {
+    if (!(hero instanceof HTMLElement)) return false;
+    const identity = hero.querySelector(":scope > .playerHeroIdentity");
+    if (identity instanceof HTMLElement) {
+      const idText = identity.querySelector(".playerIdText");
+      if (idText instanceof HTMLElement) idText.textContent = "ID #" + context.playerId;
+      const titleName = identity.querySelector(".playerTitleName");
+      if (titleName instanceof HTMLElement) {
+        titleName.classList.toggle("playerTitleNamePending", !context.name);
+        titleName.textContent = context.name || loadingBlank();
+      }
+      const noteIcon = identity.querySelector("[data-player-note-title-icon]");
+      if (noteIcon instanceof HTMLElement && state.walletPreferencesLoaded && typeof playerNoteIconHtml === "function") {
+        noteIcon.innerHTML = playerNoteIconHtml(context.playerId);
+      }
+      const positions = identity.querySelector("p");
+      if (positions instanceof HTMLElement) {
+        positions.classList.toggle("playerPositionsPending", !context.positions.length);
+        positions.textContent = context.positions.length ? context.positions.join(", ") : loadingBlank();
+      }
+    }
+    const external = hero.querySelector(".playerHeroPrimaryAction");
+    if (external instanceof HTMLAnchorElement) {
+      external.href = context.externalUrl;
+      external.target = "_blank";
+      external.rel = "noopener noreferrer";
+      external.removeAttribute("aria-disabled");
+    }
+    placeHeroMedia(hero, context);
+    return true;
+  }
+
+  function showPlayerPage() {
+    const page = document.getElementById("playerPage");
+    if (!(page instanceof HTMLElement)) return false;
+    document.querySelectorAll("main > .pageView").forEach((candidate) => {
+      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
+    });
+    page.hidden = false;
+    if (document.body) document.body.dataset.page = "player";
+    const actions = page.querySelector(".playerHeroActions");
+    if (actions instanceof HTMLElement) applyHeroActionMenuLayout(actions);
+    return true;
+  }
+
+  function renderPending(value = {}) {
+    const incoming = normalizeContext(value);
+    const playerId = incoming.playerId || playerIdFromLocation();
+    if (!playerId) return false;
+    const context = mergeContext(readCachedContext(playerId), { ...incoming, playerId });
+    readyTransitionPlayerId = playerId;
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return false;
+
+    detail.style.marginTop = "0";
+    const existingHero = detail.querySelector(":scope > .playerHero");
+    if (existingHero instanceof HTMLElement
+        && existingHero.dataset.playerShellId === playerId
+        && existingHero.classList.contains("playerHeroPending")) {
+      updatePendingHero(existingHero, context);
+      const pendingOverall = detail.querySelector(".attributesPanel .playerAttributeCard.featured .attributeValueText");
+      if (pendingOverall instanceof HTMLElement) pendingOverall.textContent = context.overall || loadingBlank();
+      showPlayerPage();
+      if (context.name || context.positions.length || context.overall || context.externalUrl) rememberContext(context);
+      return true;
+    }
+
+    const hero = document.createElement("section");
+    hero.className = "playerHero playerHeroPending";
+    hero.dataset.playerShellId = playerId;
+
+    const identity = document.createElement("div");
+    identity.className = "playerHeroIdentity";
+    const eyebrow = document.createElement("button");
+    eyebrow.id = "copyPlayerIdButton";
+    eyebrow.className = "playerEyebrow playerIdText";
+    eyebrow.type = "button";
+    eyebrow.dataset.tooltip = "Click to copy";
+    eyebrow.setAttribute("aria-label", "Click to copy player ID");
+    eyebrow.textContent = "ID #" + playerId;
+    const title = document.createElement("h2");
+    title.className = "playerTitle";
+    const titleName = document.createElement("span");
+    titleName.className = "playerTitleName" + (context.name ? "" : " playerTitleNamePending");
+    titleName.textContent = context.name || loadingBlank();
+    const titleNoteIcon = document.createElement("span");
+    titleNoteIcon.className = "playerTitleNoteIcon";
+    titleNoteIcon.dataset.playerNoteTitleIcon = "";
+    if (state.walletPreferencesLoaded && typeof playerNoteIconHtml === "function") {
+      titleNoteIcon.innerHTML = playerNoteIconHtml(playerId);
+    }
+    title.append(titleName, titleNoteIcon);
+    const positions = document.createElement("p");
+    positions.className = context.positions.length ? "" : "playerPositionsPending";
+    positions.textContent = context.positions.length ? context.positions.join(", ") : loadingBlank();
+    identity.append(eyebrow, title, positions);
+
+    const actions = createPendingHeroActions(context);
+    hero.append(createHeroMedia(context), identity, actions);
+    applyHeroLayout(hero);
+    detail.replaceChildren(hero, createPendingPlayerGrid(context));
+    showPlayerPage();
+    if (playerIdFromLocation() === playerId) {
+      document.documentElement.dataset.initialEntityVerified = "player";
+    }
+    if (context.name || context.positions.length || context.overall || context.externalUrl) rememberContext(context);
+    return true;
+  }
+
+  function hydrateHero(value = {}) {
+    const context = normalizeContext(value);
+    if (!context.playerId) return false;
+    const routePlayerId = playerIdFromLocation();
+    if (routePlayerId && routePlayerId !== context.playerId) return false;
+    const container = value.container instanceof HTMLElement ? value.container : document.getElementById("playerDetail");
+    if (!(container instanceof HTMLElement)) return false;
+    const hero = container.querySelector(":scope > .playerHero");
+    if (!(hero instanceof HTMLElement)) return false;
+
+    const identity = hero.querySelector(":scope > .playerHeroIdentity") || hero.querySelector(":scope > div:not(.playerHeroMedia):not(.playerHeroActions)");
+    if (identity instanceof HTMLElement) identity.classList.add("playerHeroIdentity");
+    hero.dataset.playerShellId = context.playerId;
+    hero.classList.remove("playerHeroPending");
+    container.style.marginTop = "0";
+    placeHeroMedia(hero, context);
+    const viewRow = container.querySelector(".playerAttributeViews");
+    if (viewRow instanceof HTMLElement) viewRow.style.visibility = "visible";
+    if (normalizePlayerId(window.__mflPlayerFirstPaintPendingContext?.playerId) === context.playerId) {
+      window.__mflPlayerFirstPaintPendingContext = null;
+    }
+    if (pendingDetailPlayerId === context.playerId) pendingDetailPlayerId = "";
+    if (readyDetailPlayerId === context.playerId) readyDetailPlayerId = "";
+    rememberContext(context);
+    return true;
+  }
+
+  window.addEventListener("resize", () => {
+    document.querySelectorAll(".playerHeroPortrait").forEach((portrait) => {
+      if (!(portrait instanceof HTMLCanvasElement)) return;
+      const source = portraitSources.get(normalizePlayerId(portrait.dataset.playerId));
+      if (source instanceof HTMLImageElement && source.complete && source.naturalWidth) drawPortraitCrop(portrait, source);
+      else applyPortraitGeometry(portrait);
+    });
+    document.querySelectorAll(".playerHeroActions").forEach((actions) => {
+      if (actions instanceof HTMLElement) applyHeroActionMenuLayout(actions);
+    });
+  }, { passive: true });
+
+  const pendingContext = window.__mflPlayerFirstPaintPendingContext;
+  const pendingPlayerId = normalizePlayerId(pendingContext?.playerId);
+  const routePlayerId = playerIdFromLocation();
+  if (pendingPlayerId) {
+    beginDetailNavigation(pendingContext);
+    renderPending(pendingContext);
+  } else if (routePlayerId) {
+    renderPending({ playerId: routePlayerId });
+  }
+
+  window.__mflPlayerFirstPaintRuntime = Object.freeze({
+    cropHeightPx: PLAYER_PORTRAIT_CROP_HEIGHT_PX,
+    portraitUrl,
+    renderPending,
+    hydrateHero,
+    rememberContext,
+    drawPortraitCrop,
+    bindHeroActionMenu,
+    animateReadyControls,
+    stableAttributePanelHtml,
+    beginDetailNavigation,
+    markDetailPayloadReady,
+    detailDataReady,
+  });
+})();
+
 function showPlayerNoteTooltip(icon) {
   if (Date.now() < state.tooltipSuppressedUntil) {
     return;
@@ -243,9 +1264,9 @@ function renderPitch(row) {
         const familiarity = familiarityForPosition(row, position);
         const rating = positionRating(row, position, familiarity);
         const content = familiarity
-          ? `<span class="pitchPositionCircle ${familiarity}" title="${position} ${rating}"><strong>${rating}</strong><small>${position}</small></span>`
+          ? `<span class="pitchPositionCircle ${familiarity}"><strong>${rating}</strong><small>${position}</small></span>`
           : `<span class="pitchPositionBlank" aria-hidden="true"></span>`;
-        return `<div class="pitchPositionSlot">${content}</div>`;
+        return `<div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none">${content}</div>`;
       }).join("")}
     </div>`).join("");
 }
@@ -525,6 +1546,15 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
 function renderPlayerPageOwner(playerId) {
   const row = rowByPlayerId(playerId);
 
+  if (row && window.__mflPlayerFirstPaintRuntime?.detailDataReady?.(row, playerId) === false) {
+    const key = String(playerId || "").trim();
+    const pendingContext = window.__mflPlayerFirstPaintPendingContext;
+    window.__mflPlayerFirstPaintRuntime?.renderPending?.(
+      String(pendingContext?.playerId || "").trim() === key ? pendingContext : { playerId: key },
+    );
+    return;
+  }
+
   if (!row) {
     playerDetailRenderReuse.invalidate();
     window.__mflStaticUiRuntime?.showNotFound?.("Player");
@@ -550,7 +1580,7 @@ function renderPlayerPageOwner(playerId) {
   const heightLabel = height === "NULL" ? height : `${height} cm`;
   const ageMarker = retirementMarker(row);
   const ageMarkerHtml = ageMarker
-    ? ` <span class="retirementMarker playerAgeMarker retirementMarker--${escapeHtml(ageMarker.status || "default")}" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></span>`
+    ? ` <i class="retirementMarker playerAgeMarker retirementMarker--${escapeHtml(ageMarker.status || "default")}" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></i>`
     : "";
   const agentWalletAddress = getValue(row, "wallet_address");
   const agentTooltip = joinedAgencyTooltip(row);
@@ -574,9 +1604,7 @@ function renderPlayerPageOwner(playerId) {
     ["Agent", agentLinkHtml],
     ["Contract", contractLabel],
   ];
-  if (revenueShare) {
-    infoCardsData.push(["Rev Share", escapeHtml(revenueShare)]);
-  }
+  infoCardsData.push(["Rev Share", escapeHtml(revenueShare || "–")]);
   const infoCards = infoCardsData.map(([label, value]) => `<div${label === "Contract" ? " class=\"contractDetailCard\"" : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
@@ -586,35 +1614,50 @@ function renderPlayerPageOwner(playerId) {
 
   playerDetail.innerHTML = `
     <section class="playerHero">
-      <div>
+      <div class="playerHeroIdentity">
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
         <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span><span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
-        <button id="playerEvaluateButton" class="playerEvaluateButton" type="button">Evaluate</button>
-        ${hasWalletOptIn() ? '<button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>' : ""}
-        <a id="openPlayerExternalButton" class="playerExternalButton" href="${escapeHtml(formatCellValue(row, linkColumn))}" target="_blank" rel="noopener noreferrer">Open link</a>
+        <div class="playerHeroActionMenu">
+          <a id="openPlayerExternalButton" class="playerExternalButton playerHeroPrimaryAction" href="${escapeHtml(formatCellValue(row, linkColumn))}" target="_blank" rel="noopener noreferrer">Open link</a>
+          <button id="playerHeroActionMenuButton" class="playerHeroActionMenuButton" type="button" aria-label="More player actions" aria-haspopup="menu" aria-expanded="false"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg></button>
+          <div id="playerHeroActionMenu" class="playerHeroActionMenuDropdown" role="menu" hidden>
+            <button id="playerEvaluateButton" class="playerEvaluateButton playerHeroActionMenuItem" type="button" role="menuitem"><svg class="playerHeroMenuIcon playerEvaluateIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span>Evaluate</span></button>
+            ${hasWalletOptIn() ? '<button id="playerWatchlistButton" class="playerWatchlistButton playerHeroActionMenuItem" type="button" role="menuitem"></button>' : ""}
+          </div>
+        </div>
       </div>
     </section>
     <section class="playerGrid">
       <div class="playerStack">
         <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
-        <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(displayRow)}</div></div>
+        <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${window.__mflPlayerFirstPaintRuntime?.stableAttributePanelHtml?.(displayRow) || renderPlayerAttributePanel(displayRow)}</div></div>
         ${hasWalletOptIn() ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea id="playerNotesInput" class="playerNotesInput" placeholder="Write private notes for this player..." maxlength="${PLAYER_NOTE_MAX_LENGTH}">${escapeHtml(playerNote(id))}</textarea><span id="playerNotesCount" class="playerNotesCount">${playerNote(id).length}/${PLAYER_NOTE_MAX_LENGTH}</span></div></div>` : ""}
       </div>
       <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(displayRow)}</div></div>
     </section>`;
 
+  window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
+    container: playerDetail,
+    playerId: id,
+    name: playerName,
+    positions,
+    overall: statDisplayValue(row, "overall"),
+    externalUrl: formatCellValue(row, linkColumn),
+  });
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   if (watchButton) {
     const inAnyWatchlist = playerIsInAnyWatchlist(id);
-    watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
+    watchButton.className = `playerWatchlistButton playerHeroActionMenuItem ${inAnyWatchlist ? "active" : ""}`;
     watchButton.innerHTML = `<span class="watchlistButtonStar" aria-hidden="true">${inAnyWatchlist ? "\u2605" : "\u2606"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
     watchButton.addEventListener("click", () => {
       toggleWatchlistPlayer(id, true);
     });
   }
+  window.__mflPlayerFirstPaintRuntime?.bindHeroActionMenu?.(playerDetail);
+  window.__mflPlayerFirstPaintRuntime?.animateReadyControls?.(playerDetail);
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });
