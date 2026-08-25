@@ -31,6 +31,18 @@ invariant(
 );
 
 invariant(
+  appCore.includes('const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();\n  return JSON.stringify([')
+    && appCore.includes("state.evaluationMflPerUsd,\n    discountRate,\n    state.evaluationLateSeasonRewardRates,"),
+  "Evaluation render reuse must treat Discount Rate resolved -> pending -> resolved as three distinct render signatures.",
+);
+
+invariant(
+  appCore.includes('const previousMflPerUsd = state.evaluationMflPerUsd;')
+    && appCore.includes('if (state.currentPage === "evaluation" && state.evaluationMflPerUsd !== previousMflPerUsd) {\n    void window.__mflEvaluationDiscountRateRuntime?.refresh?.();\n  }'),
+  "A committed MFL/USD change must synchronously start Discount Rate recalculation before the caller renders derived values.",
+);
+
+invariant(
   appCore.includes("formatEvaluationMfl(numericMflValue)")
     && appCore.includes("formatEvaluationCurrency(usdValue)")
     && appCore.includes("formatEvaluationNumber(discountFactor, 4)")
@@ -38,4 +50,4 @@ invariant(
   "MFL and USD must remain independent while only Discount Factor and Value blank during recalculation.",
 );
 
-console.log("Evaluation Discount Rate pending-state validation passed: discount-derived cells blank immediately, unrelated MFL/USD values remain visible, and resolved values return through the same render lifecycle.");
+console.log("Evaluation Discount Rate pending-state validation passed: MFL/USD commits synchronously invalidate the rate, render reuse tracks pending/resolved rate identity, discount-derived cells blank immediately, and resolved values return through the same render lifecycle.");
