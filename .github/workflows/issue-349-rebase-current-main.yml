@@ -1,0 +1,29 @@
+name: Issue 349 rebase current main
+
+on:
+  push:
+    branches:
+      - fix/loading-navigation-supersession
+    paths:
+      - .github/workflows/issue-349-rebase-current-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/loading-navigation-supersession
+      - name: Rebase onto current main and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main
+          git rm .github/workflows/issue-349-rebase-current-main.yml
+          git commit -m "Remove issue 349 rebase helper"
+          git push --force-with-lease origin HEAD:fix/loading-navigation-supersession
