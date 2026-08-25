@@ -154,6 +154,16 @@
     });
   }
 
+  function queueEvaluationRender() {
+    queueMicrotask(() => {
+      if (destroyed || !isEvaluation()) return;
+      try { window.renderEvaluationPage?.(); } catch {}
+      requestAnimationFrame(() => {
+        if (!destroyed) renderRate();
+      });
+    });
+  }
+
   function publishRate(result) {
     discountResult = result;
     installRateFunction();
@@ -162,13 +172,7 @@
     window.__mflDynamicDiscountResult = result;
     renderRate();
     window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", { detail: result }));
-    queueMicrotask(() => {
-      if (destroyed || !isEvaluation()) return;
-      try { window.renderEvaluationPage?.(); } catch {}
-      requestAnimationFrame(() => {
-        if (!destroyed) renderRate();
-      });
-    });
+    queueEvaluationRender();
   }
 
   function clearRetry() {
@@ -197,6 +201,7 @@
     window.__mflDynamicDiscountResult = null;
     document.documentElement.dataset.mflEvaluationRateSettled = "false";
     renderRate();
+    queueEvaluationRender();
 
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     discountPromise = fetch(`/api/mfl-season-ratios-v2?fresh=${encodeURIComponent(nonce)}&v=${encodeURIComponent(VERSION)}`, {
