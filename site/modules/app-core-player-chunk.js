@@ -55,6 +55,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
+  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 300;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
   const PLAYER_NOTE_MAX_LENGTH = 200;
@@ -236,6 +237,16 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     if (!context.playerId) return false;
     pendingDetailPlayerId = context.playerId;
     readyDetailPlayerId = "";
+    if (playerIdFromLocation() !== context.playerId) {
+      const targetPlayerId = context.playerId;
+      queueMicrotask(() => {
+        if (pendingDetailPlayerId !== targetPlayerId || playerIdFromLocation() !== targetPlayerId) return;
+        const pendingContext = window.__mflPlayerFirstPaintPendingContext;
+        renderPending(
+          normalizePlayerId(pendingContext?.playerId) === targetPlayerId ? pendingContext : context,
+        );
+      });
+    }
     return true;
   }
 
@@ -245,16 +256,17 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     const playerIdIndex = payload.columns.indexOf("player_id");
     const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => payload.columns.indexOf(column));
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
-    const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
-    if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
     readyDetailPlayerId = routePlayerId;
-    return true;
+    const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
+    return Boolean(matchingRow && matchingRow.length === payload.columns.length);
   }
 
   function detailDataReady(row, playerIdValue) {
     const playerId = normalizePlayerId(playerIdValue);
-    if (!Array.isArray(row) || !playerId || !Array.isArray(state.columns) || !state.columns.length) return false;
+    if (!playerId) return false;
     if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;
+    if (!Array.isArray(row)) return pendingDetailPlayerId !== playerId || readyDetailPlayerId === playerId;
+    if (!Array.isArray(state.columns) || !state.columns.length) return false;
     const playerIdIndex = state.columns.indexOf("player_id");
     const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => state.columns.indexOf(column));
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
@@ -723,9 +735,15 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
 
     hero.style.gap = "0";
     if (media instanceof HTMLElement) {
+      const identityOffset = PLAYER_HERO_OVERALL_SIZE_PX + PLAYER_HERO_IDENTITY_OVERALL_GAP_PX;
+      const width = identityOffset + "px";
       media.style.order = "1";
       media.style.alignSelf = "stretch";
-      media.style.marginRight = "12px";
+      media.style.flex = "0 0 " + width;
+      media.style.width = width;
+      media.style.minWidth = width;
+      media.style.maxWidth = width;
+      media.style.marginRight = "0";
     }
     if (identity instanceof HTMLElement) {
       const width = PLAYER_HERO_IDENTITY_WIDTH_PX + "px";
@@ -734,7 +752,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
       identity.style.width = width;
       identity.style.maxWidth = width;
       identity.style.minWidth = "0";
-      identity.style.marginLeft = "auto";
+      identity.style.marginLeft = "0";
       identity.style.marginRight = PLAYER_HERO_IDENTITY_ACTION_GAP_PX + "px";
       identity.style.alignSelf = "center";
       const eyebrow = identity.querySelector(".playerEyebrow");
@@ -747,7 +765,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     if (actions instanceof HTMLElement) {
       actions.style.order = "3";
       actions.style.alignSelf = "center";
-      actions.style.marginLeft = "0";
+      actions.style.marginLeft = "auto";
       applyHeroActionMenuLayout(actions);
     }
 
@@ -1294,7 +1312,7 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   if (!row) {`,
     `  const row = rowByPlayerId(playerId);
 
-  if (row && window.__mflPlayerFirstPaintRuntime?.detailDataReady?.(row, playerId) === false) {
+  if (window.__mflPlayerFirstPaintRuntime?.detailDataReady?.(row, playerId) === false) {
     const key = String(playerId || "").trim();
     const pendingContext = window.__mflPlayerFirstPaintPendingContext;
     window.__mflPlayerFirstPaintRuntime?.renderPending?.(
