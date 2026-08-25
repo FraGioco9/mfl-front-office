@@ -94,60 +94,18 @@ async function saveSettingsDraft() {
 
 function ensureSettingsPageStructure() {
   if (!settingsPage) return;
-  const panel = settingsPage.querySelector(".settingsPanel");
-  if (!panel) return;
-
-  const title = settingsPage.querySelector(".tablePageTitle");
-  if (title && !settingsPage.querySelector("[data-settings-intro]")) {
-    const intro = document.createElement("p");
-    intro.dataset.settingsIntro = "true";
-    intro.textContent = "Changes stay local to this page until you save them.";
-    title.insertAdjacentElement("afterend", intro);
-  }
+  settingsPage.querySelector("[data-settings-intro]")?.remove();
+  settingsPage.querySelector("[data-settings-global-actions]")?.remove();
 
   if (settingsEmailDiscardButton) {
-    settingsEmailDiscardButton.hidden = true;
-    settingsEmailDiscardButton.disabled = true;
+    settingsEmailDiscardButton.hidden = false;
+    settingsEmailDiscardButton.textContent = "Discard";
+    settingsEmailDiscardButton.setAttribute("aria-label", "Discard all Settings changes");
   }
   if (settingsEmailSaveButton) {
-    settingsEmailSaveButton.hidden = true;
-    settingsEmailSaveButton.disabled = true;
-  }
-
-  if (!panel.querySelector("[data-settings-global-actions]")) {
-    const section = document.createElement("section");
-    section.className = "settingsSection";
-    section.dataset.settingsGlobalActions = "true";
-    section.setAttribute("aria-labelledby", "settingsGlobalActionsTitle");
-
-    const heading = document.createElement("h3");
-    heading.id = "settingsGlobalActionsTitle";
-    heading.textContent = "Save changes";
-
-    const status = document.createElement("p");
-    status.id = "settingsSaveStatus";
-    status.textContent = "No unsaved changes.";
-
-    const actions = document.createElement("div");
-    actions.className = "settingsEmailAddressRow";
-
-    const discard = document.createElement("button");
-    discard.id = "settingsDiscardChangesButton";
-    discard.className = "settingsEmailActionButton";
-    discard.type = "button";
-    discard.textContent = "Discard changes";
-    discard.addEventListener("click", () => discardSettingsDraft());
-
-    const save = document.createElement("button");
-    save.id = "settingsSaveChangesButton";
-    save.className = "settingsEmailActionButton primary";
-    save.type = "button";
-    save.textContent = "Save settings";
-    save.addEventListener("click", () => void saveSettingsDraft());
-
-    actions.append(discard, save);
-    section.append(heading, status, actions);
-    panel.appendChild(section);
+    settingsEmailSaveButton.hidden = false;
+    settingsEmailSaveButton.textContent = "Save";
+    settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");
   }
 }
 
@@ -214,31 +172,18 @@ function updateSettingsEmailDraftActions() {
   if (settingsEmailAddressInput) {
     settingsEmailAddressInput.classList.toggle("invalid", Boolean(draft && !draftIsValid));
   }
-  if (settingsEmailDiscardButton) {
-    settingsEmailDiscardButton.hidden = true;
-    settingsEmailDiscardButton.disabled = true;
-  }
-  if (settingsEmailSaveButton) {
-    settingsEmailSaveButton.hidden = true;
-    settingsEmailSaveButton.disabled = true;
-  }
 
-  const discard = document.querySelector("#settingsDiscardChangesButton");
-  const save = document.querySelector("#settingsSaveChangesButton");
-  const status = document.querySelector("#settingsSaveStatus");
   const dirty = Boolean(state.settingsDraftDirty);
   const saving = Boolean(state.settingsSaveInFlight);
-  if (discard instanceof HTMLButtonElement) discard.disabled = !dirty || saving;
-  if (save instanceof HTMLButtonElement) {
-    save.disabled = !dirty || !draftIsValid || saving;
-    save.textContent = saving ? "Saving..." : "Save settings";
+  if (settingsEmailDiscardButton) {
+    settingsEmailDiscardButton.hidden = false;
+    settingsEmailDiscardButton.disabled = !dirty || saving;
+    settingsEmailDiscardButton.textContent = "Discard";
   }
-  if (status) {
-    status.textContent = saving
-      ? "Saving changes to your account..."
-      : dirty
-        ? "You have unsaved changes."
-        : "No unsaved changes.";
+  if (settingsEmailSaveButton) {
+    settingsEmailSaveButton.hidden = false;
+    settingsEmailSaveButton.disabled = !dirty || !draftIsValid || saving;
+    settingsEmailSaveButton.textContent = saving ? "Saving..." : "Save";
   }
 }
 

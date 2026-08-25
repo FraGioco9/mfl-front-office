@@ -1937,7 +1937,7 @@ function setView() {
 
 async function setPage(pageName, updateHash = true, options = {}) {
   if (!pageNavigationIsCurrent(options)) return null;
-  if (!settingsConfirmNavigation(pageName, updateHash)) return null;
+  if (!await settingsConfirmNavigation(pageName, updateHash)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
@@ -2790,8 +2790,7 @@ function settingsEmailOptionsDraftIsActive() {
 }
 
 function settingsRestoreDraftBaselineForNavigation() {
-  const baseline = state.settingsDraftBaseline;
-  if (!baseline || typeof baseline !== "object") return;
+  const baseline = state.settingsDraftBaseline || currentSettingsPayload();
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(baseline.receiveEmailsFor);
   state.settingsEmailAddress = normalizeSettingsEmailAddress(baseline.emailAddress);
   state.settingsEmailAddressDraft = state.settingsEmailAddress;
@@ -2800,15 +2799,48 @@ function settingsRestoreDraftBaselineForNavigation() {
   state.settingsDraftDirty = false;
 }
 
-function settingsConfirmNavigation(pageName, updateHash = true) {
-  if (state.currentPage !== "settings" || pageName === "settings" || !state.settingsDraftDirty) return true;
-  const leave = window.confirm("You have unsaved settings changes. Leave without saving?");
-  if (leave) {
-    settingsRestoreDraftBaselineForNavigation();
-    return true;
+async function settingsResetFromSupabaseForNavigation() {
+  settingsRestoreDraftBaselineForNavigation();
+  clearPendingSettingsLocally();
+  state.settingsDraftDirty = false;
+
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    state.settingsDraftBaseline = currentSettingsPayload();
+    return;
   }
-  if (!updateHash) window.history.replaceState({}, "", "/settings");
-  return false;
+
+  try {
+    const response = await fetch("/api/wallet-preferences", {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      state.settingsDraftDirty = false;
+      applySettingsPayload(data.settings || {});
+    }
+  } catch {
+    // The last committed in-memory baseline remains the safe fallback.
+  }
+
+  state.settingsDraftBaseline = currentSettingsPayload();
+  state.settingsDraftDirty = false;
+}
+
+async function settingsConfirmNavigation(pageName, updateHash = true) {
+  const leavingSettings = state.currentPage === "settings" && pageName !== "settings";
+  if (!leavingSettings) return true;
+
+  if (state.settingsDraftDirty) {
+    const leave = window.confirm("You have unsaved settings changes. Leave without saving?");
+    if (!leave) {
+      if (!updateHash) window.history.replaceState({}, "", "/settings");
+      return false;
+    }
+  }
+
+  await settingsResetFromSupabaseForNavigation();
+  return true;
 }
 
 window.addEventListener("beforeunload", (event) => {
