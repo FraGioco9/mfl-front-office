@@ -22,10 +22,6 @@ jobs:
       - name: Preserve one refresh loading surface
         run: python .github/scripts/issue-374-table-refresh-loading-flicker.py
 
-      - name: Install dependencies
-        working-directory: site
-        run: npm ci
-
       - name: Build generated core
         working-directory: site
         run: npm run build:core
