@@ -1673,6 +1673,7 @@ function waitForViewTransitionPaint() {
 }
 
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
+  if (!settingsConfirmNavigation(pageName, updateHash)) return null;
   const navigation = Reflect.get(window, "__mflNavigation");
   const loadingController = Reflect.get(window, "__mflInteractionBusy");
   const navigationToken = typeof navigation?.beginLatest === "function"
@@ -1937,7 +1938,6 @@ function setView() {
 
 async function setPage(pageName, updateHash = true, options = {}) {
   if (!pageNavigationIsCurrent(options)) return null;
-  if (!await settingsConfirmNavigation(pageName, updateHash)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
@@ -2109,6 +2109,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (settingsPageActive) {
+    primeSettingsFreshFirstPaint();
+    await waitForViewTransitionPaint();
+    renderSettingsIdentity();
+    await settingsPrepareCommittedForEntry();
     renderSettingsPage();
     if (document.body.classList.contains("loading")) {
       await finishLoading();
@@ -2782,11 +2786,17 @@ function normalizeSettingsEmailAddress(value) {
 
 
 function settingsEmailDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  return settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }
 
 function settingsEmailOptionsDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  return settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
+}
+
+function settingsRouteActive() {
+  return state.currentPage === "settings"
+    || document.body?.dataset?.page === "settings"
+    || settingsPage?.hidden === false;
 }
 
 function settingsRestoreDraftBaselineForNavigation() {
@@ -2799,15 +2809,8 @@ function settingsRestoreDraftBaselineForNavigation() {
   state.settingsDraftDirty = false;
 }
 
-async function settingsResetFromSupabaseForNavigation() {
-  settingsRestoreDraftBaselineForNavigation();
-  clearPendingSettingsLocally();
-  state.settingsDraftDirty = false;
-
-  if (!state.linkedWalletAddress || !hasWalletProof()) {
-    state.settingsDraftBaseline = currentSettingsPayload();
-    return;
-  }
+async function settingsRefreshCommittedFromSupabase(options = {}) {
+  if (!state.linkedWalletAddress || !hasWalletProof()) return false;
 
   try {
     const response = await fetch("/api/wallet-preferences", {
@@ -2815,20 +2818,50 @@ async function settingsResetFromSupabaseForNavigation() {
       headers: walletProofHeaders(true),
     });
     const data = await response.json().catch(() => ({}));
-    if (response.ok) {
-      state.settingsDraftDirty = false;
-      applySettingsPayload(data.settings || {});
-    }
+    if (!response.ok) return false;
+
+    const force = options.force === true;
+    const render = options.render !== false;
+    const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
+    if (activeDraft && !force) return false;
+    state.settingsDraftDirty = false;
+    applySettingsPayload(data.settings || {}, { render });
+    state.settingsDraftBaseline = currentSettingsPayload();
+    state.settingsDraftDirty = false;
+    return true;
   } catch {
     // The last committed in-memory baseline remains the safe fallback.
+    return false;
+  }
+}
+
+function settingsResetFromSupabaseForNavigation() {
+  settingsRestoreDraftBaselineForNavigation();
+  clearPendingSettingsLocally();
+  state.settingsDraftBaseline = currentSettingsPayload();
+  state.settingsDraftDirty = false;
+}
+
+async function settingsPrepareCommittedForEntry() {
+  clearPendingSettingsLocally();
+  state.settingsDraftDirty = false;
+
+  const startupHydrationPending = Reflect.get(window, "__mflSettingsStartupWalletPreferencesPending") === true;
+  const startupHydration = Reflect.get(window, "__mflWalletPreferencesStartupPromise");
+  if (startupHydrationPending && startupHydration && typeof startupHydration.then === "function") {
+    await startupHydration;
+    Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", false);
+  } else {
+    Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", false);
+    await settingsRefreshCommittedFromSupabase({ force: true, render: false });
   }
 
   state.settingsDraftBaseline = currentSettingsPayload();
   state.settingsDraftDirty = false;
 }
 
-async function settingsConfirmNavigation(pageName, updateHash = true) {
-  const leavingSettings = state.currentPage === "settings" && pageName !== "settings";
+function settingsConfirmNavigation(pageName, updateHash = true) {
+  const leavingSettings = settingsRouteActive() && pageName !== "settings";
   if (!leavingSettings) return true;
 
   if (state.settingsDraftDirty) {
@@ -2839,32 +2872,34 @@ async function settingsConfirmNavigation(pageName, updateHash = true) {
     }
   }
 
-  await settingsResetFromSupabaseForNavigation();
+  settingsResetFromSupabaseForNavigation();
   return true;
 }
 
 window.addEventListener("beforeunload", (event) => {
-  if (state.currentPage !== "settings" || !state.settingsDraftDirty) return;
+  if (!settingsRouteActive() || !state.settingsDraftDirty) return;
   event.preventDefault();
   event.returnValue = "";
 });
 
-function applySettingsPayload(settings = {}) {
+function applySettingsPayload(settings = {}, options = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  const renderSettings = options.render !== false;
+  const suppressStartupRender = Reflect.get(window, "__mflSettingsStartupWalletPreferencesPending") === true;
   state.walletSettingsLoaded = true;
-  const preserveDraft = state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  const preserveDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
   if (!preserveDraft) {
     state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
     state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
     state.settingsEmailAddressDraft = state.settingsEmailAddress;
     state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
     state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
-    if (state.currentPage === "settings") {
+    if (settingsRouteActive()) {
       state.settingsDraftBaseline = currentSettingsPayload();
       state.settingsDraftDirty = false;
     }
   }
-  if (state.currentPage === "settings") renderSettingsPage({ preserveEmailDraft: preserveDraft });
+  if (renderSettings && settingsRouteActive() && !suppressStartupRender) renderSettingsPage({ preserveEmailDraft: preserveDraft });
 }
 
 function currentSettingsPayload() {
@@ -5131,6 +5166,10 @@ function renderEvaluationSearchResults() {
   syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
 
+  if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {
+    return;
+  }
+
   if (!query && !shouldShowEvaluationRecentResults()) {
     evaluationSearchResults.hidden = true;
     evaluationSearchResults.replaceChildren();
@@ -5188,8 +5227,6 @@ function renderEvaluationSearchResults() {
 
 
 
-let evaluationRecentSearchPrimed = false;
-let evaluationRecentSearchPrimePromise = null;
 let evaluationEmptySearchFocusScheduled = false;
 
 function focusEmptyEvaluationSearchWhenReady() {
@@ -5211,25 +5248,8 @@ function focusEmptyEvaluationSearchWhenReady() {
 
 function primeEmptyEvaluationSearch() {
   focusEmptyEvaluationSearchWhenReady();
-  if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) return evaluationRecentSearchPrimePromise;
-
-  databaseSearchResponseCache.delete("players:");
-  evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
-    .then((loaded) => {
-      if (loaded) {
-        evaluationRecentSearchPrimed = true;
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
-      }
-      return loaded;
-    })
-    .catch((error) => {
-      console.error(error?.message || "Could not load recent Evaluation searches.");
-      return false;
-    })
-    .finally(() => {
-      evaluationRecentSearchPrimePromise = null;
-    });
-  return evaluationRecentSearchPrimePromise;
+  const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+  return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);
 }
 
 function waitForEvaluationDiscountRate() {
@@ -6377,8 +6397,7 @@ function databaseStatsDataCacheReady() {
 }
 
 function settingsDataCacheReady() {
-  if (typeof hasWalletOptIn !== "function" || !hasWalletOptIn()) return true;
-  return state.walletPreferencesLoaded === true && state.walletSettingsLoaded === true;
+  return false;
 }
 
 function routeDataCacheReady(pageName, options = {}) {
@@ -7315,6 +7334,7 @@ async function startApp() {
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
   window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
+  Reflect.set(window, "__mflSettingsStartupWalletPreferencesPending", initialTarget.pageName === "settings");
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
@@ -8838,7 +8858,7 @@ async function startApp() {
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
       evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
-        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
+        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false, true);
       }
     };
     Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
@@ -8860,28 +8880,6 @@ async function startApp() {
       return originalSaveTableStateLocally(localState);
     };
 
-    if (typeof primeEmptyEvaluationSearch === "function" && !primeEmptyEvaluationSearch.__mflDataOnly) {
-      const dataOnlyPrimeEmptyEvaluationSearch = function() {
-        const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-        if (typeof prime === "function") return prime(true);
-        return Promise.resolve(true);
-      };
-      Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
-      primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
-    }
-
-    if (typeof finishEvaluationReadiness === "function" && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
-      const originalFinishEvaluationReadiness = finishEvaluationReadiness;
-      const finishEvaluationReadinessWithRecents = async function() {
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
-          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-          if (typeof prime === "function") await prime(false);
-        }
-        return originalFinishEvaluationReadiness.apply(this, arguments);
-      };
-      Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
-      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
-    }
     window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
   }
