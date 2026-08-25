@@ -104,6 +104,7 @@ includes(playerCore, "const infoCardsData = [", "The Player chunk must own Playe
 includes(playerCore, 'infoCardsData.push(["Rev Share", escapeHtml(revenueShare || "–")]);', "Final Profile geometry must retain the Rev Share card.");
 includes(playerCore, 'window.__mflStaticUiRuntime?.showNotFound?.("Player");', "Missing Player IDs must use the shared not-found surface.");
 includes(playerCore, 'document.documentElement.dataset.initialEntityVerified = "player";', "Confirmed Player routes must release the guarded first-paint shell.");
+includes(playerCore, 'if (playerIdFromLocation() !== playerId) return false;', "Pending Player rendering must not mutate route DOM before the target Player URL is committed.");
 
 includes(playerCore, 'const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"]', "Player final rendering must have a detail-only readiness contract distinct from partial table rows.");
 includes(playerCore, "function detailDataReady(row, playerIdValue) {", "Player first-paint owner must validate readiness against the target Player row.");
@@ -312,6 +313,7 @@ for (const required of [
   "window.__mflRenderPlayerPageOwner = renderPlayerPageWithStableContractLinkOwner;",
   "const PLAYER_DETAIL_REQUIRED_COLUMNS = [\"height\", \"preferred_foot\", \"goalkeeping\", \"retirement_years\"]",
   "function detailDataReady(row, playerIdValue) {",
+  "if (playerIdFromLocation() !== playerId) return false;",
   "const PLAYER_READY_TRANSITION = \"color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease\";",
   "const PLAYER_PORTRAIT_SOURCE_WIDTH_PX = 912;",
   "const portraitSources = new Map();",
@@ -362,4 +364,4 @@ excludes(generatedPlayerBody, "function applyStablePlayerBoxGeometry(container =
 excludes(generatedPlayerBody, "function syncHeroActions(container = document) {", "Generated Player runtime must not restore the removed three-button sizing owner.");
 excludes(generatedPlayerBody, 'overallLabel.textContent = "Overall";', "Generated Player runtime must keep the hero Overall label removed.");
 
-console.log("Player route-core splitting, target-row Player loading readiness, identical refresh/in-site pending structure, blank loading values, one-shot flicker-free neutral-to-ready controls, passive non-selectable pitch positions, render-blocking canonical 125px hero geometry, natural smaller goalkeeper Attributes, restored retirement-marker color ownership, 14/28/16 hero identity typography, reusable cropped portrait source, complete static pitch, equal-width Open-link split action/dropdown, transitioned dropdown, dollar-icon Evaluate action, and guarded identity validation passed.");
+console.log("Player route-core splitting, target-row Player loading readiness, route-commit-safe identical refresh/in-site pending structure, blank loading values, one-shot flicker-free neutral-to-ready controls, passive non-selectable pitch positions, render-blocking canonical 125px hero geometry, natural smaller goalkeeper Attributes, restored retirement-marker color ownership, 14/28/16 hero identity typography, reusable cropped portrait source, complete static pitch, equal-width Open-link split action/dropdown, transitioned dropdown, dollar-icon Evaluate action, and guarded identity validation passed.");
