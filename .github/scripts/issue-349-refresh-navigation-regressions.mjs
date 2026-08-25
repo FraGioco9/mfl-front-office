@@ -19,7 +19,7 @@ await update("site/index.html", (input) => {
   source = replaceOnce(
     source,
     '          const routeSelector = `html:not(.mflInitialRouteResolved)[data-initial-table-page="${tablePage}"]`;',
-    '          const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflNavigationPending)[data-initial-table-page="${tablePage}"]`;',
+    '          const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="${tablePage}"]`;',
     "initial table-view route selector",
   );
   source = replaceOnce(
@@ -31,7 +31,7 @@ await update("site/index.html", (input) => {
   source = replaceOnce(
     source,
     '      html:not(.mflInitialRouteResolved):is(\n        [data-initial-table-page="database"],\n        [data-initial-table-page="mfl"],\n        [data-initial-table-page="progression"],\n        [data-initial-table-page="watchlist"],\n        [data-initial-table-page="myplayers"]\n      ) #sidebar .navButton[data-page] {',
-    '      html:not(.mflInitialRouteResolved):not(.mflNavigationPending):is(\n        [data-initial-table-page="database"],\n        [data-initial-table-page="mfl"],\n        [data-initial-table-page="progression"],\n        [data-initial-table-page="watchlist"],\n        [data-initial-table-page="myplayers"]\n      ) #sidebar .navButton[data-page]:not(:hover) {',
+    '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(\n        [data-initial-table-page="database"],\n        [data-initial-table-page="mfl"],\n        [data-initial-table-page="progression"],\n        [data-initial-table-page="watchlist"],\n        [data-initial-table-page="myplayers"]\n      ) #sidebar .navButton[data-page]:not(:hover) {',
     "initial sidebar neutral styling",
   );
 
@@ -45,7 +45,7 @@ await update("site/index.html", (input) => {
     '[data-initial-page="settings"] #sidebar .navButton[data-page="settings"]',
   ]) {
     const before = `html:not(.mflInitialRouteResolved)${selector}`;
-    const after = `html:not(.mflInitialRouteResolved):not(.mflNavigationPending)${selector}`;
+    const after = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)${selector}`;
     source = replaceOnce(source, before, after, `initial active sidebar selector ${selector}`);
   }
   return source;
@@ -57,6 +57,23 @@ await update("site/loading.css", (source) => replaceOnce(
   '',
   "global initial-chrome animation suppression",
 ));
+
+await update("site/bootstrap-core.js", (input) => {
+  let source = input;
+  source = replaceOnce(
+    source,
+    '    function beginLatest(reason = "navigation") {\n      const normalizedReason = String(reason || "navigation");\n      const token = `${normalizedReason}-${++sequence}`;',
+    '    function beginLatest(reason = "navigation") {\n      const normalizedReason = String(reason || "navigation");\n      document.documentElement.classList.add("mflInitialRouteSuperseded");\n      const token = `${normalizedReason}-${++sequence}`;',
+    "latest navigation initial-route supersession",
+  );
+  source = replaceOnce(
+    source,
+    '    document.documentElement.classList.remove("mflSingleRenderPending");\n    document.documentElement.classList.add("mflInitialRouteResolved");',
+    '    document.documentElement.classList.remove("mflSingleRenderPending", "mflInitialRouteSuperseded");\n    document.documentElement.classList.add("mflInitialRouteResolved");',
+    "initial route supersession cleanup",
+  );
+  return source;
+});
 
 await update("site/modules/app-core.js", (input) => {
   let source = input;
@@ -75,6 +92,13 @@ await update("site/modules/app-core.js", (input) => {
   return source;
 });
 
+await update("site/modules/app-core-route-chunks.js", (source) => replaceOnce(
+  source,
+  '  core = replaceRequired(\n    core,\n    \'    if (!state.incrementalMode || state.currentPage === "club") {\',\n    \'    if (!state.incrementalMode) {\',\n    "Club shared incremental view switching",\n  );',
+  '  core = replaceRequired(\n    core,\n    \'    if (!tablePages.has(pageName)) {\',\n    \'    if (!tablePages.has(pageName) && pageName !== "club") {\',\n    "Club shared incremental view switching",\n  );',
+  "Club shared incremental view splitter contract",
+));
+
 await update("site/validate-stats-animation-owner.mjs", (source) => replaceOnce(
   source,
   'invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");\nconst chromeAnimationStart = loadingStyles.indexOf("html.mflInitialChromePreparing");\nconst chromeAnimationEnd = loadingStyles.indexOf(\'html:not(.mflInitialRouteResolved)[data-initial-table-page="club"]\', chromeAnimationStart);\nconst chromeAnimationBlock = loadingStyles.slice(chromeAnimationStart, chromeAnimationEnd);\ninvariant(chromeAnimationStart >= 0 && chromeAnimationEnd > chromeAnimationStart, "Initial chrome animation ownership must remain explicit.");\nincludes(chromeAnimationBlock, "animation-play-state: paused;", "Initial chrome preparation must pause animations without recreating them at first route readiness.");\nexcludes(chromeAnimationBlock, "animation: none;", "Initial chrome preparation must not restart Stats animations when readiness settles.");',
@@ -87,10 +111,10 @@ await update("site/validate-static-route-ui.mjs", (source) => {
   const addition = [
     "",
     "invariant(",
-    "  indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflNavigationPending)[data-initial-table-page=')",
-    "    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflNavigationPending):is(')",
+    "  indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=')",
+    "    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(')",
     "    && indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),",
-    '  "Refresh-only first-paint route chrome must relinquish page/view button ownership as soon as live navigation begins, while leaving normal hover styling available.",',
+    '  "Refresh-only first-paint route chrome must permanently relinquish page/view button ownership when a live navigation supersedes startup, while leaving normal hover styling available.",',
     ");",
     "invariant(",
     "  indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),",
@@ -99,6 +123,26 @@ await update("site/validate-static-route-ui.mjs", (source) => {
     "",
   ].join("\n");
   if (!source.includes(marker)) throw new Error("Missing static-route validator footer");
+  return source.replace(marker, addition + marker);
+});
+
+await update("site/validate-bootstrap-ownership.mjs", (source) => {
+  const marker = '\nincludes(\n  bootstrapCore,\n  \'function beginLatest(reason = "navigation") {\',';
+  const addition = [
+    "",
+    "includes(",
+    "  bootstrapCore,",
+    "  'document.documentElement.classList.add(\"mflInitialRouteSuperseded\");',",
+    '  "The first live page/view navigation must permanently retire refresh-only route chrome before committing the new destination.",',
+    ");",
+    "includes(",
+    "  bootstrapCore,",
+    "  'document.documentElement.classList.remove(\"mflSingleRenderPending\", \"mflInitialRouteSuperseded\");',",
+    '  "Initial-route completion must clean the temporary startup supersession marker after runtime route ownership is established.",',
+    ");",
+    "",
+  ].join("\n");
+  if (!source.includes(marker)) throw new Error("Missing bootstrap latest-navigation validator anchor");
   return source.replace(marker, addition + marker);
 });
 
