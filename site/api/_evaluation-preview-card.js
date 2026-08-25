@@ -228,14 +228,31 @@ function drawSummaryStrip(context, metadata) {
 async function drawNationalityLine(context, metadata) {
   const nationality = cardText(metadata.nationality);
   if (!nationality) return;
-  const y = 276;
+  const centerY = 291;
+  const flagSize = 30;
+  const textX = 111;
+  const previousBaseline = context.textBaseline;
   const flag = await loadNationalityFlag(nationality);
   if (flag) {
-    context.drawImage(flag, px(72), px(y), px(30), px(30));
-    drawText(context, `- ${nationality}`, 111, y + 1, 400, 26, COLORS.soft);
+    context.drawImage(
+      flag,
+      px(72),
+      px(centerY - flagSize / 2),
+      px(flagSize),
+      px(flagSize),
+    );
+    context.textBaseline = "middle";
+    context.fillStyle = COLORS.soft;
+    setFont(context, 400, 26);
+    context.fillText(cardText(`- ${nationality}`), px(textX), px(centerY));
+    context.textBaseline = previousBaseline;
     return;
   }
-  drawText(context, nationality, 72, y + 1, 400, 26, COLORS.soft);
+  context.textBaseline = "middle";
+  context.fillStyle = COLORS.soft;
+  setFont(context, 400, 26);
+  context.fillText(nationality, px(72), px(centerY));
+  context.textBaseline = previousBaseline;
 }
 
 async function imageToPngBuffer(image) {
