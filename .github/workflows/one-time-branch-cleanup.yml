@@ -1,0 +1,64 @@
+name: One-time branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-time-branch-cleanup.yml
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete every inactive remote branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const defaultBranch = 'main';
+            const protectedBranches = new Set([defaultBranch]);
+            const deleted = [];
+            const kept = [];
+
+            const openPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            for (const pull of openPulls) {
+              if (pull.head?.repo?.full_name === `${owner}/${repo}` && pull.head?.ref) {
+                protectedBranches.add(pull.head.ref);
+              }
+            }
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            for (const branch of branches) {
+              const name = branch.name;
+              if (protectedBranches.has(name)) {
+                kept.push({ name, reason: name === defaultBranch ? 'default branch' : 'open pull request' });
+                continue;
+              }
+              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${name}` });
+              deleted.push(name);
+            }
+
+            await core.summary
+              .addHeading('Final remote branch cleanup')
+              .addRaw(`Deleted ${deleted.length} inactive branch(es); kept ${kept.length} active branch(es).`)
+              .addHeading('Deleted', 2)
+              .addCodeBlock(JSON.stringify(deleted, null, 2), 'json')
+              .addHeading('Kept', 2)
+              .addCodeBlock(JSON.stringify(kept, null, 2), 'json')
+              .write();
