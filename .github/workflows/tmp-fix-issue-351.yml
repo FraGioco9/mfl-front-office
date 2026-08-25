@@ -1,0 +1,188 @@
+name: Temporary fix issue 351
+
+on:
+  push:
+    branches:
+      - fix/issue-351-evaluation-mfl-usd-loading-race
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/issue-351-evaluation-mfl-usd-loading-race
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply canonical MFL USD loading ownership fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('site/modules/app-core.js')
+          source = path.read_text()
+
+          def replace_once(old, new, label):
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
+              source = source.replace(old, new, 1)
+
+          replace_once(
+              '  evaluationMflPerUsd: 400,\n  evaluationLateSeasonRewardRates: [80, 80, 60],',
+              '  evaluationMflPerUsd: 400,\n  evaluationMflPerUsdRevision: 0,\n  evaluationLateSeasonRewardRates: [80, 80, 60],',
+              'state revision',
+          )
+
+          replace_once(
+              '\nfunction loadEvaluationMflPerUsd() {',
+              '\nfunction commitEvaluationMflPerUsdValue(value) {\n  saveEvaluationMflPerUsd(value);\n  state.evaluationMflPerUsdRevision += 1;\n}\n\nfunction loadEvaluationMflPerUsd() {',
+              'commit helper',
+          )
+
+          parsed_commit = '    saveEvaluationMflPerUsd(parsedValue);'
+          parsed_count = source.count(parsed_commit)
+          if parsed_count != 2:
+              raise SystemExit(f'parsed commits: expected exactly 2 matches, found {parsed_count}')
+          source = source.replace(parsed_commit, '    commitEvaluationMflPerUsdValue(parsedValue);')
+
+          replace_once(
+              'function resetEvaluationMflPerUsd() {\n  saveEvaluationMflPerUsd(DEFAULT_EVALUATION_MFL_PER_USD);',
+              'function resetEvaluationMflPerUsd() {\n  commitEvaluationMflPerUsdValue(DEFAULT_EVALUATION_MFL_PER_USD);',
+              'reset commit',
+          )
+
+          replace_once(
+              '  state.walletPreferencesLoading = true;\n  const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));',
+              '  state.walletPreferencesLoading = true;\n  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;\n  const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));',
+              'wallet load revision snapshot',
+          )
+
+          old_wallet = '''      if (data.evaluationSettings) {
+        applyEvaluationSettingsPayload(data.evaluationSettings);
+        saveEvaluationSettingsLocally();
+        renderEvaluationMflPerUsdControl(false);
+        if (state.currentPage === "evaluation") {
+          renderEvaluationPage();
+        }
+      }'''
+          new_wallet = '''      if (data.evaluationSettings) {
+        const latestMflPerUsd = state.evaluationMflPerUsd;
+        const preserveLatestMflPerUsd = state.evaluationMflPerUsdRevision !== evaluationMflPerUsdRevisionAtLoadStart;
+        applyEvaluationSettingsPayload(data.evaluationSettings);
+        if (preserveLatestMflPerUsd) {
+          state.evaluationMflPerUsd = latestMflPerUsd;
+        }
+        saveEvaluationSettingsLocally();
+        renderEvaluationMflPerUsdControl(false);
+        if (state.currentPage === "evaluation") {
+          renderEvaluationPage();
+        }
+      }'''
+          replace_once(old_wallet, new_wallet, 'wallet hydration preservation')
+
+          start = source.index('async function applySharedEvaluationPayload(payload) {')
+          end = source.index('\nasync function loadSharedEvaluation(', start)
+          segment = source[start:end]
+          segment = segment.replace(
+              'async function applySharedEvaluationPayload(payload) {',
+              'async function applySharedEvaluationPayload(payload, options = {}) {',
+              1,
+          )
+          marker = '  const data = normalizeSharedEvaluationPayload(payload);\n'
+          if marker not in segment:
+              raise SystemExit('shared payload normalization marker not found')
+          segment = segment.replace(
+              marker,
+              marker
+              + '  const mflPerUsdRevisionAtLoadStart = Number.isInteger(options.mflPerUsdRevisionAtLoadStart)\n'
+              + '    ? options.mflPerUsdRevisionAtLoadStart\n'
+              + '    : state.evaluationMflPerUsdRevision;\n'
+              + '  const latestMflPerUsd = state.evaluationMflPerUsd;\n',
+              1,
+          )
+          render_marker = '  renderEvaluationMflPerUsdControl(false);\n  await renderEvaluationPage();'
+          if render_marker not in segment:
+              raise SystemExit('shared payload render marker not found')
+          segment = segment.replace(
+              render_marker,
+              '  if (state.evaluationMflPerUsdRevision !== mflPerUsdRevisionAtLoadStart) {\n'
+              + '    state.evaluationMflPerUsd = latestMflPerUsd;\n'
+              + '  }\n\n'
+              + render_marker,
+              1,
+          )
+          source = source[:start] + segment + source[end:]
+
+          shared_start = source.index('async function loadSharedEvaluation(')
+          saved_start = source.index('\nasync function loadSavedEvaluation(', shared_start)
+          shared_segment = source[shared_start:saved_start]
+          if '  state.evaluationShareLoading = true;\n' not in shared_segment:
+              raise SystemExit('shared load start marker not found')
+          shared_segment = shared_segment.replace(
+              '  state.evaluationShareLoading = true;\n',
+              '  state.evaluationShareLoading = true;\n  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;\n',
+              1,
+          )
+          shared_call = '    await applySharedEvaluationPayload(data.payload);'
+          if shared_segment.count(shared_call) != 1:
+              raise SystemExit('shared payload call mismatch')
+          shared_segment = shared_segment.replace(
+              shared_call,
+              '    await applySharedEvaluationPayload(data.payload, {\n'
+              + '      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,\n'
+              + '    });',
+              1,
+          )
+          source = source[:shared_start] + shared_segment + source[saved_start:]
+
+          saved_start = source.index('async function loadSavedEvaluation(')
+          saved_end_candidates = [
+              source.find('\nasync function ', saved_start + 1),
+              source.find('\nfunction ', saved_start + 1),
+          ]
+          saved_end_candidates = [candidate for candidate in saved_end_candidates if candidate != -1]
+          saved_end = min(saved_end_candidates) if saved_end_candidates else len(source)
+          saved_segment = source[saved_start:saved_end]
+          if '  state.evaluationSavedLoading = true;\n' not in saved_segment:
+              raise SystemExit('saved load start marker not found')
+          saved_segment = saved_segment.replace(
+              '  state.evaluationSavedLoading = true;\n',
+              '  state.evaluationSavedLoading = true;\n  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;\n',
+              1,
+          )
+          saved_call = '    await applySharedEvaluationPayload(data.payload);'
+          if saved_segment.count(saved_call) != 1:
+              raise SystemExit('saved payload call mismatch')
+          saved_segment = saved_segment.replace(
+              saved_call,
+              '    await applySharedEvaluationPayload(data.payload, {\n'
+              + '      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,\n'
+              + '    });',
+              1,
+          )
+          source = source[:saved_start] + saved_segment + source[saved_end:]
+
+          path.write_text(source)
+          PY
+      - name: Build generated application core
+        working-directory: site
+        run: |
+          npm install --no-package-lock
+          npm run build:core
+          node validate-evaluation-mfl-usd-loading-race.mjs
+      - name: Commit source and generated runtime
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js site/modules/app-core*-runtime.js
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: preserve Evaluation MFL USD edits during loading"
+          git push origin HEAD:fix/issue-351-evaluation-mfl-usd-loading-race
