@@ -32,37 +32,29 @@ jobs:
 
           bootstrap = Path('site/bootstrap-core.js')
           source = bootstrap.read_text()
-          old = '''    function routeDestinationReady(pageName, options = {}) {
-              const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
-              const dataReady = window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
-              const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
-              const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
-              return dataReady && coreReady && runtimeReady;
-            }
+          start_marker = '    function routeDestinationReady(pageName, options = {}) {'
+          end_marker = '    function routeLoadingActive() {'
+          start = source.find(start_marker)
+          end = source.find(end_marker, start)
+          if start < 0 or end <= start:
+              raise SystemExit('routeDestinationReady function range missing')
+          replacement = '''    function routeDestinationReady(pageName, options = {}) {
+            const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+            const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
+            const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
+            if (!coreReady || !runtimeReady) return false;
+            return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
+          }
+
           '''
-          new = '''    function routeDestinationReady(pageName, options = {}) {
-              const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
-              const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
-              const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
-              if (!coreReady || !runtimeReady) return false;
-              return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
-            }
-          '''
-          if source.count(old) != 1:
-              raise SystemExit(f'routeDestinationReady block: expected 1 match, found {source.count(old)}')
-          bootstrap.write_text(source.replace(old, new, 1))
+          source = source[:start] + replacement + source[end:]
+          bootstrap.write_text(source)
 
           validator = Path('site/validate-loading-ownership.mjs')
           check = validator.read_text()
-          marker = '''invariant(
-            bootstrapCore.includes("function beginRouteTransition(pageName, options = {}) {")
-              && bootstrapCore.includes("reason !== ROUTE_LOADING_REASON && reason !== INITIAL_ROUTE_BOOTSTRAP_REASON")
-              && bootstrapCore.includes("activeTokens.delete(token);")
-              && bootstrapCore.includes("if (!destinationReady) {")
-              && bootstrapCore.includes("beginRouteTransition,"),
-            "Every canonical route transition must atomically replace stale refresh/route loading ownership before the latest destination loads.",
-          );
-          '''
+          console_marker = 'console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");\n'
+          if check.count(console_marker) != 1:
+              raise SystemExit('validate-loading-ownership console marker missing')
           addition = '''const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
           const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
           const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
@@ -83,10 +75,8 @@ jobs:
             "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
           );
 
-          ''' + marker
-          if check.count(marker) != 1:
-              raise SystemExit('validate-loading-ownership insertion marker missing')
-          validator.write_text(check.replace(marker, addition, 1))
+          '''
+          validator.write_text(check.replace(console_marker, addition + console_marker, 1))
           PY
 
       - name: Install site dependencies
