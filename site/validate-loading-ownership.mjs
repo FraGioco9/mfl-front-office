@@ -78,7 +78,6 @@ invariant(
 );
 
 for (const alias of [
-  "setPage",
   "route-runtime",
   "databaseStatsData",
   "mflStatsData",
@@ -103,9 +102,12 @@ invariant(
   "Application startup must not retain a separate user-visible loading reason.",
 );
 invariant(
-  bootstrapCore.includes("if (routeDestinationReady(pageName, options) || routeLoadingActive()) {")
-    && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
-  "Refresh and SPA navigation must enter the same readiness-aware route-loading path through the final paint.",
+  bootstrapCore.includes("function beginRouteTransition(pageName, options = {}) {")
+    && bootstrapCore.includes("reason !== ROUTE_LOADING_REASON && reason !== INITIAL_ROUTE_BOOTSTRAP_REASON")
+    && bootstrapCore.includes("activeTokens.delete(token);")
+    && bootstrapCore.includes("if (!destinationReady) {")
+    && bootstrapCore.includes("beginRouteTransition,"),
+  "Every canonical route transition must atomically replace stale refresh/route loading ownership before the latest destination loads.",
 );
 invariant(
   !bootstrapCore.includes('document.createElement("style")'),
@@ -127,9 +129,10 @@ invariant(
   "Background Global Search warm-up must not delay visible route readiness.",
 );
 invariant(
-  appEntry.includes("const loadingController = runtimeWindow.__mflInteractionBusy;")
-    && appEntry.includes("loadingController?.begin?.(loadingController.reason)"),
-  "Lazy Club navigation must consume the canonical route-loading reason from the loading controller.",
+  appEntry.includes('const transitionIsCurrent = Reflect.get(runtimeWindow, "__mflNavigationTransitionIsCurrent");')
+    && appEntry.includes('if (transition && typeof transitionIsCurrent === "function" && !transitionIsCurrent(transition)) return null;')
+    && !appEntry.includes("loadingController?.begin?.(loadingController.reason)"),
+  "Lazy Club navigation must inherit route loading from the global transition and reject stale runtime completion before rendering.",
 );
 invariant(
   !appEntry.includes('begin?.("route-loading")')
@@ -168,14 +171,25 @@ invariant(
     && appCoreSource.includes('return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'),
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
+const beginLatestStart = bootstrapCore.indexOf('function beginLatest(reason = "navigation") {');
+const beginLatestEnd = bootstrapCore.indexOf("function beginIntent", beginLatestStart);
+const beginLatestSection = bootstrapCore.slice(beginLatestStart, beginLatestEnd);
+invariant(
+  beginLatestStart >= 0
+    && !beginLatestSection.includes('classList.add("mflInitialRouteSuperseded")'),
+  "Navigation intent must not retire refresh first-paint ownership before the live page/view commit has applied its active controls.",
+);
+
 invariant(
   !bootstrapCore.includes("window.__mflWithInteractionBusy")
     && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")
+    && !bootstrapCore.includes("function wrapRoutePageGlobal() {")
+    && bootstrapCore.includes('function beginLatest(reason = "navigation") {')
     && bootstrapCore.includes("const wrappedWithInteractionBusy = (callback, reason = ROUTE_LOADING_REASON) => {")
     && bootstrapCore.includes("const normalizedReason = loadingReason(reason);")
     && bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON && routeLoadingActive()) return callback();")
     && bootstrapCore.includes("return run(callback, normalizedReason);"),
-  "Uncached refresh and SPA route/data loads must share the same canonical nested route-loading reuse contract.",
+  "Nested route/data work may reuse only the latest transition-owned route token; page/view transitions themselves must replace stale route ownership.",
 );
 invariant(
   appCoreSource.includes("evaluationSaveButton.disabled = true;")
@@ -230,3 +244,44 @@ invariant(
 );
 
 console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");
+
+const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
+const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
+const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
+const coreReadyProbe = routeDestinationReadySection.indexOf("const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;");
+const runtimeReadyProbe = routeDestinationReadySection.indexOf("const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;");
+const dependencyGuard = routeDestinationReadySection.indexOf("if (!coreReady || !runtimeReady) return false;");
+const dataReadyProbe = routeDestinationReadySection.indexOf("window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true");
+invariant(
+  routeDestinationReadyStart >= 0
+    && coreReadyProbe >= 0
+    && runtimeReadyProbe > coreReadyProbe
+    && dependencyGuard > runtimeReadyProbe
+    && dataReadyProbe > dependencyGuard,
+  "Destination data readiness must never execute before lazy route core/runtime dependencies are ready.",
+);
+invariant(
+  !routeDestinationReadySection.includes("const dataReady ="),
+  "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
+);
+
+const stagedViewOwnerStart = appCoreSource.indexOf("function takeStagedViewTransition(pageName, viewName) {");
+const stagedViewOwnerEnd = appCoreSource.indexOf("function waitForViewTransitionPaint()", stagedViewOwnerStart);
+const stagedViewOwner = appCoreSource.slice(stagedViewOwnerStart, stagedViewOwnerEnd);
+invariant(
+  stagedViewOwnerStart >= 0
+    && stagedViewOwnerEnd > stagedViewOwnerStart
+    && stagedViewOwner.includes("return stagedViewTransitionIsCurrent(transition) ? transition : null;")
+    && !stagedViewOwner.includes("pendingViewTransition = null;"),
+  "A staged view transition must remain the current loading owner until the global view-transition runner finishes its async loader.",
+);
+const incrementalViewStart = appCoreSource.indexOf("setView = async function setIncrementalView(viewName) {");
+const incrementalViewEnd = appCoreSource.indexOf("setPage = async function setIncrementalPage", incrementalViewStart);
+const incrementalViewOwner = appCoreSource.slice(incrementalViewStart, incrementalViewEnd);
+invariant(
+  incrementalViewStart >= 0
+    && incrementalViewEnd > incrementalViewStart
+    && incrementalViewOwner.includes("const pageName = state.currentPage;\n    if (!tablePages.has(pageName)) {")
+    && !incrementalViewOwner.includes("if (!state.incrementalMode"),
+  "Table view navigation must use route capability rather than completed-data state, so a view click during refresh cancels the old request and starts loading the selected view.",
+);

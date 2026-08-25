@@ -150,12 +150,10 @@ includes(
   "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
 );
 
+// Route loading may change data ownership, but it must not take ownership of hover or component animation behavior.
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");
-const chromeAnimationStart = loadingStyles.indexOf("html.mflInitialChromePreparing");
-const chromeAnimationEnd = loadingStyles.indexOf('html:not(.mflInitialRouteResolved)[data-initial-table-page="club"]', chromeAnimationStart);
-const chromeAnimationBlock = loadingStyles.slice(chromeAnimationStart, chromeAnimationEnd);
-invariant(chromeAnimationStart >= 0 && chromeAnimationEnd > chromeAnimationStart, "Initial chrome animation ownership must remain explicit.");
-includes(chromeAnimationBlock, "animation-play-state: paused;", "Initial chrome preparation must pause animations without recreating them at first route readiness.");
-excludes(chromeAnimationBlock, "animation: none;", "Initial chrome preparation must not restart Stats animations when readiness settles.");
+excludes(loadingStyles, "html.mflInitialChromePreparing", "Refresh/loading state must not blanket-disable transitions or pause animations; normal hover and component animation ownership must remain active.");
+excludes(loadingStyles, "animation-play-state: paused;", "Refresh/loading must not globally pause animations.");
+excludes(loadingStyles, "transition: none;", "Refresh/loading must not globally disable hover transitions.");
 
 console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, first-paint-safe animation timelines, and prepared local MFL filter derivation without global busy state.");

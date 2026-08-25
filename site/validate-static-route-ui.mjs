@@ -32,6 +32,15 @@ const [
 ]);
 
 includes(indexHtml, "window.__mflTableViewConfig = TABLE_VIEW_CONFIG;", "First-paint table view configuration must be exposed to runtime chrome ownership.");
+includes(indexHtml, 'data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"]', "Agents must expose its active sidebar state during table-route first paint.");
+includes(indexHtml, 'data-initial-table-page="club"] #sidebar .navButton[data-page="club"]', "Club first paint must support active sidebar state when a matching navigation control exists.");
+excludes(indexHtml, ') #sidebar .navButton[data-page]:not(:hover) {', "Table first paint must not neutralize sidebar controls with a selector more specific than the active-route selector.");
+includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage', "Evaluation refresh-only visibility must stop as soon as a newer navigation owns the shell.");
+includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");
+includes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage', "Database Stats first-paint visibility must relinquish the shell as soon as live navigation supersedes refresh startup.");
+includes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage', "MFL Stats first-paint visibility must use the same supersession boundary as Database Stats.");
+excludes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #', "Database Stats must not keep refresh-only shell ownership after a newer navigation commits.");
+excludes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #', "MFL Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 for (const canonicalConfig of [
   'database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" })',
   'mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" })',
@@ -159,7 +168,7 @@ const pageRunnerEnd = coreSource.indexOf("async function runViewTransition", pag
 const pageRunner = coreSource.slice(pageRunnerStart, pageRunnerEnd);
 const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
 const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
-const pageLoadIndex = pageRunner.indexOf('return typeof loader === "function" ? await loader(transition) : transition;');
+const pageLoadIndex = pageRunner.indexOf('const result = typeof loader === "function" ? await loader(transition) : transition;');
 invariant(
   pageCommitIndex >= 0 && pagePaintIndex > pageCommitIndex && pageLoadIndex > pagePaintIndex,
   "Global page transitions must commit, paint, then load.",
@@ -216,5 +225,15 @@ includes(styles, "padding-block: var(--mfl-pager-block-padding);", "All pagers m
 includes(dropdowns, "width: 92px;", "Rows selector must retain its established footprint.");
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
+
+invariant(
+  indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=')
+    && !indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),
+  "Refresh-only table-page chrome must expose the active route directly and relinquish ownership on supersession without a higher-specificity neutral sidebar rule.",
+);
+invariant(
+  indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),
+  "Initial table-view neutral styling must not override normal hover presentation.",
+);
 
 console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");

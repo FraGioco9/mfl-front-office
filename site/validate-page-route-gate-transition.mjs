@@ -1,107 +1,55 @@
-import { readFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import fs from "node:fs";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+const appCoreSource = fs.readFileSync("modules/app-core.js", "utf8");
+const routeSetPageAssignmentIndex = appCoreSource.indexOf("setPage = routeRuntimeSetPage;");
+const routeSetPageSection = routeSetPageAssignmentIndex >= 0
+  ? appCoreSource.slice(appCoreSource.lastIndexOf(";(() => {", routeSetPageAssignmentIndex), routeSetPageAssignmentIndex + "setPage = routeRuntimeSetPage;".length)
+  : "";
+assert.ok(routeSetPageAssignmentIndex >= 0, "Could not locate the lazy setPage route gate.");
+assert.match(routeSetPageSection, /const stagedTransition = incomingOptions\.__mflNavigationTransition[\s\S]*?pendingViewTransition/, "Lazy route loads must retain an inherited page/view transition identity through runtime loading.");
+assert.match(routeSetPageSection, /const loadCommittedRoute = async \(transition = stagedTransition\) => \{/, "The lazy route gate must receive the owning page/view transition.");
+assert.match(routeSetPageSection, /__mflNavigationTransition: transition/, "The lazy route gate must forward the owning transition into downstream page renderers.");
+const runtimeAwait = routeSetPageSection.indexOf("if (routeCorePromise) await routeCorePromise;");
+const staleGuard = routeSetPageSection.indexOf("if (transition && !navigationTransitionIsCurrent(transition)) return null;", runtimeAwait);
+const downstreamCommit = routeSetPageSection.indexOf("const committedOptions = {", staleGuard);
+assert.ok(runtimeAwait >= 0 && staleGuard > runtimeAwait && downstreamCommit > staleGuard, "Lazy route runtime/core completion must be checked for staleness before any downstream renderer can run.");
+assert.doesNotMatch(routeSetPageSection, /const busyToken = !routeReady && !routeLoadingActive/, "The lazy route gate must not acquire a second route-loading token.");
+assert.doesNotMatch(routeSetPageSection, /waitForLoadingPaint/, "The global transition runner, not the lazy route gate, must own route-loading paint boundaries.");
+assert.doesNotMatch(routeSetPageSection, /__mflCancelIncrementalRouteRequest/, "Incremental cancellation must remain at the global transition boundary, before destination commit.");
 
-const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
-const generatedCore = String(artifacts.core || "");
+const pageRunnerStart = appCoreSource.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
+const pageRunnerEnd = appCoreSource.indexOf("async function runViewTransition", pageRunnerStart);
+const pageRunner = appCoreSource.slice(pageRunnerStart, pageRunnerEnd);
+const pageCancel = pageRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();");
+const pageCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
+const pageLoading = pageRunner.indexOf("loadingController?.beginRouteTransition?.(pageName, options)", pageCommit);
+assert.ok(pageCancel >= 0 && pageCommit > pageCancel && pageLoading > pageCommit, "Page navigation must abort obsolete data before committing the destination, then replace route-loading ownership for that destination.");
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+const viewRunnerStart = appCoreSource.indexOf("async function runViewTransition(pageName, viewName, options = {}, loader = null) {");
+const viewRunnerEnd = appCoreSource.indexOf('Reflect.set(window, "__mflCommitViewTransition"', viewRunnerStart);
+const viewRunner = appCoreSource.slice(viewRunnerStart, viewRunnerEnd);
+const viewCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();");
+const viewCommit = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
+const viewLoading = viewRunner.indexOf("loadingController?.beginRouteTransition?.(pageName", viewCommit);
+assert.ok(viewCancel >= 0 && viewCommit > viewCancel && viewLoading > viewCommit, "View navigation must abort obsolete data before committing the destination, then replace route-loading ownership for that destination.");
 
-const mflStatsTarget = `if (cleanPath === "/mfl/stats") {
-    return {
-      pageName: "mfl",
-      options: { view: "stats" },
-    };
-  }`;
-invariant(
-  generatedCore.includes(mflStatsTarget),
-  "MFL Stats URLs must resolve through the canonical MFL page with the Stats view.",
-);
-invariant(
-  !generatedCore.includes('pageName: "mflstats",\n      options: {},'),
-  "MFL Stats URLs must not retain the legacy pseudo-page route target.",
-);
 
-const mflStatsDataBarrier = "if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
-invariant(
-  generatedCore.includes(mflStatsDataBarrier),
-  "The internal MFL Stats renderer must retain a safe first-load data fallback.",
-);
-invariant(
-  !generatedCore.includes("if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {"),
-  "The generated fallback data barrier must not exclude the internal MFL Stats renderer.",
-);
+const baseSetPageStart = appCoreSource.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
+const baseSetPageEnd = appCoreSource.indexOf("function updateStatusDate", baseSetPageStart);
+const baseSetPage = appCoreSource.slice(baseSetPageStart, baseSetPageEnd);
+assert.match(baseSetPage, /if \(!pageNavigationIsCurrent\(options\)\) return null;/, "Every page renderer must reject a stale owning navigation before mutating destination UI.");
+const progressionAwait = baseSetPage.indexOf("const loaded = await ensureProgressionData();");
+const progressionGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", progressionAwait);
+const finalPageCommit = baseSetPage.indexOf("state.currentPage = pageName;", progressionGuard);
+assert.ok(progressionAwait >= 0 && progressionGuard > progressionAwait && finalPageCommit > progressionGuard, "Table data completion must be rejected when a newer non-table navigation has won.");
+const watchlistAwait = baseSetPage.indexOf("await ensureWatchlistRoute(options);");
+const watchlistGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", watchlistAwait);
+assert.ok(watchlistAwait >= 0 && watchlistGuard > watchlistAwait, "Watchlist route completion must be rejected after navigation supersession.");
+const evaluationAwait = baseSetPage.indexOf("await renderEvaluationPage();");
+const evaluationGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", evaluationAwait);
+assert.ok(evaluationAwait >= 0 && evaluationGuard > evaluationAwait, "Non-table Evaluation completion must not reclaim UI after a table navigation wins.");
+assert.doesNotMatch(appCoreSource, /setPageWithStableHome/, "Home must use the canonical page transition owner instead of a post-load wrapper that can reclaim stale UI.");
+assert.doesNotMatch(appCoreSource, /requestAnimationFrame\(enforceHomePage\)/, "A completed stale Home load must never schedule a later page-shell reclaim.");
 
-const gateStart = generatedCore.indexOf("const routeRuntimeSetPage = async function setPageWithRouteRuntime");
-const gateEnd = gateStart >= 0
-  ? generatedCore.indexOf("Object.defineProperty(routeRuntimeSetPage", gateStart)
-  : -1;
-invariant(gateStart >= 0 && gateEnd > gateStart, "Could not locate the generated page route-runtime gate.");
-
-const gate = generatedCore.slice(gateStart, gateEnd);
-const loaderOwner = gate.indexOf("const loadCommittedRoute = async () => {");
-const loadingController = gate.indexOf("const loadingController = window.__mflInteractionBusy;", loaderOwner);
-const routeReady = gate.indexOf("const routeReady = loadingController?.routeReady?.(pageName, incomingOptions) === true;", loadingController);
-const routeLoadingActive = gate.indexOf("const routeLoadingActive = loadingController?.snapshot?.().reasons?.includes?.(loadingController.reason) === true;", routeReady);
-const busyStart = gate.indexOf("const busyToken = !routeReady && !routeLoadingActive && loadingController?.begin", routeLoadingActive);
-const busyBegin = gate.indexOf("loadingController.begin(loadingController.reason)", busyStart);
-const loadingPaintOwner = gate.indexOf('const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");', busyBegin);
-const loadingPaintCondition = gate.indexOf('if ((busyToken || routeLoadingActive) && typeof waitForLoadingPaint === "function") {', loadingPaintOwner);
-const loadingPaint = gate.indexOf("await waitForLoadingPaint();", loadingPaintCondition);
-const routeCoreLoad = gate.indexOf("window.__mflEnsureRouteCore", loaderOwner);
-const routeRuntimeLoad = gate.indexOf("await window.__mflEnsureRouteRuntime", loaderOwner);
-const skipDuplicateTransition = gate.indexOf("skipNavigationTransition: true", loaderOwner);
-const downstreamSetPage = gate.indexOf("originalRouteRuntimeSetPage.call", skipDuplicateTransition);
-const committedBypass = gate.indexOf("if (incomingOptions.skipNavigationTransition === true) {");
-const bypassLoad = gate.indexOf("return loadCommittedRoute();", committedBypass);
-const transitionCall = gate.indexOf('return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);');
-
-invariant(loaderOwner >= 0, "The route-runtime gate must separate lazy loading from navigation ownership.");
-invariant(
-  loadingController > loaderOwner
-    && routeReady > loadingController
-    && routeLoadingActive > routeReady
-    && busyStart > routeLoadingActive
-    && busyBegin > busyStart
-    && loadingPaintOwner > busyBegin
-    && loadingPaintCondition > loadingPaintOwner
-    && loadingPaint > loadingPaintCondition
-    && routeCoreLoad > loadingPaint
-    && routeRuntimeLoad > loadingPaint,
-  "The committed route must decide full readiness first, paint only when route loading is active, then continue lazy dependency loading and final rendering after transition-owned cancellation.",
-);
-invariant(
-  gate.slice(busyStart, loadingPaintOwner).includes("!routeReady && !routeLoadingActive"),
-  "A fully ready route or an already-active canonical route load must not create a duplicate busy token.",
-);
-invariant(
-  gate.slice(loadingPaintCondition, routeCoreLoad).includes("busyToken || routeLoadingActive"),
-  "Only an active route-loading lifecycle may delay lazy work for the loading paint boundary.",
-);
-invariant(
-  !gate.includes("window.__mflCancelIncrementalRouteRequest?.();"),
-  "Lazy route loading must not retain a second incremental-request cancellation owner.",
-);
-invariant(
-  skipDuplicateTransition > routeRuntimeLoad && downstreamSetPage > skipDuplicateTransition,
-  "The downstream page renderer must consume the already-committed route without running another navigation transition.",
-);
-invariant(
-  committedBypass > downstreamSetPage && bypassLoad > committedBypass && transitionCall > bypassLoad,
-  "A page or view transition that already committed must enter the readiness-aware lazy loader directly instead of starting a second page transition.",
-);
-invariant(
-  gate.slice(committedBypass, transitionCall).includes("skipNavigationTransition === true"),
-  "The route-runtime gate must explicitly recognize already-committed navigation.",
-);
-invariant(
-  !gate.slice(0, loaderOwner).includes("loadingController.begin")
-    && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteCore")
-    && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteRuntime"),
-  "No busy or lazy-loading owner may run before the committed-route loader.",
-);
-
-console.log("Page route gate resolves destination readiness before loading paint/lazy work; MFL Stats resolves as the canonical MFL Stats view and retains only a renderer fallback.");
+console.log("Lazy route gate stale-completion guard and latest-navigation loading supersession validation passed.");

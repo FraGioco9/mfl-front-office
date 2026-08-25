@@ -1,13 +1,5 @@
 /* Canonical loading and first-paint state presentation for MFL Front Office. */
 
-html.mflInitialChromePreparing body:has(> #appShell),
-html.mflInitialChromePreparing body:has(> #appShell) *,
-html.mflInitialChromePreparing body:has(> #appShell) *::before,
-html.mflInitialChromePreparing body:has(> #appShell) *::after {
-  transition: none;
-  animation-play-state: paused;
-}
-
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager),
 body[data-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager) {
   display: none;

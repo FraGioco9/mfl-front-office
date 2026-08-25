@@ -54,11 +54,12 @@
           root.dataset.initialTablePage = tablePage;
           root.dataset.initialTableView = activeView;
 
-          const routeSelector = `html:not(.mflInitialRouteResolved)[data-initial-table-page="${tablePage}"]`;
+          const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="${tablePage}"]`;
           const buttonSelector = (viewName) => `${routeSelector} #progressionPage .views > .viewButton[data-view="${viewName}"]`;
           const firstPaintStyle = document.createElement("style");
           const rules = [
-            `${routeSelector} #progressionPage .views > .viewButton { display: none; border-color: var(--border-strong); background: var(--surface); color: var(--text); }`,
+            `${routeSelector} #progressionPage .views > .viewButton { display: none; }`,
+            `${routeSelector} #progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }`,
             `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex; }`,
             ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
             `${buttonSelector(activeView)} { border-color: var(--primary); background: var(--primary); color: #ffffff; }`,
@@ -128,24 +129,15 @@
       html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
         display: none;
       }
-      html:not(.mflInitialRouteResolved):is(
-        [data-initial-table-page="database"],
-        [data-initial-table-page="mfl"],
-        [data-initial-table-page="progression"],
-        [data-initial-table-page="watchlist"],
-        [data-initial-table-page="myplayers"]
-      ) #sidebar .navButton[data-page] {
-        border-color: var(--border-strong);
-        background: var(--surface);
-        color: var(--text);
-      }
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
-      html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
-      html:not(.mflInitialRouteResolved)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
         border-color: var(--primary);
         background: var(--primary);
         color: #ffffff;
@@ -170,10 +162,10 @@
       ) #myPlayersLockedPage {
         display: block;
       }
-      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #homePage {
+      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
         display: none;
       }
-      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #evaluationPage {
+      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {
         display: block;
       }
       html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {
@@ -197,14 +189,14 @@
       html.mflDataLoading #progressionPage nav.pager {
         display: none;
       }
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #homePage,
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #progressionPage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #homePage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #progressionPage {
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage {
         display: none;
       }
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #databaseStatsPage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #mflStatsPage {
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage {
         display: block;
       }
       #homePage .homeStats span {

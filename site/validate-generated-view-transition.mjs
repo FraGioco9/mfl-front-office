@@ -65,19 +65,25 @@ const pageRunner = section(
   "async function runViewTransition",
   "global page transition runner",
 );
-const pageRunnerNavigation = pageRunner.indexOf('navigation.begin("page-transition")');
+const pageRunnerNavigation = pageRunner.indexOf('navigation.beginLatest("page-transition")');
 const pageRunnerCancel = pageRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", pageRunnerNavigation);
 const pageRunnerCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
-const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerCommit);
-const pageRunnerLoad = pageRunner.indexOf('typeof loader === "function" ? await loader(transition)', pageRunnerPaint);
-const pageRunnerRelease = pageRunner.indexOf("navigation?.end?.(navigationToken)", pageRunnerLoad);
+const pageRunnerSupersede = pageRunner.indexOf('document.documentElement.classList.add("mflInitialRouteSuperseded");', pageRunnerCommit);
+const pageRunnerLoading = pageRunner.indexOf("loadingController?.beginRouteTransition?.(pageName, options)", pageRunnerSupersede);
+const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerLoading);
+const pageRunnerLoad = pageRunner.indexOf('const result = typeof loader === "function" ? await loader(transition)', pageRunnerPaint);
+const pageRunnerCurrentAfterLoad = pageRunner.indexOf("if (!pageTransitionIsCurrent(transition)) return null;", pageRunnerLoad);
+const pageRunnerRelease = pageRunner.indexOf("navigation?.end?.(navigationToken)", pageRunnerCurrentAfterLoad);
 invariant(
   pageRunnerNavigation >= 0
     && pageRunnerCancel > pageRunnerNavigation
     && pageRunnerCommit > pageRunnerCancel
-    && pageRunnerPaint > pageRunnerCommit
+    && pageRunnerSupersede > pageRunnerCommit
+    && pageRunnerLoading > pageRunnerSupersede
+    && pageRunnerPaint > pageRunnerLoading
     && pageRunnerLoad > pageRunnerPaint
-    && pageRunnerRelease > pageRunnerLoad,
+    && pageRunnerCurrentAfterLoad > pageRunnerLoad
+    && pageRunnerRelease > pageRunnerCurrentAfterLoad,
   "The global page transition runner must abort obsolete route data before commit, then own navigation state through commit, paint, and its loader callback.",
 );
 
@@ -87,22 +93,28 @@ const viewRunner = section(
   'Reflect.set(window, "__mflCommitViewTransition"',
   "global view transition runner",
 );
-const viewRunnerNavigation = viewRunner.indexOf('navigation.begin("view-transition")');
+const viewRunnerNavigation = viewRunner.indexOf('navigation.beginLatest("view-transition")');
 const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", viewRunnerNavigation);
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
-const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
+const viewRunnerSupersede = viewRunner.indexOf('document.documentElement.classList.add("mflInitialRouteSuperseded");', viewRunnerStage);
+const viewRunnerLoading = viewRunner.indexOf("loadingController?.beginRouteTransition?.(pageName", viewRunnerSupersede);
+const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerLoading);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
-const viewRunnerLoaderCall = viewRunner.indexOf("return await loader(transition);", viewRunnerLoad);
-const viewRunnerPendingCleanup = viewRunner.indexOf("if (pendingViewTransition === transition) pendingViewTransition = null;", viewRunnerLoaderCall);
+const viewRunnerLoaderCall = viewRunner.indexOf("const result = await loader(transition);", viewRunnerLoad);
+const viewRunnerCurrentAfterLoad = viewRunner.indexOf("if (!stagedViewTransitionIsCurrent(transition)) return null;", viewRunnerLoaderCall);
+const viewRunnerPendingCleanup = viewRunner.indexOf("if (pendingViewTransition === transition) pendingViewTransition = null;", viewRunnerCurrentAfterLoad);
 const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerPendingCleanup);
 invariant(
   viewRunnerNavigation >= 0
     && viewRunnerCancel > viewRunnerNavigation
     && viewRunnerStage > viewRunnerCancel
-    && viewRunnerPaint > viewRunnerStage
+    && viewRunnerSupersede > viewRunnerStage
+    && viewRunnerLoading > viewRunnerSupersede
+    && viewRunnerPaint > viewRunnerLoading
     && viewRunnerLoad > viewRunnerPaint
     && viewRunnerLoaderCall > viewRunnerLoad
-    && viewRunnerPendingCleanup > viewRunnerLoaderCall
+    && viewRunnerCurrentAfterLoad > viewRunnerLoaderCall
+    && viewRunnerPendingCleanup > viewRunnerCurrentAfterLoad
     && viewRunnerRelease > viewRunnerPendingCleanup
     && !viewRunner.includes("refreshLoadingToken")
     && !viewRunner.includes("mflInitialRouteResolved"),
@@ -263,9 +275,10 @@ invariant(
   "The Club app-entry gate must enter through the global page transition runner.",
 );
 invariant(
-  clubGate.includes("const loadingController = runtimeWindow.__mflInteractionBusy;")
-    && clubGate.includes("loadingController?.begin?.(loadingController.reason)"),
-  "The Club app-entry gate must consume canonical route loading from the loading controller after transition ownership is committed.",
+  !clubGate.includes("loadingController?.begin?.(loadingController.reason)")
+    && clubGate.includes('const transitionIsCurrent = Reflect.get(runtimeWindow, "__mflNavigationTransitionIsCurrent");')
+    && clubGate.includes('if (transition && typeof transitionIsCurrent === "function" && !transitionIsCurrent(transition)) return null;'),
+  "The Club app-entry gate must inherit route loading from the global page transition and reject stale lazy-runtime completion before rendering.",
 );
 invariant(
   !clubGate.includes('begin?.("route-loading")')

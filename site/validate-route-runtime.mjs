@@ -93,8 +93,9 @@ invariant(
 );
 includes(coreSource, "window.__mflEnsureRouteCore", "Canonical app-core must await route-owned core code before committing its destination.");
 includes(coreSource, "routeCorePromise", "Canonical app-core must overlap route-core download with route-runtime loading.");
-includes(coreSource, "loadingController?.routeReady?.(pageName, incomingOptions)", "Canonical setPage gate must consult full destination readiness before acquiring route loading.");
-includes(coreSource, "routeLoadingActive", "Canonical setPage gate must avoid duplicate route-loading tokens when an outer transition already owns loading.");
+includes(coreSource, "loadingController?.beginRouteTransition?.(pageName, options)", "Canonical page transitions must acquire destination-aware route loading after committing the latest destination.");
+includes(coreSource, "navigationTransitionIsCurrent(transition)", "Canonical lazy route gates must reject stale runtime completions before downstream rendering.");
+excludes(coreSource, "const busyToken = !routeReady && !routeLoadingActive", "The lazy setPage gate must not own a second route-loading token outside the global transition runner.");
 includes(coreSource, "window.__mflMarkApplicationCoreLoaded?.();", "Canonical app-core must mark itself loaded before startApp.");
 
 includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");

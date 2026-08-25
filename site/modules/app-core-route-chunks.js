@@ -235,8 +235,8 @@ export function splitApplicationCoreRuntime(source) {
 
   core = replaceRequired(
     core,
-    '    if (!state.incrementalMode || state.currentPage === "club") {',
-    '    if (!state.incrementalMode) {',
+    '    if (!tablePages.has(pageName)) {',
+    '    if (!tablePages.has(pageName) && pageName !== "club") {',
     "Club shared incremental view switching",
   );
   core = replaceRequired(
