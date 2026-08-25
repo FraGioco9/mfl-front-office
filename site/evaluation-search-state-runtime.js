@@ -82,6 +82,14 @@
     return true;
   }
 
+  function ownsEmptyRecentResults() {
+    const field = input();
+    return recentLoadingActive
+      && active()
+      && field instanceof HTMLInputElement
+      && !field.value.trim();
+  }
+
   function waitForSupabaseRecentState() {
     const pending = window.__mflWalletPreferencesStartupPromise;
     if (!pending || typeof pending.then !== "function") return Promise.resolve();
@@ -241,14 +249,13 @@
       recentLoadingActive = false;
       return false;
     }
+    recentLoadingActive = false;
     try {
       coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
-      recentLoadingActive = false;
       return false;
     }
-    recentLoadingActive = false;
     syncClearButton(field);
     return true;
   }
@@ -346,7 +353,7 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false);
+    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
   function clearDirectPointerFocus() {
@@ -497,7 +504,6 @@
   window.addEventListener("mfl:evaluation-route-active", onRouteActive);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  void restoreEmptyRecentResults(true, active());
 
   function destroy() {
     destroyed = true;
@@ -530,6 +536,7 @@
     restoreEmptyRecentResults,
     commitRecentPlayer,
     selectEmptySearch,
+    ownsEmptyRecentResults,
     destroy,
   });
 })();

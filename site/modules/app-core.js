@@ -6739,41 +6739,9 @@ const evaluationTeamEarningsByOverall = {
   34: 0,
   33: 0,
 };
-const evaluationConversions = {
-  1: 300,
-  2: 333,
-  3: 333,
-  4: 300,
-  5: 225,
-  6: 250,
-  7: 333,
-  8: 400,
-  9: 450,
-  10: 500,
-  11: 475,
-  12: 450,
-  13: 450,
-  14: 400,
-};
-
-function evaluationDiscountRateValue(currentSeason = 15, seasonsToAverage = 5) {
-  const lastCompletedSeason = currentSeason - 1;
-  const ratios = [];
-
-  for (let season = lastCompletedSeason - seasonsToAverage + 1; season <= lastCompletedSeason; season += 1) {
-    const previousConversion = evaluationConversions[season - 1];
-    const conversion = evaluationConversions[season];
-
-    if (previousConversion && conversion) {
-      ratios.push(conversion / previousConversion);
-    }
-  }
-
-  if (!ratios.length) {
-    return null;
-  }
-
-  return Math.pow(ratios.reduce((product, ratio) => product * ratio, 1), 1 / ratios.length) - 1;
+function evaluationDiscountRateValue() {
+  const liveRate = window.__mflSupabaseDiscountRateFunction?.();
+  return Number.isFinite(liveRate) ? liveRate : null;
 }
 
 function formatEvaluationRate(value) {
@@ -7371,6 +7339,10 @@ function renderEvaluationSearchResults() {
   syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
 
+  if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {
+    return;
+  }
+
   if (!query && !shouldShowEvaluationRecentResults()) {
     evaluationSearchResults.hidden = true;
     evaluationSearchResults.replaceChildren();
@@ -7445,8 +7417,6 @@ function handleEvaluationSearchInput() {
   })();
 }
 
-let evaluationRecentSearchPrimed = false;
-let evaluationRecentSearchPrimePromise = null;
 let evaluationEmptySearchFocusScheduled = false;
 
 function focusEmptyEvaluationSearchWhenReady() {
@@ -7468,25 +7438,8 @@ function focusEmptyEvaluationSearchWhenReady() {
 
 function primeEmptyEvaluationSearch() {
   focusEmptyEvaluationSearchWhenReady();
-  if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) return evaluationRecentSearchPrimePromise;
-
-  databaseSearchResponseCache.delete("players:");
-  evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
-    .then((loaded) => {
-      if (loaded) {
-        evaluationRecentSearchPrimed = true;
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
-      }
-      return loaded;
-    })
-    .catch((error) => {
-      console.error(error?.message || "Could not load recent Evaluation searches.");
-      return false;
-    })
-    .finally(() => {
-      evaluationRecentSearchPrimePromise = null;
-    });
-  return evaluationRecentSearchPrimePromise;
+  const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+  return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);
 }
 
 function waitForEvaluationDiscountRate() {
@@ -13748,7 +13701,7 @@ async function startApp() {
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
       evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
-        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
+        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false, true);
       }
     };
     Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
@@ -13770,28 +13723,6 @@ async function startApp() {
       return originalSaveTableStateLocally(localState);
     };
 
-    if (typeof primeEmptyEvaluationSearch === "function" && !primeEmptyEvaluationSearch.__mflDataOnly) {
-      const dataOnlyPrimeEmptyEvaluationSearch = function() {
-        const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-        if (typeof prime === "function") return prime(true);
-        return Promise.resolve(true);
-      };
-      Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
-      primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
-    }
-
-    if (typeof finishEvaluationReadiness === "function" && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
-      const originalFinishEvaluationReadiness = finishEvaluationReadiness;
-      const finishEvaluationReadinessWithRecents = async function() {
-        if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
-          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-          if (typeof prime === "function") await prime(false);
-        }
-        return originalFinishEvaluationReadiness.apply(this, arguments);
-      };
-      Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
-      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
-    }
     window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
   }

@@ -123,7 +123,7 @@ invariant(
   "Global and Evaluation search inputs must disable browser spellcheck so search terms never receive red spelling underlines.",
 );
 const renderStart = appCoreSource.indexOf("function renderEvaluationSearchResults()");
-const renderEnd = appCoreSource.indexOf("let evaluationRecentSearchPrimed", renderStart);
+const renderEnd = appCoreSource.indexOf("let evaluationEmptySearchFocusScheduled", renderStart);
 const renderSource = renderStart >= 0 && renderEnd > renderStart ? appCoreSource.slice(renderStart, renderEnd) : "";
 invariant(
   renderSource.includes('button.addEventListener("click", async () => {')
@@ -134,6 +134,12 @@ invariant(
     && renderSource.includes("renderEvaluationTable(row);")
     && renderSource.includes("withInteractionBusy(loadAndRender)"),
   "Clicking an Evaluation search result must select that player, sync the Evaluation URL, load the player route, and render the Evaluation.",
+);
+invariant(
+  renderSource.includes("if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {")
+    && renderSource.indexOf("window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()")
+      < renderSource.indexOf("evaluationSearchResults.replaceChildren();"),
+  "Canonical Evaluation rendering must preserve the recent-search Loading… surface while the local recent-search runtime owns empty results.",
 );
 const loadStart = generatedSharedCore.indexOf("async function openSavedEvaluationsModal()");
 const loadEnd = generatedSharedCore.indexOf("function normalizedPageName(", loadStart);
@@ -208,6 +214,22 @@ invariant(
     && !searchRuntime.includes("window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON)"),
   "Evaluation recent searches must keep one stable Loading… search-hint node for the whole active load without entering global interaction busy.",
 );
+const recentCompletionStart = searchRuntime.indexOf("function renderEmptySearchFromCore()");
+const recentCompletionEnd = searchRuntime.indexOf("async function fetchRecentEvaluationPayload", recentCompletionStart);
+const recentCompletionSource = recentCompletionStart >= 0 && recentCompletionEnd > recentCompletionStart
+  ? searchRuntime.slice(recentCompletionStart, recentCompletionEnd)
+  : "";
+invariant(
+  searchRuntime.includes("function ownsEmptyRecentResults() {")
+    && searchRuntime.includes("recentLoadingActive")
+    && searchRuntime.includes("ownsEmptyRecentResults,")
+    && recentCompletionSource.includes("recentLoadingActive = false;")
+    && recentCompletionSource.includes("coreContracts()?.renderCurrentEvaluationSearchResults?.();")
+    && recentCompletionSource.indexOf("recentLoadingActive = false;")
+      < recentCompletionSource.indexOf("coreContracts()?.renderCurrentEvaluationSearchResults?.();"),
+  "Evaluation recent-search loading ownership must remain active through intermediate core renders, then transfer to the core exactly once when authoritative recent results complete.",
+);
+
 const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
 const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
 const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
@@ -277,9 +299,40 @@ invariant(
     && !generatedEvaluationLifecycle.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
   "Plain Evaluation re-entry must clear stale player chrome before first paint, reuse the completed in-session route without Uniform Loading/readiness work, and keep first visit/refresh on the normal loading path.",
 );
+const canonicalRecentPrimeStart = appCoreSource.indexOf("function primeEmptyEvaluationSearch()");
+const canonicalRecentPrimeEnd = appCoreSource.indexOf("function waitForEvaluationDiscountRate()", canonicalRecentPrimeStart);
+const canonicalRecentPrimeSource = canonicalRecentPrimeStart >= 0 && canonicalRecentPrimeEnd > canonicalRecentPrimeStart
+  ? appCoreSource.slice(canonicalRecentPrimeStart, canonicalRecentPrimeEnd)
+  : "";
 invariant(
-  searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
-  "Direct Evaluation startup must request the local recent-results Loading… state only when Evaluation is the active initial route.",
+  canonicalRecentPrimeSource.includes("const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;")
+    && canonicalRecentPrimeSource.includes('return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);')
+    && !canonicalRecentPrimeSource.includes("requestDatabaseSearch")
+    && !appCoreSource.includes("evaluationRecentSearchPrimed")
+    && !appCoreSource.includes("evaluationRecentSearchPrimePromise"),
+  "Canonical Evaluation readiness must start exactly one Supabase recent-results prime and paint Loading… synchronously instead of maintaining a second empty database-search loader.",
+);
+const recentStateOwnershipStart = appCoreSource.indexOf("function installEvaluationRecentStateOwnership()");
+const recentStateOwnershipEnd = appCoreSource.indexOf("async function ensureEvaluationRecentStateHydrated()", recentStateOwnershipStart);
+const recentStateOwnershipSource = recentStateOwnershipStart >= 0 && recentStateOwnershipEnd > recentStateOwnershipStart
+  ? appCoreSource.slice(recentStateOwnershipStart, recentStateOwnershipEnd)
+  : "";
+invariant(
+  recentStateOwnershipSource.includes("restoreEmptyRecentResults?.(false, true)")
+    && !recentStateOwnershipSource.includes("dataOnlyPrimeEmptyEvaluationSearch")
+    && !recentStateOwnershipSource.includes("__mflDataOnly")
+    && !recentStateOwnershipSource.includes("finishEvaluationReadinessWithRecents")
+    && !recentStateOwnershipSource.includes("__mflAwaitsRecentEvaluation")
+    && generatedSharedCore.includes('return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);')
+    && !generatedSharedCore.includes("finishEvaluationReadinessWithRecents")
+    && !generatedSharedCore.includes("__mflAwaitsRecentEvaluation"),
+  "Evaluation Supabase hydration must update the same recent-results prime without wrapping readiness or forcing a second request after the first one settles.",
+);
+invariant(
+  searchRuntime.includes("if (!field.value.trim()) void restoreEmptyRecentResults(false, true);")
+    && !searchRuntime.includes("void restoreEmptyRecentResults(true, active());")
+    && !searchRuntime.includes("void restoreEmptyRecentResults(false, active());"),
+  "Evaluation route activation must paint Loading… from the route sync that starts/reuses the real recent-results request, with no autonomous startup force-prime.",
 );
 invariant(
   appEntry.includes("await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);"),
@@ -291,4 +344,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, stable local recent-results Loading… presentation across focus/blur capture, cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");
+console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, one continuous local recent-results Loading… lifecycle, cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");

@@ -73,23 +73,6 @@ const POSITION_MULTIPLIERS = Object.freeze({
   ST: 4 / 3,
 });
 
-const EVALUATION_CONVERSIONS = Object.freeze({
-  1: 300,
-  2: 333,
-  3: 333,
-  4: 300,
-  5: 225,
-  6: 250,
-  7: 333,
-  8: 400,
-  9: 450,
-  10: 500,
-  11: 475,
-  12: 450,
-  13: 450,
-  14: 400,
-});
-
 function evaluationContractValue(overall, position) {
   const roundedOverall = Math.round(Number(overall));
   const baseValue = BASE_CONTRACT_VALUES[roundedOverall] || 0;
@@ -211,7 +194,6 @@ function formatEvaluationPreviewCurrency(value) {
 }
 
 module.exports = {
-  EVALUATION_CONVERSIONS,
   evaluationContractValue,
   evaluationDiscountRateValueFromRatios,
   evaluationExpectedSeasonsFromPlayer,

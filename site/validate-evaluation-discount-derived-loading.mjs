@@ -5,10 +5,19 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCore, rateRuntime] = await Promise.all([
+const [appCore, rateRuntime, indexHtml] = await Promise.all([
   read("./modules/app-core.js"),
   read("./evaluation-discount-rate-runtime.js"),
+  read("./index.html"),
 ]);
+
+invariant(
+  !appCore.includes("const evaluationConversions = {")
+    && !appCore.includes("currentSeason = 15, seasonsToAverage = 5")
+    && appCore.includes("function evaluationDiscountRateValue() {\n  const liveRate = window.__mflSupabaseDiscountRateFunction?.();\n  return Number.isFinite(liveRate) ? liveRate : null;\n}")
+    && !indexHtml.includes("last five completed seasons"),
+  "Evaluation Discount Rate must have no legacy static conversion fallback or stale first-paint tooltip; unresolved state must wait for the live authority.",
+);
 
 invariant(
   appCore.includes("const discountDerivedValuesReady = Number.isFinite(discountRate);")
