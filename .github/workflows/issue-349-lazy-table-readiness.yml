@@ -38,15 +38,16 @@ jobs:
           end = source.find(end_marker, start)
           if start < 0 or end <= start:
               raise SystemExit('routeDestinationReady function range missing')
-          replacement = '''    function routeDestinationReady(pageName, options = {}) {
-      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
-      const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;
-      const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;
-      if (!coreReady || !runtimeReady) return false;
-      return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
-    }
-
-'''
+          replacement = "\n".join([
+              '    function routeDestinationReady(pageName, options = {}) {',
+              '      const normalizedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};',
+              '      const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;',
+              '      const runtimeReady = window.__mflIsRouteRuntimeReady?.(pageName, normalizedOptions) === true;',
+              '      if (!coreReady || !runtimeReady) return false;',
+              '      return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;',
+              '    }',
+              '',
+          ])
           path.write_text(source[:start] + replacement + source[end:])
           PY
 
