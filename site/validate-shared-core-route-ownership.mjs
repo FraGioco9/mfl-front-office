@@ -53,7 +53,20 @@ for (const name of protectedSharedFunctions) {
   invariant(hasFunction(shared, name), `Cross-route/shared function ${name} must remain in the eager core.`);
 }
 
-new Function(shared);
+try {
+  new Function(shared);
+} catch (error) {
+  const match = String(error?.stack || error || "").match(/<anonymous>:(\d+)/);
+  const lineNumber = Number(match?.[1] || 0);
+  const lines = shared.split("\n");
+  const start = Math.max(0, lineNumber - 8);
+  const end = Math.min(lines.length, lineNumber + 7);
+  console.error(`Generated shared-core syntax context around line ${lineNumber}:`);
+  for (let index = start; index < end; index += 1) {
+    console.error(`${index + 1}: ${lines[index]}`);
+  }
+  throw error;
+}
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 
 const routeOnlyCount = Object.values(routeOnlyFunctions).reduce((total, names) => total + names.length, 0);
