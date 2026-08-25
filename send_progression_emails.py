@@ -5,6 +5,9 @@ The script compares a previous SQLite database with the freshly refreshed one,
 then sends one email per enabled notification scope in wallet_preferences:
 - myplayers
 - watchlist-<id>
+
+Use --preview-output to render the production email template for one or more
+real players without Supabase or SMTP and without sending an email.
 """
 
 from __future__ import annotations
@@ -17,13 +20,15 @@ import smtplib
 import sqlite3
 import ssl
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+
+from player_portraits import player_portrait_url
 
 STAT_COLUMNS = [
     "overall",
@@ -37,6 +42,13 @@ STAT_COLUMNS = [
 ]
 DEFAULT_BASE_URL = "https://mfl-front-office.vercel.app"
 SUPABASE_PAGE_SIZE = 1000
+PORTRAIT_SIZE_PX = 72
+PLAYER_COLUMN_LEFT_PADDING_PX = 12
+PLAYER_TEXT_OFFSET_PX = 160
+PLAYER_PORTRAIT_SLOT_PX = PLAYER_TEXT_OFFSET_PX - PLAYER_COLUMN_LEFT_PADDING_PX
+ID_COLUMN_WIDTH_PERCENT = 15
+PLAYER_COLUMN_WIDTH_PERCENT = 60
+IMPROVEMENT_COLUMN_WIDTH_PERCENT = 25
 
 
 @dataclass(frozen=True)
@@ -49,6 +61,7 @@ class PlayerImprovement:
     old_overall: int | None
     new_overall: int | None
     changes: tuple[tuple[str, int, int], ...]
+    portrait_url: str = ""
 
 
 def normalize_wallet(value: Any) -> str:
@@ -106,10 +119,6 @@ def authoritative_change(
     old_progression = parse_int(previous.get(progression_column))
     new_progression = parse_int(current.get(progression_column))
 
-    # The progression endpoint is the authoritative event source. Its
-    # cumulative *_prog_all counters can advance before the absolute /players
-    # attribute snapshot does, so relying only on new_value > old_value drops
-    # valid progression notifications.
     if old_progression is not None and new_progression is not None:
         delta = new_progression - old_progression
         if delta <= 0:
@@ -120,8 +129,6 @@ def authoritative_change(
             return old_value, old_value + delta
         return None
 
-    # Preserve compatibility with older database artifacts that predate the
-    # cumulative progression columns.
     if old_value is not None and new_value is not None and new_value > old_value:
         return old_value, new_value
     return None
@@ -160,12 +167,44 @@ def changed_players(previous_db: Path, current_db: Path) -> dict[str, PlayerImpr
             wallet_address=normalize_wallet(current.get("wallet_address")),
             wallet_name=str(current.get("wallet_name") or current.get("wallet_address") or ""),
             positions=str(current.get("positions") or ""),
-            old_overall=(overall_change[0] if overall_change else parse_int(previous.get("overall"))),
-            new_overall=(overall_change[1] if overall_change else parse_int(current.get("overall"))),
+            old_overall=(
+                overall_change[0]
+                if overall_change
+                else parse_int(previous.get("overall"))
+            ),
+            new_overall=(
+                overall_change[1]
+                if overall_change
+                else parse_int(current.get("overall"))
+            ),
             changes=tuple(changes),
         )
 
     return improvements
+
+
+def load_player_portraits(
+    player_ids: set[str],
+    _portrait_cache_path: Path | None = None,
+) -> dict[str, str]:
+    """Derive the same canonical portrait URLs used by the site, with no API call."""
+    portraits: dict[str, str] = {}
+    for player_id in player_ids:
+        portrait = player_portrait_url(player_id)
+        if portrait:
+            portraits[player_id] = portrait
+    return portraits
+
+
+def attach_player_portraits(
+    improvements: dict[str, PlayerImprovement],
+    portrait_cache_path: Path | None = None,
+) -> dict[str, PlayerImprovement]:
+    portraits = load_player_portraits(set(improvements), portrait_cache_path)
+    return {
+        player_id: replace(player, portrait_url=portraits.get(player_id, ""))
+        for player_id, player in improvements.items()
+    }
 
 
 def supabase_configured() -> bool:
@@ -248,7 +287,7 @@ def format_html_changes(player: PlayerImprovement) -> str:
         value = html.escape(str(new_value))
         delta = html.escape(f"+{new_value - old_value}")
         lines.append(
-            f'<div style="margin:0 0 5px;color:#bdd0df;line-height:1.35;">{label}: '
+            f'<div style="margin:0 0 5px;color:#bdd0df;line-height:1.35;white-space:nowrap;">{label}: '
             f'<span style="color:#ffffff;font-weight:inherit;">{value}</span> '
             f'<span style="color:#2fbf62;font-weight:inherit;">({delta})</span></div>'
         )
@@ -259,13 +298,57 @@ def player_url(player_id: str) -> str:
     return f"{os.environ.get('EMAIL_BASE_URL', DEFAULT_BASE_URL).rstrip('/')}/players/{quote(player_id)}"
 
 
+def player_initials(player: PlayerImprovement) -> str:
+    parts = [part for part in player.name.split() if part]
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return f"{parts[0][0]}{parts[-1][0]}".upper()
+
+
+def player_identity_html(player: PlayerImprovement) -> str:
+    if player.portrait_url:
+        portrait = (
+            f'<img src="{html.escape(player.portrait_url)}" height="{PORTRAIT_SIZE_PX}" alt="" '
+            f'style="display:block;height:{PORTRAIT_SIZE_PX}px;width:auto;max-width:none;'
+            'border:0;margin:0;padding:0;background:transparent;">'
+        )
+    else:
+        portrait = (
+            f'<table role="presentation" width="{PORTRAIT_SIZE_PX}" '
+            f'height="{PORTRAIT_SIZE_PX}" cellspacing="0" cellpadding="0" '
+            f'style="width:{PORTRAIT_SIZE_PX}px;height:{PORTRAIT_SIZE_PX}px;'
+            'border-collapse:separate;background:transparent;">'
+            '<tr><td align="center" valign="middle" '
+            f'style="width:{PORTRAIT_SIZE_PX}px;height:{PORTRAIT_SIZE_PX}px;'
+            'color:#8fa6b8;font-size:12px;font-weight:700;line-height:1;">'
+            f'{html.escape(player_initials(player))}</td></tr></table>'
+        )
+
+    return (
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+        'style="border-collapse:collapse;table-layout:fixed;">'
+        '<tr>'
+        f'<td width="{PLAYER_PORTRAIT_SLOT_PX}" valign="top" '
+        f'style="width:{PLAYER_PORTRAIT_SLOT_PX}px;padding:0;white-space:nowrap;overflow:visible;">{portrait}</td>'
+        '<td valign="top" style="padding:0;">'
+        f'<strong style="display:block;color:#ffffff;">{html.escape(player.name)}</strong>'
+        f'<span style="display:block;margin-top:3px;color:#8fa6b8;font-size:12px;">'
+        f'{html.escape(player.positions)}</span>'
+        '</td>'
+        '</tr>'
+        '</table>'
+    )
+
+
 def build_subject(scope_name: str, players: list[PlayerImprovement]) -> str:
     return f"{scope_name} Progression Update"
 
 
 def build_text(scope_name: str, players: list[PlayerImprovement]) -> str:
     lines = [
-        f"{scope_name}",
+        scope_name,
         "",
         "These players improved after the latest database refresh:",
         "",
@@ -282,11 +365,16 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
     rows = []
     for player in players:
         rows.append(
-            "<tr style=\"border-top:1px solid #2d3a45;\">"
-            f"<td style=\"padding:14px 12px;vertical-align:top;white-space:nowrap;\"><a style=\"color:#54d3ff;font-weight:inherit;text-decoration:none;\" href=\"{html.escape(player_url(player.player_id))}\">#{html.escape(player.player_id)}</a></td>"
-            f"<td style=\"padding:14px 12px;vertical-align:top;\"><strong style=\"display:block;color:#ffffff;\">{html.escape(player.name)}</strong><span style=\"display:block;margin-top:3px;color:#8fa6b8;font-size:12px;\">{html.escape(player.positions)}</span></td>"
-            f"<td style=\"padding:14px 12px;vertical-align:top;color:#bdd0df;line-height:1.45;\">{format_html_changes(player)}</td>"
-            "</tr>"
+            '<tr style="border-top:1px solid #2d3a45;">'
+            f'<td style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:14px 12px;vertical-align:top;white-space:nowrap;">'
+            f'<a style="color:#54d3ff;font-weight:inherit;text-decoration:none;" '
+            f'href="{html.escape(player_url(player.player_id))}">'
+            f'#{html.escape(player.player_id)}</a></td>'
+            f'<td style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:14px {PLAYER_COLUMN_LEFT_PADDING_PX}px;vertical-align:top;overflow:visible;">'
+            f'{player_identity_html(player)}</td>'
+            f'<td style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:14px 8px;vertical-align:top;color:#bdd0df;line-height:1.45;white-space:nowrap;">'
+            f'{format_html_changes(player)}</td>'
+            '</tr>'
         )
 
     return f"""
@@ -314,17 +402,20 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
             </tr>
             <tr>
               <td style="padding:24px 30px;">
-                <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #2d3a45;border-radius:10px;overflow:hidden;">
+                <table width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;border:1px solid #2d3a45;border-radius:10px;overflow:hidden;table-layout:fixed;">
+                  <colgroup>
+                    <col style="width:{ID_COLUMN_WIDTH_PERCENT}%;">
+                    <col style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;">
+                    <col style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;">
+                  </colgroup>
                   <thead>
                     <tr style="background:#202c35;color:#ffffff;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;">
-                      <th style="padding:12px;">ID</th>
-                      <th style="padding:12px;">Player</th>
-                      <th style="padding:12px;">Improvement</th>
+                      <th style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:12px;">ID</th>
+                      <th style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:12px;">Player</th>
+                      <th style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:12px 8px;">Improvement</th>
                     </tr>
                   </thead>
-                  <tbody style="font-size:14px;color:#eef6ff;">
-                    {''.join(rows)}
-                  </tbody>
+                  <tbody style="font-size:14px;color:#eef6ff;">{''.join(rows)}</tbody>
                 </table>
                 <p style="margin:18px 0 0;color:#8fa6b8;font-size:12px;line-height:1.5;">You received this because this notification is enabled in Settings. <a style="color:#54d3ff;text-decoration:none;" href="https://mfl-front-office.vercel.app/settings">Unsubscribe or manage emails</a>.</p>
               </td>
@@ -354,7 +445,12 @@ def send_email(recipient: str, subject: str, text_body: str, html_body: str) -> 
     password = os.environ["SMTP_PASSWORD"]
 
     if port == 465:
-        with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as smtp:
+        with smtplib.SMTP_SSL(
+            host,
+            port,
+            context=ssl.create_default_context(),
+            timeout=30,
+        ) as smtp:
             smtp.login(username, password)
             smtp.send_message(message)
         return
@@ -377,7 +473,10 @@ def unique_players(players: list[PlayerImprovement]) -> list[PlayerImprovement]:
     return unique
 
 
-def notification_jobs(preferences: list[dict[str, Any]], improvements: dict[str, PlayerImprovement]) -> list[tuple[str, str, list[PlayerImprovement]]]:
+def notification_jobs(
+    preferences: list[dict[str, Any]],
+    improvements: dict[str, PlayerImprovement],
+) -> list[tuple[str, str, list[PlayerImprovement]]]:
     jobs: list[tuple[str, str, list[PlayerImprovement]]] = []
     improvements_by_owner: dict[str, list[PlayerImprovement]] = {}
     for player in improvements.values():
@@ -385,9 +484,19 @@ def notification_jobs(preferences: list[dict[str, Any]], improvements: dict[str,
 
     for preference in preferences:
         wallet = normalize_wallet(preference.get("wallet_address"))
-        settings = preference.get("settings") if isinstance(preference.get("settings"), dict) else {}
-        recipient = str(settings.get("emailAddress") or settings.get("email_address") or "").strip()
-        enabled = set(settings.get("receiveEmailsFor") if isinstance(settings.get("receiveEmailsFor"), list) else [])
+        settings = (
+            preference.get("settings")
+            if isinstance(preference.get("settings"), dict)
+            else {}
+        )
+        recipient = str(
+            settings.get("emailAddress") or settings.get("email_address") or ""
+        ).strip()
+        enabled = set(
+            settings.get("receiveEmailsFor")
+            if isinstance(settings.get("receiveEmailsFor"), list)
+            else []
+        )
         if not recipient or not enabled:
             continue
 
@@ -396,35 +505,233 @@ def notification_jobs(preferences: list[dict[str, Any]], improvements: dict[str,
             if players:
                 jobs.append((recipient, "My Players", players))
 
-        watchlists = preference.get("watchlists") if isinstance(preference.get("watchlists"), list) else []
+        watchlists = (
+            preference.get("watchlists")
+            if isinstance(preference.get("watchlists"), list)
+            else []
+        )
         for watchlist in watchlists:
             if not isinstance(watchlist, dict):
                 continue
             watchlist_id = str(watchlist.get("id") or "").strip()
             if not watchlist_id or f"watchlist-{watchlist_id}" not in enabled:
                 continue
-            player_ids = {str(player_id) for player_id in (watchlist.get("playerIds") or [])}
-            players = unique_players([improvements[player_id] for player_id in player_ids if player_id in improvements])
+            player_ids = {
+                str(player_id)
+                for player_id in (watchlist.get("playerIds") or [])
+            }
+            players = unique_players(
+                [
+                    improvements[player_id]
+                    for player_id in player_ids
+                    if player_id in improvements
+                ]
+            )
             if players:
-                name = str(watchlist.get("name") or "Watchlist").strip() or "Watchlist"
+                name = (
+                    str(watchlist.get("name") or "Watchlist").strip()
+                    or "Watchlist"
+                )
                 jobs.append((recipient, f"Watchlist {name}", players))
 
     return jobs
 
 
+def preview_player_from_row(player_id: str, current: dict[str, Any]) -> PlayerImprovement:
+    changes: list[tuple[str, int, int]] = []
+    for column in STAT_COLUMNS:
+        new_value = parse_int(current.get(column))
+        if new_value is None or new_value <= 0:
+            continue
+        changes.append((column, max(0, new_value - 1), new_value))
+        if len(changes) == 4:
+            break
+    if not changes:
+        changes.append(("overall", 0, 1))
+
+    overall_change = next(
+        (
+            (old_value, new_value)
+            for column, old_value, new_value in changes
+            if column == "overall"
+        ),
+        None,
+    )
+    return PlayerImprovement(
+        player_id=player_id,
+        name=str(current.get("name") or f"Player {player_id}"),
+        wallet_address=normalize_wallet(current.get("wallet_address")),
+        wallet_name=str(current.get("wallet_name") or current.get("wallet_address") or ""),
+        positions=str(current.get("positions") or ""),
+        old_overall=(
+            overall_change[0]
+            if overall_change
+            else parse_int(current.get("overall"))
+        ),
+        new_overall=(
+            overall_change[1]
+            if overall_change
+            else parse_int(current.get("overall"))
+        ),
+        changes=tuple(changes),
+    )
+
+
+def parse_preview_player_ids(single_player_id: str, player_ids_csv: str) -> list[str]:
+    requested: list[str] = []
+    if str(single_player_id or "").strip():
+        requested.append(str(single_player_id).strip())
+    requested.extend(
+        player_id.strip()
+        for player_id in str(player_ids_csv or "").split(",")
+        if player_id.strip()
+    )
+
+    seen: set[str] = set()
+    unique: list[str] = []
+    for player_id in requested:
+        if player_id in seen:
+            continue
+        seen.add(player_id)
+        unique.append(player_id)
+    return unique
+
+
+def preview_players_from_database(
+    current_db: Path,
+    requested_player_ids: list[str],
+) -> list[PlayerImprovement]:
+    players = load_players(current_db)
+    if not players:
+        raise RuntimeError("Current database contains no players to preview.")
+
+    player_ids = list(requested_player_ids)
+    if not player_ids:
+        player_ids = [
+            max(players, key=lambda value: int(value) if value.isdigit() else -1)
+        ]
+
+    missing = [player_id for player_id in player_ids if player_id not in players]
+    if missing:
+        label = ", ".join(missing)
+        raise RuntimeError(
+            f"Player{'s' if len(missing) != 1 else ''} {label} "
+            f"{'were' if len(missing) != 1 else 'was'} not found in {current_db}."
+        )
+
+    return [
+        preview_player_from_row(player_id, players[player_id])
+        for player_id in player_ids
+    ]
+
+
+def preview_player_from_database(
+    current_db: Path,
+    requested_player_id: str,
+) -> PlayerImprovement:
+    """Backward-compatible single-player preview helper."""
+    return preview_players_from_database(
+        current_db,
+        [requested_player_id] if requested_player_id else [],
+    )[0]
+
+
+def write_preview(
+    current_db: Path,
+    output_path: Path,
+    requested_player_id: str = "",
+    requested_player_ids: str = "",
+) -> None:
+    player_ids = parse_preview_player_ids(
+        requested_player_id,
+        requested_player_ids,
+    )
+    players = preview_players_from_database(current_db, player_ids)
+    hydrated = attach_player_portraits(
+        {player.player_id: player for player in players}
+    )
+    rendered_players = [
+        hydrated[player.player_id]
+        for player in players
+    ]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        build_html("Test Email", rendered_players),
+        encoding="utf-8",
+    )
+    print(
+        f"Wrote progression email preview to {output_path} "
+        f"with {len(rendered_players)} player"
+        f"{'s' if len(rendered_players) != 1 else ''}. No email was sent."
+    )
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Send MFL Front Office progression improvement emails.")
-    parser.add_argument("--previous-db", default="previous-database/mfl_progression.db")
+    parser = argparse.ArgumentParser(
+        description="Send MFL Front Office progression improvement emails."
+    )
+    parser.add_argument(
+        "--previous-db",
+        default="previous-database/mfl_progression.db",
+    )
     parser.add_argument("--current-db", default="mfl_progression.db")
+    parser.add_argument(
+        "--portrait-cache",
+        default="",
+        help="Deprecated compatibility option; portraits are derived directly from player IDs.",
+    )
+    parser.add_argument(
+        "--preview-output",
+        help="Write a browser-viewable HTML preview and exit without Supabase or SMTP.",
+    )
+    parser.add_argument(
+        "--preview-player-id",
+        default="",
+        help="Single player ID to use in preview mode.",
+    )
+    parser.add_argument(
+        "--preview-player-ids",
+        default="",
+        help=(
+            "Comma-separated player IDs to render together in one preview email. "
+            "Can be combined with --preview-player-id. If neither option is used, "
+            "the highest player ID in the current database is previewed."
+        ),
+    )
     args = parser.parse_args()
 
-    previous_db = Path(args.previous_db)
     current_db = Path(args.current_db)
+    if args.preview_output:
+        if not current_db.exists():
+            print(
+                f"Progression email preview skipped: "
+                f"current database not found at {current_db}."
+            )
+            return 1
+        try:
+            write_preview(
+                current_db,
+                Path(args.preview_output),
+                args.preview_player_id,
+                args.preview_player_ids,
+            )
+        except RuntimeError as error:
+            print(f"Progression email preview failed: {error}")
+            return 1
+        return 0
+
+    previous_db = Path(args.previous_db)
     if not previous_db.exists():
-        print(f"Progression emails skipped: previous database not found at {previous_db}.")
+        print(
+            f"Progression emails skipped: "
+            f"previous database not found at {previous_db}."
+        )
         return 0
     if not current_db.exists():
-        print(f"Progression emails skipped: current database not found at {current_db}.")
+        print(
+            f"Progression emails skipped: "
+            f"current database not found at {current_db}."
+        )
         return 0
     if not supabase_configured():
         print("Progression emails skipped: Supabase secrets are not configured.")
@@ -437,16 +744,23 @@ def main() -> int:
     if not improvements:
         print("No player stat improvements found; no progression emails sent.")
         return 0
+    improvements = attach_player_portraits(improvements)
 
     try:
         preferences = load_preferences()
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
-        print(f"Progression emails skipped: could not read Supabase preferences: {error}")
+        print(
+            f"Progression emails skipped: "
+            f"could not read Supabase preferences: {error}"
+        )
         return 0
 
     jobs = notification_jobs(preferences, improvements)
     if not jobs:
-        print(f"Found {len(improvements)} improved players, but no enabled email scopes matched them.")
+        print(
+            f"Found {len(improvements)} improved players, "
+            "but no enabled email scopes matched them."
+        )
         return 0
 
     sent = 0
@@ -459,11 +773,20 @@ def main() -> int:
                 build_html(scope_name, players),
             )
             sent += 1
-            print(f"Sent {scope_name} progression email to {recipient} with {len(players)} players.")
+            print(
+                f"Sent {scope_name} progression email to {recipient} "
+                f"with {len(players)} players."
+            )
         except Exception as error:  # noqa: BLE001 - keep database workflows alive if email delivery fails.
-            print(f"Could not send {scope_name} progression email to {recipient}: {error}")
+            print(
+                f"Could not send {scope_name} progression email "
+                f"to {recipient}: {error}"
+            )
 
-    print(f"Progression email notifications complete: {sent}/{len(jobs)} emails sent.")
+    print(
+        f"Progression email notifications complete: "
+        f"{sent}/{len(jobs)} emails sent."
+    )
     return 0
 
 

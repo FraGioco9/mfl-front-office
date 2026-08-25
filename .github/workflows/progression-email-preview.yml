@@ -1,0 +1,68 @@
+name: Progression email preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      player_ids:
+        description: Optional comma-separated player IDs; defaults to the highest ID in the latest database
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out email renderer
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download latest database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          CANDIDATE="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
+              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.workflow_run.id | tostring)] | @tsv' \
+              | sort -r \
+              | head -n 1
+          )"
+          if [ -z "$CANDIDATE" ]; then
+            echo "No non-expired mfl_database artifact is available." >&2
+            exit 1
+          fi
+
+          IFS=$'\t' read -r CREATED_AT RUN_ID <<< "$CANDIDATE"
+          echo "Using database artifact from run $RUN_ID ($CREATED_AT)."
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          python prepare_runtime_database.py mfl_database.db --validate-only
+
+      - name: Render email preview
+        env:
+          EMAIL_BASE_URL: https://mfl-front-office.vercel.app
+        run: >-
+          python progression_email_preview.py
+          --current-db mfl_database.db
+          --preview-player-ids "${{ inputs.player_ids }}"
+          --preview-output progression-email-preview.html
+
+      - name: Upload email preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: progression-email-preview
+          path: progression-email-preview.html
+          if-no-files-found: error
+          retention-days: 7
