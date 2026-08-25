@@ -1,5 +1,9 @@
 [
   [
+    "v1.125.2",
+    "Add rich social previews for shared Evaluation links"
+  ],
+  [
     "v1.125.1",
     "Stabilize navigation loading, pager visibility, and Evaluation editing behavior"
   ],
