@@ -1660,8 +1660,7 @@ function takeStagedViewTransition(pageName, viewName) {
     || transition.pageName !== String(pageName || "")
     || transition.viewName !== String(viewName || "")
   ) return null;
-  pendingViewTransition = null;
-  return transition;
+  return stagedViewTransitionIsCurrent(transition) ? transition : null;
 }
 
 function waitForViewTransitionPaint() {
@@ -8131,11 +8130,10 @@ async function startApp() {
   };
 
   setView = async function setIncrementalView(viewName) {
-    if (!state.incrementalMode) {
+    const pageName = state.currentPage;
+    if (!tablePages.has(pageName) && pageName !== "club") {
       return originalSetView.apply(this, arguments);
     }
-
-    const pageName = state.currentPage;
     const nextView = normalizeViewForPage(viewName, pageName);
     if (!allowedViewsForPage(pageName).includes(nextView)) return;
 

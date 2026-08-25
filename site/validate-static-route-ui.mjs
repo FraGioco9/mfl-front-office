@@ -217,4 +217,15 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
+invariant(
+  indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=')
+    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(')
+    && indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),
+  "Refresh-only first-paint route chrome must permanently relinquish page/view button ownership when a live navigation supersedes startup, while leaving normal hover styling available.",
+);
+invariant(
+  indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),
+  "Initial table-view neutral styling must not override normal hover presentation.",
+);
+
 console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, minimal centered not-found rendering, canonical loading rows, and explicit core contracts.");

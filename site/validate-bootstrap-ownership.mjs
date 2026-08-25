@@ -424,6 +424,17 @@ excludes(
 
 includes(
   bootstrapCore,
+  'document.documentElement.classList.add("mflInitialRouteSuperseded");',
+  "The first live page/view navigation must permanently retire refresh-only route chrome before committing the new destination.",
+);
+includes(
+  bootstrapCore,
+  'document.documentElement.classList.remove("mflInitialRouteSuperseded");',
+  "Initial-route completion must clean the temporary startup supersession marker after runtime route ownership is established.",
+);
+
+includes(
+  bootstrapCore,
   'function beginLatest(reason = "navigation") {',
   "A newly committed navigation must replace stale navigation-pending tokens instead of accumulating them.",
 );

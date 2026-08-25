@@ -95,6 +95,7 @@
 
     function beginLatest(reason = "navigation") {
       const normalizedReason = String(reason || "navigation");
+      document.documentElement.classList.add("mflInitialRouteSuperseded");
       const token = `${normalizedReason}-${++sequence}`;
       activeTokens.clear();
       activeTokens.set(token, normalizedReason);
@@ -370,6 +371,7 @@
     initialRouteFinished = true;
     startupStateObserver?.disconnect();
     document.documentElement.classList.remove("mflSingleRenderPending");
+    document.documentElement.classList.remove("mflInitialRouteSuperseded");
     document.documentElement.classList.add("mflInitialRouteResolved");
     window.__mflInteractionBusy.end(initialRouteToken);
   };

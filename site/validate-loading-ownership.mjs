@@ -255,3 +255,24 @@ invariant(
   !routeDestinationReadySection.includes("const dataReady ="),
   "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
 );
+
+const stagedViewOwnerStart = appCoreSource.indexOf("function takeStagedViewTransition(pageName, viewName) {");
+const stagedViewOwnerEnd = appCoreSource.indexOf("function waitForViewTransitionPaint()", stagedViewOwnerStart);
+const stagedViewOwner = appCoreSource.slice(stagedViewOwnerStart, stagedViewOwnerEnd);
+invariant(
+  stagedViewOwnerStart >= 0
+    && stagedViewOwnerEnd > stagedViewOwnerStart
+    && stagedViewOwner.includes("return stagedViewTransitionIsCurrent(transition) ? transition : null;")
+    && !stagedViewOwner.includes("pendingViewTransition = null;"),
+  "A staged view transition must remain the current loading owner until the global view-transition runner finishes its async loader.",
+);
+const incrementalViewStart = appCoreSource.indexOf("setView = async function setIncrementalView(viewName) {");
+const incrementalViewEnd = appCoreSource.indexOf("setPage = async function setIncrementalPage", incrementalViewStart);
+const incrementalViewOwner = appCoreSource.slice(incrementalViewStart, incrementalViewEnd);
+invariant(
+  incrementalViewStart >= 0
+    && incrementalViewEnd > incrementalViewStart
+    && incrementalViewOwner.includes("const pageName = state.currentPage;\n    if (!tablePages.has(pageName)) {")
+    && !incrementalViewOwner.includes("if (!state.incrementalMode"),
+  "Table view navigation must use route capability rather than completed-data state, so a view click during refresh cancels the old request and starts loading the selected view.",
+);
