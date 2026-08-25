@@ -37,6 +37,10 @@ includes(indexHtml, 'data-initial-table-page="club"] #sidebar .navButton[data-pa
 excludes(indexHtml, ') #sidebar .navButton[data-page]:not(:hover) {', "Table first paint must not neutralize sidebar controls with a selector more specific than the active-route selector.");
 includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage', "Evaluation refresh-only visibility must stop as soon as a newer navigation owns the shell.");
 includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");
+includes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage', "Database Stats first-paint visibility must relinquish the shell as soon as live navigation supersedes refresh startup.");
+includes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage', "MFL Stats first-paint visibility must use the same supersession boundary as Database Stats.");
+excludes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #', "Database Stats must not keep refresh-only shell ownership after a newer navigation commits.");
+excludes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #', "MFL Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 for (const canonicalConfig of [
   'database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" })',
   'mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" })',

@@ -189,14 +189,14 @@
       html.mflDataLoading #progressionPage nav.pager {
         display: none;
       }
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #homePage,
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #progressionPage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #homePage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #progressionPage {
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage {
         display: none;
       }
-      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #databaseStatsPage,
-      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #mflStatsPage {
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage {
         display: block;
       }
       #homePage .homeStats span {
