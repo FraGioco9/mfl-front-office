@@ -9,7 +9,8 @@
  *   inside their local component/page stacking context;
  * - cross-site application layers start at 300 and use only these semantic
  *   tokens;
- * - every popup/modal layer is above every non-popup application layer.
+ * - popup/modal layers stay above ordinary application UI, while toasts are the
+ *   final site-owned layer and remain above every popup/modal layer.
  *
  * Keep popups as ordinary fixed application elements. Do not use the browser
  * Popover/top-layer API, which changes native rendering and popup appearance. */
@@ -27,14 +28,16 @@
   --mfl-z-selection: 700;
   --mfl-z-wallet-guard: 720;
   --mfl-z-busy-shield: 740;
-  --mfl-z-toast: 760;
 
-  /* Legacy name for the highest non-popup layer. It must remain below modals. */
+  /* Legacy name for the highest ordinary non-popup layer. */
   --mfl-z-topmost: 780;
 
-  /* Popup layers always win over every non-popup layer above. */
+  /* Popup layers win over ordinary application UI. */
   --mfl-z-modal: 900;
   --mfl-z-critical-modal: 1000;
+
+  /* Toasts must remain visible above every popup, backdrop, and overlay. */
+  --mfl-z-toast: 1100;
 }
 
 /*
