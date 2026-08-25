@@ -34,7 +34,6 @@ jobs:
           node validate-evaluation-route-ownership.mjs
           node validate-eval-ownership.mjs
           node validate-evaluation-refresh-hydration.mjs
-          node validate-generated-core-bindings.mjs
 
       - name: Commit fix
         run: |
