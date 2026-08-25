@@ -1,0 +1,78 @@
+name: Issue 399 Actions v7 migration
+
+on:
+  push:
+    branches:
+      - chore/github-actions-v7
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/github-actions-v7
+          fetch-depth: 0
+
+      - name: Upgrade current workflow action majors
+        shell: python
+        run: |
+          from pathlib import Path
+
+          replacements = {
+              "actions/setup-node@v4": "actions/setup-node@v7",
+              "actions/setup-python@v5": "actions/setup-python@v7",
+              "actions/upload-artifact@v4": "actions/upload-artifact@v7",
+          }
+          helper = Path(".github/workflows/issue-399-actions-v7-migration.yml")
+          changed = []
+          for path in sorted(Path(".github/workflows").glob("*.y*ml")):
+              if path == helper:
+                  continue
+              before = path.read_text(encoding="utf-8")
+              after = before
+              for old, new in replacements.items():
+                  after = after.replace(old, new)
+              if after != before:
+                  path.write_text(after, encoding="utf-8")
+                  changed.append(str(path))
+
+          print("Changed files:")
+          for path in changed:
+              print(f"- {path}")
+          if not changed:
+              raise SystemExit("No workflow migration changes were needed")
+
+      - name: Verify migration coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E 'actions/setup-node@v4|actions/setup-python@v5|actions/upload-artifact@v4' .github/workflows --exclude='issue-399-actions-v7-migration.yml'; then
+            echo "Legacy action major remains" >&2
+            exit 1
+          fi
+          grep -R -n -E 'actions/setup-node@v7|actions/setup-python@v7|actions/upload-artifact@v7' .github/workflows --exclude='issue-399-actions-v7-migration.yml'
+
+      - name: Stage migrated files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p migration-output/.github/workflows
+          cp .github/workflows/full-database-refresh.yml migration-output/.github/workflows/full-database-refresh.yml
+          cp .github/workflows/mfl-marketplace-snapshot.yml migration-output/.github/workflows/mfl-marketplace-snapshot.yml
+          cp .github/workflows/progression-email-preview.yml migration-output/.github/workflows/progression-email-preview.yml
+          cp .github/workflows/release-projection-sync.yml migration-output/.github/workflows/release-projection-sync.yml
+          cp .github/workflows/site-quality.yml migration-output/.github/workflows/site-quality.yml
+          cp .github/workflows/vercel-site-update.yml migration-output/.github/workflows/vercel-site-update.yml
+
+      - name: Upload migrated files
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-399-actions-v7-files
+          path: migration-output
+          include-hidden-files: true
+          if-no-files-found: error
