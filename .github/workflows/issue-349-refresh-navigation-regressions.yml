@@ -6,6 +6,7 @@ on:
       - fix/loading-navigation-supersession
     paths:
       - .github/workflows/issue-349-refresh-navigation-regressions.yml
+      - .github/scripts/issue-349-refresh-navigation-regressions.mjs
 
 permissions:
   contents: write
