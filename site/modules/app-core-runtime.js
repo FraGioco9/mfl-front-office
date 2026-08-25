@@ -35,6 +35,8 @@ const state = {
   settingsEmailAddressDraft: "",
   settingsDateFormat: "DMY",
   settingsTimeFormat: "24h",
+  settingsDraftBaseline: null,
+  settingsDraftDirty: false,
   tablePageStates: {},
   toastTimer: null,
   menuOpen: true,
@@ -1935,6 +1937,7 @@ function setView() {
 
 async function setPage(pageName, updateHash = true, options = {}) {
   if (!pageNavigationIsCurrent(options)) return null;
+  if (!await settingsConfirmNavigation(pageName, updateHash)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
   if (pageName === "home") void loadSummary();
@@ -2779,32 +2782,89 @@ function normalizeSettingsEmailAddress(value) {
 
 
 function settingsEmailDraftIsActive() {
-  return state.currentPage === "settings"
-    && settingsEmailAddressInput
-    && (document.activeElement === settingsEmailAddressInput || state.settingsEmailAddressDraft !== state.settingsEmailAddress);
+  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }
 
 function settingsEmailOptionsDraftIsActive() {
-  return state.currentPage === "settings" && state.settingsSaveInFlight;
+  return state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
 }
+
+function settingsRestoreDraftBaselineForNavigation() {
+  const baseline = state.settingsDraftBaseline || currentSettingsPayload();
+  state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(baseline.receiveEmailsFor);
+  state.settingsEmailAddress = normalizeSettingsEmailAddress(baseline.emailAddress);
+  state.settingsEmailAddressDraft = state.settingsEmailAddress;
+  state.settingsDateFormat = normalizeSettingsDateFormat(baseline.dateFormat);
+  state.settingsTimeFormat = normalizeSettingsTimeFormat(baseline.timeFormat);
+  state.settingsDraftDirty = false;
+}
+
+async function settingsResetFromSupabaseForNavigation() {
+  settingsRestoreDraftBaselineForNavigation();
+  clearPendingSettingsLocally();
+  state.settingsDraftDirty = false;
+
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    state.settingsDraftBaseline = currentSettingsPayload();
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/wallet-preferences", {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      state.settingsDraftDirty = false;
+      applySettingsPayload(data.settings || {});
+    }
+  } catch {
+    // The last committed in-memory baseline remains the safe fallback.
+  }
+
+  state.settingsDraftBaseline = currentSettingsPayload();
+  state.settingsDraftDirty = false;
+}
+
+async function settingsConfirmNavigation(pageName, updateHash = true) {
+  const leavingSettings = state.currentPage === "settings" && pageName !== "settings";
+  if (!leavingSettings) return true;
+
+  if (state.settingsDraftDirty) {
+    const leave = window.confirm("You have unsaved settings changes. Leave without saving?");
+    if (!leave) {
+      if (!updateHash) window.history.replaceState({}, "", "/settings");
+      return false;
+    }
+  }
+
+  await settingsResetFromSupabaseForNavigation();
+  return true;
+}
+
+window.addEventListener("beforeunload", (event) => {
+  if (state.currentPage !== "settings" || !state.settingsDraftDirty) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.walletSettingsLoaded = true;
-  const draftIsActive = settingsEmailDraftIsActive();
-  const emailOptionsDraftIsActive = settingsEmailOptionsDraftIsActive();
-  if (!emailOptionsDraftIsActive) {
+  const preserveDraft = state.currentPage === "settings" && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  if (!preserveDraft) {
     state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
-  }
-  state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
-  if (!draftIsActive) {
+    state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
     state.settingsEmailAddressDraft = state.settingsEmailAddress;
+    state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
+    state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
+    if (state.currentPage === "settings") {
+      state.settingsDraftBaseline = currentSettingsPayload();
+      state.settingsDraftDirty = false;
+    }
   }
-  state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
-  state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
-  if (state.currentPage === "settings") {
-    renderSettingsPage({ preserveEmailDraft: draftIsActive });
-  }
+  if (state.currentPage === "settings") renderSettingsPage({ preserveEmailDraft: preserveDraft });
 }
 
 function currentSettingsPayload() {
