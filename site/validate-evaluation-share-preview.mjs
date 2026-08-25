@@ -9,7 +9,6 @@ const readText = (path) => readFileSync(resolve(siteRoot, path), "utf8");
 const require = createRequire(import.meta.url);
 const { renderEvaluationPreviewPng } = require("./api/_evaluation-preview-card.js");
 const {
-  EVALUATION_CONVERSIONS,
   evaluationContractValue,
   evaluationExpectedSeasonsFromPlayer,
   evaluationPresentValueTotalFromSharePayload,
@@ -276,14 +275,12 @@ for (const row of tableRows) {
   });
 }
 
-const conversionsMatch = evaluationRuntime.match(/const evaluationConversions = \{([\s\S]*?)\};/);
-assert(conversionsMatch, "Generated Evaluation runtime must expose canonical discount-rate conversions.");
-const canonicalConversions = Object.fromEntries(
-  [...conversionsMatch[1].matchAll(/(\d+):\s*([\d.]+)/g)].map((match) => [match[1], Number(match[2])]),
-);
 assert(
-  JSON.stringify(canonicalConversions) === JSON.stringify(EVALUATION_CONVERSIONS),
-  "Preview valuation discount-rate conversions must match the canonical Evaluation runtime.",
+  !evaluationRuntime.includes("const evaluationConversions = {")
+    && !previewValue.includes("EVALUATION_CONVERSIONS")
+    && !previewValue.includes("const evaluationConversions = {")
+    && previewValue.includes("evaluationDiscountRateValueFromRatios(ratioRows, mflPerUsd)"),
+  "Evaluation preview valuation must use supplied live season-ratio data and must not retain a legacy hard-coded discount-rate conversion table.",
 );
 
 const publicPlayer = { playerId: 80000, age: 34, retirementYears: 0 };
