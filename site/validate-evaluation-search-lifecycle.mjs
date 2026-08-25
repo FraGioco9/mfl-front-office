@@ -135,6 +135,12 @@ invariant(
     && renderSource.includes("withInteractionBusy(loadAndRender)"),
   "Clicking an Evaluation search result must select that player, sync the Evaluation URL, load the player route, and render the Evaluation.",
 );
+invariant(
+  renderSource.includes("if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {")
+    && renderSource.indexOf("window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()")
+      < renderSource.indexOf("evaluationSearchResults.replaceChildren();"),
+  "Canonical Evaluation rendering must preserve the recent-search Loading… surface while the local recent-search runtime owns empty results.",
+);
 const loadStart = generatedSharedCore.indexOf("async function openSavedEvaluationsModal()");
 const loadEnd = generatedSharedCore.indexOf("function normalizedPageName(", loadStart);
 const loadSource = loadStart >= 0 && loadEnd > loadStart ? generatedSharedCore.slice(loadStart, loadEnd) : "";
@@ -208,6 +214,22 @@ invariant(
     && !searchRuntime.includes("window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON)"),
   "Evaluation recent searches must keep one stable Loading… search-hint node for the whole active load without entering global interaction busy.",
 );
+const recentCompletionStart = searchRuntime.indexOf("function renderEmptySearchFromCore()");
+const recentCompletionEnd = searchRuntime.indexOf("async function fetchRecentEvaluationPayload", recentCompletionStart);
+const recentCompletionSource = recentCompletionStart >= 0 && recentCompletionEnd > recentCompletionStart
+  ? searchRuntime.slice(recentCompletionStart, recentCompletionEnd)
+  : "";
+invariant(
+  searchRuntime.includes("function ownsEmptyRecentResults() {")
+    && searchRuntime.includes("recentLoadingActive")
+    && searchRuntime.includes("ownsEmptyRecentResults,")
+    && recentCompletionSource.includes("recentLoadingActive = false;")
+    && recentCompletionSource.includes("coreContracts()?.renderCurrentEvaluationSearchResults?.();")
+    && recentCompletionSource.indexOf("recentLoadingActive = false;")
+      < recentCompletionSource.indexOf("coreContracts()?.renderCurrentEvaluationSearchResults?.();"),
+  "Evaluation recent-search loading ownership must remain active through intermediate core renders, then transfer to the core exactly once when authoritative recent results complete.",
+);
+
 const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
 const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
 const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
