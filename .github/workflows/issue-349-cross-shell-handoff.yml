@@ -96,31 +96,15 @@ jobs:
               r'\1\2if (!pageNavigationIsCurrent(options)) return null;\n\2\3\n      if (!pageNavigationIsCurrent(options)) return null;\4',
               'evaluation stale guard')
 
-          replace_once(
-          '''      const stagedTransition = incomingOptions.skipNavigationTransition === true
-                ? pendingViewTransition
-                : null;
-          ''',
-          '''      const stagedTransition = incomingOptions.__mflNavigationTransition
-                || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
-          ''',
-          'route gate inherited transition')
+          regex_once(
+              r'const stagedTransition = incomingOptions\.skipNavigationTransition === true\s*\? pendingViewTransition\s*: null;',
+              'const stagedTransition = incomingOptions.__mflNavigationTransition\n        || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);',
+              'route gate inherited transition')
 
-          replace_once(
-          '''        const committedOptions = {
-                  ...incomingOptions,
-                  skipNavigationTransition: true,
-                  ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
-                };
-          ''',
-          '''        const committedOptions = {
-                  ...incomingOptions,
-                  skipNavigationTransition: true,
-                  ...(transition ? { __mflNavigationTransition: transition } : {}),
-                  ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
-                };
-          ''',
-          'route gate transition forwarding')
+          regex_once(
+              r'(const committedOptions = \{\n\s*\.\.\.incomingOptions,\n\s*skipNavigationTransition: true,\n)(\s*)(\.\.\.\(previousTableStateSaved \? \{ __mflPreviousTableStateSaved: true \} : \{\}\),)',
+              r'\1\2...(transition ? { __mflNavigationTransition: transition } : {}),\n\2\3',
+              'route gate transition forwarding')
 
           regex_once(
               r'\n  function enforceHomePage\(\) \{.*?\n  \}\n\n  if \(typeof setPage === "function"\) \{\n    const originalSetPage = setPage;\n    setPage = async function setPageWithStableHome\(pageName\) \{.*?\n    \};\n  \}\n',
@@ -131,13 +115,11 @@ jobs:
           watchlist_pattern = re.compile(
               r'(const result = await originalSetPage\.call\(this, pageName, updateHash, nextOptions\);\n)(\s*)(keepSidebarExpanded\(\);\n\s*if \(pageName === "watchlist" && routeView\) enforceWatchlistRouteView\(true\);)'
           )
-          source, count = watchlist_pattern.subn(
+          source, _ = watchlist_pattern.subn(
               r'\1\2if (result === null || !pageNavigationIsCurrent(nextOptions)) return result;\n\2\3',
               source,
               count=1,
           )
-          if count > 1:
-              raise SystemExit('watchlist wrapper guard matched more than once')
 
           path.write_text(source)
 
