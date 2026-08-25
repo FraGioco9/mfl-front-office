@@ -53,6 +53,11 @@ for (const required of [
   'const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);',
   "let nextRequestToken = 0;",
   "let activeRequestToken = 0;",
+  "function loadingRowsMatchCurrentStructure(body) {",
+  'body.dataset.staticLoading !== "true"',
+  "rows.length !== 5",
+  "rows.some((row) => !row.classList.contains(BLANK_ROW_CLASS))",
+  "rows.every((row) => row.cells.length === columnCount)",
   "function requestActive() {",
   "function beginRequest(routeScope) {",
   'const scope = String(routeScope || "").toLowerCase();',
@@ -78,8 +83,9 @@ invariant(
   beginRequestStart >= 0
     && beginRequestEnd > beginRequestStart
     && !beginRequestSource.includes("tableRouteActive()")
-    && !beginRequestSource.includes("loadingSnapshot().dataLoading"),
-  "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
+    && !beginRequestSource.includes("loadingSnapshot().dataLoading")
+    && beginRequestSource.includes("!loadingRowsMatchCurrentStructure(body)"),
+  "An explicit table request must preserve an already-canonical loading tbody without depending on the previous DOM route or global data-loading flag.",
 );
 
 for (const required of [
@@ -180,8 +186,8 @@ invariant(
   appCoreSource.includes(requestBoundaryMarker)
     && !appCoreSource.includes("preservePager")
     && appCoreSource.includes(requestFinishMarker)
-    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;'),
-  "Canonical application source must directly own the Table request loading boundary and active-request render guard.",
+    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
+  "Canonical application source must preserve the first-paint loading tbody until table data is authoritative, while still guarding active requests.",
 );
 invariant(
   appCoreSource.includes("requestIncrementalRoute(route, 1)")
@@ -223,8 +229,8 @@ invariant(
 );
 
 invariant(
-  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;"),
-  "The Table renderer must preserve canonical loading rows while stale state can still be rendered during an active request.",
+  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === \"true\" && !state.dataLoaded) return;"),
+  "The Table renderer must preserve canonical first-paint loading rows until authoritative data exists and while a request is active.",
 );
 invariant(
   !tableRuntime.includes('document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying')

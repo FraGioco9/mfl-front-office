@@ -10453,6 +10453,7 @@ syncPagerCurrentPage(1, 1);
 
 function renderTable() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
+  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);

@@ -51,6 +51,20 @@
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
 
+  function loadingRowsMatchCurrentStructure(body) {
+    if (!(body instanceof HTMLTableSectionElement) || body.dataset.staticLoading !== "true") return false;
+    const rows = Array.from(body.rows);
+    if (rows.length !== 5 || rows.some((row) => !row.classList.contains(BLANK_ROW_CLASS))) return false;
+    const colGroup = document.getElementById("tableColGroup");
+    const head = document.getElementById("tableHead");
+    const columnCount = Math.max(
+      1,
+      colGroup instanceof HTMLElement ? colGroup.children.length : 0,
+      head instanceof HTMLTableSectionElement ? head.rows[0]?.cells.length || 0 : 0,
+    );
+    return rows.every((row) => row.cells.length === columnCount);
+  }
+
   function shouldPreserveRenderedRows(body = elements().body) {
     if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
     const root = document.documentElement;
@@ -148,7 +162,7 @@
     const currentBody = elements().body;
     const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);
     const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
-    if (body && !preserveRenderedRows) primeLoadingRows();
+    if (body && !preserveRenderedRows && !loadingRowsMatchCurrentStructure(body)) primeLoadingRows();
     return token;
   }
 
