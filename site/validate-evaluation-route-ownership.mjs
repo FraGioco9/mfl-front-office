@@ -137,8 +137,10 @@ invariant(
     && appCoreSource.includes("...(savedId ? { savedId } : {})")
     && appCoreSource.includes("...(shareId ? { shareId } : {})")
     && appCoreSource.includes("async function recoverInvalidEvaluationLink()")
-    && appCoreSource.includes("await applySharedEvaluationPayload(data.payload);"),
-  "Canonical Evaluation source must own route identity, invalid-link recovery, and final saved/shared payload rendering.",
+    && appCoreSource.includes("async function applySharedEvaluationPayload(payload, options = {})")
+    && appCoreSource.includes("await applySharedEvaluationPayload(data.payload, {")
+    && appCoreSource.includes("mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,"),
+  "Canonical Evaluation source must own route identity, invalid-link recovery, and final saved/shared payload rendering with latest MFL/USD commit ownership.",
 );
 invariant(
   shared.includes('const requestedPath = String(path || "");')
