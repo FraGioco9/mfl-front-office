@@ -20,8 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
       - name: Center share glyph at source
         run: |
           python - <<'PY'
@@ -39,7 +37,7 @@ jobs:
       - name: Build generated application core
         working-directory: site
         run: |
-          npm ci
+          npm install --no-package-lock
           npm run build:core
       - name: Commit source and generated runtime
         run: |
