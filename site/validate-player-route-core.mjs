@@ -185,11 +185,11 @@ requireAll(playerCore, [
   'views.style.visibility = "visible";',
 ], "Known Player data reuse and stable pending structure");
 
-// Hero geometry is shared by pending/final DOM. Identity starts exactly 300px after Overall's right edge.
+// Hero geometry is shared by pending/final DOM. Overall + reserved gap is exactly 320px before Identity.
 requireAll(playerCore, [
   "const PLAYER_HERO_OVERALL_SIZE_PX = 100;",
   "const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;",
-  "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 300;",
+  "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;",
   "const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;",
   "const identityOffset = PLAYER_HERO_OVERALL_SIZE_PX + PLAYER_HERO_IDENTITY_OVERALL_GAP_PX;",
   'media.style.flex = "0 0 " + width;',
@@ -312,7 +312,7 @@ requireAll(generatedPlayerBody, [
   'if (playerIdFromLocation() !== playerId) return false;',
   "queueMicrotask(() => {",
   "if (pendingDetailPlayerId !== targetPlayerId || playerIdFromLocation() !== targetPlayerId) return;",
-  "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 300;",
+  "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;",
   "const identityOffset = PLAYER_HERO_OVERALL_SIZE_PX + PLAYER_HERO_IDENTITY_OVERALL_GAP_PX;",
   "function pendingPitchHtml() {",
   "function stableAttributePanelHtml(row) {",
@@ -339,4 +339,4 @@ forbidAll(generatedPlayerBody, [
   'overallLabel.textContent = "Overall";',
 ], "Generated Player legacy behavior");
 
-console.log("Player refresh and in-site navigation share one route-commit-safe pending renderer, unresolved rows remain pending until detail payload settlement, unknown values stay blank, the full pitch exists from first paint, the 125px hero is CSS-owned, playerHeroIdentity starts 300px after playerHeroOverall, and generated runtime parity validation passed.");
+console.log("Player refresh and in-site navigation share one route-commit-safe pending renderer, unresolved rows remain pending until detail payload settlement, unknown values stay blank, the full pitch exists from first paint, the 125px hero is CSS-owned, Player hero media reserves 320px before playerHeroIdentity, and generated runtime parity validation passed.");
