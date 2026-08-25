@@ -33,59 +33,61 @@ jobs:
               p.write_text(text.replace(old, new, 1))
 
           index = "site/index.html"
-
-          replace_once(
-              index,
-              '''      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-        [data-initial-table-page="database"],
-        [data-initial-table-page="mfl"],
-        [data-initial-table-page="progression"],
-        [data-initial-table-page="watchlist"],
-        [data-initial-table-page="myplayers"]
-      ) #sidebar .navButton[data-page]:not(:hover) {
-        border-color: var(--border-strong);
-        background: var(--surface);
-        color: var(--text);
-      }
-''',
-              '''''',
+          neutral = (
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(\n'
+              '        [data-initial-table-page="database"],\n'
+              '        [data-initial-table-page="mfl"],\n'
+              '        [data-initial-table-page="progression"],\n'
+              '        [data-initial-table-page="watchlist"],\n'
+              '        [data-initial-table-page="myplayers"]\n'
+              '      ) #sidebar .navButton[data-page]:not(:hover) {\n'
+              '        border-color: var(--border-strong);\n'
+              '        background: var(--surface);\n'
+              '        color: var(--text);\n'
+              '      }\n'
           )
+          replace_once(index, neutral, '')
 
-          replace_once(
-              index,
-              '''      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
-      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],''',
-              '''      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
-      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
-      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
-      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],''',
+          active_anchor = (
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],\n'
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],'
           )
+          active_replacement = (
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],\n'
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],\n'
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],\n'
+              '      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],'
+          )
+          replace_once(index, active_anchor, active_replacement)
 
-          replace_once(
-              index,
-              '''      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #homePage {
-        display: none;
-      }
-      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #evaluationPage {
-        display: block;
-      }''',
-              '''      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
-        display: none;
-      }
-      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {
-        display: block;
-      }''',
+          evaluation_shell = (
+              '      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #homePage {\n'
+              '        display: none;\n'
+              '      }\n'
+              '      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #evaluationPage {\n'
+              '        display: block;\n'
+              '      }'
           )
+          evaluation_shell_replacement = (
+              '      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {\n'
+              '        display: none;\n'
+              '      }\n'
+              '      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {\n'
+              '        display: block;\n'
+              '      }'
+          )
+          replace_once(index, evaluation_shell, evaluation_shell_replacement)
 
           validator = Path("site/validate-static-route-ui.mjs")
           text = validator.read_text()
           anchor = 'includes(indexHtml, "window.__mflTableViewConfig = TABLE_VIEW_CONFIG;", "First-paint table view configuration must be exposed to runtime chrome ownership.");\n'
-          addition = '''includes(indexHtml, 'data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"]', "Agents must expose its active sidebar state during table-route first paint.");
-includes(indexHtml, 'data-initial-table-page="club"] #sidebar .navButton[data-page="club"]', "Club first paint must support active sidebar state when a matching navigation control exists.");
-excludes(indexHtml, ') #sidebar .navButton[data-page]:not(:hover) {', "Table first paint must not neutralize sidebar controls with a selector more specific than the active-route selector.");
-includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage', "Evaluation refresh-only visibility must stop as soon as a newer navigation owns the shell.");
-includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");
-'''
+          addition = (
+              'includes(indexHtml, \'data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"]\', "Agents must expose its active sidebar state during table-route first paint.");\n'
+              'includes(indexHtml, \'data-initial-table-page="club"] #sidebar .navButton[data-page="club"]\', "Club first paint must support active sidebar state when a matching navigation control exists.");\n'
+              'excludes(indexHtml, \') #sidebar .navButton[data-page]:not(:hover) {\', "Table first paint must not neutralize sidebar controls with a selector more specific than the active-route selector.");\n'
+              'includes(indexHtml, \'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage\', "Evaluation refresh-only visibility must stop as soon as a newer navigation owns the shell.");\n'
+              'includes(indexHtml, \'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage\', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");\n'
+          )
           if anchor not in text:
               raise SystemExit("Static route validator insertion anchor missing")
           validator.write_text(text.replace(anchor, anchor + addition, 1))
