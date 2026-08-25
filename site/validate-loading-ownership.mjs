@@ -171,6 +171,15 @@ invariant(
     && appCoreSource.includes('return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'),
   "The shared incremental route-page loader must acquire canonical route loading only at its uncached request boundary.",
 );
+const beginLatestStart = bootstrapCore.indexOf('function beginLatest(reason = "navigation") {');
+const beginLatestEnd = bootstrapCore.indexOf("function beginIntent", beginLatestStart);
+const beginLatestSection = bootstrapCore.slice(beginLatestStart, beginLatestEnd);
+invariant(
+  beginLatestStart >= 0
+    && !beginLatestSection.includes('classList.add("mflInitialRouteSuperseded")'),
+  "Navigation intent must not retire refresh first-paint ownership before the live page/view commit has applied its active controls.",
+);
+
 invariant(
   !bootstrapCore.includes("window.__mflWithInteractionBusy")
     && !bootstrapCore.includes("function routeLoadingOwnerReusable() {")

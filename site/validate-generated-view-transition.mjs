@@ -68,7 +68,8 @@ const pageRunner = section(
 const pageRunnerNavigation = pageRunner.indexOf('navigation.beginLatest("page-transition")');
 const pageRunnerCancel = pageRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", pageRunnerNavigation);
 const pageRunnerCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
-const pageRunnerLoading = pageRunner.indexOf("loadingController?.beginRouteTransition?.(pageName, options)", pageRunnerCommit);
+const pageRunnerSupersede = pageRunner.indexOf('document.documentElement.classList.add("mflInitialRouteSuperseded");', pageRunnerCommit);
+const pageRunnerLoading = pageRunner.indexOf("loadingController?.beginRouteTransition?.(pageName, options)", pageRunnerSupersede);
 const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerLoading);
 const pageRunnerLoad = pageRunner.indexOf('const result = typeof loader === "function" ? await loader(transition)', pageRunnerPaint);
 const pageRunnerCurrentAfterLoad = pageRunner.indexOf("if (!pageTransitionIsCurrent(transition)) return null;", pageRunnerLoad);
@@ -77,7 +78,8 @@ invariant(
   pageRunnerNavigation >= 0
     && pageRunnerCancel > pageRunnerNavigation
     && pageRunnerCommit > pageRunnerCancel
-    && pageRunnerLoading > pageRunnerCommit
+    && pageRunnerSupersede > pageRunnerCommit
+    && pageRunnerLoading > pageRunnerSupersede
     && pageRunnerPaint > pageRunnerLoading
     && pageRunnerLoad > pageRunnerPaint
     && pageRunnerCurrentAfterLoad > pageRunnerLoad
@@ -94,7 +96,8 @@ const viewRunner = section(
 const viewRunnerNavigation = viewRunner.indexOf('navigation.beginLatest("view-transition")');
 const viewRunnerCancel = viewRunner.indexOf("window.__mflCancelIncrementalRouteRequest?.();", viewRunnerNavigation);
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
-const viewRunnerLoading = viewRunner.indexOf("loadingController?.beginRouteTransition?.(pageName", viewRunnerStage);
+const viewRunnerSupersede = viewRunner.indexOf('document.documentElement.classList.add("mflInitialRouteSuperseded");', viewRunnerStage);
+const viewRunnerLoading = viewRunner.indexOf("loadingController?.beginRouteTransition?.(pageName", viewRunnerSupersede);
 const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerLoading);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
 const viewRunnerLoaderCall = viewRunner.indexOf("const result = await loader(transition);", viewRunnerLoad);
@@ -105,7 +108,8 @@ invariant(
   viewRunnerNavigation >= 0
     && viewRunnerCancel > viewRunnerNavigation
     && viewRunnerStage > viewRunnerCancel
-    && viewRunnerLoading > viewRunnerStage
+    && viewRunnerSupersede > viewRunnerStage
+    && viewRunnerLoading > viewRunnerSupersede
     && viewRunnerPaint > viewRunnerLoading
     && viewRunnerLoad > viewRunnerPaint
     && viewRunnerLoaderCall > viewRunnerLoad

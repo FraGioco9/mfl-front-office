@@ -95,7 +95,6 @@
 
     function beginLatest(reason = "navigation") {
       const normalizedReason = String(reason || "navigation");
-      document.documentElement.classList.add("mflInitialRouteSuperseded");
       const token = `${normalizedReason}-${++sequence}`;
       activeTokens.clear();
       activeTokens.set(token, normalizedReason);

@@ -1686,6 +1686,7 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
       kind: "page",
       sequence,
     };
+    document.documentElement.classList.add("mflInitialRouteSuperseded");
     loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
     await waitForViewTransitionPaint();
     if (!pageTransitionIsCurrent(transition)) return null;
@@ -1712,6 +1713,7 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
     window.__mflCancelIncrementalRouteRequest?.();
     const transition = stageViewTransition(pageName, viewName, options);
     if (!transition) return null;
+    document.documentElement.classList.add("mflInitialRouteSuperseded");
     loadingToken = loadingController?.beginRouteTransition?.(pageName, {
       ...options,
       view: viewName,

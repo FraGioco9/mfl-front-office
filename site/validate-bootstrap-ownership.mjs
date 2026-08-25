@@ -423,9 +423,9 @@ excludes(
 );
 
 includes(
-  bootstrapCore,
+  appCoreSource,
   'document.documentElement.classList.add("mflInitialRouteSuperseded");',
-  "The first live page/view navigation must permanently retire refresh-only route chrome before committing the new destination.",
+  "The live page/view transition must retire refresh-only route chrome only after committing the new destination.",
 );
 includes(
   bootstrapCore,
