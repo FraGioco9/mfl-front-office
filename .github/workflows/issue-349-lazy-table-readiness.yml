@@ -54,8 +54,7 @@ jobs:
           check = validator.read_text()
           sentinel = 'const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");'
           if sentinel not in check:
-              addition = '''
-          const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
+              addition = '''const routeDestinationReadyStart = bootstrapCore.indexOf("function routeDestinationReady(pageName, options = {}) {");
           const routeDestinationReadyEnd = bootstrapCore.indexOf("function routeLoadingActive()", routeDestinationReadyStart);
           const routeDestinationReadySection = bootstrapCore.slice(routeDestinationReadyStart, routeDestinationReadyEnd);
           const coreReadyProbe = routeDestinationReadySection.indexOf("const coreReady = window.__mflIsRouteCoreReady?.(pageName, normalizedOptions) === true;");
@@ -73,9 +72,8 @@ jobs:
           invariant(
             !routeDestinationReadySection.includes("const dataReady ="),
             "Destination readiness must short-circuit lazy dependencies before evaluating route-data cache state.",
-          );
-          '''
-              check = check.rstrip() + "\n" + addition + "\n"
+          );'''
+              check = check.rstrip() + "\n\n" + addition.strip() + "\n"
           validator.write_text(check)
           PY
 
