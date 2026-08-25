@@ -114,7 +114,7 @@ jobs:
           echo "Substantive workflow/deployment changes: $workflow"
           echo "Run repository validation: $quality"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
         with:
           python-version: "3.12"
