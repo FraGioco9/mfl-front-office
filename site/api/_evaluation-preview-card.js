@@ -1,6 +1,14 @@
 const { PassThrough, Readable } = require("node:stream");
 const PImage = require("pureimage");
 const { formatEvaluationPreviewCurrency } = require("./_evaluation-preview-value");
+const { loadPlayerPortraitBitmap } = require("./_player-portrait");
+const { createPortraitCloseUp } = require("./_portrait-close-up");
+const {
+  portraitSilhouetteMetrics,
+  portraitGlowTopOffsetPx,
+  portraitGlowRightOffsetPx,
+  drawPortraitSilhouetteGlow,
+} = require("./_portrait-silhouette-glow");
 
 const LOGICAL_WIDTH = 1200;
 const LOGICAL_HEIGHT = 630;
@@ -13,6 +21,12 @@ const FONT_FAMILIES = Object.freeze({
   600: "TitilliumWebPreviewSemiBold",
   700: "TitilliumWebPreviewBold",
 });
+const PREVIEW_HEADER_BOTTOM_Y = 96;
+const PLAYER_PORTRAIT_GLOW_GAP = 8;
+const PLAYER_PORTRAIT_BOUNDS = Object.freeze({ width: 600, right: 1130, bottom: 374 });
+const PLAYER_TEXT_MAX_WIDTH = 1060;
+const FOOTER_SEPARATOR_Y = 578;
+const FOOTER_LABEL_CENTER_Y = ((FOOTER_SEPARATOR_Y + 1) + LOGICAL_HEIGHT) / 2;
 
 // Mirror the canonical dark-theme tokens from styles-base.css.
 const COLORS = Object.freeze({
@@ -43,7 +57,7 @@ const FLAG_CODE_BY_NATIONALITY = Object.freeze({
   SERBIA: "RS", SLOVAKIA: "SK", SLOVENIA: "SI", SOUTH_AFRICA: "ZA", SOUTH_KOREA: "KR",
   SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH", TUNISIA: "TN", TURKEY: "TR", UKRAINE: "UA",
   UNITED_KINGDOM: "GB", UNITED_STATES: "US", UNITED_STATES_OF_AMERICA: "US", URUGUAY: "UY",
-  USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e007f",
+  USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e0074-e007f",
 });
 
 const FONT_PATHS = Object.freeze([
@@ -73,6 +87,17 @@ function cardText(value) {
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function rarityColorForOverall(overall) {
+  const value = Number(overall || 0);
+
+  if (value >= 95) return "#00ffe9";
+  if (value >= 85) return "#fa53ff";
+  if (value >= 75) return "#0077ff";
+  if (value >= 65) return "#71ff30";
+  if (value >= 55) return "#ecd17f";
+  return "#bebebe";
 }
 
 function twemojiCodepointsForNationality(nationality) {
@@ -204,7 +229,7 @@ function drawSummaryStrip(context, metadata) {
   const columnWidths = [210, 210, 210, 430];
 
   drawRectanglePanel(context, x, y, width, height);
-  fillRect(context, x, y, width, 3, COLORS.primary);
+  fillRect(context, x, y, width, 3, rarityColorForOverall(metadata.overall));
 
   let cursor = x;
   columnWidths.slice(0, -1).forEach((columnWidth) => {
@@ -255,6 +280,86 @@ async function drawNationalityLine(context, metadata) {
   context.textBaseline = previousBaseline;
 }
 
+function fitPortraitDrawGeometry(source, bounds = PLAYER_PORTRAIT_BOUNDS, glowColor = "") {
+  const sourceWidth = Number(source?.width);
+  const sourceHeight = Number(source?.height);
+  if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+  const silhouetteMetrics = glowColor ? portraitSilhouetteMetrics(source) : null;
+  const minimumGlowTop = px(PREVIEW_HEADER_BOTTOM_Y + PLAYER_PORTRAIT_GLOW_GAP);
+  const targetGlowRight = px(bounds.right - PLAYER_PORTRAIT_GLOW_GAP);
+  const maximumScale = bounds.width / sourceWidth;
+
+  function glowTopForScale(scale) {
+    const height = sourceHeight * scale;
+    const y = bounds.bottom - height;
+    const glowTopOffset = glowColor
+      ? portraitGlowTopOffsetPx(source, px(height), silhouetteMetrics)
+      : 0;
+    return px(y) + glowTopOffset;
+  }
+
+  let scale = maximumScale;
+  if (glowTopForScale(scale) < minimumGlowTop) {
+    let low = 0;
+    let high = maximumScale;
+    for (let iteration = 0; iteration < 16; iteration += 1) {
+      const candidate = (low + high) / 2;
+      if (glowTopForScale(candidate) >= minimumGlowTop) low = candidate;
+      else high = candidate;
+    }
+    scale = low;
+  }
+
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  const rightGlowOffset = glowColor
+    ? portraitGlowRightOffsetPx(source, px(width), silhouetteMetrics)
+    : px(width);
+  const x = (targetGlowRight - rightGlowOffset) / RENDER_SCALE;
+  const y = bounds.bottom - height;
+  return {
+    x,
+    y,
+    width,
+    height,
+    naturalGlowTop: glowTopForScale(scale) / RENDER_SCALE,
+    naturalGlowRight: (px(x) + rightGlowOffset) / RENDER_SCALE,
+  };
+}
+
+function drawContainedImage(context, source, bounds, glowColor = "") {
+  const portrait = createPortraitCloseUp(source) || source;
+  const geometry = fitPortraitDrawGeometry(portrait, bounds, glowColor);
+  if (!geometry) return;
+
+  const { x, y, width, height } = geometry;
+  if (glowColor) {
+    drawPortraitSilhouetteGlow(
+      context,
+      portrait,
+      px(x),
+      px(y),
+      px(width),
+      px(height),
+      glowColor,
+    );
+  }
+  context.drawImage(portrait, px(x), px(y), px(width), px(height));
+}
+
+async function resolvePlayerPortrait(metadata, options = {}) {
+  if (!metadata.isShared || !metadata.portraitUrl) return null;
+  const portraitLoader = typeof options.portraitLoader === "function"
+    ? options.portraitLoader
+    : loadPlayerPortraitBitmap;
+  try {
+    return await portraitLoader(metadata.portraitUrl);
+  } catch {
+    return null;
+  }
+}
+
 async function imageToPngBuffer(image) {
   const output = new PassThrough();
   const chunks = [];
@@ -263,8 +368,9 @@ async function imageToPngBuffer(image) {
   return Buffer.concat(chunks);
 }
 
-async function renderEvaluationPreviewPng(metadata = {}) {
+async function renderEvaluationPreviewPng(metadata = {}, options = {}) {
   registerPreviewFonts();
+  const portrait = await resolvePlayerPortrait(metadata, options);
 
   const image = PImage.make(WIDTH, HEIGHT);
   const context = image.getContext("2d");
@@ -288,7 +394,15 @@ async function renderEvaluationPreviewPng(metadata = {}) {
   if (metadata.isShared && metadata.playerId) {
     const playerName = cardText(metadata.playerName);
     const playerLabel = playerName || `Player ${cardText(metadata.playerId)}`;
-    const playerSize = fittedFontSize(context, playerLabel, 700, 72, 44, 1060);
+    const playerSize = fittedFontSize(context, playerLabel, 700, 72, 44, PLAYER_TEXT_MAX_WIDTH);
+    if (portrait) {
+      drawContainedImage(
+        context,
+        portrait,
+        PLAYER_PORTRAIT_BOUNDS,
+        rarityColorForOverall(metadata.overall),
+      );
+    }
     drawText(context, playerLabel, 70, 130, 700, playerSize, COLORS.text);
     drawText(context, `Player #${cardText(metadata.playerId)}`, 72, 224, 400, 29, COLORS.soft);
     await drawNationalityLine(context, metadata);
@@ -310,8 +424,11 @@ async function renderEvaluationPreviewPng(metadata = {}) {
     drawText(context, "Shared player Evaluation preview", 96, 455, 600, 34, COLORS.text);
   }
 
-  fillRect(context, 70, 578, 1060, 1, COLORS.borderStrong);
-  drawText(context, "MFL Front Office", 70, 592, 400, 20, COLORS.soft);
+  fillRect(context, 70, FOOTER_SEPARATOR_Y, 1060, 1, COLORS.borderStrong);
+  const previousBaseline = context.textBaseline;
+  context.textBaseline = "middle";
+  drawText(context, "MFL Front Office", 70, FOOTER_LABEL_CENTER_Y, 400, 20, COLORS.soft);
+  context.textBaseline = previousBaseline;
 
   return imageToPngBuffer(image);
 }
@@ -320,5 +437,10 @@ module.exports = {
   WIDTH,
   HEIGHT,
   FONT_FAMILY,
+  PREVIEW_HEADER_BOTTOM_Y,
+  PLAYER_PORTRAIT_GLOW_GAP,
+  PLAYER_PORTRAIT_BOUNDS,
+  fitPortraitDrawGeometry,
+  rarityColorForOverall,
   renderEvaluationPreviewPng,
 };
