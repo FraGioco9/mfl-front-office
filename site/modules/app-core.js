@@ -13019,7 +13019,14 @@ async function startApp() {
         mflStatsAgeDistribution.replaceChildren();
       }
     } else if (playerPageActive && playerDetail) {
-      playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
+      const playerId = String(route.playerId || "").trim();
+      const pendingContext = window.__mflPlayerFirstPaintPendingContext;
+      const matchingContext = String(pendingContext?.playerId || "").trim() === playerId
+        ? pendingContext
+        : { playerId };
+      window.__mflPlayerFirstPaintPendingContext = matchingContext;
+      window.__mflPlayerFirstPaintRuntime?.beginDetailNavigation?.(matchingContext);
+      window.__mflPlayerFirstPaintRuntime?.renderPending?.(matchingContext);
     } else if (evaluationPageActive) {
       evaluationPanel.hidden = true;
       evaluationSearchResults.hidden = true;
@@ -13775,6 +13782,37 @@ async function startApp() {
     let previousTableStateSaved = false;
 
     if (!runtimeReady) {
+      if (String(pageName || "") === "player") {
+        const playerId = String(
+          incomingOptions.playerId
+          || incomingOptions.__mflPlayerFirstPaintContext?.playerId
+          || window.__mflPlayerFirstPaintPendingContext?.playerId
+          || "",
+        ).trim();
+        if (playerId) {
+          const suppliedContext = incomingOptions.__mflPlayerFirstPaintContext;
+          const cachedContext = window.__mflPlayerFirstPaintPendingContext;
+          const buildContext = window.__mflBuildPlayerFirstPaintContext;
+          const pendingContext = String(suppliedContext?.playerId || "").trim() === playerId
+            ? suppliedContext
+            : String(cachedContext?.playerId || "").trim() === playerId
+              ? cachedContext
+              : (typeof buildContext === "function" ? buildContext(playerId) : { playerId });
+          window.__mflPlayerFirstPaintPendingContext = pendingContext;
+
+          const playerCorePromise = typeof window.__mflEnsureRouteCore === "function"
+            ? window.__mflEnsureRouteCore("player", { ...incomingOptions, playerId })
+            : null;
+          if (typeof window.__mflEnsureRouteRuntime === "function") {
+            await window.__mflEnsureRouteRuntime("player", { ...incomingOptions, playerId });
+          }
+          if (playerCorePromise) await playerCorePromise;
+
+          window.__mflPlayerFirstPaintRuntime?.beginDetailNavigation?.(pendingContext);
+          window.__mflPlayerFirstPaintRuntime?.renderPending?.(pendingContext);
+        }
+      }
+
       const stagedTransition = incomingOptions.__mflNavigationTransition
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {

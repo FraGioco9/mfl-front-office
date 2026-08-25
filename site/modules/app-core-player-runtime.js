@@ -12,6 +12,8 @@
   const PLAYER_HERO_ACTION_CHEVRON_WIDTH_PX = 34;
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
+  const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
+  const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
   const PLAYER_NOTE_MAX_LENGTH = 200;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
@@ -42,15 +44,67 @@
     return text ? text.split(",").map((position) => position.trim()).filter(Boolean) : [];
   }
 
+  function normalizeKnownValueEntry(value) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const rawValue = value.raw;
+      const rawType = typeof rawValue;
+      const raw = rawValue === null || rawValue === undefined
+        ? ""
+        : (rawType === "string" || rawType === "number" || rawType === "boolean" ? rawValue : String(rawValue));
+      const display = String(value.display ?? (raw === "" ? "" : raw)).trim();
+      return display || raw !== "" ? { raw, display } : null;
+    }
+    if (value === null || value === undefined || value === "") return null;
+    const rawType = typeof value;
+    const raw = rawType === "string" || rawType === "number" || rawType === "boolean" ? value : String(value);
+    const display = String(value).trim();
+    return display || raw !== "" ? { raw, display } : null;
+  }
+
+  function normalizeKnownValues(value) {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const normalized = {};
+    Object.entries(source).forEach(([column, entry]) => {
+      const known = normalizeKnownValueEntry(entry);
+      if (known) normalized[column] = known;
+    });
+    return normalized;
+  }
+
+  function mergeKnownValues(baseValue, nextValue) {
+    return {
+      ...normalizeKnownValues(baseValue),
+      ...normalizeKnownValues(nextValue),
+    };
+  }
+
+  function knownValue(context, column) {
+    return normalizeKnownValueEntry(context?.knownValues?.[column]);
+  }
+
+  function knownDisplayValue(context, column) {
+    return String(knownValue(context, column)?.display || "").trim();
+  }
+
+  function knownRawValue(context, column) {
+    const entry = knownValue(context, column);
+    return entry ? entry.raw : "";
+  }
+
   function normalizeContext(value) {
     const source = value && typeof value === "object" ? value : {};
     const playerId = normalizePlayerId(source.playerId);
+    const knownValues = normalizeKnownValues(source.knownValues);
+    const suppliedPositions = normalizePositions(source.positions);
+    const cachedPositions = normalizePositions(knownValues.positions?.display || "");
+    const suppliedOverall = source.overall === null || source.overall === undefined ? "" : String(source.overall).trim();
     return {
       playerId,
-      name: String(source.name || "").trim(),
-      positions: normalizePositions(source.positions),
-      overall: source.overall === null || source.overall === undefined ? "" : String(source.overall).trim(),
+      name: String(source.name || knownValues.name?.display || "").trim(),
+      positions: suppliedPositions.length ? suppliedPositions : cachedPositions,
+      overall: suppliedOverall || String(knownValues.overall?.display || "").trim(),
       externalUrl: String(source.externalUrl || (playerId ? PLAYER_EXTERNAL_ORIGIN + "/players/" + playerId : "")).trim(),
+      knownValues,
     };
   }
 
@@ -63,6 +117,7 @@
       positions: next.positions.length ? next.positions : base.positions,
       overall: next.overall || base.overall,
       externalUrl: next.externalUrl || base.externalUrl,
+      knownValues: mergeKnownValues(base.knownValues, next.knownValues),
     };
   }
 
@@ -87,6 +142,28 @@
       sessionStorage.setItem(cacheKey(context.playerId), JSON.stringify(merged));
     } catch {}
     return true;
+  }
+
+  function snapshotRowKnownValues(row) {
+    const knownValues = {};
+    if (!Array.isArray(row) || !Array.isArray(state.columns)) return knownValues;
+    state.columns.forEach((column, index) => {
+      if (!column || index >= row.length) return;
+      const rawValue = row[index];
+      if (rawValue === null || rawValue === undefined || rawValue === "") return;
+      const rawType = typeof rawValue;
+      const raw = rawType === "string" || rawType === "number" || rawType === "boolean" ? rawValue : String(rawValue);
+      let display = "";
+      try {
+        display = String(formatCellValue(row, column) ?? "").trim();
+      } catch {
+        display = String(raw).trim();
+      }
+      if (!display) display = String(raw).trim();
+      const known = normalizeKnownValueEntry({ raw, display });
+      if (known) knownValues[column] = known;
+    });
+    return knownValues;
   }
 
   function portraitUrl(playerIdValue) {
@@ -460,7 +537,7 @@
       primary.style.minHeight = height;
       primary.style.maxHeight = height;
       primary.style.padding = "0 10px";
-      primary.style.fontSize = "14px";
+      primary.style.fontSize = "16px";
       primary.style.lineHeight = "1";
       primary.style.whiteSpace = "nowrap";
       primary.style.textDecoration = "none";
@@ -602,14 +679,21 @@
     const media = hero.querySelector(":scope > .playerHeroMedia");
     const actions = hero.querySelector(":scope > .playerHeroActions");
 
+    hero.style.gap = "0";
     if (media instanceof HTMLElement) {
       media.style.order = "1";
       media.style.alignSelf = "stretch";
+      media.style.marginRight = "12px";
     }
     if (identity instanceof HTMLElement) {
+      const width = PLAYER_HERO_IDENTITY_WIDTH_PX + "px";
       identity.style.order = "2";
-      identity.style.flex = "1 1 280px";
+      identity.style.flex = "0 1 " + width;
+      identity.style.width = width;
+      identity.style.maxWidth = width;
       identity.style.minWidth = "0";
+      identity.style.marginLeft = "auto";
+      identity.style.marginRight = PLAYER_HERO_IDENTITY_ACTION_GAP_PX + "px";
       identity.style.alignSelf = "center";
       const eyebrow = identity.querySelector(".playerEyebrow");
       const title = identity.querySelector(".playerTitle");
@@ -621,7 +705,7 @@
     if (actions instanceof HTMLElement) {
       actions.style.order = "3";
       actions.style.alignSelf = "center";
-      actions.style.marginLeft = "auto";
+      actions.style.marginLeft = "0";
       applyHeroActionMenuLayout(actions);
     }
 
@@ -696,7 +780,83 @@
     return actions;
   }
 
-  function createPendingProfilePanel() {
+  function pendingProfileText(context, label) {
+    if (label === "Nationality") return knownDisplayValue(context, "nationality");
+    if (label === "Age") return knownDisplayValue(context, "age");
+    if (label === "Height") {
+      const height = knownDisplayValue(context, "height");
+      return height && height !== "NULL" ? height + " cm" : height;
+    }
+    if (label === "Foot") {
+      const rawFoot = knownRawValue(context, "preferred_foot");
+      return rawFoot !== "" ? formatFootedness(rawFoot) : knownDisplayValue(context, "preferred_foot");
+    }
+    if (label === "Seasons") return knownDisplayValue(context, "player_seasons");
+    if (label === "Agent") return knownDisplayValue(context, "wallet_name");
+    if (label === "Rev Share") {
+      const rawRevenueShare = knownRawValue(context, "active_contract_revenue_share");
+      return rawRevenueShare !== "" ? formatContractRevenueShare(rawRevenueShare) : knownDisplayValue(context, "active_contract_revenue_share");
+    }
+    return "";
+  }
+
+  function appendPendingAgentValue(value, context) {
+    const agentName = knownDisplayValue(context, "wallet_name");
+    const walletAddress = String(knownRawValue(context, "wallet_address") || "").trim();
+    value.style.fontWeight = "600";
+    if (!agentName) {
+      value.textContent = loadingBlank();
+      return;
+    }
+    if (!walletAddress) {
+      value.textContent = agentName;
+      return;
+    }
+    const link = document.createElement("a");
+    link.className = "agentTableLink playerAgentLink";
+    link.href = typeof agentRoute === "function" ? agentRoute(walletAddress) : "/agents/" + encodeURIComponent(walletAddress) + "/attributes";
+    link.textContent = agentName;
+    link.addEventListener("click", (event) => {
+      if (typeof openAgentPage !== "function") return;
+      event.preventDefault();
+      openAgentPage(walletAddress, agentName);
+    });
+    value.replaceChildren(link);
+  }
+
+  function appendPendingContractValue(value, context) {
+    const line = document.createElement("span");
+    line.className = "playerContractLine";
+    const teamName = knownDisplayValue(context, "active_contract_club_name");
+    const clubId = String(knownRawValue(context, "active_contract_club_id") || "").trim();
+    let team;
+    if (teamName && clubId) {
+      team = document.createElement("a");
+      team.className = "playerContractTeam playerContractTeamLink clubPageLink";
+      team.href = window.__mflAppConfig?.routes?.clubPath?.(clubId, "attributes") || "/clubs/" + encodeURIComponent(clubId) + "/squad";
+      team.dataset.clubId = clubId;
+      team.textContent = teamName;
+      team.addEventListener("click", (event) => {
+        if (typeof window.mflOpenClubPage !== "function") return;
+        event.preventDefault();
+        window.mflOpenClubPage(clubId, "attributes");
+      });
+    } else {
+      team = document.createElement("span");
+      team.className = "playerContractTeam";
+      team.textContent = teamName || loadingBlank();
+    }
+    const division = document.createElement("span");
+    division.className = "playerContractDivision";
+    const divisionRaw = knownRawValue(context, "active_contract_club_division");
+    const divisionInfo = divisionRaw !== "" ? contractDivisionInfo(divisionRaw) : null;
+    division.textContent = divisionInfo?.name || knownDisplayValue(context, "active_contract_club_division") || loadingBlank();
+    if (divisionInfo?.color) division.style.color = divisionInfo.color;
+    line.append(team, division);
+    value.replaceChildren(line);
+  }
+
+  function createPendingProfilePanel(context) {
     const panel = document.createElement("div");
     panel.className = "playerPanel playerInfoPanel";
     const heading = document.createElement("h3");
@@ -710,18 +870,18 @@
       name.textContent = label;
       const value = document.createElement("strong");
       if (label === "Contract") {
-        const line = document.createElement("span");
-        line.className = "playerContractLine";
-        const team = document.createElement("span");
-        team.className = "playerContractTeam";
-        team.textContent = loadingBlank();
-        const division = document.createElement("span");
-        division.className = "playerContractDivision";
-        division.textContent = loadingBlank();
-        line.append(team, division);
-        value.appendChild(line);
+        appendPendingContractValue(value, context);
+      } else if (label === "Agent") {
+        appendPendingAgentValue(value, context);
+      } else if (label === "Nationality") {
+        const knownNationality = knownDisplayValue(context, "nationality");
+        if (knownNationality) {
+          value.innerHTML = countryFlagHtml(knownRawValue(context, "nationality")) + " " + escapeHtml(knownNationality);
+        } else {
+          value.textContent = loadingBlank();
+        }
       } else {
-        value.textContent = loadingBlank();
+        value.textContent = pendingProfileText(context, label) || loadingBlank();
       }
       card.append(name, value);
       grid.appendChild(card);
@@ -750,11 +910,16 @@
     return views;
   }
 
-  function pendingAttributeLabels(context) {
+  function pendingAttributeColumns(context) {
     const goalkeeper = context.positions.some((position) => String(position).toUpperCase() === "GK");
     return goalkeeper
-      ? ["Overall", "Goalkeeping"]
-      : ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
+      ? ["overall", "goalkeeping"]
+      : ["overall", "pace", "dribbling", "shooting", "defense", "passing", "physical"];
+  }
+
+  function pendingAttributeValue(context, column) {
+    if (column === "overall") return context.overall || knownDisplayValue(context, column);
+    return knownDisplayValue(context, column);
   }
 
   function createPendingAttributesPanel(context) {
@@ -768,19 +933,20 @@
 
     const grid = document.createElement("div");
     grid.className = "attributeGrid";
-    const labels = pendingAttributeLabels(context);
-    const goalkeeper = labels.length === 2;
-    labels.forEach((label) => {
+    const columns = pendingAttributeColumns(context);
+    const goalkeeper = columns.length === 2;
+    columns.forEach((column) => {
+      const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
       const card = document.createElement("div");
-      const fullWidth = label === "Overall" || (goalkeeper && label === "Goalkeeping");
-      card.className = "playerAttributeCard" + (label === "Overall" ? " featured" : "") + (fullWidth ? " fullWidth" : "");
-      if (label === "Overall") card.style.setProperty("--rarity-color", rarityColor(context.overall));
+      const fullWidth = column === "overall" || (goalkeeper && column === "goalkeeping");
+      card.className = "playerAttributeCard" + (column === "overall" ? " featured" : "") + (fullWidth ? " fullWidth" : "");
+      if (column === "overall") card.style.setProperty("--rarity-color", rarityColor(context.overall));
       const name = document.createElement("span");
       name.textContent = label;
       const strong = document.createElement("strong");
       const value = document.createElement("span");
       value.className = "attributeValueText";
-      value.textContent = label === "Overall" ? (context.overall || loadingBlank()) : loadingBlank();
+      value.textContent = pendingAttributeValue(context, column) || loadingBlank();
       strong.appendChild(value);
       card.append(name, strong);
       grid.appendChild(card);
@@ -825,12 +991,23 @@
     ).join("");
   }
 
+  function pendingGridSignature(context) {
+    return JSON.stringify([
+      context.positions,
+      context.overall,
+      context.knownValues,
+      storedWalletOptIn(),
+      Boolean(state.walletPreferencesLoaded),
+    ]);
+  }
+
   function createPendingPlayerGrid(context) {
     const playerGrid = document.createElement("section");
     playerGrid.className = "playerGrid playerGridPending";
+    playerGrid.dataset.playerPendingSignature = pendingGridSignature(context);
     const stack = document.createElement("div");
     stack.className = "playerStack";
-    stack.append(createPendingProfilePanel(), createPendingAttributesPanel(context));
+    stack.append(createPendingProfilePanel(context), createPendingAttributesPanel(context));
     if (storedWalletOptIn()) stack.appendChild(createPendingNotesPanel(context));
 
     const pitchPanel = document.createElement("div");
@@ -906,8 +1083,13 @@
         && existingHero.dataset.playerShellId === playerId
         && existingHero.classList.contains("playerHeroPending")) {
       updatePendingHero(existingHero, context);
-      const pendingOverall = detail.querySelector(".attributesPanel .playerAttributeCard.featured .attributeValueText");
-      if (pendingOverall instanceof HTMLElement) pendingOverall.textContent = context.overall || loadingBlank();
+      const existingGrid = detail.querySelector(":scope > .playerGridPending");
+      const nextSignature = pendingGridSignature(context);
+      if (!(existingGrid instanceof HTMLElement) || existingGrid.dataset.playerPendingSignature !== nextSignature) {
+        const nextGrid = createPendingPlayerGrid(context);
+        if (existingGrid instanceof HTMLElement) existingGrid.replaceWith(nextGrid);
+        else detail.appendChild(nextGrid);
+      }
       showPlayerPage();
       if (context.name || context.positions.length || context.overall || context.externalUrl) rememberContext(context);
       return true;
@@ -1011,6 +1193,7 @@
     hydrateHero,
     rememberContext,
     drawPortraitCrop,
+    snapshotRowKnownValues,
     bindHeroActionMenu,
     animateReadyControls,
     stableAttributePanelHtml,
@@ -1646,6 +1829,7 @@ function renderPlayerPageOwner(playerId) {
     positions,
     overall: statDisplayValue(row, "overall"),
     externalUrl: formatCellValue(row, linkColumn),
+    knownValues: window.__mflPlayerFirstPaintRuntime?.snapshotRowKnownValues?.(row) || {},
   });
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   if (watchButton) {

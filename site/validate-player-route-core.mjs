@@ -58,7 +58,17 @@ includes(sharedCore, "function primaryPreciseOverall(row) {", "Shared table/Eval
 includes(sharedCore, "async function copyPlayerId(id) {", "Shared clipboard behavior must remain universal.");
 includes(sharedCore, "renderPlayerPageWithNoteLimit", "The Player note-limit wrapper must remain shared around the stable renderer facade.");
 includes(sharedCore, "window.__mflPlayerFirstPaintPendingContext = pendingContext;", "Internal Player navigation must publish already-known Player context before route loading.");
-includes(sharedCore, "window.__mflPlayerFirstPaintRuntime?.renderPending?.(pendingContext);", "Revisited Player routes must paint known content synchronously.");
+includes(sharedCore, "function playerFirstPaintNavigationContext(playerId) {", "Internal Player navigation must build one canonical first-paint context before route loading.");
+includes(sharedCore, "state.columns.forEach((column, index) => {", "Internal Player navigation must snapshot every safely available current-row column.");
+includes(sharedCore, "knownValues[column] = { raw: serializedRaw, display };", "Internal Player navigation must preserve raw and display values for first paint.");
+includes(sharedCore, "const searchEntry = playerFirstPaintSearchEntry(key);", "Player first paint must fall back to the search index when the clicked Player is not in current table rows.");
+includes(sharedCore, "knownValues,", "The published Player pending context must carry all safely known values.");
+includes(sharedCore, "window.__mflBuildPlayerFirstPaintContext = playerFirstPaintNavigationContext;", "The shared navigation owner must publish the canonical Player first-paint context builder to the route gate.");
+includes(sharedCore, "__mflPlayerFirstPaintContext: pendingContext", "Internal Player navigation must hand the same first-paint context into the unified route gate.");
+includes(coreSource, 'String(pageName || "") === "player"', "The route-runtime gate must special-case Player preparation before the global transition paints the destination.");
+includes(coreSource, 'await window.__mflEnsureRouteRuntime("player", { ...incomingOptions, playerId });', "In-site Player navigation must load the Player route runtime before exposing the loading shell.");
+includes(coreSource, 'window.__mflPlayerFirstPaintRuntime?.renderPending?.(pendingContext);', "The Player route gate must paint through the same pending owner used by refresh.");
+excludes(coreSource, "playerDetail.innerHTML = '<div class=\"emptyState\">Loading player...</div>';", "Generic incremental navigation must not own an alternate Player loading DOM.");
 excludes(sharedCore, "function primePlayerHeroFirstPaintGeometry() {", "Player hero geometry must not depend on a late shared-runtime primer.");
 excludes(sharedCore, "primePlayerHeroFirstPaintGeometry();", "Player navigation must not rely on a late hero-geometry primer call.");
 for (const eagerOwner of [
@@ -112,6 +122,13 @@ includes(playerCore, 'PLAYER_PORTRAIT_ORIGIN + "/players/v2/" + playerId + "/pho
 includes(playerCore, "const PLAYER_PORTRAIT_CROP_HEIGHT_PX = 500;", "Player first paint must mirror the Evaluation top-500px crop.");
 includes(playerCore, "const PLAYER_PORTRAIT_SOURCE_WIDTH_PX = 912;", "Player first paint must reserve the known 912px source width before portrait decode.");
 includes(playerCore, "const PLAYER_PORTRAIT_DISPLAY_HEIGHT_PX = 112;", "Player portrait display height must remain 112px.");
+includes(playerCore, "const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;", "Player hero identity must have a fixed width anchor independent of portrait width.");
+includes(playerCore, "const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;", "Player hero identity must remain exactly 16px from the action block.");
+includes(playerCore, 'identity.style.marginRight = PLAYER_HERO_IDENTITY_ACTION_GAP_PX + "px";', "Pending and loaded hero identities must share the fixed action-relative position.");
+includes(playerCore, 'primary.style.fontSize = "16px";', "Open link must render at 16px in both pending and loaded hero actions.");
+includes(playerCore, 'link.className = "agentTableLink playerAgentLink";', "Known Agent data must use the final clickable Agent link at first paint.");
+includes(playerCore, 'team.className = "playerContractTeam playerContractTeamLink clubPageLink";', "Known contract team data must use the final clickable team link at first paint.");
+includes(playerCore, 'value.style.fontWeight = "600";', "Pending Agent text must match the loaded Agent font weight even when its target is not yet known.");
 includes(playerCore, "const portraitSources = new Map();", "Decoded Player portrait sources must be reusable by player ID across pending/final DOM replacement.");
 includes(playerCore, "function applyPortraitGeometry(canvas, sourceWidthValue = PLAYER_PORTRAIT_SOURCE_WIDTH_PX, sourceHeightValue = PLAYER_PORTRAIT_CROP_HEIGHT_PX) {", "Player first paint must own synchronous portrait geometry reservation.");
 includes(playerCore, "const displayWidth = sourceWidth * (displayHeight / sourceCropHeight);", "Portrait width must derive from the already-cropped source ratio.");
@@ -145,13 +162,24 @@ includes(playerCore, 'positions.style.fontSize = "16px";', "Player positions mus
 includes(playerCore, "function loadingBlank() {", "Player first paint must own a geometry-preserving blank loading value.");
 includes(playerCore, 'return "\\u00A0";', "Loading placeholders must be visually blank while retaining line geometry.");
 includes(playerCore, 'overallValue.textContent = context.overall || loadingBlank();', "Unknown hero Overall must stay visually blank.");
-includes(playerCore, 'value.textContent = loadingBlank();', "Unknown Profile values must stay visually blank.");
-includes(playerCore, 'value.textContent = label === "Overall" ? (context.overall || loadingBlank()) : loadingBlank();', "Unknown Attribute values must stay visually blank.");
+includes(playerCore, 'value.textContent = pendingProfileText(context, label) || loadingBlank();', "Known Profile values must paint immediately and unknown Profile values must stay visually blank.");
+includes(playerCore, 'value.textContent = pendingAttributeValue(context, column) || loadingBlank();', "Known Attribute values must paint immediately and unknown Attribute values must stay visually blank.");
 includes(playerCore, 'titleName.textContent = context.name || loadingBlank();', "Unknown Player name must stay visually blank.");
 includes(playerCore, 'positions.textContent = context.positions.length ? context.positions.join(", ") : loadingBlank();', "Unknown positions must stay visually blank.");
-includes(playerCore, 'pendingOverall.textContent = context.overall || loadingBlank();', "Pending Attributes Overall must stay visually blank.");
+includes(playerCore, "existingGrid.dataset.playerPendingSignature !== nextSignature", "A pending Player shell must refresh its Profile/Attributes structure when newly known context changes the correct geometry.");
 
 includes(playerCore, "function createPendingPlayerGrid(context) {", "Player first paint must reserve the complete final panel grid.");
+includes(playerCore, "function normalizeKnownValues(value) {", "Player first paint must normalize a reusable map of safely known row values.");
+includes(playerCore, "knownValues: mergeKnownValues(base.knownValues, next.knownValues),", "Session first-paint context must merge newly known row values without discarding earlier safe data.");
+includes(playerCore, "function snapshotRowKnownValues(row) {", "The Player owner must be able to snapshot every available row column for first paint.");
+includes(playerCore, "function createPendingProfilePanel(context) {", "Pending Profile must consume the same known Player context as the hero and Attributes panel.");
+includes(playerCore, 'const knownNationality = knownDisplayValue(context, "nationality");', "Known nationality must be reused at first paint when available.");
+includes(playerCore, "function pendingAttributeColumns(context) {", "Pending Attribute geometry must be determined by known Player positions.");
+includes(playerCore, '? ["overall", "goalkeeping"]', "Known goalkeepers must use the smaller two-card Attributes layout immediately.");
+includes(playerCore, "playerGrid.dataset.playerPendingSignature = pendingGridSignature(context);", "Pending grid geometry must be keyed to the exact known Player context.");
+includes(playerCore, "stack.append(createPendingProfilePanel(context), createPendingAttributesPanel(context));", "Profile and Attributes must be created from one shared pending context.");
+includes(playerCore, "snapshotRowKnownValues,", "The first-paint runtime must expose full-row snapshotting to final hydration.");
+includes(playerCore, "knownValues: window.__mflPlayerFirstPaintRuntime?.snapshotRowKnownValues?.(row) || {},", "Final Player hydration must refresh the session first-paint cache with the complete detail row.");
 includes(playerCore, '["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"]', "Profile labels and cards must exist immediately.");
 includes(playerCore, 'line.className = "playerContractLine";', "Pending Contract must reserve the same nested line structure as loaded Contract.");
 includes(playerCore, 'team.className = "playerContractTeam";', "Pending Contract must reserve the final team slot.");
@@ -176,7 +204,7 @@ includes(playerCore, 'views.style.visibility = "visible";', "Player view control
 includes(playerCore, 'detail.replaceChildren(hero, createPendingPlayerGrid(context));', "Hero and static panel grid must publish together in final order.");
 
 excludes(playerCore, "function createHiddenAttributePlaceholder() {", "Goalkeeper Attributes must not be padded to outfield height with structural placeholders.");
-includes(playerCore, 'const fullWidth = label === "Overall" || (goalkeeper && label === "Goalkeeping");', "Known goalkeeper first paint must use the final full-width Goalkeeping card geometry.");
+includes(playerCore, 'const fullWidth = column === "overall" || (goalkeeper && column === "goalkeeping");', "Known goalkeeper first paint must use the final full-width Goalkeeping card geometry.");
 excludes(playerCore, 'for (let index = 0; index < 4; index += 1) grid.appendChild(createHiddenAttributePlaceholder());', "Goalkeeper first paint must remain naturally smaller than the outfield Attributes panel.");
 includes(playerCore, "function stableAttributePanelHtml(row) {", "Final Player rendering must retain the shared Attribute markup owner.");
 includes(playerCore, "return renderPlayerAttributePanel(row);", "Final goalkeeper Attributes must use the naturally smaller loaded-state rendering without hidden padding cards.");
