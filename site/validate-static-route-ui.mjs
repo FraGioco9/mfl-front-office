@@ -32,6 +32,11 @@ const [
 ]);
 
 includes(indexHtml, "window.__mflTableViewConfig = TABLE_VIEW_CONFIG;", "First-paint table view configuration must be exposed to runtime chrome ownership.");
+includes(indexHtml, 'data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"]', "Agents must expose its active sidebar state during table-route first paint.");
+includes(indexHtml, 'data-initial-table-page="club"] #sidebar .navButton[data-page="club"]', "Club first paint must support active sidebar state when a matching navigation control exists.");
+excludes(indexHtml, ') #sidebar .navButton[data-page]:not(:hover) {', "Table first paint must not neutralize sidebar controls with a selector more specific than the active-route selector.");
+includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage', "Evaluation refresh-only visibility must stop as soon as a newer navigation owns the shell.");
+includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");
 for (const canonicalConfig of [
   'database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" })',
   'mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" })',
@@ -219,9 +224,8 @@ includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a
 
 invariant(
   indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page=')
-    && indexHtml.includes('html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(')
-    && indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),
-  "Refresh-only first-paint route chrome must permanently relinquish page/view button ownership when a live navigation supersedes startup, while leaving normal hover styling available.",
+    && !indexHtml.includes(') #sidebar .navButton[data-page]:not(:hover) {'),
+  "Refresh-only table-page chrome must expose the active route directly and relinquish ownership on supersession without a higher-specificity neutral sidebar rule.",
 );
 invariant(
   indexHtml.includes('#progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }'),
