@@ -9,6 +9,16 @@ on:
       - "test_mfl_marketplace_snapshot.py"
       - "test_mfl_marketplace_events.py"
       - ".github/workflows/mfl-marketplace-snapshot.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "mfl_marketplace_cadence.py"
+      - "mfl_marketplace_snapshot.py"
+      - "mfl_marketplace_events.py"
+      - "test_mfl_marketplace_snapshot.py"
+      - "test_mfl_marketplace_events.py"
+      - ".github/workflows/mfl-marketplace-snapshot.yml"
   workflow_dispatch:
     inputs:
       mode:
@@ -76,7 +86,7 @@ jobs:
           PY
 
   snapshot:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -134,12 +144,12 @@ jobs:
                 --name mfl_marketplace_state \
                 --dir marketplace-previous
               test -s marketplace-previous/mfl_marketplace_listings.json
-            elif [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-              echo "No previous state exists; bootstrapping instead."
-              MODE="bootstrap"
-            else
+            elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
               echo "Incremental mode requires a previous successful marketplace state." >&2
               exit 1
+            else
+              echo "No previous state exists; bootstrapping instead."
+              MODE="bootstrap"
             fi
           fi
 
