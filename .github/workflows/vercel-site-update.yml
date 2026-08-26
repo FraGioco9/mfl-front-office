@@ -38,34 +38,43 @@ jobs:
           set -euo pipefail
 
           LATEST_RUN_ID=""
-          while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+          LATEST_ARTIFACT_ID=""
+          LATEST_CREATED_AT=""
+
+          while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
+            [ -n "$ARTIFACT_ID" ] || continue
             [ -n "$RUN_ID" ] || continue
 
-            ARTIFACT_NAME="$(
-              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
-                --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' \
-                | head -n 1
-            )"
+            rm -f mfl_database.db
+            echo "Checking mfl_database artifact $ARTIFACT_ID from run $RUN_ID ($CREATED_AT)."
 
-            if [ "$ARTIFACT_NAME" = "mfl_database" ]; then
+            if ! gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .; then
+              echo "Artifact $ARTIFACT_ID could not be downloaded; trying the next candidate."
+              continue
+            fi
+
+            if python prepare_runtime_database.py mfl_database.db --validate-only; then
               LATEST_RUN_ID="$RUN_ID"
-              echo "Using mfl_database from run $RUN_ID ($CREATED_AT)."
+              LATEST_ARTIFACT_ID="$ARTIFACT_ID"
+              LATEST_CREATED_AT="$CREATED_AT"
               break
             fi
+
+            rm -f mfl_database.db
+            echo "Artifact $ARTIFACT_ID does not contain a valid prepared mfl_database.db; trying the next candidate."
           done < <(
-            gh run list \
-              --status success \
-              --limit 100 \
-              --json databaseId,createdAt \
-              --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
+              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.id | tostring), (.workflow_run.id | tostring)] | @tsv' \
+              | sort -r
           )
 
           if [ -z "$LATEST_RUN_ID" ]; then
-            echo "No non-expired mfl_database artifact was found." >&2
+            echo "No valid non-expired mfl_database artifact was found." >&2
             exit 1
           fi
 
-          gh run download "$LATEST_RUN_ID" --name mfl_database --dir .
+          echo "Using mfl_database artifact $LATEST_ARTIFACT_ID from run $LATEST_RUN_ID ($LATEST_CREATED_AT)."
           test -s mfl_database.db
           ls -lh mfl_database.db
 
