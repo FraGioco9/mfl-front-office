@@ -10433,7 +10433,6 @@ function installPagerCurrentPageControl() {
   controls.input.addEventListener("focus", () => {
     pagerEditRevision += 1;
     delete controls.input.dataset.cancelCommit;
-    controls.input.select();
   });
 
   controls.input.addEventListener("input", () => {
