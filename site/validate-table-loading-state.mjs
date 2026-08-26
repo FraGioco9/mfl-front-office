@@ -75,6 +75,14 @@ const beginRequestStart = runtime.indexOf("function beginRequest(routeScope) {")
 const beginRequestEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginRequestStart);
 const beginRequestSource = runtime.slice(beginRequestStart, beginRequestEnd);
 invariant(
+  runtime.includes("function hasCanonicalLoadingRows(body) {")
+    && runtime.includes('body.dataset.staticLoading === "true"')
+    && runtime.includes("body.rows.length === 5")
+    && runtime.includes("Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS))")
+    && beginRequestSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),
+  "A refresh request must adopt the five blank rows already painted by bootstrap instead of replacing them a second time.",
+);
+invariant(
   beginRequestStart >= 0
     && beginRequestEnd > beginRequestStart
     && !beginRequestSource.includes("tableRouteActive()")

@@ -14,9 +14,13 @@ for (const required of [
   "const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);",
   "const body = preserveRenderedRows",
   ": prepareLoadingSurface();",
-  "if (body && !preserveRenderedRows) primeLoadingRows();",
+  "function hasCanonicalLoadingRows(body) {",
+  'body.dataset.staticLoading === "true"',
+  "body.rows.length === 5",
+  "Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS))",
+  "if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();",
   "hidePager();",
-  "if (shouldPreserveRenderedRows()) return;",
+  'if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;',
   "show({ replaceExisting: true });",
 ]) {
   invariant(runtime.includes(required), `Background table loading stability is missing ${required}`);
@@ -29,8 +33,8 @@ invariant(
   beginStart >= 0
     && beginEnd > beginStart
     && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")
-    && beginSource.includes("if (body && !preserveRenderedRows) primeLoadingRows();"),
-  "A post-route background request must decide whether to preserve rendered rows before preparing loading placeholders.",
+    && beginSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),
+  "A post-route background request must preserve settled rows and adopt an already-primed refresh skeleton instead of rebuilding it.",
 );
 
 const syncStart = runtime.indexOf("function sync(snapshot = loadingSnapshot()) {");
@@ -40,8 +44,9 @@ invariant(
   syncStart >= 0
     && syncEnd > syncStart
     && syncSource.indexOf("hidePager();") < syncSource.indexOf("shouldPreserveRenderedRows()")
-    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({ replaceExisting: true })"),
-  "Global loading-state updates must not replace a settled table unless a navigation is actually pending.",
+    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({ replaceExisting: true })")
+    && syncSource.includes("!snapshot.reasons.includes(FILTER_LOADING_REASON)"),
+  "Global loading-state updates must preserve a settled table for background loads while allowing filter loads to show the canonical blank rows.",
 );
 
 invariant(
@@ -51,4 +56,4 @@ invariant(
   "Every active Table load must hide pager chrome even when settled rows remain rendered.",
 );
 
-console.log("Settled table rows remain visible during background loading, while every active Table load hides pager chrome until the request settles.");
+console.log("Settled table rows remain visible during ordinary background loading, filter loading uses blank rows, and every active Table load hides pager chrome until the request settles.");

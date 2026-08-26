@@ -150,6 +150,16 @@ for (const required of [
 ]) {
   invariant(appCore.includes(required), `Canonical source must preserve Filters summary/close ownership through ${required}`);
 }
+const clearFiltersHandler = 'clearFiltersButton.addEventListener("click", () => {\n  clearAdvancedFilters(false);\n  applyAdvancedFilters();\n});';
+invariant(
+  appCore.includes(clearFiltersHandler),
+  "Clear Filters must apply the cleared draft and close the popup through the canonical Apply owner.",
+);
+invariant(
+  coreRuntime.includes(clearFiltersHandler),
+  "Generated application core must preserve Clear Filters apply-and-close behavior.",
+);
+
 invariant(
   appCore.includes('if (filterSummary) filterSummary.textContent = "0";')
     && !appCore.includes('if (filterSummary) filterSummary.textContent = "0 active";'),

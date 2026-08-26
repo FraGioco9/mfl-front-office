@@ -150,6 +150,7 @@
     const DATA_LOADING_REASONS = new Set([
       INITIAL_ROUTE_BOOTSTRAP_REASON,
       ROUTE_LOADING_REASON,
+      "table-filter-loading",
       "loadSharedEvaluation",
       "loadSavedEvaluation",
       "openSavedEvaluationsModal",

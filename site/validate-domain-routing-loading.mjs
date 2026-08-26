@@ -11,6 +11,7 @@ const validators = [
   "validate-generated-view-transition.mjs",
   "validate-page-route-gate-transition.mjs",
   "validate-table-loading-state.mjs",
+  "validate-filter-loading-blank-rows.mjs",
   "validate-table-background-loading-stability.mjs",
   "validate-app-core-startup-handshake.mjs",
 ];
