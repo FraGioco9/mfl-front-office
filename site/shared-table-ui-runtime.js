@@ -8,6 +8,7 @@
 
   let destroyed = false;
   let pointerControl = null;
+  const scrollContainer = document.querySelector("main");
 
   function controlFromTarget(target) {
     if (!(target instanceof Element)) return null;
@@ -61,6 +62,12 @@
     }
   }
 
+  function clearTableHoverState() {
+    const body = document.getElementById("tableBody");
+    if (!(body instanceof HTMLElement)) return;
+    body.dispatchEvent(new Event("pointerleave"));
+  }
+
   function onPointerDown(event) {
     pointerControl = controlFromTarget(event.target);
   }
@@ -94,6 +101,10 @@
     if (active instanceof HTMLElement && active.matches(CONTROL_SELECTOR)) releaseFocus(active);
   }
 
+  function onScroll() {
+    clearTableHoverState();
+  }
+
   function sync() {
     markInitialTableFiltersForReset();
     syncFilterSummaryNow();
@@ -105,12 +116,14 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("keydown", onKeyDown, true);
+    scrollContainer?.removeEventListener("scroll", onScroll);
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
   document.addEventListener("keydown", onKeyDown, true);
+  scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
 
   sync();
   window.__mflSharedTableUiRuntime = Object.freeze({ sync, destroy });

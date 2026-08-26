@@ -1755,8 +1755,6 @@ th.sortable:hover {
   border-top: 6px solid var(--text);
 }
 
-#tableBody tr:hover > td,
-#tableBody tr:hover > th,
 #tableBody tr.tableRowHovered > td,
 #tableBody tr.tableRowHovered > th {
   background: var(--row-hover);
