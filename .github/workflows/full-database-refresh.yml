@@ -164,7 +164,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download current database builder
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: builder
 
@@ -284,7 +284,7 @@ jobs:
           echo "sha=$SITE_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Download last published site source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.production_site.outputs.sha }}
           path: production-site
