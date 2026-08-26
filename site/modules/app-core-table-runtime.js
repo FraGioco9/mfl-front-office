@@ -580,7 +580,8 @@ function tableBuildHeaderOwner() {
     const clubPositionSort = state.currentPage === "club" && column === "positions";
     const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
+    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl") ? "" : columnLabels[column];
+    if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
     if (clubPositionSort) {
@@ -753,7 +754,7 @@ function tableBuildOperatorSelectOwner(column) {
       ["after", "after"],
       ["during", "during"],
     ];
-  } else if (column === contractStatusFilterColumn) {
+  } else if (column === contractStatusFilterColumn || column === "listing_price") {
     operators = [["=", "is"]];
     select.hidden = true;
   } else if (column === "nationality") {
@@ -825,10 +826,16 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
     return buildDateInput(savedValue);
   }
 
-  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn) {
+  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn || column === "listing_price") {
     const select = document.createElement("select");
     select.dataset.filterValue = "true";
-    const values = column === "nationality" ? uniqueNationalityValues() : column === contractStatusFilterColumn ? contractStatusOptions : uniquePositions();
+    const values = column === "nationality"
+      ? uniqueNationalityValues()
+      : column === contractStatusFilterColumn
+        ? contractStatusOptions
+        : column === "listing_price"
+          ? listingFilterOptions
+          : uniquePositions();
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = "Select...";
@@ -1210,6 +1217,13 @@ function tableRuleMatchesOwner(row, rule) {
 
   if (rule.column === contractStatusFilterColumn) {
     return rawValue === filterValue;
+  }
+
+  if (rule.column === "listing_price") {
+    const listed = rawValue !== null && rawValue !== undefined && rawValue !== "" && Number.isFinite(Number(rawValue));
+    if (filterValue === "for_sale") return listed;
+    if (filterValue === "not_for_sale") return !listed;
+    return false;
   }
 
   if (rawValue === null || rawValue === undefined || rawValue === "") {
@@ -1915,6 +1929,30 @@ function tableRenderTableOwner() {
         idContent.className = "tableControlCellContent";
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
+      } else if (column === "listing_price") {
+        const listingContent = document.createElement("span");
+        listingContent.className = "listingCellContent";
+        const rawListingValue = getValue(row, column);
+        const listingValue = rawListingValue === null || rawListingValue === undefined || rawListingValue === "" ? NaN : Number(rawListingValue);
+        if (Number.isFinite(listingValue)) {
+          const icon = document.createElement("img");
+          icon.className = "listingCellIcon";
+          icon.src = "/listing-shopping-bag.svg";
+          icon.width = 12;
+          icon.height = 12;
+          icon.alt = "";
+          icon.setAttribute("aria-hidden", "true");
+          const price = document.createElement("span");
+          price.className = "listingCellPrice";
+          price.textContent = `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listingValue)}`;
+          listingContent.setAttribute("aria-label", `For Sale at ${price.textContent}`);
+          listingContent.append(icon, price);
+        } else {
+          listingContent.classList.add("listingCellUnlisted");
+          listingContent.textContent = "—";
+          listingContent.setAttribute("aria-label", "Not For Sale");
+        }
+        cell.appendChild(listingContent);
       } else if (column === "age") {
         const ageContent = document.createElement("span");
         ageContent.className = "tableControlCellContent";

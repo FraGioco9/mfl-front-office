@@ -112,7 +112,7 @@ function createRenderReuseGuard() {
 }
 
 const flagColumn = "nationality_flag";
-const baseColumns = ["player_id", flagColumn, "name", "age", "positions", "player_seasons"];
+const baseColumns = ["player_id", flagColumn, "name", "listing_price", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
 const contractColumns = ["overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share"];
 const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
@@ -258,6 +258,7 @@ const tableColumnClasses = {
   player_id: "col-id",
   nationality_flag: "col-flag",
   name: "col-name",
+  listing_price: "col-listing",
   age: "col-age",
   positions: "col-positions",
   player_seasons: "col-seasons",
@@ -294,6 +295,7 @@ const columnLabels = {
   wallet_name: "Agent",
   owned_since: "Joined Agency",
   name: "Name",
+  listing_price: "Listing",
   age: "Age",
   positions: "Positions",
   player_seasons: "Seasons",
@@ -311,15 +313,19 @@ const columnLabels = {
   player_link: "",
 };
 
-const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
-const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
+const numberColumns = new Set(["player_id", "listing_price", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
+const sortableColumns = new Set(["player_id", "name", "listing_price", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
 const contractStatusFilterColumn = "contract_status";
 const contractStatusOptions = [
   { value: "under_contract", label: "Under Contract" },
   { value: "free_agent", label: "Free Agent" },
   { value: "development_center", label: "Development Center" },
 ];
-const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, contractStatusFilterColumn, "owned_since"];
+const listingFilterOptions = [
+  { value: "for_sale", label: "For Sale" },
+  { value: "not_for_sale", label: "Not For Sale" },
+];
+const baseFilterColumns = ["player_id", "wallet_name", "name", "listing_price", "positions", "age", "player_seasons", "nationality", ...statColumns, contractStatusFilterColumn, "owned_since"];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
@@ -8957,7 +8963,8 @@ function buildHeader() {
     const clubPositionSort = state.currentPage === "club" && column === "positions";
     const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
+    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl") ? "" : columnLabels[column];
+    if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
     if (clubPositionSort) {
@@ -9130,7 +9137,7 @@ function buildOperatorSelect(column) {
       ["after", "after"],
       ["during", "during"],
     ];
-  } else if (column === contractStatusFilterColumn) {
+  } else if (column === contractStatusFilterColumn || column === "listing_price") {
     operators = [["=", "is"]];
     select.hidden = true;
   } else if (column === "nationality") {
@@ -9202,10 +9209,16 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
     return buildDateInput(savedValue);
   }
 
-  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn) {
+  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn || column === "listing_price") {
     const select = document.createElement("select");
     select.dataset.filterValue = "true";
-    const values = column === "nationality" ? uniqueNationalityValues() : column === contractStatusFilterColumn ? contractStatusOptions : uniquePositions();
+    const values = column === "nationality"
+      ? uniqueNationalityValues()
+      : column === contractStatusFilterColumn
+        ? contractStatusOptions
+        : column === "listing_price"
+          ? listingFilterOptions
+          : uniquePositions();
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = "Select...";
@@ -9587,6 +9600,13 @@ function ruleMatches(row, rule) {
 
   if (rule.column === contractStatusFilterColumn) {
     return rawValue === filterValue;
+  }
+
+  if (rule.column === "listing_price") {
+    const listed = rawValue !== null && rawValue !== undefined && rawValue !== "" && Number.isFinite(Number(rawValue));
+    if (filterValue === "for_sale") return listed;
+    if (filterValue === "not_for_sale") return !listed;
+    return false;
   }
 
   if (rawValue === null || rawValue === undefined || rawValue === "") {
@@ -10483,6 +10503,30 @@ function renderTable() {
         idContent.className = "tableControlCellContent";
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
+      } else if (column === "listing_price") {
+        const listingContent = document.createElement("span");
+        listingContent.className = "listingCellContent";
+        const rawListingValue = getValue(row, column);
+        const listingValue = rawListingValue === null || rawListingValue === undefined || rawListingValue === "" ? NaN : Number(rawListingValue);
+        if (Number.isFinite(listingValue)) {
+          const icon = document.createElement("img");
+          icon.className = "listingCellIcon";
+          icon.src = "/listing-shopping-bag.svg";
+          icon.width = 12;
+          icon.height = 12;
+          icon.alt = "";
+          icon.setAttribute("aria-hidden", "true");
+          const price = document.createElement("span");
+          price.className = "listingCellPrice";
+          price.textContent = `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listingValue)}`;
+          listingContent.setAttribute("aria-label", `For Sale at ${price.textContent}`);
+          listingContent.append(icon, price);
+        } else {
+          listingContent.classList.add("listingCellUnlisted");
+          listingContent.textContent = "—";
+          listingContent.setAttribute("aria-label", "Not For Sale");
+        }
+        cell.appendChild(listingContent);
       } else if (column === "age") {
         const ageContent = document.createElement("span");
         ageContent.className = "tableControlCellContent";

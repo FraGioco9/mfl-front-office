@@ -6,8 +6,10 @@ on:
       - "mfl_marketplace_cadence.py"
       - "mfl_marketplace_snapshot.py"
       - "mfl_marketplace_events.py"
+      - "mfl_marketplace_runtime_state.py"
       - "test_mfl_marketplace_snapshot.py"
       - "test_mfl_marketplace_events.py"
+      - "test_mfl_marketplace_runtime_state.py"
       - ".github/workflows/mfl-marketplace-snapshot.yml"
   push:
     branches:
@@ -16,8 +18,10 @@ on:
       - "mfl_marketplace_cadence.py"
       - "mfl_marketplace_snapshot.py"
       - "mfl_marketplace_events.py"
+      - "mfl_marketplace_runtime_state.py"
       - "test_mfl_marketplace_snapshot.py"
       - "test_mfl_marketplace_events.py"
+      - "test_mfl_marketplace_runtime_state.py"
       - ".github/workflows/mfl-marketplace-snapshot.yml"
   workflow_dispatch:
     inputs:
@@ -67,11 +71,17 @@ jobs:
           mfl_marketplace_cadence.py
           mfl_marketplace_snapshot.py
           mfl_marketplace_events.py
+          mfl_marketplace_runtime_state.py
           test_mfl_marketplace_snapshot.py
           test_mfl_marketplace_events.py
+          test_mfl_marketplace_runtime_state.py
 
       - name: Run marketplace regression tests
-        run: python -m unittest -v test_mfl_marketplace_snapshot.py test_mfl_marketplace_events.py
+        run: >-
+          python -m unittest -v
+          test_mfl_marketplace_snapshot.py
+          test_mfl_marketplace_events.py
+          test_mfl_marketplace_runtime_state.py
 
       - name: Verify Flow event API against mainnet
         run: |
@@ -231,6 +241,14 @@ jobs:
               f"using {payload['mode']} mode."
           )
           PY
+
+      - name: Publish marketplace state for site runtime
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: >-
+          python mfl_marketplace_runtime_state.py
+          --input marketplace-output/mfl_marketplace_listings.json
 
       - name: Upload marketplace state
         uses: actions/upload-artifact@v7

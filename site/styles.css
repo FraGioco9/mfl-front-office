@@ -14,23 +14,24 @@
   /* Uniform Width. This is the only numeric column-width contract. */
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
-  --mfl-table-col-select: 2.5%;
-  --mfl-table-col-id: 4%;
-  --mfl-table-col-flag: 2.5%;
-  --mfl-table-col-name: 17%;
-  --mfl-table-col-age: 4.5%;
-  --mfl-table-col-positions: 7.5%;
-  --mfl-table-col-seasons: 5.5%;
-  --mfl-table-col-overall: 6%;
-  --mfl-table-col-stat: 6%;
-  --mfl-table-col-contract-revenue: 9%;
-  --mfl-table-col-contract-club: 17%;
-  --mfl-table-col-contract-division: 10%;
-  --mfl-table-col-agent: 12%;
-  --mfl-table-col-link: 2.5%;
-  --mfl-table-col-contract-render-club: 16.998%;
-  --mfl-table-col-contract-agent: 12.00045%;
-  --mfl-table-col-contract-link: 2.50155%;
+  --mfl-table-col-select: 2.3%;
+  --mfl-table-col-id: 3.68%;
+  --mfl-table-col-flag: 2.3%;
+  --mfl-table-col-name: 15.64%;
+  --mfl-table-col-listing: 8%;
+  --mfl-table-col-age: 4.14%;
+  --mfl-table-col-positions: 6.9%;
+  --mfl-table-col-seasons: 5.06%;
+  --mfl-table-col-overall: 5.52%;
+  --mfl-table-col-stat: 5.52%;
+  --mfl-table-col-contract-revenue: 8.28%;
+  --mfl-table-col-contract-club: 15.64%;
+  --mfl-table-col-contract-division: 9.2%;
+  --mfl-table-col-agent: 11.04%;
+  --mfl-table-col-link: 2.3%;
+  --mfl-table-col-contract-render-club: 15.63816%;
+  --mfl-table-col-contract-agent: 11.040414%;
+  --mfl-table-col-contract-link: 2.301426%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -90,6 +91,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 #progressionPage .playerTableScroller col.col-id { width: var(--mfl-table-col-id); }
 #progressionPage .playerTableScroller col.col-flag { width: var(--mfl-table-col-flag); }
 #progressionPage .playerTableScroller col.col-name { width: var(--mfl-table-col-name); }
+#progressionPage .playerTableScroller col.col-listing { width: var(--mfl-table-col-listing); }
 #progressionPage .playerTableScroller col.col-age { width: var(--mfl-table-col-age); }
 #progressionPage .playerTableScroller col.col-positions { width: var(--mfl-table-col-positions); }
 #progressionPage .playerTableScroller col.col-seasons { width: var(--mfl-table-col-seasons); }
@@ -244,6 +246,31 @@ body[data-page="club"] #progressionPage .rowsField {
 
 #progressionPage #tableBody .tableControlCellContentCentered {
   justify-content: center;
+}
+
+#progressionPage #tableBody .listingCellContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: var(--mfl-table-row-height);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#progressionPage #tableBody .listingCellIcon {
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+}
+
+#progressionPage #tableBody .listingCellPrice {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#progressionPage #tableBody .listingCellUnlisted {
+  color: var(--text-muted);
 }
 
 #progressionPage #tableBody .playerNameCell {
