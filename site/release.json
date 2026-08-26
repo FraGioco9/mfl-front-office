@@ -1,4 +1,4 @@
 {
-  "version": "1.126.0",
-  "description": "Add marketplace listings and rarity indicators across player views"
+  "version": "1.126.1",
+  "description": "Stabilize loading, search interactions, and table navigation"
 }
