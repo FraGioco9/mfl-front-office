@@ -25,11 +25,13 @@ assert.match(core, /listingFilterOptions/);
 assert.match(core, /value: "for_sale", label: "For Sale"/);
 assert.match(core, /value: "not_for_sale", label: "Not For Sale"/);
 assert.match(core, /label\.textContent = column === "listing_price"/);
-assert.match(core, /listingContent\.className = "listingCellContent"/);
-assert.match(core, /icon\.src = "\/listing-shopping-bag\.svg"/);
-assert.match(core, /maximumFractionDigits: 0/);
-assert.doesNotMatch(core, /listingContent\.textContent = "—"/);
-assert.match(core, /listingContent\.classList\.add\("listingCellUnlisted"\);[\s\S]*listingContent\.setAttribute\("aria-label", "Not For Sale"\);/);
+assert.match(core, /function listingPriceBadgeHtml\(row\)/);
+assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
+assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
+assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
+assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
+assert.doesNotMatch(core, /listingCellUnlisted/);
+assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
 
 const bootstrap = read("site/bootstrap.js");
 assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" : FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
@@ -74,9 +76,9 @@ const contractTotal = [
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(contractTotal - 100) < 1e-9, `Contracts widths sum to ${contractTotal}`);
 assert.match(styles, /col\.col-listing \{ width: var\(--mfl-table-col-listing\); \}/);
-assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;/);
-assert.match(styles, /listingCellContent:not\(\.listingCellUnlisted\)[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
+assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
 assert.match(styles, /\.listingCellPrice \{[\s\S]*color: #3bfb52;/);
+assert.match(styles, /\.playerTitle > \.listingCellContent \{[\s\S]*margin-left: 6px;[\s\S]*font-size: 14px;/);
 
 const svg = read("site/listing-shopping-bag.svg");
 assert.match(svg, /width="12" height="12" viewBox="0 0 24 24"/);

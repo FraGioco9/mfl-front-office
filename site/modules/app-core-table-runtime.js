@@ -1929,28 +1929,12 @@ function tableRenderTableOwner() {
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
       } else if (column === "listing_price") {
-        const listingContent = document.createElement("span");
-        listingContent.className = "listingCellContent";
-        const rawListingValue = getValue(row, column);
-        const listingValue = rawListingValue === null || rawListingValue === undefined || rawListingValue === "" ? NaN : Number(rawListingValue);
-        if (Number.isFinite(listingValue)) {
-          const icon = document.createElement("img");
-          icon.className = "listingCellIcon";
-          icon.src = "/listing-shopping-bag.svg";
-          icon.width = 12;
-          icon.height = 12;
-          icon.alt = "";
-          icon.setAttribute("aria-hidden", "true");
-          const price = document.createElement("span");
-          price.className = "listingCellPrice";
-          price.textContent = `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(listingValue)}`;
-          listingContent.setAttribute("aria-label", `For Sale at ${price.textContent}`);
-          listingContent.append(icon, price);
+        const listingBadge = listingPriceBadgeHtml(row);
+        if (listingBadge) {
+          cell.innerHTML = listingBadge;
         } else {
-          listingContent.classList.add("listingCellUnlisted");
-          listingContent.setAttribute("aria-label", "Not For Sale");
+          cell.setAttribute("aria-label", "Not For Sale");
         }
-        cell.appendChild(listingContent);
       } else if (column === "age") {
         const ageContent = document.createElement("span");
         ageContent.className = "tableControlCellContent";

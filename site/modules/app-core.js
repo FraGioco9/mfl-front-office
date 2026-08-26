@@ -6427,6 +6427,16 @@ function openAgentPage(walletAddress) {
   setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes" });
 }
 
+const listingPriceFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
+function listingPriceBadgeHtml(row) {
+  const rawValue = getValue(row, "listing_price");
+  const numericValue = rawValue === null || rawValue === undefined || rawValue === "" ? NaN : Number(rawValue);
+  if (!Number.isFinite(numericValue)) return "";
+  const priceText = `$${listingPriceFormatter.format(numericValue)}`;
+  return `<span class="listingCellContent" aria-label="For Sale at ${escapeHtml(priceText)}"><img class="listingCellIcon" src="/listing-shopping-bag.svg" width="12" height="12" alt="" aria-hidden="true"><span class="listingCellPrice">${escapeHtml(priceText)}</span></span>`;
+}
+
 function rowByPlayerId(playerId) {
   const key = String(playerId);
   return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;
@@ -8442,7 +8452,7 @@ function renderPlayerPage(playerId) {
     <section class="playerHero">
       <div>
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
-        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span><span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
+        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span>${listingPriceBadgeHtml(row)}<span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
@@ -10503,28 +10513,12 @@ function renderTable() {
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
       } else if (column === "listing_price") {
-        const listingContent = document.createElement("span");
-        listingContent.className = "listingCellContent";
-        const rawListingValue = getValue(row, column);
-        const listingValue = rawListingValue === null || rawListingValue === undefined || rawListingValue === "" ? NaN : Number(rawListingValue);
-        if (Number.isFinite(listingValue)) {
-          const icon = document.createElement("img");
-          icon.className = "listingCellIcon";
-          icon.src = "/listing-shopping-bag.svg";
-          icon.width = 12;
-          icon.height = 12;
-          icon.alt = "";
-          icon.setAttribute("aria-hidden", "true");
-          const price = document.createElement("span");
-          price.className = "listingCellPrice";
-          price.textContent = `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(listingValue)}`;
-          listingContent.setAttribute("aria-label", `For Sale at ${price.textContent}`);
-          listingContent.append(icon, price);
+        const listingBadge = listingPriceBadgeHtml(row);
+        if (listingBadge) {
+          cell.innerHTML = listingBadge;
         } else {
-          listingContent.classList.add("listingCellUnlisted");
-          listingContent.setAttribute("aria-label", "Not For Sale");
+          cell.setAttribute("aria-label", "Not For Sale");
         }
-        cell.appendChild(listingContent);
       } else if (column === "age") {
         const ageContent = document.createElement("span");
         ageContent.className = "tableControlCellContent";

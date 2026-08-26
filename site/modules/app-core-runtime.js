@@ -4574,6 +4574,16 @@ function openAgentPage(walletAddress, agentName = "") {
   setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes", agentName: knownName });
 }
 
+const listingPriceFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
+function listingPriceBadgeHtml(row) {
+  const rawValue = getValue(row, "listing_price");
+  const numericValue = rawValue === null || rawValue === undefined || rawValue === "" ? NaN : Number(rawValue);
+  if (!Number.isFinite(numericValue)) return "";
+  const priceText = `$${listingPriceFormatter.format(numericValue)}`;
+  return `<span class="listingCellContent" aria-label="For Sale at ${escapeHtml(priceText)}"><img class="listingCellIcon" src="/listing-shopping-bag.svg" width="12" height="12" alt="" aria-hidden="true"><span class="listingCellPrice">${escapeHtml(priceText)}</span></span>`;
+}
+
 function rowByPlayerId(playerId) {
   const key = String(playerId);
   return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;

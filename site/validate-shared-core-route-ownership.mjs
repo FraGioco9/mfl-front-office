@@ -48,6 +48,7 @@ const protectedSharedFunctions = [
   "normalizeWatchlists",
   "renderWatchlistSwitcher",
   "playerIsInAnyWatchlist",
+  "listingPriceBadgeHtml",
 ];
 for (const name of protectedSharedFunctions) {
   invariant(hasFunction(shared, name), `Cross-route/shared function ${name} must remain in the eager core.`);

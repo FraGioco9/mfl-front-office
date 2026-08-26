@@ -248,37 +248,37 @@ body[data-page="club"] #progressionPage .rowsField {
   justify-content: center;
 }
 
-#progressionPage #tableBody .listingCellContent {
+.listingCellContent {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-#progressionPage #tableBody .listingCellContent:not(.listingCellUnlisted) {
   height: 20px;
   padding: 0 5px;
   border-radius: 5px;
   background: rgba(13, 74, 35, 0.46);
   color: #3bfb52;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
-#progressionPage #tableBody .listingCellIcon {
+.listingCellIcon {
   flex: 0 0 12px;
   width: 12px;
   height: 12px;
 }
 
-#progressionPage #tableBody .listingCellPrice {
+.listingCellPrice {
   overflow: hidden;
   color: #3bfb52;
   text-overflow: ellipsis;
 }
 
-#progressionPage #tableBody .listingCellUnlisted {
-  color: var(--text-muted);
+.playerTitle > .listingCellContent {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 #progressionPage #tableBody .playerNameCell {
