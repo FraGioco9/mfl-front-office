@@ -5,12 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCore, generatedCore, bootstrapCore, tableLoading, bootstrap] = await Promise.all([
+const [appCore, generatedCore, bootstrapCore, tableLoading, bootstrap, styles] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-runtime.js"),
   read("./bootstrap-core.js"),
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
+  read("./styles.css"),
 ]);
 
 const filterReload = 'void reloadIncrementalPage(1, { save: options.save !== false, loadingReason: "table-filter-loading" });';
@@ -32,5 +33,11 @@ invariant(
     && bootstrap.includes('row.className = "mflTableLoadingRow";'),
   "Filter loading must reuse the existing five-row table loading skeleton.",
 );
+invariant(
+  styles.includes("--mfl-table-row-outer-height: 39px;")
+    && styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
+    && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
+  "The five filter-loading rows must inherit the same 39px rendered outer height as populated rows.",
+);
 
-console.log("Filter reloads use the existing five blank rows without changing pagination or other same-page loading behavior.");
+console.log("Filter reloads use five blank rows with the same 39px rendered height as populated rows while preserving compact 34px cell content.");
