@@ -2,6 +2,7 @@ const validators = [
   "validate-table-route-core.mjs",
   "validate-pager-current-page.mjs",
   "validate-table-column-layout.mjs",
+  "validate-table-progression-spacing.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-listing-column.mjs",
 ];

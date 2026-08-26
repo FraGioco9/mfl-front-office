@@ -6280,7 +6280,7 @@ function appendStatValue(cell, row, statColumn) {
 
   const progressionElement = document.createElement("span");
   progressionElement.className = progression > 0 ? "progressionValue positive" : "progressionValue negative";
-  progressionElement.textContent = ` (${progression > 0 ? "+" : ""}${progression})`;
+  progressionElement.textContent = `${statColumn === "overall" ? "\u00A0" : " "}(${progression > 0 ? "+" : ""}${progression})`;
   contentHost.appendChild(progressionElement);
 }
 
