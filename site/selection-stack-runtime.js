@@ -177,7 +177,6 @@
     const snapshot = navigationSourceControlSnapshot;
     navigationSourceControlSnapshot = null;
     if (!snapshot) return;
-
     const nav = sidebarNavFromTarget(target);
     if (!nav || normalizePageName(nav.dataset.page) !== snapshot.destinationPage) return;
 
@@ -352,6 +351,13 @@
   }
 
   function syncToastPosition() {
+    const main = document.querySelector("#appShell main, main");
+    if (main instanceof HTMLElement) {
+      const rect = main.getBoundingClientRect();
+      document.documentElement.style.setProperty("--toast-center-x", `${Math.round(rect.left + rect.width / 2)}px`);
+    } else {
+      document.documentElement.style.removeProperty("--toast-center-x");
+    }
     document.documentElement.style.setProperty("--mfl-toast-bottom", `${desiredToastBottom()}px`);
   }
 
@@ -474,6 +480,7 @@
     window.removeEventListener("scroll", schedule, true);
     document.documentElement.style.removeProperty("--selection-center-x");
     document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
+    document.documentElement.style.removeProperty("--toast-center-x");
     document.documentElement.style.removeProperty("--mfl-toast-bottom");
     const bar = selectionBar();
     if (bar) {
