@@ -5,6 +5,7 @@ const validators = [
   "validate-sidebar-lifecycle-ownership.mjs",
   "validate-dropdown-style-ownership.mjs",
   "validate-filter-popup-interactions.mjs",
+  "validate-table-hover-scroll.mjs",
   "validate-control-style-ownership.mjs",
   "validate-evaluation-mfl-usd-focus.mjs",
   "validate-css-ownership-consolidation.mjs",
