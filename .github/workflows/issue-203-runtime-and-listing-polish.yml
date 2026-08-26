@@ -31,7 +31,6 @@ jobs:
                   raise SystemExit(f"{path}: expected one match, found {count}: {old[:80]!r}")
               file.write_text(text.replace(old, new, 1), encoding="utf-8")
 
-          # Make Listing a JS-backed SQLite virtual value instead of a json_each join.
           replace_once(
               "site/api/_database.js",
               'let generatedAt = "";\nconst TABLE_EXISTS_CACHE = new Map();',
@@ -84,14 +83,12 @@ jobs:
               '    `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,\n    [...parameters, pageSize, offset],',
           )
 
-          # Integer display price; raw numeric value remains unchanged for sorting/filtering.
           replace_once(
               "site/modules/app-core.js",
               'price.textContent = `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listingValue)}`;',
               'price.textContent = `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(listingValue)}`;',
           )
 
-          # Uniform Width: Listing 6%; redistribute the released width proportionally.
           width_changes = {
               '--mfl-table-col-select: 2.3%;': '--mfl-table-col-select: 2.35%;',
               '--mfl-table-col-id: 3.68%;': '--mfl-table-col-id: 3.76%;',
@@ -131,7 +128,6 @@ jobs:
               '''#progressionPage #tableBody .listingCellPrice {\n  overflow: hidden;\n  color: #3bfb52;\n  text-overflow: ellipsis;\n}\n''',
           )
 
-          # Strengthen the regression and fix the existing lint escape issue.
           validator_path = Path("site/validate-listing-column.mjs")
           validator = validator_path.read_text(encoding="utf-8")
           validator = validator.replace(
@@ -158,8 +154,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
 
       - name: Install site dependencies
         working-directory: site
