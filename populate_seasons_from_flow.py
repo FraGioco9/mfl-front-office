@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
+from typing import Any, Callable
 
 import flow_season_population_core as _impl
 
@@ -133,7 +133,7 @@ def _wallet_player_ids(
     wallet_address: str,
     force: bool,
 ) -> list[int]:
-    where_sql = "" if force else "AND player_seasons IS NULL"
+    where_sql = "AND (player_seasons IS NULL OR player_seasons <= 0)"
     return [
         int(row[0])
         for row in connection.execute(
@@ -244,6 +244,102 @@ def _store_flow_batch(
     updated = _impl.update_flow_static_fields(connection, players, force)
     connection.commit()
     return updated
+
+
+def _history_entries(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [entry for entry in payload if isinstance(entry, dict)]
+    if isinstance(payload, dict):
+        for key in ("data", "experiences", "history"):
+            entries = payload.get(key)
+            if isinstance(entries, list):
+                return [entry for entry in entries if isinstance(entry, dict)]
+    return []
+
+
+def initial_mint_age_from_history(payload: Any) -> int | None:
+    """Return the mint age from the canonical INITIAL experience-history record."""
+    for entry in _history_entries(payload):
+        reason_type = entry.get("reasonType", entry.get("REASON_TYPE", entry.get("reason_type")))
+        if str(reason_type or "").upper() != "INITIAL":
+            continue
+        values = entry.get("values", entry.get("VALUES"))
+        if not isinstance(values, dict):
+            return None
+        mint_age = _impl.to_int(values.get("age", values.get("AGE")))
+        return mint_age if mint_age is not None and mint_age > 0 else None
+    return None
+
+
+def player_seasons_from_mint_age(current_age: Any, mint_age: Any) -> int | None:
+    current = _impl.to_int(current_age)
+    minted = _impl.to_int(mint_age)
+    if current is None or minted is None or current <= 0 or minted <= 0 or minted > current:
+        return None
+    seasons = current - minted + 1
+    return seasons if seasons > 0 else None
+
+
+def unresolved_player_rows(connection: sqlite3.Connection) -> list[tuple[int, int | None]]:
+    return [
+        (int(player_id), _impl.to_int(age))
+        for player_id, age in connection.execute(
+            """
+            SELECT player_id, age
+            FROM players
+            WHERE player_seasons IS NULL OR player_seasons <= 0
+            ORDER BY player_id
+            """
+        ).fetchall()
+    ]
+
+
+def recover_missing_player_seasons_from_history(
+    connection: sqlite3.Connection,
+    request_history: Callable[[int], Any],
+    workers: int = 20,
+) -> int:
+    """Recover only still-unresolved player seasons from MFL INITIAL history entries."""
+    rows = unresolved_player_rows(connection)
+    if not rows:
+        return 0
+
+    def resolve(player_id: int, current_age: int | None) -> tuple[int, int | None]:
+        payload = request_history(player_id)
+        mint_age = initial_mint_age_from_history(payload)
+        return player_id, player_seasons_from_mint_age(current_age, mint_age)
+
+    recovered: list[tuple[int, int]] = []
+    with ThreadPoolExecutor(max_workers=max(1, min(int(workers), len(rows)))) as executor:
+        futures = {
+            executor.submit(resolve, player_id, current_age): player_id
+            for player_id, current_age in rows
+        }
+        for future in as_completed(futures):
+            player_id = futures[future]
+            try:
+                resolved_player_id, seasons = future.result()
+            except Exception as error:
+                print(
+                    f"MFL experience history player {player_id} failed: {error}",
+                    flush=True,
+                )
+                continue
+            if seasons is not None:
+                recovered.append((seasons, resolved_player_id))
+
+    if recovered:
+        connection.executemany(
+            """
+            UPDATE players
+            SET player_seasons = ?
+            WHERE player_id = ?
+              AND (player_seasons IS NULL OR player_seasons <= 0)
+            """,
+            recovered,
+        )
+        connection.commit()
+    return len(recovered)
 
 
 def populate_flow_static_fields(
