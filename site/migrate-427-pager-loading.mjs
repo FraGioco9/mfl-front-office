@@ -130,4 +130,37 @@ loadingValidation = replaceOnce(
 );
 await write("./validate-table-loading-state.mjs", loadingValidation);
 
+let backgroundLoadingValidation = await read("./validate-table-background-loading-stability.mjs");
+backgroundLoadingValidation = replaceOnce(
+  backgroundLoadingValidation,
+  '  "const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);",',
+  '  \'const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);\',',
+  "background loading preserve-row marker",
+);
+backgroundLoadingValidation = replaceOnce(
+  backgroundLoadingValidation,
+  'const beginStart = runtime.indexOf("function beginRequest(routeScope) {");',
+  'const beginStart = runtime.indexOf("function beginRequest(routeScope, options = {}) {");',
+  "background loading beginRequest signature marker",
+);
+backgroundLoadingValidation = replaceOnce(
+  backgroundLoadingValidation,
+  '    && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")\n    && beginSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),',
+  '    && beginSource.includes(\'options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody)\')\n    && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")\n    && beginSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),',
+  "background loading blank-mode exception assertion",
+);
+backgroundLoadingValidation = replaceOnce(
+  backgroundLoadingValidation,
+  '  "A post-route background request must preserve settled rows and adopt an already-primed refresh skeleton instead of rebuilding it.",',
+  '  "A post-route background request must preserve settled rows by default while explicit blank-mode pager requests use the canonical loading skeleton.",',
+  "background loading assertion message",
+);
+backgroundLoadingValidation = replaceOnce(
+  backgroundLoadingValidation,
+  'console.log("Settled table rows remain visible during ordinary background loading, filter loading uses blank rows, and every active Table load hides pager chrome until the request settles.");',
+  'console.log("Settled table rows remain visible during ordinary background loading, pager and filter page loads use blank rows, and every active Table load hides pager chrome until the request settles.");',
+  "background loading validation completion message",
+);
+await write("./validate-table-background-loading-stability.mjs", backgroundLoadingValidation);
+
 console.log("Applied issue #427 pager loading and numeric-entry source migration.");
