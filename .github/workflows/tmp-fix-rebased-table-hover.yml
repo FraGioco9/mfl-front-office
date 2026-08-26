@@ -1,0 +1,29 @@
+name: Fix rebased table hover selector
+
+on:
+  push:
+    branches:
+      - fix/player-overall-pending-neutral-415
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/player-overall-pending-neutral-415
+          fetch-depth: 0
+      - name: Preserve managed table hover
+        shell: bash
+        run: |
+          python -c 'from pathlib import Path; p=Path("site/styles-base.css"); s=p.read_text(); old="#tableBody tr:hover > td,\n#tableBody tr:hover > th,\n"; assert s.count(old)==1, f"expected one stale selector block, found {s.count(old)}"; p.write_text(s.replace(old, "", 1))'
+          rm .github/workflows/tmp-fix-rebased-table-hover.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/styles-base.css .github/workflows/tmp-fix-rebased-table-hover.yml
+          git diff --cached --quiet || git commit -m "Preserve managed table hover after rebase"
+          git push origin HEAD:fix/player-overall-pending-neutral-415
