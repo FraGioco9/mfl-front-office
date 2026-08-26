@@ -1,5 +1,6 @@
 const validators = [
   "validate-global-search-results.mjs",
+  "validate-search-player-age.mjs",
   "validate-global-search-open-lifecycle.mjs",
   "validate-document-title-runtime.mjs",
   "validate-settings-route-core.mjs",
