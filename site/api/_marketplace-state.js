@@ -1,7 +1,7 @@
 const MARKETPLACE_BUCKET = "mfl-runtime";
 const MARKETPLACE_OBJECT = "marketplace/listings.json";
 const MARKETPLACE_CACHE_TTL_MS = 30_000;
-const MARKETPLACE_MAX_AGE_MS = 20 * 60_000;
+const MARKETPLACE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 let cachedState = null;
 let cachedAt = 0;
