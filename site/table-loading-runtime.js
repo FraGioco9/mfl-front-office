@@ -147,14 +147,14 @@
     return !destroyed && activeRequestToken !== 0;
   }
 
-  function beginRequest(routeScope) {
+  function beginRequest(routeScope, options = {}) {
     const scope = String(routeScope || "").toLowerCase();
     if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return 0;
     const token = ++nextRequestToken;
     activeRequestToken = token;
     hidePager();
     const currentBody = elements().body;
-    const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);
+    const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);
     const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
     if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();
     return token;

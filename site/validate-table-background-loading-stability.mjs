@@ -11,7 +11,7 @@ for (const required of [
   'root.classList.contains("mflInitialRouteResolved")',
   '!root.classList.contains("mflNavigationPending")',
   "const currentBody = elements().body;",
-  "const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);",
+  'const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);',
   "const body = preserveRenderedRows",
   ": prepareLoadingSurface();",
   "function hasCanonicalLoadingRows(body) {",
@@ -26,15 +26,16 @@ for (const required of [
   invariant(runtime.includes(required), `Background table loading stability is missing ${required}`);
 }
 
-const beginStart = runtime.indexOf("function beginRequest(routeScope) {");
+const beginStart = runtime.indexOf("function beginRequest(routeScope, options = {}) {");
 const beginEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginStart);
 const beginSource = runtime.slice(beginStart, beginEnd);
 invariant(
   beginStart >= 0
     && beginEnd > beginStart
+    && beginSource.includes('options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody)')
     && beginSource.indexOf("shouldPreserveRenderedRows(currentBody)") < beginSource.indexOf("prepareLoadingSurface()")
     && beginSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),
-  "A post-route background request must preserve settled rows and adopt an already-primed refresh skeleton instead of rebuilding it.",
+  "A post-route background request must preserve settled rows by default while explicit blank-mode pager requests use the canonical loading skeleton.",
 );
 
 const syncStart = runtime.indexOf("function sync(snapshot = loadingSnapshot()) {");
@@ -56,4 +57,4 @@ invariant(
   "Every active Table load must hide pager chrome even when settled rows remain rendered.",
 );
 
-console.log("Settled table rows remain visible during ordinary background loading, filter loading uses blank rows, and every active Table load hides pager chrome until the request settles.");
+console.log("Settled table rows remain visible during ordinary background loading, pager and filter page loads use blank rows, and every active Table load hides pager chrome until the request settles.");

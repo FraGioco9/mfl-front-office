@@ -1781,7 +1781,7 @@ async function commitPagerCurrentPage(input) {
   const total = Math.max(1, Number.parseInt(input.dataset.totalPages || "1", 10) || 1);
   const current = Math.min(total, Math.max(1, Number.parseInt(input.dataset.currentPage || String(state.page || 1), 10) || 1));
   const raw = input.value.trim();
-  const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;
+  const parsed = /^-?\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;
   const target = Math.min(total, Math.max(1, parsed));
 
   input.value = String(target);
@@ -1792,7 +1792,7 @@ async function commitPagerCurrentPage(input) {
   if (state.incrementalMode) {
     input.disabled = true;
     try {
-      await reloadIncrementalPage(target);
+      await reloadIncrementalPage(target, { loadingMode: "blank" });
     } finally {
       input.disabled = false;
     }
@@ -1818,7 +1818,7 @@ function installPagerCurrentPageControl() {
   controls.input.addEventListener("input", () => {
     const raw = controls.input.value;
     const negative = raw.trimStart().startsWith("-");
-    const digits = raw.replace(/\\D+/g, "");
+    const digits = raw.replace(/\D+/g, "");
     const normalized = negative ? "-" + digits : digits;
     if (normalized !== raw) controls.input.value = normalized;
     controls.input.dataset.dirty = "true";

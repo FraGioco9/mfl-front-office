@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, interactions, selectionStack, appCore, buildNormalizer, tableRuntime] = await Promise.all([
+const [controls, interactions, selectionStack, appCore, generatedCore, buildNormalizer, tableRuntime] = await Promise.all([
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
   read("./selection-stack-runtime.js"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-runtime.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
@@ -131,4 +132,46 @@ const inputKeydown = tableRuntime.slice(inputKeydownStart, inputKeydownEnd);
 invariant(inputKeydown.includes('event.key !== "Enter"'), "Pager input keydown must continue to commit Enter.");
 invariant(!inputKeydown.includes('"Escape"'), "Pager Escape must not depend on the later input-target keydown phase.");
 
-console.log("Editable pager window-capture Escape cancellation validation passed with global editable-control priority.");
+invariant(
+  appCore.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && appCore.includes('const digits = raw.replace(/\\D+/g, "");')
+    && appCore.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
+    && tableRuntime.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && tableRuntime.includes('const digits = raw.replace(/\\D+/g, "");')
+    && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
+  "Pager numeric entry must remain digit-aware and page changes must request the canonical blank loading rows.",
+);
+invariant(
+  !appCore.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !appCore.includes('raw.replace(/\\\\D+/g, "")')
+    && !tableRuntime.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !tableRuntime.includes('raw.replace(/\\\\D+/g, "")'),
+  "Pager digit regexes must not be double-escaped in authored or generated source.",
+);
+
+const reloadStart = appCore.indexOf("async function reloadIncrementalPage(page = state.page, options = {}) {");
+const reloadEnd = appCore.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", reloadStart);
+const reloadSource = appCore.slice(reloadStart, reloadEnd);
+const generatedReloadStart = generatedCore.indexOf("async function reloadIncrementalPage(page = state.page, options = {}) {");
+const generatedReloadEnd = generatedCore.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", generatedReloadStart);
+const generatedReloadSource = generatedCore.slice(generatedReloadStart, generatedReloadEnd);
+invariant(
+  reloadStart >= 0
+    && reloadEnd > reloadStart
+    && reloadSource.indexOf("state.page = page;") < reloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
+    && reloadSource.split("state.page = page;").length === 2
+    && generatedReloadStart >= 0
+    && generatedReloadEnd > generatedReloadStart
+    && generatedReloadSource.indexOf("state.page = page;") < generatedReloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
+    && generatedReloadSource.split("state.page = page;").length === 2,
+  "Pager target page must be committed before cached and uncached incremental reload paths diverge.",
+);
+invariant(
+  appCore.includes('void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });')
+    && appCore.includes('void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });')
+    && generatedCore.includes('void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });')
+    && generatedCore.includes('void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });'),
+  "Previous and next pager buttons must use the same canonical five-row blank loading path as direct page entry.",
+);
+
+console.log("Editable pager window-capture Escape cancellation validation passed with cached and uncached page navigation coverage.");

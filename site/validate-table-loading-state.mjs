@@ -54,7 +54,7 @@ for (const required of [
   "let nextRequestToken = 0;",
   "let activeRequestToken = 0;",
   "function requestActive() {",
-  "function beginRequest(routeScope) {",
+  "function beginRequest(routeScope, options = {}) {",
   'const scope = String(routeScope || "").toLowerCase();',
   "!TABLE_ROUTE_SCOPES.has(scope)",
   "activeRequestToken = token;",
@@ -71,7 +71,7 @@ for (const required of [
 ]) {
   invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
 }
-const beginRequestStart = runtime.indexOf("function beginRequest(routeScope) {");
+const beginRequestStart = runtime.indexOf("function beginRequest(routeScope, options = {}) {");
 const beginRequestEnd = runtime.indexOf("function hydrateInitialClubHeader() {", beginRequestStart);
 const beginRequestSource = runtime.slice(beginRequestStart, beginRequestEnd);
 invariant(
@@ -182,7 +182,21 @@ invariant(
   "Final table-loading release must atomically hand off the Club header before clearing the loading tbody marker.",
 );
 
-const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';
+const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';
+invariant(
+  beginRequestSource.includes('const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);'),
+  "Explicit blank-mode requests must replace stale rendered rows with the canonical loading tbody.",
+);
+invariant(
+  appCoreSource.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
+    && appCoreSource.includes('const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });')
+    && appCoreSource.includes(requestBoundaryMarker)
+    && generatedCore.includes('const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });')
+    && generatedCore.includes(requestBoundaryMarker)
+    && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
+  "Pager page changes must carry blank loading intent from the Table pager through the shared incremental request boundary.",
+);
+
 const requestFinishMarker = 'window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);';
 invariant(
   appCoreSource.includes(requestBoundaryMarker)
