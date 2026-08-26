@@ -1,0 +1,52 @@
+name: PR 447 Final Rebase
+
+on:
+  push:
+    branches:
+      - fix/445-pager-text-selection
+    paths:
+      - .github/workflows/pr-447-final-rebase.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: fix/445-pager-text-selection
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Rebase onto current main
+        run: |
+          git fetch origin main
+          git rebase origin/main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Validate rebased branch
+        working-directory: site
+        run: npm run check
+
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/pr-447-final-rebase.yml
+          git commit -m "Remove temporary PR 447 rebase workflow"
+
+      - name: Force-push rebased branch
+        run: git push --force-with-lease origin HEAD:fix/445-pager-text-selection
