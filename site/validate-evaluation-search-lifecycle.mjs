@@ -38,11 +38,16 @@ invariant(
   searchRuntime.includes("function recentRule()")
     && searchRuntime.includes("return active();")
     && !searchRuntime.includes("if (field.value.trim()) return document.activeElement === field;"),
-  "Evaluation search results must remain eligible while the Evaluation page is active even after a typed search loses focus.",
+  "Empty Evaluation recent-result eligibility must remain page-scoped and independent from typed-result focus visibility.",
 );
 invariant(
-  !searchRuntime.includes("hideTypedBlurredResults"),
-  "Blurred non-empty Evaluation searches must keep their current result list visible.",
+  searchRuntime.includes("function shouldShowTypedResults(field = input())")
+    && searchRuntime.includes("if (!field.value.trim() || !playerSelected()) return true;")
+    && searchRuntime.includes("return document.activeElement === field || resultPointerDown;")
+    && searchRuntime.includes("function syncTypedResultVisibility(field = input())")
+    && searchRuntime.includes("results.hidden = true;")
+    && searchRuntime.includes("shouldShowTypedResults,"),
+  "Loaded non-empty Evaluation results must be visible only while the input is focused, with an in-progress result pointer selection protected.",
 );
 invariant(
   !generatedEvaluationCore.includes('evaluationSearchInput.addEventListener("blur", () => {'),
@@ -90,7 +95,10 @@ invariant(
     && loadingBlurCaptureSource.includes("event.stopImmediatePropagation();")
     && loadingBlurCaptureSource.includes("syncClearButton(field);")
     && searchRuntime.includes('document.addEventListener("focus", onRecentLoadingFocusCapture, true);')
-    && searchRuntime.includes('document.addEventListener("blur", onRecentLoadingBlurCapture, true);'),
+    && searchRuntime.includes('document.addEventListener("blur", onRecentLoadingBlurCapture, true);')
+    && searchRuntime.includes('document.addEventListener("pointerup", onPointerUp, true);')
+    && pointerDownSource.includes('event.target.closest("#evaluationSearchResults .evaluationSearchResult")')
+    && pointerDownSource.includes("if (resultPointerDown) return;"),
   "Active recent-result Loading… must intercept Evaluation focus and blur during capture so the legacy app-core focus renderer cannot reset the results surface.",
 );
 const focusStart = searchRuntime.indexOf("function onFocus(event)");
@@ -109,11 +117,11 @@ const blurSource = blurStart >= 0 && blurEnd > blurStart ? searchRuntime.slice(b
 invariant(
   blurSource.includes("syncSelectedPlayerLabel(field);")
     && blurSource.includes("syncClearButton(field);")
-    && !blurSource.includes("hidden = true")
+    && blurSource.includes("syncTypedResultVisibility(field);")
     && !blurSource.includes("replaceChildren")
     && !blurSource.includes("restoreEmptyRecentResults")
     && !blurSource.includes("setTimeout"),
-  "Evaluation blur must preserve typed results and must not independently re-render the recent-results surface.",
+  "Evaluation blur must hide loaded typed results through the search-state owner without clearing results or disturbing empty recent-result rendering.",
 );
 invariant(
   controlInteractions.includes('const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";')
@@ -125,6 +133,12 @@ invariant(
 const renderStart = appCoreSource.indexOf("function renderEvaluationSearchResults()");
 const renderEnd = appCoreSource.indexOf("let evaluationEmptySearchFocusScheduled", renderStart);
 const renderSource = renderStart >= 0 && renderEnd > renderStart ? appCoreSource.slice(renderStart, renderEnd) : "";
+invariant(
+  renderSource.includes("if (query && window.__mflEvaluationSearchStateRuntime?.shouldShowTypedResults?.() === false) {")
+    && renderSource.includes("evaluationSearchResults.hidden = true;")
+    && renderSource.indexOf("shouldShowTypedResults?.() === false") < renderSource.indexOf("evaluationSearchResults.replaceChildren();"),
+  "Canonical Evaluation search rendering must not re-open loaded typed results while the search input is unfocused.",
+);
 invariant(
   renderSource.includes('button.addEventListener("click", async () => {')
     && renderSource.includes("state.evaluationPlayerId = playerId;")
