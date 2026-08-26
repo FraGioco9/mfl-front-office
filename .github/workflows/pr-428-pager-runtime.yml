@@ -1,0 +1,61 @@
+name: PR 428 Pager Runtime Correction
+
+on:
+  push:
+    branches:
+      - fix/427-pager-loading-navigation
+    paths:
+      - site/migrate-428-pager-runtime.mjs
+      - .github/workflows/pr-428-pager-runtime.yml
+
+permissions:
+  contents: write
+
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Apply pager runtime correction
+        working-directory: site
+        run: node migrate-428-pager-runtime.mjs
+
+      - name: Regenerate application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Commit corrected source and generated runtimes locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            site/modules/app-core.js \
+            site/modules/app-core-runtime.js \
+            site/modules/app-core-table-runtime.js \
+            site/validate-pager-current-page.mjs
+          git diff --cached --quiet && { echo "No pager correction generated."; exit 1; }
+          git commit -m "Correct pager cached and button navigation"
+
+      - name: Run full site checks
+        working-directory: site
+        run: npm run check
+
+      - name: Push verified correction
+        shell: bash
+        run: git push origin HEAD:${{ github.ref_name }}
