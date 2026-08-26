@@ -129,4 +129,4 @@ includes(prePaintCss, "background: #1d252c;", "Player Overall pre-paint styleshe
 excludes(prePaintCss, "background-size:", "Player Overall pre-paint stylesheet must not arm a loaded gradient before transition start");
 excludes(prePaintCss, "background-color: var(--color-bg-default-secondary);", "Player Overall pre-paint stylesheet must stay exact #1d252c");
 
-console.log("Player Overall paints once after loading, and Player ready controls perform exactly one grey-to-normal release.");
+console.log("Rebased Player loading keeps one rarity paint and exactly one ready-control grey-to-normal release.");
