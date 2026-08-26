@@ -11092,6 +11092,8 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
     return false;
   }
 
+  state.page = page;
+
   const loadAndRender = async () => {
     try {
       const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });
@@ -11114,7 +11116,6 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
     return loadAndRender();
   }
 
-  state.page = page;
   return withInteractionBusy(loadAndRender, options.loadingReason);
 }
 
@@ -11410,7 +11411,7 @@ addWatchlistNameInput?.addEventListener("input", () => {
 
 prevButton.addEventListener("click", () => {
   if (state.incrementalMode) {
-    void reloadIncrementalPage(Math.max(1, state.page - 1));
+    void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });
     return;
   }
   state.page -= 1;
@@ -11419,7 +11420,7 @@ prevButton.addEventListener("click", () => {
 
 nextButton.addEventListener("click", () => {
   if (state.incrementalMode) {
-    void reloadIncrementalPage(state.page + 1);
+    void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });
     return;
   }
   state.page += 1;
