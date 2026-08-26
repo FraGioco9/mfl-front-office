@@ -22,6 +22,7 @@ REPORT_PATH = Path(__file__).with_name("mfl_rebuild_report.json")
 LEADERBOARD_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
 PLAYERS_URL = "https://api.playmfl.com/prod/players"
 PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
+PLAYER_EXPERIENCE_HISTORY_URL = "https://api.playmfl.com/players/{player_id}/experiences/history"
 
 MFL_TRADE_WALLET_ADDRESS = "0x6fec8986261ecf49"
 MFL_WALLET_NAME = "MFL"
@@ -363,6 +364,63 @@ def insert_players(connection: sqlite3.Connection, players: dict[int, dict[str, 
     log(f"Players inserted: {len(players)}")
 
 
+
+
+def unresolved_player_season_count(connection: sqlite3.Connection) -> int:
+    return int(
+        connection.execute(
+            "SELECT COUNT(*) FROM players WHERE player_seasons IS NULL OR player_seasons <= 0"
+        ).fetchone()[0]
+    )
+
+
+def refresh_player_seasons(connection: sqlite3.Connection) -> dict[str, int]:
+    """Resolve player seasons with deterministic precedence: stored -> Flow -> MFL INITIAL."""
+    total_players = int(connection.execute("SELECT COUNT(*) FROM players").fetchone()[0])
+    unresolved_before = unresolved_player_season_count(connection)
+    already_known = total_players - unresolved_before
+
+    flow_module.populate_flow_static_fields(
+        connection,
+        limit=None,
+        wallet_address=None,
+        force=False,
+        include_mfl_wallet=True,
+    )
+    unresolved_after_flow = unresolved_player_season_count(connection)
+    recovered_from_flow = max(0, unresolved_before - unresolved_after_flow)
+
+    history_limiter = RateLimiter(MFL_REQUESTS_PER_MINUTE)
+
+    def request_history(player_id: int) -> Any:
+        return request_json(
+            PLAYER_EXPERIENCE_HISTORY_URL.format(player_id=player_id),
+            f"Player {player_id} experience history",
+            history_limiter,
+        )
+
+    recovered_from_history = flow_module.recover_missing_player_seasons_from_history(
+        connection,
+        request_history,
+        workers=MFL_WORKERS,
+    )
+    still_unresolved = unresolved_player_season_count(connection)
+
+    log(
+        "Mint age recovery: "
+        f"already-known {already_known}, "
+        f"recovered-from-Flow {recovered_from_flow}, "
+        f"recovered-from-MFL-history {recovered_from_history}, "
+        f"still-unresolved {still_unresolved}"
+    )
+    return {
+        "already_known": already_known,
+        "recovered_from_flow": recovered_from_flow,
+        "recovered_from_mfl_history": recovered_from_history,
+        "still_unresolved": still_unresolved,
+    }
+
+
 def chunks(values: list[int], size: int) -> list[list[int]]:
     return [values[index:index + size] for index in range(0, len(values), size)]
 
@@ -485,8 +543,10 @@ def main() -> int:
         _, timings["insert_players"] = timed("Insert merged players", insert_players, connection, players)
 
         flow_started = time.perf_counter()
-        updated_seasons = flow_module.populate_flow_static_fields(
-            connection, limit=None, wallet_address=None, force=True, include_mfl_wallet=True
+        season_stats = refresh_player_seasons(connection)
+        updated_seasons = (
+            season_stats["recovered_from_flow"]
+            + season_stats["recovered_from_mfl_history"]
         )
         timings["flow_seasons"] = time.perf_counter() - flow_started
         log(f"\n=== Flow seasons ===\nFlow seasons updated: {updated_seasons} in {format_duration(timings['flow_seasons'])}")

@@ -131,7 +131,7 @@ def get_wallets_to_process(
             return []
         return [normalized]
 
-    where_sql = "" if force else "WHERE player_seasons IS NULL"
+    where_sql = "WHERE player_seasons IS NULL OR player_seasons <= 0"
     limit_sql = "" if limit is None else "LIMIT ?"
     params: list[Any] = [] if limit is None else [limit]
     rows = connection.execute(
@@ -422,7 +422,7 @@ def update_api_static_fields(
     players: list[dict[str, Any]],
     force: bool,
 ) -> int:
-    where_sql = "" if force else "AND player_seasons IS NULL"
+    where_sql = "AND (player_seasons IS NULL OR player_seasons <= 0)"
     before = connection.total_changes
     connection.executemany(
         f"""
@@ -455,7 +455,7 @@ def update_flow_static_fields(
     players: list[dict[str, Any]],
     force: bool,
 ) -> int:
-    where_sql = "" if force else "AND player_seasons IS NULL"
+    where_sql = "AND (player_seasons IS NULL OR player_seasons <= 0)"
     rows = [
         (
             player["name"],

@@ -120,7 +120,7 @@ def install_flow_wallet_id_cache() -> None:
                 f"{regular_batch_size} IDs for other wallets...",
                 flush=True,
             )
-            where_sql = "" if force else "WHERE player_seasons IS NULL"
+            where_sql = "WHERE player_seasons IS NULL OR player_seasons <= 0"
             rows = connection.execute(
                 f"""
                 SELECT lower(wallet_address), player_id
@@ -209,12 +209,10 @@ def rebuild_directly() -> int:
         )
 
         flow_started = time.perf_counter()
-        updated_seasons = run_flow_rebuild.flow_module.populate_flow_static_fields(
-            connection,
-            limit=None,
-            wallet_address=None,
-            force=True,
-            include_mfl_wallet=True,
+        season_stats = run_flow_rebuild.refresh_player_seasons(connection)
+        updated_seasons = (
+            season_stats["recovered_from_flow"]
+            + season_stats["recovered_from_mfl_history"]
         )
         flow_seconds = time.perf_counter() - flow_started
         run_flow_rebuild.log(
