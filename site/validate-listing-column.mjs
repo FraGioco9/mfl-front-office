@@ -33,6 +33,8 @@ assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" :
 
 const dataPage = read("site/api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
+assert.match(dataPage, /AS \"\$\{LISTING_COLUMN\}\"/);
+assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
 assert.match(dataPage, /LEFT JOIN json_each\(\?\) AS marketplace/);
 assert.match(dataPage, /value === "for_sale"/);
 assert.match(dataPage, /value === "not_for_sale"/);

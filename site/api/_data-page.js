@@ -38,7 +38,7 @@ function columnsWithListing(columns) {
 function selectListWithListing(columns) {
   return columns
     .map((column) => column === LISTING_COLUMN
-      ? `${LISTING_PRICE_SQL} AS ${quoteIdentifier(LISTING_COLUMN)}`
+      ? `${LISTING_PRICE_SQL} AS "${LISTING_COLUMN}"`
       : quoteIdentifier(column))
     .join(", ");
 }
