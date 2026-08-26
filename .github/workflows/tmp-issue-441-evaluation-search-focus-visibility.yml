@@ -1,0 +1,48 @@
+name: Temporary issue 441 Evaluation search focus visibility
+
+on:
+  push:
+    branches:
+      - fix/issue-441-evaluation-search-focus-visibility
+    paths:
+      - .github/workflows/tmp-issue-441-evaluation-search-focus-visibility.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/issue-441-evaluation-search-focus-visibility
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply source fix
+        working-directory: site
+        run: node patch-issue-441-evaluation-search-focus-visibility.mjs
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/evaluation-search-state-runtime.js site/modules/app-core.js site/modules/app-core-*.js site/validate-evaluation-search-lifecycle.mjs
+          git commit -m "fix: hide loaded Evaluation search results on blur"
+          git push origin HEAD:fix/issue-441-evaluation-search-focus-visibility
