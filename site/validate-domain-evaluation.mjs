@@ -2,6 +2,7 @@ const validators = [
   "validate-eval-ownership.mjs",
   "validate-evaluation-search-lifecycle.mjs",
   "validate-evaluation-search-clear-selection.mjs",
+  "validate-evaluation-search-stacking.mjs",
   "validate-evaluation-load-cache.mjs",
   "validate-evaluation-route-ownership.mjs",
   "validate-evaluation-refresh-hydration.mjs",

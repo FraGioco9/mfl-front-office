@@ -51,3 +51,12 @@
   z-index: var(--mfl-z-content);
   isolation: isolate;
 }
+
+/*
+ * Evaluation search results extend over the content that follows the search
+ * control. Keep the search component one local paint layer above later table
+ * titles and table content while remaining far below every global UI layer.
+ */
+.evaluationSearch {
+  z-index: 1;
+}
