@@ -1,10 +1,11 @@
 const validators = [
   "validate-global-search-results.mjs",
-  "validate-search-player-age.mjs",
   "validate-global-search-open-lifecycle.mjs",
   "validate-document-title-runtime.mjs",
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
+  "validate-player-overall-loading-color.mjs",
+  "validate-player-loading-plain-attributes.mjs",
   "validate-player-loading-unknown-position.mjs",
   "validate-render-reuse-contract.mjs",
   "validate-agent-title-loading.mjs",

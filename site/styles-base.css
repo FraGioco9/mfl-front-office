@@ -2401,6 +2401,34 @@ button.playerIdText:active {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
+#playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),
+#playerDetail:not(.playerOverallRarityPaintComplete) .playerAttributeCard.featured:not(.isPending) {
+  background: #1d252c;
+}
+
+
+@keyframes playerOverallRarityPaint {
+  from {
+    background-size: 100% 0%, 100% 100%;
+  }
+  to {
+    background-size: 100% 100%, 100% 100%;
+  }
+}
+
+.playerHeroOverall.rarityPaintOnce,
+.playerAttributeCard.featured.rarityPaintOnce {
+  background-position: center bottom, center;
+  background-repeat: no-repeat;
+  animation: playerOverallRarityPaint 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playerHeroOverall.rarityPaintOnce,
+  .playerAttributeCard.featured.rarityPaintOnce {
+    animation: none;
+  }
+}
 .playerAttributeCard.featured {
   border-color: var(--border);
   background: linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
