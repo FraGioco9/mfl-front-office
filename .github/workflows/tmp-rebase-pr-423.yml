@@ -1,0 +1,32 @@
+name: Temporary rebase PR 423
+
+on:
+  push:
+    branches:
+      - feat/issue-421-player-age-search-results
+    paths:
+      - .github/workflows/tmp-rebase-pr-423.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-421-player-age-search-results
+          fetch-depth: 0
+      - name: Rebase onto latest main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/tmp-rebase-pr-423.yml
+          git commit -m "chore: remove temporary rebase workflow"
+      - name: Push rebased branch
+        run: git push --force-with-lease origin HEAD:feat/issue-421-player-age-search-results
