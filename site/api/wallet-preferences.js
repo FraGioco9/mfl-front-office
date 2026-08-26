@@ -4,7 +4,7 @@ const { readJsonBody } = require("./_request-body");
 const { normalizeLateSeasonRewardRates } = require("./_evaluation-payload");
 const { touchWalletLastSeen } = require("./_wallet-presence");
 
-const PLAYER_NOTE_MAX_LENGTH = 200;
+const PLAYER_NOTE_MAX_LENGTH = 100;
 const WATCHLIST_ID_LENGTH = 8;
 const MAX_WATCHLISTS = 5;
 const MAX_WATCHLIST_PLAYERS = 250;

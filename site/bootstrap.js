@@ -647,7 +647,7 @@
       ? '<button class="playerWatchlistButton" type="button" disabled>Watchlist</button>'
       : "";
     const notesPanel = optedIn
-      ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/200</span></div></div>`
+      ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/100</span></div></div>`
       : "";
     const infoCards = Array.from({ length: 8 }, () => `<div><span>&nbsp;</span><strong>${LOADING_VALUE_TEXT}</strong></div>`).join("");
     const attributeCards = Array.from({ length: 7 }, (_, index) => (
