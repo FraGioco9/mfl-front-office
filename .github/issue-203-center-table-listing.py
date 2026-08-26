@@ -13,13 +13,13 @@ app.write_text(text.replace(target, replacement, 1), encoding="utf-8")
 
 styles = Path("site/styles.css")
 css = styles.read_text(encoding="utf-8")
-anchor = ".listingCellContent {\n"
-host = "#progressionPage #tableBody .listingCellTableHost {\n  display: flex;\n  align-items: center;\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1;\n}\n\n"
-if host not in css:
+anchor = "\n.listingCellContent {\n"
+host = "\n#progressionPage #tableBody .listingCellTableHost {\n  display: flex;\n  align-items: center;\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1;\n}\n\n.listingCellContent {\n"
+if "#progressionPage #tableBody .listingCellTableHost {" not in css:
     count = css.count(anchor)
     if count != 1:
-        raise SystemExit(f"styles listing anchor: expected 1 match, found {count}")
-    css = css.replace(anchor, host + anchor, 1)
+        raise SystemExit(f"styles global listing anchor: expected 1 match, found {count}")
+    css = css.replace(anchor, host, 1)
 styles.write_text(css, encoding="utf-8")
 
 validator = Path("site/validate-listing-column.mjs")
