@@ -136,14 +136,17 @@ invariant(
 );
 invariant(!styles.includes("--mfl-table-mobile-width"), "Uniform Width must contain percentages only; table pixel width is not part of the contract.");
 invariant(pixelVariable("--mfl-table-header-height") === 38, "Player table headers must use the global 38px height.");
-invariant(pixelVariable("--mfl-table-row-height") === 34, "Player table rows must use the compact global 34px height.");
+invariant(pixelVariable("--mfl-table-row-height") === 34, "Player table cell content must keep the compact global 34px height.");
+invariant(pixelVariable("--mfl-table-row-outer-height") === 39, "Player table rendered rows must keep the existing 39px outer height.");
 invariant(
   styles.includes("#progressionPage .playerTableScroller table {") && styles.includes("table-layout: fixed;"),
   "The player scroller must own stable fixed table layout before hydration.",
 );
 invariant(
-  styles.includes("#tableBody > .mflTableLoadingRow > td {") && styles.includes("height: var(--mfl-table-row-height);"),
-  "Loading rows must inherit the canonical row height.",
+  styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);")
+    && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
+  "Loaded and blank player rows must share the existing 39px outer row height while cell content remains compact at 34px.",
 );
 
 const baseRules = cssRules(stylesBase);
@@ -239,10 +242,9 @@ invariant(
 
 invariant(!/\.col-(?:select|id|flag|name|listing|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive), "Responsive CSS must not override Uniform Width column percentages.");
 invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed player table width.");
-invariant(!responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive), "Responsive CSS must not assign a conflicting loading-row height.");
 invariant(
-  responsive.includes("html #tableBody > .mflTableLoadingRow > td {") && responsive.includes("height: var(--mfl-table-row-height);"),
-  "Responsive loading rows must use the canonical row-height variable.",
+  !responsive.includes(".mflTableLoadingRow"),
+  "Responsive CSS must not own loading-row height; loading rows inherit the populated-row geometry.",
 );
 
 invariant(

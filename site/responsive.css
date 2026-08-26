@@ -3,14 +3,6 @@
  * Keep new mobile/tablet media queries out of component and runtime files.
  */
 
-/* First-paint table-route ownership. This stylesheet is render-blocking, so
- * these rules apply before bootstrap.js creates loading rows or resolves the
- * static HTML's default Home page. */
-html #tableBody > .mflTableLoadingRow > td {
-  height: var(--mfl-table-row-height);
-  min-height: var(--mfl-table-row-height);
-}
-
 html:not(.mflInitialRouteResolved):is(
   [data-initial-page^="database"],
   [data-initial-page^="mfl"],

@@ -14,6 +14,7 @@
   /* Uniform Width. This is the only numeric column-width contract. */
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
+  --mfl-table-row-outer-height: 39px;
   --mfl-table-col-select: 2.35%;
   --mfl-table-col-id: 3.76%;
   --mfl-table-col-flag: 2.35%;
@@ -228,6 +229,10 @@ body[data-page="club"] #progressionPage .rowsField {
   line-height: var(--mfl-table-header-height);
 }
 
+#progressionPage .playerTableScroller tbody > tr {
+  height: var(--mfl-table-row-outer-height);
+}
+
 #progressionPage .playerTableScroller td {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
@@ -337,8 +342,6 @@ body[data-page="club"] #progressionPage .rowsField {
 }
 
 #tableBody > .mflTableLoadingRow > td {
-  height: var(--mfl-table-row-height);
-  min-height: var(--mfl-table-row-height);
   padding-top: 0;
   padding-bottom: 0;
   background: var(--surface-muted);
