@@ -1,5 +1,6 @@
 name: Temporary issue 421 Player search age patch
 
+# retry after patch-helper syntax correction
 on:
   push:
     branches:
