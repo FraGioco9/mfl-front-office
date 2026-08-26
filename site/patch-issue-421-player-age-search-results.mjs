@@ -65,7 +65,55 @@ appCore = replaceOnce(
 await writeFile(appCorePath, appCore);
 
 const validatorPath = new URL("./validate-search-player-age.mjs", import.meta.url);
-await writeFile(validatorPath, `import { readFile } from "node:fs/promises";\n\nconst read = (path) => readFile(new URL(path, import.meta.url), "utf8");\nconst invariant = (condition, message) => {\n  if (!condition) throw new Error(message);\n};\n\nconst [database, dataViews, appCore] = await Promise.all([\n  read("./api/_database.js"),\n  read("./api/_data-views.js"),\n  read("./modules/app-core.js"),\n]);\n\ninvariant(\n  database.includes('const SEARCH_PLAYER_COLUMNS = Object.freeze([\\n  "player_id",\\n  "name",\\n  "overall",\\n  "age",')\n    && dataViews.includes('const columns = SEARCH_PLAYER_COLUMNS;')\n    && dataViews.includes('const playerColumns = SEARCH_PLAYER_COLUMNS;'),\n  "Typed and recent Player search payloads must include age through the canonical SEARCH_PLAYER_COLUMNS contract.",\n);\n\ninvariant(\n  appCore.includes('function playerSearchAgeDisplay(value) {')\n    && appCore.includes('ageDisplay: playerSearchAgeDisplay(getValue(row, "age")),')\n    && appCore.includes('ageDisplay: playerSearchAgeDisplay(compactSearchValue(row, columns, "age")),')\n    && appCore.includes('function playerSearchMetadataHtml(entry, playerId) {')\n    && appCore.includes('entry.ageDisplay ? \\`\\${entry.ageDisplay} yo\\` : "",'),\n  "Full-row and compact Player search entries must normalize age once and expose it through the shared metadata renderer.",\n);\n\ninvariant(\n  appCore.includes('button.innerHTML = \\`<strong>\\${escapeHtml(entry.nameDisplay)}</strong><span>\\${playerSearchMetadataHtml(entry, playerId)}</span>\\`;')\n    && appCore.includes('button.innerHTML = \\`<strong>\\${escapeHtml(entry.nameDisplay)}</strong><span>\\${playerSearchMetadataHtml(entry, id)}</span>\\`;'),\n  "Evaluation Search and Global Search must render Player age through the same canonical metadata formatter.",\n);\n\ninvariant(\n  !appCore.includes('Age fetch')\n    && !appCore.includes('/players/${playerId}')\n    && !appCore.includes('fetchPlayerAge'),\n  "Player age search rendering must reuse the existing search payload and must not introduce a per-result age request.",\n);\n\nconsole.log("Player search age validation passed: typed and recent payloads include age, and Global/Evaluation Player results share one age metadata renderer without extra requests.");\n`);
+const validatorSource = [
+  'import { readFile } from "node:fs/promises";',
+  '',
+  'const read = (path) => readFile(new URL(path, import.meta.url), "utf8");',
+  'const invariant = (condition, message) => {',
+  '  if (!condition) throw new Error(message);',
+  '};',
+  '',
+  'const [database, dataViews, appCore] = await Promise.all([',
+  '  read("./api/_database.js"),',
+  '  read("./api/_data-views.js"),',
+  '  read("./modules/app-core.js"),',
+  ']);',
+  '',
+  'invariant(',
+  '  database.includes(`const SEARCH_PLAYER_COLUMNS = Object.freeze([\\n  "player_id",\\n  "name",\\n  "overall",\\n  "age",`)',
+  '    && dataViews.includes("const columns = SEARCH_PLAYER_COLUMNS;")',
+  '    && dataViews.includes("const playerColumns = SEARCH_PLAYER_COLUMNS;"),',
+  '  "Typed and recent Player search payloads must include age through the canonical SEARCH_PLAYER_COLUMNS contract.",',
+  ');',
+  '',
+  'invariant(',
+  '  appCore.includes("function playerSearchAgeDisplay(value) {")',
+  '    && appCore.includes(`ageDisplay: playerSearchAgeDisplay(getValue(row, "age")),`)',
+  '    && appCore.includes(`ageDisplay: playerSearchAgeDisplay(compactSearchValue(row, columns, "age")),`)',
+  '    && appCore.includes("function playerSearchMetadataHtml(entry, playerId) {")',
+  '    && appCore.includes("entry.ageDisplay ?")',
+  '    && appCore.includes(" yo"),',
+  '  "Full-row and compact Player search entries must normalize age once and expose it through the shared metadata renderer.",',
+  ');',
+  '',
+  'invariant(',
+  '  appCore.includes("playerSearchMetadataHtml(entry, playerId)")',
+  '    && appCore.includes("playerSearchMetadataHtml(entry, id)"),',
+  '  "Evaluation Search and Global Search must render Player age through the same canonical metadata formatter.",',
+  ');',
+  '',
+  'const metadataStart = appCore.indexOf("function playerSearchMetadataHtml(entry, playerId)");',
+  'const metadataEnd = appCore.indexOf("function buildAgentSearchEntry", metadataStart);',
+  'const metadataSource = metadataStart >= 0 && metadataEnd > metadataStart ? appCore.slice(metadataStart, metadataEnd) : "";',
+  'invariant(',
+  '  metadataSource && !metadataSource.includes("fetch("),',
+  '  "Player age search rendering must reuse the existing search payload and must not introduce a per-result age request.",',
+  ');',
+  '',
+  'console.log("Player search age validation passed: typed and recent payloads include age, and Global/Evaluation Player results share one age metadata renderer without extra requests.");',
+  '',
+].join("\n");
+await writeFile(validatorPath, validatorSource);
 
 const domainPath = new URL("./validate-domain-route-features.mjs", import.meta.url);
 let domain = await readFile(domainPath, "utf8");
