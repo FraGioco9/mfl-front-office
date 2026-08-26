@@ -18,6 +18,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      eslint-major:
+        patterns:
+          - "eslint"
+          - "@eslint/js"
+          - "globals"
+        update-types:
+          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
