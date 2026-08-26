@@ -1,0 +1,64 @@
+name: Issue 427 Pager Fix Migration
+
+on:
+  push:
+    branches:
+      - fix/427-pager-loading-navigation
+    paths:
+      - site/migrate-427-pager-loading.mjs
+      - .github/workflows/issue-427-pager-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Apply canonical pager fix
+        working-directory: site
+        run: node migrate-427-pager-loading.mjs
+
+      - name: Regenerate application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Run site checks
+        working-directory: site
+        run: npm run check
+
+      - name: Commit migrated source and generated runtimes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            site/modules/app-core.js \
+            site/modules/app-core-runtime.js \
+            site/modules/app-core-table-runtime.js \
+            site/table-loading-runtime.js \
+            site/validate-pager-current-page.mjs \
+            site/validate-table-loading-state.mjs
+          if git diff --cached --quiet; then
+            echo "No migration changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix pager loading and manual navigation"
+          git push origin HEAD:${{ github.ref_name }}
