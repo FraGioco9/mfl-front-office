@@ -8,6 +8,7 @@ const {
   queryOne,
   quoteIdentifier,
   rowsAsArrays,
+  setMarketplacePrices,
 } = require("./_database");
 const { normalizeWalletAddress } = require("./_data-auth");
 const { marketplaceState } = require("./_marketplace-state");
@@ -24,8 +25,7 @@ const {
 } = require("./_data-query");
 
 const LISTING_COLUMN = "listing_price";
-const LISTING_PRICE_SQL = "CAST(marketplace.value AS REAL)";
-const MARKETPLACE_JOIN_SQL = " LEFT JOIN json_each(?) AS marketplace ON CAST(marketplace.key AS INTEGER) = players.player_id";
+const LISTING_PRICE_SQL = "marketplace_price(player_id)";
 
 function columnsWithListing(columns) {
   const next = [...columns];
@@ -71,8 +71,8 @@ function ruleSql(rule, parameters) {
   }
 
   if (column === LISTING_COLUMN) {
-    if (value === "for_sale") return "marketplace.value IS NOT NULL";
-    if (value === "not_for_sale") return "marketplace.value IS NULL";
+    if (value === "for_sale") return `${LISTING_PRICE_SQL} IS NOT NULL`;
+    if (value === "not_for_sale") return `${LISTING_PRICE_SQL} IS NULL`;
     return "0";
   }
 
@@ -232,7 +232,7 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
   const databaseColumns = includeProgression ? PLAYER_COLUMNS : PUBLIC_COLUMNS;
   const columns = columnsWithListing(databaseColumns);
   const marketplace = await marketplaceState();
-  const marketplaceJson = JSON.stringify(marketplace.prices);
+  setMarketplacePrices(marketplace.prices);
   const baseConditions = [];
   const baseParameters = [];
   const playerIds = integerIds(query.playerIds);
@@ -336,8 +336,8 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
 
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   const totalRows = Number(queryOne(
-    `SELECT count(*) AS count FROM players${MARKETPLACE_JOIN_SQL}${where}`,
-    [marketplaceJson, ...parameters],
+    `SELECT count(*) AS count FROM players${where}`,
+    parameters,
   )?.count || 0);
 
   const allRows = ["player", "players", "evaluation", "club", "mflstats"].includes(scope);
@@ -369,8 +369,8 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
     String(query.sortDirection || (scope === "club" ? "asc" : "desc")),
   );
   const rows = queryRows(
-    `SELECT ${selectListWithListing(columns)} FROM players${MARKETPLACE_JOIN_SQL}${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
-    [marketplaceJson, ...parameters, pageSize, offset],
+    `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+    [...parameters, pageSize, offset],
   );
 
   return {

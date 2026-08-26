@@ -98,6 +98,7 @@ const VALID_PLAYER_COLUMNS = new Set(PLAYER_COLUMNS);
 let database = null;
 let databasePath = "";
 let generatedAt = "";
+let marketplacePrices = Object.freeze({});
 const TABLE_EXISTS_CACHE = new Map();
 
 function normalizeSearchText(value) {
@@ -121,6 +122,26 @@ function resolveDatabasePath() {
   return databasePath;
 }
 
+function setMarketplacePrices(prices) {
+  const next = {};
+  if (prices && typeof prices === "object" && !Array.isArray(prices)) {
+    Object.entries(prices).forEach(([playerId, value]) => {
+      const numericPlayerId = Number(playerId);
+      const price = Number(value);
+      if (!Number.isSafeInteger(numericPlayerId) || numericPlayerId <= 0 || !Number.isFinite(price) || price < 0) return;
+      next[String(numericPlayerId)] = price;
+    });
+  }
+  marketplacePrices = Object.freeze(next);
+}
+
+function marketplacePrice(playerId) {
+  const numericPlayerId = Number(playerId);
+  if (!Number.isSafeInteger(numericPlayerId) || numericPlayerId <= 0) return null;
+  const value = marketplacePrices[String(numericPlayerId)];
+  return Number.isFinite(value) ? value : null;
+}
+
 function getDatabase() {
   if (database) return database;
 
@@ -129,6 +150,7 @@ function getDatabase() {
   database.exec("PRAGMA query_only = ON; PRAGMA foreign_keys = ON;");
   database.function("normalize_search", { deterministic: true }, normalizeSearchText);
   database.function("normalize_wallet_name", { deterministic: true }, normalizeWalletName);
+  database.function("marketplace_price", marketplacePrice);
 
   const tables = new Set(
     database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -215,6 +237,7 @@ module.exports = {
   quoteIdentifier,
   selectList,
   rowsAsArrays,
+  setMarketplacePrices,
   queryRows,
   queryOne,
 };

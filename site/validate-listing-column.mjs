@@ -27,6 +27,7 @@ assert.match(core, /value: "not_for_sale", label: "Not For Sale"/);
 assert.match(core, /label\.textContent = column === "listing_price"/);
 assert.match(core, /listingContent\.className = "listingCellContent"/);
 assert.match(core, /icon\.src = "\/listing-shopping-bag\.svg"/);
+assert.match(core, /maximumFractionDigits: 0/);
 
 const bootstrap = read("site/bootstrap.js");
 assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" : FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
@@ -35,7 +36,8 @@ const dataPage = read("site/api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
 assert.ok(dataPage.includes('AS "${LISTING_COLUMN}"'));
 assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
-assert.match(dataPage, /LEFT JOIN json_each\(\?\) AS marketplace/);
+assert.match(dataPage, /const LISTING_PRICE_SQL = "marketplace_price\(player_id\)"/);
+assert.doesNotMatch(dataPage, /json_each/);
 assert.match(dataPage, /value === "for_sale"/);
 assert.match(dataPage, /value === "not_for_sale"/);
 assert.match(dataPage, /requestedKey === LISTING_COLUMN/);
@@ -53,7 +55,7 @@ const width = (name) => {
   assert.ok(match, `Missing Uniform Width variable: ${name}`);
   return Number(match[1]);
 };
-assert.equal(width("listing"), 8);
+assert.equal(width("listing"), 6);
 const attributesTotal = [
   width("select"), width("id"), width("flag"), width("name"), width("listing"),
   width("age"), width("positions"), width("seasons"), width("overall"),
@@ -69,6 +71,8 @@ const contractTotal = [
 assert.ok(Math.abs(contractTotal - 100) < 1e-9, `Contracts widths sum to ${contractTotal}`);
 assert.match(styles, /col\.col-listing \{ width: var\(--mfl-table-col-listing\); \}/);
 assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;/);
+assert.match(styles, /listingCellContent:not\(\.listingCellUnlisted\)[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
+assert.match(styles, /\.listingCellPrice \{[\s\S]*color: #3bfb52;/);
 
 const svg = read("site/listing-shopping-bag.svg");
 assert.match(svg, /width="12" height="12" viewBox="0 0 24 24"/);

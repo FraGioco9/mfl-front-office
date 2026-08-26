@@ -1944,7 +1944,7 @@ function tableRenderTableOwner() {
           icon.setAttribute("aria-hidden", "true");
           const price = document.createElement("span");
           price.className = "listingCellPrice";
-          price.textContent = `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listingValue)}`;
+          price.textContent = `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(listingValue)}`;
           listingContent.setAttribute("aria-label", `For Sale at ${price.textContent}`);
           listingContent.append(icon, price);
         } else {

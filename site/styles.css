@@ -14,24 +14,24 @@
   /* Uniform Width. This is the only numeric column-width contract. */
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
-  --mfl-table-col-select: 2.3%;
-  --mfl-table-col-id: 3.68%;
-  --mfl-table-col-flag: 2.3%;
-  --mfl-table-col-name: 15.64%;
-  --mfl-table-col-listing: 8%;
-  --mfl-table-col-age: 4.14%;
-  --mfl-table-col-positions: 6.9%;
-  --mfl-table-col-seasons: 5.06%;
-  --mfl-table-col-overall: 5.52%;
-  --mfl-table-col-stat: 5.52%;
-  --mfl-table-col-contract-revenue: 8.28%;
-  --mfl-table-col-contract-club: 15.64%;
-  --mfl-table-col-contract-division: 9.2%;
-  --mfl-table-col-agent: 11.04%;
-  --mfl-table-col-link: 2.3%;
-  --mfl-table-col-contract-render-club: 15.63816%;
-  --mfl-table-col-contract-agent: 11.040414%;
-  --mfl-table-col-contract-link: 2.301426%;
+  --mfl-table-col-select: 2.35%;
+  --mfl-table-col-id: 3.76%;
+  --mfl-table-col-flag: 2.35%;
+  --mfl-table-col-name: 15.98%;
+  --mfl-table-col-listing: 6%;
+  --mfl-table-col-age: 4.23%;
+  --mfl-table-col-positions: 7.05%;
+  --mfl-table-col-seasons: 5.17%;
+  --mfl-table-col-overall: 5.64%;
+  --mfl-table-col-stat: 5.64%;
+  --mfl-table-col-contract-revenue: 8.46%;
+  --mfl-table-col-contract-club: 15.98%;
+  --mfl-table-col-contract-division: 9.4%;
+  --mfl-table-col-agent: 11.28%;
+  --mfl-table-col-link: 2.35%;
+  --mfl-table-col-contract-render-club: 15.97812%;
+  --mfl-table-col-contract-agent: 11.280423%;
+  --mfl-table-col-contract-link: 2.351457%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -253,9 +253,16 @@ body[data-page="club"] #progressionPage .rowsField {
   align-items: center;
   gap: 4px;
   min-width: 0;
-  height: var(--mfl-table-row-height);
   line-height: 1;
   white-space: nowrap;
+}
+
+#progressionPage #tableBody .listingCellContent:not(.listingCellUnlisted) {
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: rgba(13, 74, 35, 0.46);
+  color: #3bfb52;
 }
 
 #progressionPage #tableBody .listingCellIcon {
@@ -266,6 +273,7 @@ body[data-page="club"] #progressionPage .rowsField {
 
 #progressionPage #tableBody .listingCellPrice {
   overflow: hidden;
+  color: #3bfb52;
   text-overflow: ellipsis;
 }
 
