@@ -58,7 +58,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
   const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
-  const PLAYER_NOTE_MAX_LENGTH = 200;
+  const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
   const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
   const portraitSources = new Map();

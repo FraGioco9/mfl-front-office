@@ -260,7 +260,7 @@ const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
 const RECENT_AGENT_SEARCH_STORAGE_KEY = "mfl-recent-agent-searches-v1";
 const RECENT_MIXED_SEARCH_STORAGE_KEY = "mfl-recent-searches-v1";
 const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
-const PLAYER_NOTE_MAX_LENGTH = 200;
+const PLAYER_NOTE_MAX_LENGTH = 100;
 const SEARCH_CACHE_VERSION_KEY = "mfl-search-cache-version";
 const FLOW_WALLET_MODULE_URLS = [
   "https://esm.sh/@onflow/fcl@1.21.11?bundle",

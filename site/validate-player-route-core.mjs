@@ -24,6 +24,8 @@ const [coreSource, playerSplitter, appConfig, routeLoader, buildCore, portraitCl
   read("./api/_portrait-close-up.js"),
   read("./styles-base.css"),
 ]);
+const bootstrapSource = await read("./bootstrap.js");
+const walletPreferencesApi = await read("./api/wallet-preferences.js");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
@@ -53,6 +55,7 @@ requireAll(playerSplitter, [
   '"Player retirement marker color ownership"',
   '"Player partial-row loading gate"',
   'const PLAYER_FIRST_PAINT_RUNTIME = String.raw`',
+  "const PLAYER_NOTE_MAX_LENGTH = 100;",
   "finalizeSplitArtifacts(",
 ], "Player splitter contract");
 
@@ -73,6 +76,7 @@ requireAll(sharedCore, [
 ], "Shared Player first-paint handoff");
 
 requireAll(coreSource, [
+  "const PLAYER_NOTE_MAX_LENGTH = 100;",
   'String(pageName || "") === "player"',
   'await window.__mflEnsureRouteRuntime("player", { ...incomingOptions, playerId });',
   'window.__mflPlayerFirstPaintRuntime?.renderPending?.(pendingContext);',
@@ -143,6 +147,17 @@ requireAll(playerCore, [
   'String(pendingContext?.playerId || "").trim() === key ? pendingContext : { playerId: key }',
   "detailDataReady,",
 ], "Player detail readiness");
+
+requireAll(playerCore, [
+  "const PLAYER_NOTE_MAX_LENGTH = 100;",
+  "input.maxLength = PLAYER_NOTE_MAX_LENGTH;",
+  'count.textContent = notesReady ? String(note.length) + "/" + PLAYER_NOTE_MAX_LENGTH : loadingBlank();',
+], "Player 100-character note limit");
+excludes(playerCore, "const PLAYER_NOTE_MAX_LENGTH = 200;", "Legacy Player note limit must not be generated.");
+includes(bootstrapSource, '>0/100</span>', "Bootstrap Player notes shell must reserve the 100-character counter.");
+excludes(bootstrapSource, '>0/200</span>', "Bootstrap Player notes shell must not expose the legacy 200-character counter.");
+includes(walletPreferencesApi, "const PLAYER_NOTE_MAX_LENGTH = 100;", "Wallet preferences API must enforce the 100-character Player note limit.");
+excludes(walletPreferencesApi, "const PLAYER_NOTE_MAX_LENGTH = 200;", "Wallet preferences API must not accept the legacy 200-character Player note limit.");
 
 // Pending values are blank, not legacy dashes, and every static pitch element is already present.
 requireAll(playerCore, [
