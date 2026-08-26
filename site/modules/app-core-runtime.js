@@ -1766,13 +1766,28 @@ function resetPageScroll() {
 let evaluationPageCacheReady = false;
 
 function preparePlainEvaluationReentry() {
+  const routeParams = new URLSearchParams(window.location.search);
+  const hadEvaluationSelection = Boolean(
+    state.evaluationPlayerId
+    || state.evaluationSavedId
+    || state.evaluationShareId
+    || (window.location.pathname === "/evaluation" && (
+      routeParams.get("player")
+      || routeParams.get("saved")
+      || routeParams.get("share")
+    ))
+  );
+  const clearSearchInput = evaluationPageCacheReady || hadEvaluationSelection;
   state.evaluationShareId = "";
   state.evaluationSavedId = "";
   state.evaluationPlayerId = null;
   state.evaluationOverallRows = {};
   state.evaluationSummaryPositions = {};
-  evaluationSearchInput.value = "";
+  if (clearSearchInput) {
+    evaluationSearchInput.value = "";
+  }
   renderEmptyEvaluationSelection(false, true);
+  syncEvaluationSearchClearButton();
 }
 
 

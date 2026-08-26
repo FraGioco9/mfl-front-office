@@ -75,8 +75,13 @@ invariant(
     && plainResetSource.includes("state.evaluationPlayerId = null;")
     && plainResetSource.includes("state.evaluationOverallRows = {};")
     && plainResetSource.includes("state.evaluationSummaryPositions = {};")
-    && plainResetSource.includes('evaluationSearchInput.value = "";')
+    && plainResetSource.includes('const routeParams = new URLSearchParams(window.location.search);')
+    && plainResetSource.includes("const hadEvaluationSelection = Boolean(")
+    && plainResetSource.includes("const clearSearchInput = evaluationPageCacheReady || hadEvaluationSelection;")
+    && plainResetSource.includes('if (clearSearchInput) {\n    evaluationSearchInput.value = "";\n  }')
     && plainResetSource.includes("renderEmptyEvaluationSelection(false, true);")
+    && plainResetSource.includes("syncEvaluationSearchClearButton();")
+    && !plainResetSource.includes('state.evaluationSummaryPositions = {};\n  evaluationSearchInput.value = "";')
     && setPagePrePaintSource.includes('const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());')
     && setPagePrePaintSource.includes("if (plainEvaluationEntry) preparePlainEvaluationReentry();")
     && shared.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
@@ -84,7 +89,7 @@ invariant(
     && shared.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
     && shared.includes("await setPageWithoutRouteLoading(pageName, true, options);")
     && shared.includes("await setPage(pageName, true, options);"),
-  "Every plain Evaluation entry must clear the previous player before setPage can update route state or expose the destination, including history/back re-entry.",
+  "Plain Evaluation entry must always clear stale selected-player state, while the initial already-plain startup pass must preserve any live typed search text; later cached re-entry still starts clean.",
 );
 
 const evaluationPageStart = shared.indexOf("  if (evaluationPageActive) {");
