@@ -25,8 +25,9 @@ for (const code of [source, generatedTable]) {
       && code.includes('createPlayerTableActionItem("mfl", "MFL profile", "external")')
       && code.includes('createPlayerTableActionItem("evaluate", "Evaluate", "evaluate")')
       && code.includes('"Remove from watchlist" : "Add to watchlist"')
-      && code.includes('createPlayerTableActionItem("copy", `#${key}`, "copy")'),
-    "Player table dropdown must expose the requested action labels and dynamic #ID copy label.",
+      && code.includes('createPlayerTableActionItem("copy", `#${key}`, "copy")')
+      && !code.includes('createPlayerTableActionItem("copy", "Copy ID", "copy")'),
+    "Player table dropdown must expose the requested action labels and dynamic #ID copy label without the legacy Copy ID label.",
   );
   invariant(
     code.includes('void setPage("player", true, { playerId });')
