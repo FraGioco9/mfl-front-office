@@ -78,7 +78,9 @@ assert.ok(Math.abs(contractTotal - 100) < 1e-9, `Contracts widths sum to ${contr
 assert.match(styles, /col\.col-listing \{ width: var\(--mfl-table-col-listing\); \}/);
 assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
 assert.match(styles, /\.listingCellPrice \{[\s\S]*color: #3bfb52;/);
-assert.match(styles, /\.playerTitle > \.listingCellContent \{[\s\S]*margin-left: 6px;[\s\S]*font-size: 14px;/);
+assert.match(styles, /\.playerTitle > :is\(\.playerTitleName, \.listingCellContent, \.playerTitleNoteIcon\) \{[\s\S]*vertical-align: middle;/);
+assert.match(styles, /\.playerTitle > \.listingCellContent \{[\s\S]*height: 22px;[\s\S]*font-size: 16px;/);
+assert.match(styles, /\.playerTitle > \.listingCellContent \.listingCellIcon \{[\s\S]*width: 14px;[\s\S]*height: 14px;/);
 
 const svg = read("site/listing-shopping-bag.svg");
 assert.match(svg, /width="12" height="12" viewBox="0 0 24 24"/);

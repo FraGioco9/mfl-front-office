@@ -275,10 +275,21 @@ body[data-page="club"] #progressionPage .rowsField {
   text-overflow: ellipsis;
 }
 
+.playerTitle > :is(.playerTitleName, .listingCellContent, .playerTitleNoteIcon) {
+  vertical-align: middle;
+}
+
 .playerTitle > .listingCellContent {
+  height: 22px;
   margin-left: 6px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 400;
+}
+
+.playerTitle > .listingCellContent .listingCellIcon {
+  flex-basis: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 #progressionPage #tableBody .playerNameCell {
