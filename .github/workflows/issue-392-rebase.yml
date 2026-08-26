@@ -1,0 +1,29 @@
+name: Issue 392 rebase
+
+on:
+  push:
+    branches:
+      - fix/issue-392-mint-age-history-fallback
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/issue-392-mint-age-history-fallback
+          fetch-depth: 0
+      - name: Rebase onto latest main and clean helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main
+          git rm .github/workflows/issue-392-rebase.yml
+          git commit -m "Remove temporary rebase workflow"
+          git push --force-with-lease origin HEAD:fix/issue-392-mint-age-history-fallback
