@@ -2,6 +2,7 @@
   "use strict";
 
   const BLANK_ROW_CLASS = "mflTableLoadingRow";
+  const FILTER_LOADING_REASON = "table-filter-loading";
   const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);
   const controller = window.__mflInteractionBusy;
 
@@ -50,6 +51,13 @@
   function hasRealRows(body) {
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
+
+  function hasCanonicalLoadingRows(body) {
+  return body instanceof HTMLTableSectionElement
+    && body.dataset.staticLoading === "true"
+    && body.rows.length === 5
+    && Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS));
+}
 
   function shouldPreserveRenderedRows(body = elements().body) {
     if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
@@ -148,7 +156,7 @@
     const currentBody = elements().body;
     const preserveRenderedRows = shouldPreserveRenderedRows(currentBody);
     const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
-    if (body && !preserveRenderedRows) primeLoadingRows();
+    if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();
     return token;
   }
 
@@ -231,7 +239,7 @@
     }
     if (snapshot.dataLoading || requestActive()) {
       hidePager();
-      if (shouldPreserveRenderedRows()) return;
+      if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;
       show({ replaceExisting: true });
     } else release();
   }

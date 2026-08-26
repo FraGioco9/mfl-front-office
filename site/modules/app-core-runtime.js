@@ -6691,7 +6691,7 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
   }
 
   state.page = page;
-  return withInteractionBusy(loadAndRender);
+  return withInteractionBusy(loadAndRender, options.loadingReason);
 }
 
 window.mflReloadIncrementalPage = reloadIncrementalPage;
@@ -6953,6 +6953,7 @@ applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
 clearFiltersButton.addEventListener("click", () => {
   clearAdvancedFilters(false);
+  applyAdvancedFilters();
 });
 
 clearSelectionButton.addEventListener("click", clearSelection);
@@ -8310,7 +8311,7 @@ async function startApp() {
     }
 
     state.page = 1;
-    void reloadIncrementalPage(1, { save: options.save !== false });
+    void reloadIncrementalPage(1, { save: options.save !== false, loadingReason: "table-filter-loading" });
     return undefined;
   };
 
