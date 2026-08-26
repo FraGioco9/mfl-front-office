@@ -1,0 +1,162 @@
+name: Issue 388 center rarity circle
+
+on:
+  push:
+    branches:
+      - fix/issue-388-overall-rarity-circle
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/issue-388-overall-rarity-circle
+
+      - name: Center Overall rarity circle in row
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('site/modules/app-core.js')
+          text = app.read_text(encoding='utf-8')
+          old = '''  if (statColumn === "overall") {
+            const rarityCircle = document.createElement("span");
+            rarityCircle.className = "tableOverallRarityCircle";
+            rarityCircle.style.setProperty("--mfl-overall-rarity-color", rarityColorForOverall(value));
+            rarityCircle.setAttribute("aria-hidden", "true");
+            cell.appendChild(rarityCircle);
+          }
+
+          cell.append(String(value));
+'''
+          new = '''  const contentHost = statColumn === "overall" ? document.createElement("span") : cell;
+
+          if (statColumn === "overall") {
+            contentHost.className = "tableOverallCellContent";
+            const rarityCircle = document.createElement("span");
+            rarityCircle.className = "tableOverallRarityCircle";
+            rarityCircle.style.setProperty("--mfl-overall-rarity-color", rarityColorForOverall(value));
+            rarityCircle.setAttribute("aria-hidden", "true");
+            contentHost.appendChild(rarityCircle);
+            cell.appendChild(contentHost);
+          }
+
+          contentHost.append(String(value));
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'app-core Overall anchor count: {text.count(old)}')
+          text = text.replace(old, new, 1)
+          text = text.replace('  cell.appendChild(progressionElement);\n}\n\nfunction tableInteractiveKey(', '  contentHost.appendChild(progressionElement);\n}\n\nfunction tableInteractiveKey(', 1)
+          app.write_text(text, encoding='utf-8')
+
+          styles = Path('site/styles.css')
+          css = styles.read_text(encoding='utf-8')
+          old_css = '''#progressionPage #tableBody .tableOverallRarityCircle {
+            display: inline-block;
+            width: 8px;
+            min-width: 8px;
+            height: 8px;
+            margin-right: 4px;
+            border-radius: 50%;
+            background: var(--mfl-overall-rarity-color, var(--text-muted));
+            vertical-align: middle;
+          }
+'''
+          new_css = '''#progressionPage #tableBody .tableOverallCellContent {
+            display: inline-flex;
+            align-items: center;
+            height: var(--mfl-table-row-height);
+            min-height: var(--mfl-table-row-height);
+          }
+
+          #progressionPage #tableBody .tableOverallRarityCircle {
+            flex: 0 0 8px;
+            width: 8px;
+            height: 8px;
+            margin-right: 4px;
+            border-radius: 50%;
+            background: var(--mfl-overall-rarity-color, var(--text-muted));
+          }
+'''
+          if css.count(old_css) != 1:
+              raise SystemExit(f'CSS rarity anchor count: {css.count(old_css)}')
+          styles.write_text(css.replace(old_css, new_css, 1), encoding='utf-8')
+
+          validator = Path('site/validate-table-column-layout.mjs')
+          checks = validator.read_text(encoding='utf-8')
+          old_render = '''  appendStatValueSource.includes('rarityCircle.className = "tableOverallRarityCircle";')
+            && appendStatValueSource.includes('rarityColorForOverall(value)')
+            && appendStatValueSource.includes('cell.appendChild(rarityCircle);'),
+          "Every non-Next table Overall must prepend one circle using the canonical rarity colour mapping.",
+'''
+          new_render = '''  appendStatValueSource.includes('contentHost.className = "tableOverallCellContent";')
+            && appendStatValueSource.includes('rarityCircle.className = "tableOverallRarityCircle";')
+            && appendStatValueSource.includes('rarityColorForOverall(value)')
+            && appendStatValueSource.includes('contentHost.appendChild(rarityCircle);')
+            && appendStatValueSource.includes('cell.appendChild(contentHost);')
+            && appendStatValueSource.includes('contentHost.appendChild(progressionElement);'),
+          "Every non-Next table Overall must use one vertically centered content host with the canonical rarity circle and progression.",
+'''
+          if checks.count(old_render) != 1:
+              raise SystemExit('validator render anchor missing')
+          checks = checks.replace(old_render, new_render, 1)
+
+          old_css_check = '''  styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
+            && styles.includes("width: 8px;")
+            && styles.includes("min-width: 8px;")
+            && styles.includes("height: 8px;")
+            && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));")
+            && styles.includes("vertical-align: middle;"),
+          "Overall rarity circles must be exactly 8x8px, vertically centered, and use a neutral CSS fallback.",
+'''
+          new_css_check = '''  styles.includes("#progressionPage #tableBody .tableOverallCellContent {")
+            && styles.includes("display: inline-flex;")
+            && styles.includes("align-items: center;")
+            && styles.includes("height: var(--mfl-table-row-height);")
+            && styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
+            && styles.includes("flex: 0 0 8px;")
+            && styles.includes("width: 8px;")
+            && styles.includes("height: 8px;")
+            && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));"),
+          "Overall rarity circles must be exactly 8x8px and centered by a row-height inline-flex content host.",
+'''
+          if checks.count(old_css_check) != 1:
+              raise SystemExit('validator CSS anchor missing')
+          validator.write_text(checks.replace(old_css_check, new_css_check, 1), encoding='utf-8')
+          PY
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build and validate
+        working-directory: site
+        run: |
+          npm run build:core
+          npm run lint
+          npm run typecheck
+          npm run validate
+
+      - name: Commit source and generated artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f site/package-lock.json
+          git rm .github/workflows/issue-388-center-rarity-circle.yml
+          git add site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/styles.css site/validate-table-column-layout.mjs
+          git commit -m "Center Overall rarity circles vertically"
+
+      - name: Verify generated parity
+        working-directory: site
+        run: npm run verify:generated
+
+      - name: Push changes
+        run: git push origin HEAD:fix/issue-388-overall-rarity-circle
