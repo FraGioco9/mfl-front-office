@@ -2,11 +2,13 @@ from pathlib import Path
 
 app = Path("site/modules/app-core.js")
 text = app.read_text(encoding="utf-8")
-target = 'cell.innerHTML = listingPriceBadgeHtml(row);'
-replacement = 'cell.innerHTML = `<span class="listingCellTableHost">${listingPriceBadgeHtml(row)}</span>`;'
+if text.count('const listingBadge = listingPriceBadgeHtml(row);') != 1:
+    raise SystemExit("app-core listing badge declaration not found exactly once")
+target = 'cell.innerHTML = listingBadge;'
+replacement = 'cell.innerHTML = listingBadge ? `<span class="listingCellTableHost">${listingBadge}</span>` : "";'
 count = text.count(target)
 if count != 1:
-    raise SystemExit(f"app-core listing table render target: expected 1 match, found {count}")
+    raise SystemExit(f"app-core listing table assignment: expected 1 match, found {count}")
 app.write_text(text.replace(target, replacement, 1), encoding="utf-8")
 
 styles = Path("site/styles.css")
@@ -23,7 +25,7 @@ styles.write_text(css, encoding="utf-8")
 validator = Path("site/validate-listing-column.mjs")
 checks = validator.read_text(encoding="utf-8")
 core_anchor = 'assert.match(core, /const listingBadge = listingPriceBadgeHtml\\(row\\);/);\n'
-core_check = 'assert.match(core, /class="listingCellTableHost">\\$\\{listingPriceBadgeHtml\\(row\\)\\}<\\/span>/);\n'
+core_check = 'assert.match(core, /cell\\.innerHTML = listingBadge \\? `<span class="listingCellTableHost">\\$\\{listingBadge\\}<\\/span>` : "";/);\n'
 if core_check not in checks:
     if checks.count(core_anchor) != 1:
         raise SystemExit("listing validator core anchor missing")
