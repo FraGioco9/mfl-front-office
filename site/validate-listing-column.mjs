@@ -28,6 +28,9 @@ assert.match(core, /label\.textContent = column === "listing_price"/);
 assert.match(core, /listingContent\.className = "listingCellContent"/);
 assert.match(core, /icon\.src = "\/listing-shopping-bag\.svg"/);
 
+const bootstrap = read("site/bootstrap.js");
+assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" : FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
+
 const dataPage = read("site/api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
 assert.match(dataPage, /LEFT JOIN json_each\(\?\) AS marketplace/);
