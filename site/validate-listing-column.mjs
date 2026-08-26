@@ -38,6 +38,8 @@ assert.ok(dataPage.includes('AS "${LISTING_COLUMN}"'));
 assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
 assert.match(dataPage, /const LISTING_PRICE_SQL = "marketplace_price\(player_id\)"/);
 assert.doesNotMatch(dataPage, /json_each/);
+assert.doesNotMatch(dataPage, /marketplace\.value/);
+assert.match(dataPage, /return `\$\{LISTING_PRICE_SQL\} IS NULL, \$\{LISTING_PRICE_SQL\} \$\{direction\}, player_id DESC`;/);
 assert.match(dataPage, /value === "for_sale"/);
 assert.match(dataPage, /value === "not_for_sale"/);
 assert.match(dataPage, /requestedKey === LISTING_COLUMN/);

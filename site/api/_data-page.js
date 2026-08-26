@@ -181,7 +181,7 @@ function orderSql(scope, view, sortKey, sortDirection) {
   const direction = String(sortDirection).toLowerCase() === "asc" ? "ASC" : "DESC";
   const requestedKey = String(sortKey || "");
   if (requestedKey === LISTING_COLUMN) {
-    return `marketplace.value IS NULL, ${LISTING_PRICE_SQL} ${direction}, player_id DESC`;
+    return `${LISTING_PRICE_SQL} IS NULL, ${LISTING_PRICE_SQL} ${direction}, player_id DESC`;
   }
   const key = VALID_PLAYER_COLUMNS.has(requestedKey) ? requestedKey : "overall";
 
