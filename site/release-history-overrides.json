@@ -1,8 +1,5 @@
 [
-  [
-    "v1.126.0",
-    "Add marketplace listings and rarity indicators across player views"
-  ],
+  ["v1.126.0", "Add marketplace listings and rarity indicators across player views"],
   [
     "v1.125.5",
     "Refine Player loading and progression email portraits"
