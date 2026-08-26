@@ -2,6 +2,7 @@ const MARKETPLACE_BUCKET = "mfl-runtime";
 const MARKETPLACE_OBJECT = "marketplace/listings.json";
 const MARKETPLACE_CACHE_TTL_MS = 30_000;
 const MARKETPLACE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const MARKETPLACE_FETCH_TIMEOUT_MS = 3_000;
 
 let cachedState = null;
 let cachedAt = 0;
@@ -54,6 +55,7 @@ async function fetchMarketplaceState(now = Date.now()) {
 
   const response = await fetch(url, {
     cache: "no-store",
+    signal: AbortSignal.timeout(MARKETPLACE_FETCH_TIMEOUT_MS),
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${serviceRoleKey}`,
@@ -96,6 +98,7 @@ module.exports = {
   MARKETPLACE_OBJECT,
   MARKETPLACE_CACHE_TTL_MS,
   MARKETPLACE_MAX_AGE_MS,
+  MARKETPLACE_FETCH_TIMEOUT_MS,
   normalizeMarketplaceState,
   marketplaceState,
 };
