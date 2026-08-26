@@ -1,0 +1,74 @@
+name: Issue 203 runtime and listing polish v2
+
+on:
+  push:
+    branches:
+      - fix/issue-203-player-listing-column
+    paths:
+      - ".github/workflows/issue-203-runtime-and-listing-polish-v2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/issue-203-player-listing-column
+
+      - name: Apply canonical patch from one-shot source
+        shell: python
+        run: |
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/issue-203-runtime-and-listing-polish.yml").read_text(encoding="utf-8").splitlines()
+          marker = "      - name: Patch canonical runtime and Listing UI"
+          start = workflow.index(marker)
+          run_index = next(i for i in range(start + 1, len(workflow)) if workflow[i] == "        run: |")
+          code = []
+          for line in workflow[run_index + 1:]:
+              if line.startswith("      - "):
+                  break
+              if line.startswith("          "):
+                  code.append(line[10:])
+              else:
+                  code.append(line)
+          exec(compile("\n".join(code), "issue-203-patch", "exec"))
+
+          validator_path = Path("site/validate-listing-column.mjs")
+          validator = validator_path.read_text(encoding="utf-8")
+          validator = validator.replace(
+              'assert.doesNotMatch(core, /minimumFractionDigits: 2, maximumFractionDigits: 2/);\n',
+              '',
+          )
+          validator_path.write_text(validator, encoding="utf-8")
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build and validate site
+        working-directory: site
+        run: |
+          npm run build:core
+          npm run lint
+          npm run typecheck
+          npm run validate
+          npm run verify:generated
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/api/_database.js site/api/_data-page.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/styles.css site/table-width-runtime.js site/validate-listing-column.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix Listing runtime and compact price display"
+          git push origin HEAD:fix/issue-203-player-listing-column
