@@ -41,22 +41,36 @@ appCore = replaceOnce(
 );
 
 let pagerValidation = await read("./validate-pager-current-page.mjs");
+pagerValidation = replaceOnce(
+  pagerValidation,
+  `const [controls, interactions, selectionStack, appCore, buildNormalizer, tableRuntime] = await Promise.all([\n  read("./controls.css"),\n  read("./control-interactions-runtime.js"),\n  read("./selection-stack-runtime.js"),\n  read("./modules/app-core.js"),\n  read("./modules/app-core-build-normalizer.js"),\n  read("./modules/app-core-table-runtime.js"),\n]);`,
+  `const [controls, interactions, selectionStack, appCore, generatedCore, buildNormalizer, tableRuntime] = await Promise.all([\n  read("./controls.css"),\n  read("./control-interactions-runtime.js"),\n  read("./selection-stack-runtime.js"),\n  read("./modules/app-core.js"),\n  read("./modules/app-core-runtime.js"),\n  read("./modules/app-core-build-normalizer.js"),\n  read("./modules/app-core-table-runtime.js"),\n]);`,
+  "pager validation generated-core input",
+);
+
 const regression = `
 const reloadStart = appCore.indexOf("async function reloadIncrementalPage(page = state.page, options = {}) {");
 const reloadEnd = appCore.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", reloadStart);
 const reloadSource = appCore.slice(reloadStart, reloadEnd);
+const generatedReloadStart = generatedCore.indexOf("async function reloadIncrementalPage(page = state.page, options = {}) {");
+const generatedReloadEnd = generatedCore.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", generatedReloadStart);
+const generatedReloadSource = generatedCore.slice(generatedReloadStart, generatedReloadEnd);
 invariant(
   reloadStart >= 0
     && reloadEnd > reloadStart
     && reloadSource.indexOf("state.page = page;") < reloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
-    && reloadSource.split("state.page = page;").length === 2,
+    && reloadSource.split("state.page = page;").length === 2
+    && generatedReloadStart >= 0
+    && generatedReloadEnd > generatedReloadStart
+    && generatedReloadSource.indexOf("state.page = page;") < generatedReloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
+    && generatedReloadSource.split("state.page = page;").length === 2,
   "Pager target page must be committed before cached and uncached incremental reload paths diverge.",
 );
 invariant(
   appCore.includes('void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });')
     && appCore.includes('void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });')
-    && tableRuntime.includes('void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });')
-    && tableRuntime.includes('void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });'),
+    && generatedCore.includes('void reloadIncrementalPage(Math.max(1, state.page - 1), { loadingMode: "blank" });')
+    && generatedCore.includes('void reloadIncrementalPage(state.page + 1, { loadingMode: "blank" });'),
   "Previous and next pager buttons must use the same canonical five-row blank loading path as direct page entry.",
 );
 `;
