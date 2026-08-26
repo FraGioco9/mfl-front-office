@@ -99,11 +99,15 @@ for (const required of [
   'flagContent.className = "tableControlCellContent tableControlCellContentCentered";',
   'idContent.className = "tableControlCellContent";',
   'ageContent.className = "tableControlCellContent";',
-  'appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");',
+  'const retirement = retirementMarker(row);',
+  'retirement || newMintMarker(row),',
+  'retirement ? "retirementMarker" : "newMintMarker",',
 ]) {
   includes(coreSource, required, `Canonical app-core must own Table control-cell alignment through ${required}`);
   includes(tableCore, required, `Generated Table core must preserve source-owned control-cell alignment through ${required}`);
 }
+excludes(coreSource, 'appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");', "NEW must not remain in the Name-cell marker slot.");
+excludes(tableCore, 'appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");', "Generated Table core must keep NEW out of the Name-cell marker slot.");
 excludes(buildNormalizerSource, "normalizeTableControlCellAlignment", "Build normalization must not rewrite Table control-cell alignment.");
 excludes(buildNormalizerSource, "app-core-table-cell-alignment.js", "The obsolete Table control-cell normalizer must stay removed from build composition.");
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route player/search formatting must remain shared.");

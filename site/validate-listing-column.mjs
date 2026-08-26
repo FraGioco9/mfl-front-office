@@ -28,6 +28,8 @@ assert.match(core, /label\.textContent = column === "listing_price"/);
 assert.match(core, /listingContent\.className = "listingCellContent"/);
 assert.match(core, /icon\.src = "\/listing-shopping-bag\.svg"/);
 assert.match(core, /maximumFractionDigits: 0/);
+assert.doesNotMatch(core, /listingContent\.textContent = "—"/);
+assert.match(core, /listingContent\.classList\.add\("listingCellUnlisted"\);[\s\S]*listingContent\.setAttribute\("aria-label", "Not For Sale"\);/);
 
 const bootstrap = read("site/bootstrap.js");
 assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" : FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);

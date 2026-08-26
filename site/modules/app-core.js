@@ -10486,7 +10486,6 @@ function renderTable() {
 
           markerWrap.appendChild(noteIcon);
         }
-        appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
         if (markerWrap.childElementCount) {
           nameWrap.appendChild(markerWrap);
         }
@@ -10523,7 +10522,6 @@ function renderTable() {
           listingContent.append(icon, price);
         } else {
           listingContent.classList.add("listingCellUnlisted");
-          listingContent.textContent = "—";
           listingContent.setAttribute("aria-label", "Not For Sale");
         }
         cell.appendChild(listingContent);
@@ -10534,7 +10532,12 @@ function renderTable() {
         ageValue.className = "playerAgeValue";
         ageValue.textContent = formatCellValue(row, column);
         ageContent.appendChild(ageValue);
-        appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");
+        const retirement = retirementMarker(row);
+        appendNameMarker(
+          ageContent,
+          retirement || newMintMarker(row),
+          retirement ? "retirementMarker" : "newMintMarker",
+        );
         cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
