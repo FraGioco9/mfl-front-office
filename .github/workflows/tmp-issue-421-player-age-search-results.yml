@@ -1,0 +1,48 @@
+name: Temporary issue 421 Player search age patch
+
+on:
+  push:
+    branches:
+      - feat/issue-421-player-age-search-results
+    paths:
+      - .github/workflows/tmp-issue-421-player-age-search-results.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/issue-421-player-age-search-results
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply source fix
+        working-directory: site
+        run: node patch-issue-421-player-age-search-results.mjs
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/api/_database.js site/modules/app-core.js site/modules/app-core-*.js site/validate-search-player-age.mjs site/validate-domain-route-features.mjs
+          git commit -m "feat: show player age in search results"
+          git push origin HEAD:feat/issue-421-player-age-search-results
