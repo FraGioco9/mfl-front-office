@@ -5813,7 +5813,16 @@ function countryFlagHtml(nationality) {
   return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="" data-tooltip="${label}" aria-label="${label}">`;
 }
 
+function rarityColorForOverall(overall) {
+  const value = Number(overall || 0);
 
+  if (value >= 95) return "#00ffe9";
+  if (value >= 85) return "#fa53ff";
+  if (value >= 75) return "#0077ff";
+  if (value >= 65) return "#71ff30";
+  if (value >= 55) return "#ecd17f";
+  return "#bebebe";
+}
 
 function playerPositionSet(row) {
   return new Set(playerPositions(row));

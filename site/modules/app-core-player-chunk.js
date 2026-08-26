@@ -20,7 +20,6 @@ const PLAYER_ROUTE_ONLY_FUNCTIONS = [
   "setPlayerNote",
   "normalizePlayerAttributeView",
   "formatFootedness",
-  "rarityColorForOverall",
   "shortStatLabel",
   "playerNoteIconHtml",
   "measureTooltipAnchorWidth",

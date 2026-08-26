@@ -1326,17 +1326,6 @@ function formatFootedness(value) {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
-function rarityColorForOverall(overall) {
-  const value = Number(overall || 0);
-
-  if (value >= 95) return "#00ffe9";
-  if (value >= 85) return "#fa53ff";
-  if (value >= 75) return "#0077ff";
-  if (value >= 65) return "#71ff30";
-  if (value >= 55) return "#ecd17f";
-  return "#bebebe";
-}
-
 function shortStatLabel(column) {
   return {
     pace: "PAC",

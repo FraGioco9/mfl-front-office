@@ -127,6 +127,8 @@ const contractsWidth = totalPlayerWidth([
 ]);
 invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
 invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns must total 100%.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.2) < 0.000001, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.546666666666667) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
 
 invariant(
   !/#progressionPage \.playerTableScroller[^\n{]*(?:th|td)[^{]*\{[^}]*\bwidth\s*:/s.test(styles),
@@ -248,6 +250,37 @@ invariant(
     && appCoreSource.includes("if (alreadyCanonical) return;"),
   "Canonical app-core colgroup ownership must be idempotent.",
 );
+const appendStatValueStart = appCoreSource.indexOf("function appendStatValue(cell, row, statColumn) {");
+const appendStatValueEnd = appCoreSource.indexOf("function tableInteractiveKey(", appendStatValueStart);
+invariant(appendStatValueStart >= 0 && appendStatValueEnd > appendStatValueStart, "Table stat renderer must remain directly inspectable.");
+const appendStatValueSource = appCoreSource.slice(appendStatValueStart, appendStatValueEnd);
+invariant(
+  appendStatValueSource.indexOf('if (state.view === "next")') >= 0
+    && appendStatValueSource.indexOf('if (state.view === "next")') < appendStatValueSource.indexOf('if (statColumn === "overall")'),
+  "Next Overall must return before the rarity circle is rendered.",
+);
+invariant(
+  appendStatValueSource.includes('contentHost.className = "tableOverallCellContent";')
+    && appendStatValueSource.includes('rarityCircle.className = "tableOverallRarityCircle";')
+    && appendStatValueSource.includes('rarityColorForOverall(value)')
+    && appendStatValueSource.includes('contentHost.appendChild(rarityCircle);')
+    && appendStatValueSource.includes('cell.appendChild(contentHost);')
+    && appendStatValueSource.includes('contentHost.appendChild(progressionElement);'),
+  "Every non-Next table Overall must use one vertically centered content host with the canonical rarity circle and progression.",
+);
+invariant(
+  styles.includes("#progressionPage #tableBody .tableOverallCellContent {")
+    && styles.includes("display: inline-flex;")
+    && styles.includes("align-items: center;")
+    && styles.includes("height: var(--mfl-table-row-height);")
+    && styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
+    && styles.includes("flex: 0 0 8px;")
+    && styles.includes("width: 8px;")
+    && styles.includes("height: 8px;")
+    && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));"),
+  "Overall rarity circles must be exactly 8x8px and centered by a row-height inline-flex content host.",
+);
+
 const clubFinishStart = appCoreSource.indexOf("function finishClubSwitch() {");
 const clubFinishEnd = appCoreSource.indexOf("function hideClubPageControls() {", clubFinishStart);
 invariant(clubFinishStart >= 0 && clubFinishEnd > clubFinishStart, "Canonical Club completion owner must remain directly inspectable.");

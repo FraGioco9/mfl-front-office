@@ -22,14 +22,14 @@
   --mfl-table-col-age: 4.23%;
   --mfl-table-col-positions: 7.05%;
   --mfl-table-col-seasons: 5.17%;
-  --mfl-table-col-overall: 5.64%;
-  --mfl-table-col-stat: 5.64%;
+  --mfl-table-col-overall: 6.2%;
+  --mfl-table-col-stat: 5.546666666666667%;
   --mfl-table-col-contract-revenue: 8.46%;
-  --mfl-table-col-contract-club: 15.98%;
+  --mfl-table-col-contract-club: 15.42%;
   --mfl-table-col-contract-division: 9.4%;
   --mfl-table-col-agent: 11.28%;
   --mfl-table-col-link: 2.35%;
-  --mfl-table-col-contract-render-club: 15.97812%;
+  --mfl-table-col-contract-render-club: 15.41812%;
   --mfl-table-col-contract-agent: 11.280423%;
   --mfl-table-col-contract-link: 2.351457%;
 
@@ -298,6 +298,22 @@ body[data-page="club"] #progressionPage .rowsField {
   flex-basis: 14px;
   width: 14px;
   height: 14px;
+}
+
+#progressionPage #tableBody .tableOverallCellContent {
+  display: inline-flex;
+  align-items: center;
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+}
+
+#progressionPage #tableBody .tableOverallRarityCircle {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--mfl-overall-rarity-color, var(--text-muted));
 }
 
 #progressionPage #tableBody .playerNameCell {
