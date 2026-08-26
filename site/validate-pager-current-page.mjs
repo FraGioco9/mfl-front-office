@@ -24,6 +24,8 @@ for (const required of [
   "border-color: var(--primary-hover);",
   "background: var(--row-hover);",
   "caret-color: var(--text);",
+  "cursor: text;",
+  "user-select: text;",
   "outline: 0;",
   "box-shadow: none;",
 ]) {
@@ -115,6 +117,22 @@ invariant(
   "Pager Escape capture must stop downstream global Escape handlers before canceling the edit.",
 );
 
+const focusStart = tableRuntime.indexOf('controls.input.addEventListener("focus", () => {');
+const inputStart = tableRuntime.indexOf('controls.input.addEventListener("input", () => {', focusStart);
+invariant(focusStart >= 0 && inputStart > focusStart, "Pager focus and input handlers must both exist in the generated Table runtime.");
+const focusSection = tableRuntime.slice(focusStart, inputStart);
+invariant(
+  !focusSection.includes(".select()") && !appCore.includes("controls.input.select();"),
+  "Pager focus must preserve native mouse caret and drag-selection behavior instead of force-selecting the full value.",
+);
+invariant(
+  appCore.includes('input.type = "text";')
+    && appCore.includes('input.inputMode = "numeric";')
+    && tableRuntime.includes('input.type = "text";')
+    && tableRuntime.includes('input.inputMode = "numeric";'),
+  "Pager page entry must remain a text input with numeric input mode so native text selection stays available.",
+);
+
 const blurStart = tableRuntime.indexOf('controls.input.addEventListener("blur", () => {');
 const inputKeydownStart = tableRuntime.indexOf('controls.input.addEventListener("keydown", (event) => {', blurStart);
 invariant(blurStart >= 0 && inputKeydownStart > blurStart, "Pager blur and input keydown handlers must both exist in the generated Table runtime.");
@@ -174,4 +192,4 @@ invariant(
   "Previous and next pager buttons must use the same canonical five-row blank loading path as direct page entry.",
 );
 
-console.log("Editable pager window-capture Escape cancellation validation passed with cached and uncached page navigation coverage.");
+console.log("Editable pager validation passed with native text selection, Escape cancellation, and cached/uncached page navigation coverage.");

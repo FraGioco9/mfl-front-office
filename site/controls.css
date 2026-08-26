@@ -498,6 +498,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   line-height: 22px;
   text-align: center;
   vertical-align: middle;
+  cursor: text;
+  user-select: text;
   transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
