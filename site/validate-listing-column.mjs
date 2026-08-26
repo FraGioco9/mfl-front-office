@@ -33,7 +33,7 @@ assert.match(bootstrap, /label\.textContent = column === "listing_price" \? "" :
 
 const dataPage = read("site/api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
-assert.match(dataPage, /AS \"\$\{LISTING_COLUMN\}\"/);
+assert.ok(dataPage.includes('AS "${LISTING_COLUMN}"'));
 assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
 assert.match(dataPage, /LEFT JOIN json_each\(\?\) AS marketplace/);
 assert.match(dataPage, /value === "for_sale"/);
@@ -43,6 +43,8 @@ assert.match(dataPage, /requestedKey === LISTING_COLUMN/);
 const marketplaceState = read("site/api/_marketplace-state.js");
 assert.match(marketplaceState, /MARKETPLACE_CACHE_TTL_MS = 30_000/);
 assert.match(marketplaceState, /MARKETPLACE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
+assert.match(marketplaceState, /MARKETPLACE_FETCH_TIMEOUT_MS = 3_000/);
+assert.match(marketplaceState, /signal: AbortSignal\.timeout\(MARKETPLACE_FETCH_TIMEOUT_MS\)/);
 assert.match(marketplaceState, /cache: "no-store"/);
 
 const styles = read("site/styles.css");
