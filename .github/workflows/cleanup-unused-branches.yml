@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .github/workflows/cleanup-unused-branches.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,15 +21,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Delete unused remote branches and remove this workflow
+      - name: Delete unused remote branches
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           mapfile -t open_heads < <(
             gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq '.[].head.ref'
@@ -66,10 +64,3 @@ jobs:
               echo "- kept: \`$branch\`"
             done
           } >> "$GITHUB_STEP_SUMMARY"
-
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-          git rm .github/workflows/cleanup-unused-branches.yml
-          git commit -m "Remove temporary branch cleanup workflow"
-          git push origin main
