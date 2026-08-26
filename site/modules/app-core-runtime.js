@@ -4589,6 +4589,12 @@ function rowByPlayerId(playerId) {
   return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;
 }
 
+function playerSearchAgeDisplay(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const numericAge = Number(value);
+  return Number.isFinite(numericAge) ? formatPlainValue(numericAge, "age") : "";
+}
+
 function buildPlayerSearchEntryFromRow(row) {
   const playerId = String(getValue(row, "player_id") ?? "");
   const nameDisplay = formatCellValue(row, "name");
@@ -4603,6 +4609,7 @@ function buildPlayerSearchEntryFromRow(row) {
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
     nameDisplay,
+    ageDisplay: playerSearchAgeDisplay(getValue(row, "age")),
     nationalityRaw,
     nationalityDisplay,
     positionsDisplay,
@@ -4629,6 +4636,7 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
     nameDisplay,
+    ageDisplay: playerSearchAgeDisplay(compactSearchValue(row, columns, "age")),
     nationalityRaw,
     nationalityDisplay,
     positionsDisplay,
@@ -4636,6 +4644,17 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
     retired: compactSearchValue(row, columns, "retirement_years") !== null
       && Number(compactSearchValue(row, columns, "retirement_years")) === 0,
   };
+}
+
+function playerSearchMetadataHtml(entry, playerId) {
+  const metadata = [
+    `OVR ${formatPlainValue(entry.overall, "overall")}`,
+    entry.ageDisplay ? `${entry.ageDisplay} yo` : "",
+    `#${playerId}`,
+    entry.nationalityDisplay,
+    entry.positionsDisplay,
+  ].filter((value) => String(value || "").trim());
+  return metadata.map((value) => escapeHtml(value)).join(" &middot; ");
 }
 
 function buildAgentSearchEntry(walletAddress, name, playerCount = 0) {
@@ -5202,8 +5221,7 @@ function renderEvaluationSearchResults() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "evaluationSearchResult";
-    const ovr = formatPlainValue(entry.overall, "overall");
-    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(playerId)} &middot; ${escapeHtml(entry.nationalityDisplay)} &middot; ${escapeHtml(entry.positionsDisplay)}</span>`;
+    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>${playerSearchMetadataHtml(entry, playerId)}</span>`;
     button.addEventListener("click", async () => {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
@@ -6228,9 +6246,8 @@ function renderSearchResultsNow() {
       return;
     }
     const id = String(entry.playerId);
-    const ovr = formatPlainValue(entry.overall, "overall");
     button.dataset.searchKey = recentPlayerKey(id);
-    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(entry.nationalityDisplay)} &middot; ${escapeHtml(entry.positionsDisplay)}</span>`;
+    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>${playerSearchMetadataHtml(entry, id)}</span>`;
     button.addEventListener("click", () => {
       rememberSearchResult(id);
       navigateFromSearch(() => openPlayerPage(id));

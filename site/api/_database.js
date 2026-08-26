@@ -89,6 +89,7 @@ const SEARCH_PLAYER_COLUMNS = Object.freeze([
   "player_id",
   "name",
   "overall",
+  "age",
   "nationality",
   "positions",
   "retirement_years",
