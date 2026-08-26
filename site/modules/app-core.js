@@ -6239,6 +6239,14 @@ function appendStatValue(cell, row, statColumn) {
     return;
   }
 
+  if (statColumn === "overall") {
+    const rarityCircle = document.createElement("span");
+    rarityCircle.className = "tableOverallRarityCircle";
+    rarityCircle.style.setProperty("--mfl-overall-rarity-color", rarityColorForOverall(value));
+    rarityCircle.setAttribute("aria-hidden", "true");
+    cell.appendChild(rarityCircle);
+  }
+
   cell.append(String(value));
 
   if (!progressionColumn) {
