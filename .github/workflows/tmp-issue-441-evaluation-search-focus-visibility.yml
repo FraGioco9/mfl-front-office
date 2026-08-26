@@ -1,5 +1,6 @@
 name: Temporary issue 441 Evaluation search focus visibility
 
+# rerun after isolating lifecycle patch targets
 on:
   push:
     branches:
