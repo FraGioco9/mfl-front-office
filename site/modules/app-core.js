@@ -10470,6 +10470,7 @@ syncPagerCurrentPage(1, 1);
 
 function renderTable() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
+  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -11010,7 +11011,10 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
-  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;
+  const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);
+  const tableLoadingRequestToken = inheritedTableLoadingRequestToken
+    || window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode })
+    || 0;
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
@@ -13112,8 +13116,8 @@ async function startApp() {
     syncHomeLoginButton();
   }
 
-  async function renderLoadedIncrementalRoute(pageName, updateHash, options, route) {
-    const payload = await requestIncrementalRoute(route, 1);
+  async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {}) {
+    const payload = await requestIncrementalRoute(route, 1, requestOptions);
     if (!payload) return false;
     if (tablePages.has(pageName)) {
       restoreSavedTableState(pageName, { view: route.view || options.view });
@@ -13225,10 +13229,16 @@ async function startApp() {
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)
+      ? window.__mflTableLoadingRuntime?.beginRequest?.("progression") || 0
+      : 0;
     const navigationUpdatesHistory = updateHash;
     if (!options.skipNavigationTransition) {
       const navigationTransition = await runPageTransition(pageName, navigationUpdatesHistory, options);
-      if (!navigationTransition) return;
+      if (!navigationTransition) {
+        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
+        return;
+      }
     }
     updateHash = false;
 
@@ -13299,6 +13309,7 @@ async function startApp() {
       renderTableDestinationShell(pageName, route);
     }
     if (!route) {
+      window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
       state.incrementalMode = false;
       return originalSetPage.call(this, pageName, updateHash, options);
     }
@@ -13312,7 +13323,9 @@ async function startApp() {
     }
     const loadAndRender = async () => {
       try {
-        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);
+        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route, {
+          tableLoadingRequestToken: progressionLoadingRequestToken,
+        });
         if (result === false) return false;
         if (previousPage !== incrementalLoadingPageName(pageName, route)) {
           resetPageScroll();
@@ -13321,6 +13334,8 @@ async function startApp() {
       } catch (error) {
         showToast(error?.message || "Could not load this page.");
         return;
+      } finally {
+        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
       }
     };
 

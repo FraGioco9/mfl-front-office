@@ -182,7 +182,7 @@ invariant(
   "Final table-loading release must atomically hand off the Club header before clearing the loading tbody marker.",
 );
 
-const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';
+const requestBoundaryMarker = 'window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode })';
 invariant(
   beginRequestSource.includes('const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);'),
   "Explicit blank-mode requests must replace stale rendered rows with the canonical loading tbody.",
@@ -202,13 +202,31 @@ invariant(
   appCoreSource.includes(requestBoundaryMarker)
     && !appCoreSource.includes("preservePager")
     && appCoreSource.includes(requestFinishMarker)
-    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;'),
-  "Canonical application source must directly own the Table request loading boundary and active-request render guard.",
+    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
+  "Canonical application source must preserve first-paint loading rows until data is authoritative and guard active requests.",
 );
 invariant(
   appCoreSource.includes("requestIncrementalRoute(route, 1)")
     && !appCoreSource.includes("preservePager"),
   "View transitions must use the same pager-hidden Table loading contract as every other uncached request."
+);
+
+const incrementalPageStart = appCoreSource.indexOf("setPage = async function setIncrementalPage(");
+const incrementalPageEnd = appCoreSource.indexOf("function divisionInfo(", incrementalPageStart);
+const incrementalPageSource = appCoreSource.slice(incrementalPageStart, incrementalPageEnd);
+const progressionTokenIndex = incrementalPageSource.indexOf('const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)');
+const pageTransitionIndex = incrementalPageSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+invariant(
+  appCoreSource.includes("const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);")
+    && appCoreSource.includes("async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {})")
+    && appCoreSource.includes("const payload = await requestIncrementalRoute(route, 1, requestOptions);")
+    && incrementalPageStart >= 0
+    && incrementalPageEnd > incrementalPageStart
+    && progressionTokenIndex >= 0
+    && pageTransitionIndex > progressionTokenIndex
+    && incrementalPageSource.includes("tableLoadingRequestToken: progressionLoadingRequestToken")
+    && incrementalPageSource.includes("finally {\n        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);"),
+  "Progression must acquire the canonical Table request token before route-transition paint and keep it through final render.",
 );
 invariant(
   !buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
@@ -245,8 +263,8 @@ invariant(
 );
 
 invariant(
-  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;"),
-  "The Table renderer must preserve canonical loading rows while stale state can still be rendered during an active request.",
+  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === \"true\" && !state.dataLoaded) return;"),
+  "The generated Table renderer must preserve first-paint loading rows until authoritative data exists and during active requests.",
 );
 invariant(
   !tableRuntime.includes('document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying')
