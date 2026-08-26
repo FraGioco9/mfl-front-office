@@ -69,6 +69,7 @@ function ownsEvaluationColumnWidth(rule) {
 
 const playerVariables = Object.freeze({
   "col-select": "--mfl-table-col-select",
+  "col-actions": "--mfl-table-col-actions",
   "col-id": "--mfl-table-col-id",
   "col-flag": "--mfl-table-col-flag",
   "col-name": "--mfl-table-col-name",
@@ -118,11 +119,11 @@ function totalPlayerWidth(columnClasses) {
 }
 
 const attributeWidth = totalPlayerWidth([
-  "col-select", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
+  "col-select", "col-actions", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
   "col-overall", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-agent", "col-link",
 ]);
 const contractsWidth = totalPlayerWidth([
-  "col-select", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
+  "col-select", "col-actions", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
   "col-overall", "col-contract-revenue", "col-contract-club", "col-contract-division", "col-agent", "col-link",
 ]);
 invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
@@ -150,7 +151,7 @@ invariant(
 );
 
 const baseRules = cssRules(stylesBase);
-const playerGeometryClasses = /\.col-(?:select|id|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
+const playerGeometryClasses = /\.col-(?:select|actions|id|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
 invariant(
   !baseRules.some((rule) => playerGeometryClasses.test(rule.selector) && ownsWidth(rule.declarations)),
   "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
@@ -202,7 +203,7 @@ invariant(
   "Contracts first paint must consume the canonical semantic column order from app config.",
 );
 invariant(
-  bootstrap.includes('const targetClasses = ["col-select", ...columns.map((column) => firstPaintTableColumnClass(column))];')
+  bootstrap.includes('const targetClasses = ["col-select", "col-actions", ...columns.map((column) => firstPaintTableColumnClass(column))];')
     && bootstrap.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
     && bootstrap.includes("if (!alreadyCanonical) {"),
   "Bootstrap must preserve an already-canonical colgroup.",

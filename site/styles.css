@@ -16,9 +16,10 @@
   --mfl-table-row-height: 34px;
   --mfl-table-row-outer-height: 39px;
   --mfl-table-col-select: 2.35%;
+  --mfl-table-col-actions: 2.35%;
   --mfl-table-col-id: 3.76%;
   --mfl-table-col-flag: 2.35%;
-  --mfl-table-col-name: 15.98%;
+  --mfl-table-col-name: 13.63%;
   --mfl-table-col-listing: 6%;
   --mfl-table-col-age: 4.23%;
   --mfl-table-col-positions: 7.05%;
@@ -89,6 +90,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 }
 
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
+#progressionPage .playerTableScroller col.col-actions { width: var(--mfl-table-col-actions); }
 #progressionPage .playerTableScroller col.col-id { width: var(--mfl-table-col-id); }
 #progressionPage .playerTableScroller col.col-flag { width: var(--mfl-table-col-flag); }
 #progressionPage .playerTableScroller col.col-name { width: var(--mfl-table-col-name); }
@@ -251,6 +253,11 @@ body[data-page="club"] #progressionPage .rowsField {
 
 #progressionPage #tableBody .tableControlCellContentCentered {
   justify-content: center;
+}
+
+#progressionPage .playerTableScroller :is(th, td).rowActionsCell {
+  padding-inline: 0;
+  text-align: center;
 }
 
 #progressionPage #tableBody .listingCellTableHost {

@@ -242,7 +242,7 @@ for (const required of [
 
 invariant(styles.includes("z-index: var(--mfl-z-topmost);"), "Global tooltip must consume the highest ordinary non-popup stacking level.");
 invariant(styles.includes("z-index: var(--mfl-z-chrome);"), "Database Stats popover must consume the shared chrome stacking level.");
-invariant(dropdowns.match(/z-index: var\(--mfl-z-dropdown\);/g)?.length === 2, "Account and Watchlist dropdowns must share one global dropdown level.");
+invariant(dropdowns.match(/z-index: var\(--mfl-z-dropdown\);/g)?.length === 3, "Account, Watchlist, and Player table action dropdowns must share one global dropdown level.");
 invariant(responsive.includes("z-index: var(--mfl-z-navigation-mobile);"), "Mobile navigation must consume the mobile navigation level.");
 invariant(!loading.includes("z-index: var(--mfl-z-busy-shield);"), "The retired interaction shield must not consume a global stacking level.");
 invariant(loading.includes("z-index: var(--mfl-z-toast);"), "Normal toasts must consume the global toast level.");

@@ -66,13 +66,13 @@ const width = (name) => {
 };
 assert.equal(width("listing"), 6);
 const attributesTotal = [
-  width("select"), width("id"), width("flag"), width("name"), width("listing"),
+  width("select"), width("actions"), width("id"), width("flag"), width("name"), width("listing"),
   width("age"), width("positions"), width("seasons"), width("overall"),
   width("stat") * 6, width("agent"), width("link"),
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(attributesTotal - 100) < 1e-9, `Attributes widths sum to ${attributesTotal}`);
 const contractTotal = [
-  width("select"), width("id"), width("flag"), width("name"), width("listing"),
+  width("select"), width("actions"), width("id"), width("flag"), width("name"), width("listing"),
   width("age"), width("positions"), width("seasons"), width("overall"),
   width("contract-revenue"), width("contract-render-club"), width("contract-division"),
   width("contract-agent"), width("contract-link"),
