@@ -168,7 +168,7 @@ class MarketplaceSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(calls, [25, 12, 6])
 
-    def test_build_snapshot_uses_lowest_active_price_and_retains_duplicates(self) -> None:
+    def test_build_snapshot_uses_most_recent_active_listing_and_retains_duplicates(self) -> None:
         wallet_a = "0xaaaaaaaaaaaaaaaa"
         wallet_b = "0xbbbbbbbbbbbbbbbb"
         fixtures = {
@@ -191,7 +191,7 @@ class MarketplaceSnapshotTests(unittest.TestCase):
             wallet_b: [
                 marketplace.Listing(
                     42,
-                    Decimal("125.00000000"),
+                    Decimal("175.00000000"),
                     wallet_b,
                     200,
                     "v2",
@@ -209,9 +209,13 @@ class MarketplaceSnapshotTests(unittest.TestCase):
         self.assertEqual(snapshot["listing_count"], 3)
         self.assertEqual(
             snapshot["players"]["42"]["listing_price"],
-            "125.00000000",
+            "175.00000000",
         )
         self.assertEqual(snapshot["players"]["42"]["listing_count"], 2)
+        self.assertEqual(
+            snapshot["players"]["42"]["listings"][0]["listing_resource_id"],
+            200,
+        )
 
     def test_build_snapshot_aborts_instead_of_publishing_partial_data(self) -> None:
         wallet_a = "0xaaaaaaaaaaaaaaaa"
