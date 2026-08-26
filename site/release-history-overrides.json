@@ -1,5 +1,9 @@
 [
   [
+    "v1.125.5",
+    "Refine Player loading and progression email portraits"
+  ],
+  [
     "v1.125.4",
     "Stabilize Evaluation recalculation, Settings persistence, and Player loading"
   ],
