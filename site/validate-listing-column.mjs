@@ -29,6 +29,7 @@ assert.match(core, /function listingPriceBadgeHtml\(row\)/);
 assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
 assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
 assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
+assert.match(core, /cell\.innerHTML = listingBadge \? `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>` : "";/);
 assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
 assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
@@ -76,6 +77,7 @@ const contractTotal = [
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(contractTotal - 100) < 1e-9, `Contracts widths sum to ${contractTotal}`);
 assert.match(styles, /col\.col-listing \{ width: var\(--mfl-table-col-listing\); \}/);
+assert.match(styles, /#progressionPage #tableBody \.listingCellTableHost \{[\s\S]*display: flex;[\s\S]*align-items: center;[\s\S]*height: var\(--mfl-table-row-height\);/);
 assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
 assert.match(styles, /\.listingCellPrice \{[\s\S]*color: #3bfb52;/);
 assert.match(styles, /\.playerTitle > :is\(\.playerTitleName, \.listingCellContent, \.playerTitleNoteIcon\) \{[\s\S]*vertical-align: middle;/);

@@ -10515,7 +10515,7 @@ function renderTable() {
       } else if (column === "listing_price") {
         const listingBadge = listingPriceBadgeHtml(row);
         if (listingBadge) {
-          cell.innerHTML = listingBadge;
+          cell.innerHTML = listingBadge ? `<span class="listingCellTableHost">${listingBadge}</span>` : "";
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }

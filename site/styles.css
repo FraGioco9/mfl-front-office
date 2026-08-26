@@ -248,6 +248,14 @@ body[data-page="club"] #progressionPage .rowsField {
   justify-content: center;
 }
 
+#progressionPage #tableBody .listingCellTableHost {
+  display: flex;
+  align-items: center;
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+  line-height: 1;
+}
+
 .listingCellContent {
   display: inline-flex;
   align-items: center;
