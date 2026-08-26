@@ -73,6 +73,7 @@ invariant(
     && dropdowns.includes("var(--mfl-motion-standard, 180ms)")
     && dropdowns.includes("border: 1px solid var(--border-strong);")
     && dropdowns.includes("background: var(--surface);")
+    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"] {\n  outline: 0;\n  border-color: var(--primary-hover);\n  background: var(--row-hover);\n  color: #ffffff;`)
     && dropdowns.includes("transform-origin: top left;")
     && dropdowns.includes(".playerTableActionItem:hover:not(:disabled)")
     && dropdowns.includes("background: var(--row-hover);")

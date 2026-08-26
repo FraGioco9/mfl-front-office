@@ -591,7 +591,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   outline: 0;
   border-color: var(--primary-hover);
   background: var(--row-hover);
-  color: var(--text);
+  color: #ffffff;
   box-shadow: none;
 }
 
