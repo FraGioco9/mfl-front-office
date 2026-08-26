@@ -38,11 +38,7 @@ jobs:
         working-directory: site
         run: npm run build:core
 
-      - name: Run site checks
-        working-directory: site
-        run: npm run check
-
-      - name: Commit migrated source and generated runtimes
+      - name: Commit migrated source and generated runtimes locally
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -56,7 +52,14 @@ jobs:
             site/validate-table-loading-state.mjs
           if git diff --cached --quiet; then
             echo "No migration changes to commit."
-            exit 0
+            exit 1
           fi
           git commit -m "Fix pager loading and manual navigation"
-          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Run site checks
+        working-directory: site
+        run: npm run check
+
+      - name: Push verified fix
+        shell: bash
+        run: git push origin HEAD:${{ github.ref_name }}
