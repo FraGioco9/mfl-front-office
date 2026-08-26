@@ -486,7 +486,7 @@
       const className = firstPaintTableColumnClass(column);
       if (className) header.classList.add(...className.split(" "));
       const label = document.createElement("span");
-      label.textContent = column === "listing_price" ? "" : FIRST_PAINT_COLUMN_LABELS[column] || "";
+      label.textContent = FIRST_PAINT_COLUMN_LABELS[column] || "";
       header.appendChild(label);
       if (FIRST_PAINT_SORTABLE_COLUMNS.has(column)) {
         header.classList.add("sortable");

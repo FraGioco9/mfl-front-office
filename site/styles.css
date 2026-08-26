@@ -256,6 +256,10 @@ body[data-page="club"] #progressionPage .rowsField {
   line-height: 1;
 }
 
+#progressionPage .playerTableScroller th.col-listing > span:first-child {
+  padding-left: 21px;
+}
+
 .listingCellContent {
   display: inline-flex;
   align-items: center;

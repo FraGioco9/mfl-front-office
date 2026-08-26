@@ -592,7 +592,7 @@ function tableBuildHeaderOwner() {
     const clubPositionSort = state.currentPage === "club" && column === "positions";
     const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl") ? "" : columnLabels[column];
+    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
