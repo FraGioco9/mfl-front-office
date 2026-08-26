@@ -1,0 +1,189 @@
+name: Issue 203 runtime and listing polish
+
+on:
+  push:
+    branches:
+      - fix/issue-203-player-listing-column
+    paths:
+      - ".github/workflows/issue-203-runtime-and-listing-polish.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/issue-203-player-listing-column
+
+      - name: Patch canonical runtime and Listing UI
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:80]!r}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          # Make Listing a JS-backed SQLite virtual value instead of a json_each join.
+          replace_once(
+              "site/api/_database.js",
+              'let generatedAt = "";\nconst TABLE_EXISTS_CACHE = new Map();',
+              'let generatedAt = "";\nlet marketplacePrices = Object.freeze({});\nconst TABLE_EXISTS_CACHE = new Map();',
+          )
+          replace_once(
+              "site/api/_database.js",
+              'function getDatabase() {\n',
+              '''function setMarketplacePrices(prices) {\n  const next = {};\n  if (prices && typeof prices === "object" && !Array.isArray(prices)) {\n    Object.entries(prices).forEach(([playerId, value]) => {\n      const numericPlayerId = Number(playerId);\n      const price = Number(value);\n      if (!Number.isSafeInteger(numericPlayerId) || numericPlayerId <= 0 || !Number.isFinite(price) || price < 0) return;\n      next[String(numericPlayerId)] = price;\n    });\n  }\n  marketplacePrices = Object.freeze(next);\n}\n\nfunction marketplacePrice(playerId) {\n  const numericPlayerId = Number(playerId);\n  if (!Number.isSafeInteger(numericPlayerId) || numericPlayerId <= 0) return null;\n  const value = marketplacePrices[String(numericPlayerId)];\n  return Number.isFinite(value) ? value : null;\n}\n\nfunction getDatabase() {\n''',
+          )
+          replace_once(
+              "site/api/_database.js",
+              '  database.function("normalize_wallet_name", { deterministic: true }, normalizeWalletName);\n',
+              '  database.function("normalize_wallet_name", { deterministic: true }, normalizeWalletName);\n  database.function("marketplace_price", marketplacePrice);\n',
+          )
+          replace_once(
+              "site/api/_database.js",
+              '  rowsAsArrays,\n  queryRows,',
+              '  rowsAsArrays,\n  setMarketplacePrices,\n  queryRows,',
+          )
+
+          replace_once(
+              "site/api/_data-page.js",
+              '  rowsAsArrays,\n} = require("./_database");',
+              '  rowsAsArrays,\n  setMarketplacePrices,\n} = require("./_database");',
+          )
+          replace_once(
+              "site/api/_data-page.js",
+              'const LISTING_PRICE_SQL = "CAST(marketplace.value AS REAL)";\nconst MARKETPLACE_JOIN_SQL = " LEFT JOIN json_each(?) AS marketplace ON CAST(marketplace.key AS INTEGER) = players.player_id";',
+              'const LISTING_PRICE_SQL = "marketplace_price(player_id)";',
+          )
+          replace_once(
+              "site/api/_data-page.js",
+              '    if (value === "for_sale") return "marketplace.value IS NOT NULL";\n    if (value === "not_for_sale") return "marketplace.value IS NULL";',
+              '    if (value === "for_sale") return `${LISTING_PRICE_SQL} IS NOT NULL`;\n    if (value === "not_for_sale") return `${LISTING_PRICE_SQL} IS NULL`;',
+          )
+          replace_once(
+              "site/api/_data-page.js",
+              '  const marketplace = await marketplaceState();\n  const marketplaceJson = JSON.stringify(marketplace.prices);',
+              '  const marketplace = await marketplaceState();\n  setMarketplacePrices(marketplace.prices);',
+          )
+          replace_once(
+              "site/api/_data-page.js",
+              '    `SELECT count(*) AS count FROM players${MARKETPLACE_JOIN_SQL}${where}`,\n    [marketplaceJson, ...parameters],',
+              '    `SELECT count(*) AS count FROM players${where}`,\n    parameters,',
+          )
+          replace_once(
+              "site/api/_data-page.js",
+              '    `SELECT ${selectListWithListing(columns)} FROM players${MARKETPLACE_JOIN_SQL}${where} ORDER BY ${order} LIMIT ? OFFSET ?`,\n    [marketplaceJson, ...parameters, pageSize, offset],',
+              '    `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,\n    [...parameters, pageSize, offset],',
+          )
+
+          # Integer display price; raw numeric value remains unchanged for sorting/filtering.
+          replace_once(
+              "site/modules/app-core.js",
+              'price.textContent = `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listingValue)}`;',
+              'price.textContent = `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(listingValue)}`;',
+          )
+
+          # Uniform Width: Listing 6%; redistribute the released width proportionally.
+          width_changes = {
+              '--mfl-table-col-select: 2.3%;': '--mfl-table-col-select: 2.35%;',
+              '--mfl-table-col-id: 3.68%;': '--mfl-table-col-id: 3.76%;',
+              '--mfl-table-col-flag: 2.3%;': '--mfl-table-col-flag: 2.35%;',
+              '--mfl-table-col-name: 15.64%;': '--mfl-table-col-name: 15.98%;',
+              '--mfl-table-col-listing: 8%;': '--mfl-table-col-listing: 6%;',
+              '--mfl-table-col-age: 4.14%;': '--mfl-table-col-age: 4.23%;',
+              '--mfl-table-col-positions: 6.9%;': '--mfl-table-col-positions: 7.05%;',
+              '--mfl-table-col-seasons: 5.06%;': '--mfl-table-col-seasons: 5.17%;',
+              '--mfl-table-col-overall: 5.52%;': '--mfl-table-col-overall: 5.64%;',
+              '--mfl-table-col-stat: 5.52%;': '--mfl-table-col-stat: 5.64%;',
+              '--mfl-table-col-contract-revenue: 8.28%;': '--mfl-table-col-contract-revenue: 8.46%;',
+              '--mfl-table-col-contract-club: 15.64%;': '--mfl-table-col-contract-club: 15.98%;',
+              '--mfl-table-col-contract-division: 9.2%;': '--mfl-table-col-contract-division: 9.4%;',
+              '--mfl-table-col-agent: 11.04%;': '--mfl-table-col-agent: 11.28%;',
+              '--mfl-table-col-link: 2.3%;': '--mfl-table-col-link: 2.35%;',
+              '--mfl-table-col-contract-render-club: 15.63816%;': '--mfl-table-col-contract-render-club: 15.97812%;',
+              '--mfl-table-col-contract-agent: 11.040414%;': '--mfl-table-col-contract-agent: 11.280423%;',
+              '--mfl-table-col-contract-link: 2.301426%;': '--mfl-table-col-contract-link: 2.351457%;',
+          }
+          styles_path = Path("site/styles.css")
+          styles = styles_path.read_text(encoding="utf-8")
+          for old, new in width_changes.items():
+              if styles.count(old) != 1:
+                  raise SystemExit(f"styles.css: expected one width match for {old!r}, found {styles.count(old)}")
+              styles = styles.replace(old, new, 1)
+          styles_path.write_text(styles, encoding="utf-8")
+
+          replace_once(
+              "site/styles.css",
+              '''#progressionPage #tableBody .listingCellContent {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n  height: var(--mfl-table-row-height);\n  line-height: 1;\n  white-space: nowrap;\n}\n''',
+              '''#progressionPage #tableBody .listingCellContent {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  min-width: 0;\n  line-height: 1;\n  white-space: nowrap;\n}\n\n#progressionPage #tableBody .listingCellContent:not(.listingCellUnlisted) {\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 5px;\n  background: rgba(13, 74, 35, 0.46);\n  color: #3bfb52;\n}\n''',
+          )
+          replace_once(
+              "site/styles.css",
+              '''#progressionPage #tableBody .listingCellPrice {\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n''',
+              '''#progressionPage #tableBody .listingCellPrice {\n  overflow: hidden;\n  color: #3bfb52;\n  text-overflow: ellipsis;\n}\n''',
+          )
+
+          # Strengthen the regression and fix the existing lint escape issue.
+          validator_path = Path("site/validate-listing-column.mjs")
+          validator = validator_path.read_text(encoding="utf-8")
+          validator = validator.replace(
+              'assert.match(dataPage, /AS \\"\\$\\{LISTING_COLUMN\\}\\"/);',
+              'assert.match(dataPage, /AS "\\$\\{LISTING_COLUMN\\}"/);',
+          )
+          validator = validator.replace(
+              'assert.match(dataPage, /LEFT JOIN json_each\\(\\?\\) AS marketplace/);',
+              'assert.match(dataPage, /const LISTING_PRICE_SQL = "marketplace_price\\(player_id\\)"/);\nassert.doesNotMatch(dataPage, /json_each/);',
+          )
+          validator = validator.replace('assert.equal(width("listing"), 8);', 'assert.equal(width("listing"), 6);')
+          anchor = 'assert.match(core, /icon\\.src = "\\/listing-shopping-bag\\.svg"/);\n'
+          addition = anchor + 'assert.match(core, /maximumFractionDigits: 0/);\nassert.doesNotMatch(core, /minimumFractionDigits: 2, maximumFractionDigits: 2/);\n'
+          if anchor not in validator:
+              raise SystemExit("validator: icon assertion anchor missing")
+          validator = validator.replace(anchor, addition, 1)
+          style_anchor = 'assert.match(styles, /\\.listingCellContent \\{[\\s\\S]*align-items: center;/);\n'
+          style_addition = style_anchor + 'assert.match(styles, /listingCellContent:not\\(\\.listingCellUnlisted\\)[\\s\\S]*background: rgba\\(13, 74, 35, 0\\.46\\);[\\s\\S]*color: #3bfb52;/);\nassert.match(styles, /\\.listingCellPrice \\{[\\s\\S]*color: #3bfb52;/);\n'
+          if style_anchor not in validator:
+              raise SystemExit("validator: style assertion anchor missing")
+          validator = validator.replace(style_anchor, style_addition, 1)
+          validator_path.write_text(validator, encoding="utf-8")
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Validate site
+        working-directory: site
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run validate
+          npm run verify:generated
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/api/_database.js site/api/_data-page.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/styles.css site/table-width-runtime.js site/validate-listing-column.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix Listing runtime and compact price display"
+          git push origin HEAD:fix/issue-203-player-listing-column
