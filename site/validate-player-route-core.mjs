@@ -127,6 +127,9 @@ requireAll(playerCore, [
   "if (pendingDetailPlayerId !== targetPlayerId || playerIdFromLocation() !== targetPlayerId) return;",
   "normalizePlayerId(pendingContext?.playerId) === targetPlayerId ? pendingContext : context,",
   "function renderPending(value = {}) {",
+  "const routeContext = { playerId: routePlayerId };",
+  "beginDetailNavigation(routeContext);",
+  "renderPending(routeContext);",
   "detail.replaceChildren(hero, createPendingPlayerGrid(context));",
   "showPlayerPage();",
 ], "Unified Player route-commit pending paint");
@@ -148,6 +151,18 @@ requireAll(playerCore, [
   "detailDataReady,",
 ], "Player detail readiness");
 
+const playerDetailMatchIndex = playerCore.indexOf("const matchingRow = payload.rows.find");
+const playerDetailReadyIndex = playerCore.indexOf("readyDetailPlayerId = routePlayerId;");
+invariant(
+  playerDetailMatchIndex >= 0 && playerDetailReadyIndex > playerDetailMatchIndex,
+  "Player detail readiness must be granted only after the authoritative matching row is validated.",
+);
+excludes(
+  playerCore,
+  'else if (routePlayerId) {\n    renderPending({ playerId: routePlayerId });',
+  "Hard-refresh Player loading must enter the same pending gate before any cached row can render a selected progression view.",
+);
+
 requireAll(playerCore, [
   "const PLAYER_NOTE_MAX_LENGTH = 100;",
   "input.maxLength = PLAYER_NOTE_MAX_LENGTH;",
@@ -163,7 +178,7 @@ excludes(walletPreferencesApi, "const PLAYER_NOTE_MAX_LENGTH = 200;", "Wallet pr
 requireAll(playerCore, [
   "function loadingBlank() {",
   'return "\\u00A0";',
-  'overallValue.textContent = context.overall || loadingBlank();',
+  'overallValue.textContent = overallLoaded ? context.overall : loadingBlank();',
   'value.textContent = pendingProfileText(context, label) || loadingBlank();',
   'value.textContent = pendingAttributeValue(context, column) || loadingBlank();',
   'titleName.textContent = context.name || loadingBlank();',
@@ -235,10 +250,27 @@ forbidAll(playerCore, [
 
 requireAll(playerCore, [
   'const fullWidth = column === "overall" || (goalkeeper && column === "goalkeeping");',
+  "function pendingAttributeValue(context, column) {",
+  "const raw = knownRawValue(context, column);",
+  'return String(formatPlainValue(raw, column) ?? "").trim();',
+  "function playerAttributeLoadingActive(playerIdValue = playerIdFromLocation()) {",
+  'pendingDetailPlayerId === playerId',
+  'root.classList.contains("mflDataLoading")',
+  'root.classList.contains("mflSingleRenderPending")',
+  'root.classList.contains("mflNavigationPending")',
+  "function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocation()) {",
+  'return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;',
   "function stableAttributePanelHtml(row) {",
   "return renderPlayerAttributePanel(row);",
+  'const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);',
+  'const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;',
+  'state.playerAttributeView = selectedAttributeView;',
+  "function scheduleReadyControlsAfterLoading(playerIdValue) {",
+  'if (playerAttributeLoadingActive(playerId)) {',
+  'if (typeof owner === "function") owner(playerId);',
   '${window.__mflPlayerFirstPaintRuntime?.stableAttributePanelHtml?.(displayRow) || renderPlayerAttributePanel(displayRow)}',
-], "Natural goalkeeper Attribute geometry");
+], "Natural goalkeeper Attribute geometry and plain Attributes-only Player loading");
+
 
 requireAll(playerCore, [
   'const PLAYER_PORTRAIT_ORIGIN = "https://d13e14gtps4iwl.cloudfront.net";',

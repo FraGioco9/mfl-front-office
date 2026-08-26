@@ -56,6 +56,8 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
   const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
+  const PLAYER_PENDING_OVERALL_BACKGROUND = "#1d252c";
+  const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
@@ -65,6 +67,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
   let pendingDetailPlayerId = "";
   let readyDetailPlayerId = "";
   let readyTransitionPlayerId = "";
+  let rarityPaintPlayerId = "";
 
   function loadingBlank() {
     return "\u00A0";
@@ -223,6 +226,47 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     return "#bebebe";
   }
 
+  function hasLoadedOverall(overall) {
+    const text = String(overall ?? "").trim();
+    if (!text) return false;
+    const value = Number(text);
+    return Number.isFinite(value) && value > 0;
+  }
+
+function applyLoadedOverallBackground(box, complete = false) {
+  if (!(box instanceof HTMLElement)) return false;
+  box.style.background = PLAYER_LOADED_OVERALL_BACKGROUND;
+  box.style.backgroundColor = "var(--color-bg-default-secondary)";
+  box.style.backgroundPosition = "center bottom, center";
+  box.style.backgroundRepeat = "no-repeat";
+  box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 100%";
+  return true;
+}
+
+function overallRarityPaintComplete(box) {
+  if (!(box instanceof HTMLElement)) return false;
+  const detail = box.closest("#playerDetail");
+  return detail instanceof HTMLElement && detail.classList.contains("playerOverallRarityPaintComplete");
+}
+
+function applyOverallBoxAppearance(box, overall) {
+  if (!(box instanceof HTMLElement)) return false;
+  const loaded = hasLoadedOverall(overall);
+  box.classList.toggle("isPending", !loaded);
+  if (!loaded) {
+    box.style.removeProperty("--rarity-color");
+    box.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
+    return false;
+  }
+  box.style.setProperty("--rarity-color", rarityColor(overall));
+  if (overallRarityPaintComplete(box)) {
+    applyLoadedOverallBackground(box, true);
+  } else {
+    box.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
+  }
+  return true;
+}
+
   function storedWalletOptIn() {
     return document.documentElement.dataset.storedWalletOptIn === "true";
   }
@@ -236,6 +280,12 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     if (!context.playerId) return false;
     pendingDetailPlayerId = context.playerId;
     readyDetailPlayerId = "";
+    rarityPaintPlayerId = "";
+    const detail = document.getElementById("playerDetail");
+    if (detail instanceof HTMLElement) {
+      detail.classList.remove("playerOverallRarityPaintComplete");
+      detail.removeAttribute("data-player-overall-rarity-painted");
+    }
     if (playerIdFromLocation() !== context.playerId) {
       const targetPlayerId = context.playerId;
       queueMicrotask(() => {
@@ -255,9 +305,10 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     const playerIdIndex = payload.columns.indexOf("player_id");
     const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => payload.columns.indexOf(column));
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
-    readyDetailPlayerId = routePlayerId;
     const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
-    return Boolean(matchingRow && matchingRow.length === payload.columns.length);
+    if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
+    readyDetailPlayerId = routePlayerId;
+    return true;
   }
 
   function detailDataReady(row, playerIdValue) {
@@ -412,7 +463,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     overall.style.justifyItems = "center";
     overall.style.border = "1px solid var(--border)";
     overall.style.borderRadius = "8px";
-    overall.style.background = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
+    overall.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
     sizeHeroOverall(overall);
     const overallValue = document.createElement("strong");
     overallValue.style.color = "var(--text)";
@@ -442,10 +493,9 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     const overall = media.querySelector(".playerHeroOverall");
     const overallValue = overall?.querySelector("strong");
     if (overall instanceof HTMLElement && overallValue instanceof HTMLElement) {
-      overall.style.setProperty("--rarity-color", rarityColor(context.overall));
-      overall.classList.toggle("isPending", !context.overall);
-      overallValue.style.color = context.overall ? "var(--text)" : "var(--text-soft)";
-      overallValue.textContent = context.overall || loadingBlank();
+      const overallLoaded = applyOverallBoxAppearance(overall, context.overall);
+      overallValue.style.color = overallLoaded ? "var(--text)" : "var(--text-soft)";
+      overallValue.textContent = overallLoaded ? context.overall : loadingBlank();
     }
 
     const portrait = media.querySelector(".playerHeroPortrait");
@@ -685,36 +735,64 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     return true;
   }
 
-  function animateReadyControls(container = document) {
-    const playerId = playerIdFromLocation();
-    if (!playerId || readyTransitionPlayerId !== playerId) return false;
-    readyTransitionPlayerId = "";
-    const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
-      .filter((control) => control instanceof HTMLElement);
-    if (!controls.length) return false;
+function animateReadyOverallBoxes(container = document) {
+  const playerId = playerIdFromLocation();
+  const detail = container instanceof HTMLElement && container.id === "playerDetail"
+    ? container
+    : document.getElementById("playerDetail");
+  if (!playerId || !(detail instanceof HTMLElement)) return false;
+  if (rarityPaintPlayerId === playerId || detail.dataset.playerOverallRarityPainted === playerId) return false;
+  const boxes = Array.from(detail.querySelectorAll(".playerHeroOverall:not(.isPending), .playerAttributeCard.featured:not(.isPending)"))
+    .filter((box) => box instanceof HTMLElement);
+  if (!boxes.length) return false;
+  rarityPaintPlayerId = playerId;
+  detail.dataset.playerOverallRarityPainted = playerId;
+  const reduceMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+  boxes.forEach((box) => {
+    applyLoadedOverallBackground(box, reduceMotion);
+    if (reduceMotion) return;
+    box.classList.add("rarityPaintOnce");
+  });
+  detail.classList.add("playerOverallRarityPaintComplete");
+  return true;
+}
+
+function animateReadyControls(container = document) {
+  const playerId = playerIdFromLocation();
+  if (!playerId || readyTransitionPlayerId !== playerId) return false;
+  const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
+    .filter((control) => control instanceof HTMLElement);
+  controls.forEach((control) => {
+    control.style.transition = "none";
+    control.style.opacity = "0.5";
+    control.style.color = "var(--text-soft)";
+    if (control.classList.contains("playerAttributeViewButton")) {
+      control.style.backgroundColor = "var(--surface-muted)";
+      control.style.borderColor = "var(--border-strong)";
+    }
+  });
+  controls[0]?.getBoundingClientRect();
+  if (playerAttributeLoadingActive(playerId)) {
+    scheduleReadyControlsAfterLoading(playerId);
+    return false;
+  }
+  readyTransitionPlayerId = "";
+  const rarityPainted = animateReadyOverallBoxes(container);
+  if (!controls.length) return rarityPainted;
+  window.requestAnimationFrame(() => {
     controls.forEach((control) => {
-      control.style.transition = "none";
-      control.style.opacity = "0.5";
-      control.style.color = "var(--text-soft)";
+      control.style.transition = PLAYER_READY_TRANSITION;
+      control.style.opacity = "1";
+      control.style.removeProperty("color");
       if (control.classList.contains("playerAttributeViewButton")) {
-        control.style.backgroundColor = "var(--surface-muted)";
-        control.style.borderColor = "var(--border-strong)";
+        control.style.removeProperty("background-color");
+        control.style.removeProperty("border-color");
       }
     });
-    controls[0]?.getBoundingClientRect();
-    window.requestAnimationFrame(() => {
-      controls.forEach((control) => {
-        control.style.transition = PLAYER_READY_TRANSITION;
-        control.style.opacity = "1";
-        control.style.removeProperty("color");
-        if (control.classList.contains("playerAttributeViewButton")) {
-          control.style.removeProperty("background-color");
-          control.style.removeProperty("border-color");
-        }
-      });
-    });
-    return true;
-  }
+  });
+  return true;
+}
+
 
   document.addEventListener("pointerdown", (event) => {
     if (!(activeHeroActionMenu instanceof HTMLElement)) return;
@@ -977,10 +1055,18 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
       : ["overall", "pace", "dribbling", "shooting", "defense", "passing", "physical"];
   }
 
-  function pendingAttributeValue(context, column) {
-    if (column === "overall") return context.overall || knownDisplayValue(context, column);
-    return knownDisplayValue(context, column);
+function pendingAttributeValue(context, column) {
+  const raw = knownRawValue(context, column);
+  if (raw !== "") {
+    try {
+      return String(formatPlainValue(raw, column) ?? "").trim();
+    } catch {
+      return String(raw).trim();
+    }
   }
+  if (column !== "overall") return "";
+  return String(context.overall || "").replace(/\s*\([+-]?\d+(?:\.\d+)?\)\s*$/, "").trim();
+}
 
   function createPendingAttributesPanel(context) {
     const panel = document.createElement("div");
@@ -1000,7 +1086,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
       const card = document.createElement("div");
       const fullWidth = column === "overall" || (goalkeeper && column === "goalkeeping");
       card.className = "playerAttributeCard" + (column === "overall" ? " featured" : "") + (fullWidth ? " fullWidth" : "");
-      if (column === "overall") card.style.setProperty("--rarity-color", rarityColor(context.overall));
+      if (column === "overall") applyOverallBoxAppearance(card, context.overall);
       const name = document.createElement("span");
       name.textContent = label;
       const strong = document.createElement("strong");
@@ -1015,9 +1101,52 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     return panel;
   }
 
-  function stableAttributePanelHtml(row) {
-    return renderPlayerAttributePanel(row);
-  }
+let readyControlsAfterLoadingFrame = 0;
+let readyControlsAfterLoadingPlayerId = "";
+
+function playerAttributeLoadingActive(playerIdValue = playerIdFromLocation()) {
+  const playerId = normalizePlayerId(playerIdValue);
+  if (!playerId) return false;
+  const root = document.documentElement;
+  return pendingDetailPlayerId === playerId
+    || root.classList.contains("mflDataLoading")
+    || root.classList.contains("mflSingleRenderPending")
+    || root.classList.contains("mflNavigationPending");
+}
+
+function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocation()) {
+  return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;
+}
+
+function scheduleReadyControlsAfterLoading(playerIdValue) {
+  const playerId = normalizePlayerId(playerIdValue);
+  if (!playerId) return false;
+  if (readyControlsAfterLoadingFrame && readyControlsAfterLoadingPlayerId === playerId) return true;
+  if (readyControlsAfterLoadingFrame) window.cancelAnimationFrame(readyControlsAfterLoadingFrame);
+  readyControlsAfterLoadingPlayerId = playerId;
+  const run = () => {
+    readyControlsAfterLoadingFrame = 0;
+    if (playerIdFromLocation() !== playerId || readyTransitionPlayerId !== playerId) {
+      readyControlsAfterLoadingPlayerId = "";
+      return;
+    }
+    if (playerAttributeLoadingActive(playerId)) {
+      readyControlsAfterLoadingFrame = window.requestAnimationFrame(run);
+      return;
+    }
+    readyControlsAfterLoadingPlayerId = "";
+    const owner = window.__mflRenderPlayerPageOwner;
+    if (typeof owner === "function") owner(playerId);
+    const detail = document.getElementById("playerDetail");
+    if (detail instanceof HTMLElement) animateReadyControls(detail);
+  };
+  readyControlsAfterLoadingFrame = window.requestAnimationFrame(run);
+  return true;
+}
+
+function stableAttributePanelHtml(row) {
+  return renderPlayerAttributePanel(row);
+}
 
   function createPendingNotesPanel(context) {
     const panel = document.createElement("div");
@@ -1244,7 +1373,9 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     beginDetailNavigation(pendingContext);
     renderPending(pendingContext);
   } else if (routePlayerId) {
-    renderPending({ playerId: routePlayerId });
+    const routeContext = { playerId: routePlayerId };
+    beginDetailNavigation(routeContext);
+    renderPending(routeContext);
   }
 
   window.__mflPlayerFirstPaintRuntime = Object.freeze({
@@ -1258,6 +1389,7 @@ const PLAYER_FIRST_PAINT_RUNTIME = String.raw`(() => {
     bindHeroActionMenu,
     animateReadyControls,
     stableAttributePanelHtml,
+    attributeViewForRender,
     beginDetailNavigation,
     markDetailPayloadReady,
     detailDataReady,
@@ -1374,6 +1506,15 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
       </div>`,
     "Player consolidated hero action menu",
   );
+playerRenderer = replaceRequired(
+  playerRenderer,
+  `  const normalizedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);`,
+  `  const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);`,
+  "Player Attributes-only render view while loading",
+);
   playerRenderer = replaceRequired(
     playerRenderer,
     '<div class="attributeGrid">${renderPlayerAttributePanel(displayRow)}</div>',
@@ -1383,7 +1524,8 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   playerRenderer = replaceRequired(
     playerRenderer,
     '  const watchButton = playerDetail.querySelector("#playerWatchlistButton");',
-    `  window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
+    `  state.playerAttributeView = selectedAttributeView;
+  window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
     playerId: id,
     name: playerName,
