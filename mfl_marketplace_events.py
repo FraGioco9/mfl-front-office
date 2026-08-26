@@ -20,6 +20,7 @@ from mfl_marketplace_snapshot import (
     fetch_wallet_listings,
     load_owner_wallets,
     normalize_flow_address,
+    newest_player_listings,
     request_json,
 )
 from mfl_marketplace_cadence import (
@@ -271,15 +272,7 @@ def build_state(
         grouped[listing.player_id].append(listing)
     players: dict[str, object] = {}
     for player_id in sorted(grouped):
-        rows = sorted(
-            grouped[player_id],
-            key=lambda row: (
-                row.price,
-                row.storefront_version,
-                row.seller_wallet,
-                row.listing_resource_id,
-            ),
-        )
+        rows = newest_player_listings(grouped[player_id])
         players[str(player_id)] = {
             "listing_price": format(rows[0].price, "f"),
             "listing_count": len(rows),

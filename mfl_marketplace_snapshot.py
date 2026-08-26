@@ -366,6 +366,18 @@ def fetch_wallet_listings(
         v2_offset = next_v2
 
 
+def newest_player_listings(listings: list[Listing]) -> list[Listing]:
+    return sorted(
+        listings,
+        key=lambda row: (
+            -row.listing_resource_id,
+            row.storefront_version,
+            row.seller_wallet,
+            row.price,
+        ),
+    )
+
+
 def build_snapshot(
     owner_wallets: list[str],
     fetcher: Callable[[str], list[Listing]],
@@ -422,15 +434,7 @@ def build_snapshot(
         grouped[listing.player_id].append(listing)
     players: dict[str, object] = {}
     for player_id in sorted(grouped):
-        rows = sorted(
-            grouped[player_id],
-            key=lambda row: (
-                row.price,
-                row.storefront_version,
-                row.seller_wallet,
-                row.listing_resource_id,
-            ),
-        )
+        rows = newest_player_listings(grouped[player_id])
         players[str(player_id)] = {
             "listing_price": format(rows[0].price, "f"),
             "listing_count": len(rows),

@@ -101,10 +101,10 @@ class MarketplaceEventTests(unittest.TestCase):
         event = events.OrderedFlowEvent(1, 0, 0, events.EVENT_TYPES["v1_available"], payload)
         self.assertIsNone(events.parse_available_listing(event))
 
-    def test_state_round_trip_and_lowest_price(self) -> None:
+    def test_state_round_trip_uses_most_recent_listing(self) -> None:
         active = {
             "v1:1": Listing(42, Decimal("150.00000000"), "0xaaaaaaaaaaaaaaaa", 1, "v1"),
-            "v2:2": Listing(42, Decimal("125.00000000"), "0xbbbbbbbbbbbbbbbb", 2, "v2"),
+            "v2:2": Listing(42, Decimal("175.00000000"), "0xbbbbbbbbbbbbbbbb", 2, "v2"),
         }
         state = events.build_state(
             active,
@@ -112,7 +112,11 @@ class MarketplaceEventTests(unittest.TestCase):
             mode="incremental",
             processed_event_count=3,
         )
-        self.assertEqual(state["players"]["42"]["listing_price"], "125.00000000")
+        self.assertEqual(state["players"]["42"]["listing_price"], "175.00000000")
+        self.assertEqual(
+            state["players"]["42"]["listings"][0]["listing_resource_id"],
+            2,
+        )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "state.json"
             events.write_state(state, path)
