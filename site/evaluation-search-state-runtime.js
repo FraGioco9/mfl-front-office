@@ -14,6 +14,7 @@
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
   let recentLoadingActive = false;
+  let resultPointerDown = false;
   let directPointerFocus = false;
   let directPointerFocusResetTimer = 0;
 
@@ -39,6 +40,18 @@
     if (panel instanceof HTMLElement && !panel.hidden) return true;
     const params = new URLSearchParams(window.location.search);
     return Boolean(params.get("player") || params.get("saved") || params.get("share"));
+  }
+
+  function shouldShowTypedResults(field = input()) {
+    if (!(field instanceof HTMLInputElement) || !active()) return true;
+    if (!field.value.trim() || !playerSelected()) return true;
+    return document.activeElement === field || resultPointerDown;
+  }
+
+  function syncTypedResultVisibility(field = input()) {
+    if (shouldShowTypedResults(field)) return;
+    const results = document.getElementById("evaluationSearchResults");
+    if (results instanceof HTMLElement) results.hidden = true;
   }
 
   function syncClearButton(field = input()) {
@@ -353,6 +366,7 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
+    syncTypedResultVisibility(field);
     if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
@@ -383,6 +397,9 @@
   function onPointerDown(event) {
     const field = input();
     clearDirectPointerFocus();
+    resultPointerDown = event.target instanceof Element
+      && Boolean(event.target.closest("#evaluationSearchResults .evaluationSearchResult"));
+    if (resultPointerDown) return;
     if (event.target instanceof Element) {
       const title = event.target.closest(".evaluationSearch .field > span");
       if (title instanceof HTMLElement) {
@@ -393,6 +410,10 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     directPointerFocus = true;
     directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
+  }
+
+  function onPointerUp() {
+    resultPointerDown = false;
   }
 
   function onRecentLoadingFocusCapture(event) {
@@ -439,6 +460,7 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
+    syncTypedResultVisibility(field);
   }
 
   function onKeyUp(event) {
@@ -476,6 +498,11 @@
 
   function onReady() {
     installCoreBridges();
+    const field = input();
+    if (field instanceof HTMLInputElement) {
+      syncClearButton(field);
+      syncTypedResultVisibility(field);
+    }
     void restoreEmptyRecentResults(false);
   }
 
@@ -486,6 +513,7 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
+    syncTypedResultVisibility(field);
     if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
@@ -493,6 +521,7 @@
   installCoreBridges();
   syncClearButton();
   document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("pointerup", onPointerUp, true);
   document.addEventListener("focus", onRecentLoadingFocusCapture, true);
   document.addEventListener("blur", onRecentLoadingBlurCapture, true);
   input()?.addEventListener("focus", onFocus, true);
@@ -508,6 +537,7 @@
   function destroy() {
     destroyed = true;
     document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("focus", onRecentLoadingFocusCapture, true);
     document.removeEventListener("blur", onRecentLoadingBlurCapture, true);
     input()?.removeEventListener("focus", onFocus, true);
@@ -524,6 +554,7 @@
     recentPayload = null;
     recentPayloadSignature = "";
     recentLoadingActive = false;
+    resultPointerDown = false;
     recentWriteSequence += 1;
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
@@ -537,6 +568,7 @@
     commitRecentPlayer,
     selectEmptySearch,
     ownsEmptyRecentResults,
+    shouldShowTypedResults,
     destroy,
   });
 })();

@@ -7386,6 +7386,11 @@ function renderEvaluationSearchResults() {
   syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
 
+  if (query && window.__mflEvaluationSearchStateRuntime?.shouldShowTypedResults?.() === false) {
+    evaluationSearchResults.hidden = true;
+    return;
+  }
+
   if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {
     return;
   }
