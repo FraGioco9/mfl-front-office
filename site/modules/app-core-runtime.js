@@ -6633,7 +6633,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
-  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
+  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
@@ -6717,7 +6717,7 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
 
   const loadAndRender = async () => {
     try {
-      const payload = await requestIncrementalRoute(route, page);
+      const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });
       if (!payload) return false;
       state.incrementalApplying = true;
       try {

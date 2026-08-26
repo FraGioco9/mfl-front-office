@@ -131,4 +131,21 @@ const inputKeydown = tableRuntime.slice(inputKeydownStart, inputKeydownEnd);
 invariant(inputKeydown.includes('event.key !== "Enter"'), "Pager input keydown must continue to commit Enter.");
 invariant(!inputKeydown.includes('"Escape"'), "Pager Escape must not depend on the later input-target keydown phase.");
 
+invariant(
+  appCore.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && appCore.includes('const digits = raw.replace(/\\D+/g, "");')
+    && appCore.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
+    && tableRuntime.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && tableRuntime.includes('const digits = raw.replace(/\\D+/g, "");')
+    && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
+  "Pager numeric entry must remain digit-aware and page changes must request the canonical blank loading rows.",
+);
+invariant(
+  !appCore.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !appCore.includes('raw.replace(/\\\\D+/g, "")')
+    && !tableRuntime.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !tableRuntime.includes('raw.replace(/\\\\D+/g, "")'),
+  "Pager digit regexes must not be double-escaped in authored or generated source.",
+);
+
 console.log("Editable pager window-capture Escape cancellation validation passed with global editable-control priority.");
