@@ -3,6 +3,7 @@ const validators = [
   "validate-pager-current-page.mjs",
   "validate-table-column-layout.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
+  "validate-listing-column.mjs",
 ];
 
 for (const validator of validators) {

@@ -7,10 +7,11 @@ const {
   queryRows,
   queryOne,
   quoteIdentifier,
-  selectList,
   rowsAsArrays,
+  setMarketplacePrices,
 } = require("./_database");
 const { normalizeWalletAddress } = require("./_data-auth");
+const { marketplaceState } = require("./_marketplace-state");
 const {
   MFL_WALLET_ADDRESS,
   STAT_COLUMNS,
@@ -22,6 +23,25 @@ const {
   mflCondition,
   hiddenMflJoinedDateCondition,
 } = require("./_data-query");
+
+const LISTING_COLUMN = "listing_price";
+const LISTING_PRICE_SQL = "marketplace_price(player_id)";
+
+function columnsWithListing(columns) {
+  const next = [...columns];
+  const nameIndex = next.indexOf("name");
+  if (nameIndex >= 0) next.splice(nameIndex + 1, 0, LISTING_COLUMN);
+  else next.push(LISTING_COLUMN);
+  return next;
+}
+
+function selectListWithListing(columns) {
+  return columns
+    .map((column) => column === LISTING_COLUMN
+      ? `${LISTING_PRICE_SQL} AS "${LISTING_COLUMN}"`
+      : quoteIdentifier(column))
+    .join(", ");
+}
 
 function safeRules(value) {
   try {
@@ -47,6 +67,12 @@ function ruleSql(rule, parameters) {
     if (value === "free_agent") {
       return "normalize_search(active_contract_club_name) <> 'development center' AND coalesce(active_contract_club_name, '') = '' AND coalesce(active_contract_club_id, '') = ''";
     }
+    return "0";
+  }
+
+  if (column === LISTING_COLUMN) {
+    if (value === "for_sale") return `${LISTING_PRICE_SQL} IS NOT NULL`;
+    if (value === "not_for_sale") return `${LISTING_PRICE_SQL} IS NULL`;
     return "0";
   }
 
@@ -121,6 +147,10 @@ function ruleSql(rule, parameters) {
   return "0";
 }
 
+function normalizedEpochSeconds(quotedColumn) {
+  return `(CASE WHEN CAST(${quotedColumn} AS REAL) > 100000000000 THEN CAST(${quotedColumn} AS REAL) / 1000.0 ELSE CAST(${quotedColumn} AS REAL) END)`;
+}
+
 function appendAdvancedRules(conditions, parameters, rules) {
   if (!rules.length) return;
 
@@ -149,7 +179,11 @@ function orderSql(scope, view, sortKey, sortDirection) {
   }
 
   const direction = String(sortDirection).toLowerCase() === "asc" ? "ASC" : "DESC";
-  const key = VALID_PLAYER_COLUMNS.has(sortKey) ? sortKey : "overall";
+  const requestedKey = String(sortKey || "");
+  if (requestedKey === LISTING_COLUMN) {
+    return `${LISTING_PRICE_SQL} IS NULL, ${LISTING_PRICE_SQL} ${direction}, player_id DESC`;
+  }
+  const key = VALID_PLAYER_COLUMNS.has(requestedKey) ? requestedKey : "overall";
 
   if (view === "next" && STAT_COLUMNS.has(key)) {
     const derived = key === "overall" ? "next_overall_gap" : `${key}_to_next_overall`;
@@ -195,7 +229,10 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
   const progressionRequested = String(query.includeProgression || "") === "1"
     || ["current", "all"].includes(view);
   const includeProgression = progressionRequested && (fullAccess || ownedProgression);
-  const columns = includeProgression ? PLAYER_COLUMNS : PUBLIC_COLUMNS;
+  const databaseColumns = includeProgression ? PLAYER_COLUMNS : PUBLIC_COLUMNS;
+  const columns = columnsWithListing(databaseColumns);
+  const marketplace = await marketplaceState();
+  setMarketplacePrices(marketplace.prices);
   const baseConditions = [];
   const baseParameters = [];
   const playerIds = integerIds(query.playerIds);
@@ -332,7 +369,7 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
     String(query.sortDirection || (scope === "club" ? "asc" : "desc")),
   );
   const rows = queryRows(
-    `SELECT ${selectList(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+    `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
     [...parameters, pageSize, offset],
   );
 
@@ -345,9 +382,18 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
     sourceRows,
     totalPages,
     generatedAt: getGeneratedAt(),
-    source: "sqlite-runtime",
+    marketplaceGeneratedAt: marketplace.generatedAt,
+    marketplaceFlowBlockHeight: marketplace.flowBlockHeight,
+    source: "sqlite-runtime+flow-marketplace",
   };
 }
 
 
-module.exports = { integerIds, pagedData };
+module.exports = {
+  LISTING_COLUMN,
+  columnsWithListing,
+  ruleSql,
+  orderSql,
+  integerIds,
+  pagedData,
+};
