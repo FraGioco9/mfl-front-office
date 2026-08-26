@@ -1,0 +1,75 @@
+name: Temporary issue 429 white Player action trigger
+
+on:
+  push:
+    branches:
+      - feat/issue-429-player-table-actions
+    paths:
+      - .github/workflows/tmp-issue-429-white-trigger.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-429-player-table-actions
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Keep three-dot trigger white in every interactive state
+        working-directory: site
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          css_path = Path("dropdowns.css")
+          css = css_path.read_text()
+          before = '''.playerTableActionsButton:hover:not(:disabled),
+          .playerTableActionsButton:focus-visible:not(:disabled),
+          .playerTableActionsButton[aria-expanded="true"] {
+            outline: 0;
+            border-color: var(--primary-hover);
+            background: var(--row-hover);
+            color: var(--text);
+            box-shadow: none;
+          }'''.replace("          ", "")
+          after = before.replace("color: var(--text);", "color: #ffffff;")
+          if css.count(before) != 1:
+              raise SystemExit(f"Expected one Player action trigger state block, found {css.count(before)}")
+          css_path.write_text(css.replace(before, after, 1))
+
+          validator_path = Path("validate-player-table-actions.mjs")
+          validator = validator_path.read_text()
+          needle = '    && dropdowns.includes("background: var(--surface);")\n'
+          addition = needle + '    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"] {\\n  outline: 0;\\n  border-color: var(--primary-hover);\\n  background: var(--row-hover);\\n  color: #ffffff;`)\n'
+          if validator.count(needle) != 1:
+              raise SystemExit(f"Expected one validator insertion point, found {validator.count(needle)}")
+          validator_path.write_text(validator.replace(needle, addition, 1))
+          PY
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit white trigger state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/dropdowns.css site/validate-player-table-actions.mjs
+          git commit -m "fix: keep Player action trigger icon white"
+          git push origin HEAD:feat/issue-429-player-table-actions
