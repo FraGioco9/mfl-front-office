@@ -49,7 +49,8 @@ jobs:
             site/modules/app-core-table-runtime.js \
             site/table-loading-runtime.js \
             site/validate-pager-current-page.mjs \
-            site/validate-table-loading-state.mjs
+            site/validate-table-loading-state.mjs \
+            site/validate-table-background-loading-stability.mjs
           if git diff --cached --quiet; then
             echo "No migration changes to commit."
             exit 1
