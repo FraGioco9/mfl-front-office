@@ -34,12 +34,17 @@ jobs:
           npm run lint
           npm run typecheck
           npm run validate
-          npm run verify:generated
 
-      - name: Commit changes
+      - name: Commit changes locally
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/styles.css site/validate-listing-column.mjs
           git commit -m "Center Listing badges in table rows"
-          git push origin HEAD:fix/issue-203-player-listing-column
+
+      - name: Verify generated parity
+        working-directory: site
+        run: npm run verify:generated
+
+      - name: Push changes
+        run: git push origin HEAD:fix/issue-203-player-listing-column
