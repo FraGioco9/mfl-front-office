@@ -6239,15 +6239,19 @@ function appendStatValue(cell, row, statColumn) {
     return;
   }
 
+  const contentHost = statColumn === "overall" ? document.createElement("span") : cell;
+
   if (statColumn === "overall") {
+    contentHost.className = "tableOverallCellContent";
     const rarityCircle = document.createElement("span");
     rarityCircle.className = "tableOverallRarityCircle";
     rarityCircle.style.setProperty("--mfl-overall-rarity-color", rarityColorForOverall(value));
     rarityCircle.setAttribute("aria-hidden", "true");
-    cell.appendChild(rarityCircle);
+    contentHost.appendChild(rarityCircle);
+    cell.appendChild(contentHost);
   }
 
-  cell.append(String(value));
+  contentHost.append(String(value));
 
   if (!progressionColumn) {
     return;
@@ -6262,7 +6266,7 @@ function appendStatValue(cell, row, statColumn) {
   const progressionElement = document.createElement("span");
   progressionElement.className = progression > 0 ? "progressionValue positive" : "progressionValue negative";
   progressionElement.textContent = ` (${progression > 0 ? "+" : ""}${progression})`;
-  cell.appendChild(progressionElement);
+  contentHost.appendChild(progressionElement);
 }
 
 function tableInteractiveKey(type, id) {

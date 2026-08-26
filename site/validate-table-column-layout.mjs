@@ -260,19 +260,25 @@ invariant(
   "Next Overall must return before the rarity circle is rendered.",
 );
 invariant(
-  appendStatValueSource.includes('rarityCircle.className = "tableOverallRarityCircle";')
+  appendStatValueSource.includes('contentHost.className = "tableOverallCellContent";')
+    && appendStatValueSource.includes('rarityCircle.className = "tableOverallRarityCircle";')
     && appendStatValueSource.includes('rarityColorForOverall(value)')
-    && appendStatValueSource.includes('cell.appendChild(rarityCircle);'),
-  "Every non-Next table Overall must prepend one circle using the canonical rarity colour mapping.",
+    && appendStatValueSource.includes('contentHost.appendChild(rarityCircle);')
+    && appendStatValueSource.includes('cell.appendChild(contentHost);')
+    && appendStatValueSource.includes('contentHost.appendChild(progressionElement);'),
+  "Every non-Next table Overall must use one vertically centered content host with the canonical rarity circle and progression.",
 );
 invariant(
-  styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
+  styles.includes("#progressionPage #tableBody .tableOverallCellContent {")
+    && styles.includes("display: inline-flex;")
+    && styles.includes("align-items: center;")
+    && styles.includes("height: var(--mfl-table-row-height);")
+    && styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
+    && styles.includes("flex: 0 0 8px;")
     && styles.includes("width: 8px;")
-    && styles.includes("min-width: 8px;")
     && styles.includes("height: 8px;")
-    && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));")
-    && styles.includes("vertical-align: middle;"),
-  "Overall rarity circles must be exactly 8x8px, vertically centered, and use a neutral CSS fallback.",
+    && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));"),
+  "Overall rarity circles must be exactly 8x8px and centered by a row-height inline-flex content host.",
 );
 
 const clubFinishStart = appCoreSource.indexOf("function finishClubSwitch() {");

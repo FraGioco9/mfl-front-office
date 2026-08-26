@@ -300,15 +300,20 @@ body[data-page="club"] #progressionPage .rowsField {
   height: 14px;
 }
 
+#progressionPage #tableBody .tableOverallCellContent {
+  display: inline-flex;
+  align-items: center;
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+}
+
 #progressionPage #tableBody .tableOverallRarityCircle {
-  display: inline-block;
+  flex: 0 0 8px;
   width: 8px;
-  min-width: 8px;
   height: 8px;
   margin-right: 4px;
   border-radius: 50%;
   background: var(--mfl-overall-rarity-color, var(--text-muted));
-  vertical-align: middle;
 }
 
 #progressionPage #tableBody .playerNameCell {
