@@ -81,7 +81,7 @@ invariant(
     && dropdowns.includes("align-self: center;")
     && dropdowns.includes("color: #ffffff;")
     && dropdowns.includes(".playerTableActionIcon"),
-  "Player table actions must keep the boxed trigger, white centered icons, row-selector hover, left-edge motion, and canonical timing.",
+  "Player table actions must keep the boxed trigger white through hover/open states, keep menu icons centered and white, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
 );
 
 invariant(
