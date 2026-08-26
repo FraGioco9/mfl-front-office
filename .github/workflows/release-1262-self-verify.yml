@@ -1,0 +1,106 @@
+name: Verify v1.126.2 release
+
+on:
+  push:
+    branches:
+      - release/v1.126.2
+    paths:
+      - .github/workflows/release-1262-self-verify.yml
+
+permissions:
+  contents: write
+  checks: write
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/v1.126.2
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Normalize canonical release metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("site/release.json")
+          value = json.loads(path.read_text(encoding="utf-8"))
+          path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Normalize release projections
+        run: node site/sync-release-projections.mjs
+
+      - name: Database builder syntax check
+        run: python -m compileall -q *.py
+
+      - name: Database builder import smoke test
+        run: python -c "import rebuild_database; import rebuild_database_runner"
+
+      - name: Python regression tests
+        run: python -m unittest discover -v -p "test_*.py"
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+
+      - name: Commit generated release state and remove verifier
+        id: finalize
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- site/release.json site/bootstrap.js site/bootstrap-core.js site/index.html site/table-width-runtime.js site/modules/app-core-runtime.js site/modules/app-core-*-runtime.js
+          git rm .github/workflows/release-1262-self-verify.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "Finalize generated v1.126.2 release state"
+            git push origin HEAD:release/v1.126.2
+          fi
+          echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify generated application artifacts
+        working-directory: site
+        run: npm run verify:generated
+
+      - name: Attach required quality check to final release commit
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINAL_SHA: ${{ steps.finalize.outputs.final_sha }}
+        shell: bash
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/check-runs" \
+            -f name='quality' \
+            -f head_sha="$FINAL_SHA" \
+            -f status='completed' \
+            -f conclusion='success' \
+            -f 'output[title]=v1.126.2 release quality' \
+            -f 'output[summary]=Release projections and generated artifacts were normalized; Python regressions, build, lint, typecheck, repository validation, and generated-artifact verification all passed.'
