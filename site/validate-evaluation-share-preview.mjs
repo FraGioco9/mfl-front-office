@@ -74,7 +74,7 @@ function validatePng(image, label) {
   try {
     decoded = inflateSync(Buffer.concat(idatChunks));
   } catch (error) {
-    throw new Error(`${label} image data must decode successfully: ${error.message}`);
+    throw new Error(`${label} image data must decode successfully: ${error.message}`, { cause: error });
   }
 
   const bytesPerPixel = colorType === 6 ? 4 : 3;

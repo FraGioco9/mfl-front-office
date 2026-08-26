@@ -29,7 +29,7 @@
         : null;
       if (!(target instanceof HTMLButtonElement)) return;
 
-      let playerIds = [];
+      let playerIds;
       try {
         playerIds = Array.from(state?.selectedPlayerIds || [])
           .map((playerId) => String(playerId || "").trim())
