@@ -65,21 +65,21 @@ loadingRuntime = replaceOnce(
 await write("./table-loading-runtime.js", loadingRuntime);
 
 let pagerValidation = await read("./validate-pager-current-page.mjs");
-const pagerRegressionValidation = `
+const pagerRegressionValidation = String.raw`
 invariant(
-  appCore.includes(String.raw\`const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;\`)
-    && appCore.includes(String.raw\`const digits = raw.replace(/\\D+/g, "");\`)
+  appCore.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && appCore.includes('const digits = raw.replace(/\\D+/g, "");')
     && appCore.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
-    && tableRuntime.includes(String.raw\`const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;\`)
-    && tableRuntime.includes(String.raw\`const digits = raw.replace(/\\D+/g, "");\`)
+    && tableRuntime.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && tableRuntime.includes('const digits = raw.replace(/\\D+/g, "");')
     && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
   "Pager numeric entry must remain digit-aware and page changes must request the canonical blank loading rows.",
 );
 invariant(
-  !appCore.includes(String.raw\`const parsed = /^-?\\\\d+$/.test(raw)\`)
-    && !appCore.includes(String.raw\`raw.replace(/\\\\D+/g, "")\`)
-    && !tableRuntime.includes(String.raw\`const parsed = /^-?\\\\d+$/.test(raw)\`)
-    && !tableRuntime.includes(String.raw\`raw.replace(/\\\\D+/g, "")\`),
+  !appCore.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !appCore.includes('raw.replace(/\\\\D+/g, "")')
+    && !tableRuntime.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !tableRuntime.includes('raw.replace(/\\\\D+/g, "")'),
   "Pager digit regexes must not be double-escaped in authored or generated source.",
 );
 `;
@@ -99,10 +99,12 @@ loadingValidation = replaceExactCount(
   2,
   "table loading beginRequest validation marker",
 );
+const requestBoundaryMarkerLine = "const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';";
+const updatedRequestBoundaryMarkerLine = "const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';";
 loadingValidation = replaceOnce(
   loadingValidation,
-  "const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';",
-  "const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';",
+  requestBoundaryMarkerLine,
+  updatedRequestBoundaryMarkerLine,
   "table loading request boundary validation marker",
 );
 const loadingRegressionValidation = `
@@ -122,8 +124,8 @@ invariant(
 `;
 loadingValidation = replaceOnce(
   loadingValidation,
-  "\nconst requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';",
-  `${loadingRegressionValidation}\nconst requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0;';`,
+  updatedRequestBoundaryMarkerLine,
+  `${updatedRequestBoundaryMarkerLine}${loadingRegressionValidation}`,
   "table loading pager regression validation insertion point",
 );
 await write("./validate-table-loading-state.mjs", loadingValidation);
