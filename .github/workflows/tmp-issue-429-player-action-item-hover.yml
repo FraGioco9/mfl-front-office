@@ -1,0 +1,98 @@
+name: Temporary issue 429 Player action item hover parity
+on:
+  push:
+    branches: [feat/issue-429-player-table-actions]
+    paths: [.github/workflows/tmp-issue-429-player-action-item-hover.yml]
+permissions:
+  contents: write
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-429-player-table-actions
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply hover parity refinement
+        working-directory: site
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              return text.replace(old, new, 1)
+
+          p = Path('dropdowns.css')
+          s = p.read_text()
+          s = replace_once(
+              s,
+              '''  select[data-mfl-dropdown-enhanced="true"] option + option,\n  .filtersDialog select option + option {\n    margin-top: 2px;\n  }''',
+              '''  select[data-mfl-dropdown-enhanced="true"] option + option,\n  .filtersDialog select option + option {\n    margin-top: 2px;\n  }\n\n  #pageSizeSelect option {\n    box-sizing: border-box;\n    border: 1px solid transparent;\n  }''',
+              'row selector rest border',
+          )
+          s = replace_once(
+              s,
+              '''  select[data-mfl-dropdown-enhanced="true"] option:checked,\n  .filtersDialog select option:checked {''',
+              '''  #pageSizeSelect option:hover,\n  #pageSizeSelect option:focus-visible {\n    outline: 0;\n    border-color: var(--border);\n    background: var(--row-hover);\n    color: var(--text);\n  }\n\n  select[data-mfl-dropdown-enhanced="true"] option:checked,\n  .filtersDialog select option:checked {''',
+              'row selector hero hover',
+          )
+          s = replace_once(
+              s,
+              '''  padding: 0 8px;\n  font-size: 12px;\n  font-weight: 600;\n}''',
+              '''  padding: 0 8px;\n  border: 1px solid transparent;\n  font-size: 12px;\n  font-weight: 600;\n}''',
+              'Player action item rest border',
+          )
+          s = replace_once(
+              s,
+              '''.playerTableActionItem:hover:not(:disabled),\n.playerTableActionItem:focus-visible:not(:disabled) {\n  outline: 0;\n  border: 0;\n  background: var(--row-hover);''',
+              '''.playerTableActionItem:hover:not(:disabled),\n.playerTableActionItem:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--border);\n  background: var(--row-hover);''',
+              'Player action item hero hover',
+          )
+          p.write_text(s)
+
+          p = Path('validate-player-table-actions.mjs')
+          s = p.read_text()
+          s = replace_once(
+              s,
+              'const [source, generatedTable, bootstrap, styles, dropdowns, baseStyles] = await Promise.all([',
+              'const [source, generatedTable, bootstrap, styles, dropdowns, baseStyles, playerRuntime] = await Promise.all([',
+              'validator source list',
+          )
+          s = replace_once(
+              s,
+              '  read("./styles-base.css"),\n]);',
+              '  read("./styles-base.css"),\n  read("./modules/app-core-player-runtime.js"),\n]);',
+              'validator Player runtime read',
+          )
+          anchor = '''invariant(\n  source.includes('menu.dataset.open = "false";')'''
+          parity = '''invariant(\n  playerRuntime.includes('item.style.background = "var(--row-hover)";')\n    && playerRuntime.includes('item.style.borderColor = "var(--border)";')\n    && dropdowns.includes('#pageSizeSelect option {\\n    box-sizing: border-box;\\n    border: 1px solid transparent;')\n    && dropdowns.includes('#pageSizeSelect option:hover,\\n  #pageSizeSelect option:focus-visible {\\n    outline: 0;\\n    border-color: var(--border);\\n    background: var(--row-hover);')\n    && dropdowns.includes('padding: 0 8px;\\n  border: 1px solid transparent;\\n  font-size: 12px;')\n    && dropdowns.includes('.playerTableActionItem:hover:not(:disabled),\\n.playerTableActionItem:focus-visible:not(:disabled) {\\n  outline: 0;\\n  border-color: var(--border);\\n  background: var(--row-hover);'),\n  "Player table action items and row selector options must match the Player hero action menu hover border/background contract.",\n);\n\n'''
+          if anchor not in s:
+              raise SystemExit('validator parity insertion anchor missing')
+          s = s.replace(anchor, parity + anchor, 1)
+          p.write_text(s)
+          PY
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/dropdowns.css site/validate-player-table-actions.mjs
+          git commit -m 'match Player action and row selector hover styling'
+          git push origin HEAD:feat/issue-429-player-table-actions
