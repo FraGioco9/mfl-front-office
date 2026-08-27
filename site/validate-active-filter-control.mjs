@@ -5,13 +5,14 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime] = await Promise.all([
+const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime, sharedTableUi] = await Promise.all([
   read("./motion.css"),
   read("./filter-controls.css"),
   read("./modules/app-core-filter-control-state.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./filter-controls-runtime.js"),
+  read("./shared-table-ui-runtime.js"),
 ]);
 
 invariant(
@@ -53,6 +54,22 @@ invariant(
   "Active Filters state must be applied in the canonical build pipeline before the table split.",
 );
 
+for (const required of [
+  "function syncFilterSummaryNow() {",
+  "const count = activeFilterCountFromDialog();",
+  'const canonicalUpdater = Reflect.get(window, "updateFilterSummary");',
+  'if (typeof canonicalUpdater === "function") {',
+  "canonicalUpdater(count);",
+  "summary instanceof HTMLElement) summary.textContent = String(count);",
+]) {
+  invariant(sharedTableUi.includes(required), `Shared table UI must delegate applied count updates through the canonical active-state owner: ${required}`);
+}
+
+invariant(
+  !sharedTableUi.includes("summary.textContent = String(activeFilterCountFromDialog());"),
+  "Shared table UI must not bypass the canonical active-state owner when applying or closing Filters.",
+);
+
 for (const retired of [
   "filterSummaryObserver",
   "observeActiveFilterSummary",
@@ -63,5 +80,6 @@ for (const retired of [
 
 invariant(!styles.includes("!important"), "Active Filters styles must not use CSS priority overrides.");
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
+invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
 console.log("Active Filters badge and canonical highlighted-state ownership validation passed.");
