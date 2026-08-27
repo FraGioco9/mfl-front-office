@@ -1676,7 +1676,6 @@ td {
 
 #tableBody .selectionCell,
 #tableBody .flagCell,
-#tableBody td.col-id,
 #tableBody td.nameCell {
   vertical-align: middle;
 }
@@ -1704,8 +1703,7 @@ td {
   align-items: center;
 }
 
-td.nameCell,
-td.col-id {
+td.nameCell {
   overflow: visible;
 }
 

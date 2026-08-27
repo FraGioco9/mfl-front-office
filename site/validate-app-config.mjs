@@ -21,6 +21,7 @@ import {
   mflStatsFilterButtonsProjectionSource,
   normalizeIndexFirstPaintConfigProjection,
   normalizeIndexMflStatsFiltersProjection,
+  normalizeIndexTableConfigRuntimeProjection,
 } from "./sync-release-projections.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -105,6 +106,13 @@ same(runtimeConfig.table.joinedAgencyPages, TABLE_JOINED_AGENCY_PAGES, "pre-boot
 same(runtimeConfig.table.sortableColumns, TABLE_SORTABLE_COLUMNS, "pre-bootstrap sortable columns");
 same(runtimeConfig.table.columnLabels, TABLE_COLUMN_LABELS, "pre-bootstrap column labels");
 same(runtimeConfig.table.columnClasses, TABLE_COLUMN_CLASSES, "pre-bootstrap column classes");
+invariant(
+  JSON.stringify(TABLE_BASE_COLUMNS) === JSON.stringify(["nationality_flag", "name", "listing_price", "positions", "age", "player_seasons"]),
+  "Canonical player-table base columns must omit ID and place Positions before Age.",
+);
+invariant(!TABLE_SORTABLE_COLUMNS.includes("player_id"), "Removed ID column must not remain sortable.");
+invariant(!("player_id" in TABLE_COLUMN_LABELS), "Removed ID column must not retain a label mapping.");
+invariant(!("player_id" in TABLE_COLUMN_CLASSES), "Removed ID column must not retain a class mapping.");
 same(runtimeConfig.ui.mflStatsOverallFilters, MFL_STATS_OVERALL_FILTERS, "pre-bootstrap MFL Stats filter config");
 same(runtimeConfig.ui.settingsDateFormats, SETTINGS_DATE_FORMAT_OPTIONS, "pre-bootstrap Settings date-format config");
 same(runtimeConfig.ui.settingsTimeFormats, SETTINGS_TIME_FORMAT_OPTIONS, "pre-bootstrap Settings time-format config");
@@ -132,6 +140,16 @@ invariant(
 invariant(
   normalizeIndexMflStatsFiltersProjection(indexSource) === indexSource,
   "index MFL Stats filter projection must already be synchronized.",
+);
+const unversionedTableConfigRuntimeScript = '<script src="/table-width-runtime.js"></script>';
+invariant(
+  indexSource.includes(unversionedTableConfigRuntimeScript),
+  "index must request the canonical parser-blocking table config runtime from its no-store URL before first paint.",
+);
+invariant(!indexSource.includes("mfl_config="), "Table schema must not use a browser-cache revision query.");
+invariant(
+  normalizeIndexTableConfigRuntimeProjection(indexSource) === indexSource,
+  "index table config runtime URL must remain unversioned and no-store.",
 );
 
 const bootstrapWindow = {
@@ -179,6 +197,34 @@ for (const retiredOwner of [
   "const SETTINGS_TIME_FORMAT_LABELS = Object.freeze([",
 ]) {
   invariant(!bootstrapSource.includes(retiredOwner), `Bootstrap must not restore duplicate first-paint config owner: ${retiredOwner}`);
+}
+
+for (const canonicalAlias of [
+  "const canonicalTableConfig = window.__mflAppConfig?.table;",
+  "const baseColumns = canonicalTableConfig.baseColumns;",
+  "const statColumns = canonicalTableConfig.statColumns;",
+  "const contractColumns = canonicalTableConfig.contractColumns;",
+  "columns: canonicalTableConfig.viewColumns.attributes,",
+  "columns: canonicalTableConfig.viewColumns.current,",
+  "columns: canonicalTableConfig.viewColumns.all,",
+  "columns: canonicalTableConfig.viewColumns.next,",
+  "columns: canonicalTableConfig.viewColumns.contracts,",
+  "const tableColumnClasses = canonicalTableConfig.columnClasses;",
+  "const joinedAgencyPageSet = new Set(canonicalTableConfig.joinedAgencyPages);",
+  "const sortableColumns = new Set(canonicalTableConfig.sortableColumns);",
+  "...canonicalTableConfig.columnLabels,",
+]) {
+  invariant(appCoreSource.includes(canonicalAlias), `Hydrated application core must consume canonical table config through: ${canonicalAlias}`);
+}
+for (const retiredTableOwner of [
+  'const baseColumns = ["player_id",',
+  "columns: [...baseColumns, ...statColumns, agentColumn, linkColumn]",
+  "columns: [...baseColumns, ...contractColumns, agentColumn, linkColumn]",
+  "const tableColumnClasses = {",
+  'return new Set(["myplayers", "agents", "mfl"]);',
+  'const sortableColumns = new Set(["player_id",',
+]) {
+  invariant(!appCoreSource.includes(retiredTableOwner), `Hydrated application core must not retain duplicate table schema owner: ${retiredTableOwner}`);
 }
 
 invariant(

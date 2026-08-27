@@ -424,8 +424,9 @@
   function firstPaintTableHeaderSignature(page, view) {
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
+    const columns = firstPaintTableColumns(normalizedPage, normalizedView);
     const sort = firstPaintTableSortState(normalizedPage, normalizedView);
-    return [normalizedPage, normalizedView, sort.sortKey, sort.sortDirection].join("|");
+    return [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");
   }
 
   function neutralizeFirstPaintSelectionHeader(head) {
@@ -448,7 +449,7 @@
     const normalizedView = String(view || "").toLowerCase();
     const columns = firstPaintTableColumns(normalizedPage, normalizedView);
     const sort = firstPaintTableSortState(normalizedPage, normalizedView);
-    const signature = [normalizedPage, normalizedView, sort.sortKey, sort.sortDirection].join("|");
+    const signature = [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");
     if (head.rows[0] && head.dataset.mflStaticHeader === "true" && head.dataset.mflHeaderSignature === signature) {
       neutralizeFirstPaintSelectionHeader(head);
       return head.rows[0].cells.length;

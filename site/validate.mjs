@@ -220,10 +220,12 @@ const appEntryPreloadIndex = indexHtml.indexOf(appEntryModulePreload);
 const headEndIndex = indexHtml.indexOf("</head>");
 invariant(appEntryPreloadIndex >= 0 && headEndIndex > appEntryPreloadIndex, "app-entry.js must be parser-discovered through one static modulepreload in the document head.");
 invariant(indexHtml.indexOf(appEntryModulePreload, appEntryPreloadIndex + 1) === -1, "app-entry.js must have only one modulepreload owner.");
-const staticWidthIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
+const staticWidthScript = '<script src="/table-width-runtime.js"></script>';
+invariant(indexHtml.split(staticWidthScript).length - 1 === 1, "Uniform Width/config runtime must load exactly once from its unversioned no-store URL.");
+invariant(!indexHtml.includes("mfl_config="), "Table schema must not use a cache revision query.");
+const staticWidthIndex = indexHtml.indexOf(staticWidthScript);
 const bootstrapIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
-invariant(staticWidthIndex >= 0 && bootstrapIndex > staticWidthIndex, "Uniform Width must load exactly once from static HTML before bootstrap.");
-invariant(indexHtml.indexOf('<script src="/table-width-runtime.js"></script>', staticWidthIndex + 1) === -1, "Uniform Width must have only one static script owner.");
+invariant(staticWidthIndex >= 0 && bootstrapIndex > staticWidthIndex, "Uniform Width must load from static HTML before bootstrap.");
 
 const vercelLocal = JSON.parse(await readSite("vercel.json"));
 const vercelProduction = JSON.parse(await readSite("vercel.production.json"));

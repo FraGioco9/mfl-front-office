@@ -15,25 +15,24 @@
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
   --mfl-table-row-outer-height: 39px;
-  --mfl-table-col-select: 2.35%;
-  --mfl-table-col-actions: 2.35%;
-  --mfl-table-col-id: 3.76%;
-  --mfl-table-col-flag: 2.35%;
-  --mfl-table-col-name: 13.63%;
-  --mfl-table-col-listing: 6%;
-  --mfl-table-col-age: 4.23%;
-  --mfl-table-col-positions: 7.05%;
-  --mfl-table-col-seasons: 5.17%;
-  --mfl-table-col-overall: 6.2%;
-  --mfl-table-col-stat: 5.546666666666667%;
-  --mfl-table-col-contract-revenue: 8.46%;
-  --mfl-table-col-contract-club: 15.42%;
-  --mfl-table-col-contract-division: 9.4%;
-  --mfl-table-col-agent: 11.28%;
-  --mfl-table-col-link: 2.35%;
-  --mfl-table-col-contract-render-club: 15.41812%;
-  --mfl-table-col-contract-agent: 11.280423%;
-  --mfl-table-col-contract-link: 2.351457%;
+  --mfl-table-col-select: 2.441812136325852%;
+  --mfl-table-col-actions: 2.441812136325852%;
+  --mfl-table-col-flag: 2.441812136325852%;
+  --mfl-table-col-name: 14.162510390689944%;
+  --mfl-table-col-listing: 6.234413965087282%;
+  --mfl-table-col-positions: 7.325436408977557%;
+  --mfl-table-col-age: 4.395261845386535%;
+  --mfl-table-col-seasons: 5.371986699916874%;
+  --mfl-table-col-overall: 6.442227763923525%;
+  --mfl-table-col-stat: 5.763369354391799%;
+  --mfl-table-col-contract-revenue: 8.790523690773069%;
+  --mfl-table-col-contract-club: 16.022443890274314%;
+  --mfl-table-col-contract-division: 9.767248545303408%;
+  --mfl-table-col-agent: 11.720698254364089%;
+  --mfl-table-col-link: 2.441812136325852%;
+  --mfl-table-col-contract-render-club: 16.020490440565254%;
+  --mfl-table-col-contract-agent: 11.721137780548629%;
+  --mfl-table-col-contract-link: 2.443326059850374%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -91,7 +90,6 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
 #progressionPage .playerTableScroller col.col-actions { width: var(--mfl-table-col-actions); }
-#progressionPage .playerTableScroller col.col-id { width: var(--mfl-table-col-id); }
 #progressionPage .playerTableScroller col.col-flag { width: var(--mfl-table-col-flag); }
 #progressionPage .playerTableScroller col.col-name { width: var(--mfl-table-col-name); }
 #progressionPage .playerTableScroller col.col-listing { width: var(--mfl-table-col-listing); }

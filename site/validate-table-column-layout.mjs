@@ -70,7 +70,6 @@ function ownsEvaluationColumnWidth(rule) {
 const playerVariables = Object.freeze({
   "col-select": "--mfl-table-col-select",
   "col-actions": "--mfl-table-col-actions",
-  "col-id": "--mfl-table-col-id",
   "col-flag": "--mfl-table-col-flag",
   "col-name": "--mfl-table-col-name",
   "col-listing": "--mfl-table-col-listing",
@@ -85,6 +84,9 @@ const playerVariables = Object.freeze({
   "col-agent": "--mfl-table-col-agent",
   "col-link": "--mfl-table-col-link",
 });
+
+invariant(!styles.includes("--mfl-table-col-id"), "Removed ID column must not retain Uniform Width geometry.");
+invariant(!styles.includes("col.col-id"), "Removed ID column must not retain a colgroup width consumer.");
 
 const evaluationVariables = [
   "--mfl-evaluation-summary-col-name",
@@ -119,17 +121,17 @@ function totalPlayerWidth(columnClasses) {
 }
 
 const attributeWidth = totalPlayerWidth([
-  "col-select", "col-actions", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
+  "col-select", "col-actions", "col-flag", "col-name", "col-listing", "col-positions", "col-age", "col-seasons",
   "col-overall", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-agent", "col-link",
 ]);
 const contractsWidth = totalPlayerWidth([
-  "col-select", "col-actions", "col-id", "col-flag", "col-name", "col-listing", "col-age", "col-positions", "col-seasons",
+  "col-select", "col-actions", "col-flag", "col-name", "col-listing", "col-positions", "col-age", "col-seasons",
   "col-overall", "col-contract-revenue", "col-contract-club", "col-contract-division", "col-agent", "col-link",
 ]);
 invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
 invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns must total 100%.");
-invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.2) < 0.000001, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
-invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.546666666666667) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.442227763923525) < 1e-12, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.763369354391799) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
 
 invariant(
   !/#progressionPage \.playerTableScroller[^\n{]*(?:th|td)[^{]*\{[^}]*\bwidth\s*:/s.test(styles),
@@ -151,7 +153,7 @@ invariant(
 );
 
 const baseRules = cssRules(stylesBase);
-const playerGeometryClasses = /\.col-(?:select|actions|id|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
+const playerGeometryClasses = /\.col-(?:select|actions|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
 invariant(
   !baseRules.some((rule) => playerGeometryClasses.test(rule.selector) && ownsWidth(rule.declarations)),
   "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
@@ -174,9 +176,11 @@ for (const forbidden of [
   invariant(!tableWidthRuntime.includes(forbidden), `Uniform Width runtime must not own mutable geometry through ${forbidden}.`);
 }
 
-const widthScriptIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
+const widthScript = '<script src="/table-width-runtime.js"></script>';
+const widthScriptIndex = indexHtml.indexOf(widthScript);
 const bootstrapScriptIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
-invariant(widthScriptIndex >= 0 && bootstrapScriptIndex > widthScriptIndex, "Uniform Width must exist before synchronous bootstrap rendering.");
+invariant(widthScriptIndex >= 0 && bootstrapScriptIndex > widthScriptIndex, "No-store Uniform Width/config runtime must exist before synchronous bootstrap rendering.");
+invariant(!indexHtml.includes("mfl_config="), "The table schema runtime must not use a cache revision query.");
 const playerTableShell = indexHtml.match(/<section class="tableShell" aria-label="Players table">([\s\S]*?)<div id="emptyState"/)?.[1] || "";
 invariant(playerTableShell.includes('<div class="playerTableScroller">'), "The static Players table must start with its final Uniform Width scroller.");
 invariant(!playerTableShell.includes('class="tableScroller"'), "The Players table must never enter the legacy generic scroller width cascade.");
@@ -194,6 +198,11 @@ for (const required of [
 ]) {
   invariant(bootstrap.includes(required), `Bootstrap first-paint table ownership is missing ${required}.`);
 }
+invariant(
+  bootstrap.includes('return [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");')
+    && bootstrap.includes('const signature = [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");'),
+  "Bootstrap first-paint header reuse signature must include the canonical column sequence so stale schema DOM cannot be reused.",
+);
 invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not switch table scroller classes after first paint.");
 invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(!bootstrap.includes('selectionHeader.className = "selectionCell col-select";'), "Selection width must belong to the colgroup, not the header cell.");
@@ -241,7 +250,7 @@ invariant(
   "Static UI must delegate table headers to the bootstrap owner.",
 );
 
-invariant(!/\.col-(?:select|id|flag|name|listing|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive), "Responsive CSS must not override Uniform Width column percentages.");
+invariant(!/\.col-(?:select|flag|name|listing|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive), "Responsive CSS must not override Uniform Width column percentages.");
 invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed player table width.");
 invariant(
   !responsive.includes(".mflTableLoadingRow"),
@@ -252,6 +261,18 @@ invariant(
   appCoreSource.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
     && appCoreSource.includes("if (alreadyCanonical) return;"),
   "Canonical app-core colgroup ownership must be idempotent.",
+);
+invariant(
+  appCoreSource.includes("const canonicalTableConfig = window.__mflAppConfig?.table;")
+    && appCoreSource.includes("columns: canonicalTableConfig.viewColumns.attributes,")
+    && appCoreSource.includes("columns: canonicalTableConfig.viewColumns.contracts,")
+    && appCoreSource.includes("const tableColumnClasses = canonicalTableConfig.columnClasses;")
+    && appCoreSource.includes("const sortableColumns = new Set(canonicalTableConfig.sortableColumns);"),
+  "Hydrated table structure must consume the same canonical config as first paint.",
+);
+invariant(
+  !appCoreSource.includes('const baseColumns = ["player_id", flagColumn, "name", "listing_price", "age", "positions", "player_seasons"];'),
+  "Hydrated application core must not retain the legacy Age-before-Positions table schema.",
 );
 const appendStatValueStart = appCoreSource.indexOf("function appendStatValue(cell, row, statColumn) {");
 const appendStatValueEnd = appCoreSource.indexOf("function tableInteractiveKey(", appendStatValueStart);

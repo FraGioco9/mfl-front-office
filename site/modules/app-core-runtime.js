@@ -113,10 +113,14 @@ function createRenderReuseGuard() {
   });
 }
 
+const canonicalTableConfig = window.__mflAppConfig?.table;
+if (!canonicalTableConfig) {
+  throw new Error("Application core requires canonical table configuration.");
+}
 const flagColumn = "nationality_flag";
-const baseColumns = ["player_id", flagColumn, "name", "listing_price", "age", "positions", "player_seasons"];
-const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
-const contractColumns = ["overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share"];
+const baseColumns = canonicalTableConfig.baseColumns;
+const statColumns = canonicalTableConfig.statColumns;
+const contractColumns = canonicalTableConfig.contractColumns;
 const agentColumn = "wallet_name";
 const joinedAgencyColumn = "owned_since";
 const linkColumn = "player_link";
@@ -164,45 +168,32 @@ function defaultViewSlugForPage(pageName) {
 
 const views = {
   attributes: {
-    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
+    columns: canonicalTableConfig.viewColumns.attributes,
     progressionSuffix: null,
   },
   current: {
-    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
+    columns: canonicalTableConfig.viewColumns.current,
     progressionSuffix: "prog_current_season",
   },
   all: {
-    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
+    columns: canonicalTableConfig.viewColumns.all,
     progressionSuffix: "prog_all",
   },
   next: {
-    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
+    columns: canonicalTableConfig.viewColumns.next,
     progressionSuffix: null,
   },
   contracts: {
-    columns: [...baseColumns, ...contractColumns, agentColumn, linkColumn],
+    columns: canonicalTableConfig.viewColumns.contracts,
     progressionSuffix: null,
   },
 };
 
-const tableColumnClasses = {
-  player_id: "col-id",
-  nationality_flag: "col-flag",
-  name: "col-name",
-  listing_price: "col-listing",
-  age: "col-age",
-  positions: "col-positions",
-  player_seasons: "col-seasons",
-  wallet_name: "col-agent",
-  owned_since: "col-agent",
-  active_contract_revenue_share: "col-contract-revenue",
-  active_contract_club_name: "col-contract-club",
-  active_contract_club_division: "col-contract-division",
-  player_link: "col-link",
-};
+const tableColumnClasses = canonicalTableConfig.columnClasses;
+const joinedAgencyPageSet = new Set(canonicalTableConfig.joinedAgencyPages);
 
 function joinedAgencyPages() {
-  return new Set(["myplayers", "agents", "mfl"]);
+  return joinedAgencyPageSet;
 }
 
 
@@ -232,10 +223,11 @@ const columnLabels = {
   active_contract_club_division: "Division",
   contract_status: "Contract",
   player_link: "",
+  ...canonicalTableConfig.columnLabels,
 };
 
 const numberColumns = new Set(["player_id", "listing_price", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
-const sortableColumns = new Set(["player_id", "name", "listing_price", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
+const sortableColumns = new Set(canonicalTableConfig.sortableColumns);
 const contractStatusFilterColumn = "contract_status";
 const contractStatusOptions = [
   { value: "under_contract", label: "Under Contract" },

@@ -20,7 +20,7 @@ for (const code of [source, generatedTable]) {
     code.includes('"col-select",\n    "col-actions",')
       && code.includes('actionsHeader.className = "rowActionsCell";')
       && code.includes('actionsContent.appendChild(createPlayerTableActionsButton(playerId));'),
-    "Player table actions must own a real column between selection and ID in canonical and generated table code.",
+    "Player table actions must own a real column between selection and the player data columns in canonical and generated table code.",
   );
   invariant(
     code.includes('createPlayerTableActionItem("profile", "Player profile", "profile")')
@@ -66,10 +66,11 @@ invariant(
 );
 
 invariant(
-  styles.includes("--mfl-table-col-actions: 2.35%;")
-    && styles.includes("--mfl-table-col-name: 13.63%;")
+  styles.includes("--mfl-table-col-actions: 2.441812136325852%;")
+    && styles.includes("--mfl-table-col-name: 14.162510390689944%;")
+    && !styles.includes("--mfl-table-col-id:")
     && styles.includes("col.col-actions { width: var(--mfl-table-col-actions); }"),
-  "Uniform Width must own the new action column without overflowing the table width contract.",
+  "Uniform Width must own the action column inside the rebuilt post-ID table width contract.",
 );
 
 invariant(
