@@ -110,6 +110,35 @@ invariant(
 );
 
 invariant(
+  shared.includes('let evaluationReadinessBusyToken = "";')
+    && shared.includes("function releaseEvaluationReadinessBusy() {")
+    && shared.includes('if (pageName !== "evaluation") {\n    releaseEvaluationReadinessBusy();\n    document.body.classList.remove("evaluationPageLoading");\n  }')
+    && shared.indexOf('if (pageName !== "evaluation") {') < shared.indexOf('const transition = {\n      ...commitPageTransition(pageName, updateHash, options),')
+    && evaluationPageSource.includes('if (evaluationBusyToken) evaluationReadinessBusyToken = evaluationBusyToken;')
+    && evaluationPageSource.includes('const evaluationStillCurrent = pageNavigationIsCurrent(options)')
+    && evaluationPageSource.includes('&& state.currentPage === "evaluation"')
+    && evaluationPageSource.includes('&& window.location.pathname === "/evaluation";')
+    && evaluationPageSource.includes('if (evaluationBusyToken && evaluationReadinessBusyToken === evaluationBusyToken) {\n        releaseEvaluationReadinessBusy();\n      }')
+    && !evaluationPageSource.includes('window.__mflInteractionBusy?.end?.(evaluationBusyToken);'),
+  "Leaving Evaluation must release its busy owner before destination paint, and stale Evaluation completion must not mutate or release UI owned by the active route.",
+);
+
+const walletPreferencesStart = shared.indexOf("async function loadWalletPreferences(options = {}) {");
+const walletPreferencesEnd = shared.indexOf("async function saveWalletPreferencesNow", walletPreferencesStart);
+const walletPreferencesSource = walletPreferencesStart >= 0 && walletPreferencesEnd > walletPreferencesStart
+  ? shared.slice(walletPreferencesStart, walletPreferencesEnd)
+  : "";
+invariant(
+  walletPreferencesSource.includes("const walletPreferencesPageAtLoadStart = state.currentPage;")
+    && walletPreferencesSource.includes('const walletPreferencesPathAtLoadStart = `${window.location.pathname}${window.location.search}`;')
+    && walletPreferencesSource.includes("const walletPreferencesLoadStillOwnsRoute = state.currentPage === walletPreferencesPageAtLoadStart")
+    && walletPreferencesSource.includes('&& `${window.location.pathname}${window.location.search}` === walletPreferencesPathAtLoadStart;')
+    && walletPreferencesSource.includes("if (walletPreferencesLoadStillOwnsRoute")
+    && walletPreferencesSource.includes("applyFilters({ save: false });"),
+  "Wallet-preference completion may update shared state globally, but note-driven table/player repaint must remain owned by the route that started the load.",
+);
+
+invariant(
   evaluationSearchState.includes("if (!force && recentPayload && recentPayloadSignature === currentSignature) {")
     && evaluationSearchState.includes("publishRecentPayload(recentPayload);")
     && evaluationSearchState.includes("return Promise.resolve(renderEmptySearchFromCore());"),

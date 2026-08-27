@@ -133,12 +133,24 @@ invariant(
   "Table row hover cleanup must not suppress the Player action trigger account-style hover state.",
 );
 
+for (const code of [source, generatedTable]) {
+  invariant(
+    code.includes("function currentPlayerTableActionRenderSignature(")
+      && code.includes("function restorePlayerTableActionMenuAfterRender(renderSignature)")
+      && code.includes('const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"')
+      && code.includes("restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);")
+      && !code.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;\n  closePlayerTableActionMenu();'),
+    "Passive table rerenders must preserve and re-anchor an open Player action menu instead of unconditionally closing it.",
+  );
+}
+
 invariant(
   source.includes('document.addEventListener("pointerdown", (event) => {')
     && source.includes('event.key !== "Escape"')
-    && source.includes('window.addEventListener("resize", () => closePlayerTableActionMenu());')
-    && source.includes('.addEventListener("scroll", () => closePlayerTableActionMenu(), { passive: true });'),
-  "Player table menu must close on outside press, Escape, resize, and table scroll.",
+    && source.includes('window.addEventListener("resize", handlePlayerTableActionWindowResize);')
+    && source.includes('const realWindowResize = Boolean(')
+    && source.includes('handlePlayerTableActionScrollerScroll(tableScroller)'),
+  "Player table menu must still close on outside press, Escape, real window resize, and real table scroll while ignoring internal layout-only resize events.",
 );
 
 console.log("Player table actions validation passed.");

@@ -2,6 +2,8 @@ const validators = [
   "validate-global-search-results.mjs",
   "validate-global-search-open-lifecycle.mjs",
   "validate-document-title-runtime.mjs",
+  "validate-evaluation-refresh-hydration.mjs",
+  "validate-evaluation-stale-wallet-preferences-ui.mjs",
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
   "validate-player-overall-loading-color.mjs",

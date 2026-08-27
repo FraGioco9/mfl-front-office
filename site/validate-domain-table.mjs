@@ -6,6 +6,7 @@ const validators = [
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-listing-column.mjs",
   "validate-player-table-actions.mjs",
+  "validate-player-table-action-menu-rerender.mjs",
 ];
 
 for (const validator of validators) {
