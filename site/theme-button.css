@@ -8,7 +8,9 @@
 
 #themeButton .themeMoonSymbol path {
   fill: currentColor;
-  stroke: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linejoin: miter;
 }
 
 #themeButton .themeSunSymbol circle {
