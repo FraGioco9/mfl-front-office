@@ -5,9 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [motion, styles, runtime] = await Promise.all([
+const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime] = await Promise.all([
   read("./motion.css"),
   read("./filter-controls.css"),
+  read("./modules/app-core-filter-control-state.js"),
+  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core-table-runtime.js"),
   read("./filter-controls-runtime.js"),
 ]);
 
@@ -31,22 +34,34 @@ for (const required of [
 }
 
 for (const required of [
-  "function activeFilterCountFromSummary() {",
-  'document.getElementById("filterSummary")',
-  "function syncActiveFilterHighlight() {",
-  'const active = activeFilterCountFromSummary() >= 1;',
-  'summary.classList.toggle("hasActiveFilters", active);',
-  'button.classList.toggle("hasActiveFilters", active);',
-  "function observeActiveFilterSummary() {",
-  "new MutationObserver(syncActiveFilterHighlight)",
-  'filterSummaryObserver.observe(summary, { childList: true });',
-  "syncActiveFilterHighlight();\n    observeActiveFilterSummary();",
+  'replaceRequiredFunction(',
+  '"updateFilterSummary"',
+  "const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;",
+  "const active = normalizedCount >= 1;",
+  'filterSummary.textContent = String(normalizedCount);',
+  'filterSummary.classList.toggle("hasActiveFilters", active);',
+  'openFiltersButton?.classList.toggle("hasActiveFilters", active);',
 ]) {
-  invariant(runtime.includes(required), `Active Filters runtime is missing ${required}`);
+  invariant(ownerSource.includes(required), `Canonical active Filters owner is missing ${required}`);
+  invariant(tableRuntime.includes(required.replace('replaceRequiredFunction(', 'function updateFilterSummary(').replace('"updateFilterSummary"', 'function updateFilterSummary(')) || required === 'replaceRequiredFunction(' || required === '"updateFilterSummary"', `Generated table runtime is missing active Filters behavior: ${required}`);
 }
 
-invariant(!runtime.includes("subtree: true"), "Active Filters must observe only the count element itself, never a rendered-control subtree.");
-invariant(!styles.includes("!important"), "Active Filters styles must not use CSS priority overrides.");
-invariant(!runtime.includes('document.createElement("style")'), "Active Filters runtime must not inject styles dynamically.");
+invariant(
+  buildNormalizer.includes('import { addActiveFilterControlState } from "./app-core-filter-control-state.js";')
+    && buildNormalizer.includes("const filterArtifacts = addActiveFilterControlState(playerArtifacts);")
+    && buildNormalizer.includes("splitTableApplicationCoreRuntime(filterArtifacts)"),
+  "Active Filters state must be applied in the canonical build pipeline before the table split.",
+);
 
-console.log("Active Filters badge and persistent highlighted-state validation passed.");
+for (const retired of [
+  "filterSummaryObserver",
+  "observeActiveFilterSummary",
+  "activeFilterCountFromSummary",
+]) {
+  invariant(!filterRuntime.includes(retired), `Filter controls runtime must not retain inferred active-state observer: ${retired}`);
+}
+
+invariant(!styles.includes("!important"), "Active Filters styles must not use CSS priority overrides.");
+invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
+
+console.log("Active Filters badge and canonical highlighted-state ownership validation passed.");
