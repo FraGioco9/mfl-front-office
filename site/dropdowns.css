@@ -103,11 +103,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     margin-top: 2px;
   }
 
+  #pageSizeSelect option {
+    box-sizing: border-box;
+    border: 1px solid transparent;
+  }
+
   select[data-mfl-dropdown-enhanced="true"] option:hover,
   select[data-mfl-dropdown-enhanced="true"] option:focus-visible,
   .filtersDialog select option:hover,
   .filtersDialog select option:focus-visible {
     outline: 0;
+    background: var(--row-hover);
+    color: var(--text);
+  }
+
+  #pageSizeSelect option:hover,
+  #pageSizeSelect option:focus-visible {
+    outline: 0;
+    border-color: var(--border);
     background: var(--row-hover);
     color: var(--text);
   }
@@ -229,6 +242,11 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   box-shadow: none;
 }
 
+.accountDropdownItem {
+  box-sizing: border-box;
+  border: 1px solid transparent;
+}
+
 .accountDropdownItem + .accountDropdownItem {
   margin-top: 2px;
 }
@@ -246,7 +264,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .accountDropdown button.accountDropdownItem:hover:not(:disabled),
 .accountDropdown button.accountDropdownItem:focus-visible:not(:disabled) {
-  border: 0;
+  border-color: var(--border);
   outline: 0;
   background: var(--row-hover);
   color: var(--text);
@@ -254,10 +272,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 }
 
 .accountDropdown .accountSettingsButton,
-.accountDropdown .accountSettingsButton:not(:disabled),
-.accountDropdown .accountSettingsButton:hover:not(:disabled),
-.accountDropdown .accountSettingsButton:focus-visible:not(:disabled) {
-  border: 0;
+.accountDropdown .accountSettingsButton:not(:disabled) {
+  border-color: transparent;
   background: transparent;
   color: var(--text);
   box-shadow: none;
@@ -556,4 +572,126 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     min-width: 0;
     max-width: 100%;
   }
+}
+
+.playerTableActionsButton {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--primary);
+  color: #ffffff;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background var(--mfl-motion-fast, 120ms) ease, border-color var(--mfl-motion-fast, 120ms) ease, color var(--mfl-motion-fast, 120ms) ease;
+}
+
+.playerTableActionsButton svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.playerTableActionsButton[aria-expanded="false"]:hover:not(:disabled),
+.playerTableActionsButton[aria-expanded="false"]:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.playerTableActionsButton[aria-expanded="true"],
+.playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),
+.playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.playerTableActionMenu {
+  position: fixed;
+  z-index: var(--mfl-z-dropdown);
+  width: 200px;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transform-origin: top left;
+  transition: opacity var(--mfl-motion-standard, 180ms) ease, transform var(--mfl-motion-standard, 180ms) ease, visibility 0s linear var(--mfl-motion-standard, 180ms);
+}
+
+.playerTableActionMenu[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.playerTableActionItem {
+  align-items: center;
+  gap: 8px;
+  height: 29px;
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.playerTableActionItem:hover:not(:disabled),
+.playerTableActionItem:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--border);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.playerTableActionItem + .playerTableActionItem {
+  margin-top: 1px;
+}
+
+.playerTableActionIcon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  align-self: center;
+  color: #ffffff;
+}
+
+.playerTableActionIcon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.playerTableActionIcon svg[data-filled="true"] {
+  fill: currentColor;
+}
+
+.playerTableActionItem:hover:not(:disabled) .playerTableActionIcon,
+.playerTableActionItem:focus-visible:not(:disabled) .playerTableActionIcon {
+  color: #ffffff;
 }

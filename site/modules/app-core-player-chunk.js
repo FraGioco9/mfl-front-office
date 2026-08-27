@@ -25,7 +25,6 @@ const PLAYER_ROUTE_ONLY_FUNCTIONS = [
   "measureTooltipAnchorWidth",
   "queueWalletNotesSave",
   "allowedPlayerAttributeViews",
-  "toggleWatchlistPlayer",
   "createWatchlistStar",
 ];
 

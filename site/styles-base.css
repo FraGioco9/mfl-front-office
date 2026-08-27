@@ -3893,10 +3893,10 @@ button.playerIdText:active {
 
 #tableBody tr:hover .playerNameLink:hover,
 #tableBody tr:hover a:hover,
-#tableBody tr:hover button:hover,
+#tableBody tr:hover button:not(.playerTableActionsButton):hover,
 #tableBody tr.tableRowHovered .playerNameLink:hover,
 #tableBody tr.tableRowHovered a:hover,
-#tableBody tr.tableRowHovered button:hover {
+#tableBody tr.tableRowHovered button:not(.playerTableActionsButton):hover {
   background: transparent;
   box-shadow: none;
   transition: none;

@@ -1151,7 +1151,7 @@ function updateAccountState() {
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
-  linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+  linkWalletButton.removeAttribute("title");
   if (accountSettingsButton) {
     accountSettingsButton.hidden = !walletLinked;
   }
@@ -8979,9 +8979,174 @@ function sortableValue(row, column) {
   return getValue(row, column);
 }
 
+
+let playerTableActionMenu = null;
+let playerTableActionTrigger = null;
+let playerTableActionPlayerId = "";
+
+const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
+  profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg>',
+  external: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>',
+  evaluate: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg>',
+  watchlist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.7l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.72 6.9 19.4l.98-5.68L3.65 9.7l5.8-.83L12 3.7z"></path></svg>',
+  watchlistFilled: '<svg data-filled="true" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.7l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.72 6.9 19.4l.98-5.68L3.65 9.7l5.8-.83L12 3.7z"></path></svg>',
+  copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="1.5"></rect><path d="M15 8V6.5A1.5 1.5 0 0 0 13.5 5h-7A1.5 1.5 0 0 0 5 6.5v7A1.5 1.5 0 0 0 6.5 15H8"></path></svg>',
+});
+
+function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
+  if (!(playerTableActionMenu instanceof HTMLElement)) return false;
+  playerTableActionMenu.dataset.open = "false";
+  if (playerTableActionTrigger instanceof HTMLButtonElement) {
+    playerTableActionTrigger.setAttribute("aria-expanded", "false");
+    if (restoreFocus && playerTableActionTrigger.isConnected) playerTableActionTrigger.focus({ preventScroll: true });
+  }
+  playerTableActionTrigger = null;
+  playerTableActionPlayerId = "";
+  return true;
+}
+
+function positionPlayerTableActionMenu() {
+  if (!(playerTableActionMenu instanceof HTMLElement)
+    || !(playerTableActionTrigger instanceof HTMLButtonElement)
+    || !playerTableActionTrigger.isConnected) return false;
+  const triggerRect = playerTableActionTrigger.getBoundingClientRect();
+  const menuRect = playerTableActionMenu.getBoundingClientRect();
+  const edgeGap = 8;
+  const menuGap = 6;
+  let left = triggerRect.left;
+  left = Math.max(edgeGap, Math.min(left, window.innerWidth - menuRect.width - edgeGap));
+  let top = triggerRect.bottom + menuGap;
+  if (top + menuRect.height > window.innerHeight - edgeGap) {
+    top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
+  }
+  playerTableActionMenu.style.left = `${Math.round(left)}px`;
+  playerTableActionMenu.style.top = `${Math.round(top)}px`;
+  return true;
+}
+
+function createPlayerTableActionItem(action, label, iconKey) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "playerTableActionItem";
+  button.dataset.mflDropdownOption = "true";
+  button.dataset.playerTableAction = action;
+  button.setAttribute("role", "menuitem");
+  button.innerHTML = `<span class="playerTableActionIcon">${PLAYER_TABLE_ACTION_ICONS[iconKey]}</span><span>${label}</span>`;
+  return button;
+}
+
+function ensurePlayerTableActionMenu() {
+  if (playerTableActionMenu instanceof HTMLElement && playerTableActionMenu.isConnected) return playerTableActionMenu;
+  const menu = document.createElement("div");
+  menu.className = "playerTableActionMenu";
+  menu.dataset.mflDropdownMenu = "true";
+  menu.dataset.open = "false";
+  menu.setAttribute("role", "menu");
+  menu.setAttribute("aria-label", "Player actions");
+  document.body.appendChild(menu);
+  playerTableActionMenu = menu;
+
+  menu.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const item = event.target.closest("[data-player-table-action]");
+    if (!(item instanceof HTMLButtonElement)) return;
+    const playerId = String(playerTableActionPlayerId || "").trim();
+    if (!playerId) return;
+    const action = String(item.dataset.playerTableAction || "");
+    closePlayerTableActionMenu();
+    if (action === "profile") {
+      rememberSearchResult(playerId);
+      void setPage("player", true, { playerId });
+      return;
+    }
+    if (action === "mfl") {
+      window.open(`https://app.playmfl.com/players/${encodeURIComponent(playerId)}`, "_blank", "noopener");
+      return;
+    }
+    if (action === "evaluate") {
+      void setPage("evaluation", true, { playerId });
+      return;
+    }
+    if (action === "watchlist") {
+      toggleWatchlistPlayer(playerId, true);
+      return;
+    }
+    if (action === "copy") copyPlayerId(playerId);
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
+    if (!(event.target instanceof Node)) return;
+    if (playerTableActionMenu.contains(event.target) || playerTableActionTrigger?.contains(event.target)) return;
+    closePlayerTableActionMenu();
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || playerTableActionMenu?.dataset.open !== "true") return;
+    event.preventDefault();
+    closePlayerTableActionMenu({ restoreFocus: true });
+  }, true);
+  window.addEventListener("resize", () => closePlayerTableActionMenu());
+  document.querySelector("#progressionPage .playerTableScroller")?.addEventListener("scroll", () => closePlayerTableActionMenu(), { passive: true });
+  return menu;
+}
+
+function openPlayerTableActionMenu(trigger, playerId) {
+  const menu = ensurePlayerTableActionMenu();
+  const key = String(playerId || "").trim();
+  if (!(trigger instanceof HTMLButtonElement) || !key) return false;
+  if (playerTableActionTrigger === trigger && menu.dataset.open === "true") {
+    closePlayerTableActionMenu({ restoreFocus: true });
+    return false;
+  }
+  closePlayerTableActionMenu();
+  playerTableActionTrigger = trigger;
+  playerTableActionPlayerId = key;
+  trigger.setAttribute("aria-expanded", "true");
+  const items = [
+    createPlayerTableActionItem("profile", "Player profile", "profile"),
+    createPlayerTableActionItem("mfl", "MFL profile", "external"),
+    createPlayerTableActionItem("evaluate", "Evaluate", "evaluate"),
+  ];
+  if (hasWalletOptIn()) {
+    const watchlistIsActive = playerIsInAnyWatchlist(key);
+    const watchlistLabel = watchlistIsActive ? "Remove from watchlist" : "Add to watchlist";
+    items.push(createPlayerTableActionItem("watchlist", watchlistLabel, watchlistIsActive ? "watchlistFilled" : "watchlist"));
+  }
+  items.push(createPlayerTableActionItem("copy", `#${key}`, "copy"));
+  menu.replaceChildren(...items);
+  menu.dataset.open = "false";
+  positionPlayerTableActionMenu();
+  void menu.offsetWidth;
+  requestAnimationFrame(() => {
+    if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;
+    menu.dataset.open = "true";
+    positionPlayerTableActionMenu();
+  });
+  return true;
+}
+
+function createPlayerTableActionsButton(playerId) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "playerTableActionsButton";
+  button.dataset.playerId = String(playerId);
+  button.setAttribute("aria-label", `Actions for player ${playerId}`);
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
+  button.addEventListener("pointerdown", (event) => event.stopPropagation());
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openPlayerTableActionMenu(button, playerId);
+  });
+  return button;
+}
+
 function buildTableColGroup() {
   const targetClasses = [
     "col-select",
+    "col-actions",
     ...currentViewColumns().map((column) => tableColumnClass(column)),
   ];
   const existingCols = Array.from(tableColGroup.children);
@@ -9012,6 +9177,11 @@ function buildHeader() {
   selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
   selectionHeader.appendChild(selectVisibleInput);
   headerRow.appendChild(selectionHeader);
+
+  const actionsHeader = document.createElement("th");
+  actionsHeader.className = "rowActionsCell";
+  actionsHeader.setAttribute("aria-label", "Player actions");
+  headerRow.appendChild(actionsHeader);
 
   currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
@@ -10485,6 +10655,7 @@ syncPagerCurrentPage(1, 1);
 function renderTable() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
+  closePlayerTableActionMenu();
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -10515,6 +10686,14 @@ function renderTable() {
     selectionContent.appendChild(selectionInput);
     selectionCell.appendChild(selectionContent);
     tableRow.appendChild(selectionCell);
+
+    const actionsCell = document.createElement("td");
+    actionsCell.className = "rowActionsCell";
+    const actionsContent = document.createElement("span");
+    actionsContent.className = "tableControlCellContent tableControlCellContentCentered";
+    actionsContent.appendChild(createPlayerTableActionsButton(playerId));
+    actionsCell.appendChild(actionsContent);
+    tableRow.appendChild(actionsCell);
 
     currentViewColumns().forEach((column) => {
       const cell = document.createElement("td");

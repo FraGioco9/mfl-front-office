@@ -454,7 +454,7 @@
       return head.rows[0].cells.length;
     }
 
-    const targetClasses = ["col-select", ...columns.map((column) => firstPaintTableColumnClass(column))];
+    const targetClasses = ["col-select", "col-actions", ...columns.map((column) => firstPaintTableColumnClass(column))];
     const existingCols = Array.from(colGroup.children);
     const alreadyCanonical = existingCols.length === targetClasses.length
       && existingCols.every((col, index) => col.className === targetClasses[index]);
@@ -480,6 +480,11 @@
     selectionInput.setAttribute("aria-label", "Select visible players");
     selectionHeader.appendChild(selectionInput);
     row.appendChild(selectionHeader);
+
+    const actionsHeader = document.createElement("th");
+    actionsHeader.className = "rowActionsCell";
+    actionsHeader.setAttribute("aria-label", "Player actions");
+    row.appendChild(actionsHeader);
 
     columns.forEach((column) => {
       const header = document.createElement("th");
