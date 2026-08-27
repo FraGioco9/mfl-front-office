@@ -103,7 +103,11 @@ for (const required of [
   "document.documentElement.dataset.mflResetTableFilters = page;",
   "function activeFilterCountFromDialog() {",
   "function syncFilterSummaryNow() {",
-  "summary.textContent = String(activeFilterCountFromDialog());",
+  "const count = activeFilterCountFromDialog();",
+  'const canonicalUpdater = Reflect.get(window, "updateFilterSummary");',
+  'if (typeof canonicalUpdater === "function") {',
+  "canonicalUpdater(count);",
+  "summary instanceof HTMLElement) summary.textContent = String(count);",
   "function syncFilterSummaryAfterClose() {",
   'target?.closest("#applyFiltersButton")',
   "filtersModalIsOpen()",
@@ -230,8 +234,9 @@ invariant(
   "Built Table runtime must clear Filters highlight synchronously when popup close starts.",
 );
 invariant(
-  tableRuntime.includes("function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}"),
-  "Built Table runtime must render only the active-filter count.",
+  tableRuntime.includes("function updateFilterSummary(count = activeFilterCount()) {")
+    && tableRuntime.includes('filterSummary.textContent = String(normalizedCount);'),
+  "Built Table runtime must keep the Filters summary numeric-only while allowing active-state presentation to share the canonical count update.",
 );
 invariant(
   !tableRuntime.includes('filterSummary.textContent = `${count} active`;')

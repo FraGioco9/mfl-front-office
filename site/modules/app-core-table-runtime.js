@@ -1003,7 +1003,12 @@ function activeFilterCountFromSavedRules(rules = []) {
 }
 
 function updateFilterSummary(count = activeFilterCount()) {
-  filterSummary.textContent = String(count);
+  const numericCount = Number(count);
+  const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;
+  const active = normalizedCount >= 1;
+  filterSummary.textContent = String(normalizedCount);
+  filterSummary.classList.toggle("hasActiveFilters", active);
+  openFiltersButton?.classList.toggle("hasActiveFilters", active);
 }
 
 function selectedFilterColumns(exceptRule = null) {

@@ -2,6 +2,7 @@
 // Canonical app-core behavior is source-owned; this module composes the build-time route/action normalizers.
 
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
+import { addActiveFilterControlState } from "./app-core-filter-control-state.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
@@ -17,7 +18,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
-  const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
+  const filterArtifacts = addActiveFilterControlState(playerArtifacts);
+  const tableArtifacts = splitTableApplicationCoreRuntime(filterArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   return watchlistArtifacts;
