@@ -1,22 +1,25 @@
 /* Canonical Light/Dark mode icon presentation. */
 
+/* The legacy inline SVG nodes remain only as first-paint state hooks.
+ * They never render; the button itself owns the recreated reference artwork. */
 #themeButton .themeModeIcon {
-  width: 22px;
-  height: 22px;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-}
-
-#themeButton .themeModeIcon > * {
   display: none;
 }
 
-#themeButton .themeMoonSymbol {
+#themeButton::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   background-image: url("/theme-moon-reference.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
 }
 
-#themeButton .themeSunSymbol {
+html[data-theme="dark"] #themeButton::before {
   background-image: url("/theme-sun-reference.svg");
   filter: invert(1);
 }
