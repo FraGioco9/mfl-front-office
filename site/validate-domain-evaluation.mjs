@@ -6,6 +6,7 @@ const validators = [
   "validate-evaluation-load-cache.mjs",
   "validate-evaluation-route-ownership.mjs",
   "validate-evaluation-refresh-hydration.mjs",
+  "validate-evaluation-overall-hover.mjs",
   "validate-evaluation-mfl-usd-edit-cancel.mjs",
   "validate-evaluation-mfl-usd-loading-race.mjs",
   "validate-evaluation-discount-derived-loading.mjs",
