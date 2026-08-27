@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime, sharedTableUi] = await Promise.all([
+const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime, sharedTableUi, controls] = await Promise.all([
   read("./motion.css"),
   read("./filter-controls.css"),
   read("./modules/app-core-filter-control-state.js"),
@@ -13,6 +13,7 @@ const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime
   read("./modules/app-core-table-runtime.js"),
   read("./filter-controls-runtime.js"),
   read("./shared-table-ui-runtime.js"),
+  read("./controls.css"),
 ]);
 
 invariant(
@@ -21,13 +22,12 @@ invariant(
 );
 
 for (const required of [
-  "#filterSummary.filtersViewCount {",
-  "visibility: hidden;",
+  "#openFiltersButton #filterSummary.filtersViewCount:not(.hasActiveFilters)",
+  "display: none;",
   "#openFiltersButton.filtersViewButton.hasActiveFilters",
   "border-color: var(--primary);",
   "background: color-mix(in srgb, var(--primary) 10%, var(--surface));",
   "#filterSummary.filtersViewCount.hasActiveFilters",
-  "visibility: visible;",
   "min-height: 18px;",
   "height: 18px;",
   "border-radius: 999px;",
@@ -38,9 +38,14 @@ for (const required of [
 }
 
 invariant(
-  styles.indexOf("visibility: hidden;") < styles.indexOf("#filterSummary.filtersViewCount.hasActiveFilters")
-    && styles.indexOf("#filterSummary.filtersViewCount.hasActiveFilters") < styles.indexOf("visibility: visible;"),
-  "Inactive Filters count must stay hidden while its fixed layout slot remains reserved, then become visible only when active.",
+  controls.includes(".filtersViewButton,")
+    && controls.includes("justify-content: center;"),
+  "Filters control must keep its remaining icon and label horizontally centered when the inactive count is removed from layout.",
+);
+
+invariant(
+  !styles.includes("visibility: hidden;") && !styles.includes("visibility: visible;"),
+  "Inactive Filters count must collapse instead of reserving layout space.",
 );
 
 for (const required of [
@@ -91,4 +96,4 @@ invariant(!styles.includes("!important"), "Active Filters styles must not use CS
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
-console.log("Active Filters badge, hidden zero count, reserved slot, and canonical highlighted-state ownership validation passed.");
+console.log("Active Filters badge, collapsed zero count, centered inactive content, and canonical highlighted-state ownership validation passed.");
