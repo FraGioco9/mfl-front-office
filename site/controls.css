@@ -206,6 +206,9 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .popupMinusButton {
   position: relative;
   font-size: 0;
+}
+
+.popupCloseButton {
   transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
 
@@ -240,8 +243,6 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 }
 
 .popupCloseButton:hover:not(:disabled),
-.popupAddButton:hover:not(:disabled),
-.popupMinusButton:hover:not(:disabled),
 .trainingStatControls button:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
