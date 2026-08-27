@@ -1,0 +1,45 @@
+name: Temporary issue 429 Player action transition refinement v2
+on:
+  push:
+    branches: [feat/issue-429-player-table-actions]
+    paths:
+      - .github/workflows/tmp-issue-429-player-actions-transition-v2.yml
+      - site/patch-issue-429-player-actions-transition.mjs
+permissions:
+  contents: write
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-429-player-table-actions
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply refinement
+        working-directory: site
+        run: node patch-issue-429-player-actions-transition.mjs
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/modules/app-core.js site/modules/app-core*-runtime.js site/dropdowns.css site/styles-base.css site/validate-player-table-actions.mjs
+          git commit -m 'refine Player action dropdown transition and hover'
+          git push origin HEAD:feat/issue-429-player-table-actions
