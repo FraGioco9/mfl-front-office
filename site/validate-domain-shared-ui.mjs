@@ -18,6 +18,7 @@ const validators = [
   "validate-nationality-flag-tooltips.mjs",
   "validate-checkbox-style.mjs",
   "validate-account-button-icon.mjs",
+  "validate-theme-button-icon.mjs",
 ];
 
 for (const validator of validators) {
