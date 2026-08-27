@@ -5,6 +5,7 @@
   --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
   --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
   --mfl-dropdown-chevron-inset: 10px;
+  --mfl-dropdown-transition-duration: 150ms;
   --mfl-row-selector-width: 92px;
   --mfl-row-selector-slot-width: 150px;
 }
@@ -182,6 +183,28 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   right: 0;
   z-index: var(--mfl-z-dropdown);
   width: 100%;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity var(--mfl-dropdown-transition-duration) ease,
+    transform var(--mfl-dropdown-transition-duration) ease,
+    display var(--mfl-dropdown-transition-duration);
+  transition-behavior: allow-discrete;
+}
+
+#accountDropdown[hidden] {
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  pointer-events: none;
+}
+
+@starting-style {
+  #accountDropdown:not([hidden]) {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 }
 
 .accountDropdownItem,
