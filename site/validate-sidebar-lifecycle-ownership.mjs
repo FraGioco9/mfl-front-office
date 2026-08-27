@@ -123,11 +123,12 @@ invariant(
 );
 invariant(
   responsive.includes("  .sidebarGrid {\n    display: contents;\n  }")
-    && responsive.includes("  .settingsNavButton {\n    align-self: center;\n    margin: 0 0 0 auto;\n  }"),
-  "Mobile navigation must flatten the desktop grid wrapper and preserve the existing horizontal Settings placement.",
+    && responsive.includes("  .menuRail .navButton {\n    display: flex;\n    flex: 1 1 0;\n    flex-direction: column;")
+    && responsive.includes("  .menuRail .settingsNavButton {\n    align-self: stretch;\n    margin: 0;\n  }"),
+  "Mobile navigation must flatten the desktop grid wrapper and distribute every existing destination, including Settings, evenly in the bottom rail.",
 );
 
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle, stable white Menu color, and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
+console.log("Built pinned-sidebar lifecycle, desktop sidebar grid geometry, and mobile bottom-rail geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
 

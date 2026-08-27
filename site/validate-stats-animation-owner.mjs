@@ -154,6 +154,25 @@ includes(
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");
 excludes(loadingStyles, "html.mflInitialChromePreparing", "Refresh/loading state must not blanket-disable transitions or pause animations; normal hover and component animation ownership must remain active.");
 excludes(loadingStyles, "animation-play-state: paused;", "Refresh/loading must not globally pause animations.");
-excludes(loadingStyles, "transition: none;", "Refresh/loading must not globally disable hover transitions.");
+const navigationScrollCueTransition = `html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollButton {
+  transition: none;
+}`;
+includes(
+  loadingStyles,
+  navigationScrollCueTransition,
+  "Resolved SPA page navigation must suppress only horizontal-cue transitions so route-commit visibility changes are instantaneous.",
+);
+for (const forbidden of ["opacity: 0;", "visibility: hidden;", "pointer-events: none;"]) {
+  excludes(
+    navigationScrollCueTransition,
+    forbidden,
+    `The navigation-only horizontal-cue rule must not hide cues ahead of the page commit: ${forbidden}`,
+  );
+}
+excludes(
+  loadingStyles.replace(navigationScrollCueTransition, ""),
+  "transition: none;",
+  "Refresh/loading must not globally disable hover transitions outside the resolved-route navigation-only horizontal scroll-cue transition suppression.",
+);
 
 console.log("Database Stats and MFL Stats keep one fill animation owner, stable histogram DOM, first-paint-safe animation timelines, and prepared local MFL filter derivation without global busy state.");

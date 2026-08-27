@@ -10,6 +10,11 @@ html.mflNavigationPending #progressionPage nav.pager {
   display: none;
 }
 
+/* Route commits own horizontal-cue visibility; suppress only the cue transition while a page switch is pending. */
+html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollButton {
+  transition: none;
+}
+
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {

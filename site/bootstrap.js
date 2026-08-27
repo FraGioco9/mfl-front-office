@@ -12,6 +12,9 @@
   const EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
+  const FIRST_PAINT_HORIZONTAL_MEDIA = window.matchMedia("(max-width: 900px)");
+  const FIRST_PAINT_OVERFLOW_CLASS = "mflViewsOverflowing";
+  const FIRST_PAINT_OVERFLOW_EPSILON = 2;
   const APP_CONFIG = Reflect.get(window, "__mflAppConfig");
   if (!APP_CONFIG?.routes || !APP_CONFIG?.table || !APP_CONFIG?.ui) {
     throw new Error("Bootstrap requires canonical pre-bootstrap app configuration.");
@@ -390,6 +393,105 @@
   Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);
   Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);
 
+  function firstPaintHorizontalItems(scroller) {
+    const selector = scroller.matches("#progressionPage .views")
+      ? ":scope > #openFiltersButton, :scope > .viewControlsSeparator, :scope > .viewButton"
+      : ":scope > label";
+    return Array.from(scroller.querySelectorAll(selector)).filter((candidate) => {
+      if (!(candidate instanceof HTMLElement) || candidate.hidden) return false;
+      const style = getComputedStyle(candidate);
+      return style.display !== "none" && style.position !== "absolute" && candidate.getClientRects().length > 0;
+    });
+  }
+
+  function firstPaintHorizontalContentWidth(scroller) {
+    const items = firstPaintHorizontalItems(scroller);
+    if (!items.length) return 0;
+    const scrollerStyle = getComputedStyle(scroller);
+    const gap = Number.parseFloat(scrollerStyle.columnGap || scrollerStyle.gap) || 0;
+    const itemsWidth = items.reduce((total, item) => {
+      const style = getComputedStyle(item);
+      const marginLeft = Number.parseFloat(style.marginLeft) || 0;
+      const marginRight = Number.parseFloat(style.marginRight) || 0;
+      return total + item.getBoundingClientRect().width + marginLeft + marginRight;
+    }, 0);
+    return itemsWidth + gap * Math.max(0, items.length - 1);
+  }
+
+  function firstPaintHorizontalShell(scroller) {
+    const parent = scroller.parentElement;
+    if (parent instanceof HTMLElement && parent.classList.contains("viewsScrollerShell")) return parent;
+
+    const shell = document.createElement("div");
+    shell.className = "viewsScrollerShell";
+    if (scroller.matches("#progressionPage .quickFilters")) shell.classList.add("quickFiltersScrollerShell");
+    scroller.insertAdjacentElement("beforebegin", shell);
+    shell.appendChild(scroller);
+
+    if (scroller.matches("#progressionPage .quickFilters")) {
+      const count = document.getElementById("watchlistPlayerCount");
+      if (count instanceof HTMLElement && count.parentElement === scroller) shell.insertAdjacentElement("afterend", count);
+    }
+    return shell;
+  }
+
+  function syncFirstPaintRightScrollButton(shell, scroller, overflowing) {
+    let button = shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight");
+    if (!overflowing) {
+      if (button instanceof HTMLButtonElement && button.dataset.mflFirstPaintScrollButton === "true") button.remove();
+      return;
+    }
+
+    if (!(button instanceof HTMLButtonElement)) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.className = "viewsScrollButton viewsScrollButtonRight";
+      button.dataset.mflFirstPaintScrollButton = "true";
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+      button.addEventListener("click", () => {
+        const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        const distance = Math.max(96, Math.floor(scroller.clientWidth * 0.72));
+        const target = Math.min(maxScroll, scroller.scrollLeft + distance);
+        scroller.scrollTo({ left: target, behavior: "smooth" });
+      });
+      shell.appendChild(button);
+    }
+
+    const label = scroller.matches("#progressionPage .quickFilters") ? "quick filters" : "views";
+    button.setAttribute("aria-label", `Scroll ${label} right`);
+    button.setAttribute("aria-hidden", "false");
+    button.tabIndex = 0;
+    button.classList.add("mflViewsScrollButtonVisible");
+  }
+
+  function primeFirstPaintHorizontalOverflow() {
+    const scrollers = [
+      document.querySelector("#progressionPage .views"),
+      document.querySelector("#progressionPage .quickFilters"),
+    ];
+    scrollers.forEach((scroller) => {
+      if (!(scroller instanceof HTMLElement)) return;
+      const canRender = FIRST_PAINT_HORIZONTAL_MEDIA.matches
+        && !scroller.hidden
+        && scroller.getClientRects().length > 0;
+      if (!canRender) {
+        scroller.classList.remove(FIRST_PAINT_OVERFLOW_CLASS);
+        return;
+      }
+
+      const shell = firstPaintHorizontalShell(scroller);
+      const nativeOverflowing = scroller.scrollWidth - scroller.clientWidth > FIRST_PAINT_OVERFLOW_EPSILON;
+      const controlsOverflowing = firstPaintHorizontalContentWidth(scroller) - scroller.clientWidth > FIRST_PAINT_OVERFLOW_EPSILON;
+      const overflowing = FIRST_PAINT_HORIZONTAL_MEDIA.matches
+        && !scroller.hidden
+        && scroller.getClientRects().length > 0
+        && nativeOverflowing
+        && controlsOverflowing;
+      scroller.classList.toggle(FIRST_PAINT_OVERFLOW_CLASS, overflowing);
+      syncFirstPaintRightScrollButton(shell, scroller, overflowing);
+    });
+  }
+
   function firstPaintTableColumns(page, view) {
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
@@ -740,6 +842,7 @@
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
+    if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
 
     const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((candidate) => {

@@ -88,9 +88,9 @@ for (const removedFallback of [
 
 invariant(
   controls.includes(".filtersViewLabel {\n  display: inline-flex;\n  align-items: center;\n  align-self: center;\n  height: 40px;")
-    && controls.includes("#filterSummary.filtersViewCount {\n  display: inline-flex;\n  flex: 0 0 18px;\n  align-items: center;\n  justify-content: center;\n  align-self: center;")
-    && controls.includes("height: 40px;\n  margin-left: auto;"),
-  "Filters icon, label, and count must remain vertically centered in the 40px control.",
+    && controls.includes("#filterSummary.filtersViewCount {\n  display: inline-grid;\n  flex: 0 0 18px;\n  place-items: center;\n  align-self: stretch;")
+    && controls.includes("min-height: 0;\n  height: auto;\n  margin-left: auto;"),
+  "Filters icon, label, and count must remain vertically centered in the 40px control while the count stretches to the control height.",
 );
 invariant(
   !controls.includes("body.filtersOpen #filterSummary.filtersViewCount"),

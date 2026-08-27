@@ -110,6 +110,7 @@ const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
   "/global-search-runtime.js",
+  "/shared-table-ui-runtime.js",
 ]);
 
 const initialPathname = String(window.location.pathname || "/");

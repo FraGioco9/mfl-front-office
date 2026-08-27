@@ -147,9 +147,15 @@
       .map((buttonView) => buttons.get(buttonView))
       .filter((button) => button instanceof HTMLElement);
     const switcher = document.getElementById("watchlistSwitcher");
+    const scrollButton = container.querySelector(":scope > .viewsScrollButton");
+    const insertionPoint = switcher instanceof HTMLElement && switcher.parentElement === container
+      ? switcher
+      : scrollButton instanceof HTMLElement
+        ? scrollButton
+        : null;
     if (!sharedViewOrderMatches(container, orderedButtons)) {
       orderedButtons.forEach((button) => {
-        container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+        container.insertBefore(button, insertionPoint);
       });
     }
 
@@ -319,6 +325,7 @@
   document.querySelectorAll("main > .pageView").forEach((page) => {
     if (page instanceof HTMLElement) page.hidden = page !== target;
   });
+  if (target.id === "progressionPage") window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
 }
 
   function showNotFound(kind = "Page") {

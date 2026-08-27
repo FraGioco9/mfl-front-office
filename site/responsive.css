@@ -41,7 +41,8 @@ html:not(.mflInitialRouteResolved):is(
 @media (max-width: 900px) {
   :root {
     --pinned-sidebar-width: 0px;
-    --mobile-nav-height: 60px;
+    --mobile-nav-height: 58px;
+    --mobile-nav-overlay-clearance: 126px;
   }
 
   html,
@@ -76,7 +77,7 @@ html:not(.mflInitialRouteResolved):is(
     grid-area: search;
     width: 100%;
     min-width: 0;
-    height: 44px;
+    height: 40px;
   }
 
   .searchShortcut {
@@ -109,19 +110,32 @@ html:not(.mflInitialRouteResolved):is(
     width: 44px;
     height: 44px;
     overflow: hidden;
+    gap: 0;
     padding: 0;
-    font-size: 0;
   }
 
-  #accountButton::before {
-    content: "\1F464";
-    font-size: 18px;
-    line-height: 1;
+  #accountButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
-  .accountDropdown {
-    width: min(190px, calc(100vw - 24px));
+  #accountButton .accountButtonIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  #accountDropdown {
+    left: auto;
     right: 0;
+    width: min(190px, calc(100vw - 24px));
+    transform-origin: top right;
   }
 
   .appShell {
@@ -131,17 +145,19 @@ html:not(.mflInitialRouteResolved):is(
 
   .menuRail {
     position: absolute;
-    inset: 0 0 auto;
+    inset: auto auto 8px 50%;
     z-index: var(--mfl-z-navigation-mobile);
-    width: 100%;
+    width: min(720px, calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
     height: var(--mobile-nav-height);
     min-height: var(--mobile-nav-height);
-    padding: 8px 10px;
-    overflow: hidden;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    align-items: stretch;
+    padding: 4px;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(14px);
+    transform: translateX(-50%);
   }
 
   .menuButton {
@@ -151,41 +167,101 @@ html:not(.mflInitialRouteResolved):is(
   .sidebar {
     display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 6px;
+    align-items: stretch;
+    gap: 2px;
     width: 100%;
     min-height: 0;
-    height: 44px;
+    height: 48px;
     margin: 0;
     padding: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
+    overflow: visible;
   }
 
   .sidebarGrid {
     display: contents;
   }
 
-  .navButton {
-    flex: 0 0 auto;
+  .menuRail .navButton {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     width: auto;
-    height: 44px;
+    min-width: 0;
+    height: 48px;
     margin: 0;
-    gap: 6px;
-    padding: 0 10px;
+    gap: 2px;
+    padding: 4px 2px;
+    overflow: visible;
+    border-color: transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-soft);
+    line-height: 1;
+    text-align: center;
     white-space: nowrap;
   }
 
-  .navText {
+  .menuRail .navButton .navEmoji {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    color: inherit;
+    font-size: 18px;
+    line-height: 18px;
+  }
+
+  .menuRail .navButton .navText {
+    display: block;
+    width: max-content;
+    min-height: 9px;
     max-width: none;
     margin-left: 0;
+    overflow: visible;
+    color: inherit;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
     opacity: 1;
   }
 
-  .settingsNavButton {
-    align-self: center;
-    margin: 0 0 0 auto;
+  .menuRail .settingsNavButton {
+    align-self: stretch;
+    margin: 0;
+  }
+
+  .menuRail .navButton.active,
+  .menuRail .navButton.active:hover {
+    border-color: transparent;
+    background: transparent;
+    color: #4aa3df;
+    box-shadow: none;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+    border-color: transparent;
+    background: transparent;
+    color: #4aa3df;
+    box-shadow: none;
+  }
+
+  .menuRail .navButton:not(.active):hover:not(:disabled),
+  .menuRail .navButton:not(.active):focus-visible {
+    border-color: transparent;
+    background: var(--row-hover);
+    color: var(--text);
   }
 
   body.pinnedSidebarVisible main,
@@ -197,7 +273,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > #appShell > main {
-    padding: calc(var(--mobile-nav-height) + 10px) 12px 12px;
+    padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
     overflow-x: hidden;
   }
 
@@ -237,39 +313,239 @@ html:not(.mflInitialRouteResolved):is(
 
   .tablePageTitle,
   .evaluationTitleRow {
-    margin-top: 8px;
+    margin-top: 2px;
   }
 
-  .views,
-  body[data-page="watchlist"] #progressionPage .views {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
+  .viewsScrollerShell {
+    position: relative;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
+  }
+
+  .views {
+    --mfl-views-gap: 6px;
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--mfl-views-gap);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     overflow-y: hidden;
-    overscroll-behavior-x: contain;
+    overscroll-behavior-x: auto;
+    touch-action: pan-y;
+  }
+
+  .views.mflViewsOverflowing {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  #progressionPage .views::before,
+  #progressionPage .views::after,
+  #progressionPage .quickFilters::before,
+  #progressionPage .quickFilters::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #progressionPage .views::before {
+    right: -2px;
+    z-index: 3;
+    width: 86px;
+    height: 48px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .views::after {
+    right: 6px;
+    z-index: 4;
+    width: 18px;
+    height: 18px;
+    background: var(--text-soft);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .quickFilters::before {
+    right: -2px;
+    z-index: 3;
+    width: 60px;
+    height: 34px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .quickFilters::after {
+    right: 5px;
+    z-index: 4;
+    width: 14px;
+    height: 14px;
+    background: var(--text-soft);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    transform: translateY(-50%);
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .views.mflViewsOverflowing::before,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .views.mflViewsOverflowing::after,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::before,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::after {
+    opacity: 0.78;
+    visibility: visible;
+  }
+
+  .viewsScrollButton {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    margin: 0;
+    padding: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-soft);
+    box-shadow: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    cursor: pointer;
+    transform: translateY(-50%) scale(0.94);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      visibility 0s linear 180ms;
+  }
+
+  .viewsScrollButton.mflViewsScrollButtonVisible {
+    opacity: 0.78;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+    transition-delay: 0s;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) .viewsScrollerShell .viewsScrollButton {
+    transition: none;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) .viewsScrollerShell:has(> .mflViewsOverflowing) > .viewsScrollButtonRight {
+    opacity: 0.78;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+  }
+
+  .viewsScrollButtonRight {
+    right: 0;
+  }
+
+  .viewsScrollButtonLeft {
+    left: 0;
+  }
+
+  .viewsScrollButton::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    bottom: -9px;
+    width: 86px;
+    pointer-events: none;
+  }
+
+  .viewsScrollButtonRight::before {
+    right: -2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+  }
+
+  .viewsScrollButtonLeft::before {
+    left: -2px;
+    background: linear-gradient(
+      270deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+  }
+
+  .viewsScrollButton:hover,
+  .viewsScrollButton:focus-visible,
+  .viewsScrollButton:active {
+    background: transparent;
+    opacity: 1;
+  }
+
+  .viewsScrollButton svg {
+    position: relative;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .viewsScrollButtonLeft svg {
+    transform: scaleX(-1);
   }
 
   .viewButton {
-    flex: 0 0 auto;
-    width: auto;
+    flex: 0 0 100px;
+    width: 100px;
     min-width: 100px;
+    max-width: 100px;
     height: 44px;
+    font-size: 12px;
+    white-space: nowrap;
   }
 
-  body[data-page="watchlist"] #progressionPage .views {
-    flex-wrap: wrap;
-    overflow: visible;
-  }
-
-  body[data-page="watchlist"] #progressionPage .watchlistSwitcher,
-  .watchlistSwitcher {
+  .watchlistSwitcher,
+  .watchlistSwitcher.mflMobileWatchlistSwitcher {
     flex: 1 0 100%;
     width: 100%;
     min-width: 0;
     margin-left: 0;
+  }
+
+  .watchlistSwitcher.mflMobileWatchlistSwitcher {
+    margin-top: 6px;
+    margin-bottom: 5px;
   }
 
   .watchlistSwitcherLabel {
@@ -288,46 +564,96 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
+  .quickFiltersScrollerShell {
+    position: relative;
+    margin-bottom: 2px;
+  }
+
+  .quickFiltersScrollerShell:has(> .quickFilters.mflViewsOverflowing) > .viewsScrollButton {
+    top: 50%;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+    padding: 5px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton::before {
+    top: -5px;
+    bottom: -5px;
+    width: 60px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .quickFilters {
+    position: relative;
+    display: flex;
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 7px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    overscroll-behavior-x: auto;
+    touch-action: pan-y;
+  }
+
+  .quickFilters.mflViewsOverflowing {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
   }
 
   .quickFilters label {
-    min-height: 44px;
+    flex: 0 0 auto;
+    min-height: 34px;
+    gap: 5px;
+    padding-right: 2px;
+    font-size: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .quickFilters input {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
   }
 
   .watchlistPlayerCount {
-    flex: 1 0 100%;
-    margin-left: 0;
-  }
-
-  .controlsBar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  #openFiltersButton,
-  #quickClearFiltersButton,
-  .controlsBar button {
+    position: static;
     width: 100%;
+    min-height: 18px;
+    margin: 0 0 2px;
+  }
+
+  #progressionPage > .controlsBar {
+    display: none;
+  }
+
+  #openFiltersButton {
+    flex: 0 0 100px;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
   }
 
   #filterSummary {
     grid-column: 1 / -1;
+    align-items: center;
+    justify-content: center;
     height: 28px;
-  }
-
-  .field.compact.rowsField {
-    grid-column: 1 / -1;
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  #pageSizeSelect {
-    width: min(160px, 48vw);
   }
 
   #progressionPage .tableShell {
@@ -342,6 +668,51 @@ html:not(.mflInitialRouteResolved):is(
     overflow-y: visible;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  #progressionPage .playerTableScroller table {
+    width: 100%;
+    min-width: 760px;
+    max-width: none;
+  }
+
+  #progressionPage .playerTableScroller :is(th, td) {
+    padding-inline: 2px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 10px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 12px;
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: 16px;
+    height: 16px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 680px;
+    font-size: 11px;
+  }
+
+  .advancedPlayerTable th {
+    font-size: 12px;
+  }
+
+  .evaluationSummaryShell .tableScroller,
+  .evaluationTableShell .tableScroller {
+    overflow-x: auto;
+  }
+
+  .evaluationSummaryTable {
+    min-width: 520px;
+  }
+
+  .evaluationTableShell .evaluationTable {
+    min-width: 580px;
   }
 
   .pager {
@@ -367,7 +738,11 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 520px;
     flex-wrap: wrap;
     justify-content: center;
-    bottom: 12px;
+    bottom: var(--mobile-nav-overlay-clearance);
+  }
+
+  .toastMessage {
+    bottom: var(--mobile-nav-overlay-clearance);
   }
 
   .selectionSummary,
@@ -384,8 +759,19 @@ html:not(.mflInitialRouteResolved):is(
     padding: 8px;
   }
 
-  .searchDialog,
-  .filtersDialog,
+  .searchDialog {
+    width: min(680px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    height: min(435px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .filtersDialog {
+    width: min(760px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
   .advancedSettingsDialog,
   .evaluationLoadDialog,
   .watchlistChoiceDialog,
@@ -396,29 +782,117 @@ html:not(.mflInitialRouteResolved):is(
     max-height: calc(100dvh - 16px);
   }
 
-  .searchDialog,
   .evaluationLoadDialog {
     height: min(560px, calc(100dvh - 16px));
   }
 
-  .searchBody,
+  .filtersHeader,
+  .filtersFooter {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .filtersHeader h2 {
+    font-size: 18px;
+  }
+
+  .searchBody {
+    flex: 1 1 auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .globalSearchControl #playerSearchInput {
+    height: 38px;
+    min-height: 38px;
+    padding-left: 10px;
+    padding-right: 38px;
+    font-size: 16px;
+  }
+
+  .playerSearchClearButton {
+    right: 3px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .searchResults {
+    gap: 6px;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    grid-auto-rows: 56px;
+  }
+
+  .searchResults.filledSearchResults {
+    padding-bottom: 8px;
+  }
+
+  .searchResult {
+    align-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 7px 10px;
+    border-radius: 6px;
+  }
+
+  .searchResult span,
+  .searchHint {
+    font-size: 11px;
+  }
+
   .filterBuilder,
   .advancedSettingsBody,
   .evaluationLoadList {
     padding-inline: 12px;
   }
 
+  .filterBuilder {
+    gap: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .addFilterRow,
+  .filterRules {
+    gap: 8px;
+  }
+
+  .addFilterRow .iconButton,
+  .addFilterRow select,
+  .filterRule > select,
+  .filterRule > button {
+    height: 38px;
+    min-height: 38px;
+  }
+
   .filterRule {
-    grid-template-columns: 1fr;
+    grid-template-columns: 72px minmax(140px, 1fr) minmax(110px, 0.75fr) minmax(150px, 1.1fr) 36px;
+    gap: 8px;
+    min-height: 38px;
+  }
+
+  .filterRule > :nth-child(4),
+  .filterRule [data-filter-value] {
+    min-width: 0;
   }
 
   .filterRule select[hidden] {
-    display: none;
+    display: block;
+    visibility: hidden;
   }
 
   .betweenValue,
   .dateRangeValue {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .filtersFooter button {
+    height: 38px;
+    min-height: 38px;
   }
 
   .advancedSettingHeader,
@@ -664,7 +1138,6 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-
 /* Mobile parity contract.
  * Viewport-specific behavior belongs here so desktop changes cannot silently
  * gain a second, competing mobile implementation in a runtime or base style.
@@ -689,14 +1162,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .menuRail {
-    padding-right: max(10px, env(safe-area-inset-right));
-    padding-left: max(10px, env(safe-area-inset-left));
+    max-width: calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
   }
 
   body > #appShell > main {
     min-width: 0;
     padding-right: max(12px, env(safe-area-inset-right));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-bottom: max(calc(var(--mobile-nav-height) + 18px), env(safe-area-inset-bottom));
     padding-left: max(12px, env(safe-area-inset-left));
   }
 
@@ -729,7 +1201,6 @@ html:not(.mflInitialRouteResolved):is(
 
   .advancedPlayerTableSection,
   .mflStatsAgeDistribution,
-  .views,
   .sidebar,
   .playerAttributeViews,
   .evaluationLoadList,
@@ -741,15 +1212,19 @@ html:not(.mflInitialRouteResolved):is(
     touch-action: pan-x pan-y;
   }
 
-  .sidebar,
   .views,
+  .quickFilters,
   .playerAttributeViews {
     scroll-padding-inline: 10px;
   }
 
   .selectionBar {
     width: min(520px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    bottom: calc(var(--mobile-nav-overlay-clearance) + env(safe-area-inset-bottom));
+  }
+
+  .toastMessage {
+    bottom: calc(var(--mobile-nav-overlay-clearance) + env(safe-area-inset-bottom));
   }
 
   .modalBackdrop {
@@ -759,8 +1234,18 @@ html:not(.mflInitialRouteResolved):is(
     padding-left: max(8px, env(safe-area-inset-left));
   }
 
-  .searchDialog,
-  .filtersDialog,
+  .searchDialog {
+    width: min(680px, 100%);
+    max-width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .filtersDialog {
+    width: min(760px, 100%);
+    max-width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
   .advancedSettingsDialog,
   .evaluationLoadDialog,
   .watchlistChoiceDialog,
@@ -809,8 +1294,120 @@ html:not(.mflInitialRouteResolved):is(
     padding-left: max(10px, env(safe-area-inset-left));
   }
 
+  body > #appShell > main {
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-left: max(8px, env(safe-area-inset-left));
+  }
+
   .topbar h1 {
     font-size: 20px;
+  }
+
+  .topbar .searchButton {
+    height: 38px;
+  }
+
+  #progressionPage .views {
+    --mfl-views-gap: 4px;
+    margin-bottom: 5px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell {
+    margin-bottom: 2px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton {
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    min-height: 22px;
+    padding: 4px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton::before {
+    top: -4px;
+    bottom: -4px;
+    width: 54px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  #progressionPage .quickFilters::before {
+    width: 54px;
+    height: 30px;
+  }
+
+  #progressionPage .quickFilters::after {
+    right: 4px;
+    width: 13px;
+    height: 13px;
+  }
+
+  .navButton {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .viewButton {
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    max-width: 74px;
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 4px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  #progressionPage .views > #openFiltersButton {
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    max-width: 74px;
+    height: 32px;
+    min-height: 32px;
+    gap: 4px;
+    padding: 0 5px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  #progressionPage .filtersViewIcon {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage #filterSummary {
+    display: inline-grid;
+    flex: 0 0 13px;
+    place-items: center;
+    align-self: stretch;
+    width: 13px;
+    min-width: 13px;
+    max-width: 13px;
+    min-height: 0;
+    height: auto;
+    font-size: 9px;
+    line-height: 1;
+    transform: none;
+  }
+
+  #progressionPage .viewControlsSeparator {
+    height: 18px;
+    margin-inline: 1px;
+  }
+
+  .tablePageTitle {
+    font-size: 18px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"]::after {
+    font-size: 10px;
   }
 
   .homeStats,
@@ -819,7 +1416,6 @@ html:not(.mflInitialRouteResolved):is(
     grid-template-columns: 1fr;
   }
 
-  .controlsBar,
   #databaseStatsPage .databaseStatsCustomFilter,
   .playerHeroActions,
   .evaluationButtons,
@@ -829,27 +1425,221 @@ html:not(.mflInitialRouteResolved):is(
     grid-template-columns: 1fr;
   }
 
-  .controlsBar {
-    align-items: stretch;
-  }
-
-  .field.compact.rowsField {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 6px;
-    align-items: stretch;
-  }
-
-  #pageSizeSelect {
-    width: 100%;
-    max-width: none;
-  }
-
   .quickFilters {
+    gap: 6px;
+  }
+
+  .quickFilters label {
+    min-height: 30px;
+    gap: 5px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .quickFilters input {
+    flex: 0 0 13px;
+    width: 13px;
+    height: 13px;
+  }
+
+  #progressionPage .watchlistPlayerCount:not([hidden]) {
+    display: flex;
+    align-items: center;
+    min-height: 22px;
+    margin: 0 0 2px;
+    color: var(--text-soft);
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .filtersDialog {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .filterBuilder {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .addFilterRow {
+    gap: 6px;
+  }
+
+  .addFilterRow select {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .addFilterRow .iconButton,
+  .addFilterRow select {
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .filterRules {
+    gap: 6px;
+  }
+
+  .filterRule {
+    grid-template-columns: 72px minmax(0, 1fr) 34px;
+    grid-template-rows: 36px 36px;
+    gap: 6px;
+    min-height: 78px;
+  }
+
+  .filterRule > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(5) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .filterRule > :nth-child(4) {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .filterRule > select,
+  .filterRule > button,
+  .filterRule [data-filter-value] {
+    min-width: 0;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .filterRule select[hidden] {
+    display: none;
+  }
+
+  .betweenValue,
+  .dateRangeValue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .filtersFooter {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    gap: 4px 10px;
+  }
+
+  .filtersFooter button {
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .searchDialog {
+    height: min(392px, calc(100dvh - 16px));
+  }
+
+  .searchBody {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .globalSearchControl #playerSearchInput {
+    height: 36px;
+    min-height: 36px;
+    padding-left: 9px;
+    padding-right: 36px;
+    font-size: 16px;
+  }
+
+  .playerSearchClearButton {
+    right: 2px;
+    width: 27px;
+    height: 27px;
+  }
+
+  .searchResults {
+    gap: 5px;
+    grid-auto-rows: 50px;
+  }
+
+  .searchResults.filledSearchResults {
+    padding-bottom: 6px;
+  }
+
+  .searchResult {
+    align-content: center;
+    gap: 1px;
+    min-height: 50px;
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+
+  #progressionPage .playerTableScroller table {
+    min-width: 620px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 9px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 11px;
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage .playerTableScroller .listingCellContent {
+    gap: 2px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+
+  #progressionPage .playerTableScroller .listingCellIcon {
+    width: 11px;
+    height: 11px;
+    flex-basis: 11px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 560px;
+    font-size: 10px;
+  }
+
+  .advancedPlayerTable th {
+    font-size: 11px;
+  }
+
+  .evaluationSummaryTable {
+    min-width: 460px;
+    font-size: 10px;
+  }
+
+  .evaluationTableShell .evaluationTable {
+    min-width: 520px;
+    font-size: 10px;
+  }
+
+  .evaluationSummaryTable th,
+  .evaluationSummaryTable td,
+  .evaluationTableShell .evaluationTable th,
+  .evaluationTableShell .evaluationTable td {
+    padding-inline: 2px;
+  }
+
+  .mflStatsHistogram {
+    min-width: 520px;
   }
 
   .detailGrid {
@@ -874,11 +1664,6 @@ html:not(.mflInitialRouteResolved):is(
 
   .evaluationLoadActions {
     justify-content: flex-start;
-  }
-
-  .filtersFooter {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .advancedSettingsFooter {
@@ -925,9 +1710,88 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 18px;
   }
 
-  .quickFilters,
-  .filtersFooter {
+  .navButton {
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .viewButton {
+    flex-basis: 68px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    padding-inline: 3px;
+    font-size: 9px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"]::after {
+    font-size: 9px;
+  }
+
+  #progressionPage .views > #openFiltersButton {
+    flex-basis: 68px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    padding-inline: 4px;
+    font-size: 9px;
+  }
+
+  .tablePageTitle {
+    font-size: 17px;
+  }
+
+  .filterRule {
+    grid-template-columns: 64px minmax(0, 1fr) 32px;
+  }
+
+  .betweenValue,
+  .dateRangeValue {
     grid-template-columns: 1fr;
+  }
+
+  .searchDialog {
+    height: min(382px, calc(100dvh - 12px));
+  }
+
+  .searchResults {
+    grid-auto-rows: 48px;
+  }
+
+  .searchResult {
+    align-content: center;
+    min-height: 48px;
+    padding: 5px 7px;
+  }
+
+  #progressionPage .playerTableScroller table {
+    min-width: 560px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 8px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 10px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 520px;
+  }
+
+  .evaluationSummaryTable {
+    min-width: 430px;
+    font-size: 9px;
+  }
+
+  .evaluationTableShell .evaluationTable {
+    min-width: 480px;
+    font-size: 9px;
+  }
+
+  .mflStatsHistogram {
+    min-width: 460px;
   }
 
   .changelogMinorToggle {
@@ -962,9 +1826,7 @@ html:not(.mflInitialRouteResolved):is(
 
   .themeButton,
   #accountButton,
-  .searchButton,
   .navButton,
-  .viewButton,
   .playerAttributeViewButton,
   .pager button {
     min-height: 44px;

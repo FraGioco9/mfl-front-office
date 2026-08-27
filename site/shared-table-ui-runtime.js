@@ -1,13 +1,27 @@
 (() => {
   "use strict";
 
-  const CONTROL_SELECTOR = "#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, #sidebar .navButton[data-page], #filtersModal button";
+  const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
+  const MOBILE_PAGE_SIZE = "100";
+  const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";
+  const VIEW_SCROLL_VISIBLE_CLASS = "mflViewsScrollButtonVisible";
+  const VIEW_SCROLL_CLASS = "mflViewsOverflowing";
+  const VIEW_SCROLL_SHELL_CLASS = "viewsScrollerShell";
+  const QUICK_FILTERS_SHELL_CLASS = "quickFiltersScrollerShell";
+  const VIEW_SCROLL_EPSILON = 2;
+  const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
 
   window.__mflSharedTableUiRuntime?.destroy?.();
 
   let destroyed = false;
   let pointerControl = null;
+  let restoreBridgeInstalled = false;
+  let coreLoadedBridgeInstalled = false;
+  let viewSyncFrame = 0;
+  let viewResizeObserver = null;
+  const pendingViewScrollers = new Set();
+  const boundViewScrollers = new Map();
   const scrollContainer = document.querySelector("main");
 
   function controlFromTarget(target) {
@@ -68,6 +82,337 @@
     body.dispatchEvent(new Event("pointerleave"));
   }
 
+  function installRestoreBridge() {
+    if (destroyed || restoreBridgeInstalled) return restoreBridgeInstalled;
+    try {
+      restoreBridgeInstalled = Boolean(window.eval(`(() => {
+        if (typeof restoreSavedTableState !== "function") return false;
+        if (restoreSavedTableState.__mflMobilePageSize) return true;
+        const originalRestoreSavedTableState = restoreSavedTableState;
+        const restoreWithMobilePageSize = function() {
+          const result = originalRestoreSavedTableState.apply(this, arguments);
+          if (window.__mflMobileTablePageSizeActive && typeof state === "object" && state) {
+            state.pageSize = 100;
+            state.page = 1;
+            const select = document.getElementById("pageSizeSelect");
+            if (select instanceof HTMLSelectElement) select.value = "100";
+          }
+          return result;
+        };
+        Object.defineProperty(restoreWithMobilePageSize, "__mflMobilePageSize", { value: true });
+        restoreSavedTableState = restoreWithMobilePageSize;
+        return true;
+      })()`));
+    } catch (error) {
+      console.warn("Could not install mobile table page-size bridge.", error);
+      restoreBridgeInstalled = false;
+    }
+    return restoreBridgeInstalled;
+  }
+
+  function installCoreLoadedBridge() {
+    if (destroyed || coreLoadedBridgeInstalled || restoreBridgeInstalled) return restoreBridgeInstalled || coreLoadedBridgeInstalled;
+    const marker = window.__mflMarkApplicationCoreLoaded;
+    if (typeof marker !== "function") return false;
+    if (marker.__mflMobilePageSizeBridge) {
+      coreLoadedBridgeInstalled = true;
+      return true;
+    }
+
+    const bridgedMarker = function() {
+      const result = marker.apply(this, arguments);
+      installRestoreBridge();
+      return result;
+    };
+    Object.defineProperty(bridgedMarker, "__mflMobilePageSizeBridge", { value: true });
+    window.__mflMarkApplicationCoreLoaded = bridgedMarker;
+    coreLoadedBridgeInstalled = true;
+    return true;
+  }
+
+  function enforceMobilePageSize() {
+    if (destroyed || !MOBILE_TABLE_MEDIA.matches) return false;
+    const select = document.getElementById("pageSizeSelect");
+    if (!(select instanceof HTMLSelectElement)) return false;
+    if (select.value === MOBILE_PAGE_SIZE) return false;
+    select.value = MOBILE_PAGE_SIZE;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  function ensureMobilePageSizeOwnership() {
+    window.__mflMobileTablePageSizeActive = MOBILE_TABLE_MEDIA.matches;
+    if (!installRestoreBridge()) installCoreLoadedBridge();
+    if (MOBILE_TABLE_MEDIA.matches) enforceMobilePageSize();
+  }
+
+  function tableViews() {
+    const views = document.querySelector("#progressionPage .views");
+    return views instanceof HTMLElement ? views : null;
+  }
+
+  function tableQuickFilters() {
+    const filters = document.querySelector("#progressionPage .quickFilters");
+    return filters instanceof HTMLElement ? filters : null;
+  }
+
+  function tableHorizontalScrollers() {
+    return [tableViews(), tableQuickFilters()].filter((scroller) => scroller instanceof HTMLElement);
+  }
+
+  function quickFiltersPlayerCount(views) {
+    if (!(views instanceof HTMLElement) || !views.matches("#progressionPage .quickFilters")) return null;
+    const count = document.getElementById("watchlistPlayerCount");
+    return count instanceof HTMLElement ? count : null;
+  }
+
+  function viewScrollShell(views, create = false) {
+    if (!(views instanceof HTMLElement)) return null;
+    const parent = views.parentElement;
+    if (parent instanceof HTMLElement && parent.classList.contains(VIEW_SCROLL_SHELL_CLASS)) return parent;
+    if (!create) return null;
+    const shell = document.createElement("div");
+    shell.className = VIEW_SCROLL_SHELL_CLASS;
+    if (views.matches("#progressionPage .quickFilters")) shell.classList.add(QUICK_FILTERS_SHELL_CLASS);
+    views.insertAdjacentElement("beforebegin", shell);
+    shell.appendChild(views);
+    const count = quickFiltersPlayerCount(views);
+    if (count?.parentElement === views) shell.insertAdjacentElement("afterend", count);
+    return shell;
+  }
+
+  function removeViewScrollShell(views) {
+    const shell = viewScrollShell(views);
+    if (!(shell instanceof HTMLElement) || !(shell.parentElement instanceof HTMLElement)) return;
+    const count = quickFiltersPlayerCount(views);
+    shell.replaceWith(views);
+    if (count instanceof HTMLElement && count.parentElement !== views) views.appendChild(count);
+  }
+
+  function mobileWatchlistRouteActive() {
+    if (!MOBILE_TABLE_MEDIA.matches) return false;
+    if (/^\/watchlist(?:\/|$)/i.test(window.location.pathname)) return true;
+    if (String(document.body.dataset.page || "").toLowerCase() === "watchlist") return true;
+    const root = document.documentElement;
+    return !root.classList.contains("mflInitialRouteResolved")
+      && !root.classList.contains("mflInitialRouteSuperseded")
+      && String(root.dataset.initialTablePage || "").toLowerCase() === "watchlist";
+  }
+
+  function syncWatchlistSwitcherPlacement() {
+    const views = tableViews();
+    const switcher = document.getElementById("watchlistSwitcher");
+    if (!(views instanceof HTMLElement) || !(switcher instanceof HTMLElement)) return;
+
+    if (mobileWatchlistRouteActive()) {
+      if (switcher.parentElement === views) {
+        const shell = viewScrollShell(views);
+        (shell || views).insertAdjacentElement("afterend", switcher);
+      }
+      switcher.classList.add("mflMobileWatchlistSwitcher");
+      return;
+    }
+
+    switcher.classList.remove("mflMobileWatchlistSwitcher");
+    if (switcher.parentElement !== views) views.appendChild(switcher);
+  }
+
+  function setViewScrollButtonVisible(button, visible) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.classList.toggle(VIEW_SCROLL_VISIBLE_CLASS, visible);
+    button.setAttribute("aria-hidden", visible ? "false" : "true");
+    button.tabIndex = visible ? 0 : -1;
+  }
+
+  function scrollerLabel(views) {
+    return views.matches("#progressionPage .quickFilters") ? "quick filters" : "views";
+  }
+
+  function viewScrollButton(views) {
+    const shell = viewScrollShell(views, true);
+    if (!(shell instanceof HTMLElement)) return null;
+    const existing = shell.querySelector(`:scope > .${VIEW_SCROLL_BUTTON_CLASS}.viewsScrollButtonRight`);
+    if (existing instanceof HTMLButtonElement) return existing;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `${VIEW_SCROLL_BUTTON_CLASS} viewsScrollButtonRight`;
+    button.setAttribute("aria-label", `Scroll ${scrollerLabel(views)} right`);
+    button.setAttribute("aria-hidden", "true");
+    button.tabIndex = -1;
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+    button.addEventListener("click", () => {
+      const maxScroll = viewMaxScroll(views);
+      const distance = Math.max(96, Math.floor(views.clientWidth * 0.72));
+      const target = Math.min(maxScroll, views.scrollLeft + distance);
+      views.scrollTo({ left: target, behavior: "smooth" });
+    });
+    shell.appendChild(button);
+    return button;
+  }
+
+  function viewScrollLeftButton(views) {
+    const shell = viewScrollShell(views, true);
+    if (!(shell instanceof HTMLElement)) return null;
+    const existing = shell.querySelector(`:scope > .${VIEW_SCROLL_BUTTON_CLASS}.viewsScrollButtonLeft`);
+    if (existing instanceof HTMLButtonElement) return existing;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `${VIEW_SCROLL_BUTTON_CLASS} viewsScrollButtonLeft`;
+    button.setAttribute("aria-label", `Scroll ${scrollerLabel(views)} left`);
+    button.setAttribute("aria-hidden", "true");
+    button.tabIndex = -1;
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+    button.addEventListener("click", () => {
+      const distance = Math.max(96, Math.floor(views.clientWidth * 0.72));
+      const target = Math.max(0, views.scrollLeft - distance);
+      views.scrollTo({ left: target, behavior: "smooth" });
+    });
+    shell.appendChild(button);
+    return button;
+  }
+
+  function renderedViewItems(views) {
+    return Array.from(views.children).filter((child) => {
+      if (!(child instanceof HTMLElement) || child.hidden) return false;
+      const style = getComputedStyle(child);
+      return style.display !== "none" && style.position !== "absolute" && child.getClientRects().length > 0;
+    });
+  }
+
+  function viewContentWidth(views) {
+    const items = renderedViewItems(views);
+    if (!items.length) return 0;
+    const viewStyle = getComputedStyle(views);
+    const gap = Number.parseFloat(viewStyle.columnGap || viewStyle.gap) || 0;
+    const itemWidth = items.reduce((total, item) => {
+      const style = getComputedStyle(item);
+      const marginLeft = Number.parseFloat(style.marginLeft) || 0;
+      const marginRight = Number.parseFloat(style.marginRight) || 0;
+      return total + item.getBoundingClientRect().width + marginLeft + marginRight;
+    }, 0);
+    return itemWidth + gap * Math.max(0, items.length - 1);
+  }
+
+  function viewMaxScroll(views) {
+    return Math.max(0, views.scrollWidth - views.clientWidth);
+  }
+
+  function clampViewScroll(views, maxScroll = viewMaxScroll(views)) {
+    const clamped = Math.min(maxScroll, Math.max(0, views.scrollLeft));
+    if (Math.abs(views.scrollLeft - clamped) > VIEW_SCROLL_EPSILON) views.scrollLeft = clamped;
+    return clamped;
+  }
+
+  function syncViewScroller(views) {
+    if (!(views instanceof HTMLElement) || !views.isConnected) return;
+
+    if (!MOBILE_TABLE_MEDIA.matches || views.getClientRects().length === 0) {
+      views.classList.remove(VIEW_SCROLL_CLASS);
+      if (views.scrollLeft) views.scrollLeft = 0;
+      removeViewScrollShell(views);
+      return;
+    }
+
+    const button = viewScrollButton(views);
+    const leftButton = viewScrollLeftButton(views);
+    if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
+    setViewScrollButtonVisible(button, false);
+    setViewScrollButtonVisible(leftButton, false);
+
+    const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
+    views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
+    if (!overflowing) {
+      if (views.scrollLeft) views.scrollLeft = 0;
+      return;
+    }
+
+    const maxScroll = viewMaxScroll(views);
+    const scrollLeft = clampViewScroll(views, maxScroll);
+    const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;
+    const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;
+    setViewScrollButtonVisible(leftButton, canScrollLeft);
+    setViewScrollButtonVisible(button, canScrollRight);
+  }
+
+  function syncRouteHorizontalCuesNow() {
+    if (destroyed) return;
+    syncWatchlistSwitcherPlacement();
+    tableHorizontalScrollers().forEach(syncViewScroller);
+  }
+
+  function scheduleViewScrollerSync(views = null) {
+    if (destroyed) return;
+    syncWatchlistSwitcherPlacement();
+    if (views instanceof HTMLElement) {
+      pendingViewScrollers.add(views);
+    } else {
+      tableHorizontalScrollers().forEach((candidate) => pendingViewScrollers.add(candidate));
+    }
+    if (viewSyncFrame) return;
+    viewSyncFrame = window.requestAnimationFrame(() => {
+      viewSyncFrame = 0;
+      const scrollers = Array.from(pendingViewScrollers);
+      pendingViewScrollers.clear();
+      scrollers.forEach(syncViewScroller);
+    });
+  }
+
+  function ensureViewResizeObserver() {
+    if (viewResizeObserver || typeof ResizeObserver !== "function") return viewResizeObserver;
+    viewResizeObserver = new ResizeObserver((entries) => {
+      const scrollers = new Set();
+      entries.forEach((entry) => {
+        const target = entry.target;
+        const views = target instanceof Element && target.matches("#progressionPage .views, #progressionPage .quickFilters")
+          ? target
+          : target instanceof Element
+            ? target.closest("#progressionPage .views, #progressionPage .quickFilters")
+            : null;
+        if (views instanceof HTMLElement) scrollers.add(views);
+      });
+      scrollers.forEach((views) => scheduleViewScrollerSync(views));
+    });
+    return viewResizeObserver;
+  }
+
+  function observeViewScroller(views) {
+    const observer = ensureViewResizeObserver();
+    if (!observer) return;
+    observer.observe(views);
+    Array.from(views.children).forEach((child) => {
+      if (child instanceof HTMLElement) observer.observe(child);
+    });
+  }
+
+  function ensureViewScrollers() {
+    tableHorizontalScrollers().forEach((candidate) => {
+      if (MOBILE_TABLE_MEDIA.matches) {
+        viewScrollButton(candidate);
+        viewScrollLeftButton(candidate);
+      }
+      observeViewScroller(candidate);
+      if (!boundViewScrollers.has(candidate)) {
+        const onViewScroll = () => {
+          clampViewScroll(candidate);
+          scheduleViewScrollerSync(candidate);
+        };
+        candidate.addEventListener("scroll", onViewScroll, { passive: true });
+        boundViewScrollers.set(candidate, onViewScroll);
+      }
+      scheduleViewScrollerSync(candidate);
+    });
+  }
+
+  function onMobileTableMediaChange(event) {
+    window.__mflMobileTablePageSizeActive = event.matches;
+    if (event.matches) enforceMobilePageSize();
+    syncWatchlistSwitcherPlacement();
+    ensureViewScrollers();
+    scheduleViewScrollerSync();
+  }
+
   function onPointerDown(event) {
     pointerControl = controlFromTarget(event.target);
   }
@@ -108,15 +453,37 @@
   function sync() {
     markInitialTableFiltersForReset();
     syncFilterSummaryNow();
+    ensureMobilePageSizeOwnership();
+    syncWatchlistSwitcherPlacement();
+    ensureViewScrollers();
   }
 
   function destroy() {
     destroyed = true;
+    window.__mflMobileTablePageSizeActive = false;
+    const views = tableViews();
+    const switcher = document.getElementById("watchlistSwitcher");
+    if (views instanceof HTMLElement && switcher instanceof HTMLElement && switcher.parentElement !== views) {
+      switcher.classList.remove("mflMobileWatchlistSwitcher");
+      views.appendChild(switcher);
+    }
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("keydown", onKeyDown, true);
     scrollContainer?.removeEventListener("scroll", onScroll);
+    MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
+    boundViewScrollers.forEach((handler, scroller) => scroller.removeEventListener("scroll", handler));
+    boundViewScrollers.clear();
+    viewResizeObserver?.disconnect();
+    viewResizeObserver = null;
+    pendingViewScrollers.clear();
+    if (viewSyncFrame) window.cancelAnimationFrame(viewSyncFrame);
+    viewSyncFrame = 0;
+    tableHorizontalScrollers().forEach((scroller) => {
+      scroller.classList.remove(VIEW_SCROLL_CLASS);
+      removeViewScrollShell(scroller);
+    });
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -124,7 +491,8 @@
   document.addEventListener("change", onChange, true);
   document.addEventListener("keydown", onKeyDown, true);
   scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
+  MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
 
   sync();
-  window.__mflSharedTableUiRuntime = Object.freeze({ sync, destroy });
+  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalCuesNow, destroy });
 })();
