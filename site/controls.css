@@ -50,6 +50,31 @@
   pointer-events: none;
 }
 
+#sidebar .navEmoji {
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  color: inherit;
+  font-size: 18px;
+  line-height: 18px;
+}
+
+#sidebar .navJerseyIcon {
+  width: 18px;
+  height: 18px;
+  color: inherit;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: none;
+}
+
 :is(
   .navButton,
   .viewButton:not([hidden]),
@@ -147,15 +172,15 @@
 }
 
 #filterSummary.filtersViewCount {
-  display: inline-flex;
+  display: inline-grid;
   flex: 0 0 18px;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
+  place-items: center;
+  align-self: stretch;
   width: 18px;
   min-width: 18px;
   max-width: 18px;
-  height: 40px;
+  min-height: 0;
+  height: auto;
   margin-left: auto;
   padding: 0;
   overflow: hidden;
@@ -163,9 +188,10 @@
   background: transparent;
   color: var(--text-soft);
   font-size: 10px;
+  font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
+  text-box: trim-both cap alphabetic;
   white-space: nowrap;
-  transform: translateY(1px);
 }
 
 body.filtersOpen .filtersViewButton {
@@ -564,5 +590,4 @@ html.mflDataLoading #pageSizeSelect {
 #sidebar .navButton.active:focus-visible {
   border-color: var(--primary);
   background: var(--primary);
-  color: #ffffff;
 }

@@ -167,3 +167,25 @@ html body > #appShell > main {
   width: var(--mfl-scrollbar-compact-size);
   height: var(--mfl-scrollbar-compact-size);
 }
+
+/* Mobile section-view and quick-filter strips use arrow cues instead of native scrollbars. */
+@media (max-width: 900px) {
+  @supports not selector(::-webkit-scrollbar) {
+    .views,
+    .quickFilters {
+      scrollbar-width: none;
+    }
+  }
+
+  .views,
+  .quickFilters {
+    -ms-overflow-style: none;
+  }
+
+  .views::-webkit-scrollbar,
+  .quickFilters::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

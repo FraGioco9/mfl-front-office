@@ -130,8 +130,8 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 }
 
 #progressionPage .quickFilters {
-  margin-bottom: 0;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 0;
 }
 
 #progressionPage > .controlsBar > .rowsField {

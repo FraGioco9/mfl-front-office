@@ -42,9 +42,20 @@ const standardsFallback = `@supports not selector(::-webkit-scrollbar) {
 if (!scrollbarSource.includes(standardsFallback)) {
   throw new Error("Standards-based scrollbar styling must be limited to browsers without WebKit scrollbar pseudo-elements.");
 }
+const mobileHorizontalStandardsFallback = `@supports not selector(::-webkit-scrollbar) {
+    .views,
+    .quickFilters {
+      scrollbar-width: none;
+    }
+  }`;
+if (!scrollbarSource.includes(mobileHorizontalStandardsFallback)) {
+  throw new Error("Mobile section-view and quick-filter strips must hide standards-based scrollbars from the canonical scrollbar owner.");
+}
 // Chromium 121+ gives scrollbar-width/scrollbar-color precedence over WebKit pseudo-elements;
 // keeping these declarations out of WebKit-capable browsers preserves hidden native arrow buttons.
-const outsideStandardsFallback = scrollbarSource.replace(standardsFallback, "");
+const outsideStandardsFallback = scrollbarSource
+  .replace(standardsFallback, "")
+  .replace(mobileHorizontalStandardsFallback, "");
 if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFallback.includes("scrollbar-color:")) {
   throw new Error("Do not let standards scrollbar properties override WebKit thumb-only styling in Chromium/Safari.");
 }
@@ -82,6 +93,17 @@ if (!scrollbarSource.includes("*::-webkit-scrollbar-button {")
   || !scrollbarSource.includes("max-height: 0;")) {
   throw new Error("WebKit scrollbar buttons/arrows must stay globally hidden with zero-size button boxes.");
 }
+const mobileHorizontalWebkitScrollbar = `.views::-webkit-scrollbar,
+  .quickFilters::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }`;
+if (!scrollbarSource.includes("@media (max-width: 900px)")
+  || !scrollbarSource.includes(mobileHorizontalWebkitScrollbar)
+  || !scrollbarSource.includes("-ms-overflow-style: none;")) {
+  throw new Error("Mobile section-view and quick-filter strips must hide every native scrollbar through scrollbars.css.");
+}
 const modalThumbSelector = ":root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb";
 if (!scrollbarSource.includes(modalThumbSelector)) {
   throw new Error("The main scrollbar thumb must stay visually transparent while a modal is visible.");
@@ -97,4 +119,4 @@ if (scrollbarSource.includes("--mfl-scrollbar-arrow") || scrollbarSource.include
   throw new Error("Scrollbar arrow styling must not be reintroduced; only the thumb should be visible.");
 }
 
-console.log("Canonical CSS priority and thumb-only scrollbar validation passed.");
+console.log("Canonical CSS priority, thumb-only scrollbar, and hidden mobile section-view/quick-filter scrollbar validation passed.");
