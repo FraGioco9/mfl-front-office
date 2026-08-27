@@ -139,6 +139,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Reliable scheduler regression tests
+        if: steps.changes.outputs.workflow == 'true'
+        working-directory: .
+        run: node --test test_database_refresh_scheduler.mjs
+
       - name: Install site dependencies
         if: steps.changes.outputs.quality == 'true'
         run: npm install --no-audit --no-fund

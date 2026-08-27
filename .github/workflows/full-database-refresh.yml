@@ -1,65 +1,159 @@
 name: Full database refresh
 
+run-name: >-
+  ${{ inputs.occurrence_key != '' && format('Full database refresh [{0}] via {1}', inputs.occurrence_key, inputs.trigger_source) || 'Full database refresh' }}
+
 on:
-  schedule:
-    # Europe/Rome local time. GitHub Actions applies CET/CEST automatically.
-    - cron: "20 10 * * *"
-      timezone: "Europe/Rome"
-    - cron: "15 19 * * *"
-      timezone: "Europe/Rome"
-    - cron: "15 23 * * *"
-      timezone: "Europe/Rome"
   workflow_dispatch:
+    inputs:
+      trigger_source:
+        description: Trigger source used by timing telemetry.
+        required: false
+        default: manual
+        type: string
+      intended_at:
+        description: Intended occurrence as an offset-aware ISO 8601 timestamp.
+        required: false
+        default: ""
+        type: string
+      occurrence_key:
+        description: Stable occurrence key, for example 20260827-1915.
+        required: false
+        default: ""
+        type: string
+      triggered_at:
+        description: External trigger timestamp as an ISO 8601 UTC timestamp.
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  # Database and site deployments must never overlap. Scheduled-run telemetry below
-  # separates GitHub scheduler delay from time spent waiting for this shared lock/runner.
+  # Database and site deployments must never overlap. Duplicate external dispatches
+  # wait for the active run, then the gate below skips them after a success marker exists.
   group: database-and-vercel-site
   cancel-in-progress: false
 
 jobs:
+  resolve-refresh-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.resolve.outputs.should_run }}
+      occurrence_key: ${{ steps.resolve.outputs.occurrence_key }}
+      intended_at: ${{ steps.resolve.outputs.intended_at }}
+      trigger_source: ${{ steps.resolve.outputs.trigger_source }}
+      triggered_at: ${{ steps.resolve.outputs.triggered_at }}
+    steps:
+      - name: Resolve refresh occurrence
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TRIGGER_SOURCE: ${{ inputs.trigger_source }}
+          INPUT_INTENDED_AT: ${{ inputs.intended_at }}
+          INPUT_OCCURRENCE_KEY: ${{ inputs.occurrence_key }}
+          INPUT_TRIGGERED_AT: ${{ inputs.triggered_at }}
+        run: |
+          set -euo pipefail
+
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
+          CREATED_AT="$(jq -r '.created_at // empty' <<< "$RUN_JSON")"
+          if [ -z "$CREATED_AT" ]; then
+            CREATED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          fi
+
+          TRIGGER_SOURCE="${INPUT_TRIGGER_SOURCE:-manual}"
+          INTENDED_AT="${INPUT_INTENDED_AT:-}"
+          OCCURRENCE_KEY="${INPUT_OCCURRENCE_KEY:-}"
+          TRIGGERED_AT="${INPUT_TRIGGERED_AT:-$CREATED_AT}"
+
+          if [ "$TRIGGER_SOURCE" = "supabase-cron" ]; then
+            if [ -z "$INTENDED_AT" ] || [ -z "$OCCURRENCE_KEY" ] || [ -z "$INPUT_TRIGGERED_AT" ]; then
+              echo "Supabase scheduler dispatch requires intended_at, occurrence_key, and triggered_at." >&2
+              exit 1
+            fi
+            date -d "$INTENDED_AT" >/dev/null
+            date -d "$TRIGGERED_AT" >/dev/null
+            if [[ ! "$OCCURRENCE_KEY" =~ ^[0-9]{8}-[0-9]{4}$ ]]; then
+              echo "Invalid occurrence_key: $OCCURRENCE_KEY" >&2
+              exit 1
+            fi
+            EXPECTED_KEY="$(TZ=Europe/Rome date -d "$INTENDED_AT" +'%Y%m%d-%H%M')"
+            if [ "$EXPECTED_KEY" != "$OCCURRENCE_KEY" ]; then
+              echo "occurrence_key $OCCURRENCE_KEY does not match intended_at $INTENDED_AT." >&2
+              exit 1
+            fi
+            case "${OCCURRENCE_KEY:9:4}" in
+              1020|1915|2315) ;;
+              *)
+                echo "Unsupported scheduled occurrence: $OCCURRENCE_KEY" >&2
+                exit 1
+                ;;
+            esac
+          elif [ -n "$INTENDED_AT" ]; then
+            date -d "$INTENDED_AT" >/dev/null
+          fi
+
+          SHOULD_RUN=true
+          if [ -n "$OCCURRENCE_KEY" ]; then
+            ARTIFACT_NAME="full-database-refresh-occurrence-$OCCURRENCE_KEY"
+            COMPLETED_COUNT="$(
+              gh api --paginate \
+                "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${ARTIFACT_NAME}&per_page=100" \
+                --jq '[.artifacts[] | select(.expired == false)] | length' \
+                | awk '{ total += $1 } END { print total + 0 }'
+            )"
+            if [ "$COMPLETED_COUNT" -gt 0 ]; then
+              SHOULD_RUN=false
+            fi
+          fi
+
+          {
+            echo "should_run=$SHOULD_RUN"
+            echo "occurrence_key=$OCCURRENCE_KEY"
+            echo "intended_at=$INTENDED_AT"
+            echo "trigger_source=$TRIGGER_SOURCE"
+            echo "triggered_at=$TRIGGERED_AT"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Full database refresh trigger"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Trigger source | \`$TRIGGER_SOURCE\` |"
+            echo "| Occurrence | \`${OCCURRENCE_KEY:-manual}\` |"
+            echo "| Intended Rome time | \`${INTENDED_AT:-n/a}\` |"
+            echo "| Triggered at | \`$TRIGGERED_AT\` |"
+            echo "| Run database refresh | \`$SHOULD_RUN\` |"
+            if [ "$SHOULD_RUN" = false ]; then
+              echo
+              echo "A successful completion marker already exists for this occurrence, so this duplicate dispatch is skipped."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
   update-database-and-production-data:
+    needs: resolve-refresh-trigger
+    if: needs.resolve-refresh-trigger.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: Record scheduled-run timing
-        if: github.event_name == 'schedule'
+      - name: Record refresh trigger timing
+        if: needs.resolve-refresh-trigger.outputs.intended_at != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          SCHEDULE_CRON: ${{ github.event.schedule }}
+          TRIGGER_SOURCE: ${{ needs.resolve-refresh-trigger.outputs.trigger_source }}
+          TRIGGERED_AT: ${{ needs.resolve-refresh-trigger.outputs.triggered_at }}
+          INTENDED_AT: ${{ needs.resolve-refresh-trigger.outputs.intended_at }}
         run: |
           set -euo pipefail
 
-          case "$SCHEDULE_CRON" in
-            "20 10 * * *") INTENDED_HM="10:20" ;;
-            "15 19 * * *") INTENDED_HM="19:15" ;;
-            "15 23 * * *") INTENDED_HM="23:15" ;;
-            *)
-              echo "Unknown Full database refresh schedule: $SCHEDULE_CRON" >&2
-              exit 1
-              ;;
-          esac
-
           MEASURED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          MEASURED_EPOCH="$(date -d "$MEASURED_AT" +%s)"
-          ROME_DATE="$(TZ=Europe/Rome date +'%Y-%m-%d')"
-          INTENDED_EPOCH="$(TZ=Europe/Rome date -d "$ROME_DATE $INTENDED_HM:00" +%s)"
-
-          # A delayed 23:15 run can begin after local midnight. In that case the
-          # intended occurrence belongs to the previous Rome calendar day.
-          if [ "$INTENDED_EPOCH" -gt "$MEASURED_EPOCH" ]; then
-            ROME_DATE="$(TZ=Europe/Rome date -d 'yesterday' +'%Y-%m-%d')"
-            INTENDED_EPOCH="$(TZ=Europe/Rome date -d "$ROME_DATE $INTENDED_HM:00" +%s)"
-          fi
-
-          INTENDED_AT="$(TZ=Europe/Rome date -d "@$INTENDED_EPOCH" +'%Y-%m-%dT%H:%M:%S%:z')"
-
           RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
           CREATED_AT="$(jq -r '.created_at // empty' <<< "$RUN_JSON")"
           if [ -z "$CREATED_AT" ]; then
@@ -67,14 +161,20 @@ jobs:
           fi
 
           JOBS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100")"
-          JOB_STARTED_AT="$(jq -r '.jobs[0].started_at // empty' <<< "$JOBS_JSON")"
+          JOB_STARTED_AT="$(
+            jq -r '.jobs[] | select(.name == "update-database-and-production-data") | .started_at // empty' \
+              <<< "$JOBS_JSON" | head -n 1
+          )"
           if [ -z "$JOB_STARTED_AT" ]; then
             JOB_STARTED_AT="$MEASURED_AT"
           fi
 
+          INTENDED_EPOCH="$(date -d "$INTENDED_AT" +%s)"
+          TRIGGERED_EPOCH="$(date -d "$TRIGGERED_AT" +%s)"
           CREATED_EPOCH="$(date -d "$CREATED_AT" +%s)"
           JOB_STARTED_EPOCH="$(date -d "$JOB_STARTED_AT" +%s)"
-          SCHEDULER_DELAY_SECONDS="$((CREATED_EPOCH - INTENDED_EPOCH))"
+          TRIGGER_DELAY_SECONDS="$((TRIGGERED_EPOCH - INTENDED_EPOCH))"
+          TRIGGER_TO_WORKFLOW_SECONDS="$((CREATED_EPOCH - TRIGGERED_EPOCH))"
           QUEUE_DELAY_SECONDS="$((JOB_STARTED_EPOCH - CREATED_EPOCH))"
           TOTAL_DELAY_SECONDS="$((JOB_STARTED_EPOCH - INTENDED_EPOCH))"
 
@@ -91,36 +191,39 @@ jobs:
               '[.workflow_runs[] | select((.id | tostring) != $run_id and .created_at <= $end and .updated_at >= $start)] | length' \
               <<< "$DATABASE_RUNS_JSON"
           )"
-          OVERLAPPING_SHARED_RUNS="$((OVERLAPPING_SITE_RUNS + OVERLAPPING_DATABASE_RUNS))"
 
-          if [ "$SCHEDULER_DELAY_SECONDS" -gt 60 ] && [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
-            if [ "$OVERLAPPING_SHARED_RUNS" -gt 0 ]; then
-              DELAY_SOURCE_HINT="GitHub scheduler delay + shared concurrency wait"
+          if [ "$TRIGGER_SOURCE" = "supabase-cron" ]; then
+            if [ "$TRIGGER_DELAY_SECONDS" -gt 60 ]; then
+              DELAY_SOURCE_HINT="Supabase scheduler arrived late"
+            elif [ "$TRIGGER_DELAY_SECONDS" -lt -60 ]; then
+              DELAY_SOURCE_HINT="Supabase scheduler arrived early"
             else
-              DELAY_SOURCE_HINT="GitHub scheduler delay + runner queue wait"
+              DELAY_SOURCE_HINT="Supabase scheduler within 60 seconds of intended time"
             fi
-          elif [ "$SCHEDULER_DELAY_SECONDS" -gt 60 ]; then
-            DELAY_SOURCE_HINT="GitHub scheduler delay"
-          elif [ "$SCHEDULER_DELAY_SECONDS" -lt -60 ]; then
-            DELAY_SOURCE_HINT="GitHub scheduled the run early"
-          elif [ "$QUEUE_DELAY_SECONDS" -gt 60 ] && [ "$OVERLAPPING_SHARED_RUNS" -gt 0 ]; then
-            DELAY_SOURCE_HINT="Shared database/site concurrency wait"
-          elif [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
-            DELAY_SOURCE_HINT="Runner queue wait"
           else
-            DELAY_SOURCE_HINT="Within 60 seconds of intended start"
+            DELAY_SOURCE_HINT="Manual dispatch"
           fi
 
-          TELEMETRY_FILE="$RUNNER_TEMP/full-database-refresh-schedule-telemetry.json"
+          if [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
+            if [ "$((OVERLAPPING_SITE_RUNS + OVERLAPPING_DATABASE_RUNS))" -gt 0 ]; then
+              DELAY_SOURCE_HINT="$DELAY_SOURCE_HINT + shared concurrency wait"
+            else
+              DELAY_SOURCE_HINT="$DELAY_SOURCE_HINT + runner/job queue wait"
+            fi
+          fi
+
+          TELEMETRY_FILE="$RUNNER_TEMP/full-database-refresh-trigger-telemetry.json"
           jq -n \
             --arg timezone "Europe/Rome" \
-            --arg cron "$SCHEDULE_CRON" \
+            --arg triggerSource "$TRIGGER_SOURCE" \
             --arg intendedAt "$INTENDED_AT" \
+            --arg triggeredAt "$TRIGGERED_AT" \
             --arg workflowCreatedAt "$CREATED_AT" \
             --arg jobStartedAt "$JOB_STARTED_AT" \
             --arg measuredAt "$MEASURED_AT" \
             --arg delaySourceHint "$DELAY_SOURCE_HINT" \
-            --argjson schedulerDelaySeconds "$SCHEDULER_DELAY_SECONDS" \
+            --argjson triggerDelaySeconds "$TRIGGER_DELAY_SECONDS" \
+            --argjson triggerToWorkflowSeconds "$TRIGGER_TO_WORKFLOW_SECONDS" \
             --argjson queueOrConcurrencyDelaySeconds "$QUEUE_DELAY_SECONDS" \
             --argjson totalStartDelaySeconds "$TOTAL_DELAY_SECONDS" \
             --argjson overlappingSiteUpdateRuns "$OVERLAPPING_SITE_RUNS" \
@@ -129,12 +232,14 @@ jobs:
             --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
             '{
               timezone: $timezone,
-              cron: $cron,
+              triggerSource: $triggerSource,
               intendedAt: $intendedAt,
+              triggeredAt: $triggeredAt,
               workflowCreatedAt: $workflowCreatedAt,
               jobStartedAt: $jobStartedAt,
               measuredAt: $measuredAt,
-              schedulerDelaySeconds: $schedulerDelaySeconds,
+              triggerDelaySeconds: $triggerDelaySeconds,
+              triggerToWorkflowSeconds: $triggerToWorkflowSeconds,
               queueOrConcurrencyDelaySeconds: $queueOrConcurrencyDelaySeconds,
               totalStartDelaySeconds: $totalStartDelaySeconds,
               overlappingSiteUpdateRuns: $overlappingSiteUpdateRuns,
@@ -146,21 +251,22 @@ jobs:
 
           cat "$TELEMETRY_FILE"
           {
-            echo "### Full database refresh schedule timing"
+            echo "### Full database refresh trigger timing"
             echo
             echo "| Metric | Value |"
             echo "| --- | --- |"
+            echo "| Trigger source | \`$TRIGGER_SOURCE\` |"
             echo "| Intended Rome time | \`$INTENDED_AT\` |"
+            echo "| Triggered | \`$TRIGGERED_AT\` |"
             echo "| Workflow created | \`$CREATED_AT\` |"
-            echo "| Job started | \`$JOB_STARTED_AT\` |"
-            echo "| Scheduler delay | ${SCHEDULER_DELAY_SECONDS}s |"
+            echo "| Database job started | \`$JOB_STARTED_AT\` |"
+            echo "| Trigger delay from intended time | ${TRIGGER_DELAY_SECONDS}s |"
+            echo "| Trigger → workflow creation | ${TRIGGER_TO_WORKFLOW_SECONDS}s |"
             echo "| Queue/concurrency delay | ${QUEUE_DELAY_SECONDS}s |"
             echo "| Total start delay | ${TOTAL_DELAY_SECONDS}s |"
             echo "| Overlapping site-update runs | $OVERLAPPING_SITE_RUNS |"
             echo "| Overlapping database-refresh runs | $OVERLAPPING_DATABASE_RUNS |"
             echo "| Delay source hint | $DELAY_SOURCE_HINT |"
-            echo
-            echo "Queue/concurrency delay is measured from workflow creation to job start. An overlapping run in the shared \`database-and-vercel-site\` group makes concurrency the likely cause; otherwise runner availability is the likely cause."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download current database builder
@@ -535,11 +641,43 @@ jobs:
           )
           PY
 
-      - name: Upload scheduled-run timing telemetry
-        if: always() && github.event_name == 'schedule'
+      - name: Record completed refresh occurrence
+        if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
+        shell: bash
+        env:
+          OCCURRENCE_KEY: ${{ needs.resolve-refresh-trigger.outputs.occurrence_key }}
+          INTENDED_AT: ${{ needs.resolve-refresh-trigger.outputs.intended_at }}
+          TRIGGER_SOURCE: ${{ needs.resolve-refresh-trigger.outputs.trigger_source }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg occurrenceKey "$OCCURRENCE_KEY" \
+            --arg intendedAt "$INTENDED_AT" \
+            --arg triggerSource "$TRIGGER_SOURCE" \
+            --arg completedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --arg runId "$GITHUB_RUN_ID" \
+            '{
+              occurrenceKey: $occurrenceKey,
+              intendedAt: $intendedAt,
+              triggerSource: $triggerSource,
+              completedAt: $completedAt,
+              runId: $runId
+            }' > "$RUNNER_TEMP/full-database-refresh-occurrence.json"
+
+      - name: Upload completed refresh occurrence
+        if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
         uses: actions/upload-artifact@v7
         with:
-          name: full-database-refresh-schedule-${{ github.run_id }}
-          path: ${{ runner.temp }}/full-database-refresh-schedule-telemetry.json
+          name: full-database-refresh-occurrence-${{ needs.resolve-refresh-trigger.outputs.occurrence_key }}
+          path: ${{ runner.temp }}/full-database-refresh-occurrence.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload refresh trigger timing telemetry
+        if: always() && needs.resolve-refresh-trigger.outputs.intended_at != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-database-refresh-trigger-${{ github.run_id }}
+          path: ${{ runner.temp }}/full-database-refresh-trigger-telemetry.json
           if-no-files-found: warn
           retention-days: 90

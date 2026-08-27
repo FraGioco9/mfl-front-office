@@ -1,0 +1,4 @@
+project_id = "mfl-front-office"
+
+[functions.mfl-database-refresh-dispatch]
+verify_jwt = false
