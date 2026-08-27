@@ -1,0 +1,58 @@
+name: Temporary issue 429 compact Player action menu v2
+on:
+  push:
+    branches: [feat/issue-429-player-table-actions]
+    paths: [.github/workflows/tmp-issue-429-player-actions-compact-v2.yml]
+permissions:
+  contents: write
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-429-player-table-actions
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply compact menu refinement
+        working-directory: site
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('modules/app-core.js'); s=p.read_text()
+          s=s.replace('r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"','r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"',1)
+          p.write_text(s)
+          p=Path('dropdowns.css'); s=p.read_text()
+          s=s.replace('''  width: 24px;\n  min-width: 24px;\n  height: 24px;\n  min-height: 24px;\n  margin: 0;\n  padding: 0;\n  border: 1px solid var(--primary);\n  border-radius: 5px;\n  background: var(--primary);''','''  width: 20px;\n  min-width: 20px;\n  height: 20px;\n  min-height: 20px;\n  margin: 0;\n  padding: 0;\n  border: 1px solid var(--primary);\n  border-radius: 4px;\n  background: var(--primary);''',1)
+          s=s.replace('''.playerTableActionsButton svg {\n  display: block;\n  width: 16px;\n  height: 16px;''','''.playerTableActionsButton svg {\n  display: block;\n  width: 12px;\n  height: 12px;''',1)
+          s=s.replace('''.playerTableActionsButton:hover:not(:disabled),\n.playerTableActionsButton:focus-visible:not(:disabled),\n.playerTableActionsButton[aria-expanded="true"] {\n  outline: 0;\n  border-color: var(--primary);\n  background: var(--primary);\n  color: #ffffff;\n  box-shadow: none;\n}''','''.playerTableActionsButton[aria-expanded="false"]:hover:not(:disabled),\n.playerTableActionsButton[aria-expanded="false"]:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--primary-hover);\n  background: var(--primary-hover);\n  color: #ffffff;\n  box-shadow: none;\n}\n\n.playerTableActionsButton[aria-expanded="true"],\n.playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),\n.playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--primary);\n  background: var(--primary);\n  color: #ffffff;\n  box-shadow: none;\n}''',1)
+          s=s.replace('  width: 250px;\n  min-width: 250px;','  width: 210px;\n  min-width: 210px;',1)
+          s=s.replace('''.playerTableActionItem {\n  align-items: center;\n  gap: 9px;\n}''','''.playerTableActionItem {\n  align-items: center;\n  gap: 8px;\n  height: 29px;\n  min-height: 29px;\n  padding: 0 8px;\n  font-size: 12px;\n  font-weight: 600;\n}''',1)
+          s=s.replace('.playerTableActionItem + .playerTableActionItem {\n  margin-top: 2px;\n}','.playerTableActionItem + .playerTableActionItem {\n  margin-top: 1px;\n}',1)
+          p.write_text(s)
+          p=Path('validate-player-table-actions.mjs'); s=p.read_text()
+          s=s.replace('code.includes(\'M12 3v18\')','code.includes(\'r="1.25"\')\n      && code.includes(\'M12 3v18\')',1)
+          s=s.replace('dropdowns.includes("width: 250px;")\n    && dropdowns.includes("min-width: 250px;")','dropdowns.includes("width: 210px;")\n    && dropdowns.includes("min-width: 210px;")\n    && dropdowns.includes("height: 29px;")\n    && dropdowns.includes("font-size: 12px;")\n    && dropdowns.includes("font-weight: 600;")',1)
+          s=s.replace('dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"] {\\n  outline: 0;\\n  border-color: var(--primary);\\n  background: var(--primary);\\n  color: #ffffff;`)','dropdowns.includes("border-color: var(--primary-hover);")\n    && dropdowns.includes("background: var(--primary-hover);")\n    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"],`)',1)
+          s=s.replace('keep the wider menu','use compact menu typography and account-button hover',1)
+          p.write_text(s)
+          PY
+      - run: npm install --no-audit --no-fund
+        working-directory: site
+      - run: npm run build:core
+        working-directory: site
+      - run: npm run lint
+        working-directory: site
+      - run: npm run typecheck
+        working-directory: site
+      - run: npm run validate
+        working-directory: site
+      - name: Commit refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/modules/app-core.js site/modules/app-core*-runtime.js site/dropdowns.css site/validate-player-table-actions.mjs
+          git commit -m 'compact Player table action menu'
+          git push origin HEAD:feat/issue-429-player-table-actions
