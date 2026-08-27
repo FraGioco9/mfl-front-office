@@ -16,6 +16,7 @@ const validators = [
   "validate-modal-entrance-lifecycle.mjs",
   "validate-z-index-ownership.mjs",
   "validate-nationality-flag-tooltips.mjs",
+  "validate-checkbox-style.mjs",
   "validate-account-button-icon.mjs",
 ];
 

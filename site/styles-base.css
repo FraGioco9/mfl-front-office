@@ -75,6 +75,65 @@ select {
   font: inherit;
 }
 
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background-color: var(--surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 10px 8px;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background-color: var(--row-hover);
+}
+
+input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3 3 7-7' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:checked:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background-color: var(--primary-hover);
+}
+
+input[type="checkbox"]:indeterminate {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M2 5h8' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+}
+
+input[type="checkbox"]:disabled {
+  border-color: var(--border);
+  background-color: var(--surface-muted);
+  cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled:checked,
+input[type="checkbox"]:disabled:indeterminate {
+  border-color: var(--border-strong);
+  background-color: var(--border-strong);
+}
+
 .topbar {
   grid-row: 1;
   position: relative;
@@ -953,12 +1012,6 @@ body:not(.pinnedSidebarVisible) .siteFooter {
   display: none;
 }
 
-.quickFilters input {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-}
 
 .controlsBar {
   display: grid;
@@ -1755,9 +1808,6 @@ th.sortable:hover {
 }
 
 .selectionCell input {
-  width: 15px;
-  height: 15px;
-  padding: 0;
   vertical-align: middle;
 }
 
@@ -3385,11 +3435,6 @@ button.playerIdText:active {
   gap: 8px;
 }
 
-.evaluationOptionFilters input {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-}
 
 .playerNotesPanel {
   display: grid;
@@ -4333,14 +4378,6 @@ button.playerIdText:active {
   opacity: 0.62;
 }
 
-.settingsCheckbox.disabled input {
-  cursor: not-allowed;
-}
-
-.settingsCheckbox input {
-  width: 15px;
-  height: 15px;
-}
 
 /* Compact individual player notes panel. */
 .playerStack {
