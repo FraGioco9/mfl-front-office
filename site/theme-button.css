@@ -3,25 +3,20 @@
 #themeButton .themeModeIcon {
   width: 22px;
   height: 22px;
-  overflow: visible;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
-#themeButton .themeMoonSymbol path {
-  fill: currentColor;
-  stroke: currentColor;
-  stroke-width: 3;
-  stroke-linejoin: miter;
+#themeButton .themeModeIcon > * {
+  display: none;
 }
 
-#themeButton .themeSunSymbol circle {
-  fill: currentColor;
-  stroke: none;
+#themeButton .themeMoonSymbol {
+  background-image: url("/theme-moon-reference.svg");
 }
 
-#themeButton .themeSunSymbol path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+#themeButton .themeSunSymbol {
+  background-image: url("/theme-sun-reference.svg");
+  filter: invert(1);
 }
