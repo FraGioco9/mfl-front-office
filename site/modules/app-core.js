@@ -9637,7 +9637,9 @@ function buildNumberInput(value = "", placeholder = "Value") {
 
 function buildDateInput(value = "") {
   const input = document.createElement("input");
-  input.type = "date";
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.placeholder = "YYYY-MM-DD";
   input.className = "dateValue";
   input.dataset.filterValue = "true";
   input.value = value;

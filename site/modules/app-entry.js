@@ -109,6 +109,7 @@ function preloadClassicScript(path) {
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
+  "/date-picker-runtime.js",
   "/global-search-runtime.js",
   "/shared-table-ui-runtime.js",
 ]);

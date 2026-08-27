@@ -719,3 +719,189 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionItem:focus-visible:not(:disabled) .playerTableActionIcon {
   color: #ffffff;
 }
+
+/* Shared date picker */
+input.dateValue[data-mfl-date-picker="true"] {
+  cursor: text;
+}
+
+.mflDatePicker {
+  position: fixed;
+  z-index: var(--mfl-z-dropdown);
+  width: min(296px, calc(100vw - 16px));
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--mfl-dropdown-shadow);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top left;
+  transition:
+    opacity var(--mfl-dropdown-transition-duration) ease,
+    transform var(--mfl-dropdown-transition-duration) ease,
+    display var(--mfl-dropdown-transition-duration);
+  transition-behavior: allow-discrete;
+}
+
+.mflDatePicker[hidden] {
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  pointer-events: none;
+}
+
+@starting-style {
+  .mflDatePicker:not([hidden]) {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.mflDatePickerHeader {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-bottom: 6px;
+}
+
+.mflDatePickerMonth {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mflDatePickerNav,
+.mflDatePickerToday,
+.mflDatePickerDay {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.mflDatePickerNav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-color: var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.mflDatePickerNav svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mflDatePickerNav:hover,
+.mflDatePickerNav:focus-visible,
+.mflDatePickerToday:hover,
+.mflDatePickerToday:focus-visible,
+.mflDatePickerDay:hover:not(.isSelected),
+.mflDatePickerDay:focus-visible:not(.isSelected) {
+  outline: 0;
+  border-color: var(--border);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.mflDatePickerWeekdays,
+.mflDatePickerDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.mflDatePickerWeekdays {
+  margin-bottom: 3px;
+}
+
+.mflDatePickerWeekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mflDatePickerDay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mflDatePickerDay.isOutsideMonth {
+  color: var(--text-soft);
+  opacity: 0.52;
+}
+
+.mflDatePickerDay.isToday:not(.isSelected) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.mflDatePickerDay.isSelected,
+.mflDatePickerDay.isSelected:hover,
+.mflDatePickerDay.isSelected:focus-visible {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.mflDatePickerToday {
+  width: 100%;
+  height: 30px;
+  margin-top: 7px;
+  padding: 0 10px;
+  border-color: var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .mflDatePicker {
+    width: min(320px, calc(100vw - 16px));
+    padding: 9px;
+  }
+
+  .mflDatePickerDay {
+    height: 36px;
+  }
+
+  .mflDatePickerToday {
+    height: 34px;
+  }
+}
