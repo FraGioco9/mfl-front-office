@@ -7,6 +7,7 @@ const validators = [
   "validate-listing-column.mjs",
   "validate-player-table-actions.mjs",
   "validate-player-table-action-menu-rerender.mjs",
+  "validate-new-player-icon.mjs",
 ];
 
 for (const validator of validators) {

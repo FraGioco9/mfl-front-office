@@ -1846,6 +1846,21 @@ td a {
   cursor: help;
 }
 
+.newMintMarker {
+  color: var(--primary);
+}
+
+.newMintIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .newMintMarker[data-tooltip]::after,
 .playerNoteIcon[data-tooltip]::after {
   content: attr(data-tooltip);

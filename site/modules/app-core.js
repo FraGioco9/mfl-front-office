@@ -6427,7 +6427,7 @@ function newMintMarker(row) {
   }
 
   return {
-    emoji: "\u{1F195}",
+    svg: "newPlayer",
     label: "New mint",
   };
 }
@@ -6446,6 +6446,13 @@ function appendNameMarker(cell, marker, className) {
     markerIcon.height = 16;
     markerIcon.alt = "";
     markerIcon.setAttribute("aria-hidden", "true");
+    markerElement.appendChild(markerIcon);
+  } else if (marker.svg === "newPlayer") {
+    const markerIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    markerIcon.classList.add("newMintIcon");
+    markerIcon.setAttribute("viewBox", "0 0 24 24");
+    markerIcon.setAttribute("aria-hidden", "true");
+    markerIcon.innerHTML = '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path><path d="M5 3v4"></path><path d="M3 5h4"></path>';
     markerElement.appendChild(markerIcon);
   } else {
     markerElement.textContent = marker.emoji;

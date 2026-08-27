@@ -564,7 +564,7 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   display: block;
   width: 16px;
   height: 16px;
-  background: currentColor;
+  background: var(--retirement-marker-color);
 }
 
 .retirementMarker--retired::before {
@@ -586,18 +586,22 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 }
 
 .retirementMarker--retired {
+  --retirement-marker-color: #910000;
   color: #910000;
 }
 
 .retirementMarker--retiring-1 {
+  --retirement-marker-color: #ff2020;
   color: #ff2020;
 }
 
 .retirementMarker--retiring-2 {
+  --retirement-marker-color: #ff7a00;
   color: #ff7a00;
 }
 
 .retirementMarker--retiring-3 {
+  --retirement-marker-color: #ffdd33;
   color: #ffdd33;
 }
 
