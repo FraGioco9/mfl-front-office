@@ -486,7 +486,6 @@
     if (clear instanceof HTMLButtonElement) {
       queueMicrotask(() => {
         selectEmptySearch();
-        void restoreEmptyRecentResults(false);
       });
       return;
     }
