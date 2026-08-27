@@ -1,0 +1,110 @@
+name: Temporary issue 429 compact Player action menu
+
+on:
+  push:
+    branches:
+      - feat/issue-429-player-table-actions
+    paths:
+      - .github/workflows/tmp-issue-429-player-actions-compact.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/issue-429-player-table-actions
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Compact Player table action menu
+        working-directory: site
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              return text.replace(old, new, 1)
+
+          core_path = Path("modules/app-core.js")
+          core = core_path.read_text()
+          core = replace_once(
+              core,
+              'button.innerHTML = \'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>\';',
+              'button.innerHTML = \'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>\';',
+              "smaller three-dot glyph",
+          )
+          core_path.write_text(core)
+
+          dropdowns_path = Path("dropdowns.css")
+          dropdowns = dropdowns_path.read_text()
+          dropdowns = replace_once(dropdowns, '  width: 24px;\n  min-width: 24px;\n  height: 24px;\n  min-height: 24px;', '  width: 20px;\n  min-width: 20px;\n  height: 20px;\n  min-height: 20px;', "smaller trigger box")
+          dropdowns = replace_once(dropdowns, '  border-radius: 5px;\n  background: var(--primary);', '  border-radius: 4px;\n  background: var(--primary);', "smaller trigger radius")
+          dropdowns = replace_once(dropdowns, '.playerTableActionsButton svg {\n  display: block;\n  width: 16px;\n  height: 16px;', '.playerTableActionsButton svg {\n  display: block;\n  width: 12px;\n  height: 12px;', "smaller dots svg")
+          dropdowns = replace_once(
+              dropdowns,
+              '.playerTableActionsButton:hover:not(:disabled),\n.playerTableActionsButton:focus-visible:not(:disabled),\n.playerTableActionsButton[aria-expanded="true"] {\n  outline: 0;\n  border-color: var(--primary);\n  background: var(--primary);\n  color: #ffffff;\n  box-shadow: none;\n}',
+              '.playerTableActionsButton[aria-expanded="false"]:hover:not(:disabled),\n.playerTableActionsButton[aria-expanded="false"]:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--primary-hover);\n  background: var(--primary-hover);\n  color: #ffffff;\n  box-shadow: none;\n}\n\n.playerTableActionsButton[aria-expanded="true"],\n.playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),\n.playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--primary);\n  background: var(--primary);\n  color: #ffffff;\n  box-shadow: none;\n}',
+              "account-button hover behavior",
+          )
+          dropdowns = replace_once(dropdowns, '  width: 250px;\n  min-width: 250px;', '  width: 210px;\n  min-width: 210px;', "narrower menu")
+          dropdowns = replace_once(
+              dropdowns,
+              '.playerTableActionItem {\n  align-items: center;\n  gap: 9px;\n}',
+              '.playerTableActionItem {\n  align-items: center;\n  gap: 8px;\n  height: 29px;\n  min-height: 29px;\n  padding: 0 8px;\n  font-size: 12px;\n  font-weight: 600;\n}',
+              "compact menu typography and rows",
+          )
+          dropdowns = replace_once(dropdowns, '.playerTableActionItem + .playerTableActionItem {\n  margin-top: 2px;\n}', '.playerTableActionItem + .playerTableActionItem {\n  margin-top: 1px;\n}', "compact item spacing")
+          dropdowns_path.write_text(dropdowns)
+
+          validator_path = Path("validate-player-table-actions.mjs")
+          validator = validator_path.read_text()
+          validator = replace_once(
+              validator,
+              '    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"] {\\n  outline: 0;\\n  border-color: var(--primary);\\n  background: var(--primary);\\n  color: #ffffff;`)\n    && dropdowns.includes("width: 250px;")\n    && dropdowns.includes("min-width: 250px;")',
+              '    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="false"]:hover:not(:disabled),\\n.playerTableActionsButton[aria-expanded="false"]:focus-visible:not(:disabled) {\\n  outline: 0;\\n  border-color: var(--primary-hover);\\n  background: var(--primary-hover);\\n  color: #ffffff;`)\n    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"],\\n.playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),\\n.playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {\\n  outline: 0;\\n  border-color: var(--primary);\\n  background: var(--primary);\\n  color: #ffffff;`)\n    && dropdowns.includes("width: 210px;")\n    && dropdowns.includes("min-width: 210px;")\n    && dropdowns.includes("height: 29px;")\n    && dropdowns.includes("min-height: 29px;")\n    && dropdowns.includes("font-size: 12px;")\n    && dropdowns.includes("font-weight: 600;")',
+              "compact/account-hover validation",
+          )
+          validator = replace_once(
+              validator,
+              '  "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, keep the wider menu, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",',
+              '  "Player table actions must keep the compact primary trigger, match account-button hover behavior, use lighter compact menu typography, keep icons centered/white, fill the remove-watchlist star, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",',
+              "validator message",
+          )
+          validator = replace_once(
+              validator,
+              '    code.includes(\'M12 3v18\')',
+              '    code.includes(\'r="1.25"\')\n      && code.includes(\'M12 3v18\')',
+              "small dots validation",
+          )
+          validator_path.write_text(validator)
+          PY
+      - name: Install dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Validate repository
+        working-directory: site
+        run: npm run validate
+      - name: Commit refinements
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js site/modules/app-core*-runtime.js site/dropdowns.css site/validate-player-table-actions.mjs
+          git commit -m "compact Player table action menu"
+          git push origin HEAD:feat/issue-429-player-table-actions
