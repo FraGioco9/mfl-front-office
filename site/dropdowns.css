@@ -197,8 +197,19 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 #accountButton[aria-expanded="true"]:focus,
 #accountButton[aria-expanded="true"]:focus-visible {
   outline: 0;
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.playerHeroActionMenuButton[aria-expanded="true"],
+.playerHeroActionMenuButton[aria-expanded="true"]:hover:not(:disabled),
+.playerHeroActionMenuButton[aria-expanded="true"]:focus:not(:disabled),
+.playerHeroActionMenuButton[aria-expanded="true"]:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
   color: #ffffff;
   box-shadow: none;
 }
@@ -627,8 +638,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),
 .playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {
   outline: 0;
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
   color: #ffffff;
   box-shadow: none;
 }
