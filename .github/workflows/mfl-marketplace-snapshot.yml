@@ -1,4 +1,5 @@
 name: MFL marketplace snapshot
+run-name: MFL marketplace snapshot [${{ inputs.occurrence_key || github.run_id }}]
 
 on:
   pull_request:
@@ -10,6 +11,11 @@ on:
       - "test_mfl_marketplace_snapshot.py"
       - "test_mfl_marketplace_events.py"
       - "test_mfl_marketplace_runtime_state.py"
+      - "test_reliable_marketplace_scheduler.py"
+      - "test_marketplace_scheduler.mjs"
+      - "supabase/config.toml"
+      - "supabase/marketplace-snapshot-scheduler.sql"
+      - "supabase/functions/mfl-marketplace-dispatch/**"
       - ".github/workflows/mfl-marketplace-snapshot.yml"
   push:
     branches:
@@ -22,6 +28,11 @@ on:
       - "test_mfl_marketplace_snapshot.py"
       - "test_mfl_marketplace_events.py"
       - "test_mfl_marketplace_runtime_state.py"
+      - "test_reliable_marketplace_scheduler.py"
+      - "test_marketplace_scheduler.mjs"
+      - "supabase/config.toml"
+      - "supabase/marketplace-snapshot-scheduler.sql"
+      - "supabase/functions/mfl-marketplace-dispatch/**"
       - ".github/workflows/mfl-marketplace-snapshot.yml"
   workflow_dispatch:
     inputs:
@@ -39,11 +50,26 @@ on:
         required: false
         default: "20"
         type: string
-  schedule:
-    - cron: "2-59/5 * * * *"
-      timezone: "Europe/Rome"
-    - cron: "19 4 * * *"
-      timezone: "Europe/Rome"
+      trigger_source:
+        description: External scheduler source
+        required: false
+        default: ""
+        type: string
+      intended_at:
+        description: Intended Europe/Rome occurrence timestamp
+        required: false
+        default: ""
+        type: string
+      occurrence_key:
+        description: Stable Marketplace occurrence key
+        required: false
+        default: ""
+        type: string
+      triggered_at:
+        description: Supabase scheduler dispatch timestamp
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -65,6 +91,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
       - name: Compile marketplace process
         run: >-
           python -m py_compile
@@ -75,6 +105,7 @@ jobs:
           test_mfl_marketplace_snapshot.py
           test_mfl_marketplace_events.py
           test_mfl_marketplace_runtime_state.py
+          test_reliable_marketplace_scheduler.py
 
       - name: Run marketplace regression tests
         run: >-
@@ -82,6 +113,10 @@ jobs:
           test_mfl_marketplace_snapshot.py
           test_mfl_marketplace_events.py
           test_mfl_marketplace_runtime_state.py
+          test_reliable_marketplace_scheduler.py
+
+      - name: Run Marketplace scheduler time tests
+        run: node --test test_marketplace_scheduler.mjs
 
       - name: Verify Flow event API against mainnet
         run: |
@@ -96,7 +131,7 @@ jobs:
           PY
 
   snapshot:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -112,17 +147,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DISPATCH_MODE: ${{ inputs.mode }}
-          SCHEDULE_CRON: ${{ github.event.schedule }}
+          INPUT_TRIGGER_SOURCE: ${{ inputs.trigger_source }}
+          INPUT_INTENDED_AT: ${{ inputs.intended_at }}
+          INPUT_OCCURRENCE_KEY: ${{ inputs.occurrence_key }}
+          INPUT_TRIGGERED_AT: ${{ inputs.triggered_at }}
         run: |
           set -euo pipefail
           mkdir -p marketplace-previous
 
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            MODE="${DISPATCH_MODE}"
-          elif [ "${SCHEDULE_CRON}" = "19 4 * * *" ]; then
-            MODE="reconcile"
-          else
+          TRIGGER_SOURCE="${INPUT_TRIGGER_SOURCE:-manual}"
+          MODE="${DISPATCH_MODE:-incremental}"
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "$TRIGGER_SOURCE" = "supabase-cron" ]; then
+            [ -n "$INPUT_INTENDED_AT" ] || { echo "Scheduled dispatch is missing intended_at." >&2; exit 1; }
+            [ -n "$INPUT_OCCURRENCE_KEY" ] || { echo "Scheduled dispatch is missing occurrence_key." >&2; exit 1; }
+            [ -n "$INPUT_TRIGGERED_AT" ] || { echo "Scheduled dispatch is missing triggered_at." >&2; exit 1; }
+            [[ "$INPUT_OCCURRENCE_KEY" =~ ^[0-9]{8}-[0-9]{4}-[pm][0-9]{4}$ ]] || {
+              echo "Scheduled dispatch has an invalid occurrence_key: $INPUT_OCCURRENCE_KEY" >&2
+              exit 1
+            }
+
+            TARGET_HM="${INPUT_OCCURRENCE_KEY:9:4}"
+            if [ "$TARGET_HM" = "0400" ]; then
+              EXPECTED_MODE="reconcile"
+            else
+              EXPECTED_MODE="incremental"
+            fi
+            [ "$MODE" = "$EXPECTED_MODE" ] || {
+              echo "Scheduled mode $MODE does not match $TARGET_HM ($EXPECTED_MODE)." >&2
+              exit 1
+            }
+          elif [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            TRIGGER_SOURCE="push"
             MODE="incremental"
+          else
+            TRIGGER_SOURCE="manual"
           fi
 
           STATE_RUN_ID=""
@@ -154,7 +213,7 @@ jobs:
                 --name mfl_marketplace_state \
                 --dir marketplace-previous
               test -s marketplace-previous/mfl_marketplace_listings.json
-            elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            elif [ "$TRIGGER_SOURCE" = "manual" ]; then
               echo "Incremental mode requires a previous successful marketplace state." >&2
               exit 1
             else
@@ -164,6 +223,16 @@ jobs:
           fi
 
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$TRIGGER_SOURCE" = "supabase-cron" ]; then
+            {
+              echo "### Marketplace scheduler"
+              echo "- Intended at: $INPUT_INTENDED_AT"
+              echo "- Occurrence: $INPUT_OCCURRENCE_KEY"
+              echo "- Supabase triggered at: $INPUT_TRIGGERED_AT"
+              echo "- Resolved mode: $MODE"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Download latest successful MFL database artifact
         if: steps.mode.outputs.mode != 'incremental'
