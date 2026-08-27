@@ -1,5 +1,9 @@
 [
   [
+    "v1.127.0",
+    "Improve mobile layouts, table loading, and Marketplace scheduling"
+  ],
+  [
     "v1.126.4",
     "Refine Player tables, dropdown interactions, and progression emails"
   ],
