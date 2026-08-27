@@ -139,6 +139,25 @@ invariant(
     && renderSource.indexOf("shouldShowTypedResults?.() === false") < renderSource.indexOf("evaluationSearchResults.replaceChildren();"),
   "Canonical Evaluation search rendering must not re-open loaded typed results while the search input is unfocused.",
 );
+const resultDataStart = renderSource.indexOf("const results = query ? evaluationSearchMatches(query) : recentEvaluationRows();");
+const resultReplaceIndex = renderSource.indexOf("evaluationSearchResults.replaceChildren();", resultDataStart);
+const reusableReturnIndex = renderSource.indexOf("if (reusableResults) return;", resultDataStart);
+invariant(
+  resultDataStart >= 0
+    && renderSource.includes("const resultEntries = results.map((entry) => {")
+    && renderSource.includes("const renderSignature = JSON.stringify([")
+    && renderSource.includes("evaluationSearchResults.dataset.mflEvaluationRenderSignature === renderSignature")
+    && renderSource.includes("evaluationSearchResults.children.length === resultEntries.length")
+    && renderSource.includes('child.classList.contains("evaluationSearchResult")')
+    && renderSource.includes("child.dataset.playerId === playerId")
+    && renderSource.includes("evaluationSearchResults.hidden = resultEntries.length === 0;")
+    && reusableReturnIndex >= 0
+    && resultReplaceIndex >= 0
+    && reusableReturnIndex < resultReplaceIndex
+    && renderSource.includes("button.dataset.playerId = playerId;")
+    && renderSource.includes("evaluationSearchResults.dataset.mflEvaluationRenderSignature = renderSignature;"),
+  "Canonical Evaluation search rendering must reuse an identical result DOM so readiness/focus rerenders cannot destroy a hovered recent result.",
+);
 invariant(
   renderSource.includes('button.addEventListener("click", async () => {')
     && renderSource.includes("state.evaluationPlayerId = playerId;")
