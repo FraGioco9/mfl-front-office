@@ -1,5 +1,9 @@
 /* Canonical active-state presentation for the table Filters control. */
 
+#filterSummary.filtersViewCount {
+  visibility: hidden;
+}
+
 #openFiltersButton.filtersViewButton.hasActiveFilters {
   border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 10%, var(--surface));
@@ -14,6 +18,7 @@
 }
 
 #filterSummary.filtersViewCount.hasActiveFilters {
+  visibility: visible;
   align-self: center;
   min-height: 18px;
   height: 18px;
