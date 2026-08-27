@@ -130,6 +130,35 @@ const contractsWidth = totalPlayerWidth([
 ]);
 invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
 invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns must total 100%.");
+
+const contractRenderName = percentageVariable("--mfl-table-col-contract-render-name");
+const contractRenderClub = percentageVariable("--mfl-table-col-contract-render-club");
+const contractRenderAgent = percentageVariable("--mfl-table-col-contract-agent");
+const contractRenderLink = percentageVariable("--mfl-table-col-contract-link");
+const contractRenderWidth = contractsWidth
+  - percentageVariable("--mfl-table-col-name")
+  - percentageVariable("--mfl-table-col-contract-club")
+  - percentageVariable("--mfl-table-col-agent")
+  - percentageVariable("--mfl-table-col-link")
+  + contractRenderName
+  + contractRenderClub
+  + contractRenderAgent
+  + contractRenderLink;
+invariant(Math.abs(contractRenderWidth - 100) < 1e-9, "Rendered Contracts table columns must total exactly 100%.");
+invariant(
+  styles.includes("--mfl-table-col-name: var(--mfl-table-col-contract-render-name);")
+    && Math.abs(contractRenderName - Number("14.162810390689944")) < 1e-12
+    && Math.abs(contractRenderClub - Number("16.019370440565254")) < 1e-12
+    && Math.abs(contractRenderAgent - Number("11.721677780548629")) < 1e-12
+    && Math.abs(contractRenderLink - Number("2.443606059850374")) < 1e-12,
+  "Contracts must preserve the Chromium 1664px calibration that keeps shared Name-through-Overall and Agent geometry identical to stat views.",
+);
+const contractCalibrationDelta =
+  (contractRenderName - percentageVariable("--mfl-table-col-name"))
+  + (contractRenderClub - percentageVariable("--mfl-table-col-contract-club"))
+  + (contractRenderAgent - percentageVariable("--mfl-table-col-agent"))
+  + (contractRenderLink - percentageVariable("--mfl-table-col-link"));
+invariant(Math.abs(contractCalibrationDelta) < 1e-12, "Contracts rounding calibration must redistribute width without changing the 100% table contract.");
 invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.442227763923525) < 1e-12, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
 invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.763369354391799) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
 
