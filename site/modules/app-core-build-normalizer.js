@@ -6,6 +6,7 @@ import { addActiveFilterControlState } from "./app-core-filter-control-state.js"
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
+import { addSettingsEmailResetRuntime } from "./app-core-settings-email-reset.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
@@ -17,7 +18,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
-  const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
+  const settingsEmailResetArtifacts = addSettingsEmailResetRuntime(settingsArtifacts);
+  const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsEmailResetArtifacts);
   const filterArtifacts = addActiveFilterControlState(playerArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(filterArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
