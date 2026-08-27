@@ -607,8 +607,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionMenu {
   position: fixed;
   z-index: var(--mfl-z-dropdown);
-  width: 210px;
-  min-width: 210px;
+  width: 200px;
+  min-width: 200px;
   max-width: calc(100vw - 16px);
   opacity: 0;
   visibility: hidden;

@@ -5,12 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [source, generatedTable, bootstrap, styles, dropdowns] = await Promise.all([
+const [source, generatedTable, bootstrap, styles, dropdowns, baseStyles] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./bootstrap.js"),
   read("./styles.css"),
   read("./dropdowns.css"),
+  read("./styles-base.css"),
 ]);
 
 for (const code of [source, generatedTable]) {
@@ -79,8 +80,8 @@ invariant(
     && dropdowns.includes("border-color: var(--primary-hover);")
     && dropdowns.includes("background: var(--primary-hover);")
     && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"],`)
-    && dropdowns.includes("width: 210px;")
-    && dropdowns.includes("min-width: 210px;")
+    && dropdowns.includes("width: 200px;")
+    && dropdowns.includes("min-width: 200px;")
     && dropdowns.includes("height: 29px;")
     && dropdowns.includes("font-size: 12px;")
     && dropdowns.includes("font-weight: 600;")
@@ -93,7 +94,22 @@ invariant(
     && dropdowns.includes("align-self: center;")
     && dropdowns.includes("color: #ffffff;")
     && dropdowns.includes(".playerTableActionIcon"),
-  "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, use compact menu typography and account-button hover, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
+  "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, use compact menu typography, first-open motion, and account-button hover, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
+);
+
+invariant(
+  source.includes('menu.dataset.open = "false";')
+    && source.includes('void menu.offsetWidth;')
+    && source.includes('if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;')
+    && source.includes('menu.dataset.open = "true";')
+    && generatedTable.includes('void menu.offsetWidth;'),
+  "Player table menu must paint its closed state before opening so first use gets the canonical transition.",
+);
+
+invariant(
+  baseStyles.includes('#tableBody tr:hover button:not(.playerTableActionsButton):hover')
+    && baseStyles.includes('#tableBody tr.tableRowHovered button:not(.playerTableActionsButton):hover'),
+  "Table row hover cleanup must not suppress the Player action trigger account-style hover state.",
 );
 
 invariant(

@@ -684,10 +684,13 @@ function openPlayerTableActionMenu(trigger, playerId) {
   }
   items.push(createPlayerTableActionItem("copy", `#${key}`, "copy"));
   menu.replaceChildren(...items);
-  menu.dataset.open = "true";
+  menu.dataset.open = "false";
   positionPlayerTableActionMenu();
+  void menu.offsetWidth;
   requestAnimationFrame(() => {
-    if (playerTableActionTrigger === trigger && trigger.isConnected) positionPlayerTableActionMenu();
+    if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;
+    menu.dataset.open = "true";
+    positionPlayerTableActionMenu();
   });
   return true;
 }
