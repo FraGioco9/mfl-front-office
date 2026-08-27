@@ -21,10 +21,13 @@ invariant(
 );
 
 for (const required of [
+  "#filterSummary.filtersViewCount {",
+  "visibility: hidden;",
   "#openFiltersButton.filtersViewButton.hasActiveFilters",
   "border-color: var(--primary);",
   "background: color-mix(in srgb, var(--primary) 10%, var(--surface));",
   "#filterSummary.filtersViewCount.hasActiveFilters",
+  "visibility: visible;",
   "min-height: 18px;",
   "height: 18px;",
   "border-radius: 999px;",
@@ -33,6 +36,12 @@ for (const required of [
 ]) {
   invariant(styles.includes(required), `Active Filters presentation is missing ${required}`);
 }
+
+invariant(
+  styles.indexOf("visibility: hidden;") < styles.indexOf("#filterSummary.filtersViewCount.hasActiveFilters")
+    && styles.indexOf("#filterSummary.filtersViewCount.hasActiveFilters") < styles.indexOf("visibility: visible;"),
+  "Inactive Filters count must stay hidden while its fixed layout slot remains reserved, then become visible only when active.",
+);
 
 for (const required of [
   'replaceRequiredFunction(',
@@ -82,4 +91,4 @@ invariant(!styles.includes("!important"), "Active Filters styles must not use CS
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
-console.log("Active Filters badge and canonical highlighted-state ownership validation passed.");
+console.log("Active Filters badge, hidden zero count, reserved slot, and canonical highlighted-state ownership validation passed.");
