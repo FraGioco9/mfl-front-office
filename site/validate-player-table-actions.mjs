@@ -49,7 +49,8 @@ for (const code of [source, generatedTable]) {
     "Each Player table action must retain its own icon.",
   );
   invariant(
-    code.includes('M12 3v18')
+    code.includes('r="1.25"')
+      && code.includes('M12 3v18')
       && code.includes('M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5')
       && code.includes('let left = triggerRect.left;'),
     "Table Evaluate must use the exact Player-page valuation icon and the menu must anchor to the trigger left edge.",
@@ -75,9 +76,14 @@ invariant(
     && dropdowns.includes("var(--mfl-motion-standard, 180ms)")
     && dropdowns.includes("border: 1px solid var(--primary);")
     && dropdowns.includes("background: var(--primary);")
-    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"] {\n  outline: 0;\n  border-color: var(--primary);\n  background: var(--primary);\n  color: #ffffff;`)
-    && dropdowns.includes("width: 250px;")
-    && dropdowns.includes("min-width: 250px;")
+    && dropdowns.includes("border-color: var(--primary-hover);")
+    && dropdowns.includes("background: var(--primary-hover);")
+    && dropdowns.includes(`.playerTableActionsButton[aria-expanded="true"],`)
+    && dropdowns.includes("width: 210px;")
+    && dropdowns.includes("min-width: 210px;")
+    && dropdowns.includes("height: 29px;")
+    && dropdowns.includes("font-size: 12px;")
+    && dropdowns.includes("font-weight: 600;")
     && dropdowns.includes('.playerTableActionIcon svg[data-filled="true"]')
     && dropdowns.includes("fill: currentColor;")
     && dropdowns.includes("transform-origin: top left;")
@@ -87,7 +93,7 @@ invariant(
     && dropdowns.includes("align-self: center;")
     && dropdowns.includes("color: #ffffff;")
     && dropdowns.includes(".playerTableActionIcon"),
-  "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, keep the wider menu, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
+  "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, use compact menu typography and account-button hover, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
 );
 
 invariant(

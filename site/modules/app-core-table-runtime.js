@@ -700,7 +700,7 @@ function createPlayerTableActionsButton(playerId) {
   button.setAttribute("aria-label", `Actions for player ${playerId}`);
   button.setAttribute("aria-haspopup", "menu");
   button.setAttribute("aria-expanded", "false");
-  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>';
+  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
   button.addEventListener("pointerdown", (event) => event.stopPropagation());
   button.addEventListener("click", (event) => {
     event.preventDefault();

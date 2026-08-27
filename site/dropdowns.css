@@ -561,14 +561,14 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionsButton {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  min-height: 24px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--primary);
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--primary);
   color: #ffffff;
   line-height: 1;
@@ -579,15 +579,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .playerTableActionsButton svg {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   fill: currentColor;
   stroke: none;
 }
 
-.playerTableActionsButton:hover:not(:disabled),
-.playerTableActionsButton:focus-visible:not(:disabled),
-.playerTableActionsButton[aria-expanded="true"] {
+.playerTableActionsButton[aria-expanded="false"]:hover:not(:disabled),
+.playerTableActionsButton[aria-expanded="false"]:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.playerTableActionsButton[aria-expanded="true"],
+.playerTableActionsButton[aria-expanded="true"]:hover:not(:disabled),
+.playerTableActionsButton[aria-expanded="true"]:focus-visible:not(:disabled) {
   outline: 0;
   border-color: var(--primary);
   background: var(--primary);
@@ -598,8 +607,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionMenu {
   position: fixed;
   z-index: var(--mfl-z-dropdown);
-  width: 250px;
-  min-width: 250px;
+  width: 210px;
+  min-width: 210px;
   max-width: calc(100vw - 16px);
   opacity: 0;
   visibility: hidden;
@@ -619,7 +628,12 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .playerTableActionItem {
   align-items: center;
-  gap: 9px;
+  gap: 8px;
+  height: 29px;
+  min-height: 29px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .playerTableActionItem:hover:not(:disabled),
@@ -632,7 +646,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 }
 
 .playerTableActionItem + .playerTableActionItem {
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .playerTableActionIcon {
