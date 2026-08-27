@@ -53,10 +53,17 @@ invariant(
   "Existing close-button and Player Training motion must remain unchanged.",
 );
 
+const overallControlStart = core.indexOf("function evaluationOverallControl(value, season) {");
+const overallControlEnd = core.indexOf("function evaluationSummaryPosition(", overallControlStart);
+const overallControl = overallControlStart >= 0 && overallControlEnd > overallControlStart
+  ? core.slice(overallControlStart, overallControlEnd)
+  : "";
 invariant(
-  core.includes('class=\\"popupMinusButton\\" type=\\"button\\" data-evaluation-overall-season=')
-    && core.includes('class=\\"popupAddButton\\" type=\\"button\\" data-evaluation-overall-season=')
-    && core.includes('return `<div class=\\"evaluationOverallControl\\">'),
+  overallControl.includes("popupMinusButton")
+    && overallControl.includes("popupAddButton")
+    && overallControl.includes("data-evaluation-overall-season")
+    && overallControl.includes("data-evaluation-overall-delta")
+    && overallControl.includes("evaluationOverallControl"),
   "Evaluation Overall must keep using the shared +/- glyph buttons without introducing a page-specific control class.",
 );
 
@@ -65,4 +72,4 @@ invariant(
   "accountButton must remain a normal button consuming the generic primary-hover contract.",
 );
 
-console.log("Rebased Evaluation +/- hover inherits accountButton primary-hover behavior while Player Training remains scoped.");
+console.log("Evaluation +/- hover inherits accountButton primary-hover behavior while Player Training remains scoped.");
