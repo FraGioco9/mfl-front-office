@@ -230,3 +230,8 @@ includes(tableCore, 'if (state.currentPage === "club") {', "The Table renderer m
 includes(tableCore, "state.filteredRows = [...state.rows];", "Club must render its returned roster rows without generic filtering.");
 
 console.log("Route runtime, prebuilt route-core splitting, request cancellation, pure table-state validation, and filter-free Club loading/render handoff passed.");
+
+
+includes(coreSource, 'window.addEventListener("popstate", () => {', "Canonical app-core must own browser history traversal through popstate.");
+includes(coreSource, 'setPage(target.pageName, false, { ...target.options, preserveScroll: true });', "Browser Back/Forward must re-enter the canonical route without pushing a duplicate history entry.");
+includes(coreSource, 'const shouldResetScroll = previousPage !== pageName && options.preserveScroll !== true;', "Browser Back/Forward must preserve the history entry scroll position.");

@@ -3225,7 +3225,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   const previousPage = state.currentPage;
-  const shouldResetScroll = previousPage !== pageName;
+  const shouldResetScroll = previousPage !== pageName && options.preserveScroll !== true;
   if (previousPage === "settings" && pageName !== "settings") {
     discardSettingsEmailAddressDraftSilently();
   }
@@ -12141,7 +12141,7 @@ window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true 
 
 window.addEventListener("popstate", () => {
   const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
-  setPage(target.pageName, false, target.options);
+  setPage(target.pageName, false, { ...target.options, preserveScroll: true });
 });
 
 accountButton.addEventListener("click", (event) => {
