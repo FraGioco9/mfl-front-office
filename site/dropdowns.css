@@ -103,11 +103,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     margin-top: 2px;
   }
 
+  #pageSizeSelect option {
+    box-sizing: border-box;
+    border: 1px solid transparent;
+  }
+
   select[data-mfl-dropdown-enhanced="true"] option:hover,
   select[data-mfl-dropdown-enhanced="true"] option:focus-visible,
   .filtersDialog select option:hover,
   .filtersDialog select option:focus-visible {
     outline: 0;
+    background: var(--row-hover);
+    color: var(--text);
+  }
+
+  #pageSizeSelect option:hover,
+  #pageSizeSelect option:focus-visible {
+    outline: 0;
+    border-color: var(--border);
     background: var(--row-hover);
     color: var(--text);
   }
@@ -632,6 +645,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   height: 29px;
   min-height: 29px;
   padding: 0 8px;
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 600;
 }
@@ -639,7 +653,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionItem:hover:not(:disabled),
 .playerTableActionItem:focus-visible:not(:disabled) {
   outline: 0;
-  border: 0;
+  border-color: var(--border);
   background: var(--row-hover);
   color: var(--text);
   box-shadow: none;

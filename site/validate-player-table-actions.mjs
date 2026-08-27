@@ -5,13 +5,14 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [source, generatedTable, bootstrap, styles, dropdowns, baseStyles] = await Promise.all([
+const [source, generatedTable, bootstrap, styles, dropdowns, baseStyles, playerRuntime] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./bootstrap.js"),
   read("./styles.css"),
   read("./dropdowns.css"),
   read("./styles-base.css"),
+  read("./modules/app-core-player-runtime.js"),
 ]);
 
 for (const code of [source, generatedTable]) {
@@ -95,6 +96,16 @@ invariant(
     && dropdowns.includes("color: #ffffff;")
     && dropdowns.includes(".playerTableActionIcon"),
   "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, use compact menu typography, first-open motion, and account-button hover, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
+);
+
+invariant(
+  playerRuntime.includes('item.style.background = "var(--row-hover)";')
+    && playerRuntime.includes('item.style.borderColor = "var(--border)";')
+    && dropdowns.includes('#pageSizeSelect option {\n    box-sizing: border-box;\n    border: 1px solid transparent;')
+    && dropdowns.includes('#pageSizeSelect option:hover,\n  #pageSizeSelect option:focus-visible {\n    outline: 0;\n    border-color: var(--border);\n    background: var(--row-hover);')
+    && dropdowns.includes('padding: 0 8px;\n  border: 1px solid transparent;\n  font-size: 12px;')
+    && dropdowns.includes('.playerTableActionItem:hover:not(:disabled),\n.playerTableActionItem:focus-visible:not(:disabled) {\n  outline: 0;\n  border-color: var(--border);\n  background: var(--row-hover);'),
+  "Player table action items and row selector options must match the Player hero action menu hover border/background contract.",
 );
 
 invariant(
