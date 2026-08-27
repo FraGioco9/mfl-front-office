@@ -4485,7 +4485,8 @@ function updateTablePlayerCount() {
     return;
   }
 
-  const visible = tablePages.has(state.currentPage);
+  const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.());
+  const visible = tablePages.has(state.currentPage) && !tableLoadingActive;
   watchlistPlayerCount.hidden = !visible;
   if (!visible) {
     return;
@@ -11355,18 +11356,28 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   if (force) state.incrementalPayloadCache.delete(cacheKey);
 
   const cachedPayload = !force ? state.incrementalPayloadCache.get(cacheKey) : null;
-  if (cachedPayload) {
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
-    applyIncrementalPayload(route, cachedPayload);
-    state.incrementalLastKey = requestKey;
-    state.incrementalLastLoadedAt = Date.now();
-    return cachedPayload;
-  }
-
   const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);
+  const cachedPayloadSupersedesActiveRequest = Boolean(cachedPayload && window.__mflTableLoadingRuntime?.requestActive?.());
   const tableLoadingRequestToken = inheritedTableLoadingRequestToken
-    || window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode })
+    || (!cachedPayload || cachedPayloadSupersedesActiveRequest
+      ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode })
+      : 0)
     || 0;
+
+  if (cachedPayload) {
+    if (!incrementalRouteRequestIsCurrent(generation)) {
+      window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+      return null;
+    }
+    try {
+      applyIncrementalPayload(route, cachedPayload);
+      state.incrementalLastKey = requestKey;
+      state.incrementalLastLoadedAt = Date.now();
+      return cachedPayload;
+    } finally {
+      window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+    }
+  }
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {

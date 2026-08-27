@@ -42,6 +42,8 @@
   function hidePager() {
     const page = pager();
     if (page) page.hidden = true;
+    const count = document.getElementById("watchlistPlayerCount");
+    if (count instanceof HTMLElement) count.hidden = true;
   }
 
   function loadingSnapshot() {
