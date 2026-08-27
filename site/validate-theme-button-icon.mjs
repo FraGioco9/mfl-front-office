@@ -34,18 +34,22 @@ invariant(
   markup.includes('#themeButton .themeSunSymbol {')
     && markup.includes('html[data-theme="dark"] #themeButton .themeMoonSymbol {')
     && markup.includes('html[data-theme="dark"] #themeButton .themeSunSymbol {'),
-  "Theme icon visibility must remain synchronized from first paint via the active theme.",
+  "Theme state hooks must remain synchronized from first paint.",
 );
 
 for (const required of [
-  "#themeButton .themeModeIcon {",
+  "#themeButton .themeModeIcon {\n  display: none;\n}",
+  "#themeButton::before {",
+  'content: "";',
+  "display: block;",
   "width: 22px;",
   "height: 22px;",
+  "flex: 0 0 22px;",
+  'background-image: url("/theme-moon-reference.svg");',
   "background-position: center;",
   "background-repeat: no-repeat;",
   "background-size: contain;",
-  "#themeButton .themeModeIcon > * {\n  display: none;\n}",
-  'background-image: url("/theme-moon-reference.svg");',
+  'html[data-theme="dark"] #themeButton::before {',
   'background-image: url("/theme-sun-reference.svg");',
   "filter: invert(1);",
 ]) {
