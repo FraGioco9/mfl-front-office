@@ -87,8 +87,8 @@ jobs:
           validator = validator_path.read_text()
           validator = replace_once(
               validator,
-              "      && code.includes('\\\"Remove from watchlist\\\" : \\\"Add to watchlist\\\"')\n      && code.includes('createPlayerTableActionItem(\\\"copy\\\", `#${key}`, \\\"copy\\\")')",
-              "      && code.includes('watchlistIsActive ? \\\"Remove from watchlist\\\" : \\\"Add to watchlist\\\"')\n      && code.includes('watchlistIsActive ? \\\"watchlistFilled\\\" : \\\"watchlist\\\"')\n      && code.includes('createPlayerTableActionItem(\\\"copy\\\", `#${key}`, \\\"copy\\\")')",
+              '      && code.includes(\'"Remove from watchlist" : "Add to watchlist"\')',
+              '      && code.includes(\'watchlistIsActive ? "Remove from watchlist" : "Add to watchlist"\')\n      && code.includes(\'watchlistIsActive ? "watchlistFilled" : "watchlist"\')',
               "watchlist label/icon state validation",
           )
           validator = replace_once(
