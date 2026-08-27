@@ -16,6 +16,7 @@ for (const required of [
   "--mfl-dropdown-gap:",
   "--mfl-dropdown-max-height:",
   "--mfl-dropdown-chevron-inset:",
+  "--mfl-dropdown-transition-duration: 150ms;",
   'select[data-mfl-dropdown-enhanced="true"]:open',
   '#accountButton[aria-expanded="true"]',
   "#watchlistButton::after",
@@ -27,11 +28,46 @@ for (const required of [
   invariant(dropdowns.includes(required), `dropdowns.css is missing canonical rule: ${required}`);
 }
 
+const accountDropdownStart = dropdowns.indexOf("#accountDropdown {");
+const accountDropdownEnd = dropdowns.indexOf("\n}\n\n#accountDropdown[hidden]", accountDropdownStart);
+const accountDropdownSource = accountDropdownStart >= 0 && accountDropdownEnd > accountDropdownStart
+  ? dropdowns.slice(accountDropdownStart, accountDropdownEnd + 2)
+  : "";
+const accountDropdownHiddenStart = dropdowns.indexOf("#accountDropdown[hidden] {");
+const accountDropdownHiddenEnd = dropdowns.indexOf("\n}\n\n@starting-style", accountDropdownHiddenStart);
+const accountDropdownHiddenSource = accountDropdownHiddenStart >= 0 && accountDropdownHiddenEnd > accountDropdownHiddenStart
+  ? dropdowns.slice(accountDropdownHiddenStart, accountDropdownHiddenEnd + 2)
+  : "";
+
+invariant(
+  accountDropdownSource.includes("opacity: 1;")
+    && accountDropdownSource.includes("transform: translateY(0) scale(1);")
+    && accountDropdownSource.includes("pointer-events: auto;")
+    && accountDropdownSource.includes("opacity var(--mfl-dropdown-transition-duration) ease")
+    && accountDropdownSource.includes("transform var(--mfl-dropdown-transition-duration) ease")
+    && accountDropdownSource.includes("display var(--mfl-dropdown-transition-duration)")
+    && accountDropdownSource.includes("transition-behavior: allow-discrete;"),
+  "The account dropdown must use the canonical dropdown entrance/exit transition, including discrete display ownership.",
+);
+invariant(
+  accountDropdownHiddenSource.includes("display: none;")
+    && accountDropdownHiddenSource.includes("opacity: 0;")
+    && accountDropdownHiddenSource.includes("transform: translateY(-4px) scale(0.98);")
+    && accountDropdownHiddenSource.includes("pointer-events: none;"),
+  "The hidden account dropdown state must retain the matching faded, raised transition endpoint.",
+);
+invariant(
+  dropdowns.includes("@starting-style {\n  #accountDropdown:not([hidden]) {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}"),
+  "The account dropdown must define its pre-paint opening state so it never flashes fully visible before animating.",
+);
+
 for (const duplicate of [
   "--mfl-dropdown-max-height:",
   "--mfl-dropdown-chevron-inset:",
   'select[data-mfl-dropdown-enhanced="true"]:open',
   '#accountButton[aria-expanded="true"]',
+  "#accountButton",
+  "#accountDropdown",
   "#watchlistButton::after",
   ".watchlistButtonChevron {",
   ".filtersDialog select::picker(select)",
@@ -71,4 +107,4 @@ for (const runtimeStyleOwner of [
   invariant(!runtime.includes(runtimeStyleOwner), `dropdowns-runtime.js must not inject deterministic CSS through ${runtimeStyleOwner}`);
 }
 
-console.log("Canonical dropdown CSS ownership validation passed.");
+console.log("Canonical dropdown CSS ownership and account transition validation passed.");
