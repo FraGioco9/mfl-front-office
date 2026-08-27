@@ -54,6 +54,9 @@ EMAIL_PAGE_HORIZONTAL_PADDING_PERCENT = 3
 EMAIL_CARD_HORIZONTAL_PADDING_PERCENT = 5
 EMAIL_ROW_VERTICAL_PADDING_PERCENT = 3
 EMAIL_ROW_HORIZONTAL_PADDING_PERCENT = 2
+EMAIL_DESKTOP_FONT_SIZE_PX = 18
+EMAIL_MOBILE_FONT_SIZE_PX = 13
+EMAIL_COMPACT_FONT_SIZE_PX = 12
 
 
 @dataclass(frozen=True)
@@ -354,7 +357,7 @@ def player_identity_html(player: PlayerImprovement) -> str:
     if player.portrait_url:
         portrait = (
             '<div class="player-portrait-shell" '
-            'style="width:100%;background:#ffffff;overflow:hidden;">'
+            'style="width:100%;background:transparent;overflow:hidden;">'
             f'<img src="{html.escape(player.portrait_url)}" alt="" '
             'style="display:block;width:auto;max-width:100%;height:auto;border:0;'
             'margin:0;padding:0;background:transparent;">'
@@ -364,7 +367,7 @@ def player_identity_html(player: PlayerImprovement) -> str:
         portrait = (
             '<table class="player-portrait-shell" role="presentation" width="100%" '
             'cellspacing="0" cellpadding="0" '
-            'style="width:100%;border-collapse:separate;background:#ffffff;">'
+            'style="width:100%;border-collapse:separate;background:transparent;">'
             '<tr><td align="center" valign="middle" '
             'style="width:100%;padding:32% 0;color:#60778a;font-size:75%;font-weight:700;line-height:1;">'
             f'{html.escape(player_initials(player))}</td></tr></table>'
@@ -434,12 +437,13 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {{ color-scheme: light dark; supported-color-schemes: light dark; }}
-      .email-id-cell, .email-id-link {{ white-space:nowrap !important; overflow-wrap:normal !important; word-break:normal !important; }}
+      .email-card {{ font-size:{EMAIL_DESKTOP_FONT_SIZE_PX}px; }}
+      .email-id-cell, .email-id-link {{ white-space:nowrap; overflow-wrap:normal; word-break:normal; }}
       @media screen and (max-width:480px) {{
-        .email-id-cell {{ font-size:70% !important; }}
+        .email-card {{ font-size:{EMAIL_MOBILE_FONT_SIZE_PX}px; }}
       }}
       @media screen and (max-width:360px) {{
-        .email-id-cell {{ font-size:65% !important; }}
+        .email-card {{ font-size:{EMAIL_COMPACT_FONT_SIZE_PX}px; }}
       }}
       @media (prefers-color-scheme: dark) {{
         .email-body, .email-page {{ background:#0f151a !important; color:#eef6ff !important; }}
@@ -453,7 +457,6 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
         .email-position, .email-footer {{ color:#8fa6b8 !important; }}
         .email-brand, .email-link {{ color:#54d3ff !important; }}
         .email-delta {{ color:#2fbf62 !important; }}
-        .player-portrait-shell {{ background:#141c23 !important; }}
       }}
       [data-ogsc] .email-title, [data-ogsc] .email-player-name, [data-ogsc] .email-value {{ color:#ffffff !important; }}
       [data-ogsc] .email-muted, [data-ogsc] .email-change, [data-ogsc] .email-change-cell {{ color:#bdd0df !important; }}
@@ -461,7 +464,7 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
       [data-ogsc] .email-brand, [data-ogsc] .email-link {{ color:#54d3ff !important; }}
       [data-ogsc] .email-delta {{ color:#2fbf62 !important; }}
       [data-ogsb] .email-page {{ background:#0f151a !important; }}
-      [data-ogsb] .email-card, [data-ogsb] .email-player-row, [data-ogsb] .player-portrait-shell {{ background:#141c23 !important; }}
+      [data-ogsb] .email-card, [data-ogsb] .email-player-row {{ background:#141c23 !important; }}
       [data-ogsb] .email-hero {{ background:#182630 !important; }}
       [data-ogsb] .email-table-head {{ background:#202c35 !important; }}
     </style>
