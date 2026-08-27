@@ -8,7 +8,7 @@ on:
       - .github/workflows/cleanup-unused-branches.yml
   workflow_dispatch:
 
-# Maintenance trigger: v1.127.0
+# Maintenance trigger: v1.127.1
 permissions:
   contents: write
   pull-requests: read
