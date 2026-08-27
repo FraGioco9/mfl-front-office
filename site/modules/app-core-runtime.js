@@ -4657,7 +4657,8 @@ function buildPlayerSearchEntryFromRow(row) {
 
   return {
     type: "player",
-    row,
+    row: [...row],
+    columns: [...state.columns],
     playerId,
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
@@ -4685,6 +4686,8 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
 
   return {
     type: "player",
+    row: [...row],
+    columns: [...columns],
     playerId,
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
@@ -5250,6 +5253,55 @@ function syncEvaluationSearchClearButton() {
   evaluationSearchClearButton.hidden = !evaluationSearchInput.value.trim();
 }
 
+const EVALUATION_SEARCH_FAST_COLUMNS = Object.freeze([
+  "player_id",
+  "name",
+  "overall",
+  "age",
+  "positions",
+  "retirement_years",
+]);
+
+function evaluationSearchRoutePayload(entry) {
+  const columns = Array.isArray(entry?.columns) ? entry.columns : [];
+  const row = Array.isArray(entry?.row) ? entry.row : null;
+  if (!row || !columns.length || !EVALUATION_SEARCH_FAST_COLUMNS.every((column) => columns.includes(column))) {
+    return null;
+  }
+
+  const playerIdIndex = columns.indexOf("player_id");
+  if (playerIdIndex < 0 || String(row[playerIdIndex] ?? "") !== String(entry?.playerId ?? "")) {
+    return null;
+  }
+
+  return {
+    columns: [...columns],
+    rows: [[...row]],
+    page: 1,
+    pageSize: 1,
+    totalRows: 1,
+    sourceRows: 1,
+    generatedAt: state.manifest?.generated_at || null,
+  };
+}
+
+function renderEvaluationSearchEntryImmediately(entry, route) {
+  if (!route) return false;
+  const payload = evaluationSearchRoutePayload(entry);
+  if (!payload) return false;
+
+  const { requestKey, cacheKey } = incrementalRequestDetails(route, 1);
+  state.incrementalPayloadCache.set(cacheKey, payload);
+  applyIncrementalPayload(route, payload);
+  state.incrementalLastKey = requestKey;
+  state.incrementalLastLoadedAt = Date.now();
+
+  const row = rowByPlayerId(entry.playerId);
+  if (!row) return false;
+  renderEvaluationTable(row);
+  return true;
+}
+
 function renderEvaluationSearchResults() {
   syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
@@ -5320,6 +5372,7 @@ function renderEvaluationSearchResults() {
       syncEvaluationPlayerUrl(playerId);
       try {
         const route = incrementalRouteTarget("evaluation", { playerId });
+        if (renderEvaluationSearchEntryImmediately(entry, route)) return;
         const loadAndRender = async () => {
           const payload = await requestIncrementalRoute(route, 1);
           if (!payload) return false;

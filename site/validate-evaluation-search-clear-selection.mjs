@@ -64,8 +64,8 @@ const clearSource = clearStart >= 0 && clearEnd > clearStart ? searchRuntime.sli
 invariant(
   clearSource.includes("queueMicrotask(() => {")
     && clearSource.includes("selectEmptySearch();")
-    && clearSource.includes("void restoreEmptyRecentResults(false);"),
-  "The Evaluation search-state owner must retain its delegated clear fallback.",
+    && !clearSource.includes("restoreEmptyRecentResults("),
+  "The Evaluation search-state owner must retain only the delegated clear focus fallback and must not start a second recent-results restore.",
 );
 
 const canonicalClearStart = appCoreSource.indexOf("function clearEvaluationSearch() {");
@@ -94,4 +94,4 @@ invariant(
   "Evaluation selection must not add keyboard blocking while loading.",
 );
 
-console.log("Evaluation search selection validation passed: first paint stays unselected, normal loading focuses an empty search only after idle, cached Evaluation readiness focuses the same empty search without a loading transition, clear X selects after reset, and Saved Evaluations Load keeps it deselected.");
+console.log("Evaluation search selection validation passed: first paint stays unselected, normal loading focuses an empty search only after idle, cached Evaluation readiness focuses the same empty search without a loading transition, clear X selects after reset without a duplicate recent-results restore, and Saved Evaluations Load keeps it deselected.");

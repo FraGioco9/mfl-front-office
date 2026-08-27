@@ -219,8 +219,8 @@ invariant(
     && evaluationSearchState.includes('field.focus({ preventScroll: true });')
     && evaluationSearchState.includes("field.select();")
     && clearSource.includes("selectEmptySearch();")
-    && clearSource.includes("void restoreEmptyRecentResults(false);"),
-  "Clearing the Evaluation search must prevent the clear control from stealing focus and select the cleared input through the single search-state focus owner.",
+    && !clearSource.includes("restoreEmptyRecentResults("),
+  "Clearing the Evaluation search must prevent the clear control from stealing focus, select the cleared input through the single search-state focus owner, and avoid a duplicate recent-results restore.",
 );
 
 invariant(
