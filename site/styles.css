@@ -30,9 +30,13 @@
   --mfl-table-col-contract-division: 9.767248545303408%;
   --mfl-table-col-agent: 11.720698254364089%;
   --mfl-table-col-link: 2.441812136325852%;
-  --mfl-table-col-contract-render-club: 16.020490440565254%;
-  --mfl-table-col-contract-agent: 11.721137780548629%;
-  --mfl-table-col-contract-link: 2.443326059850374%;
+  /* Chromium fixed-table layout resolves fractional column geometry in 1/64px units.
+   * Keep the Contracts render calibration inside Uniform Width so shared boundaries
+   * match the stat views exactly at the canonical 1664px desktop table width. */
+  --mfl-table-col-contract-render-name: 14.162810390689944%;
+  --mfl-table-col-contract-render-club: 16.019370440565254%;
+  --mfl-table-col-contract-agent: 11.721677780548629%;
+  --mfl-table-col-contract-link: 2.443606059850374%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -83,6 +87,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 /* Uniform Width is consumed by the player table only through its colgroup.
  * Headers, loading cells, and loaded cells never become width owners. */
 #progressionPage .playerTableScroller table:has(col.col-contract-revenue) {
+  --mfl-table-col-name: var(--mfl-table-col-contract-render-name);
   --mfl-table-col-contract-club: var(--mfl-table-col-contract-render-club);
   --mfl-table-col-agent: var(--mfl-table-col-contract-agent);
   --mfl-table-col-link: var(--mfl-table-col-contract-link);
