@@ -50,10 +50,12 @@ for (const required of [
   "height: 22px;",
   "#themeButton .themeMoonSymbol path {",
   "fill: currentColor;",
-  "stroke: none;",
-  "#themeButton .themeSunSymbol circle {",
-  "#themeButton .themeSunSymbol path {",
   "stroke: currentColor;",
+  "stroke-width: 3;",
+  "stroke-linejoin: miter;",
+  "#themeButton .themeSunSymbol circle {",
+  "stroke: none;",
+  "#themeButton .themeSunSymbol path {",
   "stroke-width: 2.1;",
   "stroke-linecap: round;",
   "stroke-linejoin: round;",
@@ -62,9 +64,9 @@ for (const required of [
 }
 
 invariant(
-  styles.includes("#themeButton .themeMoonSymbol path {\n  fill: currentColor;\n  stroke: none;\n}")
+  styles.includes("#themeButton .themeMoonSymbol path {\n  fill: currentColor;\n  stroke: currentColor;\n  stroke-width: 3;\n  stroke-linejoin: miter;\n}")
     && styles.includes("#themeButton .themeSunSymbol circle {\n  fill: currentColor;\n  stroke: none;\n}"),
-  "Reference theme icons must visibly use the filled crescent and filled sun-center treatment.",
+  "Reference theme icons must visibly use the broad filled crescent and filled sun-center treatment.",
 );
 invariant(!styles.includes("mask-image"), "Theme icons must not rely on CSS mask replacement of legacy glyphs.");
 invariant(!styles.includes("!important"), "Theme button icons must not use CSS priority overrides.");
