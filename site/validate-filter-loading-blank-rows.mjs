@@ -5,28 +5,26 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCore, generatedCore, bootstrapCore, tableLoading, bootstrap, styles] = await Promise.all([
+const [appCore, generatedCore, tableLoading, bootstrap, styles] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-runtime.js"),
-  read("./bootstrap-core.js"),
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles.css"),
 ]);
 
-const filterReload = 'void reloadIncrementalPage(1, { save: options.save !== false, loadingReason: "table-filter-loading" });';
-const busyForwarding = 'return withInteractionBusy(loadAndRender, options.loadingReason);';
+const filterReload = 'void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });';
+const requestForwarding = 'requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });';
 for (const source of [appCore, generatedCore]) {
-  invariant(source.includes(filterReload), "Filter reloads must carry the dedicated table-filter-loading reason.");
-  invariant(source.includes(busyForwarding), "Incremental reloads must forward their optional loading reason.");
-  invariant((source.match(/loadingReason: "table-filter-loading"/g) || []).length === 1, "Only filter reloads may opt into forced blank loading rows.");
+  invariant(source.includes(filterReload), "Filter reloads must opt directly into the canonical blank-row loading mode.");
+  invariant(source.includes(requestForwarding), "Incremental reloads must forward their table loading mode to the request owner.");
+  invariant(!source.includes('loadingReason: "table-filter-loading"'), "Filter reloads must not depend on the retired interaction-busy loading reason.");
 }
 
-invariant(bootstrapCore.includes('"table-filter-loading",'), "Filter reloads must count as data loading.");
-invariant(tableLoading.includes('const FILTER_LOADING_REASON = "table-filter-loading";'), "Table loading must recognize the filter-specific loading reason.");
 invariant(
-  tableLoading.includes('if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;'),
-  "Same-page rows may be preserved for other reloads, but filter reloads must replace them with blank rows.",
+  tableLoading.includes('const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);')
+    && tableLoading.includes('if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();'),
+  "Blank-mode table requests must replace settled rows through the canonical table-loading runtime.",
 );
 invariant(
   bootstrap.includes("const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];")
@@ -40,4 +38,4 @@ invariant(
   "The five filter-loading rows must inherit the same 39px rendered outer height as populated rows.",
 );
 
-console.log("Filter reloads use five blank rows with the same 39px rendered height as populated rows while preserving compact 34px cell content.");
+console.log("Quick Filter and filter reloads use the canonical five blank rows through table-owned blank loading mode.");
