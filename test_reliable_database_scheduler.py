@@ -33,7 +33,7 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
         self.assertIn('TRIGGER_SOURCE="${INPUT_TRIGGER_SOURCE:-manual}"', self.workflow)
         self.assertIn('if [ "$TRIGGER_SOURCE" = "supabase-cron" ]', self.workflow)
         self.assertIn("EXPECTED_KEY=", self.workflow)
-        self.assertIn("1020|1915|2315", self.workflow)
+        self.assertIn("1020|1903|2303", self.workflow)
 
     def test_duplicate_occurrences_are_gated_before_database_work(self) -> None:
         self.assertIn("resolve-refresh-trigger:", self.workflow)
@@ -103,17 +103,17 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
 
     def test_supabase_cron_checks_dst_candidates_and_ten_minute_recovery(self) -> None:
         self.assertIn("TIME_ZONE = \"Europe/Rome\"", self.schedule)
-        self.assertIn('"10:20", "19:15", "23:15"', self.schedule)
+        self.assertIn('"10:20", "19:03", "23:03"', self.schedule)
         self.assertIn("'20,30 8,9 * * *'", self.sql)
-        self.assertIn("'15,25 17,18 * * *'", self.sql)
-        self.assertIn("'15,25 21,22 * * *'", self.sql)
+        self.assertIn("'3,13 17,18 * * *'", self.sql)
+        self.assertIn("'3,13 21,22 * * *'", self.sql)
         self.assertEqual(self.sql.count("timezone('Europe/Rome', now())"), 3)
         self.assertIn("rome_hm in ('10:20', '10:30')", self.sql)
-        self.assertIn("rome_hm in ('19:15', '19:25')", self.sql)
-        self.assertIn("rome_hm in ('23:15', '23:25')", self.sql)
+        self.assertIn("rome_hm in ('19:03', '19:13')", self.sql)
+        self.assertIn("rome_hm in ('23:03', '23:13')", self.sql)
         self.assertIn("'recovery', rome_hm = '10:30'", self.sql)
-        self.assertIn("'recovery', rome_hm = '19:25'", self.sql)
-        self.assertIn("'recovery', rome_hm = '23:25'", self.sql)
+        self.assertIn("'recovery', rome_hm = '19:13'", self.sql)
+        self.assertIn("'recovery', rome_hm = '23:13'", self.sql)
         self.assertEqual(self.sql.count("select net.http_post("), 3)
         self.assertIn("mfl_scheduler_project_url", self.sql)
         self.assertIn("mfl_scheduler_shared_secret", self.sql)

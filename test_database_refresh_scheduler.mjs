@@ -56,15 +56,15 @@ test("scheduler accepts the recovery window but rejects stale invocations", () =
   );
 });
 
-test("a delayed 23:15 invocation just after Rome midnight resolves the prior date", () => {
+test("a delayed 23:03 invocation just after Rome midnight resolves the prior date", () => {
   const occurrence = resolveDueOccurrence(
     new Date("2026-08-28T22:05:00Z"),
-    "23:15",
-    { maxDelayMinutes: 55 },
+    "23:03",
+    { maxDelayMinutes: 65 },
   );
-  assert.equal(occurrence?.occurrenceKey, "20260828-2315");
-  assert.equal(occurrence?.intendedAt, "2026-08-28T23:15:00+02:00");
-  assert.equal(occurrence?.delayMinutes, 50);
+  assert.equal(occurrence?.occurrenceKey, "20260828-2303");
+  assert.equal(occurrence?.intendedAt, "2026-08-28T23:03:00+02:00");
+  assert.equal(occurrence?.delayMinutes, 62);
 });
 
 test("unsupported refresh targets fail closed", () => {

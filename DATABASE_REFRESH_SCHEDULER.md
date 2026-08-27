@@ -5,8 +5,8 @@ The production clock for `Full database refresh` is **Supabase Cron only**. GitH
 ## Intended Europe/Rome times
 
 - 10:20
-- 19:15
-- 23:15
+- 19:03
+- 23:03
 
 Each occurrence also has a Supabase-native recovery check 10 minutes later. The recovery check is not a second scheduler: it is part of the same Supabase Cron authority and only dispatches GitHub when the intended occurrence does not already have an active or successful workflow run.
 
@@ -15,15 +15,15 @@ Each occurrence also has a Supabase-native recovery check 10 minutes later. The 
 Supabase `pg_cron` schedules in UTC, while Rome alternates between CET (UTC+1) and CEST (UTC+2). Each Rome target therefore has two possible UTC hours across the year:
 
 - 10:20 Rome -> 08:20 UTC in CEST or 09:20 UTC in CET
-- 19:15 Rome -> 17:15 UTC in CEST or 18:15 UTC in CET
-- 23:15 Rome -> 21:15 UTC in CEST or 22:15 UTC in CET
+- 19:03 Rome -> 17:03 UTC in CEST or 18:03 UTC in CET
+- 23:03 Rome -> 21:03 UTC in CEST or 22:03 UTC in CET
 
 The SQL evaluates both candidate UTC hours for the primary minute and the +10 minute recovery check, then checks `timezone('Europe/Rome', now())` **before** making an HTTP request. The inactive CET/CEST candidates exit inside Postgres.
 
 Normal daily behavior is therefore:
 
-- three primary Edge Function calls at 10:20, 19:15 and 23:15 Rome time;
-- three recovery Edge Function calls at 10:30, 19:25 and 23:25 Rome time;
+- three primary Edge Function calls at 10:20, 19:03 and 23:03 Rome time;
+- three recovery Edge Function calls at 10:30, 19:13 and 23:13 Rome time;
 - exactly three GitHub workflow dispatches when every primary trigger succeeds.
 
 No manual DST changes are required.
@@ -118,8 +118,8 @@ Enable **Cron**, `pg_net`, and Vault for the MFL Supabase project, then run:
 It creates three jobs:
 
 - `mfl-database-refresh-1020` -> primary 10:20 + recovery 10:30 Rome time
-- `mfl-database-refresh-1915` -> primary 19:15 + recovery 19:25 Rome time
-- `mfl-database-refresh-2315` -> primary 23:15 + recovery 23:25 Rome time
+- `mfl-database-refresh-1903` -> primary 19:03 + recovery 19:13 Rome time
+- `mfl-database-refresh-2303` -> primary 23:03 + recovery 23:13 Rome time
 
 Each job covers both CET and CEST UTC hours. SQL rejects the inactive UTC candidate before it can call the Edge Function.
 
@@ -139,7 +139,7 @@ Check Edge Function logs for `mfl-database-refresh-dispatch`:
 
 ### GitHub
 
-Open **Actions -> Full database refresh**. Scheduled production runs should be `workflow_dispatch` runs with `trigger_source=supabase-cron` and an occurrence key such as `20260827-1915`.
+Open **Actions -> Full database refresh**. Scheduled production runs should be `workflow_dispatch` runs with `trigger_source=supabase-cron` and an occurrence key such as `20260827-1903`.
 
 There should be **no GitHub `schedule` event** for Full database refresh after this change.
 

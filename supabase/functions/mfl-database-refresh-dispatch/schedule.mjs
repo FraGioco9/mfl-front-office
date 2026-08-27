@@ -1,6 +1,6 @@
 export const TIME_ZONE = "Europe/Rome";
 export const MAX_PRIMARY_DELAY_MINUTES = 20;
-export const ALLOWED_TARGETS = new Set(["10:20", "19:15", "23:15"]);
+export const ALLOWED_TARGETS = new Set(["10:20", "19:03", "23:03"]);
 
 function partsFor(date, timeZone = TIME_ZONE) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
