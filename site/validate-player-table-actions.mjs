@@ -109,6 +109,16 @@ invariant(
 );
 
 invariant(
+  dropdowns.includes('.accountDropdownItem {\n  box-sizing: border-box;\n  border: 1px solid transparent;')
+    && dropdowns.includes('.accountDropdown button.accountDropdownItem:hover:not(:disabled),\n.accountDropdown button.accountDropdownItem:focus-visible:not(:disabled) {\n  border-color: var(--border);\n  outline: 0;\n  background: var(--row-hover);')
+    && dropdowns.includes('.accountDropdown .accountSettingsButton,\n.accountDropdown .accountSettingsButton:not(:disabled) {\n  border-color: transparent;')
+    && !dropdowns.includes('.accountDropdown .accountSettingsButton:hover:not(:disabled)')
+    && source.includes('linkWalletButton.removeAttribute("title");')
+    && !source.includes('linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";'),
+  "Account dropdown items must match the Player hero action-menu hover contract and Opt In/Out must not expose title tooltips.",
+);
+
+invariant(
   source.includes('menu.dataset.open = "false";')
     && source.includes('void menu.offsetWidth;')
     && source.includes('if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;')

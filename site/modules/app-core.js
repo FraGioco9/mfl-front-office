@@ -1151,7 +1151,7 @@ function updateAccountState() {
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
-  linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+  linkWalletButton.removeAttribute("title");
   if (accountSettingsButton) {
     accountSettingsButton.hidden = !walletLinked;
   }
