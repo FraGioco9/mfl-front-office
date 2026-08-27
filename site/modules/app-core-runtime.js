@@ -5270,16 +5270,41 @@ function renderEvaluationSearchResults() {
   }
 
   const results = query ? evaluationSearchMatches(query) : recentEvaluationRows();
-
-  evaluationSearchResults.replaceChildren();
-  evaluationSearchResults.hidden = results.length === 0;
-
-  results.forEach((entry) => {
+  const resultEntries = results.map((entry) => {
     const playerId = String(entry.playerId);
+    return {
+      entry,
+      playerId,
+      metadataHtml: playerSearchMetadataHtml(entry, playerId),
+    };
+  });
+  const renderSignature = JSON.stringify([
+    query,
+    resultEntries.map(({ entry, playerId, metadataHtml }) => [
+      playerId,
+      String(entry.nameDisplay || ""),
+      metadataHtml,
+    ]),
+  ]);
+  const reusableResults = evaluationSearchResults.dataset.mflEvaluationRenderSignature === renderSignature
+    && evaluationSearchResults.children.length === resultEntries.length
+    && resultEntries.every(({ playerId }, index) => {
+      const child = evaluationSearchResults.children[index];
+      return child instanceof HTMLButtonElement
+        && child.classList.contains("evaluationSearchResult")
+        && child.dataset.playerId === playerId;
+    });
+
+  evaluationSearchResults.hidden = resultEntries.length === 0;
+  if (reusableResults) return;
+  evaluationSearchResults.replaceChildren();
+
+  resultEntries.forEach(({ entry, playerId, metadataHtml }) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "evaluationSearchResult";
-    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>${playerSearchMetadataHtml(entry, playerId)}</span>`;
+    button.dataset.playerId = playerId;
+    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>${metadataHtml}</span>`;
     button.addEventListener("click", async () => {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
@@ -5314,6 +5339,7 @@ function renderEvaluationSearchResults() {
     });
     evaluationSearchResults.appendChild(button);
   });
+  evaluationSearchResults.dataset.mflEvaluationRenderSignature = renderSignature;
 }
 
 
