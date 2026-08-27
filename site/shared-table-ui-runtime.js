@@ -53,9 +53,14 @@
   }
 
   function syncFilterSummaryNow() {
+    const count = activeFilterCountFromDialog();
+    const canonicalUpdater = Reflect.get(window, "updateFilterSummary");
+    if (typeof canonicalUpdater === "function") {
+      canonicalUpdater(count);
+      return;
+    }
     const summary = document.getElementById("filterSummary");
-    if (!(summary instanceof HTMLElement)) return;
-    summary.textContent = String(activeFilterCountFromDialog());
+    if (summary instanceof HTMLElement) summary.textContent = String(count);
   }
 
   function syncFilterSummaryAfterClose() {
