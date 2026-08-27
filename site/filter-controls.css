@@ -17,7 +17,8 @@
   color: var(--text);
 }
 
-#filterSummary.filtersViewCount.hasActiveFilters {
+#openFiltersButton #filterSummary.filtersViewCount.hasActiveFilters {
+  display: inline-grid;
   align-self: center;
   min-height: 18px;
   height: 18px;
