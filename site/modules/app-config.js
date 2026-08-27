@@ -121,12 +121,11 @@ export const TABLE_INFRASTRUCTURE_PAGES = Object.freeze([
 ]);
 
 export const TABLE_BASE_COLUMNS = Object.freeze([
-  "player_id",
   "nationality_flag",
   "name",
   "listing_price",
-  "age",
   "positions",
+  "age",
   "player_seasons",
 ]);
 
@@ -158,7 +157,6 @@ export const TABLE_VIEW_COLUMNS = Object.freeze({
 export const TABLE_JOINED_AGENCY_PAGES = Object.freeze(["myplayers", "agents", "mfl"]);
 
 export const TABLE_SORTABLE_COLUMNS = Object.freeze([
-  "player_id",
   "name",
   "listing_price",
   "age",
@@ -170,7 +168,6 @@ export const TABLE_SORTABLE_COLUMNS = Object.freeze([
 ]);
 
 export const TABLE_COLUMN_LABELS = Object.freeze({
-  player_id: "ID",
   nationality_flag: "",
   wallet_name: "Agent",
   owned_since: "Joined Agency",
@@ -193,7 +190,6 @@ export const TABLE_COLUMN_LABELS = Object.freeze({
 });
 
 export const TABLE_COLUMN_CLASSES = Object.freeze({
-  player_id: "col-id",
   nationality_flag: "col-flag",
   name: "col-name",
   listing_price: "col-listing",

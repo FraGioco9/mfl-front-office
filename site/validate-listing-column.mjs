@@ -15,7 +15,8 @@ const repositoryRoot = resolve(root, "..");
 const read = (path) => readFileSync(resolve(repositoryRoot, path), "utf8");
 
 assert.equal(TABLE_BASE_COLUMNS[TABLE_BASE_COLUMNS.indexOf("name") + 1], "listing_price");
-assert.equal(TABLE_BASE_COLUMNS[TABLE_BASE_COLUMNS.indexOf("listing_price") + 1], "age");
+assert.equal(TABLE_BASE_COLUMNS[TABLE_BASE_COLUMNS.indexOf("listing_price") + 1], "positions");
+assert.equal(TABLE_BASE_COLUMNS[TABLE_BASE_COLUMNS.indexOf("positions") + 1], "age");
 assert.ok(TABLE_SORTABLE_COLUMNS.includes("listing_price"));
 assert.equal(TABLE_COLUMN_LABELS.listing_price, "Listing");
 assert.equal(TABLE_COLUMN_CLASSES.listing_price, "col-listing");
@@ -64,16 +65,16 @@ const width = (name) => {
   assert.ok(match, `Missing Uniform Width variable: ${name}`);
   return Number(match[1]);
 };
-assert.equal(width("listing"), 6);
+assert.equal(width("listing"), 6.234413965087282);
 const attributesTotal = [
-  width("select"), width("actions"), width("id"), width("flag"), width("name"), width("listing"),
-  width("age"), width("positions"), width("seasons"), width("overall"),
+  width("select"), width("actions"), width("flag"), width("name"), width("listing"),
+  width("positions"), width("age"), width("seasons"), width("overall"),
   width("stat") * 6, width("agent"), width("link"),
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(attributesTotal - 100) < 1e-9, `Attributes widths sum to ${attributesTotal}`);
 const contractTotal = [
-  width("select"), width("actions"), width("id"), width("flag"), width("name"), width("listing"),
-  width("age"), width("positions"), width("seasons"), width("overall"),
+  width("select"), width("actions"), width("flag"), width("name"), width("listing"),
+  width("positions"), width("age"), width("seasons"), width("overall"),
   width("contract-revenue"), width("contract-render-club"), width("contract-division"),
   width("contract-agent"), width("contract-link"),
 ].reduce((sum, value) => sum + value, 0);

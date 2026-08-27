@@ -2,7 +2,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { MFL_STATS_OVERALL_FILTERS, TABLE_VIEW_CONFIG, VIEW_BY_SLUG } from "./modules/app-config.js";
+import {
+  MFL_STATS_OVERALL_FILTERS,
+  TABLE_VIEW_CONFIG,
+  VIEW_BY_SLUG,
+} from "./modules/app-config.js";
 
 const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
 // Keep this projection inline in index.html so route/view state remains zero-request before first paint.
@@ -124,6 +128,15 @@ export function normalizeIndexMflStatsFiltersProjection(source) {
   );
 }
 
+export function normalizeIndexTableConfigRuntimeProjection(source) {
+  return replaceExactlyOnce(
+    String(source || ""),
+    /^    <script src="\/table-width-runtime\.js(?:\?mfl_config=[a-f0-9]+)?"><\/script>$/gm,
+    '    <script src="/table-width-runtime.js"></script>',
+    "index table config runtime projection",
+  );
+}
+
 async function writeIfChanged(path, content) {
   const current = await readFile(path, "utf8");
   if (current === content) return false;
@@ -137,7 +150,11 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
   const targets = [
     ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap.js")],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexMflStatsFiltersProjection(normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)))],
+    ["index.html", (source) => normalizeIndexTableConfigRuntimeProjection(
+      normalizeIndexMflStatsFiltersProjection(
+        normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+      ),
+    )],
   ];
 
   const results = [];
@@ -151,8 +168,9 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const results = await synchronizeReleaseProjections();
-  results.forEach(({ path, changed }) => {
-    console.log(`${changed ? "Generated" : "Unchanged"} ${path}`);
+  synchronizeReleaseProjections().then((results) => {
+    results.forEach(({ path, changed }) => {
+      console.log(`${changed ? "Generated" : "Unchanged"} ${path}`);
+    });
   });
 }
