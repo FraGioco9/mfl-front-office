@@ -9009,6 +9009,11 @@ function sortableValue(row, column) {
 let playerTableActionMenu = null;
 let playerTableActionTrigger = null;
 let playerTableActionPlayerId = "";
+let playerTableActionRenderSignature = "";
+let playerTableActionWindowOuterWidth = 0;
+let playerTableActionWindowOuterHeight = 0;
+let playerTableActionScrollLeft = 0;
+let playerTableActionScrollTop = 0;
 
 const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg>',
@@ -9019,6 +9024,85 @@ const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="1.5"></rect><path d="M15 8V6.5A1.5 1.5 0 0 0 13.5 5h-7A1.5 1.5 0 0 0 5 6.5v7A1.5 1.5 0 0 0 6.5 15H8"></path></svg>',
 });
 
+
+function currentPlayerTableActionRenderSignature(playerId = playerTableActionPlayerId) {
+  const key = String(playerId || "").trim();
+  if (!key || !tablePageKey()) return "";
+  const rowIds = currentPageRows().map((row) => String(getValue(row, "player_id") || ""));
+  return JSON.stringify({
+    route: `${window.location.pathname}${window.location.search}`,
+    pageName: state.currentPage,
+    viewName: state.view,
+    page: state.page,
+    pageSize: state.pageSize,
+    sortKey: state.sortKey,
+    sortDirection: state.sortDirection,
+    playerId: key,
+    rowIds,
+  });
+}
+
+function capturePlayerTableActionGeometry() {
+  playerTableActionWindowOuterWidth = Number(window.outerWidth || 0);
+  playerTableActionWindowOuterHeight = Number(window.outerHeight || 0);
+  const scroller = document.querySelector("#progressionPage .playerTableScroller");
+  playerTableActionScrollLeft = scroller instanceof HTMLElement ? scroller.scrollLeft : 0;
+  playerTableActionScrollTop = scroller instanceof HTMLElement ? scroller.scrollTop : 0;
+}
+
+function restorePlayerTableActionMenuAfterRender(renderSignature) {
+  if (!renderSignature
+    || !(playerTableActionMenu instanceof HTMLElement)
+    || playerTableActionMenu.dataset.open !== "true"
+    || renderSignature !== currentPlayerTableActionRenderSignature()) {
+    if (playerTableActionMenu?.dataset.open === "true") closePlayerTableActionMenu();
+    return false;
+  }
+
+  const key = String(playerTableActionPlayerId || "").trim();
+  const trigger = Array.from(tableBody.querySelectorAll(".playerTableActionsButton"))
+    .find((button) => button instanceof HTMLButtonElement && String(button.dataset.playerId || "") === key);
+  if (!(trigger instanceof HTMLButtonElement)) {
+    closePlayerTableActionMenu();
+    return false;
+  }
+
+  if (playerTableActionTrigger instanceof HTMLButtonElement && playerTableActionTrigger !== trigger) {
+    playerTableActionTrigger.setAttribute("aria-expanded", "false");
+  }
+  playerTableActionTrigger = trigger;
+  playerTableActionTrigger.setAttribute("aria-expanded", "true");
+  playerTableActionRenderSignature = currentPlayerTableActionRenderSignature(key);
+  capturePlayerTableActionGeometry();
+  positionPlayerTableActionMenu();
+  return true;
+}
+
+function handlePlayerTableActionWindowResize() {
+  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
+  const nextOuterWidth = Number(window.outerWidth || 0);
+  const nextOuterHeight = Number(window.outerHeight || 0);
+  const realWindowResize = Boolean(
+    (playerTableActionWindowOuterWidth && nextOuterWidth !== playerTableActionWindowOuterWidth)
+    || (playerTableActionWindowOuterHeight && nextOuterHeight !== playerTableActionWindowOuterHeight)
+  );
+  if (realWindowResize) {
+    closePlayerTableActionMenu();
+    return;
+  }
+  positionPlayerTableActionMenu();
+}
+
+function handlePlayerTableActionScrollerScroll(scroller) {
+  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
+  if (!(scroller instanceof HTMLElement)) return;
+  if (scroller.scrollLeft !== playerTableActionScrollLeft || scroller.scrollTop !== playerTableActionScrollTop) {
+    closePlayerTableActionMenu();
+    return;
+  }
+  positionPlayerTableActionMenu();
+}
+
 function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
   if (!(playerTableActionMenu instanceof HTMLElement)) return false;
   playerTableActionMenu.dataset.open = "false";
@@ -9028,6 +9112,11 @@ function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
   }
   playerTableActionTrigger = null;
   playerTableActionPlayerId = "";
+  playerTableActionRenderSignature = "";
+  playerTableActionWindowOuterWidth = 0;
+  playerTableActionWindowOuterHeight = 0;
+  playerTableActionScrollLeft = 0;
+  playerTableActionScrollTop = 0;
   return true;
 }
 
@@ -9111,8 +9200,9 @@ function ensurePlayerTableActionMenu() {
     event.preventDefault();
     closePlayerTableActionMenu({ restoreFocus: true });
   }, true);
-  window.addEventListener("resize", () => closePlayerTableActionMenu());
-  document.querySelector("#progressionPage .playerTableScroller")?.addEventListener("scroll", () => closePlayerTableActionMenu(), { passive: true });
+  window.addEventListener("resize", handlePlayerTableActionWindowResize);
+  const tableScroller = document.querySelector("#progressionPage .playerTableScroller");
+  tableScroller?.addEventListener("scroll", () => handlePlayerTableActionScrollerScroll(tableScroller), { passive: true });
   return menu;
 }
 
@@ -9127,6 +9217,8 @@ function openPlayerTableActionMenu(trigger, playerId) {
   closePlayerTableActionMenu();
   playerTableActionTrigger = trigger;
   playerTableActionPlayerId = key;
+  playerTableActionRenderSignature = currentPlayerTableActionRenderSignature(key);
+  capturePlayerTableActionGeometry();
   trigger.setAttribute("aria-expanded", "true");
   const items = [
     createPlayerTableActionItem("profile", "Player profile", "profile"),
@@ -10681,7 +10773,12 @@ syncPagerCurrentPage(1, 1);
 function renderTable() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
-  closePlayerTableActionMenu();
+  const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
+    && playerTableActionRenderSignature
+    && playerTableActionRenderSignature === currentPlayerTableActionRenderSignature()
+    ? playerTableActionRenderSignature
+    : "";
+  if (!preservedPlayerTableActionRenderSignature) closePlayerTableActionMenu();
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -10850,6 +10947,9 @@ function renderTable() {
   });
 
   tableBody.replaceChildren(fragment);
+  if (preservedPlayerTableActionRenderSignature) {
+    restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
+  }
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount();
   syncPagerCurrentPage(state.page, totalPages);
