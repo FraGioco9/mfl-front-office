@@ -36,7 +36,7 @@ invariant(
 );
 invariant(
   markup.includes('d="M19.6 17.9A8.6 8.6 0 1 1 10.2 3.7 7.2 7.2 0 0 0 19.6 17.9Z"'),
-  "Dark-mode control must use the reference-inspired broad crescent geometry.",
+  "Dark-mode control must use the reference-inspired crescent geometry.",
 );
 invariant(
   markup.includes('<circle cx="12" cy="12" r="5.4"></circle>')
@@ -61,6 +61,11 @@ for (const required of [
   invariant(styles.includes(required), `Theme button icon presentation is missing ${required}`);
 }
 
+invariant(
+  styles.includes("#themeButton .themeMoonSymbol path {\n  fill: currentColor;\n  stroke: none;\n}")
+    && styles.includes("#themeButton .themeSunSymbol circle {\n  fill: currentColor;\n  stroke: none;\n}"),
+  "Reference theme icons must visibly use the filled crescent and filled sun-center treatment.",
+);
 invariant(!styles.includes("mask-image"), "Theme icons must not rely on CSS mask replacement of legacy glyphs.");
 invariant(!styles.includes("!important"), "Theme button icons must not use CSS priority overrides.");
 
