@@ -42,7 +42,6 @@ const tokenOrder = [
   "chrome",
   "floating-tooltip",
   "selection",
-  "wallet-guard",
   "busy-shield",
   "topmost",
   "modal",
@@ -58,7 +57,6 @@ const expectedValues = new Map([
   ["chrome", 500],
   ["floating-tooltip", 600],
   ["selection", 700],
-  ["wallet-guard", 720],
   ["busy-shield", 740],
   ["topmost", 780],
   ["modal", 900],
@@ -193,7 +191,6 @@ invariant(
   tokenValue("modal") > Math.max(
     tokenValue("topmost"),
     tokenValue("busy-shield"),
-    tokenValue("wallet-guard"),
     tokenValue("selection"),
     tokenValue("floating-tooltip"),
     tokenValue("chrome"),
@@ -215,7 +212,6 @@ invariant(
     tokenValue("modal"),
     tokenValue("topmost"),
     tokenValue("busy-shield"),
-    tokenValue("wallet-guard"),
     tokenValue("selection"),
     tokenValue("floating-tooltip"),
     tokenValue("chrome"),
@@ -230,7 +226,6 @@ invariant(
 
 invariant(base.startsWith('@import url("/stacking.css");'), "Base styles must load the canonical stacking contract before site layers consume it.");
 for (const required of [
-  "z-index: var(--mfl-z-wallet-guard);",
   "z-index: var(--mfl-z-chrome);",
   "z-index: var(--mfl-z-navigation);",
   "z-index: var(--mfl-z-modal);",

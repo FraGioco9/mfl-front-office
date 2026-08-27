@@ -69,15 +69,6 @@ body {
   color: var(--text);
 }
 
-body.walletOptingIn::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: var(--mfl-z-wallet-guard);
-  background: transparent;
-  cursor: wait;
-}
-
 button,
 input,
 select {

@@ -1565,7 +1565,6 @@ async function authenticateWithDapper(fcl) {
 
 function finishWalletOptIn() {
   state.walletOptInInProgress = false;
-  document.body.classList.remove("walletOptingIn");
   updateAccountState();
 }
 
@@ -1608,7 +1607,6 @@ async function linkWallet() {
   }
 
   state.walletOptInInProgress = true;
-  document.body.classList.add("walletOptingIn");
   showToast("Opting in...", { sticky: true });
   linkWalletButton.disabled = true;
   linkWalletButton.textContent = "Loading...";
