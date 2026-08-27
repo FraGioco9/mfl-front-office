@@ -1914,6 +1914,10 @@ td a {
   padding-top: 14px;
 }
 
+.pager[hidden] {
+  display: none;
+}
+
 .pager button {
   width: 92px;
 }
