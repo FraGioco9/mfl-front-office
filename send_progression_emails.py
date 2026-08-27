@@ -16,6 +16,7 @@ import argparse
 import html
 import json
 import os
+import re
 import smtplib
 import sqlite3
 import ssl
@@ -41,14 +42,18 @@ STAT_COLUMNS = [
     "goalkeeping",
 ]
 DEFAULT_BASE_URL = "https://mfl-front-office.vercel.app"
+DEFAULT_EMAIL_THEME = "dark"
 SUPABASE_PAGE_SIZE = 1000
-PORTRAIT_SIZE_PX = 72
-PLAYER_COLUMN_LEFT_PADDING_PX = 12
-PLAYER_TEXT_OFFSET_PX = 160
-PLAYER_PORTRAIT_SLOT_PX = PLAYER_TEXT_OFFSET_PX - PLAYER_COLUMN_LEFT_PADDING_PX
-ID_COLUMN_WIDTH_PERCENT = 15
-PLAYER_COLUMN_WIDTH_PERCENT = 60
-IMPROVEMENT_COLUMN_WIDTH_PERCENT = 25
+PORTRAIT_SIZE_PX = 72  # Source-crop height for the local browser preview only.
+PLAYER_PORTRAIT_SLOT_PERCENT = 38
+ID_COLUMN_WIDTH_PERCENT = 18
+PLAYER_COLUMN_WIDTH_PERCENT = 50
+IMPROVEMENT_COLUMN_WIDTH_PERCENT = 32
+EMAIL_CARD_WIDTH_PERCENT = 94
+EMAIL_PAGE_HORIZONTAL_PADDING_PERCENT = 3
+EMAIL_CARD_HORIZONTAL_PADDING_PERCENT = 5
+EMAIL_ROW_VERTICAL_PADDING_PERCENT = 3
+EMAIL_ROW_HORIZONTAL_PADDING_PERCENT = 2
 
 
 @dataclass(frozen=True)
@@ -246,6 +251,45 @@ def load_preferences() -> list[dict[str, Any]]:
     return preferences
 
 
+def normalize_email_theme(value: Any) -> str:
+    return "light" if str(value or "").strip().lower() == "light" else DEFAULT_EMAIL_THEME
+
+
+def apply_email_theme(rendered: str, theme_value: Any) -> str:
+    theme = normalize_email_theme(theme_value)
+    rendered = rendered.replace('content="light dark"', f'content="{theme}"')
+    rendered = rendered.replace(
+        ':root { color-scheme: light dark; supported-color-schemes: light dark; }',
+        f':root {{ color-scheme: {theme}; supported-color-schemes: {theme}; }}',
+    )
+
+    dark_media_start = rendered.find('      @media (prefers-color-scheme: dark) {')
+    if dark_media_start >= 0:
+        style_end = rendered.find('    </style>', dark_media_start)
+        if style_end < 0:
+            raise RuntimeError('Progression email theme stylesheet is malformed.')
+        rendered = rendered[:dark_media_start] + rendered[style_end:]
+
+    if theme == "light":
+        return rendered
+
+    dark_colors = {
+        "#f3f6f8": "#0f151a",
+        "#ffffff": "#141c23",
+        "#edf4f8": "#182630",
+        "#e7eef3": "#202c35",
+        "#17222b": "#ffffff",
+        "#52697a": "#bdd0df",
+        "#60778a": "#8fa6b8",
+        "#007ca8": "#54d3ff",
+        "#167a42": "#2fbf62",
+        "#cbd7df": "#2d3a45",
+        "#d6e0e7": "#2d3a45",
+    }
+    color_pattern = re.compile("|".join(re.escape(color) for color in dark_colors))
+    return color_pattern.sub(lambda match: dark_colors[match.group(0)], rendered)
+
+
 def email_configured() -> bool:
     required = ["SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD", "EMAIL_FROM"]
     return all(os.environ.get(key) for key in required)
@@ -287,12 +331,11 @@ def format_html_changes(player: PlayerImprovement) -> str:
         value = html.escape(str(new_value))
         delta = html.escape(f"+{new_value - old_value}")
         lines.append(
-            f'<div style="margin:0 0 5px;color:#bdd0df;line-height:1.35;white-space:nowrap;">{label}: '
-            f'<span style="color:#ffffff;font-weight:inherit;">{value}</span> '
-            f'<span style="color:#2fbf62;font-weight:inherit;">({delta})</span></div>'
+            f'<div class="email-change" style="margin:0 0 .35em;color:#52697a;line-height:1.35;white-space:normal;overflow-wrap:anywhere;">{label}: '
+            f'<span class="email-value" style="color:#17222b;font-weight:inherit;">{value}</span> '
+            f'<span class="email-delta" style="color:#167a42;font-weight:inherit;">({delta})</span></div>'
         )
     return "".join(lines)
-
 
 def player_url(player_id: str) -> str:
     return f"{os.environ.get('EMAIL_BASE_URL', DEFAULT_BASE_URL).rstrip('/')}/players/{quote(player_id)}"
@@ -310,37 +353,37 @@ def player_initials(player: PlayerImprovement) -> str:
 def player_identity_html(player: PlayerImprovement) -> str:
     if player.portrait_url:
         portrait = (
-            f'<img src="{html.escape(player.portrait_url)}" height="{PORTRAIT_SIZE_PX}" alt="" '
-            f'style="display:block;height:{PORTRAIT_SIZE_PX}px;width:auto;max-width:none;'
-            'border:0;margin:0;padding:0;background:transparent;">'
+            '<div class="player-portrait-shell" '
+            'style="width:100%;background:#ffffff;overflow:hidden;">'
+            f'<img src="{html.escape(player.portrait_url)}" alt="" '
+            'style="display:block;width:auto;max-width:100%;height:auto;border:0;'
+            'margin:0;padding:0;background:transparent;">'
+            '</div>'
         )
     else:
         portrait = (
-            f'<table role="presentation" width="{PORTRAIT_SIZE_PX}" '
-            f'height="{PORTRAIT_SIZE_PX}" cellspacing="0" cellpadding="0" '
-            f'style="width:{PORTRAIT_SIZE_PX}px;height:{PORTRAIT_SIZE_PX}px;'
-            'border-collapse:separate;background:transparent;">'
+            '<table class="player-portrait-shell" role="presentation" width="100%" '
+            'cellspacing="0" cellpadding="0" '
+            'style="width:100%;border-collapse:separate;background:#ffffff;">'
             '<tr><td align="center" valign="middle" '
-            f'style="width:{PORTRAIT_SIZE_PX}px;height:{PORTRAIT_SIZE_PX}px;'
-            'color:#8fa6b8;font-size:12px;font-weight:700;line-height:1;">'
+            'style="width:100%;padding:32% 0;color:#60778a;font-size:75%;font-weight:700;line-height:1;">'
             f'{html.escape(player_initials(player))}</td></tr></table>'
         )
 
     return (
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
-        'style="border-collapse:collapse;table-layout:fixed;">'
+        'style="width:100%;border-collapse:collapse;table-layout:fixed;">'
         '<tr>'
-        f'<td width="{PLAYER_PORTRAIT_SLOT_PX}" valign="top" '
-        f'style="width:{PLAYER_PORTRAIT_SLOT_PX}px;padding:0;white-space:nowrap;overflow:visible;">{portrait}</td>'
-        '<td valign="top" style="padding:0;">'
-        f'<strong style="display:block;color:#ffffff;">{html.escape(player.name)}</strong>'
-        f'<span style="display:block;margin-top:3px;color:#8fa6b8;font-size:12px;">'
+        f'<td width="{PLAYER_PORTRAIT_SLOT_PERCENT}%" valign="top" '
+        f'style="width:{PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;">{portrait}</td>'
+        '<td valign="top" style="padding:0;overflow-wrap:anywhere;">'
+        f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong>'
+        f'<span class="email-position" style="display:block;margin-top:.25em;color:#60778a;font-size:75%;">'
         f'{html.escape(player.positions)}</span>'
         '</td>'
         '</tr>'
         '</table>'
     )
-
 
 def build_subject(scope_name: str, players: list[PlayerImprovement]) -> str:
     return f"{scope_name} Progression Update"
@@ -361,63 +404,98 @@ def build_text(scope_name: str, players: list[PlayerImprovement]) -> str:
     return "\n".join(lines).strip()
 
 
-def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
+def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = DEFAULT_EMAIL_THEME) -> str:
     rows = []
     for player in players:
         rows.append(
-            '<tr style="border-top:1px solid #2d3a45;">'
-            f'<td style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:14px 12px;vertical-align:top;white-space:nowrap;">'
-            f'<a style="color:#54d3ff;font-weight:inherit;text-decoration:none;" '
+            '<tr class="email-player-row" style="background:#ffffff;border-top:1px solid #d6e0e7;">'
+            f'<td class="email-id-cell" style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;font-size:80%;white-space:nowrap;overflow-wrap:normal;word-break:normal;">'
+            f'<a class="email-link email-id-link" style="color:#007ca8;font-weight:inherit;text-decoration:none;white-space:nowrap;overflow-wrap:normal;word-break:normal;" '
             f'href="{html.escape(player_url(player.player_id))}">'
             f'#{html.escape(player.player_id)}</a></td>'
-            f'<td style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:14px {PLAYER_COLUMN_LEFT_PADDING_PX}px;vertical-align:top;overflow:visible;">'
+            f'<td style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;overflow:hidden;">'
             f'{player_identity_html(player)}</td>'
-            f'<td style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:14px 8px;vertical-align:top;color:#bdd0df;line-height:1.45;white-space:nowrap;">'
+            f'<td class="email-change-cell" style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;color:#52697a;line-height:1.45;white-space:normal;overflow-wrap:anywhere;font-size:82%;">'
             f'{format_html_changes(player)}</td>'
             '</tr>'
         )
 
-    return f"""
+    rendered = f"""
 <!doctype html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>{html.escape(scope_name)} improvements</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {{ color-scheme: light dark; supported-color-schemes: light dark; }}
+      .email-id-cell, .email-id-link {{ white-space:nowrap !important; overflow-wrap:normal !important; word-break:normal !important; }}
+      @media screen and (max-width:480px) {{
+        .email-id-cell {{ font-size:70% !important; }}
+      }}
+      @media screen and (max-width:360px) {{
+        .email-id-cell {{ font-size:65% !important; }}
+      }}
+      @media (prefers-color-scheme: dark) {{
+        .email-body, .email-page {{ background:#0f151a !important; color:#eef6ff !important; }}
+        .email-card {{ background:#141c23 !important; border-color:#2d3a45 !important; }}
+        .email-hero {{ background:#182630 !important; border-color:#2d3a45 !important; }}
+        .email-table {{ border-color:#2d3a45 !important; }}
+        .email-table-head {{ background:#202c35 !important; color:#ffffff !important; }}
+        .email-player-row {{ background:#141c23 !important; border-color:#2d3a45 !important; }}
+        .email-title, .email-player-name, .email-value {{ color:#ffffff !important; }}
+        .email-muted, .email-change, .email-change-cell {{ color:#bdd0df !important; }}
+        .email-position, .email-footer {{ color:#8fa6b8 !important; }}
+        .email-brand, .email-link {{ color:#54d3ff !important; }}
+        .email-delta {{ color:#2fbf62 !important; }}
+        .player-portrait-shell {{ background:#141c23 !important; }}
+      }}
+      [data-ogsc] .email-title, [data-ogsc] .email-player-name, [data-ogsc] .email-value {{ color:#ffffff !important; }}
+      [data-ogsc] .email-muted, [data-ogsc] .email-change, [data-ogsc] .email-change-cell {{ color:#bdd0df !important; }}
+      [data-ogsc] .email-position, [data-ogsc] .email-footer {{ color:#8fa6b8 !important; }}
+      [data-ogsc] .email-brand, [data-ogsc] .email-link {{ color:#54d3ff !important; }}
+      [data-ogsc] .email-delta {{ color:#2fbf62 !important; }}
+      [data-ogsb] .email-page {{ background:#0f151a !important; }}
+      [data-ogsb] .email-card, [data-ogsb] .email-player-row, [data-ogsb] .player-portrait-shell {{ background:#141c23 !important; }}
+      [data-ogsb] .email-hero {{ background:#182630 !important; }}
+      [data-ogsb] .email-table-head {{ background:#202c35 !important; }}
+    </style>
   </head>
-  <body style="margin:0;background:#0f151a;color:#eef6ff;font-family:'Titillium Web',Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f151a;padding:28px 14px;font-family:'Titillium Web',Arial,Helvetica,sans-serif;">
+  <body class="email-body" style="margin:0;background:#f3f6f8;color:#17222b;font-family:'Titillium Web',Arial,Helvetica,sans-serif;font-size:100%;">
+    <table class="email-page" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#f3f6f8;padding:4% {EMAIL_PAGE_HORIZONTAL_PADDING_PERCENT}%;font-family:'Titillium Web',Arial,Helvetica,sans-serif;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:760px;background:#141c23;border:1px solid #2d3a45;border-radius:14px;overflow:hidden;">
+          <table class="email-card" role="presentation" width="{EMAIL_CARD_WIDTH_PERCENT}%" cellspacing="0" cellpadding="0" style="width:{EMAIL_CARD_WIDTH_PERCENT}%;background:#ffffff;border:1px solid #cbd7df;border-radius:2%;overflow:hidden;">
             <tr>
-              <td style="padding:28px 30px;background:linear-gradient(135deg,#1b2a34,#132029);border-bottom:1px solid #2d3a45;">
-                <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#54d3ff;font-weight:800;">MFL Front Office</div>
-                <h1 style="margin:8px 0 0;font-size:28px;line-height:1.15;color:#ffffff;">Player improvements</h1>
-                <p style="margin:10px 0 0;color:#bdd0df;font-size:15px;">{html.escape(scope_name)} has {len(players)} improved {'player' if len(players) == 1 else 'players'} after the latest refresh.</p>
+              <td class="email-hero" style="padding:4% {EMAIL_CARD_HORIZONTAL_PADDING_PERCENT}%;background:#edf4f8;border-bottom:1px solid #cbd7df;">
+                <div class="email-brand" style="font-size:75%;letter-spacing:.14em;text-transform:uppercase;color:#007ca8;font-weight:800;">MFL Front Office</div>
+                <h1 class="email-title" style="margin:.35em 0 0;font-size:175%;line-height:1.15;color:#17222b;">Player improvements</h1>
+                <p class="email-muted" style="margin:.65em 0 0;color:#52697a;font-size:94%;">{html.escape(scope_name)} has {len(players)} improved {'player' if len(players) == 1 else 'players'} after the latest refresh.</p>
               </td>
             </tr>
             <tr>
-              <td style="padding:24px 30px;">
-                <table width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;border:1px solid #2d3a45;border-radius:10px;overflow:hidden;table-layout:fixed;">
+              <td style="padding:4% {EMAIL_CARD_HORIZONTAL_PADDING_PERCENT}%;">
+                <table class="email-table" width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;border:1px solid #cbd7df;border-radius:1.5%;overflow:hidden;table-layout:fixed;">
                   <colgroup>
                     <col style="width:{ID_COLUMN_WIDTH_PERCENT}%;">
                     <col style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;">
                     <col style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;">
                   </colgroup>
                   <thead>
-                    <tr style="background:#202c35;color:#ffffff;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;">
-                      <th style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:12px;">ID</th>
-                      <th style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:12px;">Player</th>
-                      <th style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:12px 8px;">Improvement</th>
+                    <tr class="email-table-head" style="background:#e7eef3;color:#17222b;text-align:left;font-size:75%;text-transform:uppercase;letter-spacing:.04em;">
+                      <th style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">ID</th>
+                      <th style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">Player</th>
+                      <th style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">Improvement</th>
                     </tr>
                   </thead>
-                  <tbody style="font-size:14px;color:#eef6ff;">{''.join(rows)}</tbody>
+                  <tbody style="font-size:87.5%;color:#17222b;">{''.join(rows)}</tbody>
                 </table>
-                <p style="margin:18px 0 0;color:#8fa6b8;font-size:12px;line-height:1.5;">You received this because this notification is enabled in Settings. <a style="color:#54d3ff;text-decoration:none;" href="https://mfl-front-office.vercel.app/settings">Unsubscribe or manage emails</a>.</p>
+                <p class="email-footer" style="margin:1.25em 0 0;color:#60778a;font-size:75%;line-height:1.5;">You received this because this notification is enabled in Settings. <a class="email-link" style="color:#007ca8;text-decoration:none;" href="https://mfl-front-office.vercel.app/settings">Unsubscribe or manage emails</a>.</p>
               </td>
             </tr>
           </table>
@@ -427,7 +505,7 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
   </body>
 </html>
 """
-
+    return apply_email_theme(rendered, theme)
 
 def send_email(recipient: str, subject: str, text_body: str, html_body: str) -> None:
     message = EmailMessage()
@@ -476,8 +554,8 @@ def unique_players(players: list[PlayerImprovement]) -> list[PlayerImprovement]:
 def notification_jobs(
     preferences: list[dict[str, Any]],
     improvements: dict[str, PlayerImprovement],
-) -> list[tuple[str, str, list[PlayerImprovement]]]:
-    jobs: list[tuple[str, str, list[PlayerImprovement]]] = []
+) -> list[tuple[str, str, list[PlayerImprovement], str]]:
+    jobs: list[tuple[str, str, list[PlayerImprovement], str]] = []
     improvements_by_owner: dict[str, list[PlayerImprovement]] = {}
     for player in improvements.values():
         improvements_by_owner.setdefault(player.wallet_address, []).append(player)
@@ -499,11 +577,12 @@ def notification_jobs(
         )
         if not recipient or not enabled:
             continue
+        theme = normalize_email_theme(settings.get("theme"))
 
         if "myplayers" in enabled:
             players = unique_players(improvements_by_owner.get(wallet, []))
             if players:
-                jobs.append((recipient, "My Players", players))
+                jobs.append((recipient, "My Players", players, theme))
 
         watchlists = (
             preference.get("watchlists")
@@ -532,7 +611,7 @@ def notification_jobs(
                     str(watchlist.get("name") or "Watchlist").strip()
                     or "Watchlist"
                 )
-                jobs.append((recipient, f"Watchlist {name}", players))
+                jobs.append((recipient, f"Watchlist {name}", players, theme))
 
     return jobs
 
@@ -764,13 +843,13 @@ def main() -> int:
         return 0
 
     sent = 0
-    for recipient, scope_name, players in jobs:
+    for recipient, scope_name, players, theme in jobs:
         try:
             send_email(
                 recipient,
                 build_subject(scope_name, players),
                 build_text(scope_name, players),
-                build_html(scope_name, players),
+                build_html(scope_name, players, theme),
             )
             sent += 1
             print(

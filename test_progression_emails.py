@@ -73,15 +73,18 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def _preferences(self) -> list[dict[str, object]]:
+    def _preferences(self, theme: str | None = None) -> list[dict[str, object]]:
+        settings: dict[str, object] = {
+            "emailAddress": "regression@example.com",
+            "receiveEmailsFor": ["myplayers"],
+        }
+        if theme is not None:
+            settings["theme"] = theme
         return [
             {
                 "wallet_address": self.wallet,
                 "watchlists": [],
-                "settings": {
-                    "emailAddress": "regression@example.com",
-                    "receiveEmailsFor": ["myplayers"],
-                },
+                "settings": settings,
             }
         ]
 
@@ -95,6 +98,10 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
         self.assertEqual(jobs[0][0], "regression@example.com")
         self.assertEqual(jobs[0][1], "My Players")
         self.assertEqual([player.player_id for player in jobs[0][2]], ["42"])
+        self.assertEqual(jobs[0][3], "dark")
+
+        light_jobs = sender.notification_jobs(self._preferences("light"), improvements)
+        self.assertEqual(light_jobs[0][3], "light")
 
     def test_valid_progression_sends_exactly_one_email(self) -> None:
         environment = {
@@ -123,6 +130,7 @@ class ProgressionEmailDeliveryTests(unittest.TestCase):
             call = mocked_send.call_args
             self.assertEqual(call.args[0], "regression@example.com")
             self.assertEqual(call.args[1], "My Players Progression Update")
+            self.assertIn('<meta name="color-scheme" content="dark">', call.args[3])
 
 
 if __name__ == "__main__":

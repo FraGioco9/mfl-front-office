@@ -91,6 +91,11 @@ function normalizeSettingsTimeFormat(value) {
   return String(value || "").trim().toLowerCase() === "12h" ? "12h" : "24h";
 }
 
+function normalizeSettingsTheme(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "light" || normalized === "dark" ? normalized : null;
+}
+
 function normalizeSettingsEmailAddress(value) {
   return String(value || "").trim().slice(0, 254);
 }
@@ -112,6 +117,7 @@ function normalizeSettings(settings) {
     emailAddress: normalizeSettingsEmailAddress(data?.emailAddress ?? data?.email_address),
     dateFormat: normalizeSettingsDateFormat(data?.dateFormat ?? data?.date_format),
     timeFormat: normalizeSettingsTimeFormat(data?.timeFormat ?? data?.time_format),
+    theme: normalizeSettingsTheme(data?.theme),
   };
 }
 

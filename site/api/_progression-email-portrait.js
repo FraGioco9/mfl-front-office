@@ -3,7 +3,7 @@ const PImage = require("pureimage");
 const { createPortraitCloseUp, PORTRAIT_CROP_HEIGHT_PX } = require("./_portrait-close-up");
 const { loadPlayerPortraitBitmap, playerPortraitUrl } = require("./_player-portrait");
 
-const PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX = 72;
+const PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX = 216;
 
 async function imageToPngBuffer(image) {
   const output = new PassThrough();

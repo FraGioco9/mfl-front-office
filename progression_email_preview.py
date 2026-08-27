@@ -4,9 +4,10 @@
 Production emails use the server-generated progression portrait PNG endpoint.
 This preview renderer instead loads the canonical portrait WebP in the browser,
 crops source rows 0..499, removes transparent padding before the visible
-silhouette on the left, then scales the remaining crop to 72px high while
-preserving its width-to-height proportions. Transparent pixels to the right of
-the silhouette are preserved and may overflow the reserved portrait slot.
+silhouette on the left, then scales the remaining crop to 216px high for a
+high-density raster while preserving its width-to-height proportions.
+Transparent pixels to the right of the silhouette are preserved and may overflow
+the reserved portrait slot.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from player_portraits import canonical_player_portrait_url
 PREVIEW_PORTRAIT_SCRIPT = """
 <script>
 (() => {
-  const HEIGHT = 72;
+  const HEIGHT = 216;
   const CROP_HEIGHT = 500;
 
   function transparentLeftInset(image, cropHeight) {
@@ -82,9 +83,9 @@ PREVIEW_PORTRAIT_SCRIPT = """
       );
       canvas.width = targetWidth;
       canvas.height = HEIGHT;
-      canvas.style.width = `${targetWidth}px`;
-      canvas.style.height = `${HEIGHT}px`;
-      if (host) host.style.width = `${targetWidth}px`;
+      canvas.style.width = "100%";
+      canvas.style.height = "auto";
+      if (host) host.style.width = "100%";
 
       const context = canvas.getContext("2d");
       if (!context) return;
@@ -133,46 +134,44 @@ def local_preview_identity_html(player: emails.PlayerImprovement) -> str:
     initials = html.escape(emails.player_initials(player))
 
     portrait = (
-        f'<div style="position:relative;width:{emails.PORTRAIT_SIZE_PX}px;'
-        f'height:{emails.PORTRAIT_SIZE_PX}px;background:transparent;">'
-        f'<table id="{fallback_id}" role="presentation" width="{emails.PORTRAIT_SIZE_PX}" '
-        f'height="{emails.PORTRAIT_SIZE_PX}" cellspacing="0" cellpadding="0" '
-        f'style="position:absolute;inset:0;width:{emails.PORTRAIT_SIZE_PX}px;'
-        f'height:{emails.PORTRAIT_SIZE_PX}px;border-collapse:separate;background:transparent;">'
+        '<div class="player-portrait-shell" style="position:relative;width:100%;background:#ffffff;overflow:hidden;">'
+        f'<table id="{fallback_id}" role="presentation" width="100%" '
+        'cellspacing="0" cellpadding="0" '
+        'style="position:absolute;inset:0;width:100%;border-collapse:separate;background:transparent;">'
         '<tr><td align="center" valign="middle" '
-        f'style="width:{emails.PORTRAIT_SIZE_PX}px;height:{emails.PORTRAIT_SIZE_PX}px;'
-        'color:#8fa6b8;font-size:12px;font-weight:700;line-height:1;">'
+        'style="width:100%;padding:32% 0;color:#60778a;font-size:75%;font-weight:700;line-height:1;">'
         f'{initials}</td></tr></table>'
         f'<canvas data-progression-preview-portrait="{html.escape(source_url)}" '
         f'data-fallback-id="{fallback_id}" width="{emails.PORTRAIT_SIZE_PX}" '
         f'height="{emails.PORTRAIT_SIZE_PX}" '
-        f'style="position:absolute;inset:0;display:block;width:{emails.PORTRAIT_SIZE_PX}px;'
-        f'height:{emails.PORTRAIT_SIZE_PX}px;background:transparent;"></canvas>'
+        'style="position:relative;display:block;width:100%;height:auto;background:transparent;"></canvas>'
         '</div>'
     )
 
     return (
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
-        'style="border-collapse:collapse;table-layout:fixed;">'
+        'style="width:100%;border-collapse:collapse;table-layout:fixed;">'
         '<tr>'
-        f'<td width="{emails.PLAYER_PORTRAIT_SLOT_PX}" valign="top" '
-        f'style="width:{emails.PLAYER_PORTRAIT_SLOT_PX}px;padding:0;white-space:nowrap;overflow:visible;">'
+        f'<td width="{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%" valign="top" '
+        f'style="width:{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;">'
         f'{portrait}</td>'
-        '<td valign="top" style="padding:0;">'
-        f'<strong style="display:block;color:#ffffff;">{html.escape(player.name)}</strong>'
-        f'<span style="display:block;margin-top:3px;color:#8fa6b8;font-size:12px;">'
+        '<td valign="top" style="padding:0;overflow-wrap:anywhere;">'
+        f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong>'
+        f'<span class="email-position" style="display:block;margin-top:.25em;color:#60778a;font-size:75%;">'
         f'{html.escape(player.positions)}</span>'
         '</td>'
         '</tr>'
         '</table>'
     )
 
-
-def build_local_preview_html(players: list[emails.PlayerImprovement]) -> str:
+def build_local_preview_html(
+    players: list[emails.PlayerImprovement],
+    theme: str = emails.DEFAULT_EMAIL_THEME,
+) -> str:
     original_identity = emails.player_identity_html
     try:
         emails.player_identity_html = local_preview_identity_html
-        rendered = emails.build_html("Test Email", players)
+        rendered = emails.build_html("Test Email", players, theme)
     finally:
         emails.player_identity_html = original_identity
 
@@ -184,6 +183,7 @@ def write_local_preview(
     output_path: Path,
     requested_player_id: str = "",
     requested_player_ids: str = "",
+    theme: str = emails.DEFAULT_EMAIL_THEME,
 ) -> None:
     player_ids = emails.parse_preview_player_ids(
         requested_player_id,
@@ -191,7 +191,7 @@ def write_local_preview(
     )
     players = emails.preview_players_from_database(current_db, player_ids)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(build_local_preview_html(players), encoding="utf-8")
+    output_path.write_text(build_local_preview_html(players, theme), encoding="utf-8")
     print(
         f"Wrote progression email preview to {output_path} "
         f"with {len(players)} player{'s' if len(players) != 1 else ''}. No email was sent."
@@ -206,6 +206,12 @@ def main() -> int:
     parser.add_argument("--preview-output", default="progression-email-preview.html")
     parser.add_argument("--preview-player-id", default="")
     parser.add_argument("--preview-player-ids", default="")
+    parser.add_argument(
+        "--preview-theme",
+        choices=("dark", "light"),
+        default=emails.DEFAULT_EMAIL_THEME,
+        help="Render the email using the saved MFL theme. Defaults to dark.",
+    )
     args = parser.parse_args()
 
     current_db = Path(args.current_db)
@@ -219,6 +225,7 @@ def main() -> int:
             Path(args.preview_output),
             args.preview_player_id,
             args.preview_player_ids,
+            args.preview_theme,
         )
     except RuntimeError as error:
         print(f"Progression email preview failed: {error}")
