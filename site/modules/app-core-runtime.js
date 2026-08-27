@@ -482,6 +482,24 @@ const addToWatchlistButton = document.querySelector("#addToWatchlistButton");
 const moveToWatchlistButton = document.querySelector("#moveToWatchlistButton");
 const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton");
 
+function normalizeSettingsTheme(value, fallback = "dark") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "light" || normalized === "dark") return normalized;
+  return fallback;
+}
+
+function currentMflTheme() {
+  return normalizeSettingsTheme(document.documentElement.dataset.theme, "dark");
+}
+
+function queueThemePreferenceCloudSync() {
+  if (!state.linkedWalletAddress || !hasWalletProof() || !state.walletSettingsLoaded) return;
+  window.clearTimeout(state.walletPreferencesSaveTimer);
+  state.walletPreferencesSaveTimer = window.setTimeout(() => {
+    void saveWalletPreferencesNow();
+  }, 0);
+}
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   themeButton.dataset.activeTheme = theme;
@@ -2950,6 +2968,7 @@ function currentSettingsPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddress),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
   };
 }
 
@@ -7140,6 +7159,7 @@ nextButton.addEventListener("click", () => {
 themeButton.addEventListener("click", () => {
   const currentTheme = document.documentElement.dataset.theme || "light";
   applyTheme(currentTheme === "dark" ? "light" : "dark");
+  queueThemePreferenceCloudSync();
 });
 
 menuButton.addEventListener("click", toggleMenu);

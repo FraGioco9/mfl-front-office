@@ -46,43 +46,41 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
             self.assertEqual(emails.player_portrait_url(payload), EMAIL_PORTRAIT_123)
             self.assertEqual(emails.player_portrait_url("123"), EMAIL_PORTRAIT_123)
 
-    def test_html_uses_72px_high_portrait_with_intrinsic_width(self) -> None:
+    def test_html_uses_responsive_portrait_with_intrinsic_ratio(self) -> None:
         identity = emails.player_identity_html(
             self.player(portrait_url=EMAIL_PORTRAIT_123)
         )
         self.assertIn(f'src="{EMAIL_PORTRAIT_123}"', identity)
-        self.assertIn('height="72"', identity)
-        self.assertIn('height:72px;width:auto', identity)
-        self.assertNotIn('width="72"', identity)
+        self.assertIn('max-width:100%;height:auto', identity)
+        self.assertNotIn('height="72"', identity)
+        self.assertNotIn('height:72px', identity)
         self.assertNotIn(CANONICAL_PORTRAIT_123, identity)
-        self.assertNotIn('background:#202c35', identity)
-        self.assertNotIn('border-radius', identity)
+        self.assertIn('class="player-portrait-shell"', identity)
+        self.assertIn('background:#ffffff', identity)
 
         fallback = emails.player_identity_html(self.player())
         self.assertNotIn("<img ", fallback)
         self.assertIn(">AL</td>", fallback)
-        self.assertIn('background:transparent', fallback)
-        self.assertNotIn('background:#202c35', fallback)
+        self.assertIn('width="100%"', fallback)
+        self.assertIn('background:#ffffff', fallback)
 
-    def test_player_column_uses_12px_portrait_inset_and_160px_label_offset(self) -> None:
-        self.assertEqual(emails.PLAYER_COLUMN_LEFT_PADDING_PX, 12)
-        self.assertEqual(emails.PLAYER_TEXT_OFFSET_PX, 160)
-        self.assertEqual(emails.PLAYER_PORTRAIT_SLOT_PX, 148)
+    def test_player_column_uses_percentage_portrait_slot(self) -> None:
+        self.assertEqual(emails.PLAYER_PORTRAIT_SLOT_PERCENT, 38)
 
         player = self.player(portrait_url=EMAIL_PORTRAIT_123)
         identity = emails.player_identity_html(player)
         rendered = emails.build_html("Test Email", [player])
 
-        self.assertIn('width="148"', identity)
-        self.assertIn('width:148px;padding:0;white-space:nowrap;overflow:visible;', identity)
+        self.assertIn('width="38%"', identity)
+        self.assertIn('width:38%;padding:0 4% 0 0;overflow:hidden;', identity)
         self.assertIn('table-layout:fixed', identity)
-        self.assertIn('padding:14px 12px;vertical-align:top;overflow:visible;', rendered)
+        self.assertIn('padding:3% 2%;vertical-align:top;overflow:hidden;', rendered)
         self.assertIn('>Ada Lovelace</strong>', identity)
 
     def test_email_table_uses_percentage_columns_with_compact_improvements(self) -> None:
-        self.assertEqual(emails.ID_COLUMN_WIDTH_PERCENT, 15)
-        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 60)
-        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 25)
+        self.assertEqual(emails.ID_COLUMN_WIDTH_PERCENT, 18)
+        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 50)
+        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 32)
         self.assertEqual(
             emails.ID_COLUMN_WIDTH_PERCENT
             + emails.PLAYER_COLUMN_WIDTH_PERCENT
@@ -95,14 +93,39 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
             [self.player(portrait_url=EMAIL_PORTRAIT_123)],
         )
         self.assertIn('table-layout:fixed', rendered)
-        self.assertIn('<col style="width:15%;">', rendered)
-        self.assertIn('<col style="width:60%;">', rendered)
-        self.assertIn('<col style="width:25%;">', rendered)
-        self.assertIn('width:15%;padding:14px 12px', rendered)
-        self.assertIn('width:60%;padding:14px 12px', rendered)
-        self.assertIn('width:25%;padding:14px 8px', rendered)
-        self.assertIn('line-height:1.35;white-space:nowrap;', rendered)
-        self.assertIn('line-height:1.45;white-space:nowrap;', rendered)
+        self.assertIn('<col style="width:18%;">', rendered)
+        self.assertIn('<col style="width:50%;">', rendered)
+        self.assertIn('<col style="width:32%;">', rendered)
+        self.assertIn('width:18%;padding:3% 2%', rendered)
+        self.assertIn('width:50%;padding:3% 2%', rendered)
+        self.assertIn('width:32%;padding:3% 2%', rendered)
+        self.assertIn('white-space:normal;overflow-wrap:anywhere;', rendered)
+        self.assertNotIn('max-width:760px', rendered)
+        self.assertIn('<meta name="color-scheme" content="dark">', rendered)
+        self.assertNotIn('@media (prefers-color-scheme: dark)', rendered)
+        self.assertIn('style="background:#141c23;border-top:1px solid #2d3a45;"', rendered)
+        self.assertIn('class="player-portrait-shell" style="width:100%;background:#141c23;overflow:hidden;"', rendered)
+        light_rendered = emails.build_html("Test Email", [self.player(portrait_url=EMAIL_PORTRAIT_123)], theme="light")
+        self.assertIn('<meta name="color-scheme" content="light">', light_rendered)
+        self.assertIn('style="background:#ffffff;border-top:1px solid #d6e0e7;"', light_rendered)
+        six_digit = emails.PlayerImprovement(
+            player_id='374512',
+            name='Six Digit Player',
+            wallet_address='0xabc',
+            wallet_name='Example Agent',
+            positions='CM',
+            old_overall=70,
+            new_overall=71,
+            changes=(('overall', 70, 71),),
+        )
+        six_digit_rendered = emails.build_html('Test Email', [six_digit])
+        self.assertIn('#374512</a>', six_digit_rendered)
+        self.assertIn('class="email-id-cell"', six_digit_rendered)
+        self.assertIn('white-space:nowrap;overflow-wrap:normal;word-break:normal;', six_digit_rendered)
+        self.assertIn('@media screen and (max-width:480px)', six_digit_rendered)
+        self.assertIn('.email-id-cell { font-size:70% !important; }', six_digit_rendered)
+        self.assertIn('@media screen and (max-width:360px)', six_digit_rendered)
+        self.assertIn('.email-id-cell { font-size:65% !important; }', six_digit_rendered)
 
     def test_portrait_lookup_never_calls_playmfl(self) -> None:
         self.assertFalse(hasattr(emails, "mfl_request_json"))
