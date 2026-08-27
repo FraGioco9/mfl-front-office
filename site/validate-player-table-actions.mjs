@@ -35,6 +35,13 @@ for (const code of [source, generatedTable]) {
   invariant(
     code.includes('void setPage("player", true, { playerId });')
       && code.includes('https://app.playmfl.com/players/${encodeURIComponent(playerId)}')
+      && code.includes('const playerRow = state.rows.find((row) => String(getValue(row, "player_id")) === playerId);')
+      && code.includes('const playerName = playerRow ? formatCellValue(playerRow, "name") : "";')
+      && code.includes('rememberEvaluationResult(playerId);')
+      && code.includes('state.evaluationPlayerId = playerId;')
+      && code.includes('evaluationSearchInput.value = playerName;')
+      && code.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, playerName);')
+      && code.includes('clearEvaluationSearchFocus();')
       && code.includes('void setPage("evaluation", true, { playerId });')
       && code.includes('toggleWatchlistPlayer(playerId, true);')
       && code.includes('copyPlayerId(playerId);'),

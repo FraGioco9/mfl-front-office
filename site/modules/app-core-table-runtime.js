@@ -723,6 +723,19 @@ function ensurePlayerTableActionMenu() {
       return;
     }
     if (action === "evaluate") {
+      const playerRow = state.rows.find((row) => String(getValue(row, "player_id")) === playerId);
+      const playerName = playerRow ? formatCellValue(playerRow, "name") : "";
+      rememberEvaluationResult(playerId);
+      state.evaluationPlayerId = playerId;
+      if (playerName) {
+        evaluationSearchInput.value = playerName;
+        try {
+          sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, playerName);
+        } catch {
+          // Session storage is an optional first-paint cache only.
+        }
+      }
+      clearEvaluationSearchFocus();
       void setPage("evaluation", true, { playerId });
       return;
     }
