@@ -36,19 +36,23 @@ invariant(
 );
 invariant(
   markup.includes('d="M19.6 17.9A8.6 8.6 0 1 1 10.2 3.7 7.2 7.2 0 0 0 19.6 17.9Z"'),
-  "Dark-mode control must use the reference-inspired broad outlined crescent geometry.",
+  "Dark-mode control must use the reference-inspired broad crescent geometry.",
 );
 invariant(
   markup.includes('<circle cx="12" cy="12" r="5.4"></circle>')
     && markup.includes('d="M12 1.8v2.6M12 19.6v2.6M1.8 12h2.6M19.6 12h2.6M4.8 4.8l1.8 1.8M17.4 17.4l1.8 1.8M4.8 19.2l1.8-1.8M17.4 6.6l1.8-1.8"'),
-  "Light-mode control must use the reference-inspired large-ring sun with short rounded rays.",
+  "Light-mode control must use the reference-inspired sun geometry.",
 );
 
 for (const required of [
   "#themeButton .themeModeIcon {",
   "width: 22px;",
   "height: 22px;",
-  "fill: none;",
+  "#themeButton .themeMoonSymbol path {",
+  "fill: currentColor;",
+  "stroke: none;",
+  "#themeButton .themeSunSymbol circle {",
+  "#themeButton .themeSunSymbol path {",
   "stroke: currentColor;",
   "stroke-width: 2.1;",
   "stroke-linecap: round;",
