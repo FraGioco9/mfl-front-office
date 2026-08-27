@@ -13487,7 +13487,7 @@ async function startApp() {
     }
 
     state.page = 1;
-    void reloadIncrementalPage(1, { save: options.save !== false, loadingReason: "table-filter-loading" });
+    void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });
     return undefined;
   };
 
