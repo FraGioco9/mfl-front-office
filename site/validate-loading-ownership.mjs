@@ -5,8 +5,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource] = await Promise.all([
+const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource] = await Promise.all([
   read("./styles.css"),
+  read("./styles-base.css"),
   read("./loading.css"),
   read("./bootstrap-core.js"),
   read("./modules/app-entry.js"),
@@ -26,6 +27,13 @@ invariant(
 invariant(
   !styles.includes("html.mflInteractionBusy"),
   "styles.css must not duplicate loading-state presentation owned by loading.css.",
+);
+invariant(
+  !stylesBase.includes("walletOptingIn")
+    && !stylesBase.includes("--mfl-z-wallet-guard")
+    && !appCoreSource.includes('classList.add("walletOptingIn")')
+    && !appCoreSource.includes('classList.remove("walletOptingIn")'),
+  "Wallet opt-in/out must use local mutation feedback without a page-wide interaction guard.",
 );
 
 for (const required of [
