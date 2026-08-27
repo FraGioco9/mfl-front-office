@@ -5,6 +5,7 @@ const validators = [
   "validate-evaluation-refresh-hydration.mjs",
   "validate-evaluation-stale-wallet-preferences-ui.mjs",
   "validate-settings-route-core.mjs",
+  "validate-settings-email-privacy.mjs",
   "validate-player-route-core.mjs",
   "validate-player-overall-loading-color.mjs",
   "validate-player-loading-plain-attributes.mjs",

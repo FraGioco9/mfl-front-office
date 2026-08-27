@@ -688,6 +688,26 @@
     primeStaticButtonGroup("mflStatsOverallFilters", MFL_STATS_FILTER_LABELS, "mflStatsFilterButton", "all");
   }
 
+  function primeSettingsEmailEditAction() {
+    const input = document.getElementById("settingsEmailAddressInput");
+    if (!(input instanceof HTMLInputElement)) return;
+    const row = input.closest(".settingsEmailAddressRow");
+    if (!(row instanceof HTMLElement)) return;
+
+    const existingEdit = row.querySelector("[data-settings-email-edit]");
+    const edit = existingEdit instanceof HTMLButtonElement ? existingEdit : document.createElement("button");
+    if (!(existingEdit instanceof HTMLButtonElement)) {
+      edit.type = "button";
+      edit.dataset.settingsEmailEdit = "true";
+      input.insertAdjacentElement("afterend", edit);
+    }
+    edit.className = "settingsEmailActionButton primary";
+    edit.textContent = "Edit";
+    edit.disabled = true;
+    edit.setAttribute("aria-label", "Edit email address");
+    edit.setAttribute("aria-pressed", "false");
+  }
+
   function primeSettingsActions() {
     const panel = document.querySelector("#settingsPage .settingsPanel");
     const discard = document.getElementById("settingsEmailDiscardButton");
@@ -717,6 +737,7 @@
     setLoadingValue("settingsWalletAddress");
     primeStaticButtonGroup("settingsDateFormatOptions", SETTINGS_DATE_FORMAT_LABELS, "settingsToggleButton", "DMY");
     primeStaticButtonGroup("settingsTimeFormatOptions", SETTINGS_TIME_FORMAT_LABELS, "settingsToggleButton", "24h");
+    primeSettingsEmailEditAction();
     primeSettingsActions();
   }
 
