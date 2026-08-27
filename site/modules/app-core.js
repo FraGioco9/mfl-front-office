@@ -3015,9 +3015,22 @@ function waitForViewTransitionPaint() {
   });
 }
 
+let evaluationReadinessBusyToken = "";
+
+function releaseEvaluationReadinessBusy() {
+  const token = evaluationReadinessBusyToken;
+  evaluationReadinessBusyToken = "";
+  if (token) window.__mflInteractionBusy?.end?.(token);
+  return Boolean(token);
+}
+
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   const navigation = Reflect.get(window, "__mflNavigation");
   const loadingController = Reflect.get(window, "__mflInteractionBusy");
+  if (pageName !== "evaluation") {
+    releaseEvaluationReadinessBusy();
+    document.body.classList.remove("evaluationPageLoading");
+  }
   const navigationToken = typeof navigation?.beginLatest === "function"
     ? navigation.beginLatest("page-transition")
     : typeof navigation?.begin === "function"
@@ -3377,6 +3390,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     const evaluationBusyToken = cachedEvaluationReentry
       ? ""
       : window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    if (evaluationBusyToken) evaluationReadinessBusyToken = evaluationBusyToken;
     if (!cachedEvaluationReentry) {
       document.documentElement.classList.remove("mflEvaluationReady");
       document.body.classList.add("evaluationPageLoading");
@@ -3401,11 +3415,18 @@ async function setPage(pageName, updateHash = true, options = {}) {
       window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
       return;
     } finally {
-      document.body.classList.remove("evaluationPageLoading");
-      if (!document.documentElement.classList.contains("mflEvaluationReady")) {
-        document.documentElement.classList.add("mflEvaluationReady");
+      const evaluationStillCurrent = pageNavigationIsCurrent(options)
+        && state.currentPage === "evaluation"
+        && window.location.pathname === "/evaluation";
+      if (evaluationStillCurrent) {
+        document.body.classList.remove("evaluationPageLoading");
+        if (!document.documentElement.classList.contains("mflEvaluationReady")) {
+          document.documentElement.classList.add("mflEvaluationReady");
+        }
       }
-      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+      if (evaluationBusyToken && evaluationReadinessBusyToken === evaluationBusyToken) {
+        releaseEvaluationReadinessBusy();
+      }
     }
   }
 
@@ -5279,6 +5300,8 @@ async function loadWalletPreferences(options = {}) {
   }
 
   state.walletPreferencesLoading = true;
+  const walletPreferencesPageAtLoadStart = state.currentPage;
+  const walletPreferencesPathAtLoadStart = `${window.location.pathname}${window.location.search}`;
   const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
   const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
@@ -5357,7 +5380,10 @@ async function loadWalletPreferences(options = {}) {
   } finally {
     state.walletPreferencesLoaded = true;
     state.walletPreferencesLoading = false;
-    if (previousNotes !== JSON.stringify(normalizedPlayerNotes(state.playerNotes))) {
+    const walletPreferencesLoadStillOwnsRoute = state.currentPage === walletPreferencesPageAtLoadStart
+      && `${window.location.pathname}${window.location.search}` === walletPreferencesPathAtLoadStart;
+    if (walletPreferencesLoadStillOwnsRoute
+      && previousNotes !== JSON.stringify(normalizedPlayerNotes(state.playerNotes))) {
       refreshPlayerPageAfterWalletSync();
       if (tablePageKey()) {
         applyFilters({ save: false });

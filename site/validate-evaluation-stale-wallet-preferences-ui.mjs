@@ -1,0 +1,36 @@
+import { readFile } from "node:fs/promises";
+
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const invariant = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+
+const [source, generated] = await Promise.all([
+  read("./modules/app-core.js"),
+  read("./modules/app-core-runtime.js"),
+]);
+
+for (const code of [source, generated]) {
+  const loadStart = code.indexOf("async function loadWalletPreferences(options = {}) {");
+  const pageSnapshotIndex = code.indexOf("const walletPreferencesPageAtLoadStart = state.currentPage;", loadStart);
+  const pathSnapshotIndex = code.indexOf('const walletPreferencesPathAtLoadStart = `${window.location.pathname}${window.location.search}`;', loadStart);
+  const routeGuardIndex = code.indexOf("const walletPreferencesLoadStillOwnsRoute = state.currentPage === walletPreferencesPageAtLoadStart", loadStart);
+  const pathGuardIndex = code.indexOf('&& `${window.location.pathname}${window.location.search}` === walletPreferencesPathAtLoadStart;', routeGuardIndex);
+  const guardedRefreshIndex = code.indexOf("if (walletPreferencesLoadStillOwnsRoute", routeGuardIndex);
+  const noteRefreshIndex = code.indexOf("refreshPlayerPageAfterWalletSync();", guardedRefreshIndex);
+  const tableRefreshIndex = code.indexOf("applyFilters({ save: false });", noteRefreshIndex);
+
+  invariant(
+    loadStart >= 0
+      && pageSnapshotIndex > loadStart
+      && pathSnapshotIndex > pageSnapshotIndex
+      && routeGuardIndex > pathSnapshotIndex
+      && pathGuardIndex > routeGuardIndex
+      && guardedRefreshIndex > pathGuardIndex
+      && noteRefreshIndex > guardedRefreshIndex
+      && tableRefreshIndex > noteRefreshIndex,
+    "Wallet-preference completion must not repaint a route that did not start the load; stale Evaluation work must never rerender a later table page and close its open Player actions menu.",
+  );
+}
+
+console.log("Evaluation stale wallet-preference UI ownership validation passed.");
