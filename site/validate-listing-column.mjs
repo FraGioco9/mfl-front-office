@@ -65,18 +65,18 @@ const width = (name) => {
   assert.ok(match, `Missing Uniform Width variable: ${name}`);
   return Number(match[1]);
 };
-assert.equal(width("listing"), 6.234413965087282);
+assert.equal(width("listing"), 6.3904569176696135);
 const attributesTotal = [
   width("select"), width("actions"), width("flag"), width("name"), width("listing"),
   width("positions"), width("age"), width("seasons"), width("overall"),
-  width("stat") * 6, width("agent"), width("link"),
+  width("stat") * 6, width("agent"),
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(attributesTotal - 100) < 1e-9, `Attributes widths sum to ${attributesTotal}`);
 const contractTotal = [
   width("select"), width("actions"), width("flag"), width("contract-render-name"), width("listing"),
   width("positions"), width("age"), width("seasons"), width("overall"),
   width("contract-revenue"), width("contract-render-club"), width("contract-division"),
-  width("contract-agent"), width("contract-link"),
+  width("contract-agent"),
 ].reduce((sum, value) => sum + value, 0);
 assert.ok(Math.abs(contractTotal - 100) < 1e-9, `Contracts widths sum to ${contractTotal}`);
 assert.match(styles, /col\.col-listing \{ width: var\(--mfl-table-col-listing\); \}/);

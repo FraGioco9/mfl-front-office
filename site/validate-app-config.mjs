@@ -113,6 +113,12 @@ invariant(
 invariant(!TABLE_SORTABLE_COLUMNS.includes("player_id"), "Removed ID column must not remain sortable.");
 invariant(!("player_id" in TABLE_COLUMN_LABELS), "Removed ID column must not retain a label mapping.");
 invariant(!("player_id" in TABLE_COLUMN_CLASSES), "Removed ID column must not retain a class mapping.");
+for (const [view, columns] of Object.entries(TABLE_VIEW_COLUMNS)) {
+  invariant(!columns.includes("player_link"), `Removed Link column must not remain in ${view} table schema.`);
+}
+invariant(!("player_link" in TABLE_COLUMN_LABELS), "Removed Link column must not retain a label mapping.");
+invariant(!("player_link" in TABLE_COLUMN_CLASSES), "Removed Link column must not retain a class mapping.");
+invariant(!bootstrapSource.includes("\"player_link\""), "First-paint table schema must not restore the Link column.");
 same(runtimeConfig.ui.mflStatsOverallFilters, MFL_STATS_OVERALL_FILTERS, "pre-bootstrap MFL Stats filter config");
 same(runtimeConfig.ui.settingsDateFormats, SETTINGS_DATE_FORMAT_OPTIONS, "pre-bootstrap Settings date-format config");
 same(runtimeConfig.ui.settingsTimeFormats, SETTINGS_TIME_FORMAT_OPTIONS, "pre-bootstrap Settings time-format config");

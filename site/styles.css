@@ -15,28 +15,26 @@
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
   --mfl-table-row-outer-height: 39px;
-  --mfl-table-col-select: 2.441812136325852%;
-  --mfl-table-col-actions: 2.441812136325852%;
-  --mfl-table-col-flag: 2.441812136325852%;
-  --mfl-table-col-name: 14.162510390689944%;
-  --mfl-table-col-listing: 6.234413965087282%;
-  --mfl-table-col-positions: 7.325436408977557%;
-  --mfl-table-col-age: 4.395261845386535%;
-  --mfl-table-col-seasons: 5.371986699916874%;
-  --mfl-table-col-overall: 6.442227763923525%;
-  --mfl-table-col-stat: 5.763369354391799%;
-  --mfl-table-col-contract-revenue: 8.790523690773069%;
-  --mfl-table-col-contract-club: 16.022443890274314%;
-  --mfl-table-col-contract-division: 9.767248545303408%;
-  --mfl-table-col-agent: 11.720698254364089%;
-  --mfl-table-col-link: 2.441812136325852%;
+  --mfl-table-col-select: 2.5029289594205983%;
+  --mfl-table-col-actions: 2.5029289594205983%;
+  --mfl-table-col-flag: 2.5029289594205983%;
+  --mfl-table-col-name: 14.516987964639473%;
+  --mfl-table-col-listing: 6.3904569176696135%;
+  --mfl-table-col-positions: 7.508786878261796%;
+  --mfl-table-col-age: 4.505272126957078%;
+  --mfl-table-col-seasons: 5.506443710725317%;
+  --mfl-table-col-overall: 6.603472148258601%;
+  --mfl-table-col-stat: 5.907622395001243%;
+  --mfl-table-col-contract-revenue: 9.010544253914157%;
+  --mfl-table-col-contract-club: 16.423474278410904%;
+  --mfl-table-col-contract-division: 10.011715837682393%;
+  --mfl-table-col-agent: 12.014059005218872%;
   /* Chromium fixed-table layout resolves fractional column geometry in 1/64px units.
    * Keep the Contracts render calibration inside Uniform Width so shared boundaries
    * match the stat views exactly at the canonical 1664px desktop table width. */
-  --mfl-table-col-contract-render-name: 14.162810390689944%;
-  --mfl-table-col-contract-render-club: 16.019370440565254%;
-  --mfl-table-col-contract-agent: 11.721677780548629%;
-  --mfl-table-col-contract-link: 2.443606059850374%;
+  --mfl-table-col-contract-render-name: 14.517295473426351%;
+  --mfl-table-col-contract-render-club: 16.420323902439023%;
+  --mfl-table-col-contract-agent: 12.016901872403878%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -90,7 +88,6 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   --mfl-table-col-name: var(--mfl-table-col-contract-render-name);
   --mfl-table-col-contract-club: var(--mfl-table-col-contract-render-club);
   --mfl-table-col-agent: var(--mfl-table-col-contract-agent);
-  --mfl-table-col-link: var(--mfl-table-col-contract-link);
 }
 
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
@@ -107,7 +104,6 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 #progressionPage .playerTableScroller col.col-contract-club { width: var(--mfl-table-col-contract-club); }
 #progressionPage .playerTableScroller col.col-contract-division { width: var(--mfl-table-col-contract-division); }
 #progressionPage .playerTableScroller col.col-agent { width: var(--mfl-table-col-agent); }
-#progressionPage .playerTableScroller col.col-link { width: var(--mfl-table-col-link); }
 
 #progressionPage {
   position: relative;

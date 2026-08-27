@@ -147,11 +147,11 @@ export const TABLE_CONTRACT_COLUMNS = Object.freeze([
 ]);
 
 export const TABLE_VIEW_COLUMNS = Object.freeze({
-  attributes: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-  current: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-  all: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-  next: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-  contracts: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_CONTRACT_COLUMNS, "wallet_name", "player_link"]),
+  attributes: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name"]),
+  current: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name"]),
+  all: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name"]),
+  next: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_STAT_COLUMNS, "wallet_name"]),
+  contracts: Object.freeze([...TABLE_BASE_COLUMNS, ...TABLE_CONTRACT_COLUMNS, "wallet_name"]),
 });
 
 export const TABLE_JOINED_AGENCY_PAGES = Object.freeze(["myplayers", "agents", "mfl"]);
@@ -186,7 +186,6 @@ export const TABLE_COLUMN_LABELS = Object.freeze({
   active_contract_revenue_share: "Rev. Share",
   active_contract_club_name: "Club Name",
   active_contract_club_division: "Division",
-  player_link: "",
 });
 
 export const TABLE_COLUMN_CLASSES = Object.freeze({
@@ -201,7 +200,6 @@ export const TABLE_COLUMN_CLASSES = Object.freeze({
   active_contract_revenue_share: "col-contract-revenue",
   active_contract_club_name: "col-contract-club",
   active_contract_club_division: "col-contract-division",
-  player_link: "col-link",
 });
 
 const BROWSER_DATA = Object.freeze({
