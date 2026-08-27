@@ -19,7 +19,10 @@ from cron.job
 where jobname in (
   'mfl-database-refresh-1020',
   'mfl-database-refresh-1915',
-  'mfl-database-refresh-2315'
+  'mfl-database-refresh-2315',
+  'mfl-database-refresh-1015',
+  'mfl-database-refresh-1903',
+  'mfl-database-refresh-2303'
 );
 
 select cron.schedule(
@@ -56,8 +59,8 @@ select cron.schedule(
 );
 
 select cron.schedule(
-  'mfl-database-refresh-1915',
-  '15,25 17,18 * * *',
+  'mfl-database-refresh-1903',
+  '3,13 17,18 * * *',
   $$
   with schedule_context as (
     select to_char(timezone('Europe/Rome', now()), 'HH24:MI') as rome_hm
@@ -79,18 +82,18 @@ select cron.schedule(
       )
     ),
     body := jsonb_build_object(
-      'target', '19:15',
-      'recovery', rome_hm = '19:25'
+      'target', '19:03',
+      'recovery', rome_hm = '19:13'
     )
   )
   from schedule_context
-  where rome_hm in ('19:15', '19:25');
+  where rome_hm in ('19:03', '19:13');
   $$
 );
 
 select cron.schedule(
-  'mfl-database-refresh-2315',
-  '15,25 21,22 * * *',
+  'mfl-database-refresh-2303',
+  '3,13 21,22 * * *',
   $$
   with schedule_context as (
     select to_char(timezone('Europe/Rome', now()), 'HH24:MI') as rome_hm
@@ -112,11 +115,11 @@ select cron.schedule(
       )
     ),
     body := jsonb_build_object(
-      'target', '23:15',
-      'recovery', rome_hm = '23:25'
+      'target', '23:03',
+      'recovery', rome_hm = '23:13'
     )
   )
   from schedule_context
-  where rome_hm in ('23:15', '23:25');
+  where rome_hm in ('23:03', '23:13');
   $$
 );

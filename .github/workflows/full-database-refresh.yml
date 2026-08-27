@@ -17,7 +17,7 @@ on:
         default: ""
         type: string
       occurrence_key:
-        description: Stable occurrence key, for example 20260827-1915.
+        description: Stable occurrence key, for example 20260827-1903.
         required: false
         default: ""
         type: string
@@ -87,7 +87,7 @@ jobs:
               exit 1
             fi
             case "${OCCURRENCE_KEY:9:4}" in
-              1020|1915|2315) ;;
+              1020|1903|2303) ;;
               *)
                 echo "Unsupported scheduled occurrence: $OCCURRENCE_KEY" >&2
                 exit 1
