@@ -1,7 +1,7 @@
 /* Canonical active-state presentation for the table Filters control. */
 
-#filterSummary.filtersViewCount {
-  visibility: hidden;
+#openFiltersButton #filterSummary.filtersViewCount:not(.hasActiveFilters) {
+  display: none;
 }
 
 #openFiltersButton.filtersViewButton.hasActiveFilters {
@@ -18,7 +18,6 @@
 }
 
 #filterSummary.filtersViewCount.hasActiveFilters {
-  visibility: visible;
   align-self: center;
   min-height: 18px;
   height: 18px;
