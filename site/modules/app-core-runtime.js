@@ -2859,6 +2859,7 @@ function settingsRestoreDraftBaselineForNavigation() {
   state.settingsDateFormat = normalizeSettingsDateFormat(baseline.dateFormat);
   state.settingsTimeFormat = normalizeSettingsTimeFormat(baseline.timeFormat);
   state.settingsDraftDirty = false;
+  if (settingsEmailAddressInput) delete settingsEmailAddressInput.dataset.settingsEmailEditing;
 }
 
 async function settingsRefreshCommittedFromSupabase(options = {}) {
