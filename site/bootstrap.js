@@ -497,7 +497,7 @@
     const normalizedView = String(view || "").toLowerCase();
     const viewColumns = normalizedView === "contracts" ? FIRST_PAINT_CONTRACT_COLUMNS : FIRST_PAINT_STAT_COLUMNS;
     const agentColumn = FIRST_PAINT_AGENT_PAGES.has(normalizedPage) ? "owned_since" : "wallet_name";
-    return [...FIRST_PAINT_BASE_COLUMNS, ...viewColumns, agentColumn, "player_link"];
+    return [...FIRST_PAINT_BASE_COLUMNS, ...viewColumns, agentColumn];
   }
 
   function firstPaintTableColumnClass(column) {

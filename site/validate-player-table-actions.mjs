@@ -73,11 +73,12 @@ invariant(
 );
 
 invariant(
-  styles.includes("--mfl-table-col-actions: 2.441812136325852%;")
-    && styles.includes("--mfl-table-col-name: 14.162510390689944%;")
+  styles.includes("--mfl-table-col-actions: 2.5029289594205983%;")
+    && styles.includes("--mfl-table-col-name: 14.516987964639473%;")
     && !styles.includes("--mfl-table-col-id:")
+    && !styles.includes("--mfl-table-col-link:")
     && styles.includes("col.col-actions { width: var(--mfl-table-col-actions); }"),
-  "Uniform Width must own the action column inside the rebuilt post-ID table width contract.",
+  "Uniform Width must own the action column inside the rebuilt no-Link table width contract.",
 );
 
 invariant(

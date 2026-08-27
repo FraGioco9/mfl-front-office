@@ -82,11 +82,12 @@ const playerVariables = Object.freeze({
   "col-contract-club": "--mfl-table-col-contract-club",
   "col-contract-division": "--mfl-table-col-contract-division",
   "col-agent": "--mfl-table-col-agent",
-  "col-link": "--mfl-table-col-link",
 });
 
 invariant(!styles.includes("--mfl-table-col-id"), "Removed ID column must not retain Uniform Width geometry.");
 invariant(!styles.includes("col.col-id"), "Removed ID column must not retain a colgroup width consumer.");
+invariant(!styles.includes("--mfl-table-col-link"), "Removed Link column must not retain Uniform Width geometry.");
+invariant(!styles.includes("col.col-link"), "Removed Link column must not retain a colgroup width consumer.");
 
 const evaluationVariables = [
   "--mfl-evaluation-summary-col-name",
@@ -122,11 +123,11 @@ function totalPlayerWidth(columnClasses) {
 
 const attributeWidth = totalPlayerWidth([
   "col-select", "col-actions", "col-flag", "col-name", "col-listing", "col-positions", "col-age", "col-seasons",
-  "col-overall", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-agent", "col-link",
+  "col-overall", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-agent",
 ]);
 const contractsWidth = totalPlayerWidth([
   "col-select", "col-actions", "col-flag", "col-name", "col-listing", "col-positions", "col-age", "col-seasons",
-  "col-overall", "col-contract-revenue", "col-contract-club", "col-contract-division", "col-agent", "col-link",
+  "col-overall", "col-contract-revenue", "col-contract-club", "col-contract-division", "col-agent",
 ]);
 invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
 invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns must total 100%.");
@@ -134,33 +135,28 @@ invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns
 const contractRenderName = percentageVariable("--mfl-table-col-contract-render-name");
 const contractRenderClub = percentageVariable("--mfl-table-col-contract-render-club");
 const contractRenderAgent = percentageVariable("--mfl-table-col-contract-agent");
-const contractRenderLink = percentageVariable("--mfl-table-col-contract-link");
 const contractRenderWidth = contractsWidth
   - percentageVariable("--mfl-table-col-name")
   - percentageVariable("--mfl-table-col-contract-club")
   - percentageVariable("--mfl-table-col-agent")
-  - percentageVariable("--mfl-table-col-link")
   + contractRenderName
   + contractRenderClub
-  + contractRenderAgent
-  + contractRenderLink;
+  + contractRenderAgent;
 invariant(Math.abs(contractRenderWidth - 100) < 1e-9, "Rendered Contracts table columns must total exactly 100%.");
 invariant(
   styles.includes("--mfl-table-col-name: var(--mfl-table-col-contract-render-name);")
-    && Math.abs(contractRenderName - Number("14.162810390689944")) < 1e-12
-    && Math.abs(contractRenderClub - Number("16.019370440565254")) < 1e-12
-    && Math.abs(contractRenderAgent - Number("11.721677780548629")) < 1e-12
-    && Math.abs(contractRenderLink - Number("2.443606059850374")) < 1e-12,
+    && Math.abs(contractRenderName - Number("14.517295473426351")) < 1e-12
+    && Math.abs(contractRenderClub - Number("16.420323902439023")) < 1e-12
+    && Math.abs(contractRenderAgent - Number("12.016901872403878")) < 1e-12,
   "Contracts must preserve the Chromium 1664px calibration that keeps shared Name-through-Overall and Agent geometry identical to stat views.",
 );
 const contractCalibrationDelta =
   (contractRenderName - percentageVariable("--mfl-table-col-name"))
   + (contractRenderClub - percentageVariable("--mfl-table-col-contract-club"))
-  + (contractRenderAgent - percentageVariable("--mfl-table-col-agent"))
-  + (contractRenderLink - percentageVariable("--mfl-table-col-link"));
+  + (contractRenderAgent - percentageVariable("--mfl-table-col-agent"));
 invariant(Math.abs(contractCalibrationDelta) < 1e-12, "Contracts rounding calibration must redistribute width without changing the 100% table contract.");
-invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.442227763923525) < 1e-12, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
-invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.763369354391799) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-overall") - 6.603472148258601) < 1e-12, "Overall must reserve enough Uniform Width for its rarity circle and two-digit progression.");
+invariant(Math.abs(percentageVariable("--mfl-table-col-stat") - 5.907622395001243) < 1e-12, "Stat columns must absorb the Overall width rebalance without changing total table width.");
 
 invariant(
   !/#progressionPage \.playerTableScroller[^\n{]*(?:th|td)[^{]*\{[^}]*\bwidth\s*:/s.test(styles),
@@ -182,7 +178,7 @@ invariant(
 );
 
 const baseRules = cssRules(stylesBase);
-const playerGeometryClasses = /\.col-(?:select|actions|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
+const playerGeometryClasses = /\.col-(?:select|actions|flag|name|listing|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division)\b/;
 invariant(
   !baseRules.some((rule) => playerGeometryClasses.test(rule.selector) && ownsWidth(rule.declarations)),
   "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
