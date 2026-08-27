@@ -1,7 +1,7 @@
 /* Canonical Light/Dark mode icon presentation. */
 
 /* The legacy inline SVG nodes remain only as first-paint state hooks.
- * They never render; the button itself owns the recreated reference artwork. */
+ * They never render; the button itself is the sole owner of the recreated reference artwork. */
 #themeButton .themeModeIcon {
   display: none;
 }
