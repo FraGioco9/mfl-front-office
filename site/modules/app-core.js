@@ -8987,8 +8987,9 @@ let playerTableActionPlayerId = "";
 const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg>',
   external: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>',
-  evaluate: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h11"></path><path d="m13 8 4 4-4 4"></path></svg>',
+  evaluate: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg>',
   watchlist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.7l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.72 6.9 19.4l.98-5.68L3.65 9.7l5.8-.83L12 3.7z"></path></svg>',
+  watchlistFilled: '<svg data-filled="true" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.7l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.72 6.9 19.4l.98-5.68L3.65 9.7l5.8-.83L12 3.7z"></path></svg>',
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="1.5"></rect><path d="M15 8V6.5A1.5 1.5 0 0 0 13.5 5h-7A1.5 1.5 0 0 0 5 6.5v7A1.5 1.5 0 0 0 6.5 15H8"></path></svg>',
 });
 
@@ -9107,8 +9108,9 @@ function openPlayerTableActionMenu(trigger, playerId) {
     createPlayerTableActionItem("evaluate", "Evaluate", "evaluate"),
   ];
   if (hasWalletOptIn()) {
-    const watchlistLabel = playerIsInAnyWatchlist(key) ? "Remove from watchlist" : "Add to watchlist";
-    items.push(createPlayerTableActionItem("watchlist", watchlistLabel, "watchlist"));
+    const watchlistIsActive = playerIsInAnyWatchlist(key);
+    const watchlistLabel = watchlistIsActive ? "Remove from watchlist" : "Add to watchlist";
+    items.push(createPlayerTableActionItem("watchlist", watchlistLabel, watchlistIsActive ? "watchlistFilled" : "watchlist"));
   }
   items.push(createPlayerTableActionItem("copy", `#${key}`, "copy"));
   menu.replaceChildren(...items);

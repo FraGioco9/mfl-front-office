@@ -567,9 +567,9 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   min-height: 24px;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--primary);
   border-radius: 5px;
-  background: var(--surface);
+  background: var(--primary);
   color: #ffffff;
   line-height: 1;
   cursor: pointer;
@@ -589,8 +589,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionsButton:focus-visible:not(:disabled),
 .playerTableActionsButton[aria-expanded="true"] {
   outline: 0;
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
+  border-color: var(--primary);
+  background: var(--primary);
   color: #ffffff;
   box-shadow: none;
 }
@@ -598,8 +598,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionMenu {
   position: fixed;
   z-index: var(--mfl-z-dropdown);
-  width: 210px;
-  min-width: 210px;
+  width: 250px;
+  min-width: 250px;
   max-width: calc(100vw - 16px);
   opacity: 0;
   visibility: hidden;
@@ -654,6 +654,10 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.playerTableActionIcon svg[data-filled="true"] {
+  fill: currentColor;
 }
 
 .playerTableActionItem:hover:not(:disabled) .playerTableActionIcon,
