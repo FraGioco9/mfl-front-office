@@ -171,12 +171,25 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 #accountButton {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   width: 100%;
   padding: 0;
   text-align: center;
   line-height: 1;
+}
+
+.accountButtonIcon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 #accountButton[aria-expanded="true"],
