@@ -2,7 +2,6 @@
   "use strict";
 
   let coreObserver = null;
-  let filterSummaryObserver = null;
   let destroyed = false;
 
   function clubRouteActive() {
@@ -11,32 +10,6 @@
     if (bodyPage === "club") return true;
     return root.dataset.mflReady !== "true"
       && String(root.dataset.initialTablePage || "").toLowerCase() === "club";
-  }
-
-  function activeFilterCountFromSummary() {
-    const summary = document.getElementById("filterSummary");
-    if (!(summary instanceof HTMLElement)) return 0;
-    const count = Number.parseInt(String(summary.textContent || "0"), 10);
-    return Number.isFinite(count) ? Math.max(0, count) : 0;
-  }
-
-  function syncActiveFilterHighlight() {
-    const summary = document.getElementById("filterSummary");
-    const button = document.getElementById("openFiltersButton");
-    if (!(summary instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return false;
-    const active = activeFilterCountFromSummary() >= 1;
-    summary.classList.toggle("hasActiveFilters", active);
-    button.classList.toggle("hasActiveFilters", active);
-    return active;
-  }
-
-  function observeActiveFilterSummary() {
-    const summary = document.getElementById("filterSummary");
-    if (!(summary instanceof HTMLElement)) return false;
-    filterSummaryObserver?.disconnect();
-    filterSummaryObserver = new MutationObserver(syncActiveFilterHighlight);
-    filterSummaryObserver.observe(summary, { childList: true });
-    return true;
   }
 
   function syncDropdowns(root = document) {
@@ -239,8 +212,6 @@
     restorePageSizeSelectInteraction();
     installCoreBridge();
     syncDropdowns(document);
-    syncActiveFilterHighlight();
-    observeActiveFilterSummary();
     return true;
   }
 
@@ -262,8 +233,6 @@
   if (!clubRouteActive()) {
     installSelectedLinksDirectOpen();
     installCoreBridgeWhenAvailable();
-    syncActiveFilterHighlight();
-    observeActiveFilterSummary();
   }
   window.addEventListener("mfl:ready", sync, { once: true });
 
@@ -271,8 +240,6 @@
     destroyed = true;
     coreObserver?.disconnect();
     coreObserver = null;
-    filterSummaryObserver?.disconnect();
-    filterSummaryObserver = null;
     window.removeEventListener("mfl:ready", sync);
   }
 
