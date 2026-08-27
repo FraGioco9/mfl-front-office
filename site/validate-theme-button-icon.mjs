@@ -35,13 +35,13 @@ invariant(
   "Theme icon visibility must remain synchronized from first paint via the active theme.",
 );
 invariant(
-  markup.includes('d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z"'),
-  "Dark-mode control must use the canonical outlined crescent geometry.",
+  markup.includes('d="M19.6 17.9A8.6 8.6 0 1 1 10.2 3.7 7.2 7.2 0 0 0 19.6 17.9Z"'),
+  "Dark-mode control must use the reference-inspired broad outlined crescent geometry.",
 );
 invariant(
-  markup.includes('<circle cx="12" cy="12" r="3.8"></circle>')
-    && markup.includes('d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"'),
-  "Light-mode control must use the canonical outlined sun geometry.",
+  markup.includes('<circle cx="12" cy="12" r="5.4"></circle>')
+    && markup.includes('d="M12 1.8v2.6M12 19.6v2.6M1.8 12h2.6M19.6 12h2.6M4.8 4.8l1.8 1.8M17.4 17.4l1.8 1.8M4.8 19.2l1.8-1.8M17.4 6.6l1.8-1.8"'),
+  "Light-mode control must use the reference-inspired large-ring sun with short rounded rays.",
 );
 
 for (const required of [
