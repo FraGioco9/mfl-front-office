@@ -17,9 +17,16 @@ invariant(
 );
 invariant(
   markup.includes('<button id="themeButton" class="themeButton" type="button" aria-label="Toggle color mode" title="Toggle color mode">')
-    && markup.includes('class="themeMoonSymbol"')
-    && markup.includes('class="themeSunSymbol"'),
-  "Theme button must preserve its canonical control and first-paint icon state hooks.",
+    && markup.includes('<svg class="themeModeIcon themeMoonSymbol" viewBox="0 0 24 24" aria-hidden="true">')
+    && markup.includes('<svg class="themeModeIcon themeSunSymbol" viewBox="0 0 24 24" aria-hidden="true">'),
+  "Theme button must own canonical inline SVG icons while preserving first-paint state hooks.",
+);
+invariant(
+  !markup.includes("&#127769;")
+    && !markup.includes("&#9728;")
+    && !markup.includes("🌙")
+    && !markup.includes("☀️"),
+  "Legacy emoji theme icons must be removed completely from canonical markup.",
 );
 invariant(
   markup.includes('#themeButton .themeSunSymbol {')
@@ -27,37 +34,30 @@ invariant(
     && markup.includes('html[data-theme="dark"] #themeButton .themeSunSymbol {'),
   "Theme icon visibility must remain synchronized from first paint via the active theme.",
 );
+invariant(
+  markup.includes('d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z"'),
+  "Dark-mode control must use the canonical outlined crescent geometry.",
+);
+invariant(
+  markup.includes('<circle cx="12" cy="12" r="3.8"></circle>')
+    && markup.includes('d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"'),
+  "Light-mode control must use the canonical outlined sun geometry.",
+);
 
 for (const required of [
-  '#themeButton :is(.themeMoonSymbol, .themeSunSymbol) {',
-  "font-size: 0;",
-  "line-height: 0;",
-  '#themeButton :is(.themeMoonSymbol, .themeSunSymbol)::before {',
-  'content: "";',
-  "display: inline-block;",
+  "#themeButton .themeModeIcon {",
   "width: 22px;",
   "height: 22px;",
-  "background-color: currentColor;",
-  "mask-repeat: no-repeat;",
-  "mask-position: center;",
-  "mask-size: 22px 22px;",
+  "fill: none;",
+  "stroke: currentColor;",
+  "stroke-width: 2.1;",
+  "stroke-linecap: round;",
+  "stroke-linejoin: round;",
 ]) {
   invariant(styles.includes(required), `Theme button icon presentation is missing ${required}`);
 }
 
-invariant(
-  styles.includes("M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z")
-    && styles.includes("stroke-width='2.1'")
-    && styles.includes("stroke-linecap='round'")
-    && styles.includes("stroke-linejoin='round'"),
-  "Dark-mode control must use the canonical rounded outline crescent vector.",
-);
-invariant(
-  styles.includes("%3Ccircle cx='12' cy='12' r='4' fill='none' stroke='black' stroke-width='2.1'/%3E")
-    && styles.includes("M12 2v2.2M12 19.8V22")
-    && styles.includes("M2 12h2.2M19.8 12H22"),
-  "Light-mode control must use the canonical rounded outline sun vector.",
-);
+invariant(!styles.includes("mask-image"), "Theme icons must not rely on CSS mask replacement of legacy glyphs.");
 invariant(!styles.includes("!important"), "Theme button icons must not use CSS priority overrides.");
 
 console.log("Theme button icon validation passed.");
