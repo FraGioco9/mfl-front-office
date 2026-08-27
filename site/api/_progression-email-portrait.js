@@ -1,8 +1,9 @@
 const { PassThrough } = require("node:stream");
 const PImage = require("pureimage");
-const { createPortraitCloseUp, PORTRAIT_CROP_HEIGHT_PX } = require("./_portrait-close-up");
+const { createPortraitCloseUp } = require("./_portrait-close-up");
 const { loadPlayerPortraitBitmap, playerPortraitUrl } = require("./_player-portrait");
 
+const PORTRAIT_CROP_HEIGHT_PX = 400;
 const PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX = 216;
 
 async function imageToPngBuffer(image) {
@@ -41,7 +42,7 @@ function trimTransparentLeft(image) {
 }
 
 function resizeProgressionEmailPortrait(source) {
-  const cropped = createPortraitCloseUp(source);
+  const cropped = createPortraitCloseUp(source, PORTRAIT_CROP_HEIGHT_PX);
   if (!cropped) return null;
 
   const silhouetteAligned = trimTransparentLeft(cropped);

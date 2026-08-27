@@ -56,13 +56,13 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
         self.assertNotIn('height:72px', identity)
         self.assertNotIn(CANONICAL_PORTRAIT_123, identity)
         self.assertIn('class="player-portrait-shell"', identity)
-        self.assertIn('background:#ffffff', identity)
+        self.assertIn('background:transparent', identity)
 
         fallback = emails.player_identity_html(self.player())
         self.assertNotIn("<img ", fallback)
         self.assertIn(">AL</td>", fallback)
         self.assertIn('width="100%"', fallback)
-        self.assertIn('background:#ffffff', fallback)
+        self.assertIn('background:transparent', fallback)
 
     def test_player_column_uses_percentage_portrait_slot(self) -> None:
         self.assertEqual(emails.PLAYER_PORTRAIT_SLOT_PERCENT, 38)
@@ -104,7 +104,7 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
         self.assertIn('<meta name="color-scheme" content="dark">', rendered)
         self.assertNotIn('@media (prefers-color-scheme: dark)', rendered)
         self.assertIn('style="background:#141c23;border-top:1px solid #2d3a45;"', rendered)
-        self.assertIn('class="player-portrait-shell" style="width:100%;background:#141c23;overflow:hidden;"', rendered)
+        self.assertIn('class="player-portrait-shell" style="width:100%;background:transparent;overflow:hidden;"', rendered)
         light_rendered = emails.build_html("Test Email", [self.player(portrait_url=EMAIL_PORTRAIT_123)], theme="light")
         self.assertIn('<meta name="color-scheme" content="light">', light_rendered)
         self.assertIn('style="background:#ffffff;border-top:1px solid #d6e0e7;"', light_rendered)
@@ -123,9 +123,19 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
         self.assertIn('class="email-id-cell"', six_digit_rendered)
         self.assertIn('white-space:nowrap;overflow-wrap:normal;word-break:normal;', six_digit_rendered)
         self.assertIn('@media screen and (max-width:480px)', six_digit_rendered)
-        self.assertIn('.email-id-cell { font-size:70% !important; }', six_digit_rendered)
+        self.assertIn('.email-card { font-size:13px; }', six_digit_rendered)
         self.assertIn('@media screen and (max-width:360px)', six_digit_rendered)
-        self.assertIn('.email-id-cell { font-size:65% !important; }', six_digit_rendered)
+        self.assertIn('.email-card { font-size:12px; }', six_digit_rendered)
+        self.assertIn('.email-card { font-size:18px; }', six_digit_rendered)
+        self.assertNotIn('.email-id-cell { font-size:70% !important; }', six_digit_rendered)
+        self.assertNotIn('.email-id-cell { font-size:65% !important; }', six_digit_rendered)
+
+    def test_portrait_background_stays_transparent(self) -> None:
+        player = self.player(portrait_url=EMAIL_PORTRAIT_123)
+        rendered = emails.build_html("Test Email", [player])
+        self.assertIn('background:transparent', emails.player_identity_html(player))
+        self.assertNotIn('.player-portrait-shell { background:#141c23 !important; }', rendered)
+        self.assertNotIn('[data-ogsb] .player-portrait-shell', rendered)
 
     def test_portrait_lookup_never_calls_playmfl(self) -> None:
         self.assertFalse(hasattr(emails, "mfl_request_json"))

@@ -1,6 +1,6 @@
 const PORTRAIT_CROP_HEIGHT_PX = 500;
 
-function createPortraitCloseUp(source) {
+function createPortraitCloseUp(source, cropHeightPx = PORTRAIT_CROP_HEIGHT_PX) {
   const sourceWidth = Number(source?.width);
   const sourceHeight = Number(source?.height);
   const sourceData = source?.data;
@@ -14,7 +14,11 @@ function createPortraitCloseUp(source) {
     return null;
   }
 
-  const cropHeight = Math.max(1, Math.min(PORTRAIT_CROP_HEIGHT_PX, sourceHeight));
+  const requestedCropHeight = Number(cropHeightPx);
+  const cropLimit = Number.isFinite(requestedCropHeight) && requestedCropHeight > 0
+    ? Math.floor(requestedCropHeight)
+    : PORTRAIT_CROP_HEIGHT_PX;
+  const cropHeight = Math.max(1, Math.min(cropLimit, sourceHeight));
   const PImage = require("pureimage");
   const cropped = PImage.make(sourceWidth, cropHeight);
   for (let y = 0; y < cropHeight; y += 1) {

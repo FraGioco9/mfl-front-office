@@ -330,7 +330,9 @@ forbidAll(playerCore, [
 
 requireAll(portraitCloseUp, [
   "const PORTRAIT_CROP_HEIGHT_PX = 500;",
-  "Math.min(PORTRAIT_CROP_HEIGHT_PX, sourceHeight)",
+  "function createPortraitCloseUp(source, cropHeightPx = PORTRAIT_CROP_HEIGHT_PX) {",
+  "const cropLimit = Number.isFinite(requestedCropHeight) && requestedCropHeight > 0",
+  "Math.min(cropLimit, sourceHeight)",
 ], "Evaluation/Player portrait crop parity");
 requireAll(appConfig, ['player: "/modules/app-core-player-runtime.js"'], "Player route config");
 requireAll(routeLoader, ["const ROUTE_CORE_PATHS = routeConfig.corePaths;"], "Route-core loader");

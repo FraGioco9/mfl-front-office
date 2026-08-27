@@ -3,7 +3,7 @@
 
 Production emails use the server-generated progression portrait PNG endpoint.
 This preview renderer instead loads the canonical portrait WebP in the browser,
-crops source rows 0..499, removes transparent padding before the visible
+crops source rows 0..399, removes transparent padding before the visible
 silhouette on the left, then scales the remaining crop to 216px high for a
 high-density raster while preserving its width-to-height proportions.
 Transparent pixels to the right of the silhouette are preserved and may overflow
@@ -24,7 +24,7 @@ PREVIEW_PORTRAIT_SCRIPT = """
 <script>
 (() => {
   const HEIGHT = 216;
-  const CROP_HEIGHT = 500;
+  const CROP_HEIGHT = 400;
 
   function transparentLeftInset(image, cropHeight) {
     const sourceCanvas = document.createElement("canvas");
@@ -134,7 +134,7 @@ def local_preview_identity_html(player: emails.PlayerImprovement) -> str:
     initials = html.escape(emails.player_initials(player))
 
     portrait = (
-        '<div class="player-portrait-shell" style="position:relative;width:100%;background:#ffffff;overflow:hidden;">'
+        '<div class="player-portrait-shell" style="position:relative;width:100%;background:transparent;overflow:hidden;">'
         f'<table id="{fallback_id}" role="presentation" width="100%" '
         'cellspacing="0" cellpadding="0" '
         'style="position:absolute;inset:0;width:100%;border-collapse:separate;background:transparent;">'

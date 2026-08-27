@@ -30,7 +30,7 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
         )
         self.assertIn('canvas data-progression-preview-portrait=', rendered)
         self.assertIn("const HEIGHT = 216;", rendered)
-        self.assertIn("const CROP_HEIGHT = 500;", rendered)
+        self.assertIn("const CROP_HEIGHT = 400;", rendered)
         self.assertIn("function transparentLeftInset(image, cropHeight)", rendered)
         self.assertIn("sourceContext.getImageData(", rendered)
         self.assertIn("const leftInset = transparentLeftInset(image, cropHeight);", rendered)
@@ -50,10 +50,10 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
         self.assertIn('width:38%;padding:0 4% 0 0;overflow:hidden;', rendered)
         self.assertIn('padding:3% 2%;vertical-align:top;overflow:hidden;', rendered)
         self.assertIn('>Preview Player</strong>', rendered)
-        self.assertIn('background:#141c23;overflow:hidden;', rendered)
+        self.assertIn('background:transparent;overflow:hidden;', rendered)
         self.assertIn('border-collapse:separate;background:transparent;', rendered)
         light_rendered = preview.build_local_preview_html([self.player()], theme="light")
-        self.assertIn('background:#ffffff;overflow:hidden;', light_rendered)
+        self.assertIn('background:transparent;overflow:hidden;', light_rendered)
 
     def test_local_preview_uses_percentage_table_columns(self) -> None:
         rendered = preview.build_local_preview_html([self.player()])
