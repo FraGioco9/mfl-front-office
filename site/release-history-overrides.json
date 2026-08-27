@@ -1,5 +1,9 @@
 [
   [
+    "v1.126.3",
+    "Improve scheduling, Player table actions, and Account interactions"
+  ],
+  [
     "v1.126.2",
     "Improve mint-age recovery, pager selection, and progression spacing"
   ],
