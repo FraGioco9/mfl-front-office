@@ -77,14 +77,12 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
         self.assertIn('padding:3% 2%;vertical-align:top;overflow:hidden;', rendered)
         self.assertIn('>Ada Lovelace</strong>', identity)
 
-    def test_email_table_uses_percentage_columns_with_compact_improvements(self) -> None:
-        self.assertEqual(emails.ID_COLUMN_WIDTH_PERCENT, 18)
-        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 50)
-        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 32)
+    def test_email_table_uses_two_rebalanced_columns(self) -> None:
+        self.assertFalse(hasattr(emails, "ID_COLUMN_WIDTH_PERCENT"))
+        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 60)
+        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 40)
         self.assertEqual(
-            emails.ID_COLUMN_WIDTH_PERCENT
-            + emails.PLAYER_COLUMN_WIDTH_PERCENT
-            + emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT,
+            emails.PLAYER_COLUMN_WIDTH_PERCENT + emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT,
             100,
         )
 
@@ -93,12 +91,18 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
             [self.player(portrait_url=EMAIL_PORTRAIT_123)],
         )
         self.assertIn('table-layout:fixed', rendered)
-        self.assertIn('<col style="width:18%;">', rendered)
-        self.assertIn('<col style="width:50%;">', rendered)
-        self.assertIn('<col style="width:32%;">', rendered)
-        self.assertIn('width:18%;padding:3% 2%', rendered)
-        self.assertIn('width:50%;padding:3% 2%', rendered)
-        self.assertIn('width:32%;padding:3% 2%', rendered)
+        self.assertEqual(rendered.count('<col style="width:'), 2)
+        self.assertNotIn('<col style="width:18%;">', rendered)
+        self.assertIn('<col style="width:60%;">', rendered)
+        self.assertIn('<col style="width:40%;">', rendered)
+        self.assertNotIn('width:18%;padding:3% 2%', rendered)
+        self.assertIn('width:60%;padding:3% 2%', rendered)
+        self.assertIn('width:40%;padding:3% 2%', rendered)
+        self.assertNotIn('>ID</th>', rendered)
+        self.assertNotIn('class="email-id-cell"', rendered)
+        self.assertNotIn('class="email-link email-id-link"', rendered)
+        self.assertIn('class="email-player-name-link"', rendered)
+        self.assertIn(f'href="{emails.player_url("123")}"', rendered)
         self.assertIn('white-space:normal;overflow-wrap:anywhere;', rendered)
         self.assertNotIn('max-width:760px', rendered)
         self.assertIn('<meta name="color-scheme" content="dark">', rendered)
@@ -119,9 +123,10 @@ class ProgressionEmailPortraitTests(unittest.TestCase):
             changes=(('overall', 70, 71),),
         )
         six_digit_rendered = emails.build_html('Test Email', [six_digit])
-        self.assertIn('#374512</a>', six_digit_rendered)
-        self.assertIn('class="email-id-cell"', six_digit_rendered)
-        self.assertIn('white-space:nowrap;overflow-wrap:normal;word-break:normal;', six_digit_rendered)
+        self.assertNotIn('#374512</a>', six_digit_rendered)
+        self.assertNotIn('class="email-id-cell"', six_digit_rendered)
+        self.assertIn('class="email-player-name-link"', six_digit_rendered)
+        self.assertIn(f'href="{emails.player_url("374512")}"', six_digit_rendered)
         self.assertIn('@media screen and (max-width:480px)', six_digit_rendered)
         self.assertIn('.email-card { font-size:13px; }', six_digit_rendered)
         self.assertIn('@media screen and (max-width:360px)', six_digit_rendered)

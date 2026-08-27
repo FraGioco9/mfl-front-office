@@ -46,9 +46,8 @@ DEFAULT_EMAIL_THEME = "dark"
 SUPABASE_PAGE_SIZE = 1000
 PORTRAIT_SIZE_PX = 72  # Source-crop height for the local browser preview only.
 PLAYER_PORTRAIT_SLOT_PERCENT = 38
-ID_COLUMN_WIDTH_PERCENT = 18
-PLAYER_COLUMN_WIDTH_PERCENT = 50
-IMPROVEMENT_COLUMN_WIDTH_PERCENT = 32
+PLAYER_COLUMN_WIDTH_PERCENT = 60
+IMPROVEMENT_COLUMN_WIDTH_PERCENT = 40
 EMAIL_CARD_WIDTH_PERCENT = 94
 EMAIL_PAGE_HORIZONTAL_PADDING_PERCENT = 3
 EMAIL_CARD_HORIZONTAL_PADDING_PERCENT = 5
@@ -380,7 +379,9 @@ def player_identity_html(player: PlayerImprovement) -> str:
         f'<td width="{PLAYER_PORTRAIT_SLOT_PERCENT}%" valign="top" '
         f'style="width:{PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;">{portrait}</td>'
         '<td valign="top" style="padding:0;overflow-wrap:anywhere;">'
-        f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong>'
+        f'<a class="email-player-name-link" href="{html.escape(player_url(player.player_id))}" '
+        'style="display:block;color:inherit;text-decoration:none;">'
+        f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong></a>'
         f'<span class="email-position" style="display:block;margin-top:.25em;color:#60778a;font-size:75%;">'
         f'{html.escape(player.positions)}</span>'
         '</td>'
@@ -412,10 +413,6 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
     for player in players:
         rows.append(
             '<tr class="email-player-row" style="background:#ffffff;border-top:1px solid #d6e0e7;">'
-            f'<td class="email-id-cell" style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;font-size:80%;white-space:nowrap;overflow-wrap:normal;word-break:normal;">'
-            f'<a class="email-link email-id-link" style="color:#007ca8;font-weight:inherit;text-decoration:none;white-space:nowrap;overflow-wrap:normal;word-break:normal;" '
-            f'href="{html.escape(player_url(player.player_id))}">'
-            f'#{html.escape(player.player_id)}</a></td>'
             f'<td style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;overflow:hidden;">'
             f'{player_identity_html(player)}</td>'
             f'<td class="email-change-cell" style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:{EMAIL_ROW_VERTICAL_PADDING_PERCENT}% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;vertical-align:top;color:#52697a;line-height:1.45;white-space:normal;overflow-wrap:anywhere;font-size:82%;">'
@@ -438,7 +435,6 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
     <style>
       :root {{ color-scheme: light dark; supported-color-schemes: light dark; }}
       .email-card {{ font-size:{EMAIL_DESKTOP_FONT_SIZE_PX}px; }}
-      .email-id-cell, .email-id-link {{ white-space:nowrap; overflow-wrap:normal; word-break:normal; }}
       @media screen and (max-width:480px) {{
         .email-card {{ font-size:{EMAIL_MOBILE_FONT_SIZE_PX}px; }}
       }}
@@ -485,13 +481,11 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
               <td style="padding:4% {EMAIL_CARD_HORIZONTAL_PADDING_PERCENT}%;">
                 <table class="email-table" width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;border:1px solid #cbd7df;border-radius:1.5%;overflow:hidden;table-layout:fixed;">
                   <colgroup>
-                    <col style="width:{ID_COLUMN_WIDTH_PERCENT}%;">
                     <col style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;">
                     <col style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;">
                   </colgroup>
                   <thead>
                     <tr class="email-table-head" style="background:#e7eef3;color:#17222b;text-align:left;font-size:75%;text-transform:uppercase;letter-spacing:.04em;">
-                      <th style="width:{ID_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">ID</th>
                       <th style="width:{PLAYER_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">Player</th>
                       <th style="width:{IMPROVEMENT_COLUMN_WIDTH_PERCENT}%;padding:2.5% {EMAIL_ROW_HORIZONTAL_PADDING_PERCENT}%;">Improvement</th>
                     </tr>

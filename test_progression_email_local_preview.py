@@ -55,14 +55,19 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
         light_rendered = preview.build_local_preview_html([self.player()], theme="light")
         self.assertIn('background:transparent;overflow:hidden;', light_rendered)
 
-    def test_local_preview_uses_percentage_table_columns(self) -> None:
+    def test_local_preview_uses_two_rebalanced_table_columns(self) -> None:
         rendered = preview.build_local_preview_html([self.player()])
-        self.assertEqual(emails.ID_COLUMN_WIDTH_PERCENT, 18)
-        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 50)
-        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 32)
-        self.assertIn('<col style="width:18%;">', rendered)
-        self.assertIn('<col style="width:50%;">', rendered)
-        self.assertIn('<col style="width:32%;">', rendered)
+        self.assertFalse(hasattr(emails, "ID_COLUMN_WIDTH_PERCENT"))
+        self.assertEqual(emails.PLAYER_COLUMN_WIDTH_PERCENT, 60)
+        self.assertEqual(emails.IMPROVEMENT_COLUMN_WIDTH_PERCENT, 40)
+        self.assertEqual(rendered.count('<col style="width:'), 2)
+        self.assertNotIn('<col style="width:18%;">', rendered)
+        self.assertIn('<col style="width:60%;">', rendered)
+        self.assertIn('<col style="width:40%;">', rendered)
+        self.assertNotIn('>ID</th>', rendered)
+        self.assertNotIn('class="email-id-cell"', rendered)
+        self.assertIn('class="email-player-name-link"', rendered)
+        self.assertIn(f'href="{emails.player_url("374512")}"', rendered)
         self.assertIn('width="94%"', rendered)
         self.assertIn('padding:4% 3%', rendered)
 
