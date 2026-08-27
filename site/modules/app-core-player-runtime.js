@@ -817,10 +817,10 @@ function animateReadyControls(container = document) {
     if (!(media instanceof HTMLElement)) {
       media = createHeroMedia(context);
       hero.insertBefore(media, identity instanceof HTMLElement ? identity : hero.firstChild);
-    } else {
-      updateHeroMedia(media, context);
-      if (identity instanceof HTMLElement && media.nextElementSibling !== identity) hero.insertBefore(media, identity);
+    } else if (identity instanceof HTMLElement && media.nextElementSibling !== identity) {
+      hero.insertBefore(media, identity);
     }
+    updateHeroMedia(media, context);
     applyHeroLayout(hero);
     return true;
   }

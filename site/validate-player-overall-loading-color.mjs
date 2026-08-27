@@ -102,6 +102,16 @@ for (const [label, source] of [
     readyControlsStart >= 0 && primeIndex >= 0 && loadingGateIndex > primeIndex && releaseIndex > loadingGateIndex,
     `${label}: Player ready controls must be frozen in their grey start state before loading ends, then released exactly once afterward`,
   );
+
+  const placeHeroStart = source.indexOf("function placeHeroMedia(hero, context) {");
+  const placeHeroEnd = source.indexOf("function createPendingHeroActions(context) {", placeHeroStart);
+  const placeHeroBody = source.slice(placeHeroStart, placeHeroEnd);
+  const insertMediaIndex = placeHeroBody.indexOf("hero.insertBefore(media, identity instanceof HTMLElement ? identity : hero.firstChild);");
+  const refreshAppearanceIndex = placeHeroBody.lastIndexOf("updateHeroMedia(media, context);");
+  invariant(
+    placeHeroStart >= 0 && insertMediaIndex >= 0 && refreshAppearanceIndex > insertMediaIndex,
+    `${label}: Player hero Overall appearance must be refreshed after newly created media is attached so view rerenders preserve the completed rarity colour`,
+  );
 }
 
 for (const value of [
