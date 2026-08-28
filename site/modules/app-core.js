@@ -575,7 +575,6 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   themeButton.dataset.activeTheme = theme;
   themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to night mode");
-  themeButton.title = theme === "dark" ? "Light mode" : "Night mode";
 
   try {
     localStorage.setItem("mfl-theme", theme);

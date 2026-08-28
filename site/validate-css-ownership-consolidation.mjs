@@ -94,6 +94,7 @@ for (const required of [
 }
 
 const canonicalHoverSelector = `:is(
+  .themeButton,
   .navButton,
   .viewButton:not([hidden]),
   .filtersViewButton,
@@ -102,7 +103,7 @@ const canonicalHoverSelector = `:is(
   .playerAttributeViewButton
 ):not(.active):hover:not(:disabled)`;
 const canonicalHoverRule = exactRule(controls, canonicalHoverSelector);
-invariant(canonicalHoverRule, "controls.css must retain the canonical shared hover-control rule.");
+invariant(canonicalHoverRule, "controls.css must retain the canonical shared hover-control rule, including the theme toggle.");
 for (const required of ["border-color: var(--primary-hover);", "background: var(--row-hover);"]) {
   invariant(canonicalHoverRule.includes(required), `controls.css shared hover-control rule is missing ${required}`);
 }
