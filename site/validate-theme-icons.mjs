@@ -1,7 +1,13 @@
 import { access, readFile } from "node:fs/promises";
 
-const markup = String(await readFile(new URL("./index.html", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const motion = String(await readFile(new URL("./motion.css", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const [markup, motion, appCore, controlInteractions, controls, stylesBase] = await Promise.all([
+  readFile(new URL("./index.html", import.meta.url), "utf8"),
+  readFile(new URL("./motion.css", import.meta.url), "utf8"),
+  readFile(new URL("./modules/app-core.js", import.meta.url), "utf8"),
+  readFile(new URL("./control-interactions-runtime.js", import.meta.url), "utf8"),
+  readFile(new URL("./controls.css", import.meta.url), "utf8"),
+  readFile(new URL("./styles-base.css", import.meta.url), "utf8"),
+].map((promise) => promise.then((value) => String(value).replace(/\r\n?/g, "\n"))));
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -16,5 +22,10 @@ invariant(!motion.includes('theme-icons.css'), "Theme icons must not rely on a r
 let replacementStylesheetExists = true;
 try { await access(new URL("./theme-icons.css", import.meta.url)); } catch { replacementStylesheetExists = false; }
 invariant(!replacementStylesheetExists, "The previous theme icon replacement stylesheet must be removed.");
+invariant(markup.includes('aria-label="Toggle color mode"') && !markup.includes('title="Toggle color mode"'), "Theme button must keep its accessible label without a native hover tooltip.");
+invariant(!appCore.includes("themeButton.title ="), "Theme changes must not recreate Light/Night mode title tooltips.");
+invariant(!controlInteractions.includes('target?.closest("#themeButton")'), "Theme toggle must not keep a tooltip-dismiss interaction special case after tooltip removal.");
+invariant(controls.split(".themeButton,\n  .navButton,").length - 1 >= 2, "Theme button must participate in the shared inactive-control hover contract.");
+invariant(stylesBase.includes(".themeButton {\n") && stylesBase.includes("transition: background 120ms ease, border-color 120ms ease;"), "Theme button must use the same hover transition timing as the other chrome buttons.");
 
-console.log("Direct inline theme icon validation passed.");
+console.log("Direct inline theme icon and shared hover validation passed.");
