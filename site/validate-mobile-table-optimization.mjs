@@ -13,7 +13,7 @@ function excludes(source, unexpected, message) {
   if (source.includes(unexpected)) throw new Error(message);
 }
 
-const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appConfig, mobileTablePresentation, buildNormalizer] = await Promise.all([
+const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appConfig, mobileTablePresentation, evaluationChunk, buildNormalizer] = await Promise.all([
   read("responsive.css"),
   read("shared-table-ui-runtime.js"),
   read("mobile-table-interactions-runtime.js"),
@@ -21,6 +21,7 @@ const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appCo
   read("dropdowns-runtime.js"),
   read("modules/app-config.js"),
   read("modules/app-core-mobile-table-presentation.js"),
+  read("modules/app-core-evaluation-chunk.js"),
   read("modules/app-core-build-normalizer.js"),
 ]);
 
@@ -71,7 +72,11 @@ includes(responsive, ".filtersDialog select {\n    touch-action: auto;", "Filter
 includes(staticUi, "const MOBILE_TOOLTIP_MEDIA = window.matchMedia", "Global tooltip ownership must recognize mobile/touch input.");
 includes(staticUi, "function onTooltipClick(event)", "Mobile tooltips must use click/tap input.");
 includes(staticUi, "if (MOBILE_TOOLTIP_MEDIA.matches) return;", "Hover/focus tooltip handlers must be inert on mobile.");
+includes(staticUi, "if (!MOBILE_TOOLTIP_MEDIA.matches && tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;", "Specialized desktop tooltip targets must fall through to the global tap owner on mobile.");
 includes(staticUi, 'document.addEventListener("click", onTooltipClick, true);', "The global tooltip tap owner must be installed once site-wide.");
+includes(evaluationChunk, 'window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches', "Evaluation saved-action hover/focus tooltips must be disabled on mobile so taps have one owner.");
+includes(evaluationChunk, 'button.addEventListener("mouseenter", showTooltip);', "Evaluation saved-action desktop hover must remain supported through the guarded handler.");
+includes(evaluationChunk, 'button.addEventListener("focus", showTooltip);', "Evaluation saved-action desktop focus must remain supported through the guarded handler.");
 excludes(mobileInteractions, "mflMobileClickTooltip", "The table runtime must not maintain a competing mobile tooltip portal.");
 excludes(mobileInteractions, "document.addEventListener(\"click\"", "The table runtime must not maintain a second tooltip click owner.");
 includes(mobileInteractions, "resizeObserver = new ResizeObserver(() => sync());", "Table render geometry must continue scheduling shared presentation updates.");
@@ -84,9 +89,9 @@ excludes(mobileTablePresentation, "listingCellPrice", "Generated table Listing c
 includes(buildNormalizer, "const tablePresentationArtifacts = addMobileTablePresentation(tableArtifacts);", "Canonical core generation must apply Listing presentation at build time.");
 includes(appConfig, '"/mobile-table-interactions-runtime.js"', "Every table route must retain the render-geometry sync bridge.");
 
-for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, mobileTablePresentation]) {
+for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, mobileTablePresentation, evaluationChunk]) {
   excludes(source, "!important", "Mobile table optimization must not introduce priority overrides.");
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Mobile tables now use native iPhone selects, tap tooltips, first-paint fades/labels, direct lateral scrolling, compact icons, and centered price-only Listing presentation.");
+console.log("Mobile tables now use native iPhone selects, single-owner tap tooltips, first-paint fades/labels, direct lateral scrolling, compact icons, and centered price-only Listing presentation.");
