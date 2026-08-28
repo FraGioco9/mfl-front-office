@@ -875,7 +875,23 @@ function tableBuildHeaderOwner() {
     const clubPositionSort = state.currentPage === "club" && column === "positions";
     const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl") ? "" : columnLabels[column];
+    header.dataset.tableColumn = column;
+    const mobileLabel = window.matchMedia("(max-width: 900px)").matches
+      ? ({
+          positions: "POS",
+          overall: "OVR",
+          pace: "PAC",
+          shooting: "SHO",
+          passing: "PAS",
+          dribbling: "DRI",
+          defense: "DEF",
+          physical: "PHY",
+          goalkeeping: "GK",
+        }[column] || "")
+      : "";
+    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+      ? ""
+      : mobileLabel || columnLabels[column];
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
@@ -2473,7 +2489,7 @@ function tableRenderTableOwner() {
           ? NaN
           : Number(rawListingPrice);
         if (Number.isFinite(numericListingPrice)) {
-          const priceText = `${listingPriceFormatter.format(numericListingPrice)}`;
+          const priceText = "$" + listingPriceFormatter.format(numericListingPrice);
           const listingHost = document.createElement("span");
           listingHost.className = "listingCellTableHost";
           const listingBadge = document.createElement("span");
