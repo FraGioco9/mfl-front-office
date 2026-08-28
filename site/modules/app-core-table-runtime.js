@@ -2474,14 +2474,13 @@ function tableRenderTableOwner() {
           : Number(rawListingPrice);
         if (Number.isFinite(numericListingPrice)) {
           const priceText = `${listingPriceFormatter.format(numericListingPrice)}`;
-          const tooltipText = `For Sale at ${priceText}`;
           const listingHost = document.createElement("span");
           listingHost.className = "listingCellTableHost";
           const listingBadge = document.createElement("span");
           listingBadge.className = "listingCellContent";
-          listingBadge.dataset.tooltip = tooltipText;
+          listingBadge.dataset.tooltip = priceText;
           listingBadge.dataset.mflListingPrice = priceText;
-          listingBadge.setAttribute("aria-label", tooltipText);
+          listingBadge.setAttribute("aria-label", priceText);
           listingBadge.tabIndex = 0;
           const listingIcon = document.createElement("img");
           listingIcon.className = "listingCellIcon";
