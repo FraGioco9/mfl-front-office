@@ -13,8 +13,11 @@ export function addMobileTablePresentation(artifacts) {
   table = replaceRequired(
     table,
     '    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];',
-    `    header.dataset.tableColumn = column;
-    const mobileLabel = window.matchMedia("(max-width: 900px)").matches
+    `    cell.dataset.tableColumn = column;
+    const fullLabel = columnLabels[column] || "";
+    label.dataset.mflFullTableLabel = fullLabel;
+    const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+    const mobileLabel = mobileTable
       ? ({
           positions: "POS",
           overall: "OVR",
@@ -27,9 +30,11 @@ export function addMobileTablePresentation(artifacts) {
           goalkeeping: "GK",
         }[column] || "")
       : "";
-    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+    label.textContent = column === agentColumn && state.currentPage === "mfl"
       ? ""
-      : mobileLabel || columnLabels[column];`,
+      : mobileTable && column === "listing_price"
+        ? ""
+        : mobileLabel || fullLabel;`,
     "compact mobile table headers",
   );
 
@@ -43,34 +48,44 @@ export function addMobileTablePresentation(artifacts) {
           cell.setAttribute("aria-label", "Not For Sale");
         }`,
     `      } else if (column === "listing_price") {
-        const rawListingPrice = getValue(row, "listing_price");
-        const numericListingPrice = rawListingPrice === null || rawListingPrice === undefined || rawListingPrice === ""
-          ? NaN
-          : Number(rawListingPrice);
-        if (Number.isFinite(numericListingPrice)) {
-          const priceText = "$" + listingPriceFormatter.format(numericListingPrice);
-          const listingHost = document.createElement("span");
-          listingHost.className = "listingCellTableHost";
-          const listingBadge = document.createElement("span");
-          listingBadge.className = "listingCellContent";
-          listingBadge.dataset.tooltip = priceText;
-          listingBadge.dataset.mflListingPrice = priceText;
-          listingBadge.setAttribute("aria-label", priceText);
-          listingBadge.tabIndex = 0;
-          const listingIcon = document.createElement("img");
-          listingIcon.className = "listingCellIcon";
-          listingIcon.src = "/listing-shopping-bag.svg";
-          listingIcon.width = 12;
-          listingIcon.height = 12;
-          listingIcon.alt = "";
-          listingIcon.setAttribute("aria-hidden", "true");
-          listingBadge.appendChild(listingIcon);
-          listingHost.appendChild(listingBadge);
-          cell.appendChild(listingHost);
+        const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+        if (!mobileTable) {
+          const listingBadge = listingPriceBadgeHtml(row);
+          if (listingBadge) {
+            cell.innerHTML = listingBadge ? \`<span class="listingCellTableHost">\${listingBadge}</span>\` : "";
+          } else {
+            cell.setAttribute("aria-label", "Not For Sale");
+          }
         } else {
-          cell.setAttribute("aria-label", "Not For Sale");
+          const rawListingPrice = getValue(row, "listing_price");
+          const numericListingPrice = rawListingPrice === null || rawListingPrice === undefined || rawListingPrice === ""
+            ? NaN
+            : Number(rawListingPrice);
+          if (Number.isFinite(numericListingPrice)) {
+            const priceText = "$" + listingPriceFormatter.format(numericListingPrice);
+            const listingHost = document.createElement("span");
+            listingHost.className = "listingCellTableHost";
+            const listingBadge = document.createElement("span");
+            listingBadge.className = "listingCellContent";
+            listingBadge.dataset.tooltip = priceText;
+            listingBadge.dataset.mflListingPrice = priceText;
+            listingBadge.setAttribute("aria-label", priceText);
+            listingBadge.tabIndex = 0;
+            const listingIcon = document.createElement("img");
+            listingIcon.className = "listingCellIcon";
+            listingIcon.src = "/listing-shopping-bag.svg";
+            listingIcon.width = 12;
+            listingIcon.height = 12;
+            listingIcon.alt = "";
+            listingIcon.setAttribute("aria-hidden", "true");
+            listingBadge.appendChild(listingIcon);
+            listingHost.appendChild(listingBadge);
+            cell.appendChild(listingHost);
+          } else {
+            cell.setAttribute("aria-label", "Not For Sale");
+          }
         }`,
-    "icon-only Listing cell with price-only tooltip",
+    "mobile-only icon Listing cell with price-only tooltip",
   );
 
   return Object.freeze({
