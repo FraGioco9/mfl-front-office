@@ -14,10 +14,11 @@ Canonical write owner: `site/api/_wallet-presence.js`. Callers are `site/api/wal
 
 Stored values:
 - `wallet_address`: the opted-in wallet identity.
+- `agent_name`: the current MFL agent name resolved from the packaged runtime wallet database when the wallet presence record is touched.
 - `opted_in_at`: first persisted opt-in timestamp.
 - `last_seen_at`: most recent authenticated visit/activity timestamp.
 
-`last_seen_at` is refreshed when the signed wallet opts in and whenever the authenticated wallet-preferences GET succeeds far enough to run its parallel presence touch. Application startup already requests wallet preferences for a restored valid wallet proof, so an opted-in user's return to the site refreshes this timestamp without a separate browser persistence path. A failed presence touch is non-blocking and does not prevent required preferences from loading.
+`agent_name` and `last_seen_at` are refreshed when the signed wallet opts in and whenever the authenticated wallet-preferences GET succeeds far enough to run its parallel presence touch. Agent names are refreshed only when the current runtime database contains a non-empty name for that wallet, so a temporary lookup miss does not erase a previously known name. Application startup already requests wallet preferences for a restored valid wallet proof, so an opted-in user's return to the site refreshes this presence data without a separate browser persistence path. A failed presence touch is non-blocking and does not prevent required preferences from loading.
 
 This table is retained as the explicit opt-in/audit and last-seen record. It is not duplicated into `wallet_preferences`.
 
@@ -99,7 +100,7 @@ This is read-only reference data for the application, not user persistence.
 
 The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. In particular, wallet proof/session material, request/loading state, route payload caches, guest watchlists, and the legacy per-entity recent-search arrays do not need independent Supabase copies.
 
-The last-seen timestamp is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `site/api/_wallet-presence.js` writes the server timestamp into `wallet_opt_ins.last_seen_at`.
+The wallet presence data is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `site/api/_wallet-presence.js` resolves the current runtime agent name and writes it with the server timestamp into `wallet_opt_ins`.
 
 ## Issue #200 cleanup
 
