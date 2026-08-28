@@ -12,14 +12,36 @@ import { normalizeEvaluationSnapshotEditRoute } from "./app-core-evaluation-snap
 const ADVANCED_SETTINGS_BACKDROP_BINDING = "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);";
 const EVALUATION_ROUTE_INITIALIZATION = `renderEvaluationMflPerUsdControl(false);
 evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());`;
+const EVALUATION_LOAD_TOOLTIP_BINDING = `function attachEvaluationLoadActionTooltip(button) {
+  button.addEventListener("mouseenter", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("focus", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
+  button.addEventListener("blur", hideEvaluationLoadActionTooltip);
+}`;
+const EVALUATION_LOAD_TOOLTIP_MOBILE_BINDING = `function attachEvaluationLoadActionTooltip(button) {
+  const showTooltip = () => {
+    if (window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches) return;
+    showEvaluationLoadActionTooltip(button);
+  };
+  button.addEventListener("mouseenter", showTooltip);
+  button.addEventListener("focus", showTooltip);
+  button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
+  button.addEventListener("blur", hideEvaluationLoadActionTooltip);
+}`;
 
 export function splitEvaluationApplicationCoreRuntime(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
   const routeChunks = input.routeChunks && typeof input.routeChunks === "object" ? input.routeChunks : {};
-  const existingEvaluation = String(routeChunks.evaluation || "").replace(/\s*$/, "");
+  let existingEvaluation = String(routeChunks.evaluation || "").replace(/\s*$/, "");
   if (!existingEvaluation) {
     throw new Error("Evaluation route chunk must exist before Evaluation ownership splitting.");
   }
+  existingEvaluation = replaceRequired(
+    existingEvaluation,
+    EVALUATION_LOAD_TOOLTIP_BINDING,
+    EVALUATION_LOAD_TOOLTIP_MOBILE_BINDING,
+    "Evaluation saved-action mobile tooltip ownership",
+  );
 
   let core = normalizeEvaluationSnapshotEditRoute(
     normalizeApplicationCoreSource(input.core, "Evaluation ownership"),
