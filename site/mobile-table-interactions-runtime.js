@@ -71,12 +71,13 @@
           header.replaceChildren();
         }
         header.style.fontSize = "0px";
+        header.style.lineHeight = "0";
         header.style.color = "transparent";
         header.style.textShadow = "none";
         header.style.backgroundImage = "none";
         header.style.overflow = "hidden";
       } else {
-        removeInlineGeometry(header, ["font-size", "color", "text-shadow", "background-image", "overflow"]);
+        removeInlineGeometry(header, ["font-size", "line-height", "color", "text-shadow", "background-image", "overflow"]);
       }
     });
   }
@@ -87,16 +88,18 @@
     const progressionPage = document.getElementById("progressionPage");
     if (progressionPage instanceof HTMLElement) {
       if (mobile) {
-        progressionPage.style.setProperty("--mfl-table-row-height", phone ? "24px" : "26px");
-        progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "28px" : "30px");
+        progressionPage.style.setProperty("--mfl-table-header-height", phone ? "24px" : "26px");
+        progressionPage.style.setProperty("--mfl-table-row-height", phone ? "22px" : "24px");
+        progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "26px" : "28px");
       } else {
+        progressionPage.style.removeProperty("--mfl-table-header-height");
         progressionPage.style.removeProperty("--mfl-table-row-height");
         progressionPage.style.removeProperty("--mfl-table-row-outer-height");
       }
     }
 
-    const actionSize = phone ? 14 : 16;
-    const actionIconSize = phone ? 8 : 10;
+    const actionSize = phone ? 12 : 14;
+    const actionIconSize = phone ? 7 : 8;
     document.querySelectorAll("#progressionPage .playerTableScroller .playerTableActionsButton").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       if (mobile) {
@@ -123,7 +126,7 @@
       }
     });
 
-    const flagSize = phone ? 9 : 10;
+    const flagSize = phone ? 8 : 9;
     document.querySelectorAll("#progressionPage .playerTableScroller .flagImage").forEach((icon) => {
       if (!(icon instanceof HTMLElement)) return;
       if (mobile) {
@@ -135,19 +138,29 @@
       }
     });
 
-    const markerScale = phone ? 0.42 : 0.5;
+    const markerSize = phone ? 6 : 7;
     document.querySelectorAll("#progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker)").forEach((marker) => {
       if (!(marker instanceof HTMLElement)) return;
+      marker.style.removeProperty("zoom");
       if (mobile) {
-        marker.style.zoom = String(markerScale);
-        marker.style.marginLeft = phone ? "4px" : "5px";
+        const size = `${markerSize}px`;
+        marker.style.fontSize = size;
+        marker.style.lineHeight = "1";
+        marker.style.marginLeft = phone ? "3px" : "4px";
+        marker.querySelectorAll("img, svg").forEach((icon) => {
+          if (!(icon instanceof HTMLElement || icon instanceof SVGElement)) return;
+          icon.style.width = size;
+          icon.style.height = size;
+        });
       } else {
-        marker.style.removeProperty("zoom");
-        marker.style.removeProperty("margin-left");
+        removeInlineGeometry(marker, ["font-size", "line-height", "margin-left"]);
+        marker.querySelectorAll("img, svg").forEach((icon) => {
+          removeInlineGeometry(icon, ["width", "height"]);
+        });
       }
     });
 
-    const noteSize = phone ? 7 : 8;
+    const noteSize = phone ? 6 : 7;
     document.querySelectorAll("#progressionPage .playerTableScroller .playerNoteIcon").forEach((icon) => {
       if (!(icon instanceof HTMLElement)) return;
       if (mobile) {
@@ -158,8 +171,8 @@
       }
     });
 
-    const listingBadgeSize = phone ? 13 : 15;
-    const listingIconSize = phone ? 6 : 7;
+    const listingBadgeSize = phone ? 12 : 13;
+    const listingIconSize = phone ? 5 : 6;
     document.querySelectorAll("#progressionPage .playerTableScroller .listingCellContent").forEach((badge) => {
       if (!(badge instanceof HTMLElement)) return;
       if (mobile) {
@@ -188,7 +201,7 @@
       }
     });
 
-    const raritySize = phone ? 3 : 4;
+    const raritySize = phone ? 2 : 3;
     document.querySelectorAll("#progressionPage #tableBody .tableOverallRarityCircle").forEach((marker) => {
       if (!(marker instanceof HTMLElement)) return;
       if (mobile) {
@@ -199,6 +212,17 @@
         marker.style.marginRight = "1px";
       } else {
         removeInlineGeometry(marker, ["flex", "width", "height", "margin-right"]);
+      }
+    });
+
+    const sortArrowScale = phone ? 0.55 : 0.65;
+    document.querySelectorAll("#progressionPage .playerTableScroller .sortArrow").forEach((arrow) => {
+      if (!(arrow instanceof HTMLElement)) return;
+      if (mobile) {
+        arrow.style.transform = `scale(${sortArrowScale})`;
+        arrow.style.transformOrigin = "center";
+      } else {
+        removeInlineGeometry(arrow, ["transform", "transform-origin"]);
       }
     });
   }
