@@ -62,7 +62,6 @@ EMAIL_MOBILE_FONT_SIZE_PX = 13
 EMAIL_COMPACT_FONT_SIZE_PX = 12
 INLINE_PORTRAIT_MAX_BYTES = 4 * 1024 * 1024
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-_INLINE_PORTRAIT_CACHE: dict[str, bytes | None] = {}
 
 
 @dataclass(frozen=True)
@@ -530,81 +529,13 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
 """
     return apply_email_theme(rendered, theme)
 
-def portrait_content_id(player_id: str) -> str:
-    normalized_id = re.sub(r"[^0-9A-Za-z.-]", "-", str(player_id or "").strip())
-    return f"mfl-player-{normalized_id or 'unknown'}@mfl-front-office"
-
-
-def load_inline_portrait_png(url: str) -> bytes | None:
-    portrait_url = str(url or "").strip()
-    if not portrait_url:
-        return None
-    if portrait_url in _INLINE_PORTRAIT_CACHE:
-        return _INLINE_PORTRAIT_CACHE[portrait_url]
-
-    request = Request(
-        portrait_url,
-        headers={
-            "Accept": "image/png",
-            "User-Agent": "MFL-Front-Office-Progression-Email/1.0",
-        },
-    )
-    try:
-        with urlopen(request, timeout=15) as response:
-            content_type = str(response.headers.get("Content-Type") or "")
-            content_type = content_type.split(";", 1)[0].strip().lower()
-            payload = response.read(INLINE_PORTRAIT_MAX_BYTES + 1)
-    except (HTTPError, URLError, TimeoutError, OSError) as error:
-        print(f"Could not embed progression email portrait {portrait_url}: {error}")
-        _INLINE_PORTRAIT_CACHE[portrait_url] = None
-        return None
-
-    if (
-        content_type != "image/png"
-        or not payload.startswith(PNG_SIGNATURE)
-        or len(payload) > INLINE_PORTRAIT_MAX_BYTES
-    ):
-        print(f"Could not embed progression email portrait {portrait_url}: invalid PNG response.")
-        _INLINE_PORTRAIT_CACHE[portrait_url] = None
-        return None
-
-    _INLINE_PORTRAIT_CACHE[portrait_url] = payload
-    return payload
-
-
-def inline_progression_portraits(
-    html_body: str,
-    players: list[PlayerImprovement] | tuple[PlayerImprovement, ...],
-) -> tuple[str, list[tuple[str, bytes]]]:
-    rendered = html_body
-    related_images: list[tuple[str, bytes]] = []
-    seen: set[str] = set()
-
-    for player in players:
-        if player.player_id in seen or not player.portrait_url:
-            continue
-        seen.add(player.player_id)
-        source_marker = f'src="{html.escape(player.portrait_url)}"'
-        if source_marker not in rendered:
-            continue
-        png = load_inline_portrait_png(player.portrait_url)
-        if not png:
-            continue
-        content_id = portrait_content_id(player.player_id)
-        rendered = rendered.replace(source_marker, f'src="cid:{content_id}"', 1)
-        related_images.append((content_id, png))
-
-    return rendered, related_images
-
-
 def build_email_message(
     recipient: str,
     subject: str,
     text_body: str,
     html_body: str,
-    players: list[PlayerImprovement] | tuple[PlayerImprovement, ...] = (),
+    _players: list[PlayerImprovement] | tuple[PlayerImprovement, ...] = (),
 ) -> EmailMessage:
-    rendered_html, related_images = inline_progression_portraits(html_body, players)
     message = EmailMessage()
     message["From"] = os.environ["EMAIL_FROM"]
     message["To"] = recipient
@@ -612,17 +543,9 @@ def build_email_message(
     if os.environ.get("EMAIL_REPLY_TO"):
         message["Reply-To"] = os.environ["EMAIL_REPLY_TO"]
     message.set_content(text_body)
-    message.add_alternative(rendered_html, subtype="html")
-
-    html_part = message.get_payload()[-1]
-    for content_id, png in related_images:
-        html_part.add_related(
-            png,
-            maintype="image",
-            subtype="png",
-            cid=f"<{content_id}>",
-            disposition="inline",
-        )
+    # Keep portraits as remote HTTPS resources. Adding them as related MIME image
+    # parts makes Gmail surface the portraits as email attachments.
+    message.add_alternative(html_body, subtype="html")
     return message
 
 

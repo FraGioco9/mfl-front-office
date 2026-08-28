@@ -157,7 +157,7 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         self.assertIn("SHOWCASE_PLAYER_IDS", sender)
         self.assertIn("SHOWCASE_CHANGE_COLUMNS", sender)
         self.assertIn("emails.send_email(", sender)
-        self.assertIn("emails.load_inline_portrait_png = loader", sender)
+        self.assertNotIn("emails.load_inline_portrait_png", sender)
         self.assertNotIn("load_preferences", sender)
         self.assertNotIn("notification_jobs", sender)
 
