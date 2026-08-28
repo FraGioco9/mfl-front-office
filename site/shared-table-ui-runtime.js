@@ -2,6 +2,7 @@
   "use strict";
 
   const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
+  const COMPACT_TABLE_HEADING_MEDIA = window.matchMedia("(max-width: 520px)");
   const MOBILE_PAGE_SIZE = "100";
   const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";
   const VIEW_SCROLL_VISIBLE_CLASS = "mflViewsScrollButtonVisible";
@@ -240,10 +241,11 @@
 
   function syncMobileTableText() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
+    const compactHeadings = COMPACT_TABLE_HEADING_MEDIA.matches;
     document.querySelectorAll("#tableHead th.col-stat > span").forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
       const fullLabel = canonicalResponsiveText(label, "mflFullStatLabel", compactStatLabel);
-      const desired = mobile ? compactStatLabel(fullLabel) : fullLabel;
+      const desired = compactHeadings ? compactStatLabel(fullLabel) : fullLabel;
       if (label.textContent !== desired) label.textContent = desired;
     });
     document.querySelectorAll("#tableBody .playerNameLink").forEach((link) => {
@@ -677,6 +679,7 @@
     document.removeEventListener("keydown", onKeyDown, true);
     scrollContainer?.removeEventListener("scroll", onScroll);
     MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
+    COMPACT_TABLE_HEADING_MEDIA.removeEventListener("change", scheduleMobileTablePresentation);
     boundViewScrollers.forEach((handler, scroller) => scroller.removeEventListener("scroll", handler));
     boundViewScrollers.clear();
     if (boundPlayerTableScroller && boundPlayerTableScrollHandler) {
@@ -706,6 +709,7 @@
   document.addEventListener("keydown", onKeyDown, true);
   scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
   MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
+  COMPACT_TABLE_HEADING_MEDIA.addEventListener("change", scheduleMobileTablePresentation);
 
   sync();
   window.__mflSharedTableUiRuntime = Object.freeze({
