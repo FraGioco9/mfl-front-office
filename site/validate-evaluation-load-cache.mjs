@@ -47,8 +47,8 @@ invariant(
 
 invariant(
   sharedCore.includes('document.addEventListener("keydown", (event) => {\n  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;')
-    && sharedCore.includes('event.preventDefault();\n  hideEvaluationLoadActionTooltip();\n  hideModal(evaluationLoadModal);'),
-  "Saved Evaluations must close on Escape through the canonical modal owner.",
+    && sharedCore.includes('event.preventDefault();\n  hideEvaluationLoadActionTooltip();\n  if (document.activeElement instanceof HTMLElement && evaluationLoadModal.contains(document.activeElement)) {\n    document.activeElement.blur();'),
+  "Saved Evaluations must stay open on Escape while the active control is deselected.",
 );
 
 for (const required of [
@@ -144,4 +144,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape closes the modal, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape keeps the modal open while deselecting the active control, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");

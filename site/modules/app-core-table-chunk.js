@@ -397,14 +397,6 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   });`,
     "Filters close focus ownership",
   );
-  normalizedCore = replaceRequired(
-    normalizedCore,
-    `  } else if (event.key === "Escape" && !filtersModal.hidden) {
-    closeFilters();`,
-    `  } else if (event.key === "Escape" && !filtersModal.hidden) {
-    closeFilters(false, false);`,
-    "Filters Escape neutral trigger focus",
-  );
 
   normalizedCore = replaceRequired(
     normalizedCore,
