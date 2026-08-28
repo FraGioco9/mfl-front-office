@@ -5903,6 +5903,7 @@ function joinedAgencyTooltip(row) {
   return date ? `Since ${date}` : "";
 }
 
+
 function parseFilterDateDay(value) {
   const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
@@ -5912,8 +5913,65 @@ function parseFilterDateDay(value) {
   const year = Number(match[1]);
   const month = Number(match[2]) - 1;
   const day = Number(match[3]);
-  const date = new Date(year, month, day);
-  return Number.isNaN(date.getTime()) ? null : Math.floor(date.getTime() / 86400000);
+  const date = new Date(year, month, day, 12);
+  if (
+    Number.isNaN(date.getTime())
+    || date.getFullYear() !== year
+    || date.getMonth() !== month
+    || date.getDate() !== day
+  ) {
+    return null;
+  }
+  return Math.floor(Date.UTC(year, month, day) / 86400000);
+}
+
+function filterDateEpochBounds(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const start = new Date(year, month, day, 0, 0, 0, 0);
+  if (
+    Number.isNaN(start.getTime())
+    || start.getFullYear() !== year
+    || start.getMonth() !== month
+    || start.getDate() !== day
+  ) {
+    return null;
+  }
+  const nextDay = new Date(year, month, day + 1, 0, 0, 0, 0);
+  return {
+    startEpochSeconds: Math.floor(start.getTime() / 1000),
+    nextDayStartEpochSeconds: Math.floor(nextDay.getTime() / 1000),
+  };
+}
+
+function serializeFilterRulesForRequest(rules) {
+  return rules.map((rule) => {
+    if (rule?.column !== joinedAgencyColumn) {
+      return rule;
+    }
+
+    const fromBounds = filterDateEpochBounds(rule.value);
+    const toBounds = rule.operator === "during"
+      ? filterDateEpochBounds(rule.valueTo)
+      : null;
+    return {
+      ...rule,
+      ...(fromBounds ? {
+        valueDayStartEpochSeconds: fromBounds.startEpochSeconds,
+        valueNextDayStartEpochSeconds: fromBounds.nextDayStartEpochSeconds,
+      } : {}),
+      ...(toBounds ? {
+        valueToDayStartEpochSeconds: toBounds.startEpochSeconds,
+        valueToNextDayStartEpochSeconds: toBounds.nextDayStartEpochSeconds,
+      } : {}),
+    };
+  });
 }
 
 function ownedSinceDay(row) {
@@ -5923,7 +5981,9 @@ function ownedSinceDay(row) {
   }
 
   const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? null : Math.floor(new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() / 86400000);
+  return Number.isNaN(date.getTime())
+    ? null
+    : Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
 }
 
 function filterLabel(column) {
@@ -9591,8 +9651,8 @@ function buildOperatorSelect(column) {
     ];
   } else if (column === joinedAgencyColumn) {
     operators = [
-      ["before", "before"],
       ["after", "after"],
+      ["before", "before"],
       ["during", "during"],
     ];
   } else if (column === contractStatusFilterColumn || column === "listing_price") {
@@ -10309,7 +10369,7 @@ function ruleMatches(row, rule) {
     }
 
     if (rule.operator === "after") {
-      return rowDay > filterDay;
+      return rowDay >= filterDay;
     }
 
     if (rule.operator === "during") {
@@ -11479,7 +11539,7 @@ function incrementalDataQuery(route, page = 1) {
     if (packablePlayersInput?.checked) query.set("packableOnly", "1");
     if (newMintsInput.checked) query.set("newMintsOnly", "1");
     const rules = Array.isArray(route.filterRules) ? route.filterRules : readFilterRules();
-    if (rules.length) query.set("filters", JSON.stringify(rules));
+    if (rules.length) query.set("filters", JSON.stringify(serializeFilterRulesForRequest(rules)));
   }
 
   return query;

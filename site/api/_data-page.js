@@ -95,21 +95,47 @@ function ruleSql(rule, parameters) {
     return `${quotedColumn} = ?`;
   }
 
-  if (column === "owned_since") {
-    const from = Date.parse(`${String(value || "")}T00:00:00Z`) / 1000;
-    if (!Number.isFinite(from)) return "0";
 
-    if (operator === "during") {
-      const to = Date.parse(`${String(rule?.valueTo || "")}T23:59:59Z`) / 1000;
-      if (!Number.isFinite(to)) return "0";
-      parameters.push(Math.min(from, to), Math.max(from, to));
-      return `${normalizedEpochSeconds(quotedColumn)} BETWEEN ? AND ?`;
-    }
+if (column === "owned_since") {
+  const fallbackStart = Date.parse(`${String(value || "")}T00:00:00Z`) / 1000;
+  if (!Number.isFinite(fallbackStart)) return "0";
 
-    if (!["before", "after"].includes(operator)) return "0";
-    parameters.push(from);
-    return `${normalizedEpochSeconds(quotedColumn)} ${operator === "before" ? "<" : ">"} ?`;
+  const suppliedStart = rule?.valueDayStartEpochSeconds;
+  const suppliedNext = rule?.valueNextDayStartEpochSeconds;
+  const fromStart = suppliedStart !== null
+    && suppliedStart !== undefined
+    && Number.isFinite(Number(suppliedStart))
+    ? Number(suppliedStart)
+    : fallbackStart;
+  const fromNext = suppliedNext !== null
+    && suppliedNext !== undefined
+    && Number.isFinite(Number(suppliedNext))
+    ? Number(suppliedNext)
+    : fallbackStart + 86400;
+
+  if (operator === "during") {
+    const fallbackToStart = Date.parse(`${String(rule?.valueTo || "")}T00:00:00Z`) / 1000;
+    if (!Number.isFinite(fallbackToStart)) return "0";
+    const suppliedToStart = rule?.valueToDayStartEpochSeconds;
+    const suppliedToNext = rule?.valueToNextDayStartEpochSeconds;
+    const toStart = suppliedToStart !== null
+      && suppliedToStart !== undefined
+      && Number.isFinite(Number(suppliedToStart))
+      ? Number(suppliedToStart)
+      : fallbackToStart;
+    const toNext = suppliedToNext !== null
+      && suppliedToNext !== undefined
+      && Number.isFinite(Number(suppliedToNext))
+      ? Number(suppliedToNext)
+      : fallbackToStart + 86400;
+    parameters.push(Math.min(fromStart, toStart), Math.max(fromNext, toNext));
+    return `${normalizedEpochSeconds(quotedColumn)} >= ? AND ${normalizedEpochSeconds(quotedColumn)} < ?`;
   }
+
+  if (!["before", "after"].includes(operator)) return "0";
+  parameters.push(fromStart);
+  return `${normalizedEpochSeconds(quotedColumn)} ${operator === "before" ? "<" : ">="} ?`;
+}
 
   const numeric = NUMBER_COLUMNS.has(column)
     || column.includes("_prog_")

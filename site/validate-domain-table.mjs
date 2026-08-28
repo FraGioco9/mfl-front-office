@@ -8,6 +8,7 @@ const validators = [
   "validate-player-table-actions.mjs",
   "validate-player-table-action-menu-rerender.mjs",
   "validate-new-player-icon.mjs",
+  "validate-progression-joined-agency-filter.mjs",
 ];
 
 for (const validator of validators) {

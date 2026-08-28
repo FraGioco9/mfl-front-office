@@ -1050,8 +1050,8 @@ function tableBuildOperatorSelectOwner(column) {
     ];
   } else if (column === joinedAgencyColumn) {
     operators = [
-      ["before", "before"],
       ["after", "after"],
+      ["before", "before"],
       ["during", "during"],
     ];
   } else if (column === contractStatusFilterColumn || column === "listing_price") {
@@ -1768,7 +1768,7 @@ function tableRuleMatchesOwner(row, rule) {
     }
 
     if (rule.operator === "after") {
-      return rowDay > filterDay;
+      return rowDay >= filterDay;
     }
 
     if (rule.operator === "during") {
