@@ -148,7 +148,7 @@ function availableFilterColumns(pageName = tablePageKey() || state.currentPage |
     columns.push(...statColumns.map((column) => `${column}_prog_all`));
   }
 
-  return columns.filter((column) => column === contractStatusFilterColumn || state.columns.includes(column));
+  return columns;
 }
 
 function contractStatusValue(row) {
@@ -293,6 +293,7 @@ function renderTableLoadingShell(pageName) {
   } else {
     restoreSavedTableState(pageName);
     globalThis.syncQuickFilterLabels?.();
+    syncRestoredTableControls(pageName);
   }
 
   updateViewButtons();
@@ -1444,6 +1445,13 @@ function restoreFilterDraftRules(rules = []) {
 }
 
 function tableOpenFiltersOwner() {
+  const pageName = tablePageKey() || state.currentPage || "progression";
+  if (!syncRestoredTableControls(pageName)) {
+    removeUnavailableFilterRules(pageName);
+    populateAddFilterSelect(pageName);
+    refreshRuleColumnSelects(pageName);
+    updateFilterSummary();
+  }
   state.filterDraftRules = readFilterDraftRules();
   document.body.classList.add("filtersOpen");
   showModal(filtersModal);

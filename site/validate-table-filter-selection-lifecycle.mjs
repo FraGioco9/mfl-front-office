@@ -43,6 +43,18 @@ invariant(
   "Table restore must clear only destination filter/selection state and consume the page-reset marker after controls synchronize.",
 );
 invariant(
+  !appCore.includes('return columns.filter((column) => column === contractStatusFilterColumn || state.columns.includes(column));')
+    && appCore.includes('restoreSavedTableState(pageName);\n    globalThis.syncQuickFilterLabels?.();\n    syncRestoredTableControls(pageName);')
+    && !generated.includes('return columns.filter((column) => column === contractStatusFilterColumn || state.columns.includes(column));')
+    && generated.includes('restoreSavedTableState(pageName);\n    globalThis.syncQuickFilterLabels?.();\n    syncRestoredTableControls(pageName);'),
+  "Advanced Filters must use the destination schema and restore controls during the loading shell instead of waiting for hydrated table columns.",
+);
+invariant(
+  appCore.includes('const pageName = tablePageKey() || state.currentPage || "progression";\n  if (!syncRestoredTableControls(pageName)) {\n    removeUnavailableFilterRules(pageName);\n    populateAddFilterSelect(pageName);\n    refreshRuleColumnSelects(pageName);\n    updateFilterSummary();\n  }\n  state.filterDraftRules = readFilterDraftRules();')
+    && generated.includes('const pageName = tablePageKey() || state.currentPage || "progression";\n  if (!syncRestoredTableControls(pageName)) {\n    removeUnavailableFilterRules(pageName);\n    populateAddFilterSelect(pageName);\n    refreshRuleColumnSelects(pageName);\n    updateFilterSummary();\n  }\n  state.filterDraftRules = readFilterDraftRules();'),
+  "Opening Advanced Filters must synchronize pending controls or populate the destination-schema selector before capturing the draft, including during initial loading.",
+);
+invariant(
   appCore.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
     && appCore.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
     && appCore.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
