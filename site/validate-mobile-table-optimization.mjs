@@ -61,7 +61,9 @@ includes(responsive, ".listingCellIcon {\n    flex: 0 0 10px;", "Mobile Listing 
 includes(responsive, ".tableOverallRarityCircle {\n    flex-basis: 6px;", "Mobile rarity markers must scale down.");
 
 includes(dropdowns, "function touchNativeSelectMode()", "Dropdown ownership must explicitly support native touch selects.");
-includes(dropdowns, "if (touchNativeSelectMode() && options.afterChange !== true) return;", "Touch filter selects must not be blurred before iOS opens its native picker.");
+includes(dropdowns, "const committedFilterSelects = new WeakSet();", "Touch filter selects must distinguish committed native picker changes from pointer-up/click events.");
+includes(dropdowns, "if (touchNativeSelectMode() && !committedOnTouch) return;", "Touch filter selects must not be blurred before iOS opens its native picker.");
+includes(dropdowns, "if (touchNativeSelectMode() && select instanceof HTMLSelectElement) committedFilterSelects.add(select);", "Touch filter selects must become blur-eligible only after native selection commits.");
 includes(dropdowns, 'document.documentElement.classList.add("mflMobileScrolling");', "Touch scrolling must publish a temporary no-hover-animation state.");
 includes(responsive, "html.mflMobileScrolling :is(", "Responsive CSS must suppress button transitions while touch scrolling.");
 includes(responsive, ".filtersDialog select {\n    touch-action: auto;", "Filter selects must retain native iPhone picker touch behavior.");
