@@ -14,6 +14,7 @@ export function addMobileTablePresentation(artifacts) {
     table,
     "  currentViewColumns().forEach((column) => {",
     `  const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
   if (mobileTable) {
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
       if (button instanceof HTMLButtonElement) {
@@ -47,10 +48,14 @@ export function addMobileTablePresentation(artifacts) {
       ? ""
       : compactLabel;
     label.dataset.mflMobileTableLabel = mobileLabel;
-    label.textContent = mobileTable
-      ? mobileLabel
-      : (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel);`,
-    "compact mobile table headers",
+    label.textContent = !mobileTable
+      ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
+      : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+        ? ""
+        : compactTableHeadings
+          ? compactLabel
+          : fullLabel;`,
+    "width-aware mobile table headers",
   );
 
   table = replaceRequired(
