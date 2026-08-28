@@ -77,76 +77,55 @@ class ProgressionEmailGmailTests(unittest.TestCase):
         self.assertEqual(sender.stats_improvement_total(two_small_gains), 2)
         self.assertEqual([player.player_id for player in ordered], ["10", "99"])
 
-    def test_gmail_delivery_embeds_portrait_as_related_cid_png(self) -> None:
-        portrait_url = "https://mfl-front-office.vercel.app/api/progression-email-portrait?player=123"
-        player = self.player(
-            "123",
-            new_overall=80,
-            overall_gain=1,
-            stats_improved=1,
-            portrait_url=portrait_url,
-        )
-        # The production endpoint is responsible for producing the transparent RGBA PNG.
-        # This test locks the Gmail-specific delivery contract: those exact PNG bytes are
-        # embedded as a related MIME part instead of being handed to Gmail's remote proxy.
-        transparent_png = sender.PNG_SIGNATURE + b"transparent-alpha-png-regression"
-        html_body = sender.build_html("My Players", [player])
+    def test_gmail_delivery_keeps_portraits_remote_and_attachment_free(self) -> None:
+        portrait_urls = [
+            "https://mfl-front-office.vercel.app/api/progression-email-portrait?player=123",
+            "https://mfl-front-office.vercel.app/api/progression-email-portrait?player=321",
+        ]
+        players = [
+            self.player(
+                "123",
+                new_overall=80,
+                overall_gain=1,
+                stats_improved=1,
+                portrait_url=portrait_urls[0],
+            ),
+            self.player(
+                "321",
+                new_overall=75,
+                overall_gain=1,
+                stats_improved=1,
+                portrait_url=portrait_urls[1],
+            ),
+        ]
+        html_body = sender.build_html("My Players", players)
 
-        with (
-            patch.dict(os.environ, {"EMAIL_FROM": "MFL Front Office <notifications@example.com>"}),
-            patch.object(sender, "load_inline_portrait_png", return_value=transparent_png),
+        with patch.dict(
+            os.environ,
+            {"EMAIL_FROM": "MFL Front Office <notifications@example.com>"},
         ):
             message = sender.build_email_message(
                 "recipient@gmail.com",
                 "Progression Update",
                 "Text fallback",
                 html_body,
-                [player],
+                players,
             )
 
-        html_parts = [part for part in message.walk() if part.get_content_type() == "text/html"]
+        html_parts = [
+            part for part in message.walk()
+            if part.get_content_type() == "text/html"
+        ]
         self.assertEqual(len(html_parts), 1)
         delivered_html = html_parts[0].get_content()
-        content_id = sender.portrait_content_id("123")
-        self.assertIn(f'src="cid:{content_id}"', delivered_html)
-        self.assertNotIn(portrait_url, delivered_html)
-
-        image_parts = [part for part in message.walk() if part.get_content_type() == "image/png"]
-        self.assertEqual(len(image_parts), 1)
-        self.assertEqual(image_parts[0]["Content-ID"], f"<{content_id}>")
-        self.assertEqual(image_parts[0].get_content_disposition(), "inline")
-        self.assertEqual(image_parts[0].get_payload(decode=True), transparent_png)
-
-    def test_failed_inline_fetch_keeps_remote_portrait_as_safe_fallback(self) -> None:
-        portrait_url = "https://mfl-front-office.vercel.app/api/progression-email-portrait?player=321"
-        player = self.player(
-            "321",
-            new_overall=75,
-            overall_gain=1,
-            stats_improved=1,
-            portrait_url=portrait_url,
+        for portrait_url in portrait_urls:
+            self.assertIn(portrait_url, delivered_html)
+        self.assertNotIn('src="cid:', delivered_html)
+        self.assertFalse(
+            any(part.get_content_maintype() == "image" for part in message.walk())
         )
-        html_body = sender.build_html("My Players", [player])
+        self.assertEqual(list(message.iter_attachments()), [])
 
-        with (
-            patch.dict(os.environ, {"EMAIL_FROM": "MFL Front Office <notifications@example.com>"}),
-            patch.object(sender, "load_inline_portrait_png", return_value=None),
-        ):
-            message = sender.build_email_message(
-                "recipient@gmail.com",
-                "Progression Update",
-                "Text fallback",
-                html_body,
-                [player],
-            )
-
-        delivered_html = next(
-            part.get_content()
-            for part in message.walk()
-            if part.get_content_type() == "text/html"
-        )
-        self.assertIn(portrait_url, delivered_html)
-        self.assertFalse(any(part.get_content_type() == "image/png" for part in message.walk()))
 
 
 if __name__ == "__main__":

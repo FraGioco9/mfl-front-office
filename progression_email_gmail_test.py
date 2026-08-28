@@ -2,8 +2,8 @@
 """Send one manual progression-email test to an explicit recipient.
 
 This helper is intentionally isolated from wallet preferences and Supabase. It
-loads selected players from the current database, uses branch-rendered portrait
-PNGs, and sends exactly one message through the production email MIME/CID path.
+loads selected players from the current database and sends exactly one message
+through the production remote-portrait email path.
 """
 
 from __future__ import annotations
@@ -120,6 +120,7 @@ def local_portrait_loader(
     players: list[emails.PlayerImprovement],
     portrait_directory: Path,
 ) -> Callable[[str], bytes | None]:
+    """Validate branch-rendered portrait PNGs used by standalone renderer tests."""
     paths_by_url = {
         player.portrait_url: portrait_directory / f"{player.player_id}.png"
         for player in players
@@ -144,7 +145,7 @@ def local_portrait_loader(
 
 def send_test_email(
     current_db: Path,
-    portrait_directory: Path,
+    _portrait_directory: Path,
     recipient: str,
     player_ids_csv: str,
     theme: str,
@@ -159,20 +160,14 @@ def send_test_email(
         raise RuntimeError("SMTP email secrets are not configured.")
 
     players = selected_players(current_db, player_ids_csv, fixture)
-    loader = local_portrait_loader(players, portrait_directory)
-    original_loader = emails.load_inline_portrait_png
-    emails.load_inline_portrait_png = loader
-    try:
-        scope_name = "Gmail Test"
-        emails.send_email(
-            recipient,
-            f"[TEST] {emails.build_subject(scope_name, players)}",
-            emails.build_text(scope_name, players),
-            emails.build_html(scope_name, players, theme),
-            players,
-        )
-    finally:
-        emails.load_inline_portrait_png = original_loader
+    scope_name = "Gmail Test"
+    emails.send_email(
+        recipient,
+        f"[TEST] {emails.build_subject(scope_name, players)}",
+        emails.build_text(scope_name, players),
+        emails.build_html(scope_name, players, theme),
+        players,
+    )
 
     return players
 
