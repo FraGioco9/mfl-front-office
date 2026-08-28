@@ -4,8 +4,24 @@
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
   const FILTER_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
+  const TOUCH_NATIVE_SELECT_MEDIA = window.matchMedia("(hover: none) and (pointer: coarse), (max-width: 900px) and (pointer: coarse)");
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
+  let mobileScrollTimer = 0;
+
+  function touchNativeSelectMode() {
+    return TOUCH_NATIVE_SELECT_MEDIA.matches;
+  }
+
+  function markMobileScrolling() {
+    if (!touchNativeSelectMode()) return;
+    document.documentElement.classList.add("mflMobileScrolling");
+    if (mobileScrollTimer) window.clearTimeout(mobileScrollTimer);
+    mobileScrollTimer = window.setTimeout(() => {
+      mobileScrollTimer = 0;
+      document.documentElement.classList.remove("mflMobileScrolling");
+    }, 140);
+  }
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -134,9 +150,10 @@
     return control instanceof HTMLSelectElement ? control : null;
   }
 
-  function blurFilterSelectWhenClosed(target) {
+  function blurFilterSelectWhenClosed(target, options = {}) {
     const select = filterSelectForTarget(target);
     if (!(select instanceof HTMLSelectElement)) return;
+    if (touchNativeSelectMode() && options.afterChange !== true) return;
 
     window.setTimeout(() => {
       if (!select.isConnected || isSelectOpen(select)) return;
@@ -183,7 +200,7 @@
       clubPointerCommittedView = "";
     }
 
-    if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
+    if (!touchNativeSelectMode() && target instanceof HTMLSelectElement && isSelectOpen(target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
       target.blur();
@@ -214,13 +231,13 @@
   }, true);
 
   document.addEventListener("change", (event) => {
-    blurFilterSelectWhenClosed(event.target);
+    blurFilterSelectWhenClosed(event.target, { afterChange: true });
   });
 
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
     if (["Enter", "Escape", "Tab"].includes(event.key)) {
-      blurFilterSelectWhenClosed(event.target);
+      blurFilterSelectWhenClosed(event.target, { afterChange: true });
     }
   }, true);
 
@@ -265,6 +282,9 @@
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);
+
+  window.addEventListener("scroll", markMobileScrolling, { passive: true, capture: true });
+  document.addEventListener("touchmove", markMobileScrolling, { passive: true, capture: true });
 
   window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
     "filter-controls",

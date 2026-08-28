@@ -11,6 +11,7 @@
     "all-time": "all",
   });
   const TOOLTIP_HEIGHT = 6;
+  const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");
 
   function cssDurationMs(propertyName, fallbackMs) {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(propertyName).trim();
@@ -370,7 +371,8 @@
   function tooltipTargetFrom(target) {
     if (!(target instanceof Element)) return null;
     const tooltipTarget = target.closest("[data-tooltip], [data-note-tooltip], [title]");
-    if (!(tooltipTarget instanceof HTMLElement) || tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;
+    if (!(tooltipTarget instanceof HTMLElement)) return null;
+    if (!MOBILE_TOOLTIP_MEDIA.matches && tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;
     return tooltipTarget;
   }
 
@@ -482,6 +484,7 @@
   }
 
   function onTooltipPointerOver(event) {
+    if (MOBILE_TOOLTIP_MEDIA.matches) return;
     if (activeTooltipTarget instanceof HTMLElement && activeTooltipTarget.contains(event.target)) {
       activeTooltipHovered = true;
       return;
@@ -491,6 +494,7 @@
   }
 
   function onTooltipPointerOut(event) {
+    if (MOBILE_TOOLTIP_MEDIA.matches) return;
     if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipTarget.contains(event.target)) return;
     if (event.relatedTarget instanceof Node && activeTooltipTarget.contains(event.relatedTarget)) return;
     activeTooltipHovered = false;
@@ -498,6 +502,7 @@
   }
 
   function onTooltipFocusIn(event) {
+    if (MOBILE_TOOLTIP_MEDIA.matches) return;
     if (activeTooltipTarget instanceof HTMLElement && activeTooltipTarget.contains(event.target)) {
       activeTooltipFocused = true;
       return;
@@ -507,10 +512,37 @@
   }
 
   function onTooltipFocusOut(event) {
+    if (MOBILE_TOOLTIP_MEDIA.matches) return;
     if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipTarget.contains(event.target)) return;
     if (event.relatedTarget instanceof Node && activeTooltipTarget.contains(event.relatedTarget)) return;
     activeTooltipFocused = false;
     if (!activeTooltipHovered) hideGlobalTooltip();
+  }
+
+  function onTooltipClick(event) {
+    if (!MOBILE_TOOLTIP_MEDIA.matches) return;
+    if (activeTooltipTarget instanceof HTMLElement && activeTooltipTarget.contains(event.target)) {
+      hideGlobalTooltip({ immediate: true });
+      return;
+    }
+    const target = tooltipTargetFrom(event.target);
+    if (target) {
+      showGlobalTooltip(target, "click");
+      return;
+    }
+    hideGlobalTooltip({ immediate: true });
+  }
+
+  function onTooltipScroll() {
+    if (MOBILE_TOOLTIP_MEDIA.matches) {
+      hideGlobalTooltip({ immediate: true });
+      return;
+    }
+    positionTooltipPortal();
+  }
+
+  function onTooltipMediaChange() {
+    hideGlobalTooltip({ immediate: true });
   }
 
   function onKeyDown(event) {
@@ -552,9 +584,11 @@
     document.removeEventListener("pointerout", onTooltipPointerOut, true);
     document.removeEventListener("focus", onTooltipFocusIn, true);
     document.removeEventListener("blur", onTooltipFocusOut, true);
+    document.removeEventListener("click", onTooltipClick, true);
     window.removeEventListener("resize", positionTooltipPortal);
-    window.removeEventListener("scroll", positionTooltipPortal, true);
+    window.removeEventListener("scroll", onTooltipScroll, true);
     window.removeEventListener("popstate", onPopState);
+    MOBILE_TOOLTIP_MEDIA.removeEventListener("change", onTooltipMediaChange);
   }
 
   syncRouteChrome(window.location.href);
@@ -563,9 +597,11 @@
   document.addEventListener("pointerout", onTooltipPointerOut, true);
   document.addEventListener("focus", onTooltipFocusIn, true);
   document.addEventListener("blur", onTooltipFocusOut, true);
+  document.addEventListener("click", onTooltipClick, true);
   window.addEventListener("resize", positionTooltipPortal);
-  window.addEventListener("scroll", positionTooltipPortal, true);
+  window.addEventListener("scroll", onTooltipScroll, true);
   window.addEventListener("popstate", onPopState);
+  MOBILE_TOOLTIP_MEDIA.addEventListener("change", onTooltipMediaChange);
 
   window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy });
 })();

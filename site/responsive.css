@@ -45,6 +45,12 @@ html:not(.mflInitialRouteResolved):is(
     --mobile-nav-overlay-clearance: 126px;
   }
 
+  #progressionPage {
+    --mfl-table-col-listing: 4.25%;
+    --mfl-table-col-name: 16.657444882309086%;
+    --mfl-table-col-contract-render-name: 16.657752391095965%;
+  }
+
   html,
   body {
     max-width: 100%;
@@ -257,7 +263,6 @@ html:not(.mflInitialRouteResolved):is(
     box-shadow: none;
   }
 
-  .menuRail .navButton:not(.active):hover:not(:disabled),
   .menuRail .navButton:not(.active):focus-visible {
     border-color: transparent;
     background: var(--row-hover);
@@ -358,13 +363,13 @@ html:not(.mflInitialRouteResolved):is(
   #progressionPage .views::before {
     right: -2px;
     z-index: 3;
-    width: 86px;
+    width: 112px;
     height: 48px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
-      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      color-mix(in srgb, var(--page-bg) 62%, transparent) 34%,
+      color-mix(in srgb, var(--page-bg) 92%, transparent) 68%,
       var(--page-bg) 100%
     );
     transform: translateY(-50%);
@@ -384,13 +389,13 @@ html:not(.mflInitialRouteResolved):is(
   #progressionPage .quickFilters::before {
     right: -2px;
     z-index: 3;
-    width: 60px;
+    width: 84px;
     height: 34px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
-      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      color-mix(in srgb, var(--page-bg) 62%, transparent) 34%,
+      color-mix(in srgb, var(--page-bg) 92%, transparent) 68%,
       var(--page-bg) 100%
     );
     transform: translateY(-50%);
@@ -411,7 +416,7 @@ html:not(.mflInitialRouteResolved):is(
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .views.mflViewsOverflowing::after,
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::before,
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::after {
-    opacity: 0.78;
+    opacity: 0.92;
     visibility: visible;
   }
 
@@ -445,7 +450,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .viewsScrollButton.mflViewsScrollButtonVisible {
-    opacity: 0.78;
+    opacity: 0.92;
     visibility: visible;
     pointer-events: auto;
     transform: translateY(-50%) scale(1);
@@ -457,7 +462,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) .viewsScrollerShell:has(> .mflViewsOverflowing) > .viewsScrollButtonRight {
-    opacity: 0.78;
+    opacity: 0.92;
     visibility: visible;
     pointer-events: auto;
     transform: translateY(-50%) scale(1);
@@ -476,7 +481,7 @@ html:not(.mflInitialRouteResolved):is(
     position: absolute;
     top: -9px;
     bottom: -9px;
-    width: 86px;
+    width: 112px;
     pointer-events: none;
   }
 
@@ -485,8 +490,8 @@ html:not(.mflInitialRouteResolved):is(
     background: linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
-      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      color-mix(in srgb, var(--page-bg) 62%, transparent) 34%,
+      color-mix(in srgb, var(--page-bg) 92%, transparent) 68%,
       var(--page-bg) 100%
     );
   }
@@ -496,8 +501,8 @@ html:not(.mflInitialRouteResolved):is(
     background: linear-gradient(
       270deg,
       transparent 0%,
-      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
-      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      color-mix(in srgb, var(--page-bg) 62%, transparent) 34%,
+      color-mix(in srgb, var(--page-bg) 92%, transparent) 68%,
       var(--page-bg) 100%
     );
   }
@@ -601,7 +606,7 @@ html:not(.mflInitialRouteResolved):is(
   .quickFiltersScrollerShell .viewsScrollButton::before {
     top: -5px;
     bottom: -5px;
-    width: 60px;
+    width: 84px;
   }
 
   .quickFiltersScrollerShell .viewsScrollButton svg {
@@ -699,13 +704,22 @@ html:not(.mflInitialRouteResolved):is(
     overflow: hidden;
   }
 
+  #progressionPage .playerTableScroller,
   #progressionPage .tableScroller,
   .tableScroller {
+    display: block;
+    width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage .playerTableScroller {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 56px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 56px), transparent 100%);
   }
 
   #progressionPage .playerTableScroller table {
@@ -718,6 +732,21 @@ html:not(.mflInitialRouteResolved):is(
     padding-inline: 2px;
   }
 
+  #progressionPage .playerTableScroller :is(th, td).col-listing {
+    padding-inline: 0;
+    text-align: center;
+  }
+
+  #progressionPage #tableBody .listingCellTableHost {
+    justify-content: center;
+    width: 100%;
+  }
+
+  #progressionPage .playerTableScroller .listingCellContent {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
   #progressionPage .playerTableScroller th {
     font-size: 10px;
   }
@@ -726,10 +755,109 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 12px;
   }
 
-  #progressionPage .playerTableScroller .flagImage {
-    width: 16px;
-    height: 16px;
+  #progressionPage .playerTableScroller :is(th, td).selectionCell input {
+    width: 12px;
+    min-width: 12px;
+    height: 12px;
+    background-size: 8px 6px;
+    border-radius: 3px;
   }
+
+  #progressionPage .playerTableScroller .playerTableActionsButton {
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    min-height: 20px;
+    padding: 0;
+  }
+
+  #progressionPage .playerTableScroller .playerTableActionsButton svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
+    width: 12px;
+    height: 12px;
+  }
+
+  #progressionPage .playerTableScroller .listingCellIcon {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+  }
+
+  #progressionPage #tableBody .tableOverallRarityCircle {
+    flex-basis: 6px;
+    width: 6px;
+    height: 6px;
+    margin-right: 2px;
+  }
+
+  #progressionPage .playerTableScroller .sortArrow {
+    transform: scale(0.8);
+    transform-origin: center;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-listing > span:first-child {
+    font-size: 0;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child {
+    font-size: 0;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th:nth-child(9).col-stat > span:first-child::after {
+    content: "OVR";
+    font-size: 10px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(10) > span:first-child::after { content: "PAC"; font-size: 10px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(11) > span:first-child::after { content: "SHO"; font-size: 10px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(12) > span:first-child::after { content: "PAS"; font-size: 10px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(13) > span:first-child::after { content: "DRI"; font-size: 10px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(14) > span:first-child::after { content: "DEF"; font-size: 10px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+    [data-initial-table-view="attributes"],
+    [data-initial-table-view="current"],
+    [data-initial-table-view="all"],
+    [data-initial-table-view="next"]
+  ) #tableHead th:nth-child(15) > span:first-child::after { content: "PHY"; font-size: 10px; }
 
   .advancedPlayerTable {
     min-width: 680px;
@@ -906,7 +1034,6 @@ html:not(.mflInitialRouteResolved):is(
     gap: 6px;
   }
 
-
   .filtersDialog .addFilterRow > *,
   .filtersDialog .filterRule,
   .filtersDialog .filterRule > *,
@@ -965,7 +1092,6 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 16px;
     max-width: 16px;
   }
-
 
   .filterRule {
     --mfl-filter-edge-gap: 8px;
@@ -1032,7 +1158,6 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
     max-inline-size: 100%;
   }
-
 
   .filterRule:first-child > :nth-child(1) {
     display: none;
@@ -1340,6 +1465,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage,
   #progressionPage .tableShell,
+  #progressionPage .playerTableScroller,
   #progressionPage .tableScroller,
   .tableShell,
   .tableScroller {
@@ -1352,6 +1478,7 @@ html:not(.mflInitialRouteResolved):is(
     overflow: hidden;
   }
 
+  #progressionPage .playerTableScroller,
   #progressionPage .tableScroller,
   .tableShell > .tableScroller,
   .tableScroller {
@@ -1432,7 +1559,6 @@ html:not(.mflInitialRouteResolved):is(
   textarea {
     font-size: 16px;
   }
-
 
   #databaseStatsPage .databaseStatsCustomFilter {
     display: grid;
@@ -1515,7 +1641,7 @@ html:not(.mflInitialRouteResolved):is(
   .quickFiltersScrollerShell .viewsScrollButton::before {
     top: -4px;
     bottom: -4px;
-    width: 54px;
+    width: 72px;
   }
 
   .quickFiltersScrollerShell .viewsScrollButton svg {
@@ -1524,7 +1650,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage .quickFilters::before {
-    width: 54px;
+    width: 72px;
     height: 30px;
   }
 
@@ -1682,8 +1808,6 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
-
-
   .filterRules {
     gap: 4px;
   }
@@ -1733,7 +1857,6 @@ html:not(.mflInitialRouteResolved):is(
     grid-row: 2;
     min-width: 0;
   }
-
 
   .filterRule:first-child > :nth-child(1) {
     display: none;
@@ -1826,20 +1949,29 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage .playerTableScroller .flagImage {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
+  }
+
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
+    width: 10px;
+    height: 10px;
   }
 
   #progressionPage .playerTableScroller .listingCellContent {
-    gap: 2px;
-    padding-inline: 3px;
+    gap: 0;
+    padding-inline: 0;
     font-size: 10px;
   }
 
   #progressionPage .playerTableScroller .listingCellIcon {
-    width: 11px;
-    height: 11px;
-    flex-basis: 11px;
+    flex-basis: 9px;
+    width: 9px;
+    height: 9px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-stat > span:first-child::after {
+    font-size: 9px;
   }
 
   .advancedPlayerTable {
@@ -1977,13 +2109,11 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-popup-close-size: 26px;
   }
 
-
   .addFilterRow select {
     flex-basis: 180px;
     width: min(180px, 100%);
     max-width: 100%;
   }
-
 
   .filterRule {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
@@ -1999,7 +2129,6 @@ html:not(.mflInitialRouteResolved):is(
     height: 10px;
     min-height: 10px;
   }
-
 
   .betweenValue,
   .dateRangeValue {
@@ -2037,6 +2166,10 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage .playerTableScroller td {
     font-size: 10px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-stat > span:first-child::after {
+    font-size: 8px;
   }
 
   .advancedPlayerTable {
@@ -2081,10 +2214,13 @@ html:not(.mflInitialRouteResolved):is(
 @media (hover: none) and (pointer: coarse) {
   button,
   input,
-  select,
   .navButton,
   .viewButton {
     touch-action: manipulation;
+  }
+
+  .filtersDialog select {
+    touch-action: auto;
   }
 
   .themeButton,
@@ -2093,6 +2229,16 @@ html:not(.mflInitialRouteResolved):is(
   .playerAttributeViewButton,
   .pager button {
     min-height: 44px;
+  }
+
+  html.mflMobileScrolling :is(
+    button,
+    .navButton,
+    .viewButton,
+    [role="button"]
+  ) {
+    transition: none;
+    animation: none;
   }
 
   [data-tooltip]::before,

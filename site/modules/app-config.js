@@ -82,6 +82,7 @@ export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
     "/filter-controls-runtime.js",
     "/desktop-table-style-runtime.js",
     "/shared-table-ui-runtime.js",
+    "/mobile-table-interactions-runtime.js",
     "/nationality-filter-options-runtime.js",
     "/table-loading-runtime.js",
   ]),
@@ -237,7 +238,6 @@ export function browserConfigRuntimeSource(release) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
     throw new Error("Canonical app configuration requires a valid release version.");
   }
-
   const data = JSON.stringify({
     release: { version, description },
     routes: BROWSER_DATA.routes,

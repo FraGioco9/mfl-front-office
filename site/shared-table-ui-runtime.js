@@ -9,6 +9,18 @@
   const VIEW_SCROLL_SHELL_CLASS = "viewsScrollerShell";
   const QUICK_FILTERS_SHELL_CLASS = "quickFiltersScrollerShell";
   const VIEW_SCROLL_EPSILON = 2;
+  const PLAYER_TABLE_SCROLL_EPSILON = 2;
+  const PLAYER_TABLE_FADE_DISTANCE = 56;
+  const MOBILE_STAT_LABELS = Object.freeze({
+    overall: "OVR",
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+  });
   const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
 
@@ -17,9 +29,14 @@
   let destroyed = false;
   let pointerControl = null;
   let restoreBridgeInstalled = false;
+  let tablePresentationBridgeInstalled = false;
   let coreLoadedBridgeInstalled = false;
   let viewSyncFrame = 0;
+  let playerTableSyncFrame = 0;
   let viewResizeObserver = null;
+  let playerTableResizeObserver = null;
+  let boundPlayerTableScroller = null;
+  let boundPlayerTableScrollHandler = null;
   const pendingViewScrollers = new Set();
   const boundViewScrollers = new Map();
   const scrollContainer = document.querySelector("main");
@@ -115,18 +132,55 @@
     return restoreBridgeInstalled;
   }
 
+  function installTablePresentationBridge() {
+    if (destroyed || tablePresentationBridgeInstalled) return tablePresentationBridgeInstalled;
+    try {
+      tablePresentationBridgeInstalled = Boolean(window.eval(`(() => {
+        if (typeof renderTable !== "function" || typeof buildHeader !== "function") return false;
+        if (renderTable.__mflMobileTablePresentation && buildHeader.__mflMobileTablePresentation) return true;
+        const originalRenderTable = renderTable;
+        const originalBuildHeader = buildHeader;
+        const schedule = () => window.__mflSharedTableUiRuntime?.scheduleMobileTablePresentation?.();
+        const renderWithMobileTablePresentation = function() {
+          const result = originalRenderTable.apply(this, arguments);
+          schedule();
+          return result;
+        };
+        const buildHeaderWithMobileTablePresentation = function() {
+          const result = originalBuildHeader.apply(this, arguments);
+          schedule();
+          return result;
+        };
+        Object.defineProperty(renderWithMobileTablePresentation, "__mflMobileTablePresentation", { value: true });
+        Object.defineProperty(buildHeaderWithMobileTablePresentation, "__mflMobileTablePresentation", { value: true });
+        renderTable = renderWithMobileTablePresentation;
+        buildHeader = buildHeaderWithMobileTablePresentation;
+        return true;
+      })()`));
+    } catch (error) {
+      console.warn("Could not install mobile table presentation bridge.", error);
+      tablePresentationBridgeInstalled = false;
+    }
+    return tablePresentationBridgeInstalled;
+  }
+
   function installCoreLoadedBridge() {
-    if (destroyed || coreLoadedBridgeInstalled || restoreBridgeInstalled) return restoreBridgeInstalled || coreLoadedBridgeInstalled;
+    if (destroyed || coreLoadedBridgeInstalled || (restoreBridgeInstalled && tablePresentationBridgeInstalled)) {
+      return restoreBridgeInstalled && tablePresentationBridgeInstalled;
+    }
     const marker = window.__mflMarkApplicationCoreLoaded;
     if (typeof marker !== "function") return false;
     if (marker.__mflMobilePageSizeBridge) {
       coreLoadedBridgeInstalled = true;
-      return true;
+      installRestoreBridge();
+      installTablePresentationBridge();
+      return restoreBridgeInstalled && tablePresentationBridgeInstalled;
     }
 
     const bridgedMarker = function() {
       const result = marker.apply(this, arguments);
       installRestoreBridge();
+      installTablePresentationBridge();
       return result;
     };
     Object.defineProperty(bridgedMarker, "__mflMobilePageSizeBridge", { value: true });
@@ -147,8 +201,147 @@
 
   function ensureMobilePageSizeOwnership() {
     window.__mflMobileTablePageSizeActive = MOBILE_TABLE_MEDIA.matches;
-    if (!installRestoreBridge()) installCoreLoadedBridge();
+    const restoreReady = installRestoreBridge();
+    const presentationReady = installTablePresentationBridge();
+    if (!restoreReady || !presentationReady) installCoreLoadedBridge();
     if (MOBILE_TABLE_MEDIA.matches) enforceMobilePageSize();
+  }
+
+  function compactPlayerName(value) {
+    const fullName = String(value || "").trim();
+    if (!fullName) return "";
+    const parts = fullName.split(/\s+/);
+    if (parts.length < 2) return fullName;
+    const firstName = parts.shift() || "";
+    const initial = Array.from(firstName)[0] || "";
+    return initial ? `${initial.toLocaleUpperCase()}. ${parts.join(" ")}` : fullName;
+  }
+
+  function compactStatLabel(value) {
+    const fullLabel = String(value || "").trim();
+    return MOBILE_STAT_LABELS[fullLabel.toLowerCase()] || fullLabel;
+  }
+
+  function canonicalResponsiveText(element, datasetKey, compact) {
+    if (!(element instanceof HTMLElement)) return "";
+    const current = String(element.textContent || "").trim();
+    const saved = String(element.dataset[datasetKey] || "").trim();
+    if (!saved) {
+      element.dataset[datasetKey] = current;
+      return current;
+    }
+    const savedCompact = compact(saved);
+    if (current && current !== saved && current !== savedCompact) {
+      element.dataset[datasetKey] = current;
+      return current;
+    }
+    return saved;
+  }
+
+  function syncMobileTableText() {
+    const mobile = MOBILE_TABLE_MEDIA.matches;
+    document.querySelectorAll("#tableHead th.col-stat > span").forEach((label) => {
+      if (!(label instanceof HTMLElement)) return;
+      const fullLabel = canonicalResponsiveText(label, "mflFullStatLabel", compactStatLabel);
+      const desired = mobile ? compactStatLabel(fullLabel) : fullLabel;
+      if (label.textContent !== desired) label.textContent = desired;
+    });
+    document.querySelectorAll("#tableBody .playerNameLink").forEach((link) => {
+      if (!(link instanceof HTMLElement)) return;
+      const fullName = canonicalResponsiveText(link, "mflFullPlayerName", compactPlayerName);
+      const desired = mobile ? compactPlayerName(fullName) : fullName;
+      if (link.textContent !== desired) link.textContent = desired;
+    });
+  }
+
+  function playerTableScroller() {
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
+    return scroller instanceof HTMLElement ? scroller : null;
+  }
+
+  function playerTableFadeMask(canScrollLeft, canScrollRight) {
+    const edge = `${PLAYER_TABLE_FADE_DISTANCE}px`;
+    if (canScrollLeft && canScrollRight) {
+      return `linear-gradient(to right, transparent 0, #000 ${edge}, #000 calc(100% - ${edge}), transparent 100%)`;
+    }
+    if (canScrollLeft) {
+      return `linear-gradient(to right, transparent 0, #000 ${edge}, #000 100%)`;
+    }
+    if (canScrollRight) {
+      return `linear-gradient(to right, #000 0, #000 calc(100% - ${edge}), transparent 100%)`;
+    }
+    return "";
+  }
+
+  function applyPlayerTableFade(scroller, canScrollLeft, canScrollRight) {
+    if (!(scroller instanceof HTMLElement)) return;
+    const mask = playerTableFadeMask(canScrollLeft, canScrollRight);
+    scroller.dataset.mflScrollFadeLeft = canScrollLeft ? "true" : "false";
+    scroller.dataset.mflScrollFadeRight = canScrollRight ? "true" : "false";
+    if (mask) {
+      scroller.style.setProperty("mask-image", mask);
+      scroller.style.setProperty("-webkit-mask-image", mask);
+    } else {
+      scroller.style.removeProperty("mask-image");
+      scroller.style.removeProperty("-webkit-mask-image");
+    }
+  }
+
+  function syncPlayerTableScroller() {
+    const scroller = playerTableScroller();
+    if (!(scroller instanceof HTMLElement)) return;
+    if (!MOBILE_TABLE_MEDIA.matches || scroller.getClientRects().length === 0) {
+      applyPlayerTableFade(scroller, false, false);
+      return;
+    }
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const scrollLeft = Math.min(maxScroll, Math.max(0, scroller.scrollLeft));
+    const overflowing = maxScroll > PLAYER_TABLE_SCROLL_EPSILON;
+    const canScrollLeft = overflowing && scrollLeft > PLAYER_TABLE_SCROLL_EPSILON;
+    const canScrollRight = overflowing && maxScroll - scrollLeft > PLAYER_TABLE_SCROLL_EPSILON;
+    applyPlayerTableFade(scroller, canScrollLeft, canScrollRight);
+  }
+
+  function syncMobileTablePresentationNow() {
+    if (destroyed) return;
+    syncMobileTableText();
+    syncPlayerTableScroller();
+  }
+
+  function scheduleMobileTablePresentation() {
+    if (destroyed || playerTableSyncFrame) return;
+    playerTableSyncFrame = window.requestAnimationFrame(() => {
+      playerTableSyncFrame = 0;
+      syncMobileTablePresentationNow();
+    });
+  }
+
+  function ensurePlayerTableResizeObserver() {
+    if (playerTableResizeObserver || typeof ResizeObserver !== "function") return playerTableResizeObserver;
+    playerTableResizeObserver = new ResizeObserver(() => scheduleMobileTablePresentation());
+    return playerTableResizeObserver;
+  }
+
+  function ensurePlayerTableScroller() {
+    const scroller = playerTableScroller();
+    if (!(scroller instanceof HTMLElement)) return;
+    if (boundPlayerTableScroller !== scroller) {
+      if (boundPlayerTableScroller && boundPlayerTableScrollHandler) {
+        boundPlayerTableScroller.removeEventListener("scroll", boundPlayerTableScrollHandler);
+      }
+      boundPlayerTableScroller = scroller;
+      boundPlayerTableScrollHandler = () => {
+        clearTableHoverState();
+        scheduleMobileTablePresentation();
+      };
+      scroller.addEventListener("scroll", boundPlayerTableScrollHandler, { passive: true });
+    }
+    const observer = ensurePlayerTableResizeObserver();
+    observer?.disconnect();
+    observer?.observe(scroller);
+    const table = scroller.querySelector("table");
+    if (table instanceof HTMLElement) observer?.observe(table);
+    scheduleMobileTablePresentation();
   }
 
   function tableViews() {
@@ -345,6 +538,8 @@
     if (destroyed) return;
     syncWatchlistSwitcherPlacement();
     tableHorizontalScrollers().forEach(syncViewScroller);
+    ensurePlayerTableScroller();
+    syncPlayerTableScroller();
   }
 
   function scheduleViewScrollerSync(views = null) {
@@ -415,7 +610,9 @@
     if (event.matches) enforceMobilePageSize();
     syncWatchlistSwitcherPlacement();
     ensureViewScrollers();
+    ensurePlayerTableScroller();
     scheduleViewScrollerSync();
+    scheduleMobileTablePresentation();
   }
 
   function onPointerDown(event) {
@@ -461,6 +658,8 @@
     ensureMobilePageSizeOwnership();
     syncWatchlistSwitcherPlacement();
     ensureViewScrollers();
+    ensurePlayerTableScroller();
+    scheduleMobileTablePresentation();
   }
 
   function destroy() {
@@ -480,11 +679,21 @@
     MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
     boundViewScrollers.forEach((handler, scroller) => scroller.removeEventListener("scroll", handler));
     boundViewScrollers.clear();
+    if (boundPlayerTableScroller && boundPlayerTableScrollHandler) {
+      boundPlayerTableScroller.removeEventListener("scroll", boundPlayerTableScrollHandler);
+    }
+    applyPlayerTableFade(boundPlayerTableScroller, false, false);
+    boundPlayerTableScroller = null;
+    boundPlayerTableScrollHandler = null;
     viewResizeObserver?.disconnect();
     viewResizeObserver = null;
+    playerTableResizeObserver?.disconnect();
+    playerTableResizeObserver = null;
     pendingViewScrollers.clear();
     if (viewSyncFrame) window.cancelAnimationFrame(viewSyncFrame);
+    if (playerTableSyncFrame) window.cancelAnimationFrame(playerTableSyncFrame);
     viewSyncFrame = 0;
+    playerTableSyncFrame = 0;
     tableHorizontalScrollers().forEach((scroller) => {
       scroller.classList.remove(VIEW_SCROLL_CLASS);
       removeViewScrollShell(scroller);
@@ -499,5 +708,10 @@
   MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
 
   sync();
-  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalCuesNow, destroy });
+  window.__mflSharedTableUiRuntime = Object.freeze({
+    sync,
+    syncRouteHorizontalCuesNow,
+    scheduleMobileTablePresentation,
+    destroy,
+  });
 })();
