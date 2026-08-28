@@ -47,7 +47,8 @@
       const column = String(header.dataset.tableColumn || "");
       const fullLabel = String(label.dataset.mflFullTableLabel || label.textContent || "").trim();
       if (!label.dataset.mflFullTableLabel) label.dataset.mflFullTableLabel = fullLabel;
-      const compactLabel = MOBILE_HEADER_LABELS[column]
+      const compactLabel = String(label.dataset.mflMobileTableLabel || "").trim()
+        || MOBILE_HEADER_LABELS[column]
         || MOBILE_HEADER_LABELS_BY_TEXT[fullLabel.toLowerCase()]
         || fullLabel;
       const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";
@@ -61,12 +62,21 @@
     document.querySelectorAll("#tableHead :is(th.selectionCell, th.rowActionsCell)").forEach((header) => {
       if (!(header instanceof HTMLElement)) return;
       if (mobile) {
+        if (header.classList.contains("selectionCell")) {
+          const checkbox = header.querySelector('input[type="checkbox"]');
+          Array.from(header.childNodes).forEach((node) => {
+            if (node !== checkbox) node.remove();
+          });
+        } else {
+          header.replaceChildren();
+        }
         header.style.fontSize = "0px";
         header.style.color = "transparent";
         header.style.textShadow = "none";
         header.style.backgroundImage = "none";
+        header.style.overflow = "hidden";
       } else {
-        removeInlineGeometry(header, ["font-size", "color", "text-shadow", "background-image"]);
+        removeInlineGeometry(header, ["font-size", "color", "text-shadow", "background-image", "overflow"]);
       }
     });
   }
@@ -77,16 +87,16 @@
     const progressionPage = document.getElementById("progressionPage");
     if (progressionPage instanceof HTMLElement) {
       if (mobile) {
-        progressionPage.style.setProperty("--mfl-table-row-height", phone ? "25px" : "27px");
-        progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "30px" : "32px");
+        progressionPage.style.setProperty("--mfl-table-row-height", phone ? "24px" : "26px");
+        progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "28px" : "30px");
       } else {
         progressionPage.style.removeProperty("--mfl-table-row-height");
         progressionPage.style.removeProperty("--mfl-table-row-outer-height");
       }
     }
 
-    const actionSize = phone ? 16 : 18;
-    const actionIconSize = phone ? 10 : 12;
+    const actionSize = phone ? 14 : 16;
+    const actionIconSize = phone ? 8 : 10;
     document.querySelectorAll("#progressionPage .playerTableScroller .playerTableActionsButton").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       if (mobile) {
@@ -113,7 +123,7 @@
       }
     });
 
-    const flagSize = phone ? 10 : 12;
+    const flagSize = phone ? 9 : 10;
     document.querySelectorAll("#progressionPage .playerTableScroller .flagImage").forEach((icon) => {
       if (!(icon instanceof HTMLElement)) return;
       if (mobile) {
@@ -125,17 +135,19 @@
       }
     });
 
-    const markerScale = phone ? 0.5 : 0.625;
+    const markerScale = phone ? 0.42 : 0.5;
     document.querySelectorAll("#progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker)").forEach((marker) => {
       if (!(marker instanceof HTMLElement)) return;
       if (mobile) {
         marker.style.zoom = String(markerScale);
+        marker.style.marginLeft = phone ? "4px" : "5px";
       } else {
         marker.style.removeProperty("zoom");
+        marker.style.removeProperty("margin-left");
       }
     });
 
-    const noteSize = phone ? 8 : 9;
+    const noteSize = phone ? 7 : 8;
     document.querySelectorAll("#progressionPage .playerTableScroller .playerNoteIcon").forEach((icon) => {
       if (!(icon instanceof HTMLElement)) return;
       if (mobile) {
@@ -146,8 +158,8 @@
       }
     });
 
-    const listingBadgeSize = phone ? 14 : 16;
-    const listingIconSize = phone ? 7 : 8;
+    const listingBadgeSize = phone ? 13 : 15;
+    const listingIconSize = phone ? 6 : 7;
     document.querySelectorAll("#progressionPage .playerTableScroller .listingCellContent").forEach((badge) => {
       if (!(badge instanceof HTMLElement)) return;
       if (mobile) {
@@ -176,7 +188,7 @@
       }
     });
 
-    const raritySize = phone ? 4 : 5;
+    const raritySize = phone ? 3 : 4;
     document.querySelectorAll("#progressionPage #tableBody .tableOverallRarityCircle").forEach((marker) => {
       if (!(marker instanceof HTMLElement)) return;
       if (mobile) {
@@ -184,7 +196,7 @@
         marker.style.flex = `0 0 ${size}`;
         marker.style.width = size;
         marker.style.height = size;
-        marker.style.marginRight = phone ? "1px" : "2px";
+        marker.style.marginRight = "1px";
       } else {
         removeInlineGeometry(marker, ["flex", "width", "height", "margin-right"]);
       }
@@ -234,7 +246,7 @@
         if (renderTable.__mflMobileTableInteractions && buildHeader.__mflMobileTableInteractions) return true;
         const originalRenderTable = renderTable;
         const originalBuildHeader = buildHeader;
-        const syncMobileTable = () => window.__mflMobileTableInteractionsRuntime?.sync?.();
+        const syncMobileTable = () => window.__mflMobileTableInteractionsRuntime?.syncNow?.();
         const renderWithMobileInteractions = function() {
           const result = originalRenderTable.apply(this, arguments);
           syncMobileTable();
@@ -266,7 +278,7 @@
       const result = marker.apply(this, arguments);
       installCoreBridge();
       observeTableGeometry();
-      sync();
+      syncNow();
       return result;
     };
     Object.defineProperty(bridgedMarker, "__mflMobileTableInteractionsBridge", { value: true });
@@ -293,8 +305,8 @@
   MOBILE_TABLE_MEDIA.addEventListener("change", onResize);
   PHONE_TABLE_MEDIA.addEventListener("change", onResize);
 
-  window.__mflMobileTableInteractionsRuntime = Object.freeze({ sync, destroy });
+  window.__mflMobileTableInteractionsRuntime = Object.freeze({ sync, syncNow, destroy });
   installCoreLoadedBridge();
   observeTableGeometry();
-  sync();
+  syncNow();
 })();
