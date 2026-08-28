@@ -44,25 +44,23 @@ includes(responsive, "width: 112px;", "Mobile view-button fades must be more pro
 includes(responsive, "width: 84px;", "Mobile Quick Filters fades must be more prominent.");
 includes(responsive, "opacity: 0.92;", "Mobile horizontal cues must use the stronger visible opacity.");
 
-includes(releaseProjection, 'const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({', "The zero-request first-paint projection must own compact phone table labels before bootstrap runs.");
-includes(releaseProjection, 'const MOBILE_TABLE_FULL_LABELS = Object.freeze({', "The zero-request projection must also own full tablet table labels.");
-includes(releaseProjection, 'mobileTableFirstPaintStyle.id = "mflInitialMobileTableFirstPaint";', "The first-paint mobile table contract must be emitted into the document head before bootstrap builds the table.");
+includes(releaseProjection, 'const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({', "The zero-request projection must own compact phone table labels before bootstrap runs.");
+includes(releaseProjection, 'mobileTableFirstPaintStyle.id = "mflResponsiveTableHeadings";', "The width-aware heading stylesheet must persist beyond initial route resolution.");
 includes(releaseProjection, "--mfl-table-header-height: 26px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px;", "First paint must already use the compact mobile header and row geometry.");
 includes(releaseProjection, "--mfl-table-header-height: 24px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px;", "Phone first paint must already use the smallest header and row geometry.");
 includes(releaseProjection, '@media (min-width: 521px) and (max-width: 900px)', "Tablet-width tables must keep full column names while retaining mobile layout.");
 includes(releaseProjection, '@media (max-width: 520px)', "Compact column names must be limited to narrow phone widths.");
 includes(releaseProjection, 'mobileTableTabletLabelRules', "Tablet heading presentation must have an explicit full-name owner.");
 includes(releaseProjection, 'mobileTableCompactLabelRules', "Phone heading presentation must have an explicit compact-name owner.");
-includes(releaseProjection, 'th[data-table-column=\\"${column}\\"] > span:first-child', "Hydrated headers must have semantic pseudo-label ownership instead of depending on active-view nth-child selectors.");
+includes(releaseProjection, 'Object.keys(MOBILE_TABLE_FIRST_PAINT_LABELS).forEach((column) => {', "Tablet semantic headers must explicitly neutralize compact pseudo labels.");
+includes(releaseProjection, '`${selector} { font-size: 10px; }`', "Tablet semantic headers must display their real full text.");
+includes(releaseProjection, '`${selector}::after { content: none; display: none; }`', "Tablet semantic headers must not render a second pseudo label.");
 includes(releaseProjection, 'MOBILE_TABLE_FIRST_PAINT_LABELS.overall', "The phone first-paint Overall column must render OVR before route runtimes load.");
 includes(releaseProjection, 'MOBILE_TABLE_FIRST_PAINT_LABELS.positions', "The phone first-paint Positions column must render POS before route runtimes load.");
-includes(releaseProjection, 'MOBILE_TABLE_FULL_LABELS).forEach', "Tablet semantic headers must use the canonical full labels.");
 includes(releaseProjection, 'data-table-column=\\"listing_price\\"] > span:first-child { font-size: 0; }', "The semantic mobile Listing header must remain blank.");
+excludes(releaseProjection, 'const MOBILE_TABLE_FULL_LABELS', "Tablet headings must use canonical real header text rather than a second full-label pseudo map.");
 for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(releaseProjection, `"${abbreviation}"`, `The first-paint projection must contain the compact ${abbreviation} heading.`);
-}
-for (const fullLabel of ["Overall", "Pace", "Shooting", "Passing", "Dribbling", "Defense", "Physical", "Goalkeeping"]) {
-  includes(releaseProjection, `"${fullLabel}"`, `The tablet first-paint projection must contain the full ${fullLabel} heading.`);
 }
 
 for (const [column, abbreviation] of Object.entries({
@@ -75,8 +73,13 @@ for (const [column, abbreviation] of Object.entries({
   physical: "PHY",
   goalkeeping: "GK",
 })) {
-  includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated mobile table headers must retain ${abbreviation} as the compact form for ${column}.`);
+  includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated table headers must retain ${abbreviation} as the compact form for ${column}.`);
 }
+includes(sharedTableUi, 'const COMPACT_TABLE_HEADING_MEDIA = window.matchMedia("(max-width: 520px)");', "Shared table text must use the same 520px compact-heading breakpoint as generated headers.");
+includes(sharedTableUi, 'const compactHeadings = COMPACT_TABLE_HEADING_MEDIA.matches;', "Shared table text must independently distinguish compact headings from general mobile layout.");
+includes(sharedTableUi, 'const desired = compactHeadings ? compactStatLabel(fullLabel) : fullLabel;', "Shared table text must keep full stat names above phone width.");
+includes(sharedTableUi, 'COMPACT_TABLE_HEADING_MEDIA.addEventListener("change", scheduleMobileTablePresentation);', "Crossing the compact-heading breakpoint must update rendered headings immediately.");
+excludes(sharedTableUi, 'const desired = mobile ? compactStatLabel(fullLabel) : fullLabel;', "The old 900px stat-abbreviation owner must not remain active.");
 includes(mobileTablePresentation, 'document.querySelectorAll("#progressionPage .viewButton[data-view]")', "Generated mobile headers must synchronize the routed active view before the header can paint.");
 includes(mobileTablePresentation, 'button.classList.toggle("active", button.dataset.view === state.view);', "First-paint pseudo headings must follow the actual routed mobile view instead of the static Current Season class.");
 includes(mobileTablePresentation, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Generated table headers must switch to compact names only at phone width.");
@@ -151,4 +154,4 @@ for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, d
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Table headings are now screen-width aware: narrow phones use POS/OVR/PAC/SHO/PAS/DRI/DEF/PHY/GK, while wider mobile/tablet screens keep the full column names from first paint through hydration.");
+console.log("Table headings now have one width-aware owner: narrow phones use compact labels, wider mobile/tablet screens keep the real full header text, and the 900px shared runtime can no longer re-abbreviate them.");
