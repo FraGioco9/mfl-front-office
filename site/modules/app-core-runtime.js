@@ -9263,7 +9263,10 @@ async function startApp() {
     const crossPageNavigation = !runtimeReady
       && String(pageName || "") !== String(state.currentPage || "");
     if (crossPageNavigation) {
-      updateFilterSummary(0);
+      const canonicalFilterSummaryUpdater = Reflect.get(window, "updateFilterSummary");
+      if (typeof canonicalFilterSummaryUpdater === "function") {
+        canonicalFilterSummaryUpdater(0);
+      }
     }
     let previousTableStateSaved = false;
 

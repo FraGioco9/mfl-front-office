@@ -74,25 +74,38 @@ for (const required of [
   'import { replaceRequired, replaceRequiredFunction } from "./app-core-splitter-utils.js";',
   "const crossPageNavigation = !runtimeReady",
   'String(pageName || "") !== String(state.currentPage || "")',
-  "updateFilterSummary(0);",
+  'const canonicalFilterSummaryUpdater = Reflect.get(window, "updateFilterSummary");',
+  'if (typeof canonicalFilterSummaryUpdater === "function") {',
+  "canonicalFilterSummaryUpdater(0);",
   '"cross-page active Filters presentation reset"',
 ]) {
   invariant(ownerSource.includes(required), `Canonical active Filters owner is missing cross-page reset contract: ${required}`);
 }
 
+invariant(
+  !ownerSource.includes("      updateFilterSummary(0);"),
+  "The global route gate must not directly call table-owned updateFilterSummary before the lazy table runtime exists.",
+);
+
 const routeGateStart = coreRuntime.indexOf("const routeRuntimeSetPage = async function setPageWithRouteRuntime");
 const routeResetGuard = coreRuntime.indexOf("const crossPageNavigation = !runtimeReady", routeGateStart);
-const routeResetCall = coreRuntime.indexOf("updateFilterSummary(0);", routeResetGuard);
+const routeUpdaterLookup = coreRuntime.indexOf('const canonicalFilterSummaryUpdater = Reflect.get(window, "updateFilterSummary");', routeResetGuard);
+const routeUpdaterGuard = coreRuntime.indexOf('if (typeof canonicalFilterSummaryUpdater === "function") {', routeUpdaterLookup);
+const routeResetCall = coreRuntime.indexOf("canonicalFilterSummaryUpdater(0);", routeUpdaterGuard);
 const routeSavedState = coreRuntime.indexOf("let previousTableStateSaved = false;", routeGateStart);
 const routeTransitionStart = coreRuntime.indexOf('const runTransition = Reflect.get(window, "__mflRunPageTransition");', routeGateStart);
+const routeGatePrelude = coreRuntime.slice(routeGateStart, routeSavedState);
 invariant(
   routeGateStart >= 0
     && routeResetGuard > routeGateStart
-    && routeResetCall > routeResetGuard
+    && routeUpdaterLookup > routeResetGuard
+    && routeUpdaterGuard > routeUpdaterLookup
+    && routeResetCall > routeUpdaterGuard
     && routeSavedState > routeResetCall
     && routeTransitionStart > routeResetCall
-    && coreRuntime.slice(routeResetGuard, routeResetCall).includes('String(pageName || "") !== String(state.currentPage || "")'),
-  "Generated route gate must reset the Filters button to zero-active presentation synchronously for cross-page navigation before saved-state and transition work.",
+    && coreRuntime.slice(routeResetGuard, routeUpdaterLookup).includes('String(pageName || "") !== String(state.currentPage || "")')
+    && !routeGatePrelude.includes("      updateFilterSummary(0);"),
+  "Generated route gate must reset Filters through an optional lazy-runtime lookup before saved-state and transition work, without a direct table-runtime call that can break non-table navigation.",
 );
 
 for (const required of [
@@ -123,4 +136,4 @@ invariant(!styles.includes("!important"), "Active Filters styles must not use CS
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
-console.log("Active Filters badge, collapsed zero count, centered inactive content, click-time cross-page reset, and canonical highlighted-state ownership validation passed.");
+console.log("Active Filters badge, collapsed zero count, centered inactive content, lazy-runtime-safe click-time reset, and canonical highlighted-state ownership validation passed.");
