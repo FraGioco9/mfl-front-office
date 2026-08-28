@@ -236,6 +236,9 @@
   document.addEventListener("change", (event) => {
     const select = filterSelectForTarget(event.target);
     if (touchNativeSelectMode() && select instanceof HTMLSelectElement) committedFilterSelects.add(select);
+  }, true);
+
+  document.addEventListener("change", (event) => {
     blurFilterSelectWhenClosed(event.target);
   });
 
