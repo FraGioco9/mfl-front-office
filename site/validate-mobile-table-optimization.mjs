@@ -60,7 +60,10 @@ for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]) {
 }
 includes(responsive, "#progressionPage:has(.viewButton[data-view=\"attributes\"].active)", "Compact first-paint stat headings must follow the actual active table view.");
 includes(responsive, "#progressionPage #tableHead th.col-listing > span:first-child {\n    font-size: 0;", "Mobile first paint must keep the Listing header blank.");
-includes(mobileInteractions, 'column === "listing_price" ? "" : MOBILE_HEADER_LABELS[column] || fullLabel', "Hydrated mobile Listing headers must remain blank while other columns use their compact labels.");
+includes(mobileInteractions, 'document.querySelectorAll("#tableHead th > span:first-child")', "The mobile pre-core runtime must compact bootstrap first-paint headers before generated headers replace them.");
+includes(mobileInteractions, "const MOBILE_HEADER_LABELS_BY_TEXT = Object.freeze({", "Bootstrap headers must be compacted from their canonical text even before semantic data-column attributes exist.");
+includes(mobileInteractions, 'const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";', "Bootstrap and generated Listing headers must share the same mobile blank-header rule.");
+includes(mobileInteractions, 'const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;', "Compact header names must be mobile-only and restore canonical desktop text.");
 
 includes(responsive, ':is(th, td).selectionCell input {\n    width: 12px;', "Mobile selection controls must scale with the table.");
 includes(responsive, "background-size: 8px 6px;\n    border-radius: 4px;", "Mobile selection controls must retain the desktop checkbox corner shape.");
@@ -117,4 +120,4 @@ for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, d
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Mobile tables now keep compact first-paint headings, shorter rows, smaller full marker/action geometry, blank mobile Listing headers, price-only mobile Listing tooltips, and unchanged desktop Listing presentation.");
+console.log("Mobile tables now compact bootstrap and generated headers, keep shorter rows and smaller full marker/action geometry, blank mobile Listing headers, price-only mobile Listing tooltips, and unchanged desktop Listing presentation.");
