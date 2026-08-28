@@ -3,11 +3,10 @@
 
 Production emails use the server-generated progression portrait PNG endpoint.
 This preview renderer instead loads the canonical portrait WebP in the browser,
-crops source rows 0..399, removes transparent padding before the visible
-silhouette on the left, then scales the remaining crop to 216px high for a
-high-density raster while preserving its width-to-height proportions.
-Transparent pixels to the right of the silhouette are preserved and may overflow
-the reserved portrait slot.
+crops source rows 0..399, trims fully transparent columns from both the left
+and right sides, then scales the remaining crop to 216px high for a high-density
+raster while preserving its width-to-height proportions. Vertical framing is
+left untouched, and the resulting portrait is centered in its reserved slot.
 """
 
 from __future__ import annotations
@@ -26,12 +25,12 @@ PREVIEW_PORTRAIT_SCRIPT = """
   const HEIGHT = 216;
   const CROP_HEIGHT = 400;
 
-  function transparentLeftInset(image, cropHeight) {
+  function horizontalVisibleBounds(image, cropHeight) {
     const sourceCanvas = document.createElement("canvas");
     sourceCanvas.width = image.naturalWidth;
     sourceCanvas.height = cropHeight;
     const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-    if (!sourceContext) return 0;
+    if (!sourceContext) return [0, image.naturalWidth - 1];
 
     sourceContext.drawImage(
       image,
@@ -52,17 +51,22 @@ PREVIEW_PORTRAIT_SCRIPT = """
         image.naturalWidth,
         cropHeight,
       ).data;
+      let left = image.naturalWidth;
+      let right = -1;
       for (let x = 0; x < image.naturalWidth; x += 1) {
         for (let y = 0; y < cropHeight; y += 1) {
           const alpha = pixels[((y * image.naturalWidth) + x) * 4 + 3];
-          if (alpha > 0) return x;
+          if (alpha <= 0) continue;
+          left = Math.min(left, x);
+          right = Math.max(right, x);
         }
       }
+      if (right >= left) return [left, right];
     } catch (_error) {
       // If a browser blocks pixel reads for a remote file:// preview, keep the
       // portrait visible and fall back to the full-width crop.
     }
-    return 0;
+    return [0, image.naturalWidth - 1];
   }
 
   function loadPortrait(canvas, sourceUrl, fallback, host, useCors) {
@@ -75,26 +79,31 @@ PREVIEW_PORTRAIT_SCRIPT = """
       if (!sourceWidth || !sourceHeight) return;
 
       const cropHeight = Math.max(1, Math.min(CROP_HEIGHT, sourceHeight));
-      const leftInset = transparentLeftInset(image, cropHeight);
-      const alignedSourceWidth = Math.max(1, sourceWidth - leftInset);
+      const [left, right] = horizontalVisibleBounds(image, cropHeight);
+      const trimmedSourceWidth = Math.max(1, right - left + 1);
       const targetWidth = Math.max(
         1,
-        Math.round((alignedSourceWidth * HEIGHT) / cropHeight),
+        Math.round((trimmedSourceWidth * HEIGHT) / cropHeight),
       );
       canvas.width = targetWidth;
       canvas.height = HEIGHT;
-      canvas.style.width = "100%";
+      canvas.style.width = "auto";
+      canvas.style.maxWidth = "100%";
       canvas.style.height = "auto";
-      if (host) host.style.width = "100%";
+      canvas.style.margin = "0 auto";
+      if (host) {
+        host.style.width = "100%";
+        host.style.textAlign = "center";
+      }
 
       const context = canvas.getContext("2d");
       if (!context) return;
       context.clearRect(0, 0, targetWidth, HEIGHT);
       context.drawImage(
         image,
-        leftInset,
+        left,
         0,
-        alignedSourceWidth,
+        trimmedSourceWidth,
         cropHeight,
         0,
         0,
@@ -144,7 +153,7 @@ def local_preview_identity_html(player: emails.PlayerImprovement) -> str:
         f'<canvas data-progression-preview-portrait="{html.escape(source_url)}" '
         f'data-fallback-id="{fallback_id}" width="{emails.PORTRAIT_SIZE_PX}" '
         f'height="{emails.PORTRAIT_SIZE_PX}" '
-        'style="position:relative;display:block;width:100%;height:auto;background:transparent;"></canvas>'
+        'style="position:relative;display:block;width:auto;max-width:100%;height:auto;margin:0 auto;background:transparent;"></canvas>'
         '</div>'
     )
 
@@ -152,8 +161,8 @@ def local_preview_identity_html(player: emails.PlayerImprovement) -> str:
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
         'style="width:100%;border-collapse:collapse;table-layout:fixed;">'
         '<tr>'
-        f'<td width="{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%" valign="top" '
-        f'style="width:{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;">'
+        f'<td width="{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%" align="center" valign="top" '
+        f'style="width:{emails.PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;text-align:center;">'
         f'{portrait}</td>'
         '<td valign="top" style="padding:0;overflow-wrap:anywhere;">'
         f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong>'

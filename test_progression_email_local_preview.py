@@ -22,7 +22,7 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
             changes=(("overall", 70, 71),),
         )
 
-    def test_local_preview_loads_canonical_source_and_aligns_visible_silhouette(self) -> None:
+    def test_local_preview_loads_canonical_source_trims_sides_and_centers_portrait(self) -> None:
         rendered = preview.build_local_preview_html([self.player()])
         self.assertIn(
             "https://d13e14gtps4iwl.cloudfront.net/players/v2/374512/photo.webp",
@@ -31,14 +31,15 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
         self.assertIn('canvas data-progression-preview-portrait=', rendered)
         self.assertIn("const HEIGHT = 216;", rendered)
         self.assertIn("const CROP_HEIGHT = 400;", rendered)
-        self.assertIn("function transparentLeftInset(image, cropHeight)", rendered)
+        self.assertIn("function horizontalVisibleBounds(image, cropHeight)", rendered)
         self.assertIn("sourceContext.getImageData(", rendered)
-        self.assertIn("const leftInset = transparentLeftInset(image, cropHeight);", rendered)
-        self.assertIn("const alignedSourceWidth = Math.max(1, sourceWidth - leftInset);", rendered)
-        self.assertIn("Math.round((alignedSourceWidth * HEIGHT) / cropHeight)", rendered)
-        self.assertIn('canvas.style.width = "100%";', rendered)
-        self.assertIn('canvas.style.height = "auto";', rendered)
-        self.assertIn("leftInset,\n        0,\n        alignedSourceWidth,", rendered)
+        self.assertIn("const [left, right] = horizontalVisibleBounds(image, cropHeight);", rendered)
+        self.assertIn("const trimmedSourceWidth = Math.max(1, right - left + 1);", rendered)
+        self.assertIn("Math.round((trimmedSourceWidth * HEIGHT) / cropHeight)", rendered)
+        self.assertIn('canvas.style.width = "auto";', rendered)
+        self.assertIn('canvas.style.maxWidth = "100%";', rendered)
+        self.assertIn('canvas.style.margin = "0 auto";', rendered)
+        self.assertIn("left,\n        0,\n        trimmedSourceWidth,", rendered)
         self.assertIn('image.crossOrigin = "anonymous";', rendered)
         self.assertIn("loadPortrait(canvas, sourceUrl, fallback, host, false);", rendered)
         self.assertNotIn("/api/progression-email-portrait?player=374512", rendered)
@@ -47,7 +48,8 @@ class ProgressionEmailLocalPreviewTests(unittest.TestCase):
         rendered = preview.build_local_preview_html([self.player()])
         self.assertEqual(emails.PLAYER_PORTRAIT_SLOT_PERCENT, 38)
         self.assertIn('width="38%"', rendered)
-        self.assertIn('width:38%;padding:0 4% 0 0;overflow:hidden;', rendered)
+        self.assertIn('width:38%;padding:0 4% 0 0;overflow:hidden;text-align:center;', rendered)
+        self.assertIn('align="center"', rendered)
         self.assertIn('padding:3% 2%;vertical-align:top;overflow:hidden;', rendered)
         self.assertIn('>Preview Player</strong>', rendered)
         self.assertIn('background:transparent;overflow:hidden;', rendered)
