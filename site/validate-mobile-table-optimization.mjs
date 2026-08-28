@@ -13,7 +13,7 @@ function excludes(source, unexpected, message) {
   if (source.includes(unexpected)) throw new Error(message);
 }
 
-const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appConfig, mobileTablePresentation, evaluationChunk, buildNormalizer] = await Promise.all([
+const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appConfig, mobileTablePresentation, evaluationChunk, buildNormalizer, releaseProjection] = await Promise.all([
   read("responsive.css"),
   read("shared-table-ui-runtime.js"),
   read("mobile-table-interactions-runtime.js"),
@@ -23,24 +23,38 @@ const [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, appCo
   read("modules/app-core-mobile-table-presentation.js"),
   read("modules/app-core-evaluation-chunk.js"),
   read("modules/app-core-build-normalizer.js"),
+  read("sync-release-projections.mjs"),
 ]);
 
 includes(responsive, "#progressionPage .playerTableScroller,\n  #progressionPage .tableScroller,", "The real player table scroller must own mobile horizontal scrolling directly from responsive CSS.");
 includes(responsive, "overflow-x: auto;\n    overflow-y: hidden;\n    overscroll-behavior-x: contain;", "Player tables must pan laterally without waiting for runtime class mutation.");
 includes(responsive, "min-width: 760px;", "Mobile player tables must remain wider than tablet viewports when needed.");
 includes(responsive, "min-width: 620px;", "Phone player tables must preserve a horizontally pannable width.");
-includes(mobileInteractions, 'progressionPage.style.setProperty("--mfl-table-row-height", phone ? "24px" : "26px");', "Hydrated mobile player-table rows must be shorter than the previous mobile geometry.");
-includes(mobileInteractions, 'progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "28px" : "30px");', "Hydrated mobile player-table row spacing must shrink with the content row.");
+includes(mobileInteractions, 'progressionPage.style.setProperty("--mfl-table-header-height", phone ? "24px" : "26px");', "Hydrated mobile table headers must be shorter than desktop headers.");
+includes(mobileInteractions, 'progressionPage.style.setProperty("--mfl-table-row-height", phone ? "22px" : "24px");', "Hydrated mobile player-table rows must be shorter than the previous mobile geometry.");
+includes(mobileInteractions, 'progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "26px" : "28px");', "Hydrated mobile player-table row spacing must shrink with the content row.");
 includes(responsive, "--mfl-table-col-listing: 4%;", "The mobile Listing column must stay narrow.");
 includes(responsive, "--mfl-table-col-positions: 9.5%;", "The mobile Positions column must retain additional width.");
 includes(responsive, "#progressionPage #tableBody .listingCellTableHost {\n    justify-content: center;\n    width: 100%;", "The Listing bag must be horizontally centered in its column.");
 includes(responsive, ".listingCellContent {\n    justify-content: center;\n    width: 18px;\n    min-width: 18px;\n    max-width: 18px;\n    height: 18px;", "The first responsive Listing badge background must be square rather than rectangular.");
-includes(mobileInteractions, 'const listingBadgeSize = phone ? 13 : 15;', "Hydrated Listing badges must shrink further while remaining square.");
+includes(mobileInteractions, 'const listingBadgeSize = phone ? 12 : 13;', "Hydrated Listing badges must shrink further while remaining square.");
 includes(responsive, "linear-gradient(to right, #000 0, #000 calc(100% - 56px), transparent 100%)", "First paint must show the player-table right-edge fade before hydration.");
 includes(sharedTableUi, "const PLAYER_TABLE_FADE_DISTANCE = 56;", "Hydrated player-table fades must retain the stronger first-paint fade distance.");
 includes(responsive, "width: 112px;", "Mobile view-button fades must be more prominent.");
 includes(responsive, "width: 84px;", "Mobile Quick Filters fades must be more prominent.");
 includes(responsive, "opacity: 0.92;", "Mobile horizontal cues must use the stronger visible opacity.");
+
+includes(releaseProjection, 'const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({', "The zero-request first-paint projection must own compact mobile table labels before bootstrap runs.");
+includes(releaseProjection, 'mobileTableFirstPaintStyle.id = "mflInitialMobileTableFirstPaint";', "The first-paint mobile table contract must be emitted into the document head before bootstrap builds the table.");
+includes(releaseProjection, "--mfl-table-header-height: 26px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px;", "First paint must already use the compact mobile header and row geometry.");
+includes(releaseProjection, "--mfl-table-header-height: 24px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px;", "Phone first paint must already use the smallest header and row geometry.");
+includes(releaseProjection, 'th[data-table-column=\\"${column}\\"] > span:first-child', "Hydrated headers must have semantic pseudo-label ownership instead of depending on active-view nth-child selectors.");
+includes(releaseProjection, 'th:nth-child(9) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.overall', "The static first-paint Overall column must render OVR before route runtimes load.");
+includes(releaseProjection, 'th:nth-child(6) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.positions', "The static first-paint Positions column must render POS before route runtimes load.");
+includes(releaseProjection, '#progressionPage #tableHead th[data-table-column=\\"listing_price\\"] > span:first-child { font-size: 0; }', "The semantic mobile Listing header must remain blank.");
+for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
+  includes(releaseProjection, `"${abbreviation}"`, `The first-paint projection must contain the compact ${abbreviation} heading.`);
+}
 
 for (const [column, abbreviation] of Object.entries({
   overall: "OVR",
@@ -54,33 +68,31 @@ for (const [column, abbreviation] of Object.entries({
 })) {
   includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated mobile table headers must abbreviate ${column} as ${abbreviation}.`);
 }
-includes(responsive, '#tableHead th:nth-child(6) > span:first-child::after {\n    content: "POS";', "Mobile first paint must label Positions as POS through its pre-hydration pseudo-element.");
-for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]) {
-  includes(responsive, `content: "${abbreviation}";`, `First paint must already include the compact ${abbreviation} pseudo heading.`);
-}
 includes(mobileTablePresentation, 'document.querySelectorAll("#progressionPage .viewButton[data-view]")', "Generated mobile headers must synchronize the routed active view before the header can paint.");
 includes(mobileTablePresentation, 'button.classList.toggle("active", button.dataset.view === state.view);', "First-paint pseudo headings must follow the actual routed mobile view instead of the static Current Season class.");
 includes(mobileTablePresentation, 'label.dataset.mflMobileTableLabel = mobileLabel;', "Generated headers must publish their semantic mobile name at construction time.");
-includes(responsive, "#progressionPage #tableHead th.col-listing > span:first-child {\n    font-size: 0;", "Mobile first paint must keep the Listing header blank.");
-includes(mobileInteractions, 'document.querySelectorAll("#tableHead th > span:first-child")', "The mobile pre-core runtime must compact bootstrap first-paint headers before generated headers replace them.");
-includes(mobileInteractions, 'String(label.dataset.mflMobileTableLabel || "").trim()', "Hydrated headers must prefer the semantic mobile label produced during header construction.");
+includes(mobileInteractions, 'String(label.dataset.mflMobileTableLabel || "").trim()', "Hydrated headers must retain their semantic mobile label metadata.");
 includes(mobileInteractions, 'const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";', "Bootstrap and generated Listing headers must share the same mobile blank-header rule.");
-includes(mobileInteractions, 'const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;', "Compact header names must be mobile-only and restore canonical desktop text.");
+includes(mobileInteractions, 'const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;', "Compact header names must remain mobile-only and restore canonical desktop text.");
 
 includes(responsive, ':is(th, td).selectionCell input {\n    width: 12px;', "Mobile selection controls must scale with the table.");
 includes(responsive, "background-size: 8px 6px;\n    border-radius: 4px;", "Mobile selection controls must retain the desktop checkbox corner shape.");
 includes(responsive, "#tableHead :is(th.selectionCell, th.rowActionsCell)::before,\n  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after {\n    content: none;", "Selection/action headers must not emit stray pseudo-element dots.");
+includes(releaseProjection, ':is(th.selectionCell, th.rowActionsCell)::before, #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after { content: none; display: none;', "The head first-paint contract must suppress selection/action pseudo artifacts before runtime.");
 includes(mobileInteractions, 'Array.from(header.childNodes).forEach((node) => {', "Mobile selection headers must remove any residual non-checkbox node that could render as a dot.");
 includes(mobileInteractions, 'header.replaceChildren();', "The empty mobile action header must remain structurally empty.");
+includes(mobileInteractions, 'header.style.lineHeight = "0";', "Mobile selection/action headers must have no text line box that could render a residual dot.");
 includes(mobileInteractions, 'header.style.color = "transparent";', "Mobile selection/action headers must neutralize residual currentColor artifacts.");
-includes(mobileInteractions, 'const actionSize = phone ? 14 : 16;', "The playerTableActionsButton must scale further on mobile and phone widths.");
-includes(mobileInteractions, 'const actionIconSize = phone ? 8 : 10;', "The playerTableActionsButton glyph must scale with its compact button.");
-includes(mobileInteractions, 'const markerScale = phone ? 0.42 : 0.5;', "The full retiring/retired and new-mint marker must scale further, including pseudo-element artwork.");
-includes(mobileInteractions, 'marker.style.zoom = String(markerScale);', "Retirement/new-mint marker scaling must affect pseudo-elements as well as child images/SVGs.");
-includes(mobileInteractions, 'const flagSize = phone ? 9 : 10;', "Mobile table flags must continue scaling with the compact row.");
-includes(mobileInteractions, 'const noteSize = phone ? 7 : 8;', "Mobile player-note icons must scale down with the rest of table chrome.");
-includes(mobileInteractions, 'const listingIconSize = phone ? 6 : 7;', "Mobile Listing icons must scale with the smaller square badge.");
-includes(mobileInteractions, 'const raritySize = phone ? 3 : 4;', "Mobile rarity markers must scale with the shorter rows.");
+includes(mobileInteractions, 'const actionSize = phone ? 12 : 14;', "The playerTableActionsButton must scale further on mobile and phone widths.");
+includes(mobileInteractions, 'const actionIconSize = phone ? 7 : 8;', "The playerTableActionsButton glyph must scale with its compact button.");
+includes(mobileInteractions, 'const markerSize = phone ? 6 : 7;', "Retiring, retired, new-mint, and emoji markers must use explicit compact mobile dimensions.");
+includes(mobileInteractions, 'marker.querySelectorAll("img, svg").forEach((icon) => {', "Retirement/new-mint child artwork must be explicitly scaled rather than relying on inherited geometry.");
+excludes(mobileInteractions, 'marker.style.zoom = String(', "Retirement markers must not rely on zoom for mobile sizing.");
+includes(mobileInteractions, 'const flagSize = phone ? 8 : 9;', "Mobile table flags must continue scaling with the compact row.");
+includes(mobileInteractions, 'const noteSize = phone ? 6 : 7;', "Mobile player-note icons must scale down with the rest of table chrome.");
+includes(mobileInteractions, 'const listingIconSize = phone ? 5 : 6;', "Mobile Listing icons must scale with the smaller square badge.");
+includes(mobileInteractions, 'const raritySize = phone ? 2 : 3;', "Mobile rarity markers must scale with the shorter rows.");
+includes(mobileInteractions, 'const sortArrowScale = phone ? 0.55 : 0.65;', "Mobile sort arrows must scale with the compact headers.");
 includes(mobileInteractions, 'const syncMobileTable = () => window.__mflMobileTableInteractionsRuntime?.syncNow?.();', "Header and row rendering must apply compact mobile geometry synchronously before paint.");
 includes(mobileInteractions, 'window.__mflMobileTableInteractionsRuntime = Object.freeze({ sync, syncNow, destroy });', "The render bridge must expose the synchronous mobile first-paint path.");
 includes(mobileInteractions, "syncNow();\n})();", "The mobile table runtime must prime compact geometry before the route core renders rows.");
@@ -122,9 +134,9 @@ excludes(mobileTablePresentation, "For Sale at", "The mobile-only Listing render
 includes(buildNormalizer, "const tablePresentationArtifacts = addMobileTablePresentation(tableArtifacts);", "Canonical core generation must apply mobile table presentation at build time.");
 includes(appConfig, '"/mobile-table-interactions-runtime.js"', "Every table route must retain the render-geometry sync bridge.");
 
-for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, mobileTablePresentation, evaluationChunk]) {
+for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, dropdowns, mobileTablePresentation, evaluationChunk, releaseProjection]) {
   excludes(source, "!important", "Mobile table optimization must not introduce priority overrides.");
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Mobile tables now synchronize routed first-paint pseudo headings before insertion, strip residual selection-header nodes, and apply shorter rows plus smaller action/retirement chrome synchronously before paint.");
+console.log("Mobile tables now own compact headings in the zero-request first-paint projection, prevent OVR/OVR duplication through semantic header pseudo-labels, suppress selection-header artifacts, and use shorter headers/rows plus smaller action and retirement chrome.");
