@@ -44,16 +44,25 @@ includes(responsive, "width: 112px;", "Mobile view-button fades must be more pro
 includes(responsive, "width: 84px;", "Mobile Quick Filters fades must be more prominent.");
 includes(responsive, "opacity: 0.92;", "Mobile horizontal cues must use the stronger visible opacity.");
 
-includes(releaseProjection, 'const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({', "The zero-request first-paint projection must own compact mobile table labels before bootstrap runs.");
+includes(releaseProjection, 'const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({', "The zero-request first-paint projection must own compact phone table labels before bootstrap runs.");
+includes(releaseProjection, 'const MOBILE_TABLE_FULL_LABELS = Object.freeze({', "The zero-request projection must also own full tablet table labels.");
 includes(releaseProjection, 'mobileTableFirstPaintStyle.id = "mflInitialMobileTableFirstPaint";', "The first-paint mobile table contract must be emitted into the document head before bootstrap builds the table.");
 includes(releaseProjection, "--mfl-table-header-height: 26px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px;", "First paint must already use the compact mobile header and row geometry.");
 includes(releaseProjection, "--mfl-table-header-height: 24px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px;", "Phone first paint must already use the smallest header and row geometry.");
+includes(releaseProjection, '@media (min-width: 521px) and (max-width: 900px)', "Tablet-width tables must keep full column names while retaining mobile layout.");
+includes(releaseProjection, '@media (max-width: 520px)', "Compact column names must be limited to narrow phone widths.");
+includes(releaseProjection, 'mobileTableTabletLabelRules', "Tablet heading presentation must have an explicit full-name owner.");
+includes(releaseProjection, 'mobileTableCompactLabelRules', "Phone heading presentation must have an explicit compact-name owner.");
 includes(releaseProjection, 'th[data-table-column=\\"${column}\\"] > span:first-child', "Hydrated headers must have semantic pseudo-label ownership instead of depending on active-view nth-child selectors.");
-includes(releaseProjection, 'th:nth-child(9) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.overall', "The static first-paint Overall column must render OVR before route runtimes load.");
-includes(releaseProjection, 'th:nth-child(6) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.positions', "The static first-paint Positions column must render POS before route runtimes load.");
-includes(releaseProjection, '#progressionPage #tableHead th[data-table-column=\\"listing_price\\"] > span:first-child { font-size: 0; }', "The semantic mobile Listing header must remain blank.");
+includes(releaseProjection, 'MOBILE_TABLE_FIRST_PAINT_LABELS.overall', "The phone first-paint Overall column must render OVR before route runtimes load.");
+includes(releaseProjection, 'MOBILE_TABLE_FIRST_PAINT_LABELS.positions', "The phone first-paint Positions column must render POS before route runtimes load.");
+includes(releaseProjection, 'MOBILE_TABLE_FULL_LABELS).forEach', "Tablet semantic headers must use the canonical full labels.");
+includes(releaseProjection, 'data-table-column=\\"listing_price\\"] > span:first-child { font-size: 0; }', "The semantic mobile Listing header must remain blank.");
 for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(releaseProjection, `"${abbreviation}"`, `The first-paint projection must contain the compact ${abbreviation} heading.`);
+}
+for (const fullLabel of ["Overall", "Pace", "Shooting", "Passing", "Dribbling", "Defense", "Physical", "Goalkeeping"]) {
+  includes(releaseProjection, `"${fullLabel}"`, `The tablet first-paint projection must contain the full ${fullLabel} heading.`);
 }
 
 for (const [column, abbreviation] of Object.entries({
@@ -66,19 +75,22 @@ for (const [column, abbreviation] of Object.entries({
   physical: "PHY",
   goalkeeping: "GK",
 })) {
-  includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated mobile table headers must abbreviate ${column} as ${abbreviation}.`);
+  includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated mobile table headers must retain ${abbreviation} as the compact form for ${column}.`);
 }
 includes(mobileTablePresentation, 'document.querySelectorAll("#progressionPage .viewButton[data-view]")', "Generated mobile headers must synchronize the routed active view before the header can paint.");
 includes(mobileTablePresentation, 'button.classList.toggle("active", button.dataset.view === state.view);', "First-paint pseudo headings must follow the actual routed mobile view instead of the static Current Season class.");
-includes(mobileTablePresentation, 'label.dataset.mflMobileTableLabel = mobileLabel;', "Generated headers must publish their semantic mobile name at construction time.");
-includes(mobileInteractions, 'String(label.dataset.mflMobileTableLabel || "").trim()', "Hydrated headers must retain their semantic mobile label metadata.");
+includes(mobileTablePresentation, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Generated table headers must switch to compact names only at phone width.");
+includes(mobileTablePresentation, 'label.dataset.mflMobileTableLabel = mobileLabel;', "Generated headers must publish their semantic compact name at construction time.");
+includes(mobileTablePresentation, ': compactTableHeadings\n          ? compactLabel\n          : fullLabel;', "Generated tablet headers must preserve full names while narrow phones use compact names.");
+includes(mobileInteractions, 'String(label.dataset.mflMobileTableLabel || "").trim()', "Hydrated headers must retain their semantic compact label metadata.");
+includes(mobileInteractions, 'const compact = PHONE_TABLE_MEDIA.matches;', "Runtime heading selection must use the same phone-width breakpoint as first paint.");
 includes(mobileInteractions, 'const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";', "Bootstrap and generated Listing headers must share the same mobile blank-header rule.");
-includes(mobileInteractions, 'const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;', "Compact header names must remain mobile-only and restore canonical desktop text.");
+includes(mobileInteractions, ': compact\n            ? compactLabel\n            : fullLabel;', "Hydrated tablet headings must use full names and narrow phones must use compact names.");
 
 includes(responsive, ':is(th, td).selectionCell input {\n    width: 12px;', "Mobile selection controls must scale with the table.");
 includes(responsive, "background-size: 8px 6px;\n    border-radius: 4px;", "Mobile selection controls must retain the desktop checkbox corner shape.");
 includes(responsive, "#tableHead :is(th.selectionCell, th.rowActionsCell)::before,\n  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after {\n    content: none;", "Selection/action headers must not emit stray pseudo-element dots.");
-includes(releaseProjection, ':is(th.selectionCell, th.rowActionsCell)::before, #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after { content: none; display: none;', "The head first-paint contract must suppress selection/action pseudo artifacts before runtime.");
+includes(releaseProjection, ':is(th.selectionCell, th.rowActionsCell)::before, ${mobileTableSemanticHead} :is(th.selectionCell, th.rowActionsCell)::after { content: none; display: none;', "The head first-paint contract must suppress selection/action pseudo artifacts before runtime.");
 includes(mobileInteractions, 'Array.from(header.childNodes).forEach((node) => {', "Mobile selection headers must remove any residual non-checkbox node that could render as a dot.");
 includes(mobileInteractions, 'header.replaceChildren();', "The empty mobile action header must remain structurally empty.");
 includes(mobileInteractions, 'header.style.lineHeight = "0";', "Mobile selection/action headers must have no text line box that could render a residual dot.");
@@ -120,8 +132,8 @@ includes(mobileInteractions, "resizeObserver = new ResizeObserver(() => sync());
 excludes(mobileTablePresentation, "header.dataset.tableColumn", "Generated table headers must never reference an undefined header variable during refresh.");
 includes(mobileTablePresentation, 'cell.dataset.tableColumn = column;', "Generated table headers must assign semantic identity to the actual header cell.");
 includes(mobileTablePresentation, 'label.dataset.mflFullTableLabel = fullLabel;', "Generated headers must retain their desktop label for breakpoint restoration.");
-includes(mobileTablePresentation, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Generated table presentation must explicitly gate compact behavior to mobile.");
-includes(mobileTablePresentation, 'positions: "POS"', "Generated mobile table headers must render Positions as POS.");
+includes(mobileTablePresentation, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Generated table presentation must explicitly gate mobile-only behavior to mobile widths.");
+includes(mobileTablePresentation, 'positions: "POS"', "Generated phone table headers must render Positions as POS.");
 for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]) {
   includes(mobileTablePresentation, `: "${abbreviation}"`, `Generated mobile table presentation must contain ${abbreviation}.`);
 }
@@ -139,4 +151,4 @@ for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, d
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Mobile tables now own compact headings in the zero-request first-paint projection, prevent OVR/OVR duplication through semantic header pseudo-labels, suppress selection-header artifacts, and use shorter headers/rows plus smaller action and retirement chrome.");
+console.log("Table headings are now screen-width aware: narrow phones use POS/OVR/PAC/SHO/PAS/DRI/DEF/PHY/GK, while wider mobile/tablet screens keep the full column names from first paint through hydration.");
