@@ -1,8 +1,11 @@
 create table if not exists public.wallet_opt_ins (
   wallet_address text primary key,
+  agent_name text,
   opted_in_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
+
+alter table public.wallet_opt_ins add column if not exists agent_name text;
 
 create table if not exists public.wallet_permissions (
   wallet_address text primary key,
