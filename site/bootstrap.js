@@ -898,6 +898,7 @@
 
   void (async () => {
     try {
+      await loadRuntime("/date-picker-runtime.js");
       await Promise.all([
         loadRuntime("/route-core-loader-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),

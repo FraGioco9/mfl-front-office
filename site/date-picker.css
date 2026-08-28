@@ -1,0 +1,402 @@
+/* Shared Baraccano-style calendar owner for MFL Front Office date controls. */
+
+:root {
+  --mfl-date-picker-width: 272px;
+}
+
+.mflDateControl {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.mflDateControl > input[data-mfl-date-source="true"] {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  visibility: hidden;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+.mflDateControl > .mflDateInput {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding-right: 42px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mflDateControl > .mflDateInput:is(:focus, :focus-visible, [data-mfl-date-picker-open="true"]):not(:disabled):not([readonly]) {
+  outline: 0;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.mflDateControl > .mflDateInput[aria-invalid="true"]:not(:focus) {
+  border-color: var(--danger);
+}
+
+.mflDatePickerToggle {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 8px;
+  display: grid;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  line-height: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.mflDatePickerToggle:is(:hover, :focus, :focus-visible, :active) {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.mflDatePickerToggle:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.mflDatePickerToggle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.mflDatePickerPopover {
+  position: fixed;
+  z-index: var(--mfl-z-critical-modal);
+  box-sizing: border-box;
+  width: var(--mfl-date-picker-width);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  padding: 9px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 28%), 0 0 0 1px color-mix(in srgb, var(--text) 4%, transparent);
+  font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+  user-select: none;
+}
+
+:root[data-theme="dark"] .mflDatePickerPopover {
+  box-shadow: 0 18px 48px rgb(0 0 0 / 48%), 0 0 0 1px color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.mflDatePickerPopover[hidden] {
+  display: none;
+}
+
+.mflDatePickerPopover[data-placement="below"] {
+  transform-origin: top left;
+}
+
+.mflDatePickerPopover[data-placement="above"] {
+  transform-origin: bottom left;
+}
+
+.mflDatePickerHeader {
+  display: grid;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 34px 34px;
+  align-items: center;
+  min-height: 30px;
+  margin-bottom: 5px;
+  column-gap: 2px;
+}
+
+.mflDatePickerMonth {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mflDatePickerMonth:hover:not(:disabled),
+.mflDatePickerMonth:focus-visible:not(:disabled),
+.mflDatePickerMonth[aria-expanded="true"] {
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.mflDatePickerMonth:disabled {
+  background: transparent;
+  color: var(--text);
+  cursor: default;
+  opacity: 1;
+}
+
+.mflDatePickerNav,
+.mflDatePickerDay,
+.mflDatePickerOption,
+.mflDatePickerFooter button {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mflDatePickerNav {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  place-items: center;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.mflDatePickerNav:hover,
+.mflDatePickerNav:focus-visible {
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.mflDatePickerNav svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.mflDatePickerWeekdays,
+.mflDatePickerGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.mflDatePickerWeekdays {
+  margin-bottom: 2px;
+}
+
+.mflDatePickerWeekdays span {
+  display: grid;
+  height: 20px;
+  place-items: center;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mflDatePickerDay {
+  display: grid;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mflDatePickerDay[data-outside-month="true"] {
+  color: var(--text-soft);
+  opacity: 0.62;
+}
+
+.mflDatePickerDay:hover:not(:disabled),
+.mflDatePickerDay:focus-visible:not(:disabled) {
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--text);
+  opacity: 1;
+}
+
+.mflDatePickerDay[aria-current="date"] {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.mflDatePickerDay[aria-selected="true"] {
+  background: var(--primary);
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.mflDatePickerDay[aria-selected="true"]:hover,
+.mflDatePickerDay[aria-selected="true"]:focus-visible {
+  background: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.mflDatePickerDay:disabled {
+  color: var(--text-soft);
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.mflDatePickerOptionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 32px;
+  align-content: start;
+  gap: 4px;
+  max-height: 214px;
+  padding: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.mflDatePickerOptionGrid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mflDatePickerOptionGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mflDatePickerOptionGrid::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.mflDatePickerOptionGrid::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+.mflDatePickerOption {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border-radius: 4px;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mflDatePickerMonthOption {
+  text-transform: capitalize;
+}
+
+.mflDatePickerOption:hover,
+.mflDatePickerOption:focus-visible {
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.mflDatePickerOption[aria-selected="true"] {
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mflDatePickerOption[aria-selected="true"]:hover,
+.mflDatePickerOption[aria-selected="true"]:focus-visible {
+  background: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.mflDatePickerFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.mflDatePickerFooter button {
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mflDatePickerFooter button:hover:not(:disabled),
+.mflDatePickerFooter button:focus-visible:not(:disabled) {
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--primary-hover);
+}
+
+.mflDatePickerFooter button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

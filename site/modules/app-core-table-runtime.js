@@ -1094,12 +1094,14 @@ function buildNumberInput(value = "", placeholder = "Value") {
 }
 
 function buildDateInput(value = "") {
-  const input = document.createElement("input");
-  input.type = "date";
-  input.className = "dateValue";
-  input.dataset.filterValue = "true";
-  input.value = value;
-  return input;
+  const datePicker = window.__mflDatePickerRuntime;
+  if (!datePicker || typeof datePicker.createControl !== "function") {
+    throw new Error("Shared date picker runtime is unavailable.");
+  }
+  return datePicker.createControl(
+    value,
+    state.settingsDateFormat === "MDY" ? "MDY" : "DMY",
+  );
 }
 
 function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
@@ -1188,7 +1190,9 @@ function replaceOperatorSelect(rule, column) {
 }
 
 function valueControlElement(rule) {
-  return rule.querySelector("[data-filter-value-group]") || rule.querySelector("[data-filter-value]");
+  return rule.querySelector("[data-filter-value-group]")
+    || rule.querySelector("[data-mfl-date-control]")
+    || rule.querySelector("[data-filter-value]");
 }
 
 function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
@@ -1196,6 +1200,7 @@ function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
   const operator = rule.querySelector("[data-filter-operator]").value;
   const newValue = buildValueControl(column, savedValue, savedValueTo, operator);
   oldValue.replaceWith(newValue);
+  syncDatePickerControls();
 }
 
 function tableAddFilterRuleOwner(column, options = {}) {
@@ -1252,12 +1257,13 @@ function tableAddFilterRuleOwner(column, options = {}) {
   rule.appendChild(value);
   rule.appendChild(remove);
   filterRules.appendChild(rule);
+  syncDatePickerControls();
   refreshRuleConnectors();
   populateAddFilterSelect();
   refreshRuleColumnSelects();
 
   if (options.focus !== false) {
-    (value.querySelector("[data-filter-value]") || value).focus();
+    (rule.querySelector("[data-mfl-date-display]") || value.querySelector("[data-filter-value]") || value).focus();
   }
 }
 
@@ -1447,7 +1453,9 @@ function tableOpenFiltersOwner() {
   state.filterDraftRules = readFilterDraftRules();
   document.body.classList.add("filtersOpen");
   showModal(filtersModal);
-  const firstInput = filterRules.querySelector("input") || addFilterSelect;
+  const firstInput = filterRules.querySelector("[data-mfl-date-display]")
+    || filterRules.querySelector("input:not([data-mfl-date-source])")
+    || addFilterSelect;
 
   if (firstInput) {
     firstInput.focus();

@@ -1,6 +1,7 @@
 @import url("/styles-base.css");
 @import url("/scrollbars.css");
 @import url("/dropdowns.css");
+@import url("/date-picker.css");
 @import url("/controls.css");
 @import url("/footer.css");
 @import url("/loading.css");
