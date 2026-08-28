@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [motion, styles, ownerSource, buildNormalizer, tableRuntime, filterRuntime, sharedTableUi, controls] = await Promise.all([
+const [motion, styles, ownerSource, buildNormalizer, coreRuntime, tableRuntime, filterRuntime, sharedTableUi, controls] = await Promise.all([
   read("./motion.css"),
   read("./filter-controls.css"),
   read("./modules/app-core-filter-control-state.js"),
   read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./filter-controls-runtime.js"),
   read("./shared-table-ui-runtime.js"),
@@ -70,6 +71,31 @@ invariant(
 );
 
 for (const required of [
+  'import { replaceRequired, replaceRequiredFunction } from "./app-core-splitter-utils.js";',
+  "const crossPageNavigation = !runtimeReady",
+  'String(pageName || "") !== String(state.currentPage || "")',
+  "updateFilterSummary(0);",
+  '"cross-page active Filters presentation reset"',
+]) {
+  invariant(ownerSource.includes(required), `Canonical active Filters owner is missing cross-page reset contract: ${required}`);
+}
+
+const routeGateStart = coreRuntime.indexOf("const routeRuntimeSetPage = async function setPageWithRouteRuntime");
+const routeResetGuard = coreRuntime.indexOf("const crossPageNavigation = !runtimeReady", routeGateStart);
+const routeResetCall = coreRuntime.indexOf("updateFilterSummary(0);", routeResetGuard);
+const routeSavedState = coreRuntime.indexOf("let previousTableStateSaved = false;", routeGateStart);
+const routeTransitionStart = coreRuntime.indexOf('const runTransition = Reflect.get(window, "__mflRunPageTransition");', routeGateStart);
+invariant(
+  routeGateStart >= 0
+    && routeResetGuard > routeGateStart
+    && routeResetCall > routeResetGuard
+    && routeSavedState > routeResetCall
+    && routeTransitionStart > routeResetCall
+    && coreRuntime.slice(routeResetGuard, routeResetCall).includes('String(pageName || "") !== String(state.currentPage || "")'),
+  "Generated route gate must reset the Filters button to zero-active presentation synchronously for cross-page navigation before saved-state and transition work.",
+);
+
+for (const required of [
   "function syncFilterSummaryNow() {",
   "const count = activeFilterCountFromDialog();",
   'const canonicalUpdater = Reflect.get(window, "updateFilterSummary");',
@@ -97,4 +123,4 @@ invariant(!styles.includes("!important"), "Active Filters styles must not use CS
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
-console.log("Active Filters badge, collapsed zero count, centered inactive content, and canonical highlighted-state ownership validation passed.");
+console.log("Active Filters badge, collapsed zero count, centered inactive content, click-time cross-page reset, and canonical highlighted-state ownership validation passed.");

@@ -1,6 +1,6 @@
 // @ts-check
 
-import { replaceRequiredFunction } from "./app-core-splitter-utils.js";
+import { replaceRequired, replaceRequiredFunction } from "./app-core-splitter-utils.js";
 
 export function addActiveFilterControlState(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
@@ -9,7 +9,7 @@ export function addActiveFilterControlState(artifacts) {
     throw new Error("Cannot add active Filters control state to an empty application core.");
   }
 
-  const normalizedCore = replaceRequiredFunction(
+  const activeFilterCore = replaceRequiredFunction(
     core,
     "updateFilterSummary",
     `function updateFilterSummary(count = activeFilterCount()) {
@@ -21,6 +21,20 @@ export function addActiveFilterControlState(artifacts) {
   openFiltersButton?.classList.toggle("hasActiveFilters", active);
 }`,
     "Active Filters count and highlighted state",
+  );
+
+  const normalizedCore = replaceRequired(
+    activeFilterCore,
+    `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    let previousTableStateSaved = false;`,
+    `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    const crossPageNavigation = !runtimeReady
+      && String(pageName || "") !== String(state.currentPage || "");
+    if (crossPageNavigation) {
+      updateFilterSummary(0);
+    }
+    let previousTableStateSaved = false;`,
+    "cross-page active Filters presentation reset",
   );
 
   return Object.freeze({ ...input, core: normalizedCore });

@@ -9260,6 +9260,11 @@ async function startApp() {
   const routeRuntimeSetPage = async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    const crossPageNavigation = !runtimeReady
+      && String(pageName || "") !== String(state.currentPage || "");
+    if (crossPageNavigation) {
+      updateFilterSummary(0);
+    }
     let previousTableStateSaved = false;
 
     if (!runtimeReady) {
