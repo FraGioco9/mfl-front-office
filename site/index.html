@@ -28,6 +28,44 @@
           "current-season": "current",
           "all-time": "all",
         });
+        const MOBILE_TABLE_FIRST_PAINT_LABELS = Object.freeze({
+          positions: "POS",
+          overall: "OVR",
+          pace: "PAC",
+          shooting: "SHO",
+          passing: "PAS",
+          dribbling: "DRI",
+          defense: "DEF",
+          physical: "PHY",
+          goalkeeping: "GK",
+        });
+        const mobileTableFirstPaintStyle = document.createElement("style");
+        const mobileTableFirstPaintHead = 'html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage #tableHead';
+        const mobileTableFirstPaintStatHead = 'html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page][data-initial-table-view]:not([data-initial-table-view="contracts"]) #progressionPage #tableHead';
+        const mobileTableFirstPaintRules = [
+          '#progressionPage { --mfl-mobile-table-header-font-size: 10px; --mfl-table-header-height: 26px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px; }',
+          `${mobileTableFirstPaintHead} th:nth-child(5) > span:first-child { font-size: 0; }`,
+          '#progressionPage #tableHead th[data-table-column="listing_price"] > span:first-child { font-size: 0; }',
+          '#progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell) { font-size: 0; line-height: 0; color: transparent; text-shadow: none; background-image: none; overflow: hidden; }',
+          '#progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::before, #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after { content: none; display: none; width: 0; height: 0; margin: 0; padding: 0; border: 0; background: none; }',
+        ];
+        const addMobileTableFirstPaintLabel = (selector, label) => {
+          mobileTableFirstPaintRules.push(
+            `${selector} { font-size: 0; }`,
+            `${selector}::after { content: ${JSON.stringify(label)}; font-size: var(--mfl-mobile-table-header-font-size); }`,
+          );
+        };
+        addMobileTableFirstPaintLabel(`${mobileTableFirstPaintHead} th:nth-child(6) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.positions);
+        addMobileTableFirstPaintLabel(`${mobileTableFirstPaintHead} th:nth-child(9) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS.overall);
+        [[10, "pace"], [11, "shooting"], [12, "passing"], [13, "dribbling"], [14, "defense"], [15, "physical"]].forEach(([index, column]) => {
+          addMobileTableFirstPaintLabel(`${mobileTableFirstPaintStatHead} th:nth-child(${index}) > span:first-child`, MOBILE_TABLE_FIRST_PAINT_LABELS[column]);
+        });
+        Object.entries(MOBILE_TABLE_FIRST_PAINT_LABELS).forEach(([column, label]) => {
+          addMobileTableFirstPaintLabel(`#progressionPage #tableHead th[data-table-column="${column}"] > span:first-child`, label);
+        });
+        mobileTableFirstPaintStyle.id = "mflInitialMobileTableFirstPaint";
+        mobileTableFirstPaintStyle.textContent = `@media (max-width: 900px) {\n${mobileTableFirstPaintRules.join("\n")}\n}\n@media (max-width: 520px) {\n#progressionPage { --mfl-mobile-table-header-font-size: 9px; --mfl-table-header-height: 24px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; }\n}`;
+        document.head.appendChild(mobileTableFirstPaintStyle);
         // END GENERATED FIRST-PAINT ROUTE CONFIG
         window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
 
