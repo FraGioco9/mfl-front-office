@@ -125,7 +125,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   padding-right: 140px;
 }
 
-#progressionPage .quickFilters {
+.quickFilters {
   margin-bottom: 6px;
   padding-bottom: 0;
 }

@@ -530,8 +530,10 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   font-size: 13px;
 }
 
-.filtersDialog .filterRule {
-  grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
+@media (min-width: 901px) {
+  .filtersDialog .filterRule {
+    grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
+  }
 }
 
 .filtersDialog select {

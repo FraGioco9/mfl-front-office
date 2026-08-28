@@ -4,7 +4,11 @@
 
 :root {
   --mfl-popup-close-size: 36px;
-  --mfl-popup-close-glyph-size: 12px;
+  --mfl-popup-close-glyph-size: calc(var(--mfl-popup-close-size) / 3);
+  --mfl-filter-control-height: 36px;
+  --mfl-filter-box-font-size: 1em;
+  --mfl-filter-box-line-height: 17px;
+  --mfl-filter-remove-danger: #ff2020;
 }
 
 :is(
@@ -229,6 +233,10 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   display: none;
 }
 
+.iconButton[hidden] {
+  display: none;
+}
+
 .popupCloseButton,
 .popupAddButton,
 .popupMinusButton {
@@ -314,6 +322,212 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   border-radius: 3px;
   font-size: 8px;
   line-height: 1;
+}
+
+/* Filters controls own their track width; no field may expand the popup. */
+.filtersDialog,
+.filtersDialog .filterBuilder,
+.filtersDialog .addFilterRow,
+.filtersDialog .filterRules,
+.filtersDialog .filterRule,
+.filtersDialog .filterRule > *,
+.filtersDialog .filterRule [data-filter-value-group],
+.filtersDialog .filterRule :is(.mflNumericStepperControl, .betweenValue, .dateValue, .dateRangeValue) {
+  min-width: 0;
+  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.filtersDialog .addFilterRow {
+  width: 100%;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.filtersDialog .filterBuilder:has(> .filterRules > .filterRule) > .addFilterRow {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filtersDialog .filtersFooter button {
+  height: var(--mfl-filter-control-height);
+  min-height: var(--mfl-filter-control-height);
+}
+
+/* Filters header close keeps a stable touch target while the glyph scales by viewport. */
+.filtersDialog .filtersHeader .popupCloseButton {
+  flex: 0 0 var(--mfl-popup-close-size);
+  width: var(--mfl-popup-close-size);
+  min-width: var(--mfl-popup-close-size);
+  max-width: var(--mfl-popup-close-size);
+  height: var(--mfl-popup-close-size);
+  min-height: var(--mfl-popup-close-size);
+  max-height: var(--mfl-popup-close-size);
+  padding: 0;
+}
+
+.filtersDialog .filtersHeader .popupCloseButton::before,
+.filtersDialog .filtersHeader .popupCloseButton::after {
+  width: var(--mfl-popup-close-glyph-size);
+  height: 2px;
+}
+
+.filtersDialog .filterRule {
+  min-height: var(--mfl-filter-control-height);
+}
+
+.filtersDialog .filterRule > * {
+  justify-self: stretch;
+}
+
+/* Every actual Filters box shares one canonical height and typography contract. */
+.filtersDialog :is(
+  .addFilterRow select,
+  .filterRule select,
+  .filterRule input
+) {
+  box-sizing: border-box;
+  height: var(--mfl-filter-control-height);
+  min-height: var(--mfl-filter-control-height);
+  max-height: var(--mfl-filter-control-height);
+  padding-block: calc((var(--mfl-filter-control-height) - 2px - var(--mfl-filter-box-line-height)) / 2);
+  font-family: inherit;
+  font-size: var(--mfl-filter-box-font-size);
+  font-style: normal;
+  font-weight: inherit;
+  line-height: var(--mfl-filter-box-line-height);
+  letter-spacing: inherit;
+  vertical-align: middle;
+}
+
+.filtersDialog .filterRule input[data-filter-value]::placeholder {
+  font-family: inherit;
+  font-size: var(--mfl-filter-box-font-size);
+  font-style: normal;
+  font-weight: inherit;
+  line-height: var(--mfl-filter-box-line-height);
+  letter-spacing: inherit;
+}
+
+.filtersDialog .filterRule input:is([type="search"], [type="number"])[data-filter-value] {
+  appearance: textfield;
+  -webkit-appearance: none;
+}
+
+/* Chrome renders the empty date hint (for example gg/mm/aaaa) through internal date-edit segments. */
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit,
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  box-sizing: border-box;
+  height: 100%;
+  padding-block: 0;
+  font-family: inherit;
+  font-size: var(--mfl-filter-box-font-size);
+  font-style: normal;
+  font-weight: inherit;
+  line-height: var(--mfl-filter-box-line-height);
+  letter-spacing: inherit;
+}
+
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit {
+  display: flex;
+  align-items: center;
+}
+
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-day-field,
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-month-field,
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-year-field,
+.filtersDialog .filterRule input[type="date"]::-webkit-datetime-edit-text {
+  font-family: inherit;
+  font-size: var(--mfl-filter-box-font-size);
+  font-style: normal;
+  font-weight: inherit;
+  line-height: var(--mfl-filter-box-line-height);
+  letter-spacing: inherit;
+}
+
+.filtersDialog select option {
+  font-size: inherit;
+}
+
+/* Every direct filter control fills exactly the grid track assigned by the layout owner. */
+.filtersDialog .filterRule > :is(select, [data-filter-value], [data-filter-value-group]) {
+  box-sizing: border-box;
+  width: 100%;
+  inline-size: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  max-inline-size: 100%;
+  justify-self: stretch;
+}
+
+/* Filter-rule removal follows its action track while keeping one rounded geometry throughout hover. */
+.filtersDialog .filterRule > .iconButton.popupCloseButton {
+  box-sizing: border-box;
+  width: var(--mfl-filter-remove-size, 28px);
+  inline-size: var(--mfl-filter-remove-size, 28px);
+  min-width: var(--mfl-filter-remove-size, 28px);
+  min-inline-size: var(--mfl-filter-remove-size, 28px);
+  max-width: var(--mfl-filter-remove-size, 28px);
+  max-inline-size: var(--mfl-filter-remove-size, 28px);
+  height: var(--mfl-filter-remove-size, 28px);
+  min-height: var(--mfl-filter-remove-size, 28px);
+  max-height: var(--mfl-filter-remove-size, 28px);
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mfl-filter-remove-danger);
+  box-shadow: none;
+  aspect-ratio: 1 / 1;
+  align-self: center;
+  justify-self: center;
+}
+
+.filtersDialog .filterRule > .iconButton.popupCloseButton::before,
+.filtersDialog .filterRule > .iconButton.popupCloseButton::after {
+  width: min(12px, calc(var(--mfl-filter-remove-size, 28px) - 2px));
+  height: 2px;
+}
+
+.filtersDialog .filterRule > .iconButton.popupCloseButton:hover:not(:disabled),
+.filtersDialog .filterRule > .iconButton.popupCloseButton:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--mfl-filter-remove-danger);
+  background: var(--mfl-filter-remove-danger);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.filtersDialog .filterRule :is(.betweenValue, .dateRangeValue, [data-filter-value-group]) > *,
+.filtersDialog .mflNumericStepperControl > input[type="number"] {
+  box-sizing: border-box;
+  width: 100%;
+  inline-size: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  max-inline-size: 100%;
+}
+
+.filtersDialog .filterRule :is(.betweenValue, .dateRangeValue, [data-filter-value-group]) {
+  width: 100%;
+  inline-size: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  max-inline-size: 100%;
+}
+
+.filtersDialog .filterRule :is(.betweenValue, .dateRangeValue) {
+  grid-template-columns: repeat(auto-fit, minmax(min(128px, 100%), 1fr));
 }
 
 .filtersDialog [data-filter-value],
@@ -409,13 +623,16 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   flex: 0 0 var(--mfl-popup-close-size);
-  width: var(--mfl-popup-close-size);
-  min-width: var(--mfl-popup-close-size);
-  max-width: var(--mfl-popup-close-size);
-  height: var(--mfl-popup-close-size);
-  min-height: var(--mfl-popup-close-size);
-  max-height: var(--mfl-popup-close-size);
+  box-sizing: border-box;
+  inline-size: var(--mfl-popup-close-size);
+  block-size: var(--mfl-popup-close-size);
+  min-inline-size: var(--mfl-popup-close-size);
+  max-inline-size: var(--mfl-popup-close-size);
+  min-block-size: var(--mfl-popup-close-size);
+  max-block-size: var(--mfl-popup-close-size);
+  aspect-ratio: 1 / 1;
   margin: 0;
   padding: 0;
   border-color: var(--border-strong);

@@ -47,6 +47,28 @@
     });
   }
 
+  function normalizeAddFilterSelect(select = document.getElementById("addFilterSelect")) {
+    if (!(select instanceof HTMLSelectElement)) return;
+    select.hidden = false;
+    const placeholder = Array.from(select.options).find((option) => option.value === "");
+    if (placeholder) placeholder.textContent = "Add filter...";
+  }
+
+  function initializeAddFilterControl() {
+    const button = document.getElementById("showAddFilterButton");
+    if (button instanceof HTMLButtonElement) {
+      button.hidden = true;
+      button.tabIndex = -1;
+      button.setAttribute("aria-hidden", "true");
+    }
+
+    normalizeAddFilterSelect();
+  }
+
+  function scheduleAddFilterNormalization() {
+    queueMicrotask(() => normalizeAddFilterSelect());
+  }
+
   function navigationController() {
     const controller = window.__mflNavigation;
     return controller && typeof controller === "object" ? controller : null;
@@ -69,16 +91,6 @@
     if (dropdown instanceof HTMLElement) dropdown.hidden = true;
     const button = document.getElementById("watchlistButton");
     if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
-  }
-
-  function addFilterSelect() {
-    const select = document.getElementById("addFilterSelect");
-    return select instanceof HTMLSelectElement ? select : null;
-  }
-
-  function showAddFilterButton() {
-    const button = document.getElementById("showAddFilterButton");
-    return button instanceof HTMLButtonElement ? button : null;
   }
 
   function activePageViewFilterControl(target) {
@@ -221,6 +233,10 @@
 
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#openFiltersButton, #filtersModal")) {
+      scheduleAddFilterNormalization();
+    }
+
     if (consumeActivePageViewFilterEvent(event)) return;
     if (suppressDraggedClick(event)) {
       endNavigationIntent();
@@ -229,18 +245,6 @@
 
     syncWatchlistSelectorNavigationIntent(event.target);
     if (beginNavigationIntent(event.target)) handOffNavigationIntent();
-
-    if (!target?.closest("#showAddFilterButton")) return;
-
-    const select = addFilterSelect();
-    if (!select) return;
-    event.preventDefault();
-    event.stopPropagation();
-    select.hidden = !select.hidden;
-    if (!select.hidden && document.activeElement === select) select.blur();
-
-    const button = showAddFilterButton();
-    if (button && document.activeElement === button) button.blur();
   }
 
   function onEnterBubble(event) {
@@ -250,7 +254,16 @@
 
   function onChange(event) {
     const target = event.target;
-    if (!(target instanceof HTMLSelectElement) || target.id !== "addFilterSelect" || !target.value) return;
+    if (!(target instanceof HTMLSelectElement)) return;
+
+    if (target.id !== "addFilterSelect") {
+      if (target.closest("#filterRules")) scheduleAddFilterNormalization();
+      return;
+    }
+    if (!target.value) {
+      target.blur();
+      return;
+    }
 
     const addFilterRule = window.addFilterRule;
     if (typeof addFilterRule !== "function") return;
@@ -259,12 +272,8 @@
     const column = target.value;
     addFilterRule(column, { focus: false });
     target.value = "";
-    target.hidden = true;
-    const rules = document.querySelectorAll("#filterRules .filterRule");
-    const newest = rules.item(rules.length - 1);
-    newest?.querySelectorAll?.("input, select").forEach((control) => {
-      if (control === document.activeElement && control instanceof HTMLElement) control.blur();
-    });
+    normalizeAddFilterSelect(target);
+    target.blur();
   }
 
   function onPointerDown(event) {
@@ -345,6 +354,7 @@
   }
 
   disableSearchSpellcheck();
+  initializeAddFilterControl();
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
   document.addEventListener("pointerdown", onPointerDown, true);

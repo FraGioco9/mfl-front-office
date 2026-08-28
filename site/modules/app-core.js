@@ -9564,7 +9564,7 @@ function populateAddFilterSelect(pageName = tablePageKey() || state.currentPage 
   const fragment = document.createDocumentFragment();
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = "Select filter...";
+  placeholder.textContent = "Add filter...";
   fragment.appendChild(placeholder);
 
   availableFilterColumns(pageName)
@@ -10145,21 +10145,24 @@ function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
   if (packablePlayersInput) packablePlayersInput.checked = restored.mflPackable;
   newMintsInput.checked = restored.newMints;
 
-  const allowedColumns = new Set(availableFilterColumns(pageName));
-  filterRules.replaceChildren();
-  for (const rule of restored.rules) {
-    if (!allowedColumns.has(rule.column)) continue;
-    addFilterRule(rule.column, {
-      connector: rule.connector,
-      operator: rule.operator,
-      value: rule.value,
-      valueTo: rule.valueTo,
-      focus: false,
-    });
-  }
+  const preserveOpenFilterDraft = document.body.classList.contains("filtersOpen") && !filtersModal.hidden;
+  if (!preserveOpenFilterDraft) {
+    const allowedColumns = new Set(availableFilterColumns(pageName));
+    filterRules.replaceChildren();
+    for (const rule of restored.rules) {
+      if (!allowedColumns.has(rule.column)) continue;
+      addFilterRule(rule.column, {
+        connector: rule.connector,
+        operator: rule.operator,
+        value: rule.value,
+        valueTo: rule.valueTo,
+        focus: false,
+      });
+    }
 
-  populateAddFilterSelect(pageName);
-  refreshRuleColumnSelects(pageName);
+    populateAddFilterSelect(pageName);
+    refreshRuleColumnSelects(pageName);
+  }
   updateFilterSummary();
   if (document.documentElement.dataset.mflResetTableFilters === pageName) {
     delete document.documentElement.dataset.mflResetTableFilters;
