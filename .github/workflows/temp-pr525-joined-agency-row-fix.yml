@@ -1,0 +1,77 @@
+name: Temporary PR 525 Joined Agency row fix
+
+on:
+  push:
+    branches:
+      - feat/522-baraccano-calendar
+
+permissions:
+  contents: write
+
+jobs:
+  repair-joined-agency-row:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Remove stale date-picker sync calls
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          core_path = Path('site/modules/app-core.js')
+          core = core_path.read_text()
+
+          old_replace = '''  oldValue.replaceWith(newValue);\n  syncDatePickerControls();\n}'''
+          new_replace = '''  oldValue.replaceWith(newValue);\n}'''
+          if old_replace not in core:
+              raise SystemExit('stale replaceValueControl sync call not found')
+          core = core.replace(old_replace, new_replace, 1)
+
+          old_append = '''  filterRules.appendChild(rule);\n  syncDatePickerControls();\n  refreshRuleConnectors();'''
+          new_append = '''  filterRules.appendChild(rule);\n  refreshRuleConnectors();'''
+          if old_append not in core:
+              raise SystemExit('stale addFilterRule sync call not found')
+          core_path.write_text(core.replace(old_append, new_append, 1))
+
+          validator_path = Path('site/validate-date-picker-runtime.mjs')
+          validator = validator_path.read_text()
+          anchor = '''invariant(\n  core.includes('rule.querySelector("[data-mfl-date-display]")')\n    && tableRuntime.includes('rule.querySelector("[data-mfl-date-display]")'),\n  "New date filters must focus the visible managed editor rather than the hidden ISO source.",\n);\n'''
+          addition = anchor + '''invariant(\n  !core.includes("syncDatePickerControls();")\n    && !tableRuntime.includes("syncDatePickerControls();")\n    && core.includes("filterRules.appendChild(rule);\\n  refreshRuleConnectors();")\n    && tableRuntime.includes("filterRules.appendChild(rule);\\n  refreshRuleConnectors();"),\n  "Joined Agency insertion and replacement must not call the removed date-picker sync helper after managed controls are created.",\n);\n'''
+          if anchor not in validator:
+              raise SystemExit('date picker focus validation anchor not found')
+          validator_path.write_text(validator.replace(anchor, addition, 1))
+          PY
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Validate Joined Agency calendar row lifecycle
+        working-directory: site
+        run: node validate-date-picker-runtime.mjs
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+      - name: Commit repaired implementation locally
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/modules/app-core.js site/modules/app-core-table-runtime.js site/validate-date-picker-runtime.mjs
+          git commit -m "Fix Joined Agency calendar row insertion"
+      - name: Verify generated application artifacts
+        working-directory: site
+        run: npm run verify:generated
+      - name: Push verified implementation
+        run: git push origin HEAD:feat/522-baraccano-calendar
