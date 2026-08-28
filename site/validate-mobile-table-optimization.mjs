@@ -29,8 +29,11 @@ includes(responsive, "#progressionPage .playerTableScroller,\n  #progressionPage
 includes(responsive, "overflow-x: auto;\n    overflow-y: hidden;\n    overscroll-behavior-x: contain;", "Player tables must pan laterally without waiting for runtime class mutation.");
 includes(responsive, "min-width: 760px;", "Mobile player tables must remain wider than tablet viewports when needed.");
 includes(responsive, "min-width: 620px;", "Phone player tables must preserve a horizontally pannable width.");
-includes(responsive, "--mfl-table-col-listing: 4.25%;", "The mobile Listing column must be narrower than its desktop width.");
+includes(responsive, "--mfl-table-row-height: 30px;\n    --mfl-table-row-outer-height: 35px;", "Mobile player-table rows must be shorter than desktop rows.");
+includes(responsive, "--mfl-table-col-listing: 4%;", "The mobile Listing column must be narrower than its previous mobile width.");
+includes(responsive, "--mfl-table-col-positions: 9.5%;", "The mobile Positions column must receive additional width.");
 includes(responsive, "#progressionPage #tableBody .listingCellTableHost {\n    justify-content: center;\n    width: 100%;", "The Listing bag must be horizontally centered in its column.");
+includes(responsive, ".listingCellContent {\n    justify-content: center;\n    width: 18px;\n    min-width: 18px;\n    max-width: 18px;\n    height: 18px;", "The mobile Listing badge background must be square rather than rectangular.");
 includes(responsive, "linear-gradient(to right, #000 0, #000 calc(100% - 56px), transparent 100%)", "First paint must show the player-table right-edge fade before hydration.");
 includes(sharedTableUi, "const PLAYER_TABLE_FADE_DISTANCE = 56;", "Hydrated player-table fades must retain the stronger first-paint fade distance.");
 includes(responsive, "width: 112px;", "Mobile view-button fades must be more prominent.");
@@ -49,17 +52,24 @@ for (const [column, abbreviation] of Object.entries({
 })) {
   includes(sharedTableUi, `${column}: "${abbreviation}"`, `Hydrated mobile table headers must abbreviate ${column} as ${abbreviation}.`);
 }
-includes(responsive, 'content: "OVR";', "First paint must already show the compact Overall header.");
-includes(responsive, 'content: "PAC";', "First paint must already show the compact Pace header.");
-includes(responsive, 'content: "PHY";', "First paint must already show the compact Physical header.");
-includes(responsive, "#tableHead th.col-listing > span:first-child {\n    font-size: 0;", "First paint must not flash the Listing header label.");
+includes(responsive, '#tableHead th:nth-child(6) > span:first-child::after {\n    content: "POS";', "Mobile Positions must be labeled POS from first paint.");
+for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]) {
+  includes(responsive, `content: "${abbreviation}";`, `First paint must already show the compact ${abbreviation} stat heading.`);
+}
+includes(responsive, "#progressionPage:has(.viewButton[data-view=\"attributes\"].active)", "Compact stat headings must follow the actual active table view instead of stale initial-route position alone.");
+includes(responsive, "#progressionPage #tableHead th.col-listing > span:first-child {\n    font-size: 0;", "First paint must not flash the Listing header label.");
 
 includes(responsive, ':is(th, td).selectionCell input {\n    width: 12px;', "Mobile selection controls must scale with the table.");
+includes(responsive, "background-size: 8px 6px;\n    border-radius: 4px;", "Mobile selection controls must retain the desktop checkbox corner shape.");
+includes(responsive, "#tableHead :is(th.selectionCell, th.rowActionsCell)::before,\n  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after {\n    content: none;", "Selection/action headers must not emit stray pseudo-element dots.");
 includes(responsive, ".playerTableActionsButton {\n    width: 20px;", "Mobile table action controls must be compact.");
 includes(responsive, ".playerTableActionsButton svg {\n    width: 14px;", "Mobile table action SVGs must be compact.");
-includes(responsive, ':is(.retirementMarker, .newMintMarker) img {\n    width: 12px;', "Mobile table status-marker icons must scale down.");
+includes(responsive, ':is(.retirementMarker, .newMintMarker) img {\n    width: 10px;', "Mobile retiring/retired and new-mint marker icons must scale down.");
+includes(responsive, ".playerNoteIcon {\n    font-size: 10px;", "Mobile player-note icons must scale down with the rest of table chrome.");
 includes(responsive, ".listingCellIcon {\n    flex: 0 0 10px;", "Mobile Listing icons must scale down.");
 includes(responsive, ".tableOverallRarityCircle {\n    flex-basis: 6px;", "Mobile rarity markers must scale down.");
+includes(responsive, ".playerTableActionsButton {\n    width: 18px;", "Phone table action controls must scale down again at the phone breakpoint.");
+includes(responsive, ':is(.retirementMarker, .newMintMarker) img {\n    width: 8px;', "Phone retiring/retired markers must use the smallest table-icon geometry.");
 
 includes(dropdowns, "function touchNativeSelectMode()", "Dropdown ownership must explicitly support native touch selects.");
 includes(dropdowns, "const committedFilterSelects = new WeakSet();", "Touch filter selects must distinguish committed native picker changes from pointer-up/click events.");
@@ -81,7 +91,12 @@ excludes(mobileInteractions, "mflMobileClickTooltip", "The table runtime must no
 excludes(mobileInteractions, "document.addEventListener(\"click\"", "The table runtime must not maintain a second tooltip click owner.");
 includes(mobileInteractions, "resizeObserver = new ResizeObserver(() => sync());", "Table render geometry must continue scheduling shared presentation updates.");
 
-includes(mobileTablePresentation, 'label.textContent = column === "listing_price" ||', "The generated table header must keep Listing icon-only.");
+includes(mobileTablePresentation, 'header.dataset.tableColumn = column;', "Generated table headers must retain semantic column identity for responsive presentation.");
+includes(mobileTablePresentation, 'positions: "POS"', "Generated mobile table headers must render Positions as POS.");
+for (const abbreviation of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY"]) {
+  includes(mobileTablePresentation, `: "${abbreviation}"`, `Generated mobile table presentation must contain ${abbreviation}.`);
+}
+includes(mobileTablePresentation, 'const priceText = "$" + listingPriceFormatter.format(numericListingPrice);', "Listing tooltip text must be exactly $ followed by the formatted price.");
 includes(mobileTablePresentation, "listingBadge.dataset.tooltip = priceText;", "Listing tooltip text must be exactly the formatted price.");
 includes(mobileTablePresentation, 'listingBadge.setAttribute("aria-label", priceText);', "Listing accessibility text must match the price-only tooltip.");
 excludes(mobileTablePresentation, "For Sale at", "Listing tooltip copy must not include explanatory prefix text.");
@@ -94,4 +109,4 @@ for (const source of [responsive, sharedTableUi, mobileInteractions, staticUi, d
 }
 excludes(mobileInteractions, "MutationObserver", "Mobile table presentation must remain render/resize driven rather than mutation-polled.");
 
-console.log("Mobile tables now use native iPhone selects, single-owner tap tooltips, first-paint fades/labels, direct lateral scrolling, compact icons, and centered price-only Listing presentation.");
+console.log("Mobile tables now use native iPhone selects, single-owner tap tooltips, compact first-paint headings, shorter rows, direct lateral scrolling, compact icons, desktop-shaped selection controls, wider POS, and square price-only Listing presentation.");
