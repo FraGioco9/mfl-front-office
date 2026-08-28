@@ -1,6 +1,20 @@
 (() => {
   "use strict";
 
+  const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
+  const PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
+  const MOBILE_HEADER_LABELS = Object.freeze({
+    positions: "POS",
+    overall: "OVR",
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+  });
+
   window.__mflMobileTableInteractionsRuntime?.destroy?.();
 
   let destroyed = false;
@@ -8,8 +22,167 @@
   let syncFrame = 0;
   let resizeObserver = null;
 
+  function removeInlineGeometry(element, properties) {
+    if (!(element instanceof HTMLElement || element instanceof SVGElement)) return;
+    properties.forEach((property) => element.style.removeProperty(property));
+  }
+
+  function syncHeaderLabels() {
+    const mobile = MOBILE_TABLE_MEDIA.matches;
+    document.querySelectorAll("#tableHead th[data-table-column] > span:first-child").forEach((label) => {
+      if (!(label instanceof HTMLElement)) return;
+      const header = label.closest("th[data-table-column]");
+      if (!(header instanceof HTMLTableCellElement)) return;
+      const column = String(header.dataset.tableColumn || "");
+      const fullLabel = String(label.dataset.mflFullTableLabel || label.textContent || "").trim();
+      if (!label.dataset.mflFullTableLabel) label.dataset.mflFullTableLabel = fullLabel;
+      const desired = mobile
+        ? (column === "listing_price" ? "" : MOBILE_HEADER_LABELS[column] || fullLabel)
+        : fullLabel;
+      if (label.textContent !== desired) label.textContent = desired;
+    });
+  }
+
+  function syncHeaderChrome() {
+    const mobile = MOBILE_TABLE_MEDIA.matches;
+    document.querySelectorAll("#tableHead :is(th.selectionCell, th.rowActionsCell)").forEach((header) => {
+      if (!(header instanceof HTMLElement)) return;
+      if (mobile) {
+        header.style.fontSize = "0px";
+        header.style.color = "transparent";
+        header.style.textShadow = "none";
+        header.style.backgroundImage = "none";
+      } else {
+        removeInlineGeometry(header, ["font-size", "color", "text-shadow", "background-image"]);
+      }
+    });
+  }
+
+  function syncCompactTableGeometry() {
+    const mobile = MOBILE_TABLE_MEDIA.matches;
+    const phone = mobile && PHONE_TABLE_MEDIA.matches;
+    const progressionPage = document.getElementById("progressionPage");
+    if (progressionPage instanceof HTMLElement) {
+      if (mobile) {
+        progressionPage.style.setProperty("--mfl-table-row-height", phone ? "25px" : "27px");
+        progressionPage.style.setProperty("--mfl-table-row-outer-height", phone ? "30px" : "32px");
+      } else {
+        progressionPage.style.removeProperty("--mfl-table-row-height");
+        progressionPage.style.removeProperty("--mfl-table-row-outer-height");
+      }
+    }
+
+    const actionSize = phone ? 16 : 18;
+    const actionIconSize = phone ? 10 : 12;
+    document.querySelectorAll("#progressionPage .playerTableScroller .playerTableActionsButton").forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      if (mobile) {
+        const size = `${actionSize}px`;
+        button.style.width = size;
+        button.style.minWidth = size;
+        button.style.maxWidth = size;
+        button.style.height = size;
+        button.style.minHeight = size;
+        button.style.maxHeight = size;
+        button.style.padding = "0";
+      } else {
+        removeInlineGeometry(button, ["width", "min-width", "max-width", "height", "min-height", "max-height", "padding"]);
+      }
+    });
+    document.querySelectorAll("#progressionPage .playerTableScroller .playerTableActionsButton svg").forEach((icon) => {
+      if (!(icon instanceof SVGElement)) return;
+      if (mobile) {
+        const size = `${actionIconSize}px`;
+        icon.style.width = size;
+        icon.style.height = size;
+      } else {
+        removeInlineGeometry(icon, ["width", "height"]);
+      }
+    });
+
+    const flagSize = phone ? 10 : 12;
+    document.querySelectorAll("#progressionPage .playerTableScroller .flagImage").forEach((icon) => {
+      if (!(icon instanceof HTMLElement)) return;
+      if (mobile) {
+        const size = `${flagSize}px`;
+        icon.style.width = size;
+        icon.style.height = size;
+      } else {
+        removeInlineGeometry(icon, ["width", "height"]);
+      }
+    });
+
+    const markerScale = phone ? 0.5 : 0.625;
+    document.querySelectorAll("#progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker)").forEach((marker) => {
+      if (!(marker instanceof HTMLElement)) return;
+      if (mobile) {
+        marker.style.zoom = String(markerScale);
+      } else {
+        marker.style.removeProperty("zoom");
+      }
+    });
+
+    const noteSize = phone ? 8 : 9;
+    document.querySelectorAll("#progressionPage .playerTableScroller .playerNoteIcon").forEach((icon) => {
+      if (!(icon instanceof HTMLElement)) return;
+      if (mobile) {
+        icon.style.fontSize = `${noteSize}px`;
+        icon.style.lineHeight = "1";
+      } else {
+        removeInlineGeometry(icon, ["font-size", "line-height"]);
+      }
+    });
+
+    const listingBadgeSize = phone ? 14 : 16;
+    const listingIconSize = phone ? 7 : 8;
+    document.querySelectorAll("#progressionPage .playerTableScroller .listingCellContent").forEach((badge) => {
+      if (!(badge instanceof HTMLElement)) return;
+      if (mobile) {
+        const size = `${listingBadgeSize}px`;
+        badge.style.width = size;
+        badge.style.minWidth = size;
+        badge.style.maxWidth = size;
+        badge.style.height = size;
+        badge.style.minHeight = size;
+        badge.style.maxHeight = size;
+        badge.style.gap = "0";
+        badge.style.padding = "0";
+      } else {
+        removeInlineGeometry(badge, ["width", "min-width", "max-width", "height", "min-height", "max-height", "gap", "padding"]);
+      }
+    });
+    document.querySelectorAll("#progressionPage .playerTableScroller .listingCellIcon").forEach((icon) => {
+      if (!(icon instanceof HTMLElement)) return;
+      if (mobile) {
+        const size = `${listingIconSize}px`;
+        icon.style.flex = `0 0 ${size}`;
+        icon.style.width = size;
+        icon.style.height = size;
+      } else {
+        removeInlineGeometry(icon, ["flex", "width", "height"]);
+      }
+    });
+
+    const raritySize = phone ? 4 : 5;
+    document.querySelectorAll("#progressionPage #tableBody .tableOverallRarityCircle").forEach((marker) => {
+      if (!(marker instanceof HTMLElement)) return;
+      if (mobile) {
+        const size = `${raritySize}px`;
+        marker.style.flex = `0 0 ${size}`;
+        marker.style.width = size;
+        marker.style.height = size;
+        marker.style.marginRight = phone ? "1px" : "2px";
+      } else {
+        removeInlineGeometry(marker, ["flex", "width", "height", "margin-right"]);
+      }
+    });
+  }
+
   function syncNow() {
     if (destroyed) return;
+    syncHeaderLabels();
+    syncHeaderChrome();
+    syncCompactTableGeometry();
     window.__mflSharedTableUiRuntime?.scheduleMobileTablePresentation?.();
   }
 
@@ -95,6 +268,8 @@
   function destroy() {
     destroyed = true;
     window.removeEventListener("resize", onResize);
+    MOBILE_TABLE_MEDIA.removeEventListener("change", onResize);
+    PHONE_TABLE_MEDIA.removeEventListener("change", onResize);
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (syncFrame) window.cancelAnimationFrame(syncFrame);
@@ -102,6 +277,8 @@
   }
 
   window.addEventListener("resize", onResize);
+  MOBILE_TABLE_MEDIA.addEventListener("change", onResize);
+  PHONE_TABLE_MEDIA.addEventListener("change", onResize);
 
   window.__mflMobileTableInteractionsRuntime = Object.freeze({ sync, destroy });
   installCoreLoadedBridge();
