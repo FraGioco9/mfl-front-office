@@ -16,6 +16,7 @@ const validators = [
   "validate-domain-stats.mjs",
   "validate-domain-club.mjs",
   "validate-domain-table.mjs",
+  "validate-site-date-picker.mjs",
 ];
 
 for (const validator of validators) {

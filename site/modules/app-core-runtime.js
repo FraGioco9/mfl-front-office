@@ -7128,17 +7128,23 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     openSearch();
   } else if (event.key === "Escape" && !searchModal.hidden) {
-    closeSearch();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && searchModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
-    closeFilters(false, false);
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !watchlistChoiceModal?.hidden) {
-    closeWatchlistChoiceModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && watchlistChoiceModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !addWatchlistModal.hidden) {
-    closeAddWatchlistModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && addWatchlistModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !deleteWatchlistModal.hidden) {
-    closeDeleteWatchlistModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && deleteWatchlistModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
-    closeAdvancedSettings();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && advancedSettingsModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !watchlistDropdown?.hidden) {
     closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
@@ -7315,7 +7321,9 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
   event.preventDefault();
   hideEvaluationLoadActionTooltip();
-  hideModal(evaluationLoadModal);
+  if (document.activeElement instanceof HTMLElement && evaluationLoadModal.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
 });
 setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
 if (evaluationLoadList) {

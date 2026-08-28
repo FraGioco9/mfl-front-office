@@ -3,6 +3,7 @@
 
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
+  const FILTER_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
 
@@ -113,15 +114,24 @@
     if (filtersModal.contains(active)) active.blur();
   }
 
-  function filterSelectForTarget(target) {
+  function filterControlForTarget(target) {
     const filtersModal = document.getElementById("filtersModal");
-    if (!(filtersModal instanceof HTMLElement)) return null;
+    if (!(filtersModal instanceof HTMLElement) || filtersModal.hidden) return null;
 
-    let select = target instanceof HTMLSelectElement ? target : null;
-    if (!(select instanceof HTMLSelectElement) && document.activeElement instanceof HTMLSelectElement) {
-      select = document.activeElement;
-    }
-    return select instanceof HTMLSelectElement && filtersModal.contains(select) ? select : null;
+    const direct = target instanceof Element ? target.closest(FILTER_CONTROL_SELECTOR) : null;
+    if (direct instanceof HTMLElement && filtersModal.contains(direct)) return direct;
+
+    const active = document.activeElement;
+    return active instanceof HTMLElement
+      && filtersModal.contains(active)
+      && active.matches(FILTER_CONTROL_SELECTOR)
+      ? active
+      : null;
+  }
+
+  function filterSelectForTarget(target) {
+    const control = filterControlForTarget(target);
+    return control instanceof HTMLSelectElement ? control : null;
   }
 
   function blurFilterSelectWhenClosed(target) {
@@ -137,6 +147,15 @@
         }
       });
     }, 0);
+  }
+
+  function handleFilterControlEscape(event) {
+    if (document.querySelector(".siteDatePicker")) return false;
+    const control = filterControlForTarget(event?.target);
+    if (!(control instanceof HTMLElement)) return false;
+
+    control.blur();
+    return true;
   }
 
   function beginNeutralFiltersOpen() {
@@ -246,6 +265,12 @@
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);
+
+  window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
+    "filter-controls",
+    handleFilterControlEscape,
+    { priority: 300 },
+  );
 
   enhanceVisible(document);
   syncAttributesViewLabel();

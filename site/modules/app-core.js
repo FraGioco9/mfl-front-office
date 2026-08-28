@@ -9635,13 +9635,226 @@ function buildNumberInput(value = "", placeholder = "Value") {
   return input;
 }
 
+/** @type {{ input: HTMLInputElement, field: HTMLElement, popup: HTMLElement, viewYear: number, viewMonth: number } | null} */
+let activeSiteDatePicker = null;
+
+function parseSiteDateInputValue(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const candidate = new Date(year, month, day, 12);
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== month || candidate.getDate() !== day) {
+    return null;
+  }
+  return candidate;
+}
+
+function siteDatePickerIsoValue(date) {
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function closeSiteDatePicker() {
+  if (!activeSiteDatePicker) return;
+  activeSiteDatePicker.popup.remove();
+  activeSiteDatePicker = null;
+  document.removeEventListener("pointerdown", handleSiteDatePickerPointerDown);
+  document.removeEventListener("keydown", handleSiteDatePickerKeyDown);
+  window.removeEventListener("resize", positionSiteDatePicker);
+  window.removeEventListener("scroll", positionSiteDatePicker, true);
+}
+
+/** @param {PointerEvent} event */
+function handleSiteDatePickerPointerDown(event) {
+  if (!activeSiteDatePicker || !(event.target instanceof Node)) return;
+  if (activeSiteDatePicker.popup.contains(event.target) || activeSiteDatePicker.field.contains(event.target)) return;
+  closeSiteDatePicker();
+}
+
+/** @param {KeyboardEvent} event */
+function handleSiteDatePickerKeyDown(event) {
+  if (event.key !== "Escape" || !activeSiteDatePicker) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const input = activeSiteDatePicker.input;
+  closeSiteDatePicker();
+  input.blur();
+}
+
+function positionSiteDatePicker() {
+  if (!activeSiteDatePicker) return;
+  const { field, popup } = activeSiteDatePicker;
+  const rect = field.getBoundingClientRect();
+  const gap = 6;
+  const viewportPadding = 8;
+  const popupWidth = popup.offsetWidth;
+  const popupHeight = popup.offsetHeight;
+  const maxLeft = Math.max(viewportPadding, window.innerWidth - popupWidth - viewportPadding);
+  const left = Math.min(Math.max(rect.right - popupWidth, viewportPadding), maxLeft);
+  const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+  const canFitAbove = rect.top - gap - popupHeight >= viewportPadding;
+  const top = spaceBelow < popupHeight && canFitAbove
+    ? rect.top - popupHeight - gap
+    : rect.bottom + gap;
+  popup.style.left = `${Math.round(left)}px`;
+  popup.style.top = `${Math.round(Math.max(viewportPadding, top))}px`;
+}
+
+function renderSiteDatePicker() {
+  if (!activeSiteDatePicker) return;
+  const { input, popup } = activeSiteDatePicker;
+  const selectedDate = parseSiteDateInputValue(input.value);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  popup.replaceChildren();
+
+  const header = document.createElement("div");
+  header.className = "siteDatePickerHeader";
+
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.className = "siteDatePickerNav";
+  previous.setAttribute("aria-label", "Previous month");
+  previous.textContent = "‹";
+  previous.addEventListener("click", () => {
+    if (!activeSiteDatePicker) return;
+    const next = new Date(activeSiteDatePicker.viewYear, activeSiteDatePicker.viewMonth - 1, 1, 12);
+    activeSiteDatePicker.viewYear = next.getFullYear();
+    activeSiteDatePicker.viewMonth = next.getMonth();
+    renderSiteDatePicker();
+  });
+
+  const title = document.createElement("div");
+  title.className = "siteDatePickerTitle";
+  title.textContent = new Date(activeSiteDatePicker.viewYear, activeSiteDatePicker.viewMonth, 1, 12)
+    .toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "siteDatePickerNav";
+  next.setAttribute("aria-label", "Next month");
+  next.textContent = "›";
+  next.addEventListener("click", () => {
+    if (!activeSiteDatePicker) return;
+    const following = new Date(activeSiteDatePicker.viewYear, activeSiteDatePicker.viewMonth + 1, 1, 12);
+    activeSiteDatePicker.viewYear = following.getFullYear();
+    activeSiteDatePicker.viewMonth = following.getMonth();
+    renderSiteDatePicker();
+  });
+
+  header.append(previous, title, next);
+  popup.appendChild(header);
+
+  const weekdays = document.createElement("div");
+  weekdays.className = "siteDatePickerWeekdays";
+  for (const label of ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]) {
+    const item = document.createElement("span");
+    item.textContent = label;
+    weekdays.appendChild(item);
+  }
+  popup.appendChild(weekdays);
+
+  const grid = document.createElement("div");
+  grid.className = "siteDatePickerGrid";
+  const firstOfMonth = new Date(activeSiteDatePicker.viewYear, activeSiteDatePicker.viewMonth, 1, 12);
+  const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+  const gridStart = new Date(activeSiteDatePicker.viewYear, activeSiteDatePicker.viewMonth, 1 - mondayOffset, 12);
+  const selectedIso = selectedDate ? siteDatePickerIsoValue(selectedDate) : "";
+  const todayIso = siteDatePickerIsoValue(today);
+
+  for (let index = 0; index < 42; index += 1) {
+    const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index, 12);
+    const iso = siteDatePickerIsoValue(date);
+    const day = document.createElement("button");
+    day.type = "button";
+    day.className = "siteDatePickerDay";
+    day.textContent = String(date.getDate());
+    day.dataset.date = iso;
+    if (date.getMonth() !== activeSiteDatePicker.viewMonth) day.classList.add("is-outside");
+    if (iso === selectedIso) day.classList.add("is-selected");
+    if (iso === todayIso) day.classList.add("is-today");
+    day.addEventListener("click", () => {
+      input.value = iso;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      closeSiteDatePicker();
+      input.blur();
+    });
+    grid.appendChild(day);
+  }
+  popup.appendChild(grid);
+
+  const footer = document.createElement("div");
+  footer.className = "siteDatePickerFooter";
+  const todayButton = document.createElement("button");
+  todayButton.type = "button";
+  todayButton.className = "siteDatePickerToday";
+  todayButton.textContent = "Today";
+  todayButton.addEventListener("click", () => {
+    input.value = todayIso;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    closeSiteDatePicker();
+    input.blur();
+  });
+  footer.appendChild(todayButton);
+  popup.appendChild(footer);
+  requestAnimationFrame(positionSiteDatePicker);
+}
+
+function openSiteDatePicker(input, field) {
+  if (activeSiteDatePicker?.input === input) {
+    closeSiteDatePicker();
+    return;
+  }
+  closeSiteDatePicker();
+  const selected = parseSiteDateInputValue(input.value) || new Date();
+  const popup = document.createElement("div");
+  popup.className = "siteDatePicker";
+  popup.setAttribute("role", "dialog");
+  popup.setAttribute("aria-label", "Choose date");
+  document.body.appendChild(popup);
+  activeSiteDatePicker = {
+    input,
+    field,
+    popup,
+    viewYear: selected.getFullYear(),
+    viewMonth: selected.getMonth(),
+  };
+  renderSiteDatePicker();
+  document.addEventListener("pointerdown", handleSiteDatePickerPointerDown);
+  document.addEventListener("keydown", handleSiteDatePickerKeyDown);
+  window.addEventListener("resize", positionSiteDatePicker);
+  window.addEventListener("scroll", positionSiteDatePicker, true);
+}
+
 function buildDateInput(value = "") {
+  const field = document.createElement("div");
+  field.className = "siteDateField";
+  field.dataset.siteDateField = "true";
+
   const input = document.createElement("input");
   input.type = "date";
   input.className = "dateValue";
   input.dataset.filterValue = "true";
   input.value = value;
-  return input;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "siteDatePickerButton";
+  button.setAttribute("aria-label", "Open calendar");
+  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    openSiteDatePicker(input, field);
+  });
+
+  field.append(input, button);
+  return field;
 }
 
 function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
@@ -9730,7 +9943,9 @@ function replaceOperatorSelect(rule, column) {
 }
 
 function valueControlElement(rule) {
-  return rule.querySelector("[data-filter-value-group]") || rule.querySelector("[data-filter-value]");
+  return rule.querySelector("[data-filter-value-group]")
+    || rule.querySelector("[data-site-date-field]")
+    || rule.querySelector("[data-filter-value]");
 }
 
 function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
@@ -11767,17 +11982,23 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     openSearch();
   } else if (event.key === "Escape" && !searchModal.hidden) {
-    closeSearch();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && searchModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
-    closeFilters();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !watchlistChoiceModal?.hidden) {
-    closeWatchlistChoiceModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && watchlistChoiceModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !addWatchlistModal.hidden) {
-    closeAddWatchlistModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && addWatchlistModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !deleteWatchlistModal.hidden) {
-    closeDeleteWatchlistModal();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && deleteWatchlistModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
-    closeAdvancedSettings();
+    event.preventDefault();
+    if (document.activeElement instanceof HTMLElement && advancedSettingsModal.contains(document.activeElement)) document.activeElement.blur();
   } else if (event.key === "Escape" && !watchlistDropdown?.hidden) {
     closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
@@ -12032,7 +12253,9 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
   event.preventDefault();
   hideEvaluationLoadActionTooltip();
-  hideModal(evaluationLoadModal);
+  if (document.activeElement instanceof HTMLElement && evaluationLoadModal.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
 });
 setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
 if (evaluationLoadList) {

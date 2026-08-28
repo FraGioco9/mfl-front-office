@@ -7,8 +7,9 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [controls, selectionStack, appEntry, appConfig, tableRuntime, staticUi] = await Promise.all([
+const [controls, dropdowns, selectionStack, appEntry, appConfig, tableRuntime, staticUi] = await Promise.all([
   read("./control-interactions-runtime.js"),
+  read("./dropdowns-runtime.js"),
   read("./selection-stack-runtime.js"),
   read("./modules/app-entry.js"),
   read("./modules/app-config.js"),
@@ -33,6 +34,23 @@ invariant(escapeCaptureStart >= 0 && keyDownStart > escapeCaptureStart, "The glo
 const escapeCapture = controls.slice(escapeCaptureStart, keyDownStart);
 excludes(escapeCapture, ".blur()", "Global Escape ownership must not blur controls before feature handlers can cancel.");
 
+for (const required of [
+  'const FILTER_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";',
+  "function filterControlForTarget(target) {",
+  "function handleFilterControlEscape(event) {",
+  'document.querySelector(".siteDatePicker")',
+  "control.blur();",
+  'window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(',
+  '"filter-controls",',
+  "handleFilterControlEscape,",
+  "{ priority: 300 },",
+]) {
+  includes(dropdowns, required, `Filters capture-phase Escape ownership is missing ${required}`);
+}
+includes(dropdowns, "return true;", "Focused Filters controls must claim Escape after synchronous blur.");
+excludes(dropdowns, "function handleDropdownEscape() {", "Filters Escape ownership must not depend on native select :open detection.");
+excludes(dropdowns, 'document.addEventListener("keyup", (event) => {\n    if (event.key !== "Escape") return;', "Filters Escape ownership must not depend on keyup delivery from native select menus.");
+
 includes(selectionStack, "function editableEscapeTarget(target) {", "Selection Stack must defer Escape while an editable control owns focus.");
 for (const editableType of ["HTMLInputElement", "HTMLSelectElement", "HTMLTextAreaElement", "target.isContentEditable"]) {
   includes(selectionStack, editableType, `Selection Stack editable Escape priority is missing ${editableType}.`);
@@ -49,4 +67,4 @@ includes(tableRuntime, 'target.id !== PAGER_CURRENT_PAGE_INPUT_ID', "The pager h
 includes(staticUi, 'if (event.key !== "Escape") return;', "Static UI must retain the neutral Escape fallback for unclaimed events.");
 includes(staticUi, "queueMicrotask(() => {", "Neutral Escape focus release must remain deferred until feature ownership has had a chance to claim the event.");
 
-console.log("Global Escape ownership validation passed with editable-control priority, centralized feature dispatch, and neutral fallback focus release.");
+console.log("Global Escape ownership validation passed with capture-phase Filters control release, editable-control priority, centralized feature dispatch, and neutral fallback focus release.");

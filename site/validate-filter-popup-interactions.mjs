@@ -200,30 +200,43 @@ invariant(
 );
 
 for (const required of [
+  'const FILTER_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";',
+  "function filterControlForTarget(target) {",
+  "active.matches(FILTER_CONTROL_SELECTOR)",
   "function filterSelectForTarget(target) {",
-  "document.activeElement instanceof HTMLSelectElement",
   "function blurFilterSelectWhenClosed(target) {",
   "!select.isConnected || isSelectOpen(select)",
   "!isSelectOpen(select) && document.activeElement === select",
+  "function handleFilterControlEscape(event) {",
+  'document.querySelector(".siteDatePicker")',
+  "control.blur();",
+  'window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(',
+  '"filter-controls",',
+  "handleFilterControlEscape,",
+  "{ priority: 300 },",
   'document.addEventListener("pointerup", (event) => {',
   'document.addEventListener("change", (event) => {\n    blurFilterSelectWhenClosed(event.target);\n  });',
   '["Enter", "Escape", "Tab"].includes(event.key)',
   'document.addEventListener("click", (event) => {\n    const target = event.target instanceof Element ? event.target : null;\n    if (!target) return;\n\n    blurFilterSelectWhenClosed(target);',
 ]) {
-  invariant(dropdownRuntime.includes(required), `Filter dropdowns are missing close-state blur ownership through ${required}`);
+  invariant(dropdownRuntime.includes(required), `Filter controls are missing capture-phase Escape ownership through ${required}`);
 }
+invariant(
+  !dropdownRuntime.includes("function handleDropdownEscape()")
+    && !dropdownRuntime.includes('document.addEventListener("keyup", (event) => {\\n    if (event.key !== "Escape") return;'),
+  "Filters Escape must use the global capture owner, not native select :open detection or keyup fallback.",
+);
 
 for (const required of [
   '"function closeFilters(commitChanges = false, restoreTriggerFocus = true) {"',
   "if (restoreTriggerFocus) openFiltersButton.focus();",
-  "closeFilters(false, false);",
 ]) {
-  invariant(tableSplitter.includes(required), `Canonical table splitting is missing Filters ESC focus ownership through ${required}`);
+  invariant(tableSplitter.includes(required), `Canonical table splitting is missing Filters close focus ownership through ${required}`);
 }
 
 invariant(
-  coreRuntime.includes('event.key === "Escape" && !filtersModal.hidden) {\n    closeFilters(false, false);'),
-  "Built application core must close Filters on Escape without restoring trigger focus.",
+  coreRuntime.includes('event.key === "Escape" && !filtersModal.hidden) {\n    event.preventDefault();\n    if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();'),
+  "Built application core must keep Filters open on Escape and blur the active control.",
 );
 invariant(
   tableRuntime.includes("function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = true)"),
@@ -271,4 +284,10 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters behavior must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Direct count-only Filters, request-time page reset, view-state preservation, immediate close highlight, view-sized control, and neutral ESC focus validation passed.");
+console.log("Direct count-only Filters, request-time page reset, view-state preservation, immediate close highlight, view-sized control, and capture-phase all-filter-box ESC focus validation passed.");
+
+invariant(
+  !appCore.includes('event.key === "Escape" && !filtersModal.hidden) {\n    closeFilters();')
+    && appCore.includes('filtersModal.contains(document.activeElement)) document.activeElement.blur();'),
+  "Escape must blur the active Filters control without closing the popup.",
+);
