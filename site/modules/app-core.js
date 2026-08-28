@@ -9742,7 +9742,6 @@ function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
   const operator = rule.querySelector("[data-filter-operator]").value;
   const newValue = buildValueControl(column, savedValue, savedValueTo, operator);
   oldValue.replaceWith(newValue);
-  syncDatePickerControls();
 }
 
 function addFilterRule(column, options = {}) {
@@ -9799,7 +9798,6 @@ function addFilterRule(column, options = {}) {
   rule.appendChild(value);
   rule.appendChild(remove);
   filterRules.appendChild(rule);
-  syncDatePickerControls();
   refreshRuleConnectors();
   populateAddFilterSelect();
   refreshRuleColumnSelects();

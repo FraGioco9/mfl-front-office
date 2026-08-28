@@ -110,6 +110,13 @@ invariant(
   "New date filters must focus the visible managed editor rather than the hidden ISO source.",
 );
 invariant(
+  !core.includes("syncDatePickerControls();")
+    && !tableRuntime.includes("syncDatePickerControls();")
+    && core.includes("filterRules.appendChild(rule);\n  refreshRuleConnectors();")
+    && tableRuntime.includes("filterRules.appendChild(rule);\n  refreshRuleConnectors();"),
+  "Joined Agency insertion and replacement must not call the removed date-picker sync helper after managed controls are created.",
+);
+invariant(
   core.includes('rule.querySelector("[data-mfl-date-control]")')
     && tableRuntime.includes('rule.querySelector("[data-mfl-date-control]")'),
   "Joined Agency operator and column changes must replace the whole managed date box, never only its hidden ISO source.",
