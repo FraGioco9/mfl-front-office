@@ -3,6 +3,7 @@
 
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
+  const committedFilterSelects = new WeakSet();
   const FILTER_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
   const TOUCH_NATIVE_SELECT_MEDIA = window.matchMedia("(hover: none) and (pointer: coarse), (max-width: 900px) and (pointer: coarse)");
   let clubPointerPressedView = "";
@@ -150,10 +151,12 @@
     return control instanceof HTMLSelectElement ? control : null;
   }
 
-  function blurFilterSelectWhenClosed(target, options = {}) {
+  function blurFilterSelectWhenClosed(target) {
     const select = filterSelectForTarget(target);
     if (!(select instanceof HTMLSelectElement)) return;
-    if (touchNativeSelectMode() && options.afterChange !== true) return;
+    const committedOnTouch = committedFilterSelects.has(select);
+    if (touchNativeSelectMode() && !committedOnTouch) return;
+    if (committedOnTouch) committedFilterSelects.delete(select);
 
     window.setTimeout(() => {
       if (!select.isConnected || isSelectOpen(select)) return;
@@ -231,13 +234,17 @@
   }, true);
 
   document.addEventListener("change", (event) => {
-    blurFilterSelectWhenClosed(event.target, { afterChange: true });
+    const select = filterSelectForTarget(event.target);
+    if (touchNativeSelectMode() && select instanceof HTMLSelectElement) committedFilterSelects.add(select);
+    blurFilterSelectWhenClosed(event.target);
   });
 
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
     if (["Enter", "Escape", "Tab"].includes(event.key)) {
-      blurFilterSelectWhenClosed(event.target, { afterChange: true });
+      const select = filterSelectForTarget(event.target);
+      if (touchNativeSelectMode() && select instanceof HTMLSelectElement) committedFilterSelects.add(select);
+      blurFilterSelectWhenClosed(event.target);
     }
   }, true);
 
