@@ -164,6 +164,14 @@ invariant(
   "Generated application core must preserve Clear Filters apply-and-close behavior.",
 );
 
+for (const required of [
+  'const preserveOpenFilterDraft = document.body.classList.contains("filtersOpen") && !filtersModal.hidden;',
+  "if (!preserveOpenFilterDraft) {\n    const allowedColumns = new Set(availableFilterColumns(pageName));\n    filterRules.replaceChildren();",
+]) {
+  invariant(appCore.includes(required), `Canonical Filters restore must preserve an open popup draft through ${required}`);
+  invariant(tableRuntime.includes(required), `Built Table runtime must preserve an open popup draft through ${required}`);
+}
+
 invariant(
   appCore.includes('if (filterSummary) filterSummary.textContent = "0";')
     && !appCore.includes('if (filterSummary) filterSummary.textContent = "0 active";'),

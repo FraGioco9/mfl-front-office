@@ -56,6 +56,25 @@ for (const required of [
 }
 
 for (const required of [
+  "align-self: center;\n  flex: 0 0 var(--mfl-popup-close-size);",
+  "inline-size: var(--mfl-popup-close-size);\n  block-size: var(--mfl-popup-close-size);",
+  "min-inline-size: var(--mfl-popup-close-size);\n  max-inline-size: var(--mfl-popup-close-size);",
+  "min-block-size: var(--mfl-popup-close-size);\n  max-block-size: var(--mfl-popup-close-size);",
+  "aspect-ratio: 1 / 1;",
+]) {
+  invariant(controls.includes(required), `Filters header close button must remain a true square through ${required}`);
+}
+
+for (const required of [
+  ".filtersDialog .filterBuilder,\n.filtersDialog .addFilterRow,\n.filtersDialog .filterRules,",
+  ".filtersDialog .filterRule :is(.mflNumericStepperControl, .betweenValue, .dateValue, .dateRangeValue) {\n  min-width: 0;\n  max-width: 100%;\n  min-inline-size: 0;\n  max-inline-size: 100%;",
+  ".filtersDialog .filterRule > * {\n  justify-self: stretch;\n}",
+  "box-sizing: border-box;\n  width: 100%;\n  inline-size: 100%;\n  min-width: 0;\n  min-inline-size: 0;\n  max-width: 100%;\n  max-inline-size: 100%;",
+]) {
+  invariant(controls.includes(required), `Filters value controls must remain contained by the dialog through ${required}`);
+}
+
+for (const required of [
   "mflNumericStepperControl",
   "mflIncrementStepper",
   'button.textContent = delta > 0 ? "▲" : "▼";',
@@ -286,4 +305,4 @@ for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtim
   invariant(!exists, `${path} must remain deleted; its behavior is canonical static CSS or no-op.`);
 }
 
-console.log("Canonical shared-control, increment-arrow, footer, Tooltip Height, and static table chrome ownership validation passed.");
+console.log("Canonical shared-control, filter containment, increment-arrow, footer, Tooltip Height, and static table chrome ownership validation passed.");

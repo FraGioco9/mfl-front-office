@@ -564,13 +564,30 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
+  #progressionPage > .quickFilters {
+    height: 56px;
+    min-height: 56px;
+    margin-bottom: 0;
+    padding: 0;
+    align-items: flex-start;
+  }
+
   .quickFiltersScrollerShell {
     position: relative;
-    margin-bottom: 2px;
+    height: 56px;
+    min-height: 56px;
+    margin-bottom: 0;
+  }
+
+  .quickFiltersScrollerShell > .quickFilters {
+    height: 34px;
+    min-height: 34px;
+    margin-bottom: 0;
+    padding: 0;
   }
 
   .quickFiltersScrollerShell:has(> .quickFilters.mflViewsOverflowing) > .viewsScrollButton {
-    top: 50%;
+    top: 17px;
   }
 
   .quickFiltersScrollerShell .viewsScrollButton {
@@ -601,7 +618,8 @@ html:not(.mflInitialRouteResolved):is(
     gap: 8px;
     width: 100%;
     max-width: 100%;
-    padding-bottom: 0;
+    margin-bottom: 0;
+    padding: 0;
     overflow-x: hidden;
     overflow-y: hidden;
     overscroll-behavior-x: auto;
@@ -619,23 +637,43 @@ html:not(.mflInitialRouteResolved):is(
     flex: 0 0 auto;
     min-height: 34px;
     gap: 5px;
-    padding-right: 2px;
+    padding: 0;
     font-size: 12px;
     line-height: 1.1;
     white-space: nowrap;
   }
 
-  .quickFilters input {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+  .quickFilters input[type="checkbox"] {
+    flex: 0 0 16px;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 4px;
   }
 
-  .watchlistPlayerCount {
-    position: static;
+  #progressionPage .watchlistPlayerCount:not([hidden]) {
+    display: flex;
+    align-items: center;
     width: 100%;
+    height: 18px;
     min-height: 18px;
-    margin: 0 0 2px;
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #progressionPage .quickFiltersScrollerShell + .watchlistPlayerCount:not([hidden]) {
+    position: static;
+    margin-top: -20px;
+    margin-bottom: 2px;
+  }
+
+  #progressionPage > .quickFilters > .watchlistPlayerCount:not([hidden]) {
+    position: absolute;
+    top: 36px;
+    left: 0;
   }
 
   #progressionPage > .controlsBar {
@@ -767,9 +805,11 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .filtersDialog {
-    width: min(760px, calc(100vw - 16px));
+    width: min(640px, calc(100vw - 16px));
     max-width: calc(100vw - 16px);
+    height: auto;
     max-height: calc(100dvh - 16px);
+    overflow: hidden;
   }
 
   .advancedSettingsDialog,
@@ -788,12 +828,13 @@ html:not(.mflInitialRouteResolved):is(
 
   .filtersHeader,
   .filtersFooter {
-    gap: 8px;
-    padding: 8px 10px;
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 6px 8px;
   }
 
   .filtersHeader h2 {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .searchBody {
@@ -850,49 +891,174 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .filterBuilder {
-    gap: 8px;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    flex: 0 1 auto;
+    gap: 6px;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px 10px;
+    overflow-x: hidden;
   }
 
   .addFilterRow,
   .filterRules {
-    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    gap: 6px;
   }
 
-  .addFilterRow .iconButton,
-  .addFilterRow select,
-  .filterRule > select,
-  .filterRule > button {
-    height: 38px;
-    min-height: 38px;
+
+  .filtersDialog .addFilterRow > *,
+  .filtersDialog .filterRule,
+  .filtersDialog .filterRule > *,
+  .filtersDialog .filterRule :is(
+    input,
+    select,
+    button,
+    [data-filter-value],
+    [data-filter-value-group],
+    .mflNumericStepperControl,
+    .betweenValue,
+    .dateValue,
+    .dateRangeValue
+  ),
+  .filtersDialog .filterRule :is(.betweenValue, .dateValue, .dateRangeValue, .mflNumericStepperControl, [data-filter-value-group]) > * {
+    min-width: 0;
+    max-width: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
+
+  .filtersDialog .filterRule :is(
+    input,
+    select,
+    [data-filter-value],
+    [data-filter-value-group],
+    .mflNumericStepperControl,
+    .betweenValue,
+    .dateValue,
+    .dateRangeValue
+  ),
+  .filtersDialog .filterRule :is(.betweenValue, .dateValue, .dateRangeValue, .mflNumericStepperControl, [data-filter-value-group]) > :is(input, select, [data-filter-value]) {
+    width: 100%;
+    inline-size: 100%;
+  }
+
+  .filtersDialog .mflNumericStepperControl {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    gap: 2px;
+  }
+
+  .filtersDialog .mflNumericStepperControl > input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filtersDialog .mflIncrementStepper {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+  }
+
+  .filtersDialog .mflIncrementStepper button {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+  }
+
 
   .filterRule {
-    grid-template-columns: 72px minmax(140px, 1fr) minmax(110px, 0.75fr) minmax(150px, 1.1fr) 36px;
-    gap: 8px;
-    min-height: 38px;
+    --mfl-filter-edge-gap: 8px;
+    --mfl-filter-builder-inline-padding: 10px;
+    --mfl-filter-remove-size: 18px;
+    --mfl-filter-remove-strip: calc((2 * var(--mfl-filter-edge-gap)) + var(--mfl-filter-remove-size) - var(--mfl-filter-builder-inline-padding));
+    position: relative;
+    box-sizing: border-box;
+    width: calc(100% - var(--mfl-filter-remove-strip));
+    max-width: calc(100% - var(--mfl-filter-remove-strip));
+    margin-left: 0;
+    margin-right: var(--mfl-filter-remove-strip);
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-rows: 36px 36px;
+    gap: 4px;
+    min-height: 76px;
   }
 
-  .filterRule > :nth-child(4),
-  .filterRule [data-filter-value] {
+  .filterRule > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(5) {
+    position: absolute;
+    top: 18px;
+    right: calc(var(--mfl-filter-edge-gap) - var(--mfl-filter-builder-inline-padding) - var(--mfl-filter-remove-strip));
+    width: var(--mfl-filter-remove-size);
+    min-width: var(--mfl-filter-remove-size);
+    max-width: var(--mfl-filter-remove-size);
+    height: var(--mfl-filter-remove-size);
+    min-height: var(--mfl-filter-remove-size);
+    transform: translateY(-50%);
+  }
+
+  .filterRule > :nth-child(5)::before,
+  .filterRule > :nth-child(5)::after {
+    width: 8px;
+    height: 1.5px;
+  }
+
+  .filterRule > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .filterRule > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
     min-width: 0;
   }
 
+  .filtersDialog .filterRule > :is(:nth-child(2), :nth-child(4)) {
+    width: 100%;
+    inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    max-width: 100%;
+    max-inline-size: 100%;
+  }
+
+
+  .filterRule:first-child > :nth-child(1) {
+    display: none;
+  }
+
+  .filterRule:first-child > :nth-child(2) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule > :nth-child(3)[hidden] + :nth-child(4) {
+    grid-column: 1 / 3;
+  }
+
   .filterRule select[hidden] {
-    display: block;
-    visibility: hidden;
+    display: none;
   }
 
   .betweenValue,
   .dateRangeValue {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
   }
 
   .filtersFooter button {
-    height: 38px;
-    min-height: 38px;
+    height: 36px;
+    min-height: 36px;
   }
 
   .advancedSettingHeader,
@@ -1241,9 +1407,14 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .filtersDialog {
-    width: min(760px, 100%);
+    --mfl-filter-box-font-size: 13px;
+    --mfl-filter-box-line-height: 16px;
+    --mfl-popup-close-size: 30px;
+    width: min(640px, 100%);
     max-width: 100%;
+    height: auto;
     max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow: hidden;
   }
 
   .advancedSettingsDialog,
@@ -1256,11 +1427,12 @@ html:not(.mflInitialRouteResolved):is(
     max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]),
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"])),
   select,
   textarea {
     font-size: 16px;
   }
+
 
   #databaseStatsPage .databaseStatsCustomFilter {
     display: grid;
@@ -1312,8 +1484,24 @@ html:not(.mflInitialRouteResolved):is(
     margin-bottom: 5px;
   }
 
+  #progressionPage > .quickFilters {
+    height: 56px;
+    min-height: 56px;
+    padding: 0;
+  }
+
   #progressionPage .quickFiltersScrollerShell {
-    margin-bottom: 2px;
+    height: 56px;
+    min-height: 56px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell > .quickFilters {
+    height: 30px;
+    min-height: 30px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell:has(> .quickFilters.mflViewsOverflowing) > .viewsScrollButton {
+    top: 15px;
   }
 
   .quickFiltersScrollerShell .viewsScrollButton {
@@ -1427,66 +1615,90 @@ html:not(.mflInitialRouteResolved):is(
 
   .quickFilters {
     gap: 6px;
+    padding: 0;
   }
 
   .quickFilters label {
     min-height: 30px;
     gap: 5px;
+    padding: 0;
     font-size: 11px;
     line-height: 1.1;
   }
 
-  .quickFilters input {
-    flex: 0 0 13px;
-    width: 13px;
-    height: 13px;
+  .quickFilters input[type="checkbox"] {
+    flex-basis: 16px;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
   }
 
   #progressionPage .watchlistPlayerCount:not([hidden]) {
-    display: flex;
-    align-items: center;
+    height: 22px;
     min-height: 22px;
-    margin: 0 0 2px;
-    color: var(--text-soft);
     font-size: 10px;
-    line-height: 1;
-    white-space: nowrap;
+  }
+
+  #progressionPage .quickFiltersScrollerShell + .watchlistPlayerCount:not([hidden]) {
+    margin-top: -24px;
+  }
+
+  #progressionPage > .quickFilters > .watchlistPlayerCount:not([hidden]) {
+    top: 32px;
   }
 
   .filtersDialog {
-    max-height: calc(100dvh - 16px);
+    --mfl-filter-box-font-size: 12px;
+    --mfl-filter-box-line-height: 15px;
+    --mfl-popup-close-size: 28px;
+    width: min(100%, 420px);
+    height: auto;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .filtersHeader,
+  .filtersFooter {
+    gap: 5px;
+    padding: 5px 7px;
+  }
+
+  .filtersHeader h2 {
+    font-size: 15px;
   }
 
   .filterBuilder {
-    gap: 6px;
-    padding: 10px;
+    gap: 4px;
+    padding: 6px;
   }
 
   .addFilterRow {
-    gap: 6px;
+    gap: 4px;
   }
 
   .addFilterRow select {
-    flex: 1 1 auto;
-    width: auto;
+    flex: 0 1 200px;
+    width: min(200px, 100%);
     min-width: 0;
+    max-width: 100%;
   }
 
-  .addFilterRow .iconButton,
-  .addFilterRow select {
-    height: 36px;
-    min-height: 36px;
-  }
+
 
   .filterRules {
-    gap: 6px;
+    gap: 4px;
   }
 
   .filterRule {
-    grid-template-columns: 72px minmax(0, 1fr) 34px;
+    --mfl-filter-builder-inline-padding: 6px;
+    --mfl-filter-remove-size: 14px;
+    width: calc(100% - var(--mfl-filter-remove-strip));
+    max-width: calc(100% - var(--mfl-filter-remove-strip));
+    margin-left: 0;
+    margin-right: var(--mfl-filter-remove-strip);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
     grid-template-rows: 36px 36px;
-    gap: 6px;
-    min-height: 78px;
+    gap: 3px;
+    min-height: 75px;
   }
 
   .filterRule > :nth-child(1) {
@@ -1500,8 +1712,15 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .filterRule > :nth-child(5) {
-    grid-column: 3;
-    grid-row: 1;
+    position: absolute;
+    top: 18px;
+    right: calc(var(--mfl-filter-edge-gap) - var(--mfl-filter-builder-inline-padding) - var(--mfl-filter-remove-strip));
+    width: var(--mfl-filter-remove-size);
+    min-width: var(--mfl-filter-remove-size);
+    max-width: var(--mfl-filter-remove-size);
+    height: var(--mfl-filter-remove-size);
+    min-height: var(--mfl-filter-remove-size);
+    transform: translateY(-50%);
   }
 
   .filterRule > :nth-child(3) {
@@ -1510,17 +1729,28 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .filterRule > :nth-child(4) {
-    grid-column: 2 / 4;
+    grid-column: 2;
     grid-row: 2;
     min-width: 0;
   }
 
+
+  .filterRule:first-child > :nth-child(1) {
+    display: none;
+  }
+
+  .filterRule:first-child > :nth-child(2) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule > :nth-child(3)[hidden] + :nth-child(4) {
+    grid-column: 1 / 3;
+  }
+
   .filterRule > select,
-  .filterRule > button,
   .filterRule [data-filter-value] {
     min-width: 0;
-    height: 36px;
-    min-height: 36px;
+    max-width: 100%;
   }
 
   .filterRule select[hidden] {
@@ -1530,7 +1760,7 @@ html:not(.mflInitialRouteResolved):is(
   .betweenValue,
   .dateRangeValue {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
+    gap: 3px;
   }
 
   .filtersFooter {
@@ -1741,13 +1971,46 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 17px;
   }
 
-  .filterRule {
-    grid-template-columns: 64px minmax(0, 1fr) 32px;
+  .filtersDialog {
+    --mfl-filter-box-font-size: 11px;
+    --mfl-filter-box-line-height: 14px;
+    --mfl-popup-close-size: 26px;
   }
+
+
+  .addFilterRow select {
+    flex-basis: 180px;
+    width: min(180px, 100%);
+    max-width: 100%;
+  }
+
+
+  .filterRule {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-rows: 36px 36px;
+    gap: 3px;
+    min-height: 75px;
+  }
+
+  .filterRule > :nth-child(5) {
+    width: 10px;
+    min-width: 10px;
+    max-width: 10px;
+    height: 10px;
+    min-height: 10px;
+  }
+
 
   .betweenValue,
   .dateRangeValue {
     grid-template-columns: 1fr;
+  }
+
+  .filterRule:has(> :nth-child(4) > :is(.betweenValue, .dateRangeValue)),
+  .filterRule:has(> :nth-child(4).betweenValue),
+  .filterRule:has(> :nth-child(4).dateRangeValue) {
+    grid-template-rows: 36px auto;
+    min-height: auto;
   }
 
   .searchDialog {
