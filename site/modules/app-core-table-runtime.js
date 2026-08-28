@@ -867,6 +867,7 @@ function tableBuildHeaderOwner() {
   headerRow.appendChild(actionsHeader);
 
   const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
   if (mobileTable) {
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
       if (button instanceof HTMLButtonElement) {
@@ -902,9 +903,13 @@ function tableBuildHeaderOwner() {
       ? ""
       : compactLabel;
     label.dataset.mflMobileTableLabel = mobileLabel;
-    label.textContent = mobileTable
-      ? mobileLabel
-      : (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel);
+    label.textContent = !mobileTable
+      ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
+      : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+        ? ""
+        : compactTableHeadings
+          ? compactLabel
+          : fullLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
