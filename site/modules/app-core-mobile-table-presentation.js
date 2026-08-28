@@ -13,8 +13,24 @@ export function addMobileTablePresentation(artifacts) {
   table = replaceRequired(
     table,
     '    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];',
-    '    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl") ? "" : columnLabels[column];',
-    "icon-only Listing header",
+    `    header.dataset.tableColumn = column;
+    const mobileLabel = window.matchMedia("(max-width: 900px)").matches
+      ? ({
+          positions: "POS",
+          overall: "OVR",
+          pace: "PAC",
+          shooting: "SHO",
+          passing: "PAS",
+          dribbling: "DRI",
+          defense: "DEF",
+          physical: "PHY",
+          goalkeeping: "GK",
+        }[column] || "")
+      : "";
+    label.textContent = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+      ? ""
+      : mobileLabel || columnLabels[column];`,
+    "compact mobile table headers",
   );
 
   table = replaceRequired(
@@ -32,7 +48,7 @@ export function addMobileTablePresentation(artifacts) {
           ? NaN
           : Number(rawListingPrice);
         if (Number.isFinite(numericListingPrice)) {
-          const priceText = \`$\${listingPriceFormatter.format(numericListingPrice)}\`;
+          const priceText = "$" + listingPriceFormatter.format(numericListingPrice);
           const listingHost = document.createElement("span");
           listingHost.className = "listingCellTableHost";
           const listingBadge = document.createElement("span");
@@ -54,7 +70,7 @@ export function addMobileTablePresentation(artifacts) {
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }`,
-    "icon-only Listing cell with price tooltip",
+    "icon-only Listing cell with price-only tooltip",
   );
 
   return Object.freeze({
