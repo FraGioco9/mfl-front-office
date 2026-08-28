@@ -80,6 +80,16 @@ includes(
 );
 includes(walletPresence, "last_seen_at: now,", "The canonical wallet presence helper must update last_seen_at.");
 includes(
+  walletPresence,
+  '"SELECT name FROM wallets WHERE lower(wallet_address) = lower(?) LIMIT 1"',
+  "Wallet presence must resolve the current agent name from the runtime wallets table.",
+);
+includes(
+  walletPresence,
+  "if (agentName) presence.agent_name = agentName;",
+  "Wallet presence must persist a non-empty runtime agent name without erasing an existing name on lookup misses.",
+);
+includes(
   walletOptIns,
   'const { touchWalletLastSeen } = require("./_wallet-presence");',
   "Wallet opt-in recording must reuse the canonical last-seen owner.",
@@ -127,6 +137,7 @@ includes(
   "Application startup must continue loading authenticated wallet preferences so returning opted-in users refresh last_seen_at.",
 );
 
+includes(schema, "agent_name text", "The canonical Supabase schema must retain wallet agent-name storage.");
 includes(schema, "last_seen_at timestamptz not null default now()", "The canonical Supabase schema must retain wallet last-seen storage.");
 includes(schema, "- 'linkedWalletAddress'", "The canonical Supabase schema must clean redundant linked wallet identity from table_state.");
 includes(
@@ -154,13 +165,18 @@ for (const table of [
 
 includes(
   documentation,
+  "current MFL agent name",
+  "Supabase documentation must define wallet_opt_ins.agent_name as runtime MFL agent data.",
+);
+includes(
+  documentation,
   "most recent authenticated visit/activity timestamp",
   "Supabase documentation must define last_seen_at as authenticated visit/activity data.",
 );
 includes(
   documentation,
   "Application startup already requests wallet preferences for a restored valid wallet proof",
-  "Supabase documentation must explain how returning opted-in visits refresh last_seen_at.",
+  "Supabase documentation must explain how returning opted-in visits refresh wallet presence data.",
 );
 
 const apiFiles = await fs.readdir(apiRoot);
@@ -187,4 +203,4 @@ includes(
   "The workflow that supplies Supabase credentials to progression email delivery must be documented.",
 );
 
-console.log("Supabase persistence ownership is documented, authenticated visits refresh wallet last-seen data, and wallet table_state stores only canonical cloud-owned data.");
+console.log("Supabase persistence ownership is documented, authenticated visits refresh wallet presence data, and wallet table_state stores only canonical cloud-owned data.");
