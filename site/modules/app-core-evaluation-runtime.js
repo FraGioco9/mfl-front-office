@@ -614,8 +614,12 @@ function showEvaluationLoadActionTooltip(button) {
 }
 
 function attachEvaluationLoadActionTooltip(button) {
-  button.addEventListener("mouseenter", () => showEvaluationLoadActionTooltip(button));
-  button.addEventListener("focus", () => showEvaluationLoadActionTooltip(button));
+  const showTooltip = () => {
+    if (window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches) return;
+    showEvaluationLoadActionTooltip(button);
+  };
+  button.addEventListener("mouseenter", showTooltip);
+  button.addEventListener("focus", showTooltip);
   button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
   button.addEventListener("blur", hideEvaluationLoadActionTooltip);
 }
