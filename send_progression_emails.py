@@ -45,6 +45,9 @@ DEFAULT_BASE_URL = "https://mfl-front-office.vercel.app"
 DEFAULT_EMAIL_THEME = "dark"
 SUPABASE_PAGE_SIZE = 1000
 PORTRAIT_SIZE_PX = 72  # Source-crop height for the local browser preview only.
+EMAIL_PORTRAIT_DISPLAY_HEIGHT_PX = 88
+EMAIL_PORTRAIT_MOBILE_DISPLAY_HEIGHT_PX = 32
+EMAIL_PORTRAIT_COMPACT_DISPLAY_HEIGHT_PX = 24
 PLAYER_PORTRAIT_SLOT_PERCENT = 38
 ID_COLUMN_WIDTH_PERCENT = 18
 PLAYER_COLUMN_WIDTH_PERCENT = 50
@@ -57,6 +60,9 @@ EMAIL_ROW_HORIZONTAL_PADDING_PERCENT = 2
 EMAIL_DESKTOP_FONT_SIZE_PX = 18
 EMAIL_MOBILE_FONT_SIZE_PX = 13
 EMAIL_COMPACT_FONT_SIZE_PX = 12
+INLINE_PORTRAIT_MAX_BYTES = 4 * 1024 * 1024
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+_INLINE_PORTRAIT_CACHE: dict[str, bytes | None] = {}
 
 
 @dataclass(frozen=True)
@@ -311,13 +317,23 @@ def overall_delta(player: PlayerImprovement) -> int:
     return 0
 
 
-def improvement_count(player: PlayerImprovement) -> int:
-    return len(player.changes)
+def stats_improvement_total(player: PlayerImprovement) -> int:
+    return sum(
+        new_value - old_value
+        for column, old_value, new_value in player.changes
+        if column != "overall"
+    )
 
 
-def player_sort_key(player: PlayerImprovement) -> tuple[int, int, str, int]:
+def player_sort_key(player: PlayerImprovement) -> tuple[int, int, int, int]:
     numeric_id = int(player.player_id) if player.player_id.isdigit() else 0
-    return (-overall_delta(player), -improvement_count(player), player.name.lower(), numeric_id)
+    current_overall = player.new_overall if player.new_overall is not None else -1
+    return (
+        -overall_delta(player),
+        -current_overall,
+        -stats_improvement_total(player),
+        -numeric_id,
+    )
 
 
 def format_text_changes(player: PlayerImprovement) -> str:
@@ -358,9 +374,10 @@ def player_identity_html(player: PlayerImprovement) -> str:
         portrait = (
             '<div class="player-portrait-shell" '
             'style="width:100%;background:transparent;overflow:hidden;">'
-            f'<img src="{html.escape(player.portrait_url)}" alt="" '
-            'style="display:block;width:auto;max-width:100%;height:auto;border:0;'
-            'margin:0;padding:0;background:transparent;">'
+            f'<img class="email-player-portrait" src="{html.escape(player.portrait_url)}" alt="" '
+            f'height="{EMAIL_PORTRAIT_DISPLAY_HEIGHT_PX}" '
+            'style="display:block;width:auto;max-width:none;border:0;'
+            'margin:0 auto;padding:0;background:transparent;">'
             '</div>'
         )
     else:
@@ -377,8 +394,8 @@ def player_identity_html(player: PlayerImprovement) -> str:
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
         'style="width:100%;border-collapse:collapse;table-layout:fixed;">'
         '<tr>'
-        f'<td width="{PLAYER_PORTRAIT_SLOT_PERCENT}%" valign="top" '
-        f'style="width:{PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;">{portrait}</td>'
+        f'<td width="{PLAYER_PORTRAIT_SLOT_PERCENT}%" align="center" valign="top" '
+        f'style="width:{PLAYER_PORTRAIT_SLOT_PERCENT}%;padding:0 4% 0 0;overflow:hidden;text-align:center;">{portrait}</td>'
         '<td valign="top" style="padding:0;overflow-wrap:anywhere;">'
         f'<strong class="email-player-name" style="display:block;color:#17222b;">{html.escape(player.name)}</strong>'
         f'<span class="email-position" style="display:block;margin-top:.25em;color:#60778a;font-size:75%;">'
@@ -439,11 +456,14 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
       :root {{ color-scheme: light dark; supported-color-schemes: light dark; }}
       .email-card {{ font-size:{EMAIL_DESKTOP_FONT_SIZE_PX}px; }}
       .email-id-cell, .email-id-link {{ white-space:nowrap; overflow-wrap:normal; word-break:normal; }}
+      .email-player-portrait {{ height:{EMAIL_PORTRAIT_DISPLAY_HEIGHT_PX}px; width:auto; max-width:none; }}
       @media screen and (max-width:480px) {{
         .email-card {{ font-size:{EMAIL_MOBILE_FONT_SIZE_PX}px; }}
+        .email-player-portrait {{ height:{EMAIL_PORTRAIT_MOBILE_DISPLAY_HEIGHT_PX}px; }}
       }}
       @media screen and (max-width:360px) {{
         .email-card {{ font-size:{EMAIL_COMPACT_FONT_SIZE_PX}px; }}
+        .email-player-portrait {{ height:{EMAIL_PORTRAIT_COMPACT_DISPLAY_HEIGHT_PX}px; }}
       }}
       @media (prefers-color-scheme: dark) {{
         .email-body, .email-page {{ background:#0f151a !important; color:#eef6ff !important; }}
@@ -510,7 +530,81 @@ def build_html(scope_name: str, players: list[PlayerImprovement], theme: str = D
 """
     return apply_email_theme(rendered, theme)
 
-def send_email(recipient: str, subject: str, text_body: str, html_body: str) -> None:
+def portrait_content_id(player_id: str) -> str:
+    normalized_id = re.sub(r"[^0-9A-Za-z.-]", "-", str(player_id or "").strip())
+    return f"mfl-player-{normalized_id or 'unknown'}@mfl-front-office"
+
+
+def load_inline_portrait_png(url: str) -> bytes | None:
+    portrait_url = str(url or "").strip()
+    if not portrait_url:
+        return None
+    if portrait_url in _INLINE_PORTRAIT_CACHE:
+        return _INLINE_PORTRAIT_CACHE[portrait_url]
+
+    request = Request(
+        portrait_url,
+        headers={
+            "Accept": "image/png",
+            "User-Agent": "MFL-Front-Office-Progression-Email/1.0",
+        },
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            content_type = str(response.headers.get("Content-Type") or "")
+            content_type = content_type.split(";", 1)[0].strip().lower()
+            payload = response.read(INLINE_PORTRAIT_MAX_BYTES + 1)
+    except (HTTPError, URLError, TimeoutError, OSError) as error:
+        print(f"Could not embed progression email portrait {portrait_url}: {error}")
+        _INLINE_PORTRAIT_CACHE[portrait_url] = None
+        return None
+
+    if (
+        content_type != "image/png"
+        or not payload.startswith(PNG_SIGNATURE)
+        or len(payload) > INLINE_PORTRAIT_MAX_BYTES
+    ):
+        print(f"Could not embed progression email portrait {portrait_url}: invalid PNG response.")
+        _INLINE_PORTRAIT_CACHE[portrait_url] = None
+        return None
+
+    _INLINE_PORTRAIT_CACHE[portrait_url] = payload
+    return payload
+
+
+def inline_progression_portraits(
+    html_body: str,
+    players: list[PlayerImprovement] | tuple[PlayerImprovement, ...],
+) -> tuple[str, list[tuple[str, bytes]]]:
+    rendered = html_body
+    related_images: list[tuple[str, bytes]] = []
+    seen: set[str] = set()
+
+    for player in players:
+        if player.player_id in seen or not player.portrait_url:
+            continue
+        seen.add(player.player_id)
+        source_marker = f'src="{html.escape(player.portrait_url)}"'
+        if source_marker not in rendered:
+            continue
+        png = load_inline_portrait_png(player.portrait_url)
+        if not png:
+            continue
+        content_id = portrait_content_id(player.player_id)
+        rendered = rendered.replace(source_marker, f'src="cid:{content_id}"', 1)
+        related_images.append((content_id, png))
+
+    return rendered, related_images
+
+
+def build_email_message(
+    recipient: str,
+    subject: str,
+    text_body: str,
+    html_body: str,
+    players: list[PlayerImprovement] | tuple[PlayerImprovement, ...] = (),
+) -> EmailMessage:
+    rendered_html, related_images = inline_progression_portraits(html_body, players)
     message = EmailMessage()
     message["From"] = os.environ["EMAIL_FROM"]
     message["To"] = recipient
@@ -518,7 +612,34 @@ def send_email(recipient: str, subject: str, text_body: str, html_body: str) -> 
     if os.environ.get("EMAIL_REPLY_TO"):
         message["Reply-To"] = os.environ["EMAIL_REPLY_TO"]
     message.set_content(text_body)
-    message.add_alternative(html_body, subtype="html")
+    message.add_alternative(rendered_html, subtype="html")
+
+    html_part = message.get_payload()[-1]
+    for content_id, png in related_images:
+        html_part.add_related(
+            png,
+            maintype="image",
+            subtype="png",
+            cid=f"<{content_id}>",
+            disposition="inline",
+        )
+    return message
+
+
+def send_email(
+    recipient: str,
+    subject: str,
+    text_body: str,
+    html_body: str,
+    players: list[PlayerImprovement] | tuple[PlayerImprovement, ...] = (),
+) -> None:
+    message = build_email_message(
+        recipient,
+        subject,
+        text_body,
+        html_body,
+        players,
+    )
 
     host = os.environ["SMTP_HOST"]
     port = int(os.environ.get("SMTP_PORT") or "587")
@@ -853,6 +974,7 @@ def main() -> int:
                 build_subject(scope_name, players),
                 build_text(scope_name, players),
                 build_html(scope_name, players, theme),
+                players,
             )
             sent += 1
             print(

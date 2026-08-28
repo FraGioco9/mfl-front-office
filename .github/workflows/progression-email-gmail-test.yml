@@ -1,0 +1,229 @@
+name: Progression email Gmail test
+
+on:
+  workflow_dispatch:
+    inputs:
+      recipient:
+        description: Email address that receives the single test message
+        required: true
+        type: string
+      fixture:
+        description: Deterministic test layout or database-driven players
+        required: true
+        default: database
+        type: choice
+        options:
+          - database
+          - showcase
+      player_ids:
+        description: Comma-separated player IDs for database mode (max 10)
+        required: false
+        type: string
+      theme:
+        description: Email theme to test
+        required: true
+        default: dark
+        type: choice
+        options:
+          - dark
+          - light
+  push:
+    branches:
+      - fix/529-gmail-progression-email-images-order
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  send-gmail-test:
+    if: >-
+      github.actor == github.repository_owner &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        contains(github.event.head_commit.message, '[gmail-test]')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TEST_RECIPIENT: ${{ github.event_name == 'workflow_dispatch' && inputs.recipient || secrets.PROGRESSION_EMAIL_TEST_RECIPIENT }}
+      CONFIGURED_FIXTURE: ${{ github.event_name == 'workflow_dispatch' && inputs.fixture || vars.PROGRESSION_EMAIL_TEST_FIXTURE }}
+      CONFIGURED_PLAYER_IDS: ${{ github.event_name == 'workflow_dispatch' && inputs.player_ids || vars.PROGRESSION_EMAIL_TEST_PLAYER_IDS }}
+      CONFIGURED_THEME: ${{ github.event_name == 'workflow_dispatch' && inputs.theme || vars.PROGRESSION_EMAIL_TEST_THEME }}
+      GMAIL_TEST_COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
+
+    steps:
+      - name: Check out email renderer
+        uses: actions/checkout@v7
+
+      - name: Validate test recipient
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${TEST_RECIPIENT:-}" ]; then
+            if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+              echo "Set the PROGRESSION_EMAIL_TEST_RECIPIENT repository secret before using the pre-merge [gmail-test] trigger." >&2
+            else
+              echo "A test recipient is required." >&2
+            fi
+            exit 1
+          fi
+
+      - name: Resolve test configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+
+          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+          configured_fixture = os.environ.get("CONFIGURED_FIXTURE", "").strip().lower()
+          configured_ids = os.environ.get("CONFIGURED_PLAYER_IDS", "").strip()
+          configured_theme = os.environ.get("CONFIGURED_THEME", "").strip().lower()
+          commit_message = os.environ.get("GMAIL_TEST_COMMIT_MESSAGE", "")
+
+          fixture = configured_fixture
+          fixture_source = "workflow input" if event_name == "workflow_dispatch" else "repository variable"
+          if event_name == "push" and not fixture:
+              match = re.search(r"(?:^|\s)fixture=(database|showcase)(?:\s|$)", commit_message, re.IGNORECASE)
+              if match:
+                  fixture = match.group(1).lower()
+                  fixture_source = "commit message"
+          if not fixture:
+              fixture = "database"
+              fixture_source = "default"
+          if fixture not in {"database", "showcase"}:
+              raise SystemExit("Gmail test fixture must be database or showcase.")
+
+          if fixture == "showcase":
+              player_ids = "374512,265327,185140,250483"
+              player_source = "showcase fixture"
+          else:
+              player_ids = configured_ids
+              player_source = "workflow input" if event_name == "workflow_dispatch" else "repository variable"
+              if event_name == "push" and not player_ids:
+                  match = re.search(r"(?:^|\s)players=([0-9][0-9,\s]*)", commit_message)
+                  if match:
+                      player_ids = match.group(1).strip()
+                      player_source = "commit message"
+              if event_name == "push" and not player_ids:
+                  raise SystemExit(
+                      "Pre-merge database Gmail tests require explicit players. Set the "
+                      "PROGRESSION_EMAIL_TEST_PLAYER_IDS repository variable or use "
+                      "a commit message such as '[gmail-test] players=374512,374511'."
+                  )
+
+          theme = configured_theme
+          theme_source = "workflow input" if event_name == "workflow_dispatch" else "repository variable"
+          if event_name == "push" and not theme:
+              match = re.search(r"(?:^|\s)theme=(dark|light)(?:\s|$)", commit_message, re.IGNORECASE)
+              if match:
+                  theme = match.group(1).lower()
+                  theme_source = "commit message"
+          if not theme:
+              theme = "dark"
+              theme_source = "default"
+          if theme not in {"dark", "light"}:
+              raise SystemExit("Gmail test theme must be dark or light.")
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.write(f"TEST_FIXTURE={fixture}\n")
+              output.write(f"INPUT_PLAYER_IDS={player_ids}\n")
+              output.write(f"TEST_THEME={theme}\n")
+
+          print(f"Fixture source: {fixture_source}")
+          print(f"Fixture: {fixture}")
+          print(f"Player selection source: {player_source}")
+          print(f"Configured player IDs: {player_ids}")
+          print(f"Theme source: {theme_source}")
+          print(f"Theme: {theme}")
+          PY
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Download latest database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          CANDIDATE="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
+              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.workflow_run.id | tostring)] | @tsv' \
+              | sort -r \
+              | head -n 1
+          )"
+          if [ -z "$CANDIDATE" ]; then
+            echo "No non-expired mfl_database artifact is available." >&2
+            exit 1
+          fi
+
+          IFS=$'\t' read -r CREATED_AT RUN_ID <<< "$CANDIDATE"
+          echo "Using database artifact from run $RUN_ID ($CREATED_AT)."
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          python prepare_runtime_database.py mfl_database.db --validate-only
+
+      - name: Resolve test players
+        id: players
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import progression_email_gmail_test as gmail_test
+
+          players = gmail_test.selected_players(
+              Path("mfl_database.db"),
+              os.environ.get("INPUT_PLAYER_IDS", ""),
+              os.environ.get("TEST_FIXTURE", "database"),
+          )
+          player_ids = ",".join(player.player_id for player in players)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"player_ids={player_ids}\n")
+          print(f"Testing players after production sort: {player_ids}")
+          for player in players:
+              labels = ", ".join(column for column, _, _ in player.changes)
+              print(f"  #{player.player_id}: {labels}")
+          PY
+
+      - name: Install portrait renderer dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Render branch portraits
+        working-directory: site
+        run: >-
+          node render-progression-email-test-portraits.mjs
+          ../progression-email-test-portraits
+          "${{ steps.players.outputs.player_ids }}"
+
+      - name: Send one Gmail test email
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          EMAIL_BASE_URL: https://mfl-front-office.vercel.app
+          TEST_PLAYER_IDS: ${{ steps.players.outputs.player_ids }}
+        run: >-
+          python progression_email_gmail_test.py
+          --current-db mfl_database.db
+          --portrait-dir progression-email-test-portraits
+          --recipient "$TEST_RECIPIENT"
+          --player-ids "$TEST_PLAYER_IDS"
+          --theme "$TEST_THEME"
+          --fixture "$TEST_FIXTURE"
