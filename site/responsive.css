@@ -46,9 +46,12 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage {
-    --mfl-table-col-listing: 4.25%;
-    --mfl-table-col-name: 16.657444882309086%;
-    --mfl-table-col-contract-render-name: 16.657752391095965%;
+    --mfl-table-row-height: 30px;
+    --mfl-table-row-outer-height: 35px;
+    --mfl-table-col-listing: 4%;
+    --mfl-table-col-positions: 9.5%;
+    --mfl-table-col-name: 14.91623176057088%;
+    --mfl-table-col-contract-render-name: 14.916539269357763%;
   }
 
   html,
@@ -744,7 +747,14 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage .playerTableScroller .listingCellContent {
     justify-content: center;
-    padding-inline: 0;
+    width: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    height: 18px;
+    min-height: 18px;
+    max-height: 18px;
+    gap: 0;
+    padding: 0;
   }
 
   #progressionPage .playerTableScroller th {
@@ -760,7 +770,17 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 12px;
     height: 12px;
     background-size: 8px 6px;
-    border-radius: 3px;
+    border-radius: 4px;
+  }
+
+  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell) {
+    font-size: 0;
+  }
+
+  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::before,
+  #progressionPage #tableHead :is(th.selectionCell, th.rowActionsCell)::after {
+    content: none;
+    display: none;
   }
 
   #progressionPage .playerTableScroller .playerTableActionsButton {
@@ -782,8 +802,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
+  }
+
+  #progressionPage .playerTableScroller .playerNoteIcon {
+    font-size: 10px;
+    line-height: 1;
   }
 
   #progressionPage .playerTableScroller .listingCellIcon {
@@ -804,60 +829,60 @@ html:not(.mflInitialRouteResolved):is(
     transform-origin: center;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-listing > span:first-child {
+  #progressionPage #tableHead th.col-listing > span:first-child {
     font-size: 0;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child {
+  #progressionPage #tableHead th:nth-child(6) > span:first-child {
     font-size: 0;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th:nth-child(9).col-stat > span:first-child::after {
-    content: "OVR";
+  #progressionPage #tableHead th:nth-child(6) > span:first-child::after {
+    content: "POS";
     font-size: 10px;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(10) > span:first-child::after { content: "PAC"; font-size: 10px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(11) > span:first-child::after { content: "SHO"; font-size: 10px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(12) > span:first-child::after { content: "PAS"; font-size: 10px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(13) > span:first-child::after { content: "DRI"; font-size: 10px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(14) > span:first-child::after { content: "DEF"; font-size: 10px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-    [data-initial-table-view="attributes"],
-    [data-initial-table-view="current"],
-    [data-initial-table-view="all"],
-    [data-initial-table-view="next"]
-  ) #tableHead th:nth-child(15) > span:first-child::after { content: "PHY"; font-size: 10px; }
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child {
+    font-size: 0;
+  }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(9) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(9) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(9) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(9) > span:first-child::after { content: "OVR"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(10) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(10) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(10) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(10) > span:first-child::after { content: "PAC"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(11) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(11) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(11) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(11) > span:first-child::after { content: "SHO"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(12) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(12) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(12) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(12) > span:first-child::after { content: "PAS"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(13) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(13) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(13) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(13) > span:first-child::after { content: "DRI"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(14) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(14) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(14) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(14) > span:first-child::after { content: "DEF"; font-size: 10px; }
+
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(15) > span:first-child::after { content: "PHY"; font-size: 10px; }
 
   .advancedPlayerTable {
     min-width: 680px;
@@ -1605,6 +1630,11 @@ html:not(.mflInitialRouteResolved):is(
     height: 38px;
   }
 
+  #progressionPage {
+    --mfl-table-row-height: 28px;
+    --mfl-table-row-outer-height: 33px;
+  }
+
   #progressionPage .views {
     --mfl-views-gap: 4px;
     margin-bottom: 5px;
@@ -1948,29 +1978,55 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 11px;
   }
 
+  #progressionPage .playerTableScroller .playerTableActionsButton {
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    min-height: 18px;
+  }
+
+  #progressionPage .playerTableScroller .playerTableActionsButton svg {
+    width: 12px;
+    height: 12px;
+  }
+
   #progressionPage .playerTableScroller .flagImage {
     width: 12px;
     height: 12px;
   }
 
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
+  }
+
+  #progressionPage .playerTableScroller .playerNoteIcon {
+    font-size: 9px;
   }
 
   #progressionPage .playerTableScroller .listingCellContent {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+    height: 16px;
+    min-height: 16px;
+    max-height: 16px;
     gap: 0;
-    padding-inline: 0;
+    padding: 0;
     font-size: 10px;
   }
 
   #progressionPage .playerTableScroller .listingCellIcon {
-    flex-basis: 9px;
-    width: 9px;
-    height: 9px;
+    flex-basis: 8px;
+    width: 8px;
+    height: 8px;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-stat > span:first-child::after {
+  #progressionPage #tableHead th:nth-child(6) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after {
     font-size: 9px;
   }
 
@@ -2168,7 +2224,11 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 10px;
   }
 
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #tableHead th.col-stat > span:first-child::after {
+  #progressionPage #tableHead th:nth-child(6) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="attributes"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="current"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="all"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after,
+  #progressionPage:has(.viewButton[data-view="next"].active) #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after {
     font-size: 8px;
   }
 
