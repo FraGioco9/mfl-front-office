@@ -14,6 +14,17 @@
     physical: "PHY",
     goalkeeping: "GK",
   });
+  const MOBILE_HEADER_LABELS_BY_TEXT = Object.freeze({
+    positions: "POS",
+    overall: "OVR",
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+  });
 
   window.__mflMobileTableInteractionsRuntime?.destroy?.();
 
@@ -29,16 +40,18 @@
 
   function syncHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
-    document.querySelectorAll("#tableHead th[data-table-column] > span:first-child").forEach((label) => {
+    document.querySelectorAll("#tableHead th > span:first-child").forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
-      const header = label.closest("th[data-table-column]");
+      const header = label.closest("th");
       if (!(header instanceof HTMLTableCellElement)) return;
       const column = String(header.dataset.tableColumn || "");
       const fullLabel = String(label.dataset.mflFullTableLabel || label.textContent || "").trim();
       if (!label.dataset.mflFullTableLabel) label.dataset.mflFullTableLabel = fullLabel;
-      const desired = mobile
-        ? (column === "listing_price" ? "" : MOBILE_HEADER_LABELS[column] || fullLabel)
-        : fullLabel;
+      const compactLabel = MOBILE_HEADER_LABELS[column]
+        || MOBILE_HEADER_LABELS_BY_TEXT[fullLabel.toLowerCase()]
+        || fullLabel;
+      const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";
+      const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
