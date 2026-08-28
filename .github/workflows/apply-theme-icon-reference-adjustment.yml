@@ -30,24 +30,8 @@ jobs:
           elif new_moon not in index:
               raise SystemExit("Expected moon SVG geometry was not found.")
 
-          old_visibility = '''      #themeButton .themeSunSymbol {
-        display: none;
-      }
-      html[data-theme="dark"] #themeButton .themeMoonSymbol {
-        display: none;
-      }
-      html[data-theme="dark"] #themeButton .themeSunSymbol {
-        display: inline;
-      }'''
-          new_visibility = '''      #themeButton .themeMoonSymbol {
-        display: none;
-      }
-      html[data-theme="dark"] #themeButton .themeSunSymbol {
-        display: none;
-      }
-      html[data-theme="dark"] #themeButton .themeMoonSymbol {
-        display: inline;
-      }'''
+          old_visibility = '      #themeButton .themeSunSymbol {\n        display: none;\n      }\n      html[data-theme="dark"] #themeButton .themeMoonSymbol {\n        display: none;\n      }\n      html[data-theme="dark"] #themeButton .themeSunSymbol {\n        display: inline;\n      }'
+          new_visibility = '      #themeButton .themeMoonSymbol {\n        display: none;\n      }\n      html[data-theme="dark"] #themeButton .themeSunSymbol {\n        display: none;\n      }\n      html[data-theme="dark"] #themeButton .themeMoonSymbol {\n        display: inline;\n      }'
           if old_visibility in index:
               index = index.replace(old_visibility, new_visibility, 1)
           elif new_visibility not in index:
