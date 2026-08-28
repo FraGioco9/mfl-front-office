@@ -91,7 +91,7 @@ export function firstPaintRouteConfigProjectionSource() {
     "        Object.entries(MOBILE_TABLE_FIRST_PAINT_LABELS).forEach(([column, label]) => {",
     "          addMobileTableFirstPaintLabel(`#progressionPage #tableHead th[data-table-column=\"${column}\"] > span:first-child`, label);",
     "        });",
-    "        mobileTableFirstPaintStyle.id = \"mflInitialMobileTableFirstPaint\";",
+    '        mobileTableFirstPaintStyle.id = "mflInitialMobileTableFirstPaint";',
     "        mobileTableFirstPaintStyle.textContent = `@media (max-width: 900px) {\\n${mobileTableFirstPaintRules.join(\"\\n\")}\\n}\\n@media (max-width: 520px) {\\n#progressionPage { --mfl-mobile-table-header-font-size: 9px; --mfl-table-header-height: 24px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; }\\n}`;",
     "        document.head.appendChild(mobileTableFirstPaintStyle);",
     FIRST_PAINT_CONFIG_END,
