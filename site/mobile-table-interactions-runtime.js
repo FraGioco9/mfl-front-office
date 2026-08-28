@@ -40,6 +40,7 @@
 
   function syncHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
+    const compact = PHONE_TABLE_MEDIA.matches;
     document.querySelectorAll("#tableHead th > span:first-child").forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
       const header = label.closest("th");
@@ -52,7 +53,13 @@
         || MOBILE_HEADER_LABELS_BY_TEXT[fullLabel.toLowerCase()]
         || fullLabel;
       const listingHeader = column === "listing_price" || fullLabel.toLowerCase() === "listing";
-      const desired = mobile ? (listingHeader ? "" : compactLabel) : fullLabel;
+      const desired = !mobile
+        ? fullLabel
+        : listingHeader
+          ? ""
+          : compact
+            ? compactLabel
+            : fullLabel;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
