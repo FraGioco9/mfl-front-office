@@ -12,29 +12,44 @@ export function addMobileTablePresentation(artifacts) {
 
   table = replaceRequired(
     table,
+    "  currentViewColumns().forEach((column) => {",
+    `  const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  if (mobileTable) {
+    document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
+      if (button instanceof HTMLButtonElement) {
+        button.classList.toggle("active", button.dataset.view === state.view);
+      }
+    });
+  }
+
+  currentViewColumns().forEach((column) => {`,
+    "mobile first-paint active view synchronization",
+  );
+
+  table = replaceRequired(
+    table,
     '    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];',
     `    cell.dataset.tableColumn = column;
     const fullLabel = columnLabels[column] || "";
     label.dataset.mflFullTableLabel = fullLabel;
-    const mobileTable = window.matchMedia("(max-width: 900px)").matches;
-    const mobileLabel = mobileTable
-      ? ({
-          positions: "POS",
-          overall: "OVR",
-          pace: "PAC",
-          shooting: "SHO",
-          passing: "PAS",
-          dribbling: "DRI",
-          defense: "DEF",
-          physical: "PHY",
-          goalkeeping: "GK",
-        }[column] || "")
-      : "";
-    label.textContent = column === agentColumn && state.currentPage === "mfl"
+    const compactLabel = ({
+      positions: "POS",
+      overall: "OVR",
+      pace: "PAC",
+      shooting: "SHO",
+      passing: "PAS",
+      dribbling: "DRI",
+      defense: "DEF",
+      physical: "PHY",
+      goalkeeping: "GK",
+    }[column] || fullLabel);
+    const mobileLabel = column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
       ? ""
-      : mobileTable && column === "listing_price"
-        ? ""
-        : mobileLabel || fullLabel;`,
+      : compactLabel;
+    label.dataset.mflMobileTableLabel = mobileLabel;
+    label.textContent = mobileTable
+      ? mobileLabel
+      : (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel);`,
     "compact mobile table headers",
   );
 
