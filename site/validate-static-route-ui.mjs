@@ -43,7 +43,7 @@ includes(indexHtml, ') #myPlayersLockedPage {\n        display: grid;\n        p
 excludes(indexHtml, ') #myPlayersLockedPage {\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");
 includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");
 includes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");
-includes(indexHtml, 'settings: ["Settings", "In order to use settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
+includes(indexHtml, 'settings: ["Settings", "In order to view settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
 const setPageStart = coreSource.indexOf('async function setPage(pageName, updateHash = true, options = {}) {');
 invariant(setPageStart >= 0, "Canonical setPage must exist for opted-out route validation.");
 const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
