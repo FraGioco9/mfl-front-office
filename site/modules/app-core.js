@@ -1179,6 +1179,10 @@ function updateAccountState() {
 
 function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
+  const routeAtOptOut = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+    ? routeAtOptOut
+    : null;
   clearWalletNotesState();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
@@ -1196,6 +1200,18 @@ function optOutWallet() {
 
   updateAccountState();
   updateMenuVisibility();
+
+  if (protectedRouteAtOptOut) {
+    const lockedPage = protectedRouteAtOptOut.pageName;
+    const lockedOptions = protectedRouteAtOptOut.options && typeof protectedRouteAtOptOut.options === "object"
+      ? protectedRouteAtOptOut.options
+      : {};
+    setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
+    saveTableState();
+    showToast("Dapper opt-in removed.");
+    return;
+  }
+
   normalizeCurrentViewsAfterProgressionAccessLoss();
   if (state.currentPage === "player") {
     renderPlayerPage(playerIdFromUrl());
@@ -1210,17 +1226,8 @@ function optOutWallet() {
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "watchlist") {
-    const targetPath = pagePath("watchlist", { view: defaultViewForPage("watchlist") });
-    if (`${window.location.pathname}${window.location.search}` !== targetPath) {
-      window.history.replaceState({}, "", targetPath);
-    }
-    setPage("watchlist", false, { plain: true, view: defaultViewForPage("watchlist") });
-    return;
-  }
-
-  if (state.currentPage === "myplayers" || state.currentPage === "settings") {
-    setPage(state.currentPage, false);
+  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+    setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }
 
@@ -3215,6 +3222,7 @@ function renderTableLoadingShell(pageName) {
   window.__mflTableLoadingRuntime?.show?.();
 }
 async function setPage(pageName, updateHash = true, options = {}) {
+  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
@@ -3232,17 +3240,19 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "agents") {
     state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
   }
-  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
     window.history.replaceState({}, "", options.replaceUrl);
   }
   document.body.dataset.page = pageName;
-  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  if (!lockedOptOutRoute) {
+    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  }
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
   }
 
-  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
+  if (lockedOptOutRoute) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;

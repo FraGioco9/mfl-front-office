@@ -46,6 +46,12 @@
             ? "player"
             : "";
         if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+          ? tablePage
+          : firstPart === "settings"
+            ? "settings"
+            : "";
+        if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;
         const tableConfig = TABLE_VIEW_CONFIG[tablePage];
         if (tableConfig) {
           const lastPart = String(pathParts.at(-1) || "").toLowerCase();
@@ -160,7 +166,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
       ) #myPlayersLockedPage {
-        display: block;
+        display: grid;
+        place-items: center;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
         display: none;
@@ -493,6 +500,20 @@
             <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
           </div>
         </section>
+        <script>
+          (() => {
+            const copy = {
+              myplayers: ["My Players", "In order to see your players, you need to opt in."],
+              watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
+              settings: ["Settings", "In order to view settings, you need to opt in."],
+            }[document.documentElement.dataset.initialLockedPage || ""];
+            if (!copy) return;
+            const title = document.getElementById("optInLockedTitle");
+            const message = document.getElementById("optInLockedMessage");
+            if (title) title.textContent = copy[0];
+            if (message) message.textContent = copy[1];
+          })();
+        </script>
 
         <section id="evaluationPage" class="pageView evaluationPage" hidden>
           <div class="evaluationTitleRow">
