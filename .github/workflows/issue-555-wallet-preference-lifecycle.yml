@@ -42,6 +42,18 @@ jobs:
           PY
       - name: Apply canonical migration
         run: python site/migrate-555-wallet-preference-lifecycle.py
+      - name: Align Settings persistence regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("site/validate-settings-route-core.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = 'includes(settingsCore, "await saveWalletPreferencesNow();", "Explicit Settings Save must write through the existing wallet-preferences/Supabase owner.");'
+          new = 'includes(settingsCore, \'await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });\', "Explicit Settings Save must write only the Settings domain through the wallet-preferences/Supabase owner.");'
+          if old not in text:
+              raise SystemExit("Settings persistence assertion not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - uses: actions/setup-node@v7
         with:
           node-version: 22
