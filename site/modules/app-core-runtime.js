@@ -79,6 +79,8 @@ const state = {
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
   walletPreferencesSaveSequence: 0,
+  walletPreferencesLoadPromise: null,
+  walletPreferencesWritePromise: Promise.resolve(),
   settingsSaveInFlight: false,
   tooltipSuppressedUntil: 0,
   hoveredTablePlayerId: "",
@@ -488,7 +490,7 @@ function queueThemePreferenceCloudSync() {
   if (!state.linkedWalletAddress || !hasWalletProof() || !state.walletSettingsLoaded) return;
   window.clearTimeout(state.walletPreferencesSaveTimer);
   state.walletPreferencesSaveTimer = window.setTimeout(() => {
-    void saveWalletPreferencesNow();
+    void saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
   }, 0);
 }
 
@@ -2864,25 +2866,20 @@ function settingsRestoreDraftBaselineForNavigation() {
 async function settingsRefreshCommittedFromSupabase(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) return false;
 
-  try {
-    const response = await fetch("/api/wallet-preferences", {
-      cache: "no-store",
-      headers: walletProofHeaders(true),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) return false;
+  const force = options.force === true;
+  const render = options.render !== false;
+  const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  if (activeDraft && !force) return false;
 
-    const force = options.force === true;
-    const render = options.render !== false;
-    const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
-    if (activeDraft && !force) return false;
+  try {
+    const loaded = await loadWalletPreferences({ force });
+    if (!loaded && !state.walletPreferencesLoaded) return false;
     state.settingsDraftDirty = false;
-    applySettingsPayload(data.settings || {}, { render });
     state.settingsDraftBaseline = currentSettingsPayload();
     state.settingsDraftDirty = false;
+    if (render && settingsRouteActive()) renderSettingsPage();
     return true;
   } catch {
-    // The last committed in-memory baseline remains the safe fallback.
     return false;
   }
 }
@@ -3718,11 +3715,12 @@ function refreshPlayerPageAfterWalletSync() {
 async function loadWalletPreferences(options = {}) {
   const force = Boolean(options.force);
 
-  if (!state.linkedWalletAddress || !hasWalletProof() || state.walletPreferencesLoading || (state.walletPreferencesLoaded && !force)) {
-    return;
-  }
+  if (!state.linkedWalletAddress || !hasWalletProof()) return false;
+  if (state.walletPreferencesLoadPromise) return state.walletPreferencesLoadPromise;
+  if (state.walletPreferencesLoaded && !force) return true;
 
-  state.walletPreferencesLoading = true;
+  const loadPromise = (async () => {
+    state.walletPreferencesLoading = true;
   const walletPreferencesPageAtLoadStart = state.currentPage;
   const walletPreferencesPathAtLoadStart = `${window.location.pathname}${window.location.search}`;
   const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
@@ -3775,7 +3773,7 @@ async function loadWalletPreferences(options = {}) {
       const pendingSettings = loadPendingSettingsLocally();
       if (pendingSettings || state.settingsSaveInFlight) {
         applySettingsPayload(pendingSettings || currentSettingsPayload());
-        void saveWalletPreferencesNow();
+        void saveWalletPreferencesNow({ domains: ["settings"] });
       } else if (data.settings) {
         applySettingsPayload(data.settings);
       }
@@ -3795,6 +3793,8 @@ async function loadWalletPreferences(options = {}) {
       saveWalletNotesLocally();
       if (tableStateChanged && tablePageKey()) {
         restoreSavedTableState(tablePageKey());
+        syncRestoredTableControls(tablePageKey());
+        globalThis.syncQuickFilterLabels?.();
         applyFilters({ save: false });
       }
     }
@@ -3813,9 +3813,20 @@ async function loadWalletPreferences(options = {}) {
       }
     }
   }
+    return true;
+  })();
+
+  state.walletPreferencesLoadPromise = loadPromise;
+  try {
+    return await loadPromise;
+  } finally {
+    if (state.walletPreferencesLoadPromise === loadPromise) {
+      state.walletPreferencesLoadPromise = null;
+    }
+  }
 }
 
-async function saveWalletPreferencesNow(options = {}) {
+async function performWalletPreferencesSave(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     return;
   }
@@ -3829,13 +3840,15 @@ async function saveWalletPreferencesNow(options = {}) {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
     const pendingSettings = loadPendingSettingsLocally();
-    const shouldSaveSettings = state.walletSettingsLoaded || state.settingsSaveInFlight || Boolean(pendingSettings);
+    const requestedDomains = Array.isArray(options.domains) ? new Set(options.domains) : null;
+    const includesDomain = (domain) => !requestedDomains || requestedDomains.has(domain);
+    const shouldSaveSettings = includesDomain("settings") && (options.includeSettings === true || state.settingsSaveInFlight || Boolean(pendingSettings));
     const settingsPayload = pendingSettings || currentSettingsPayload();
     const body = {
-      playerNotes: normalizedPlayerNotes(state.playerNotes),
-      watchlists: watchlistsPayload(),
-      tableState: stripPersistentSortState(currentTableState()),
-      evaluationSettings: currentEvaluationSettingsPayload(),
+      ...(includesDomain("playerNotes") ? { playerNotes: normalizedPlayerNotes(state.playerNotes) } : {}),
+      ...(includesDomain("watchlists") ? { watchlists: watchlistsPayload() } : {}),
+      ...(includesDomain("tableState") ? { tableState: stripPersistentSortState(currentTableState()) } : {}),
+      ...(includesDomain("evaluationSettings") ? { evaluationSettings: currentEvaluationSettingsPayload() } : {}),
       ...(shouldSaveSettings ? { settings: settingsPayload } : {}),
     };
 
@@ -3891,6 +3904,14 @@ async function saveWalletPreferencesNow(options = {}) {
     }
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
   }
+}
+
+async function saveWalletPreferencesNow(options = {}) {
+  const run = () => performWalletPreferencesSave(options);
+  state.walletPreferencesWritePromise = Promise.resolve(state.walletPreferencesWritePromise)
+    .catch(() => undefined)
+    .then(run);
+  return state.walletPreferencesWritePromise;
 }
 
 function saveTableState() {
@@ -9272,17 +9293,18 @@ async function startApp() {
       return originalSaveTableStateLocally(localState);
     };
 
-    window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
   }
 
   async function ensureEvaluationRecentStateHydrated() {
+    if (evaluationRecentStateHydrated) return true;
+
     const pendingStartup = window.__mflWalletPreferencesStartupPromise;
     if (pendingStartup && typeof pendingStartup.then === "function") {
       await Promise.resolve(pendingStartup).catch(() => undefined);
+      if (evaluationRecentStateHydrated) return true;
     }
 
-    if (evaluationRecentStateHydrated) return true;
     if (!state.linkedWalletAddress
       || typeof hasWalletProof !== "function"
       || !hasWalletProof()
@@ -9290,7 +9312,7 @@ async function startApp() {
       return false;
     }
 
-    await loadWalletPreferences({ force: true });
+    await loadWalletPreferences();
     return evaluationRecentStateHydrated;
   }
 

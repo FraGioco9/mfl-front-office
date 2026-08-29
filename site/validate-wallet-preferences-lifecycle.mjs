@@ -28,7 +28,8 @@ invariant(
 invariant(
   appCore.includes("walletPreferencesWritePromise: Promise.resolve()")
     && appCore.includes("state.walletPreferencesWritePromise = Promise.resolve(state.walletPreferencesWritePromise)")
-    && appCore.includes("return state.walletPreferencesWritePromise;"),
+    && appCore.includes("return state.walletPreferencesWritePromise;")
+    && settingsChunk.includes('saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true })'),
   "Wallet preference writes must be serialized so browser saves cannot race one another.",
 );
 invariant(

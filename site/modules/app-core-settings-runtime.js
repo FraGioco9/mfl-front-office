@@ -188,7 +188,7 @@ async function saveSettingsDraft() {
   state.settingsSaveInFlight = true;
   savePendingSettingsLocally(payload);
   updateSettingsEmailDraftActions();
-  await saveWalletPreferencesNow();
+  await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
 
   const pending = loadPendingSettingsLocally();
   state.settingsSaveInFlight = false;
