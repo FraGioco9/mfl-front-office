@@ -33,7 +33,12 @@ jobs:
           new = '''    if end_index < 0:\n        if label == "saveSettingsPreferencesAfterChange":\n            return text\n        raise RuntimeError(f"{label}: end marker not found")'''
           if old not in text:
               raise SystemExit("migration end-marker guard not found")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          text = text.replace(old, new, 1)
+          old_wrapper = '''function saveWalletPreferencesNow(options = {}) {\\n  const run = () => performWalletPreferencesSave(options);'''
+          new_wrapper = '''async function saveWalletPreferencesNow(options = {}) {\\n  const run = () => performWalletPreferencesSave(options);'''
+          if old_wrapper not in text:
+              raise SystemExit("wallet save wrapper template not found")
+          path.write_text(text.replace(old_wrapper, new_wrapper, 1), encoding="utf-8")
           PY
       - name: Apply canonical migration
         run: python site/migrate-555-wallet-preference-lifecycle.py
