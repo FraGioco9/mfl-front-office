@@ -15,7 +15,7 @@
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
   const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
-  const PLAYER_PENDING_OVERALL_BACKGROUND = "#1d252c";
+  const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
   const PLAYER_NOTE_MAX_LENGTH = 100;
@@ -195,10 +195,10 @@
 function applyLoadedOverallBackground(box, complete = false) {
   if (!(box instanceof HTMLElement)) return false;
   box.style.background = PLAYER_LOADED_OVERALL_BACKGROUND;
-  box.style.backgroundColor = "var(--color-bg-default-secondary)";
+  box.style.backgroundColor = "var(--surface)";
   box.style.backgroundPosition = "center bottom, center";
   box.style.backgroundRepeat = "no-repeat";
-  box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 100%";
+  box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 0%";
   return true;
 }
 
@@ -603,7 +603,7 @@ function applyOverallBoxAppearance(box, overall) {
       primary.style.lineHeight = "1";
       primary.style.whiteSpace = "nowrap";
       primary.style.textDecoration = "none";
-      primary.style.color = unavailable ? "var(--text-soft)" : "var(--text)";
+      primary.style.color = unavailable ? "var(--text-soft)" : "#ffffff";
       primary.style.opacity = unavailable ? "0.5" : "1";
       primary.style.cursor = unavailable ? "default" : "";
       primary.style.pointerEvents = unavailable ? "none" : "";

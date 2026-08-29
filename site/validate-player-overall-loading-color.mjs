@@ -19,13 +19,15 @@ const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const playerCore = String(artifacts.routeChunks?.player || "");
 
 const required = [
-  'const PLAYER_PENDING_OVERALL_BACKGROUND = "#1d252c";',
+  'const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";',
+  'primary.style.color = unavailable ? "var(--text-soft)" : "#ffffff";',
   'const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(',
   "function hasLoadedOverall(overall) {",
   "return Number.isFinite(value) && value > 0;",
   "function applyLoadedOverallBackground(box, complete = false) {",
   "box.style.background = PLAYER_LOADED_OVERALL_BACKGROUND;",
-  'box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 100%";',
+  'box.style.backgroundColor = "var(--surface)";',
+  'box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 0%";',
   "function overallRarityPaintComplete(box) {",
   'detail.classList.contains("playerOverallRarityPaintComplete")',
   "function applyOverallBoxAppearance(box, overall) {",
@@ -89,7 +91,7 @@ for (const [label, source] of [
   const neutralIndex = appearanceBody.lastIndexOf("box.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;");
   invariant(
     raritySetIndex >= 0 && neutralIndex > raritySetIndex,
-    `${label}: a loaded Overall must remain #1d252c until the rarity paint is explicitly started`,
+    `${label}: a loaded Overall must remain on the theme surface (white in light mode) until the rarity paint is explicitly started`,
   );
 
   const readyControlsStart = source.indexOf("function animateReadyControls(container = document) {");
@@ -117,9 +119,9 @@ for (const [label, source] of [
 for (const value of [
   "#playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),",
   "#playerDetail:not(.playerOverallRarityPaintComplete) .playerAttributeCard.featured:not(.isPending) {",
-  "background: #1d252c;",
+  "background: var(--surface);",
   "@keyframes playerOverallRarityPaint {",
-  "background-size: 100% 0%, 100% 100%;",
+  "background-size: 100% 0%, 100% 0%;",
   "background-size: 100% 100%, 100% 100%;",
   ".playerHeroOverall.rarityPaintOnce,",
   ".playerAttributeCard.featured.rarityPaintOnce {",
@@ -135,8 +137,14 @@ for (const value of [
 const prePaintStart = stylesBase.indexOf("#playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),");
 const keyframesStart = stylesBase.indexOf("@keyframes playerOverallRarityPaint", prePaintStart);
 const prePaintCss = stylesBase.slice(prePaintStart, keyframesStart);
-includes(prePaintCss, "background: #1d252c;", "Player Overall pre-paint stylesheet");
+const rarityKeyframesStart = stylesBase.indexOf("@keyframes playerOverallRarityPaint", prePaintStart);
+const rarityRulesStart = stylesBase.indexOf(".playerHeroOverall.rarityPaintOnce,", rarityKeyframesStart);
+const rarityKeyframesCss = stylesBase.slice(rarityKeyframesStart, rarityRulesStart);
+includes(rarityKeyframesCss, "background-size: 100% 0%, 100% 0%;", "Player Overall rarity paint must start with both gradient layers collapsed so the theme surface is the first visible frame");
+excludes(rarityKeyframesCss, "background-size: 100% 0%, 100% 100%;", "Player Overall rarity paint must not expose the dark overlay layer on its first frame");
+includes(prePaintCss, "background: var(--surface);", "Player Overall pre-paint stylesheet");
 excludes(prePaintCss, "background-size:", "Player Overall pre-paint stylesheet must not arm a loaded gradient before transition start");
-excludes(prePaintCss, "background-color: var(--color-bg-default-secondary);", "Player Overall pre-paint stylesheet must stay exact #1d252c");
+excludes(prePaintCss, "background: #1d252c;", "Player Overall pre-paint stylesheet must not hardcode the dark muted surface");
+excludes(prePaintCss, "background: var(--surface-muted);", "Player Overall pre-paint stylesheet must start from the theme surface, not the muted surface");
 
 console.log("Rebased Player loading keeps one rarity paint and exactly one ready-control grey-to-normal release.");

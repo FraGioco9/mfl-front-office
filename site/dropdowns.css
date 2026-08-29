@@ -699,7 +699,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   width: 16px;
   height: 16px;
   align-self: center;
-  color: #ffffff;
+  color: var(--text);
 }
 
 .playerTableActionIcon svg {

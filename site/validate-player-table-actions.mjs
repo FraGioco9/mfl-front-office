@@ -107,6 +107,22 @@ invariant(
   "Player table actions must match active-view trigger styling, keep icons centered/white, fill the remove-watchlist star, use compact menu typography, first-open motion, and account-button hover, reuse row-selector hover, preserve left-edge motion, and retain canonical timing.",
 );
 
+const playerTableActionIconStart = dropdowns.indexOf(".playerTableActionIcon {");
+const playerTableActionIconEnd = dropdowns.indexOf(".playerTableActionIcon svg {", playerTableActionIconStart);
+const playerTableActionIconCss = playerTableActionIconStart >= 0 && playerTableActionIconEnd > playerTableActionIconStart
+  ? dropdowns.slice(playerTableActionIconStart, playerTableActionIconEnd)
+  : "";
+invariant(
+  playerTableActionIconCss.includes("color: var(--text);")
+    && !playerTableActionIconCss.includes("color: #ffffff;"),
+  "Player table action icons must use the theme-aware text color at rest so they remain visible in light and dark dropdown surfaces.",
+);
+
+invariant(
+  dropdowns.includes('.playerTableActionItem:hover:not(:disabled) .playerTableActionIcon,\n.playerTableActionItem:focus-visible:not(:disabled) .playerTableActionIcon {\n  color: #ffffff;'),
+  "Player table action icons must remain white only in the highlighted hover/focus state.",
+);
+
 invariant(
   playerRuntime.includes('item.style.background = "var(--row-hover)";')
     && playerRuntime.includes('item.style.borderColor = "var(--border)";')
