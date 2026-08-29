@@ -33,8 +33,8 @@ jobs:
                   'settings: ["Settings", "In order to view settings, you need to opt in."]',
               ),
               Path("site/validate-static-route-ui.mjs"): (
-                  'settings: [\\"Settings\\", \\"In order to use settings, you need to opt in.\\"]',
-                  'settings: [\\"Settings\\", \\"In order to view settings, you need to opt in.\\"]',
+                  'settings: ["Settings", "In order to use settings, you need to opt in."]',
+                  'settings: ["Settings", "In order to view settings, you need to opt in."]',
               ),
           }
 
