@@ -2462,13 +2462,13 @@ button.playerIdText:active {
 }
 #playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),
 #playerDetail:not(.playerOverallRarityPaintComplete) .playerAttributeCard.featured:not(.isPending) {
-  background: #1d252c;
+  background: var(--surface);
 }
 
 
 @keyframes playerOverallRarityPaint {
   from {
-    background-size: 100% 0%, 100% 100%;
+    background-size: 100% 0%, 100% 0%;
   }
   to {
     background-size: 100% 100%, 100% 100%;
