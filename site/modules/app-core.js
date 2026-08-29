@@ -4168,6 +4168,15 @@ function normalizeSettingsReceiveEmailsFor(values) {
   return normalized;
 }
 
+function reconcileSettingsReceiveEmailsForWithCurrentWatchlists(values) {
+  const validTargets = new Set(["myplayers"]);
+  (Array.isArray(state.watchlists) ? state.watchlists : []).forEach((watchlist) => {
+    const watchlistId = String(watchlist?.id || "").trim();
+    if (watchlistId) validTargets.add(`watchlist-${watchlistId}`);
+  });
+  return normalizeSettingsReceiveEmailsFor(values).filter((value) => validTargets.has(value));
+}
+
 function normalizeSettingsEmailAddress(value) {
   return String(value || "").trim().slice(0, 254);
 }
@@ -4213,6 +4222,14 @@ function currentSettingsPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddress),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
+  };
+}
+
+function currentSettingsPayloadForSave() {
+  return {
+    ...currentSettingsPayload(),
+    receiveEmailsFor: reconcileSettingsReceiveEmailsForWithCurrentWatchlists(state.settingsReceiveEmailsFor),
     theme: currentMflTheme(),
   };
 }
@@ -5127,6 +5144,15 @@ function deleteWatchlist(watchlistId) {
   const wasActive = state.currentWatchlistId === watchlistId;
   clearSelectionsForDeletedWatchlist(deletedPlayerIds, wasActive);
   state.watchlists.splice(deleteIndex, 1);
+  state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(state.settingsReceiveEmailsFor);
+  const pendingSettings = loadPendingSettingsLocally();
+  if (pendingSettings) {
+    savePendingSettingsLocally({
+      ...pendingSettings,
+      receiveEmailsFor: reconcileSettingsReceiveEmailsForWithCurrentWatchlists(pendingSettings.receiveEmailsFor),
+      theme: currentMflTheme(),
+    });
+  }
   if (wasActive) {
     const nextWatchlist = state.watchlists[Math.max(0, deleteIndex - 1)] || state.watchlists[0] || ensureDefaultWatchlist();
     state.currentWatchlistId = nextWatchlist.id;
@@ -5419,7 +5445,9 @@ async function saveWalletPreferencesNow(options = {}) {
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
     const pendingSettings = loadPendingSettingsLocally();
     const shouldSaveSettings = state.walletSettingsLoaded || state.settingsSaveInFlight || Boolean(pendingSettings);
-    const settingsPayload = pendingSettings || currentSettingsPayload();
+    const settingsPayload = currentSettingsPayloadForSave();
+    state.settingsReceiveEmailsFor = [...settingsPayload.receiveEmailsFor];
+    if (pendingSettings || state.settingsSaveInFlight) savePendingSettingsLocally(settingsPayload);
     const body = {
       playerNotes: normalizedPlayerNotes(state.playerNotes),
       watchlists: watchlistsPayload(),
@@ -5450,12 +5478,13 @@ async function saveWalletPreferencesNow(options = {}) {
         watchlistChanged = true;
       }
 
-      if (shouldSaveSettings && (state.settingsSaveInFlight || pendingSettings)) {
-        applySettingsPayload(settingsPayload);
-      } else if (data.settings) {
-        applySettingsPayload(data.settings);
-      }
+      const savedSettings = data.settings || (shouldSaveSettings ? settingsPayload : null);
       state.settingsSaveInFlight = false;
+      if (savedSettings) {
+        applySettingsPayload(savedSettings);
+        state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(savedSettings.receiveEmailsFor);
+      }
+      saveWalletWatchlistLocally();
       clearPendingSettingsLocally();
 
       if (watchlistChanged) {
