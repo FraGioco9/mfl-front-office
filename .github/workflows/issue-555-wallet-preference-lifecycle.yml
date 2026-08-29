@@ -182,7 +182,7 @@ jobs:
         run: npm run validate
       - name: Commit clean implementation
         run: |
-          git rm site/migrate-555-wallet-preference-lifecycle.py .github/workflows/issue-555-wallet-preference-lifecycle.yml
+          git rm -f site/migrate-555-wallet-preference-lifecycle.py .github/workflows/issue-555-wallet-preference-lifecycle.yml
           git add -A
           git commit -m "Fix wallet preference hydration and persistence"
           git push origin HEAD:fix/555-wallet-preference-lifecycle
