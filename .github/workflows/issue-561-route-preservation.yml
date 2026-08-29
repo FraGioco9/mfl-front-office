@@ -33,28 +33,84 @@ jobs:
 
           core = Path("site/modules/app-core.js")
           text = core.read_text(encoding="utf-8")
-          old_url = '''  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {\n    window.history.replaceState({}, "", options.replaceUrl);\n  }\n  document.body.dataset.page = pageName;\n  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });'''
-          new_url = '''  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();\n  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {\n    window.history.replaceState({}, "", options.replaceUrl);\n  }\n  document.body.dataset.page = pageName;\n  if (!lockedOptOutRoute) {\n    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });\n  }'''
-          if old_url not in text:
-              raise SystemExit("setPage URL ownership marker not found")
-          text = text.replace(old_url, new_url, 1)
+          signature = 'async function setPage(pageName, updateHash = true, options = {}) {'
+          start = text.find(signature)
+          if start < 0:
+              raise SystemExit("canonical setPage function not found")
 
+          old_url = '''  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+    window.history.replaceState({}, "", options.replaceUrl);
+  }
+  document.body.dataset.page = pageName;
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });'''
           old_gate = '''  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {'''
-          if old_gate not in text:
-              raise SystemExit("locked opt-out gate marker not found")
-          text = text.replace(old_gate, '''  if (lockedOptOutRoute) {''', 1)
+          url_index = text.find(old_url, start)
+          gate_index = text.find(old_gate, start)
+          if url_index < 0:
+              raise SystemExit("setPage URL ownership marker not found")
+          if gate_index < 0:
+              raise SystemExit("setPage locked opt-out gate not found")
+
+          decision = '''
+  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();'''
+          text = text[:start] + text[start:].replace(signature, signature + decision, 1)
+          start = text.find(signature)
+          new_url = '''  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+    window.history.replaceState({}, "", options.replaceUrl);
+  }
+  document.body.dataset.page = pageName;
+  if (!lockedOptOutRoute) {
+    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  }'''
+          url_index = text.find(old_url, start)
+          gate_index = text.find(old_gate, start)
+          if url_index < 0 or gate_index < 0:
+              raise SystemExit("setPage markers moved unexpectedly")
+          text = text[:url_index] + new_url + text[url_index + len(old_url):]
+          gate_index = text.find(old_gate, start)
+          if gate_index < 0:
+              raise SystemExit("setPage locked gate moved unexpectedly")
+          text = text[:gate_index] + '  if (lockedOptOutRoute) {' + text[gate_index + len(old_gate):]
           core.write_text(text, encoding="utf-8")
 
           index = Path("site/index.html")
           text = index.read_text(encoding="utf-8")
-          route_anchor = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;\n        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
-          route_replacement = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;\n        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"\n          ? tablePage\n          : firstPart === "settings"\n            ? "settings"\n            : "";\n        if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;\n        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
+          route_anchor = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
+        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
+          route_replacement = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+          ? tablePage
+          : firstPart === "settings"
+            ? "settings"
+            : "";
+        if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;
+        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
           if route_anchor not in text:
               raise SystemExit("initial locked-route marker not found")
           text = text.replace(route_anchor, route_replacement, 1)
 
-          locked_section = '''        <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>\n          <div class="myPlayersLockedContent">\n            <h2 id="optInLockedTitle">My Players</h2>\n            <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>\n            <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>\n          </div>\n        </section>'''
-          locked_with_copy = locked_section + '''\n        <script>\n          (() => {\n            const copy = {\n              myplayers: ["My Players", "In order to see your players, you need to opt in."],\n              watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],\n              settings: ["Settings", "In order to use settings, you need to opt in."],\n            }[document.documentElement.dataset.initialLockedPage || ""];\n            if (!copy) return;\n            const title = document.getElementById("optInLockedTitle");\n            const message = document.getElementById("optInLockedMessage");\n            if (title) title.textContent = copy[0];\n            if (message) message.textContent = copy[1];\n          })();\n        </script>'''
+          locked_section = '''        <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
+          <div class="myPlayersLockedContent">
+            <h2 id="optInLockedTitle">My Players</h2>
+            <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>
+            <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
+          </div>
+        </section>'''
+          locked_with_copy = locked_section + '''
+        <script>
+          (() => {
+            const copy = {
+              myplayers: ["My Players", "In order to see your players, you need to opt in."],
+              watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
+              settings: ["Settings", "In order to use settings, you need to opt in."],
+            }[document.documentElement.dataset.initialLockedPage || ""];
+            if (!copy) return;
+            const title = document.getElementById("optInLockedTitle");
+            const message = document.getElementById("optInLockedMessage");
+            if (title) title.textContent = copy[0];
+            if (message) message.textContent = copy[1];
+          })();
+        </script>'''
           if locked_section not in text:
               raise SystemExit("locked page markup marker not found")
           text = text.replace(locked_section, locked_with_copy, 1)
@@ -62,8 +118,19 @@ jobs:
 
           validator = Path("site/validate-static-route-ui.mjs")
           text = validator.read_text(encoding="utf-8")
-          anchor = '''excludes(indexHtml, ') #myPlayersLockedPage {\\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");\n'''
-          addition = '''includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");\nincludes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");\nincludes(indexHtml, 'settings: ["Settings", "In order to use settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");\nconst lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();');\ninvariant(lockedRouteDecision >= 0, "Opted-out protected routes must determine the locked state before route mutation.");\nconst lockedRouteEnd = coreSource.indexOf('if (pageRequiresProgressionPermission(pageName)', lockedRouteDecision);\ninvariant(lockedRouteEnd > lockedRouteDecision, "Opted-out route startup guard must remain inside setPage before permission/data loading.");\nconst lockedRouteStartup = coreSource.slice(lockedRouteDecision, lockedRouteEnd);\nincludes(lockedRouteStartup, 'if (!lockedOptOutRoute && options.replaceUrl', "Opted-out refresh must suppress canonical replaceUrl mutation.");\nincludes(lockedRouteStartup, 'if (!lockedOptOutRoute) {\\n    updatePageUrl(pageName', "Opted-out refresh must suppress normal page URL mutation.");\nincludes(coreSource.slice(lockedRouteDecision), 'if (lockedOptOutRoute) {', "The locked shell must reuse the same precomputed opt-out route decision.");\nexcludes(lockedRouteStartup, '\\n  if (options.replaceUrl &&', "The opted-out startup window must not contain an unguarded replaceUrl mutation.");\nexcludes(lockedRouteStartup, '\\n  updatePageUrl(pageName, { ...options', "The opted-out startup window must not contain an unguarded page URL mutation.");\n'''
+          anchor = '''excludes(indexHtml, ') #myPlayersLockedPage {\\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");
+'''
+          addition = '''includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");
+includes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");
+includes(indexHtml, 'settings: ["Settings", "In order to use settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
+const setPageStart = coreSource.indexOf('async function setPage(pageName, updateHash = true, options = {}) {');
+invariant(setPageStart >= 0, "Canonical setPage must exist for opted-out route validation.");
+const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
+const lockedRouteGuard = coreSource.indexOf('if (lockedOptOutRoute) {', lockedRouteDecision);
+const guardedReplace = coreSource.indexOf('if (!lockedOptOutRoute && options.replaceUrl', lockedRouteDecision);
+const guardedUpdate = coreSource.indexOf('if (!lockedOptOutRoute) {\\n    updatePageUrl(pageName', lockedRouteDecision);
+invariant(lockedRouteDecision > setPageStart && lockedRouteGuard > lockedRouteDecision && guardedReplace > lockedRouteDecision && guardedUpdate > lockedRouteDecision, "Opted-out protected routes must preserve the requested refresh URL and reuse one scoped setPage lock decision.");
+'''
           if anchor not in text:
               raise SystemExit("static route regression anchor not found")
           validator.write_text(text.replace(anchor, anchor + addition, 1), encoding="utf-8")
