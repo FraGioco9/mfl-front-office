@@ -1,3 +1,4 @@
+# Temporary self-removing implementation workflow for issue #555.
 name: Issue 555 wallet preference lifecycle
 
 on:
