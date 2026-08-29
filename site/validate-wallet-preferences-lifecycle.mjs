@@ -27,14 +27,16 @@ invariant(
 );
 invariant(
   appCore.includes("walletPreferencesWritePromise: Promise.resolve()")
-    && appCore.includes("state.walletPreferencesWritePromise = state.walletPreferencesWritePromise")
+    && appCore.includes("state.walletPreferencesWritePromise = Promise.resolve(state.walletPreferencesWritePromise)")
     && appCore.includes("return state.walletPreferencesWritePromise;"),
   "Wallet preference writes must be serialized so browser saves cannot race one another.",
 );
 invariant(
-  walletPreferencesApi.includes('method: "PATCH"')
-    && walletPreferencesApi.includes("Object.prototype.hasOwnProperty.call(preferences, \"settings\")")
-    && walletPreferencesApi.includes("Object.prototype.hasOwnProperty.call(preferences, \"tableState\")")
+  walletPreferencesApi.includes('const hasDomain = (key) => Object.prototype.hasOwnProperty.call(incoming, key);')
+    && walletPreferencesApi.includes('if (hasDomain("settings")) patch.settings = normalizeSettings(incoming.settings);')
+    && walletPreferencesApi.includes('if (hasDomain("tableState")) {')
+    && walletPreferencesApi.includes("patch.table_state = mergeTableState(incoming.tableState, currentTableState) || {};")
+    && walletPreferencesApi.includes('method: "PATCH"')
     && !walletPreferencesApi.includes("const currentPreferences = await readPreferences(wallet);\n\n  const watchlists"),
   "Server persistence must patch only supplied preference domains instead of rewriting a stale full-row snapshot.",
 );
