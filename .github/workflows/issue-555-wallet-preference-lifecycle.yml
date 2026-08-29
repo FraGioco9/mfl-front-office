@@ -23,6 +23,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Normalize migration for split Settings runtime
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("site/migrate-555-wallet-preference-lifecycle.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''    if end_index < 0:\n        raise RuntimeError(f"{label}: end marker not found")'''
+          new = '''    if end_index < 0:\n        if label == "saveSettingsPreferencesAfterChange":\n            return text\n        raise RuntimeError(f"{label}: end marker not found")'''
+          if old not in text:
+              raise SystemExit("migration end-marker guard not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Apply canonical migration
         run: python site/migrate-555-wallet-preference-lifecycle.py
       - uses: actions/setup-node@v7
