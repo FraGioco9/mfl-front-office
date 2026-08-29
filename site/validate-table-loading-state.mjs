@@ -18,15 +18,15 @@ const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generated
 for (const required of [
   'input.checked = false;',
   'input.indeterminate = false;',
-  'input.disabled = false;',
+  'input.disabled = true;',
   'if (document.activeElement === input) input.blur();',
   'neutralizeSelectionHeader();',
 ]) {
   invariant(runtime.includes(required), `Loading header selection must stay neutral through ${required}`);
 }
 invariant(
-  !runtime.includes("input.disabled = true;"),
-  "Loading must not use the browser disabled-checkbox appearance for the header selector.",
+  !runtime.includes("input.disabled = false;"),
+  "Loading must keep the header selector disabled until the table request is released.",
 );
 
 invariant(
@@ -34,7 +34,7 @@ invariant(
     && bootstrap.includes('neutralizeFirstPaintSelectionHeader(head);')
     && bootstrap.includes('selectionInput.checked = false;')
     && bootstrap.includes('selectionInput.indeterminate = false;')
-    && bootstrap.includes('selectionInput.disabled = false;'),
+    && bootstrap.includes('selectionInput.disabled = true;'),
   "The first-paint header selector must be neutral before the table is revealed, including when static header DOM is reused.",
 );
 
@@ -42,7 +42,7 @@ const loadingGuardMarkers = [
   'if (document.documentElement.classList.contains("mflDataLoading")) {',
   'selectVisibleInput.checked = false;',
   'selectVisibleInput.indeterminate = false;',
-  'selectVisibleInput.disabled = false;',
+  'selectVisibleInput.disabled = true;',
 ];
 for (const marker of loadingGuardMarkers) {
   invariant(appCoreSource.includes(marker), `Canonical selection-header loading guard is missing ${marker}`);

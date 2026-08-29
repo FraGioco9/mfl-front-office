@@ -536,7 +536,7 @@
     if (!(input instanceof HTMLInputElement)) return false;
     input.checked = false;
     input.indeterminate = false;
-    input.disabled = false;
+    input.disabled = true;
     if (document.activeElement === input) input.blur();
     return true;
   }
@@ -579,7 +579,7 @@
     selectionInput.type = "checkbox";
     selectionInput.checked = false;
     selectionInput.indeterminate = false;
-    selectionInput.disabled = false;
+    selectionInput.disabled = true;
     selectionInput.setAttribute("aria-label", "Select visible players");
     selectionHeader.appendChild(selectionInput);
     row.appendChild(selectionHeader);

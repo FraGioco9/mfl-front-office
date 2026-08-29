@@ -2,6 +2,7 @@
   "use strict";
 
   const PENDING_CLASS = "mflSelectionStartupResetPending";
+  const READY_EVENT = "mfl:route-ready";
 
   window.__mflSelectionStartupResetRuntime?.destroy?.();
   window.__mflSelectionStartupResetActive = true;
@@ -46,7 +47,6 @@
     const bar = document.getElementById("selectionBar");
     if (bar instanceof HTMLElement) {
       bar.classList.remove("visible", "mflSelectionActionDismissed");
-      bar.hidden = true;
     }
     try {
       if (typeof updateSelectionBar === "function") updateSelectionBar();
@@ -94,7 +94,6 @@
 
   function finish() {
     if (destroyed) return;
-    clearCurrentSelection();
     window.__mflSelectionStartupResetActive = false;
     document.documentElement.classList.remove(PENDING_CLASS);
   }
@@ -107,13 +106,13 @@
   markPending();
   installRestoreBridge();
   clearCurrentSelection();
-  window.addEventListener("mfl:ready", finish, { once: true });
-  if (document.documentElement.dataset.mflReady === "true") finish();
+  window.addEventListener(READY_EVENT, finish, { once: true });
+  if (document.documentElement.dataset.mflRouteReady === "true") finish();
 
   function destroy() {
     destroyed = true;
     window.__mflSelectionStartupResetActive = false;
-    window.removeEventListener("mfl:ready", finish);
+    window.removeEventListener(READY_EVENT, finish);
     document.documentElement.classList.remove(PENDING_CLASS);
   }
 
