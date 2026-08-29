@@ -53,7 +53,7 @@ assert.match(dataPage, /value === "not_for_sale"/);
 assert.match(dataPage, /requestedKey === LISTING_COLUMN/);
 
 const marketplaceState = read("site/api/_marketplace-state.js");
-assert.match(marketplaceState, /MARKETPLACE_CACHE_TTL_MS = 30_000/);
+assert.match(marketplaceState, /MARKETPLACE_CACHE_TTL_MS = 5_000/);
 assert.match(marketplaceState, /MARKETPLACE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
 assert.match(marketplaceState, /MARKETPLACE_FETCH_TIMEOUT_MS = 3_000/);
 assert.match(marketplaceState, /signal: AbortSignal\.timeout\(MARKETPLACE_FETCH_TIMEOUT_MS\)/);
