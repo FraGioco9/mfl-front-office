@@ -125,6 +125,37 @@ jobs:
               raise SystemExit("Evaluation ownership validation summary not found")
           path.write_text(text.replace(old_log, new_log, 1), encoding="utf-8")
           PY
+      - name: Align Evaluation search hydration regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("site/validate-evaluation-search-lifecycle.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = '''invariant(
+            recentOwnerSource.includes("evaluationRecentStateHydrated = true;")
+              && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
+              && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
+              && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
+              && recentOwnerSource.includes("await loadWalletPreferences({ force: true });")
+              && recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+              && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+            "Late Evaluation route ownership must chain authoritative Supabase hydration into the same published readiness promise, reusing startup when possible and issuing one corrective fresh preference read only when startup completed before the Supabase-only owner was installed.",
+          );'''
+          new = '''invariant(
+            recentOwnerSource.includes("evaluationRecentStateHydrated = true;")
+              && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
+              && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
+              && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
+              && recentOwnerSource.includes("await loadWalletPreferences();")
+              && !recentOwnerSource.includes("force: true")
+              && !recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+              && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+            "Late Evaluation route ownership must reuse the published startup Supabase hydration and fall back only to the canonical non-forced preference loader without replacing readiness ownership.",
+          );'''
+          if old not in text:
+              raise SystemExit("Evaluation search corrective-refresh assertion not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - uses: actions/setup-node@v7
         with:
           node-version: 22
