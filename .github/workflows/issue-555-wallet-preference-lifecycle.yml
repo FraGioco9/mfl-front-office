@@ -1,0 +1,57 @@
+name: Issue 555 wallet preference lifecycle
+
+on:
+  push:
+    branches:
+      - fix/555-wallet-preference-lifecycle
+    paths:
+      - site/migrate-555-wallet-preference-lifecycle.py
+      - .github/workflows/issue-555-wallet-preference-lifecycle.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/555-wallet-preference-lifecycle
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Apply canonical migration
+        run: python site/migrate-555-wallet-preference-lifecycle.py
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Stage generated application artifacts
+        working-directory: site
+        run: git add modules/app-core*-runtime.js table-width-runtime.js
+      - name: Verify generated application artifacts
+        working-directory: site
+        run: npm run verify:generated
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+      - name: Commit clean implementation
+        run: |
+          git rm site/migrate-555-wallet-preference-lifecycle.py .github/workflows/issue-555-wallet-preference-lifecycle.yml
+          git add -A
+          git commit -m "Fix wallet preference hydration and persistence"
+          git push origin HEAD:fix/555-wallet-preference-lifecycle
