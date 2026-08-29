@@ -1982,6 +1982,7 @@ function setView() {
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
+  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
@@ -2002,17 +2003,19 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const agentTitleReady = pageName === "agents"
     ? ensureAgentPageTitleName(state.currentAgentWalletAddress, options.agentName)
     : Promise.resolve("");
-  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
     window.history.replaceState({}, "", options.replaceUrl);
   }
   document.body.dataset.page = pageName;
-  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  if (!lockedOptOutRoute) {
+    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  }
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
   }
 
-  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
+  if (lockedOptOutRoute) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;

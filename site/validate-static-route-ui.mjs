@@ -41,6 +41,16 @@ includes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRou
 includes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage', "MFL Stats first-paint visibility must use the same supersession boundary as Database Stats.");
 includes(indexHtml, ') #myPlayersLockedPage {\n        display: grid;\n        place-items: center;\n      }', "Opted-out protected routes must use the final centered locked-page grid at first paint.");
 excludes(indexHtml, ') #myPlayersLockedPage {\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");
+includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");
+includes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");
+includes(indexHtml, 'settings: ["Settings", "In order to use settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
+const setPageStart = coreSource.indexOf('async function setPage(pageName, updateHash = true, options = {}) {');
+invariant(setPageStart >= 0, "Canonical setPage must exist for opted-out route validation.");
+const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
+const lockedRouteGuard = coreSource.indexOf('if (lockedOptOutRoute) {', lockedRouteDecision);
+const guardedReplace = coreSource.indexOf('if (!lockedOptOutRoute && options.replaceUrl', lockedRouteDecision);
+const guardedUpdate = coreSource.indexOf('if (!lockedOptOutRoute) {\n    updatePageUrl(pageName', lockedRouteDecision);
+invariant(lockedRouteDecision > setPageStart && lockedRouteGuard > lockedRouteDecision && guardedReplace > lockedRouteDecision && guardedUpdate > lockedRouteDecision, "Opted-out protected routes must preserve the requested refresh URL and reuse one scoped setPage lock decision.");
 excludes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #', "Database Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 excludes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #', "MFL Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 for (const canonicalConfig of [
