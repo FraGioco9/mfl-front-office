@@ -47,4 +47,31 @@ invariant(
   "Wallet hydration must resynchronize visible table controls with restored persisted state.",
 );
 
-console.log("Wallet preference hydration, ordered persistence, domain isolation, and table-control synchronization validation passed.");
+invariant(
+  appCore.includes('function reconcileSettingsReceiveEmailsForWithCurrentWatchlists(values) {')
+    && appCore.includes('validTargets.add(`watchlist-${watchlistId}`);')
+    && appCore.includes('return normalizeSettingsReceiveEmailsFor(values).filter((value) => validTargets.has(value));'),
+  "Settings notification targets must be reconciled against the watchlists that still exist.",
+);
+invariant(
+  appCore.includes("function currentSettingsPayloadForSave() {")
+    && appCore.includes("const settingsPayload = currentSettingsPayloadForSave();")
+    && !appCore.includes("const settingsPayload = pendingSettings || currentSettingsPayload();")
+    && settingsChunk.includes('timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),\n    theme: currentMflTheme(),'),
+  "Settings writes and pending drafts must use the complete current canonical snapshot, including theme.",
+);
+invariant(
+  appCore.includes("const settingsTargetsChanged = JSON.stringify(previousSettingsReceiveEmailsFor) !== JSON.stringify(state.settingsReceiveEmailsFor);")
+    && appCore.includes("if (pendingSettings || settingsTargetsChanged) {")
+    && appCore.includes("pendingSettings ? pendingSettings.receiveEmailsFor : state.settingsReceiveEmailsFor"),
+  "Deleting a watchlist must prune live and pending notification targets and queue a Settings save when that deletion changes Settings.",
+);
+invariant(
+  appCore.includes('if (includesDomain("watchlists")) {\n        clearSyncedWatchlistChanges(addedIds, removedIds);')
+    && appCore.includes('if (includesDomain("watchlists") && Array.isArray(data.watchlists) && data.watchlists.length) {')
+    && appCore.includes("if (shouldSaveSettings) {\n        const savedSettings = data.settings || settingsPayload;")
+    && appCore.includes("if (shouldSaveSettings && saveSequence === state.walletPreferencesSaveSequence)"),
+  "Save responses and failure cleanup must remain domain-scoped so unrelated saves cannot clear or overwrite pending local state.",
+);
+
+console.log("Wallet preference hydration, ordered persistence, domain isolation, canonical Settings convergence, and table-control synchronization validation passed.");

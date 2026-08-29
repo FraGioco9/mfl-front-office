@@ -2833,6 +2833,15 @@ function normalizeSettingsReceiveEmailsFor(values) {
   return normalized;
 }
 
+function reconcileSettingsReceiveEmailsForWithCurrentWatchlists(values) {
+  const validTargets = new Set(["myplayers"]);
+  (Array.isArray(state.watchlists) ? state.watchlists : []).forEach((watchlist) => {
+    const watchlistId = String(watchlist?.id || "").trim();
+    if (watchlistId) validTargets.add(`watchlist-${watchlistId}`);
+  });
+  return normalizeSettingsReceiveEmailsFor(values).filter((value) => validTargets.has(value));
+}
+
 function normalizeSettingsEmailAddress(value) {
   return String(value || "").trim().slice(0, 254);
 }
@@ -2957,6 +2966,14 @@ function currentSettingsPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddress),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
+  };
+}
+
+function currentSettingsPayloadForSave() {
+  return {
+    ...currentSettingsPayload(),
+    receiveEmailsFor: reconcileSettingsReceiveEmailsForWithCurrentWatchlists(state.settingsReceiveEmailsFor),
     theme: currentMflTheme(),
   };
 }
@@ -3581,6 +3598,20 @@ function deleteWatchlist(watchlistId) {
   const wasActive = state.currentWatchlistId === watchlistId;
   clearSelectionsForDeletedWatchlist(deletedPlayerIds, wasActive);
   state.watchlists.splice(deleteIndex, 1);
+  const previousSettingsReceiveEmailsFor = [...state.settingsReceiveEmailsFor];
+  state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(state.settingsReceiveEmailsFor);
+  const pendingSettings = loadPendingSettingsLocally();
+  const settingsTargetsChanged = JSON.stringify(previousSettingsReceiveEmailsFor) !== JSON.stringify(state.settingsReceiveEmailsFor);
+  if (pendingSettings || settingsTargetsChanged) {
+    const pendingBase = pendingSettings || currentSettingsPayloadForSave();
+    savePendingSettingsLocally({
+      ...pendingBase,
+      receiveEmailsFor: reconcileSettingsReceiveEmailsForWithCurrentWatchlists(
+        pendingSettings ? pendingSettings.receiveEmailsFor : state.settingsReceiveEmailsFor,
+      ),
+      theme: currentMflTheme(),
+    });
+  }
   if (wasActive) {
     const nextWatchlist = state.watchlists[Math.max(0, deleteIndex - 1)] || state.watchlists[0] || ensureDefaultWatchlist();
     state.currentWatchlistId = nextWatchlist.id;
@@ -3835,6 +3866,7 @@ async function performWalletPreferencesSave(options = {}) {
   saveWalletNotesLocally();
 
   const saveSequence = ++state.walletPreferencesSaveSequence;
+  let shouldSaveSettings = false;
 
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
@@ -3842,8 +3874,12 @@ async function performWalletPreferencesSave(options = {}) {
     const pendingSettings = loadPendingSettingsLocally();
     const requestedDomains = Array.isArray(options.domains) ? new Set(options.domains) : null;
     const includesDomain = (domain) => !requestedDomains || requestedDomains.has(domain);
-    const shouldSaveSettings = includesDomain("settings") && (options.includeSettings === true || state.settingsSaveInFlight || Boolean(pendingSettings));
-    const settingsPayload = pendingSettings || currentSettingsPayload();
+    shouldSaveSettings = includesDomain("settings") && (options.includeSettings === true || state.settingsSaveInFlight || Boolean(pendingSettings));
+    const settingsPayload = currentSettingsPayloadForSave();
+    state.settingsReceiveEmailsFor = [...settingsPayload.receiveEmailsFor];
+    if (shouldSaveSettings && (pendingSettings || state.settingsSaveInFlight)) {
+      savePendingSettingsLocally(settingsPayload);
+    }
     const body = {
       ...(includesDomain("playerNotes") ? { playerNotes: normalizedPlayerNotes(state.playerNotes) } : {}),
       ...(includesDomain("watchlists") ? { watchlists: watchlistsPayload() } : {}),
@@ -3866,21 +3902,24 @@ async function performWalletPreferencesSave(options = {}) {
       if (saveSequence !== state.walletPreferencesSaveSequence) {
         return;
       }
-      clearSyncedWatchlistChanges(addedIds, removedIds);
+      if (includesDomain("watchlists")) {
+        clearSyncedWatchlistChanges(addedIds, removedIds);
+      }
 
       let watchlistChanged = false;
-      if (Array.isArray(data.watchlists) && data.watchlists.length) {
+      if (includesDomain("watchlists") && Array.isArray(data.watchlists) && data.watchlists.length) {
         applyWatchlists(data.watchlists, state.currentWatchlistId, []);
+        saveWalletWatchlistLocally();
         watchlistChanged = true;
       }
 
-      if (shouldSaveSettings && (state.settingsSaveInFlight || pendingSettings)) {
-        applySettingsPayload(settingsPayload);
-      } else if (data.settings) {
-        applySettingsPayload(data.settings);
+      if (shouldSaveSettings) {
+        const savedSettings = data.settings || settingsPayload;
+        applySettingsPayload(savedSettings);
+        state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(savedSettings.receiveEmailsFor);
+        state.settingsSaveInFlight = false;
+        clearPendingSettingsLocally();
       }
-      state.settingsSaveInFlight = false;
-      clearPendingSettingsLocally();
 
       if (watchlistChanged) {
         if (state.currentPage === "watchlist") {
@@ -3899,7 +3938,7 @@ async function performWalletPreferencesSave(options = {}) {
       }
     }
   } catch {
-    if (saveSequence === state.walletPreferencesSaveSequence) {
+    if (shouldSaveSettings && saveSequence === state.walletPreferencesSaveSequence) {
       state.settingsSaveInFlight = false;
     }
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.

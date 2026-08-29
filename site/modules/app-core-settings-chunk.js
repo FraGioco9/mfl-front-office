@@ -109,6 +109,7 @@ const SETTINGS_ROUTE_DRAFT_RUNTIME = `function settingsDraftPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddressDraft),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
   };
 }
 
