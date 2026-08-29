@@ -1,0 +1,76 @@
+name: Issue 561 Settings first-paint copy
+
+on:
+  push:
+    branches:
+      - fix/561-opted-out-first-paint
+    paths:
+      - .github/workflows/issue-561-settings-first-paint-copy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/561-opted-out-first-paint
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Align Settings locked copy
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("site/index.html"): (
+                  'settings: ["Settings", "In order to use settings, you need to opt in."]',
+                  'settings: ["Settings", "In order to view settings, you need to opt in."]',
+              ),
+              Path("site/validate-static-route-ui.mjs"): (
+                  'settings: [\\"Settings\\", \\"In order to use settings, you need to opt in.\\"]',
+                  'settings: [\\"Settings\\", \\"In order to view settings, you need to opt in.\\"]',
+              ),
+          }
+
+          for path, (old, new) in replacements.items():
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one Settings first-paint copy marker in {path}, found {count}")
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+      - name: Verify generated application artifacts
+        working-directory: site
+        run: npm run verify:generated
+      - name: Commit clean implementation
+        run: |
+          git rm .github/workflows/issue-561-settings-first-paint-copy.yml
+          git add site/index.html site/validate-static-route-ui.mjs
+          git commit -m "Align Settings opt-out first-paint copy"
+          git push origin HEAD:fix/561-opted-out-first-paint
