@@ -2808,6 +2808,7 @@ function applyWatchlists(nextWatchlists, currentWatchlistId = "", legacyIds = []
   state.watchlists = normalized;
   state.currentWatchlistId = nextActive?.id || "";
   state.watchlistPlayerIds = new Set(normalizeWatchlistIdList(nextActive?.playerIds));
+  saveWalletWatchlistLocally();
   renderWatchlistSwitcher();
 }
 
@@ -3210,6 +3211,8 @@ function switchWatchlist(watchlistId) {
   state.currentWatchlistId = nextWatchlist.id;
   state.watchlistPlayerIdsAdded.clear();
   state.watchlistPlayerIdsRemoved.clear();
+  state.selectedPlayerIds.clear();
+  state.selectionAnchorPlayerId = null;
   setActiveWatchlistIds(nextWatchlist.playerIds);
   state.page = 1;
   renderWatchlistSwitcher();
@@ -3758,8 +3761,11 @@ async function loadWalletPreferences(options = {}) {
   const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
     const localWatchlists = loadLocalWalletWatchlist();
+    const requestedWatchlistId = String(
+      watchlistIdFromUrl() || state.pendingWatchlistRouteId || state.currentWatchlistId || "",
+    ).trim();
     if (Array.isArray(localWatchlists) && localWatchlists.some((item) => item && typeof item === "object" && !Array.isArray(item))) {
-      applyWatchlists(localWatchlists, state.currentWatchlistId, Array.from(state.watchlistPlayerIds));
+      applyWatchlists(localWatchlists, requestedWatchlistId, Array.from(state.watchlistPlayerIds));
     } else {
       applyWalletWatchlistIds(localWatchlists);
       ensureDefaultWatchlist();

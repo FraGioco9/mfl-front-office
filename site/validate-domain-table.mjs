@@ -7,6 +7,8 @@ const validators = [
   "validate-listing-column.mjs",
   "validate-player-table-actions.mjs",
   "validate-player-table-action-menu-rerender.mjs",
+  "validate-selection-action-menu-readiness.mjs",
+  "validate-header-selection-loading.mjs",
   "validate-new-player-icon.mjs",
   "validate-progression-joined-agency-filter.mjs",
 ];

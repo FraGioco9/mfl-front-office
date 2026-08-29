@@ -16,6 +16,7 @@ const [
   routeLoader,
   buildCore,
   appEntry,
+  bootstrap,
   bootstrapCore,
   tableLoading,
   watchlistRouteRuntime,
@@ -26,6 +27,7 @@ const [
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-entry.js"),
+  read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./table-loading-runtime.js"),
   read("./watchlist-myplayers-route-runtime.js"),
@@ -81,6 +83,26 @@ includes(appConfig, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Cano
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(appConfig, 'core.push("table", "watchlist");', "Watchlist routes must load Table before Watchlist UI ownership.");
 includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(pageName, options).core;", "The route-core loader must consume canonical Watchlist dependencies.");
+includes(
+  bootstrap,
+  'JSON.parse(localStorage.getItem(`${WALLET_WATCHLIST_STORAGE_PREFIX}${wallet}`) || "[]")',
+  "Watchlist first paint must resolve the routed list name from the wallet-local canonical watchlist cache.",
+);
+includes(
+  coreSource,
+  'state.watchlistPlayerIds = new Set(normalizeWatchlistIdList(nextActive?.playerIds));\n  saveWalletWatchlistLocally();\n  renderWatchlistSwitcher();',
+  "Applying canonical Watchlist preferences must persist names locally before rendering so refresh first paint can resolve the routed title.",
+);
+includes(
+  coreSource,
+  'watchlistIdFromUrl() || state.pendingWatchlistRouteId || state.currentWatchlistId || "",',
+  "Local Watchlist preference hydration must preserve the route-selected Watchlist before rendering.",
+);
+includes(
+  coreSource,
+  'applyWatchlists(localWatchlists, requestedWatchlistId, Array.from(state.watchlistPlayerIds));',
+  "Local Watchlist hydration must apply cached lists with the routed identity instead of falling back to the default list.",
+);
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical Watchlist route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct Watchlist startup must load Table and Watchlist dependencies before startApp.");
 
@@ -134,6 +156,11 @@ includes(
   coreSource,
   "function switchWatchlist(watchlistId) {",
   "Direct Watchlist switching must remain a local source-owned operation.",
+);
+includes(
+  coreSource,
+  'state.watchlistPlayerIdsRemoved.clear();\n  state.selectedPlayerIds.clear();\n  state.selectionAnchorPlayerId = null;\n  setActiveWatchlistIds(nextWatchlist.playerIds);',
+  "Switching Watchlists must clear the current player selection before the destination list is rendered and persisted.",
 );
 excludes(
   bootstrapCore,

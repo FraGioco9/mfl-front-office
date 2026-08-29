@@ -2057,7 +2057,7 @@ function updateSelectionHeader(pageRows = currentPageRows()) {
   if (document.documentElement.classList.contains("mflDataLoading")) {
   selectVisibleInput.checked = false;
   selectVisibleInput.indeterminate = false;
-  selectVisibleInput.disabled = false;
+  selectVisibleInput.disabled = true;
   if (document.activeElement === selectVisibleInput) {
     selectVisibleInput.blur();
   }

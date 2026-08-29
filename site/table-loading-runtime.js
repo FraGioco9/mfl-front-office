@@ -120,7 +120,7 @@
     if (!(input instanceof HTMLInputElement)) return false;
     input.checked = false;
     input.indeterminate = false;
-    input.disabled = false;
+    input.disabled = true;
     if (document.activeElement === input) input.blur();
     return true;
   }
@@ -155,6 +155,7 @@
     const token = ++nextRequestToken;
     activeRequestToken = token;
     hidePager();
+    neutralizeSelectionHeader();
     const currentBody = elements().body;
     const preserveRenderedRows = options.loadingMode !== "blank" && shouldPreserveRenderedRows(currentBody);
     const body = preserveRenderedRows ? currentBody : prepareLoadingSurface();
@@ -241,6 +242,7 @@
     }
     if (snapshot.dataLoading || requestActive()) {
       hidePager();
+      neutralizeSelectionHeader();
       if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;
       show({ replaceExisting: true });
     } else release();
