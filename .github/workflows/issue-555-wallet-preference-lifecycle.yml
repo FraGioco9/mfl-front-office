@@ -100,15 +100,19 @@ jobs:
               && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
             "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner, including the one corrective fresh preference read for a late-installed owner, and publish it through the existing readiness promise.",
           );'''
-          new = '''invariant(
+          new = '''const evaluationHydrationStart = sharedCore.indexOf("async function ensureEvaluationRecentStateHydrated()");
+          const evaluationHydrationEnd = sharedCore.indexOf("window.__mflCoreContracts = Object.freeze({", evaluationHydrationStart);
+          const evaluationHydrationSource = evaluationHydrationStart >= 0 && evaluationHydrationEnd > evaluationHydrationStart
+            ? sharedCore.slice(evaluationHydrationStart, evaluationHydrationEnd)
+            : "";
+          invariant(
             sharedCore.includes("let evaluationRecentStateHydrated = false;")
               && sharedCore.includes("evaluationRecentStateHydrated = true;")
-              && sharedCore.includes("async function ensureEvaluationRecentStateHydrated()")
-              && sharedCore.includes("const pendingStartup = window.__mflWalletPreferencesStartupPromise;")
-              && sharedCore.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
-              && sharedCore.includes("await loadWalletPreferences();")
-              && !sharedCore.includes("await loadWalletPreferences({ force: true });")
-              && !sharedCore.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+              && evaluationHydrationSource.includes("pendingStartup")
+              && evaluationHydrationSource.includes("__mflWalletPreferencesStartupPromise")
+              && evaluationHydrationSource.includes("loadWalletPreferences()")
+              && !evaluationHydrationSource.includes("force: true")
+              && !evaluationHydrationSource.includes("__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated")
               && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
             "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner while awaiting and reusing the one startup wallet-preference hydration instead of forcing a duplicate read.",
           );'''
