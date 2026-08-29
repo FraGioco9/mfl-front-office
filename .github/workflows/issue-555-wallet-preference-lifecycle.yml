@@ -85,6 +85,42 @@ jobs:
               raise SystemExit("Supabase canonical table-state assertion not found")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
+      - name: Align Evaluation single-hydration regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("site/validate-eval-ownership.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = '''invariant(
+            sharedCore.includes("let evaluationRecentStateHydrated = false;")
+              && sharedCore.includes("evaluationRecentStateHydrated = true;")
+              && sharedCore.includes("async function ensureEvaluationRecentStateHydrated()")
+              && sharedCore.includes("await loadWalletPreferences({ force: true });")
+              && sharedCore.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+              && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+            "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner, including the one corrective fresh preference read for a late-installed owner, and publish it through the existing readiness promise.",
+          );'''
+          new = '''invariant(
+            sharedCore.includes("let evaluationRecentStateHydrated = false;")
+              && sharedCore.includes("evaluationRecentStateHydrated = true;")
+              && sharedCore.includes("async function ensureEvaluationRecentStateHydrated()")
+              && sharedCore.includes("const pendingStartup = window.__mflWalletPreferencesStartupPromise;")
+              && sharedCore.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
+              && sharedCore.includes("await loadWalletPreferences();")
+              && !sharedCore.includes("await loadWalletPreferences({ force: true });")
+              && !sharedCore.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+              && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+            "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner while awaiting and reusing the one startup wallet-preference hydration instead of forcing a duplicate read.",
+          );'''
+          if old not in text:
+              raise SystemExit("Evaluation corrective-refresh assertion not found")
+          text = text.replace(old, new, 1)
+          old_log = 'console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative late Evaluation Supabase hydration and its corrective refresh retained in shared-core ownership.");'
+          new_log = 'console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative late Evaluation Supabase hydration reusing the canonical startup preference lifecycle.");'
+          if old_log not in text:
+              raise SystemExit("Evaluation ownership validation summary not found")
+          path.write_text(text.replace(old_log, new_log, 1), encoding="utf-8")
+          PY
       - uses: actions/setup-node@v7
         with:
           node-version: 22
