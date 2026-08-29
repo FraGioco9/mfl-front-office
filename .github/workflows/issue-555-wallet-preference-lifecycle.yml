@@ -54,6 +54,36 @@ jobs:
               raise SystemExit("Settings persistence assertion not found")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
+      - name: Align Supabase partial-domain persistence regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("site/validate-supabase-persistence.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = '''includes(
+            preferences,
+            "table_state: tableState || {},",
+            "Supabase writes must use the canonical tableState rather than the compatibility response shape.",
+          );'''
+          new = '''includes(
+            preferences,
+            'if (hasDomain("tableState")) {',
+            "Supabase table-state writes must be explicitly scoped to the tableState preference domain.",
+          );
+          includes(
+            preferences,
+            "patch.table_state = mergeTableState(incoming.tableState, currentTableState) || {};",
+            "Supabase table-state PATCHes must merge and store the canonical tableState rather than the compatibility response shape.",
+          );
+          includes(
+            preferences,
+            'method: "PATCH",',
+            "Existing wallet preference rows must use partial PATCH updates so unrelated domains cannot be overwritten.",
+          );'''
+          if old not in text:
+              raise SystemExit("Supabase canonical table-state assertion not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - uses: actions/setup-node@v7
         with:
           node-version: 22
