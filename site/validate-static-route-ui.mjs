@@ -39,6 +39,8 @@ includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteRe
 includes(indexHtml, 'html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage', "Evaluation refresh-only Home hiding must stop with the same supersession boundary.");
 includes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage', "Database Stats first-paint visibility must relinquish the shell as soon as live navigation supersedes refresh startup.");
 includes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage', "MFL Stats first-paint visibility must use the same supersession boundary as Database Stats.");
+includes(indexHtml, ') #myPlayersLockedPage {\n        display: grid;\n        place-items: center;\n      }', "Opted-out protected routes must use the final centered locked-page grid at first paint.");
+excludes(indexHtml, ') #myPlayersLockedPage {\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");
 excludes(indexHtml, 'html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #', "Database Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 excludes(indexHtml, 'html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #', "MFL Stats must not keep refresh-only shell ownership after a newer navigation commits.");
 for (const canonicalConfig of [

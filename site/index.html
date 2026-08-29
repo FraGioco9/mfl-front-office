@@ -160,7 +160,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
       ) #myPlayersLockedPage {
-        display: block;
+        display: grid;
+        place-items: center;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
         display: none;
