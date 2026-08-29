@@ -1,0 +1,98 @@
+name: Issue 561 route preservation
+
+on:
+  push:
+    branches:
+      - fix/561-opted-out-first-paint
+    paths:
+      - .github/workflows/issue-561-route-preservation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/561-opted-out-first-paint
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            git rebase origin/main
+          fi
+      - name: Fix opted-out route first paint and URL ownership
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          core = Path("site/modules/app-core.js")
+          text = core.read_text(encoding="utf-8")
+          old_url = '''  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {\n    window.history.replaceState({}, "", options.replaceUrl);\n  }\n  document.body.dataset.page = pageName;\n  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });'''
+          new_url = '''  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();\n  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {\n    window.history.replaceState({}, "", options.replaceUrl);\n  }\n  document.body.dataset.page = pageName;\n  if (!lockedOptOutRoute) {\n    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });\n  }'''
+          if old_url not in text:
+              raise SystemExit("setPage URL ownership marker not found")
+          text = text.replace(old_url, new_url, 1)
+
+          old_gate = '''  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {'''
+          if old_gate not in text:
+              raise SystemExit("locked opt-out gate marker not found")
+          text = text.replace(old_gate, '''  if (lockedOptOutRoute) {''', 1)
+          core.write_text(text, encoding="utf-8")
+
+          index = Path("site/index.html")
+          text = index.read_text(encoding="utf-8")
+          route_anchor = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;\n        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
+          route_replacement = '''        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;\n        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"\n          ? tablePage\n          : firstPart === "settings"\n            ? "settings"\n            : "";\n        if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;\n        const tableConfig = TABLE_VIEW_CONFIG[tablePage];'''
+          if route_anchor not in text:
+              raise SystemExit("initial locked-route marker not found")
+          text = text.replace(route_anchor, route_replacement, 1)
+
+          locked_section = '''        <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>\n          <div class="myPlayersLockedContent">\n            <h2 id="optInLockedTitle">My Players</h2>\n            <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>\n            <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>\n          </div>\n        </section>'''
+          locked_with_copy = locked_section + '''\n        <script>\n          (() => {\n            const copy = {\n              myplayers: ["My Players", "In order to see your players, you need to opt in."],\n              watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],\n              settings: ["Settings", "In order to use settings, you need to opt in."],\n            }[document.documentElement.dataset.initialLockedPage || ""];\n            if (!copy) return;\n            const title = document.getElementById("optInLockedTitle");\n            const message = document.getElementById("optInLockedMessage");\n            if (title) title.textContent = copy[0];\n            if (message) message.textContent = copy[1];\n          })();\n        </script>'''
+          if locked_section not in text:
+              raise SystemExit("locked page markup marker not found")
+          text = text.replace(locked_section, locked_with_copy, 1)
+          index.write_text(text, encoding="utf-8")
+
+          validator = Path("site/validate-static-route-ui.mjs")
+          text = validator.read_text(encoding="utf-8")
+          anchor = '''excludes(indexHtml, ') #myPlayersLockedPage {\\n        display: block;', "Opted-out protected routes must never start in normal block flow before the locked-page grid takes ownership.");\n'''
+          addition = '''includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");\nincludes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");\nincludes(indexHtml, 'settings: ["Settings", "In order to use settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");\nconst lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();');\nconst lockedReplaceUrl = coreSource.indexOf('if (!lockedOptOutRoute && options.replaceUrl', lockedRouteDecision);\nconst lockedUpdateUrl = coreSource.indexOf('if (!lockedOptOutRoute) {\\n    updatePageUrl(pageName', lockedRouteDecision);\nconst lockedGate = coreSource.indexOf('if (lockedOptOutRoute) {', lockedRouteDecision);\ninvariant(lockedRouteDecision >= 0 && lockedReplaceUrl > lockedRouteDecision && lockedUpdateUrl > lockedReplaceUrl && lockedGate > lockedUpdateUrl, "Opted-out protected routes must decide their locked state before any startup URL canonicalization and preserve the requested refresh URL.");\n'''
+          if anchor not in text:
+              raise SystemExit("static route regression anchor not found")
+          validator.write_text(text.replace(anchor, anchor + addition, 1), encoding="utf-8")
+          PY
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+      - name: Build canonical application core
+        working-directory: site
+        run: npm run build:core
+      - name: Lint
+        working-directory: site
+        run: npm run lint
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Repository validation
+        working-directory: site
+        run: npm run validate
+      - name: Stage generated artifacts and verify
+        run: |
+          git add site/index.html site/modules/app-core.js site/modules/app-core*-runtime.js site/validate-static-route-ui.mjs
+          cd site
+          npm run verify:generated
+      - name: Commit clean implementation
+        run: |
+          git rm .github/workflows/issue-561-route-preservation.yml
+          git commit -m "Preserve opted-out refresh routes"
+          git push origin HEAD:fix/561-opted-out-first-paint
