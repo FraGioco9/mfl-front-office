@@ -59,8 +59,18 @@ includes(
 );
 includes(
   preferences,
-  "table_state: tableState || {},",
-  "Supabase writes must use the canonical tableState rather than the compatibility response shape.",
+  'if (hasDomain("tableState")) {',
+  "Supabase table-state writes must be explicitly scoped to the tableState preference domain.",
+);
+includes(
+  preferences,
+  "patch.table_state = mergeTableState(incoming.tableState, currentTableState) || {};",
+  "Supabase table-state PATCHes must merge and store the canonical tableState rather than the compatibility response shape.",
+);
+includes(
+  preferences,
+  'method: "PATCH",',
+  "Existing wallet preference rows must use partial PATCH updates so unrelated domains cannot be overwritten.",
 );
 excludes(
   preferences,

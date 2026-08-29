@@ -5,6 +5,7 @@ function settingsDraftPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddressDraft),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
   };
 }
 
@@ -188,7 +189,7 @@ async function saveSettingsDraft() {
   state.settingsSaveInFlight = true;
   savePendingSettingsLocally(payload);
   updateSettingsEmailDraftActions();
-  await saveWalletPreferencesNow();
+  await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
 
   const pending = loadPendingSettingsLocally();
   state.settingsSaveInFlight = false;

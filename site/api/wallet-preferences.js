@@ -276,52 +276,65 @@ async function readPreferencesForVisit(wallet) {
 }
 
 async function writePreferences(wallet, preferences) {
-  const currentPreferences = await readPreferences(wallet);
+  const incoming = preferences && typeof preferences === "object" && !Array.isArray(preferences)
+    ? preferences
+    : {};
+  const hasDomain = (key) => Object.prototype.hasOwnProperty.call(incoming, key);
 
-  const watchlists = Array.isArray(preferences.watchlists)
-    ? normalizeWatchlists(preferences.watchlists)
-    : normalizeWatchlists(currentPreferences.watchlists);
-
-  const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
-    ? normalizePlayerNotes(preferences.playerNotes)
-    : currentPreferences.playerNotes;
-
-  const tableState = mergeTableState(preferences.tableState, currentPreferences.tableState);
-  const evaluationSettings = preferences.evaluationSettings
-    ? normalizeEvaluationSettings(preferences.evaluationSettings)
-    : currentPreferences.evaluationSettings;
-
-  const settings = preferences.settings
-    ? normalizeSettings(preferences.settings)
-    : currentPreferences.settings;
-
-  const nextPreferences = {
-    watchlists,
-    playerNotes,
-    tableState: tableStateForClient(tableState),
-    evaluationSettings,
-    settings,
-  };
   if (!supabaseConfig()) {
-    return nextPreferences;
+    const currentPreferences = await readPreferences(wallet);
+    return {
+      watchlists: hasDomain("watchlists") ? normalizeWatchlists(incoming.watchlists) : currentPreferences.watchlists,
+      playerNotes: hasDomain("playerNotes") ? normalizePlayerNotes(incoming.playerNotes) : currentPreferences.playerNotes,
+      tableState: hasDomain("tableState")
+        ? tableStateForClient(mergeTableState(incoming.tableState, currentPreferences.tableState))
+        : currentPreferences.tableState,
+      evaluationSettings: hasDomain("evaluationSettings")
+        ? normalizeEvaluationSettings(incoming.evaluationSettings)
+        : currentPreferences.evaluationSettings,
+      settings: hasDomain("settings") ? normalizeSettings(incoming.settings) : currentPreferences.settings,
+    };
   }
 
-  const rows = await supabaseRequest("wallet_preferences?on_conflict=wallet_address", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify([{
-      wallet_address: wallet,
-      watchlists,
-      player_notes: playerNotes,
-      table_state: tableState || {},
-      evaluation_settings: evaluationSettings || {},
-      settings: settings || {},
-    }]),
-  });
+  const patch = {};
+  if (hasDomain("watchlists")) patch.watchlists = normalizeWatchlists(incoming.watchlists);
+  if (hasDomain("playerNotes")) patch.player_notes = normalizePlayerNotes(incoming.playerNotes);
+  if (hasDomain("evaluationSettings")) patch.evaluation_settings = normalizeEvaluationSettings(incoming.evaluationSettings) || {};
+  if (hasDomain("settings")) patch.settings = normalizeSettings(incoming.settings);
 
-  return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
+  if (hasDomain("tableState")) {
+    const rows = await supabaseRequest(
+      `wallet_preferences?select=table_state&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`,
+    );
+    const row = Array.isArray(rows) ? rows[0] : null;
+    const currentTableState = row?.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state)
+      ? tableStateForClient(row.table_state)
+      : null;
+    patch.table_state = mergeTableState(incoming.tableState, currentTableState) || {};
+  }
+
+  if (!Object.keys(patch).length) {
+    return readPreferences(wallet);
+  }
+
+  const updateRows = await supabaseRequest(
+    `wallet_preferences?wallet_address=eq.${encodeURIComponent(wallet)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(patch),
+    },
+  );
+  if (Array.isArray(updateRows) && updateRows.length) {
+    return preferencesFromRow(updateRows[0]);
+  }
+
+  const insertRows = await supabaseRequest("wallet_preferences?on_conflict=wallet_address", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify([{ wallet_address: wallet, ...patch }]),
+  });
+  return preferencesFromRow(Array.isArray(insertRows) ? insertRows[0] : null);
 }
 
 module.exports = async function handler(request, response) {

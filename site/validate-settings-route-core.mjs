@@ -140,7 +140,7 @@ includes(settingsCore, "settingsEmailSaveButton.onclick = saveSettingsEmailAddre
 includes(settingsCore, 'settingsEmailDiscardButton.setAttribute("aria-label", "Discard all Settings changes");', "The Discard control must describe its page-wide scope.");
 includes(settingsCore, 'settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");', "The Save control must describe its page-wide scope.");
 includes(settingsCore, "savePendingSettingsLocally(payload);", "Explicit Settings Save must stage only the committed draft through the existing persistence payload owner.");
-includes(settingsCore, "await saveWalletPreferencesNow();", "Explicit Settings Save must write through the existing wallet-preferences/Supabase owner.");
+includes(settingsCore, 'await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });', "Explicit Settings Save must write only the Settings domain through the wallet-preferences/Supabase owner.");
 includes(settingsCore, 'showToast("Settings saved.");', "Successful explicit Settings persistence must provide completion feedback.");
 includes(settingsCore, 'showToast("Settings changes discarded.");', "Discarding the page-wide draft must provide completion feedback.");
 excludes(settingsCore, "settingsDiscardChangesButton", "Settings must not create a second late-rendered Discard control.");

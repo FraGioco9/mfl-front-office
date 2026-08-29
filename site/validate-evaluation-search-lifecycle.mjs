@@ -208,10 +208,11 @@ invariant(
     && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
     && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
     && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
-    && recentOwnerSource.includes("await loadWalletPreferences({ force: true });")
-    && recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+    && recentOwnerSource.includes("await loadWalletPreferences();")
+    && !recentOwnerSource.includes("force: true")
+    && !recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
     && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
-  "Late Evaluation route ownership must chain authoritative Supabase hydration into the same published readiness promise, reusing startup when possible and issuing one corrective fresh preference read only when startup completed before the Supabase-only owner was installed.",
+  "Late Evaluation route ownership must reuse the published startup Supabase hydration and fall back only to the canonical non-forced preference loader without replacing readiness ownership.",
 );
 invariant(
   searchRuntime.includes("function waitForSupabaseRecentState()")

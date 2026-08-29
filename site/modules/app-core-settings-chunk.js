@@ -38,25 +38,20 @@ function settingsRestoreDraftBaselineForNavigation() {
 async function settingsRefreshCommittedFromSupabase(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) return false;
 
-  try {
-    const response = await fetch("/api/wallet-preferences", {
-      cache: "no-store",
-      headers: walletProofHeaders(true),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) return false;
+  const force = options.force === true;
+  const render = options.render !== false;
+  const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
+  if (activeDraft && !force) return false;
 
-    const force = options.force === true;
-    const render = options.render !== false;
-    const activeDraft = settingsRouteActive() && state.settingsDraftDirty && !state.settingsSaveInFlight;
-    if (activeDraft && !force) return false;
+  try {
+    const loaded = await loadWalletPreferences({ force });
+    if (!loaded && !state.walletPreferencesLoaded) return false;
     state.settingsDraftDirty = false;
-    applySettingsPayload(data.settings || {}, { render });
     state.settingsDraftBaseline = currentSettingsPayload();
     state.settingsDraftDirty = false;
+    if (render && settingsRouteActive()) renderSettingsPage();
     return true;
   } catch {
-    // The last committed in-memory baseline remains the safe fallback.
     return false;
   }
 }
@@ -114,6 +109,7 @@ const SETTINGS_ROUTE_DRAFT_RUNTIME = `function settingsDraftPayload() {
     emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddressDraft),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
+    theme: currentMflTheme(),
   };
 }
 
@@ -245,7 +241,7 @@ async function saveSettingsDraft() {
   state.settingsSaveInFlight = true;
   savePendingSettingsLocally(payload);
   updateSettingsEmailDraftActions();
-  await saveWalletPreferencesNow();
+  await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
 
   const pending = loadPendingSettingsLocally();
   state.settingsSaveInFlight = false;
