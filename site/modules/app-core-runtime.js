@@ -985,6 +985,10 @@ function updateAccountState() {
 
 function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
+  const routeAtOptOut = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+    ? routeAtOptOut
+    : null;
   clearWalletNotesState();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
@@ -1002,6 +1006,18 @@ function optOutWallet() {
 
   updateAccountState();
   updateMenuVisibility();
+
+  if (protectedRouteAtOptOut) {
+    const lockedPage = protectedRouteAtOptOut.pageName;
+    const lockedOptions = protectedRouteAtOptOut.options && typeof protectedRouteAtOptOut.options === "object"
+      ? protectedRouteAtOptOut.options
+      : {};
+    setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
+    saveTableState();
+    showToast("Dapper opt-in removed.");
+    return;
+  }
+
   normalizeCurrentViewsAfterProgressionAccessLoss();
   if (state.currentPage === "player") {
     renderPlayerPage(playerIdFromUrl());
@@ -1016,17 +1032,8 @@ function optOutWallet() {
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "watchlist") {
-    const targetPath = pagePath("watchlist", { view: defaultViewForPage("watchlist") });
-    if (`${window.location.pathname}${window.location.search}` !== targetPath) {
-      window.history.replaceState({}, "", targetPath);
-    }
-    setPage("watchlist", false, { plain: true, view: defaultViewForPage("watchlist") });
-    return;
-  }
-
-  if (state.currentPage === "myplayers" || state.currentPage === "settings") {
-    setPage(state.currentPage, false);
+  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+    setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }
 
