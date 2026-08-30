@@ -1,0 +1,43 @@
+name: Issue 594 core source migration
+
+on:
+  push:
+    branches:
+      - refactor/594-global-runtime-ownership
+    paths:
+      - site/migrate-594-core-sources.mjs
+      - .github/workflows/issue594-core-source-migration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: refactor/594-global-runtime-ownership
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Promote shipped core artifacts to canonical sources
+        run: node site/migrate-594-core-sources.mjs
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Verify source-owned core build
+        working-directory: site
+        run: npm run check
+      - name: Commit migration and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm site/migrate-594-core-sources.mjs .github/workflows/issue594-core-source-migration.yml
+          git add -A
+          git commit -m "Make split application cores source-owned"
+          git push origin HEAD:refactor/594-global-runtime-ownership
