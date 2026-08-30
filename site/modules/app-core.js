@@ -9343,8 +9343,8 @@ function sortableValue(row, column) {
 
   if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
-      getValue(row, getProgressionColumn(column)) || 0,
-      getValue(row, column) || 0,
+      getValue(row, getProgressionColumn(column)),
+      getValue(row, column),
     ];
   }
 
@@ -10999,7 +10999,9 @@ function applyFilters(options = {}) {
     return true;
   });
 
-  state.filteredRows.sort(compareRows);
+  if (!state.incrementalApplying) {
+    state.filteredRows.sort(compareRows);
+  }
   updateFilterSummary();
   syncActiveWatchlistFromSet();
   if (options.save !== false) {
