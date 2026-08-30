@@ -78,7 +78,7 @@ Stored values:
 - `player_id`: validates/resolves the shared player context.
 - `payload`: normalized public Evaluation share state.
 - `created_at`: share ordering metadata.
-- `expires_at`: mandatory expiry and active-share filtering.
+- `expires_at`: mandatory expiry and active-share filtering; new shares expire one calendar month after share creation.
 
 The preview lookup selects only `id`, `player_id`, `payload`, and `expires_at`; it never exposes or selects the creator wallet. Only after that active share has been validated, the preview owner resolves the player's current public `name`, `age`, and `retirement_years` from the packaged public player database (`mfl_database.db`). Name and age keep the card aligned with the public player identity shown by the site. For valuation, the saved `overallValues` array is also the canonical saved Expected Seasons horizon because the Evaluation page creates exactly one Overall entry per raw expected season. Public age/retirement context is therefore only a backward-compatibility fallback when a legacy payload does not contain that horizon.
 
