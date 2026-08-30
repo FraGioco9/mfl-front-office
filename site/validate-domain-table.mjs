@@ -18,6 +18,7 @@ const validators = [
   "validate-mobile-pager-scaling.mjs",
 ];
 
+
 for (const validator of validators) {
   console.log(`[table] ${validator}`);
   try {
