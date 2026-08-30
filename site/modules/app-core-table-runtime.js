@@ -545,9 +545,7 @@ function sortableValue(row, column) {
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
-    return column === "overall"
-      ? tableNextOverallPreciseValue(row)
-      : tableNextOverallSortValue(row, column);
+    return tableNextOverallSortValue(row, column);
   }
 
   if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
@@ -981,14 +979,6 @@ function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
 
   if (state.view === "next" && statColumns.includes(state.sortKey)) {
-    if (state.sortKey === "overall") {
-      return comparePrimitiveValues(
-        tableNextOverallPreciseValue(a),
-        tableNextOverallPreciseValue(b),
-        direction,
-        true,
-      );
-    }
     return compareNextOverallRows(a, b, state.sortKey, direction);
   }
 

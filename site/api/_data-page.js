@@ -218,7 +218,7 @@ function orderSql(scope, view, sortKey, sortDirection) {
 
   if (["current", "all"].includes(view) && STAT_COLUMNS.has(key)) {
     const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;
-    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall ${direction}, player_id DESC`;
+    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall DESC, player_id DESC`;
   }
 
   if (key === "active_contract_club_division") {

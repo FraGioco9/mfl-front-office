@@ -2542,11 +2542,17 @@ function tableSortStateForView(
 ) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
-  return normalizedViewSortState(
-    state.tableSortSessionSortState || fallbackSortState,
+  const sourceSortState = state.tableSortSessionSortState || fallbackSortState;
+  const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);
+  const resolvedSortState = normalizedViewSortState(
+    sourceSortState,
     normalizedView,
     normalizedPageName,
   );
+  if (!sourceSortSupported && state.tableSortSessionKey) {
+    state.tableSortSessionSortState = resolvedSortState;
+  }
+  return resolvedSortState;
 }
 
 function rememberTableSortState(
@@ -9222,12 +9228,15 @@ async function startApp() {
     const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
     const currentPage = String(state.currentPage || "").toLowerCase();
     const currentView = String(state.view || "").toLowerCase();
+    const stagedViewCommit = pendingViewTransition?.pageName === currentPage
+      && pendingViewTransition?.viewName === currentView;
     const staticRoutePending = staticHeader
+      && !stagedViewCommit
       && staticPage
       && staticView
       && (currentPage !== staticPage || currentView !== staticView);
     if (staticRoutePending) return true;
-    if (staticHeader && staticSignature && staticSignature !== signature) return true;
+    if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return true;
     const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
     if (needsCanonicalBuild) buildHeader();
     if (!head.rows[0]) return false;

@@ -3721,11 +3721,17 @@ function tableSortStateForView(
 ) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
-  return normalizedViewSortState(
-    state.tableSortSessionSortState || fallbackSortState,
+  const sourceSortState = state.tableSortSessionSortState || fallbackSortState;
+  const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);
+  const resolvedSortState = normalizedViewSortState(
+    sourceSortState,
     normalizedView,
     normalizedPageName,
   );
+  if (!sourceSortSupported && state.tableSortSessionKey) {
+    state.tableSortSessionSortState = resolvedSortState;
+  }
+  return resolvedSortState;
 }
 
 function rememberTableSortState(
@@ -9330,9 +9336,7 @@ function sortableValue(row, column) {
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
-    return column === "overall"
-      ? tableNextOverallPreciseValue(row)
-      : tableNextOverallSortValue(row, column);
+    return tableNextOverallSortValue(row, column);
   }
 
   if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
@@ -9741,14 +9745,6 @@ function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
 
   if (state.view === "next" && statColumns.includes(state.sortKey)) {
-    if (state.sortKey === "overall") {
-      return comparePrimitiveValues(
-        tableNextOverallPreciseValue(a),
-        tableNextOverallPreciseValue(b),
-        direction,
-        true,
-      );
-    }
     return compareNextOverallRows(a, b, state.sortKey, direction);
   }
 
@@ -14452,12 +14448,15 @@ async function startApp() {
     const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
     const currentPage = String(state.currentPage || "").toLowerCase();
     const currentView = String(state.view || "").toLowerCase();
+    const stagedViewCommit = pendingViewTransition?.pageName === currentPage
+      && pendingViewTransition?.viewName === currentView;
     const staticRoutePending = staticHeader
+      && !stagedViewCommit
       && staticPage
       && staticView
       && (currentPage !== staticPage || currentView !== staticView);
     if (staticRoutePending) return true;
-    if (staticHeader && staticSignature && staticSignature !== signature) return true;
+    if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return true;
     const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
     if (needsCanonicalBuild) buildHeader();
     if (!head.rows[0]) return false;
@@ -14483,12 +14482,15 @@ async function startApp() {
         const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
         const currentPage = String(state.currentPage || "").toLowerCase();
         const currentView = String(state.view || "").toLowerCase();
+        const stagedViewCommit = pendingViewTransition?.pageName === currentPage
+          && pendingViewTransition?.viewName === currentView;
         const staticRoutePending = staticHeader
+          && !stagedViewCommit
           && staticPage
           && staticView
           && (currentPage !== staticPage || currentView !== staticView);
         if (staticRoutePending) return undefined;
-        if (staticHeader && staticSignature && staticSignature !== signature) return undefined;
+        if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return undefined;
         if (!staticHeader && staticSignature === signature && head.rows[0]) return undefined;
         const result = originalBuildHeader.apply(this, arguments);
         head.dataset.mflHeaderSignature = signature;
