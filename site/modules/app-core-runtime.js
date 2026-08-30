@@ -1705,8 +1705,51 @@ function releaseEvaluationReadinessBusy() {
   return Boolean(token);
 }
 
+function syncMobileTablePageTransitionChrome(pageName) {
+  if (!window.matchMedia("(max-width: 900px)").matches) return;
+  const normalizePage = (value) => {
+    const page = String(value || "").trim().toLowerCase();
+    if (page === "mflstats") return "mfl";
+    if (page === "my-players") return "myplayers";
+    return page;
+  };
+  const targetPage = normalizePage(pageName);
+  const currentPage = normalizePage(document.body.dataset.page || state.currentPage);
+
+  if (targetPage && currentPage && targetPage !== currentPage) {
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
+    if (scroller instanceof HTMLElement) scroller.scrollLeft = 0;
+  }
+
+  const views = document.querySelector("#progressionPage .views");
+  const switcher = document.getElementById("watchlistSwitcher");
+  if (!(views instanceof HTMLElement) || !(switcher instanceof HTMLElement)) return;
+
+  const showWatchlistSelector = targetPage === "watchlist"
+    && document.documentElement.dataset.storedWalletOptIn === "true";
+  switcher.hidden = !showWatchlistSelector;
+
+  if (showWatchlistSelector) {
+    const shell = views.parentElement instanceof HTMLElement
+      && views.parentElement.classList.contains("viewsScrollerShell")
+      ? views.parentElement
+      : null;
+    (shell || views).insertAdjacentElement("afterend", switcher);
+    switcher.classList.add("mflMobileWatchlistSwitcher");
+    return;
+  }
+
+  switcher.classList.remove("mflMobileWatchlistSwitcher");
+  if (switcher.parentElement !== views) views.appendChild(switcher);
+  const dropdown = document.getElementById("watchlistDropdown");
+  if (dropdown instanceof HTMLElement) dropdown.hidden = true;
+  const button = document.getElementById("watchlistButton");
+  if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
+}
+
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   if (!settingsConfirmNavigation(pageName, updateHash)) return null;
+  syncMobileTablePageTransitionChrome(pageName);
   const navigation = Reflect.get(window, "__mflNavigation");
   const loadingController = Reflect.get(window, "__mflInteractionBusy");
   if (pageName !== "evaluation") {

@@ -42,21 +42,24 @@ const standardsFallback = `@supports not selector(::-webkit-scrollbar) {
 if (!scrollbarSource.includes(standardsFallback)) {
   throw new Error("Standards-based scrollbar styling must be limited to browsers without WebKit scrollbar pseudo-elements.");
 }
-const mobileHiddenStandardsFallback = `@supports not selector(::-webkit-scrollbar) {
-    .views,
+const mobileHiddenStandardsFallback = `.views,
     .quickFilters,
     .filtersDialog .filterBuilder {
       scrollbar-width: none;
-    }
-  }`;
-if (!scrollbarSource.includes(mobileHiddenStandardsFallback)) {
-  throw new Error("Mobile section-view, quick-filter, and Filters-body scrollers must hide standards-based scrollbars from the canonical scrollbar owner.");
+    }`;
+const playerTableHiddenStandardsFallback = `.playerTableScroller {
+      scrollbar-width: none;
+    }`;
+if (!scrollbarSource.includes(mobileHiddenStandardsFallback)
+  || !scrollbarSource.includes(playerTableHiddenStandardsFallback)) {
+  throw new Error("Mobile section-view, quick-filter, player-table, and Filters-body scrollers must hide standards-based scrollbars from the canonical scrollbar owner.");
 }
 // Chromium 121+ gives scrollbar-width/scrollbar-color precedence over WebKit pseudo-elements;
 // keeping these declarations out of WebKit-capable browsers preserves hidden native arrow buttons.
 const outsideStandardsFallback = scrollbarSource
   .replace(standardsFallback, "")
-  .replace(mobileHiddenStandardsFallback, "");
+  .replace(mobileHiddenStandardsFallback, "")
+  .replace(playerTableHiddenStandardsFallback, "");
 if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFallback.includes("scrollbar-color:")) {
   throw new Error("Do not let standards scrollbar properties override WebKit thumb-only styling in Chromium/Safari.");
 }
@@ -101,14 +104,23 @@ const mobileHiddenWebkitScrollbar = `.views::-webkit-scrollbar,
     width: 0;
     height: 0;
   }`;
+const playerTableHiddenWebkitScrollbar = `.playerTableScroller::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }`;
 if (!scrollbarSource.includes("@media (max-width: 900px)")
   || !scrollbarSource.includes(mobileHiddenWebkitScrollbar)
+  || !scrollbarSource.includes(playerTableHiddenWebkitScrollbar)
   || !scrollbarSource.includes(`.views,
   .quickFilters,
   .filtersDialog .filterBuilder {
     -ms-overflow-style: none;
+  }`)
+  || !scrollbarSource.includes(`.playerTableScroller {
+    -ms-overflow-style: none;
   }`)) {
-  throw new Error("Mobile section-view, quick-filter, and Filters-body scrollers must hide every native scrollbar through scrollbars.css.");
+  throw new Error("Mobile section-view, quick-filter, player-table, and Filters-body scrollers must hide every native scrollbar through scrollbars.css.");
 }
 const modalThumbSelector = ":root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb";
 if (!scrollbarSource.includes(modalThumbSelector)) {
@@ -125,4 +137,4 @@ if (scrollbarSource.includes("--mfl-scrollbar-arrow") || scrollbarSource.include
   throw new Error("Scrollbar arrow styling must not be reintroduced; only the thumb should be visible.");
 }
 
-console.log("Canonical CSS priority, thumb-only scrollbar, and hidden mobile section-view/quick-filter/Filters-body scrollbar validation passed.");
+console.log("Canonical CSS priority, thumb-only scrollbar, and hidden mobile section-view/quick-filter/player-table/Filters-body scrollbar validation passed.");

@@ -81,7 +81,12 @@ includes(
 );
 includes(
   bootstrap,
-  "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);",
+  "const insertionAnchor = switcher instanceof HTMLElement && switcher.parentElement === container",
+  "View ordering must derive a valid DOM insertion anchor when the Watchlist selector is still inside Views.",
+);
+includes(
+  bootstrap,
+  "container.insertBefore(button, insertionAnchor);",
   "View order must be represented by DOM order instead of CSS order overrides.",
 );
 includes(

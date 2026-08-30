@@ -15,6 +15,9 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   transition: none;
 }
 
+/* Loading rows intentionally have no separate height or border owner: they inherit the exact
+ * player-table tbody/tr/td geometry used by populated rows. */
+
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {

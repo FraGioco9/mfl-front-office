@@ -12,6 +12,8 @@ const validators = [
   "validate-header-selection-loading.mjs",
   "validate-new-player-icon.mjs",
   "validate-progression-joined-agency-filter.mjs",
+  "validate-mobile-table-retry.mjs",
+  "validate-mobile-pager-scaling.mjs",
 ];
 
 for (const validator of validators) {

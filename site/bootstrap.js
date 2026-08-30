@@ -13,7 +13,10 @@
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const FIRST_PAINT_HORIZONTAL_MEDIA = window.matchMedia("(max-width: 900px)");
+  const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
   const FIRST_PAINT_OVERFLOW_CLASS = "mflViewsOverflowing";
+  const FIRST_PAINT_PLAYER_TABLE_FADE_LEFT_CLASS = "mflPlayerTableCanScrollLeft";
+  const FIRST_PAINT_PLAYER_TABLE_FADE_RIGHT_CLASS = "mflPlayerTableCanScrollRight";
   const FIRST_PAINT_OVERFLOW_EPSILON = 2;
   const APP_CONFIG = Reflect.get(window, "__mflAppConfig");
   if (!APP_CONFIG?.routes || !APP_CONFIG?.table || !APP_CONFIG?.ui) {
@@ -28,6 +31,16 @@
   const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);
   const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;
   const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;
+  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
+    overall: "OVR",
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+  });
   const MFL_STATS_FILTER_LABELS = Object.freeze(
     APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label])),
   );
@@ -290,11 +303,14 @@
     });
 
     const switcher = document.getElementById("watchlistSwitcher");
+    const insertionAnchor = switcher instanceof HTMLElement && switcher.parentElement === container
+      ? switcher
+      : null;
     config.order.forEach((buttonView) => {
       const button = buttons.get(buttonView);
       if (!(button instanceof HTMLElement)) return;
       button.hidden = false;
-      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+      container.insertBefore(button, insertionAnchor);
     });
 
     const activeView = config.order.includes(view)
@@ -492,6 +508,19 @@
     });
   }
 
+  function primeFirstPaintPlayerTableFade() {
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
+    const shell = scroller instanceof HTMLElement ? scroller.closest("#progressionPage .tableShell") : null;
+    if (!(scroller instanceof HTMLElement) || !(shell instanceof HTMLElement)) return;
+
+    const canRender = FIRST_PAINT_HORIZONTAL_MEDIA.matches && scroller.getClientRects().length > 0;
+    const maxScroll = canRender ? Math.max(0, scroller.scrollWidth - scroller.clientWidth) : 0;
+    const scrollLeft = canRender ? Math.min(maxScroll, Math.max(0, scroller.scrollLeft)) : 0;
+    const overflowing = maxScroll > FIRST_PAINT_OVERFLOW_EPSILON;
+    shell.classList.toggle(FIRST_PAINT_PLAYER_TABLE_FADE_LEFT_CLASS, overflowing && scrollLeft > FIRST_PAINT_OVERFLOW_EPSILON);
+    shell.classList.toggle(FIRST_PAINT_PLAYER_TABLE_FADE_RIGHT_CLASS, overflowing && maxScroll - scrollLeft > FIRST_PAINT_OVERFLOW_EPSILON);
+  }
+
   function firstPaintTableColumns(page, view) {
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
@@ -504,6 +533,19 @@
     if (column === "overall") return "col-stat col-overall";
     if (FIRST_PAINT_STAT_COLUMNS.includes(column)) return "col-stat";
     return FIRST_PAINT_COLUMN_CLASSES[column] || "";
+  }
+
+  function firstPaintTableColumnLabel(page, column) {
+    const normalizedPage = String(page || "").toLowerCase();
+    const fullLabel = String(FIRST_PAINT_COLUMN_LABELS[column] || "");
+    const compactLabel = String(FIRST_PAINT_COMPACT_COLUMN_LABELS[column] || fullLabel);
+    const agentColumn = FIRST_PAINT_AGENT_PAGES.has(normalizedPage) ? "owned_since" : "wallet_name";
+    if (!FIRST_PAINT_HORIZONTAL_MEDIA.matches) {
+      return column === agentColumn && normalizedPage === "mfl" ? "" : fullLabel;
+    }
+    if (column === "listing_price" || (column === agentColumn && normalizedPage === "mfl")) return "";
+    if (column === "positions") return "POSITIONS";
+    return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;
   }
 
   function firstPaintTableSortState(page, view) {
@@ -593,8 +635,13 @@
       const header = document.createElement("th");
       const className = firstPaintTableColumnClass(column);
       if (className) header.classList.add(...className.split(" "));
+      header.dataset.tableColumn = column;
       const label = document.createElement("span");
-      label.textContent = FIRST_PAINT_COLUMN_LABELS[column] || "";
+      const fullLabel = String(FIRST_PAINT_COLUMN_LABELS[column] || "");
+      const compactLabel = String(FIRST_PAINT_COMPACT_COLUMN_LABELS[column] || fullLabel);
+      label.dataset.mflFullTableLabel = fullLabel;
+      label.dataset.mflCompactTableLabel = compactLabel;
+      label.textContent = firstPaintTableColumnLabel(normalizedPage, column);
       header.appendChild(label);
       if (FIRST_PAINT_SORTABLE_COLUMNS.has(column)) {
         header.classList.add("sortable");
@@ -864,6 +911,7 @@
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
     if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
+    if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
 
     const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((candidate) => {

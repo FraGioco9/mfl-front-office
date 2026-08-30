@@ -866,6 +866,9 @@ function tableBuildHeaderOwner() {
   actionsHeader.setAttribute("aria-label", "Player actions");
   headerRow.appendChild(actionsHeader);
 
+  const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
+
   currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
@@ -875,7 +878,29 @@ function tableBuildHeaderOwner() {
     const clubPositionSort = state.currentPage === "club" && column === "positions";
     const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
+    cell.dataset.tableColumn = column;
+    const fullLabel = columnLabels[column] || "";
+    const compactLabel = ({
+      overall: "OVR",
+      pace: "PAC",
+      shooting: "SHO",
+      passing: "PAS",
+      dribbling: "DRI",
+      defense: "DEF",
+      physical: "PHY",
+      goalkeeping: "GK",
+    }[column] || fullLabel);
+    label.dataset.mflFullTableLabel = fullLabel;
+    label.dataset.mflCompactTableLabel = compactLabel;
+    label.textContent = !mobileTable
+      ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
+      : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+        ? ""
+        : column === "positions"
+          ? "POSITIONS"
+          : compactTableHeadings
+            ? compactLabel
+            : fullLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
@@ -2374,6 +2399,14 @@ installPagerCurrentPageControl();
 syncPagerCurrentPage(1, 1);
 
 
+function compactMobilePlayerName(value) {
+  const fullName = String(value || "").trim();
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return fullName;
+  const initial = Array.from(parts[0])[0] || "";
+  return initial ? `${initial}. ${parts.at(-1)}` : fullName;
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
@@ -2437,7 +2470,11 @@ function tableRenderTableOwner() {
         nameLink.href = playerRoute(playerId);
         nameLink.className = "playerNameLink";
         markTableInteractiveHover(nameLink, "name", playerId);
-        nameLink.textContent = formatCellValue(row, column);
+        const fullPlayerName = formatCellValue(row, column);
+        nameLink.textContent = window.matchMedia("(max-width: 900px)").matches
+          ? compactMobilePlayerName(fullPlayerName)
+          : fullPlayerName;
+        if (fullPlayerName) nameLink.setAttribute("aria-label", fullPlayerName);
         nameLink.dataset.playerId = String(playerId);
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");
@@ -2470,7 +2507,27 @@ function tableRenderTableOwner() {
       } else if (column === "listing_price") {
         const listingBadge = listingPriceBadgeHtml(row);
         if (listingBadge) {
-          cell.innerHTML = listingBadge ? `<span class="listingCellTableHost">${listingBadge}</span>` : "";
+          if (!window.matchMedia("(max-width: 900px)").matches) {
+            cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;
+          } else {
+            const template = document.createElement("template");
+            template.innerHTML = listingBadge.trim();
+            const badge = template.content.firstElementChild;
+            const price = badge instanceof HTMLElement ? badge.querySelector(".listingCellPrice") : null;
+            const priceText = String(price?.textContent || "").trim();
+            if (badge instanceof HTMLElement) {
+              price?.remove();
+              if (priceText) {
+                badge.dataset.tooltip = priceText;
+                badge.setAttribute("aria-label", priceText);
+                badge.tabIndex = 0;
+              }
+              const host = document.createElement("span");
+              host.className = "listingCellTableHost";
+              host.appendChild(badge);
+              cell.appendChild(host);
+            }
+          }
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }

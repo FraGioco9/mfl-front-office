@@ -82,15 +82,25 @@
     const switcher = document.getElementById("watchlistSwitcher");
     if (!(switcher instanceof HTMLElement)) return;
 
-    const show = String(control.dataset.page || "") === "watchlist"
+    const targetPage = String(control.dataset.page || "");
+    const show = targetPage === "watchlist"
       && document.documentElement.dataset.storedWalletOptIn === "true";
     switcher.hidden = !show;
-    if (show) return;
 
-    const dropdown = document.getElementById("watchlistDropdown");
-    if (dropdown instanceof HTMLElement) dropdown.hidden = true;
-    const button = document.getElementById("watchlistButton");
-    if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
+    if (!show) {
+      const views = document.querySelector("#progressionPage .views");
+      switcher.classList.remove("mflMobileWatchlistSwitcher");
+      if (views instanceof HTMLElement && switcher.parentElement !== views) views.appendChild(switcher);
+
+      const dropdown = document.getElementById("watchlistDropdown");
+      if (dropdown instanceof HTMLElement) dropdown.hidden = true;
+      const button = document.getElementById("watchlistButton");
+      if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
+    }
+
+    if (targetPage === "watchlist" || targetPage === "myplayers") {
+      requestAnimationFrame(() => window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.());
+    }
   }
 
   function activePageViewFilterControl(target) {

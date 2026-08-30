@@ -2,6 +2,7 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
+  const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");
 
   function installTooltipController() {
     window.__mflDiscountTooltipController?.destroy?.();
@@ -99,7 +100,7 @@
     }
 
     function show(metric) {
-      if (!(metric instanceof HTMLElement) || !evaluationActive()) return;
+      if (MOBILE_TOOLTIP_MEDIA.matches || !(metric instanceof HTMLElement) || !evaluationActive()) return;
       const text = String(metric.dataset.tooltip || "").trim();
       if (!text) {
         hide(true);
@@ -129,7 +130,7 @@
     }
 
     function sync() {
-      if (!evaluationActive()) {
+      if (MOBILE_TOOLTIP_MEDIA.matches || !evaluationActive()) {
         hoverMetric = null;
         keyboardFocusMetric = null;
         hide(true);
@@ -147,6 +148,7 @@
     }
 
     function onPointerOver(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) return;
       keyboardFocusMode = false;
       const metric = metricFrom(event.target);
       if (!metric) return;
@@ -155,6 +157,7 @@
     }
 
     function onPointerMove(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) return;
       keyboardFocusMode = false;
       const metric = metricFrom(event.target);
       if (metric === hoverMetric) return;
@@ -163,6 +166,7 @@
     }
 
     function onPointerOut(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) return;
       const metric = metricFrom(event.target);
       if (!metric || metric.contains(event.relatedTarget)) return;
       if (hoverMetric === metric) hoverMetric = null;
@@ -170,6 +174,7 @@
     }
 
     function onFocusIn(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) return;
       const metric = metricFrom(event.target);
       if (!metric) return;
       if (keyboardFocusMode) keyboardFocusMetric = metric;
@@ -177,6 +182,7 @@
     }
 
     function onFocusOut(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) return;
       const metric = metricFrom(event.target);
       if (!metric || metric.contains(event.relatedTarget)) return;
       if (keyboardFocusMetric === metric) keyboardFocusMetric = null;
@@ -184,6 +190,10 @@
     }
 
     function onPointerDown(event) {
+      if (MOBILE_TOOLTIP_MEDIA.matches) {
+        clearAll(true);
+        return;
+      }
       keyboardFocusMode = false;
       const metric = metricFrom(event.target);
       if (!metric) {
@@ -211,6 +221,10 @@
     }
 
     function onResize() {
+      if (MOBILE_TOOLTIP_MEDIA.matches) {
+        clearAll(true);
+        return;
+      }
       if (activeMetric) position();
     }
 
@@ -231,6 +245,10 @@
       else sync();
     }
 
+    function onTooltipModeChange() {
+      clearAll(true);
+    }
+
     window.addEventListener("pointerover", onPointerOver, true);
     window.addEventListener("pointermove", onPointerMove, true);
     window.addEventListener("pointerout", onPointerOut, true);
@@ -239,6 +257,7 @@
     document.addEventListener("focusout", onFocusOut, true);
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("visibilitychange", onVisibilityChange);
+    MOBILE_TOOLTIP_MEDIA.addEventListener("change", onTooltipModeChange);
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("blur", onWindowBlur);
@@ -258,6 +277,7 @@
       document.removeEventListener("focusout", onFocusOut, true);
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      MOBILE_TOOLTIP_MEDIA.removeEventListener("change", onTooltipModeChange);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("blur", onWindowBlur);

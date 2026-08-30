@@ -37,8 +37,15 @@ assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
 
 const bootstrap = read("site/bootstrap.js");
-assert.match(bootstrap, /label\.textContent = FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
-assert.doesNotMatch(bootstrap, /column === "listing_price"[^\n]*\? ""/);
+assert.match(bootstrap, /function firstPaintTableColumnLabel\(page, column\)/);
+assert.match(bootstrap, /const fullLabel = String\(FIRST_PAINT_COLUMN_LABELS\[column\] \|\| ""\);/);
+assert.match(bootstrap, /const compactLabel = String\(FIRST_PAINT_COMPACT_COLUMN_LABELS\[column\] \|\| fullLabel\);/);
+assert.match(bootstrap, /if \(column === "listing_price" \|\| \(column === agentColumn && normalizedPage === "mfl"\)\) return "";/);
+assert.match(bootstrap, /header\.dataset\.tableColumn = column;/);
+assert.match(bootstrap, /label\.dataset\.mflFullTableLabel = fullLabel;/);
+assert.match(bootstrap, /label\.dataset\.mflCompactTableLabel = compactLabel;/);
+assert.match(bootstrap, /label\.textContent = firstPaintTableColumnLabel\(normalizedPage, column\);/);
+assert.doesNotMatch(bootstrap, /label\.textContent = FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
 
 const dataPage = read("site/api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
