@@ -3,6 +3,7 @@ const validators = [
   "validate-pager-current-page.mjs",
   "validate-table-column-layout.mjs",
   "validate-table-progression-spacing.mjs",
+  "validate-table-row-vertical-centering.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-listing-column.mjs",
   "validate-marketplace-state-freshness.mjs",

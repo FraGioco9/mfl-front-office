@@ -318,16 +318,20 @@ invariant(
   "Every non-Next table Overall must use one vertically centered content host with the canonical rarity circle and progression.",
 );
 invariant(
-  styles.includes("#progressionPage #tableBody .tableOverallCellContent {")
-    && styles.includes("display: inline-flex;")
+  styles.includes("#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {")
+    && styles.includes("display: flex;")
     && styles.includes("align-items: center;")
+    && styles.includes("width: 100%;")
     && styles.includes("height: var(--mfl-table-row-height);")
+    && styles.includes("min-height: var(--mfl-table-row-height);")
+    && styles.includes("line-height: 1;")
+    && !styles.includes("#progressionPage #tableBody .tableOverallCellContent {\n  display: inline-flex;")
     && styles.includes("#progressionPage #tableBody .tableOverallRarityCircle {")
     && styles.includes("flex: 0 0 8px;")
     && styles.includes("width: 8px;")
     && styles.includes("height: 8px;")
     && styles.includes("background: var(--mfl-overall-rarity-color, var(--text-muted));"),
-  "Overall rarity circles must be exactly 8x8px and centered by a row-height inline-flex content host.",
+  "Overall rarity circles must be exactly 8x8px and centered by the shared full-height block-level flex content host.",
 );
 
 const clubFinishStart = appCoreSource.indexOf("function finishClubSwitch() {");
