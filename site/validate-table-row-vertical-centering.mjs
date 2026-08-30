@@ -35,7 +35,7 @@ assert.doesNotMatch(transform, /!important|translate\(|translateY\(|position:\s*
 assert.match(buildNormalizer, /import \{ addTableRowVerticalCentering \} from "\.\/app-core-table-row-centering\.js";/, "The canonical build must import the shared table-row centering transform.");
 assert.match(
   buildNormalizer,
-  /const mobileTableArtifacts = addMobileTablePresentation\(tableArtifacts\);\n  const centeredTableArtifacts = addTableRowVerticalCentering\(mobileTableArtifacts\);\n  const walletArtifacts = splitWalletApplicationCoreRuntime\(centeredTableArtifacts\);/,
+  /const mobileTableArtifacts = addMobileTablePresentation\(tableArtifacts\);\n {2}const centeredTableArtifacts = addTableRowVerticalCentering\(mobileTableArtifacts\);\n {2}const walletArtifacts = splitWalletApplicationCoreRuntime\(centeredTableArtifacts\);/,
   "Universal row centering must run after table/mobile presentation and before later route transforms.",
 );
 
