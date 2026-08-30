@@ -1,0 +1,272 @@
+name: PR 569 sort page session v2
+
+on:
+  push:
+    branches:
+      - fix/page-scoped-default-sorting
+    paths:
+      - .github/workflows/pr569-sort-page-session-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/page-scoped-default-sorting
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Make sorting page-session owned
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          core_path = Path('site/modules/app-core.js')
+          core = core_path.read_text()
+
+          def replace_once(old, new, label):
+              global core
+              count = core.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              core = core.replace(old, new, 1)
+
+          replace_once(
+              '  tableSortSessionViewStates: {},\n',
+              '  tableSortSessionSortState: null,\n',
+              'session state field',
+          )
+
+          session_pattern = re.compile(
+              r'function tableSortStateForView\(.*?\n\}\n\nfunction defaultTablePageState',
+              re.S,
+          )
+          session_replacement = '''function tableSortStateForView(
+            viewName = state.view,
+            pageName = tablePageKey() || state.currentPage || "progression",
+            fallbackSortState = null,
+          ) {
+            const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+            const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+            return normalizedViewSortState(
+              state.tableSortSessionSortState || fallbackSortState,
+              normalizedView,
+              normalizedPageName,
+            );
+          }
+
+          function rememberTableSortState(
+            sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
+            viewName = state.view,
+            pageName = tablePageKey() || state.currentPage || "progression",
+          ) {
+            if (!state.tableSortSessionKey) return false;
+            const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+            const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+            if (!sortKeySupportedByView(sortState?.sortKey, normalizedView, normalizedPageName)) return false;
+            state.tableSortSessionSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
+            return true;
+          }
+
+          function resetTableSortSession(pageName, options = {}) {
+            const nextSessionKey = tableSortSessionKey(pageName, options);
+            if (nextSessionKey === state.tableSortSessionKey) return false;
+            state.tableSortSessionKey = nextSessionKey;
+            state.tableSortSessionSortState = null;
+            if (!nextSessionKey) return false;
+
+            const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+            const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
+            const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
+            state.tableSortSessionSortState = defaultSortState;
+            state.sortKey = defaultSortState.sortKey;
+            state.sortDirection = defaultSortState.sortDirection;
+            return true;
+          }
+
+          function defaultTablePageState'''
+          core, count = session_pattern.subn(session_replacement, core, count=1)
+          if count != 1:
+              raise SystemExit(f'session helpers: expected one match, found {count}')
+
+          # Restoring filters/table controls must never overwrite the page-session sort intent.
+          core = re.sub(
+              r'  const viewSortState = tableSortStateForView\(\n\s*state\.view,\n\s*pageName,\n\s*\{ sortKey: state\.sortKey, sortDirection: state\.sortDirection \},\n\s*\);\n\s*state\.sortKey = viewSortState\.sortKey;\n\s*state\.sortDirection = viewSortState\.sortDirection;\n\s*rememberTableSortStateForView\(state\.view, pageName, viewSortState\);',
+              '''  const viewSortState = tableSortStateForView(
+            state.view,
+            pageName,
+            { sortKey: state.sortKey, sortDirection: state.sortDirection },
+          );
+          state.sortKey = viewSortState.sortKey;
+          state.sortDirection = viewSortState.sortDirection;''',
+              core,
+              count=1,
+          )
+
+          replace_once(
+              'function applyFilters(options = {}) {\n  rememberTableSortStateForView();\n',
+              'function applyFilters(options = {}) {\n',
+              'filter lifecycle sort ownership',
+          )
+
+          # A deliberate header sort click updates the one page-level sort intent.
+          replace_once(
+              '        state.page = 1;\n        buildHeader();\n        applyFilters();\n',
+              '        rememberTableSortState();\n        state.page = 1;\n        buildHeader();\n        applyFilters();\n',
+              'sort click session commit',
+          )
+
+          # Standard view changes resolve the same page-level sort against the destination columns.
+          replace_once(
+              '  rememberTableSortStateForView(state.view, pageKey || state.currentPage);\n\n  state.view = viewName;\n',
+              '  state.view = viewName;\n',
+              'standard previous-view memory removal',
+          )
+          core = re.sub(
+              r'  const targetSortState = tableSortStateForView\(\n\s*viewName,\n\s*pageKey \|\| state\.currentPage,\n\s*\{ sortKey: state\.sortKey, sortDirection: state\.sortDirection \},\n\s*\);\n\s*state\.sortKey = targetSortState\.sortKey;\n\s*state\.sortDirection = targetSortState\.sortDirection;\n\s*rememberTableSortStateForView\(viewName, pageKey \|\| state\.currentPage, targetSortState\);',
+              '''  const targetSortState = tableSortStateForView(
+            viewName,
+            pageKey || state.currentPage,
+            { sortKey: state.sortKey, sortDirection: state.sortDirection },
+          );
+          state.sortKey = targetSortState.sortKey;
+          state.sortDirection = targetSortState.sortDirection;''',
+              core,
+              count=1,
+          )
+
+          # Incremental view loading must not create a second per-view sort owner.
+          incremental_memory = re.compile(
+              r'\n\s*rememberTableSortStateForView\(\n\s*previousView,\n\s*pageKey \|\| pageName,\n\s*\{ sortKey: previousSortKey, sortDirection: previousSortDirection \},\n\s*\);\n',
+          )
+          core, count = incremental_memory.subn('\n', core, count=1)
+          if count != 1:
+              raise SystemExit(f'incremental previous-view memory: expected one match, found {count}')
+          replace_once(
+              '    rememberTableSortStateForView(nextView, pageKey || pageName, targetSortState);\n',
+              '',
+              'incremental destination-view memory removal',
+          )
+
+          core_path.write_text(core)
+
+          bootstrap_path = Path('site/bootstrap.js')
+          bootstrap = bootstrap_path.read_text()
+          bootstrap_pattern = re.compile(
+              r'  function firstPaintTableSortState\(page, view\) \{.*?\n  \}\n',
+              re.S,
+          )
+          bootstrap_replacement = '''  function firstPaintTableSortState(page, view) {
+            const normalizedPage = String(page || "").toLowerCase();
+            void view;
+            if (normalizedPage === "club") return { sortKey: "positions", sortDirection: "asc" };
+            return { sortKey: "overall", sortDirection: "desc" };
+          }
+          '''
+          bootstrap, count = bootstrap_pattern.subn(bootstrap_replacement, bootstrap, count=1)
+          if count != 1:
+              raise SystemExit(f'bootstrap first-paint sort: expected one match, found {count}')
+          bootstrap_path.write_text(bootstrap)
+
+          validation = Path('site/validate-table-sort-session.mjs')
+          validation.write_text('''import fs from "node:fs";
+          import assert from "node:assert/strict";
+
+          const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
+          const bootstrap = fs.readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
+          const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");
+
+          function sourceBetween(source, start, end) {
+            const startIndex = source.indexOf(start);
+            const endIndex = source.indexOf(end, startIndex + start.length);
+            assert.notEqual(startIndex, -1, `Missing source marker: ${start}`);
+            assert.notEqual(endIndex, -1, `Missing source marker: ${end}`);
+            return source.slice(startIndex, endIndex);
+          }
+
+          assert.match(core, /tableSortSessionKey:\\s*""/u, "Table state must own one transient sort-session key.");
+          assert.match(core, /tableSortSessionSortState:\\s*null/u, "Table state must own one page-level transient sort intent.");
+          assert.doesNotMatch(core, /tableSortSessionViewStates/u, "Per-view session sorting must not compete with the page-level sort intent.");
+          assert.match(core, /pageName === "club"[\\s\\S]{0,180}sortKey:\\s*"positions"[\\s\\S]{0,100}sortDirection:\\s*"asc"/u, "Club pages must retain Positions ascending as their canonical default.");
+          assert.match(core, /sortKey:\\s*"overall",\\s*\\n\\s*sortDirection:\\s*"desc"/u, "Non-Club table views must default to Overall descending.");
+          assert.doesNotMatch(core, /sortDirection:\\s*viewName === "next" \\? "asc" : "desc"/u, "Next Overall must not default ascending.");
+
+          const resetSessionSource = sourceBetween(core, "function resetTableSortSession", "function defaultTablePageState");
+          assert.match(resetSessionSource, /state\\.tableSortSessionSortState = null;/u, "Changing page/entity must clear the previous page sort intent.");
+          assert.match(resetSessionSource, /state\\.tableSortSessionSortState = defaultSortState;/u, "A new page session must start from its canonical default.");
+
+          const standardViewSource = sourceBetween(core, "async function setView(viewName)", "function mflChunkFromPublicData");
+          assert.doesNotMatch(standardViewSource, /rememberTableSortState/u, "View switching must not rewrite the page-level sort intent.");
+          assert.match(standardViewSource, /tableSortStateForView\\([\\s\\S]*viewName/u, "Standard view switches must resolve the existing page sort against the destination view.");
+
+          const incrementalViewSource = sourceBetween(core, "setView = async function setIncrementalView", "setPage = async function setIncrementalPage");
+          assert.doesNotMatch(incrementalViewSource, /rememberTableSortState/u, "Incremental view loading must not own a separate per-view sort state.");
+          assert.match(incrementalViewSource, /tableSortStateForView\\([\\s\\S]*nextView/u, "Incremental view switches must resolve the same page-level sort intent.");
+
+          const incrementalPageSource = sourceBetween(core, "setPage = async function setIncrementalPage", "function divisionInfo");
+          assert.ok(incrementalPageSource.indexOf("resetTableSortSession(pageName, options);") < incrementalPageSource.indexOf("runPageTransition"), "Page sorting must reset before the destination transition can paint.");
+
+          const sortClickSource = sourceBetween(core, "function buildHeader()", "function isMissingSortValue");
+          assert.match(sortClickSource, /rememberTableSortState\\(\\);\\s*state\\.page = 1;\\s*buildHeader\\(\\);\\s*applyFilters\\(\\);/u, "Only a deliberate header sort click should commit a new page-level sort intent.");
+          assert.doesNotMatch(core, /function applyFilters\\(options = \\{\\}\\) \\{\\s*rememberTableSortState/u, "Filter application must not overwrite page-level sorting during a view fallback.");
+
+          const commitViewSource = sourceBetween(core, "function commitViewTransition", "function commitPageTransition");
+          assert.match(commitViewSource, /buildHeader\\(\\);/u, "View transitions must rebuild the sorted header before their runtime paint.");
+          const loadingShellSource = sourceBetween(core, "function renderTableLoadingShell", "async function setPage");
+          assert.ok(loadingShellSource.indexOf("updateViewButtons();") < loadingShellSource.indexOf("buildHeader();"), "Loading shells must rebuild the header immediately after syncing the destination view.");
+
+          const bootstrapSortSource = sourceBetween(bootstrap, "function firstPaintTableSortState", "function firstPaintTableHeaderSignature");
+          assert.doesNotMatch(bootstrapSortSource, /storedTablePageState|viewSortStates|savedSort/u, "Refresh first paint must never resurrect persisted sorting.");
+          assert.match(bootstrapSortSource, /normalizedPage === "club"[\\s\\S]*positions[\\s\\S]*asc/u, "Club refresh first paint must show Positions ascending.");
+          assert.match(bootstrapSortSource, /sortKey: "overall", sortDirection: "desc"/u, "Every non-Club refresh first paint, including Next Overall, must show Overall descending.");
+
+          assert.match(core, /state\\.view === "next"[\\s\\S]{0,180}column === "overall"[\\s\\S]{0,120}tableNextOverallPreciseValue\\(row\\)/u, "Next Overall sortable values must use the displayed precise Overall value.");
+          assert.match(core, /state\\.sortKey === "overall"[\\s\\S]{0,220}tableNextOverallPreciseValue\\(a\\)[\\s\\S]{0,120}tableNextOverallPreciseValue\\(b\\)/u, "Next Overall comparisons must sort the displayed Overall value instead of the needed gain.");
+          assert.match(core, /state\\.currentPage === "progression" && \\(state\\.view === "current" \\|\\| state\\.view === "all"\\) && statColumns\\.includes\\(column\\)[\\s\\S]{0,180}getProgressionColumn\\(column\\)[\\s\\S]{0,100}getValue\\(row, "overall"\\)/u, "Progression sorting must compare Overall/stat progression first and Overall second.");
+          assert.match(core, /comparisonDirection = state\\.currentPage === "progression" && index > 0 \\? -1 : direction/u, "Progression tie-breaks must keep higher Overall first after equal progression.");
+          assert.match(core, /compareRowsWithClubPositionOrder|clubPositionSort/u, "Existing Club position-order ownership must remain intact.");
+          assert.match(entry, /sortKey:\\s*"positions"[\\s\\S]{0,80}sortDirection:\\s*"asc"/u, "Club route bootstrap must keep Positions ascending.");
+
+          console.log("Table sort session validation passed.");
+          '''.replace('          ', ''))
+          PY
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Rebuild generated runtime chunks
+        working-directory: site
+        run: npm run build:core
+
+      - name: Run dedicated regression
+        working-directory: site
+        run: node validate-table-sort-session.mjs
+
+      - name: Stage generated contract
+        run: git add site/bootstrap.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/validate-table-sort-session.mjs
+
+      - name: Run full site checks
+        working-directory: site
+        run: npm run check
+
+      - name: Commit fix and remove helper workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr569-sort-page-session-v2.yml
+          git add site/bootstrap.js site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/validate-table-sort-session.mjs
+          git commit -m "Fix page-session sorting lifecycle"
+          git push origin HEAD:fix/page-scoped-default-sorting
