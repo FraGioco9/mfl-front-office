@@ -544,10 +544,12 @@ function sortableValue(row, column) {
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
-    return tableNextOverallSortValue(row, column);
+    return column === "overall"
+      ? tableNextOverallPreciseValue(row)
+      : tableNextOverallSortValue(row, column);
   }
 
-  if ((state.view === "current" || state.view === "all") && statColumns.includes(column)) {
+  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
       getValue(row, getProgressionColumn(column)) || 0,
       getValue(row, "overall") || 0,
@@ -977,6 +979,14 @@ function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
 
   if (state.view === "next" && statColumns.includes(state.sortKey)) {
+    if (state.sortKey === "overall") {
+      return comparePrimitiveValues(
+        tableNextOverallPreciseValue(a),
+        tableNextOverallPreciseValue(b),
+        direction,
+        true,
+      );
+    }
     return compareNextOverallRows(a, b, state.sortKey, direction);
   }
 
@@ -1603,12 +1613,13 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
     state.pageSize = Number(savedState.pageSize);
   }
 
-  const viewSortState = normalizedViewSortState(
-    savedState.viewSortStates?.[state.view] || savedState,
-    state.view,
-  );
-  state.sortKey = viewSortState.sortKey;
-  state.sortDirection = viewSortState.sortDirection;
+const viewSortState = normalizedViewSortState(
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  state.view,
+  pageName,
+);
+state.sortKey = viewSortState.sortKey;
+state.sortDirection = viewSortState.sortDirection;
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -2653,10 +2664,11 @@ async function tableSetViewOwner(viewName) {
     updatePageUrl(pageKey, { updateUrl: true, view: viewName });
   }
 
-  const targetSortState = normalizedViewSortState(
-    pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
-    viewName,
-  );
+const targetSortState = normalizedViewSortState(
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  viewName,
+  pageKey || state.currentPage,
+);
   state.sortKey = targetSortState.sortKey;
   state.sortDirection = targetSortState.sortDirection;
 

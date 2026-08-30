@@ -35,6 +35,7 @@ const state = {
   settingsDateFormat: "DMY",
   settingsTimeFormat: "24h",
   tablePageStates: {},
+  tableSortSessionKey: "",
   toastTimer: null,
   menuAnimationTimer: null,
   menuOpen: true,
@@ -3223,6 +3224,7 @@ function renderTableLoadingShell(pageName) {
 }
 async function setPage(pageName, updateHash = true, options = {}) {
   const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
@@ -3640,27 +3642,91 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
     renderPlayerPage(playerIdFromUrl());
   }
 }
-function defaultSortStateForView(viewName = defaultViewForPage(tablePageKey() || "progression")) {
+function defaultSortStateForView(
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  if (pageName === "club") {
+    return {
+      sortKey: "positions",
+      sortDirection: "asc",
+    };
+  }
   return {
     sortKey: "overall",
-    sortDirection: viewName === "next" ? "asc" : "desc",
+    sortDirection: "desc",
   };
 }
 
-function normalizedViewSortState(sortState, viewName = defaultViewForPage(tablePageKey() || "progression")) {
-  const defaultSortState = defaultSortStateForView(viewName);
+function sortKeySupportedByView(
+  sortKey,
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  if (normalizedPageName === "club" && sortKey === "positions") return true;
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  const visibleColumns = (views[normalizedView]?.columns || [])
+    .map((column) => displayColumnForPage(column, normalizedPageName));
+  return sortableColumns.has(sortKey) && visibleColumns.includes(sortKey);
+}
+
+function normalizedViewSortState(
+  sortState,
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  const defaultSortState = defaultSortStateForView(viewName, pageName);
+  const sortKeyIsSupported = sortKeySupportedByView(sortState?.sortKey, viewName, pageName);
+  const sortKey = sortKeyIsSupported ? sortState.sortKey : defaultSortState.sortKey;
 
   return {
-    sortKey: sortableColumns.has(sortState?.sortKey) ? sortState.sortKey : defaultSortState.sortKey,
-    sortDirection: sortState?.sortDirection === "asc" || sortState?.sortDirection === "desc"
+    sortKey,
+    sortDirection: sortKeyIsSupported && (sortState?.sortDirection === "asc" || sortState?.sortDirection === "desc")
       ? sortState.sortDirection
       : defaultSortState.sortDirection,
   };
 }
 
+function tableSortSessionKey(pageName = state.currentPage, options = {}) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  if (normalizedPageName === "agents") {
+    const walletAddress = normalizeWalletAddress(
+      options.walletAddress || agentWalletAddressFromUrl() || state.currentAgentWalletAddress,
+    ).toLowerCase();
+    return `agents:${walletAddress || window.location.pathname}`;
+  }
+  if (normalizedPageName === "watchlist") {
+    const watchlistId = String(
+      options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "default",
+    ).trim();
+    return `watchlist:${watchlistId || "default"}`;
+  }
+  if (normalizedPageName === "club") {
+    const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
+    const clubId = String(options.clubId || clubRoute?.clubId || "").trim();
+    return `club:${clubId || window.location.pathname}`;
+  }
+  return tablePages.has(normalizedPageName) ? normalizedPageName : "";
+}
+
+function resetTableSortSession(pageName, options = {}) {
+  const nextSessionKey = tableSortSessionKey(pageName, options);
+  if (nextSessionKey === state.tableSortSessionKey) return false;
+  state.tableSortSessionKey = nextSessionKey;
+  if (!nextSessionKey) return false;
+
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
+  const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
+  state.sortKey = defaultSortState.sortKey;
+  state.sortDirection = defaultSortState.sortDirection;
+  return true;
+}
+
 function defaultTablePageState(pageName = tablePageKey() || "progression") {
   const defaultView = defaultViewForPage(pageName);
-  const defaultSortState = defaultSortStateForView(defaultView);
+  const defaultSortState = defaultSortStateForView(defaultView, pageName);
 
   return {
     hideRetired: true,
@@ -9231,10 +9297,12 @@ function sortableValue(row, column) {
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
-    return tableNextOverallSortValue(row, column);
+    return column === "overall"
+      ? tableNextOverallPreciseValue(row)
+      : tableNextOverallSortValue(row, column);
   }
 
-  if ((state.view === "current" || state.view === "all") && statColumns.includes(column)) {
+  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
       getValue(row, getProgressionColumn(column)) || 0,
       getValue(row, "overall") || 0,
@@ -9639,6 +9707,14 @@ function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
 
   if (state.view === "next" && statColumns.includes(state.sortKey)) {
+    if (state.sortKey === "overall") {
+      return comparePrimitiveValues(
+        tableNextOverallPreciseValue(a),
+        tableNextOverallPreciseValue(b),
+        direction,
+        true,
+      );
+    }
     return compareNextOverallRows(a, b, state.sortKey, direction);
   }
 
@@ -10260,12 +10336,13 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
     state.pageSize = Number(savedState.pageSize);
   }
 
-  const viewSortState = normalizedViewSortState(
-    savedState.viewSortStates?.[state.view] || savedState,
-    state.view,
-  );
-  state.sortKey = viewSortState.sortKey;
-  state.sortDirection = viewSortState.sortDirection;
+const viewSortState = normalizedViewSortState(
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  state.view,
+  pageName,
+);
+state.sortKey = viewSortState.sortKey;
+state.sortDirection = viewSortState.sortDirection;
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -11474,10 +11551,11 @@ async function setView(viewName) {
     updatePageUrl(pageKey, { updateUrl: true, view: viewName });
   }
 
-  const targetSortState = normalizedViewSortState(
-    pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
-    viewName,
-  );
+const targetSortState = normalizedViewSortState(
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  viewName,
+  pageKey || state.currentPage,
+);
   state.sortKey = targetSortState.sortKey;
   state.sortDirection = targetSortState.sortDirection;
 
@@ -13999,10 +14077,11 @@ async function startApp() {
       };
     }
 
-    const targetSortState = normalizedViewSortState(
-      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
-      nextView,
-    );
+const targetSortState = normalizedViewSortState(
+  { sortKey: previousSortKey, sortDirection: previousSortDirection },
+  nextView,
+  pageKey || pageName,
+);
     if (stagedTransition) {
       state.sortKey = targetSortState.sortKey;
       state.sortDirection = targetSortState.sortDirection;
