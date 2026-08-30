@@ -49,16 +49,12 @@ jobs:
           core = replace_once(core, old, new, "Next Overall comparator")
 
           old = '    const staticRoutePending = staticHeader\n      && staticPage\n      && staticView\n      && (currentPage !== staticPage || currentView !== staticView);\n    if (staticRoutePending) return true;\n    if (staticHeader && staticSignature && staticSignature !== signature) return true;'
-          new = '    const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");\n    const staticRoutePending = staticHeader\n      && !initialRouteSuperseded\n      && staticPage\n      && staticView\n      && (currentPage !== staticPage || currentView !== staticView);\n    if (staticRoutePending) return true;\n    if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return true;'
+          new = '    const stagedViewCommit = pendingViewTransition?.pageName === currentPage\n      && pendingViewTransition?.viewName === currentView;\n    const staticRoutePending = staticHeader\n      && !stagedViewCommit\n      && staticPage\n      && staticView\n      && (currentPage !== staticPage || currentView !== staticView);\n    if (staticRoutePending) return true;\n    if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return true;'
           core = replace_once(core, old, new, "canonical loading header guard")
 
           old = '        const staticRoutePending = staticHeader\n          && staticPage\n          && staticView\n          && (currentPage !== staticPage || currentView !== staticView);\n        if (staticRoutePending) return undefined;\n        if (staticHeader && staticSignature && staticSignature !== signature) return undefined;'
-          new = '        const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");\n        const staticRoutePending = staticHeader\n          && !initialRouteSuperseded\n          && staticPage\n          && staticView\n          && (currentPage !== staticPage || currentView !== staticView);\n        if (staticRoutePending) return undefined;\n        if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return undefined;'
+          new = '        const stagedViewCommit = pendingViewTransition?.pageName === currentPage\n          && pendingViewTransition?.viewName === currentView;\n        const staticRoutePending = staticHeader\n          && !stagedViewCommit\n          && staticPage\n          && staticView\n          && (currentPage !== staticPage || currentView !== staticView);\n        if (staticRoutePending) return undefined;\n        if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return undefined;'
           core = replace_once(core, old, new, "stable loading header guard")
-
-          old = '    window.__mflCancelIncrementalRouteRequest?.();\n    const transition = stageViewTransition(pageName, viewName, options);\n    if (!transition) return null;\n    document.documentElement.classList.add("mflInitialRouteSuperseded");'
-          new = '    window.__mflCancelIncrementalRouteRequest?.();\n    document.documentElement.classList.add("mflInitialRouteSuperseded");\n    const transition = stageViewTransition(pageName, viewName, options);\n    if (!transition) return null;'
-          core = replace_once(core, old, new, "view transition header handoff")
 
           core_path.write_text(core)
 
@@ -92,4 +88,4 @@ jobs:
           git commit -m "Fix sorting semantics and loading arrows"
           git push origin HEAD:fix/page-scoped-default-sorting
 
-# Full-suite retry after aligning the Progression regression.
+# Final retry: preserve the established transition order while letting the staged destination view replace the stale bootstrap header.
