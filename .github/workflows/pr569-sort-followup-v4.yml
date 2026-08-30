@@ -36,118 +36,28 @@ jobs:
           core_path = Path("site/modules/app-core.js")
           core = core_path.read_text()
 
-          old = """function tableSortStateForView(
-            viewName = state.view,
-            pageName = tablePageKey() || state.currentPage || \"progression\",
-            fallbackSortState = null,
-          ) {
-            const normalizedPageName = pageName === \"mflstats\" ? \"mfl\" : String(pageName || \"\");
-            const normalizedView = normalizeViewForPage(viewName, normalizedPageName || \"progression\");
-            return normalizedViewSortState(
-              state.tableSortSessionSortState || fallbackSortState,
-              normalizedView,
-              normalizedPageName,
-            );
-          }"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """function tableSortStateForView(
-            viewName = state.view,
-            pageName = tablePageKey() || state.currentPage || \"progression\",
-            fallbackSortState = null,
-          ) {
-            const normalizedPageName = pageName === \"mflstats\" ? \"mfl\" : String(pageName || \"\");
-            const normalizedView = normalizeViewForPage(viewName, normalizedPageName || \"progression\");
-            const sourceSortState = state.tableSortSessionSortState || fallbackSortState;
-            const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);
-            const resolvedSortState = normalizedViewSortState(
-              sourceSortState,
-              normalizedView,
-              normalizedPageName,
-            );
-            if (!sourceSortSupported && state.tableSortSessionKey) {
-              state.tableSortSessionSortState = resolvedSortState;
-            }
-            return resolvedSortState;
-          }"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '  return normalizedViewSortState(\n    state.tableSortSessionSortState || fallbackSortState,\n    normalizedView,\n    normalizedPageName,\n  );'
+          new = '  const sourceSortState = state.tableSortSessionSortState || fallbackSortState;\n  const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);\n  const resolvedSortState = normalizedViewSortState(\n    sourceSortState,\n    normalizedView,\n    normalizedPageName,\n  );\n  if (!sourceSortSupported && state.tableSortSessionKey) {\n    state.tableSortSessionSortState = resolvedSortState;\n  }\n  return resolvedSortState;'
           core = replace_once(core, old, new, "unsupported destination sort reset")
 
-          old = """  if (state.view === \"next\" && statColumns.includes(column)) {
-            return column === \"overall\"
-              ? tableNextOverallPreciseValue(row)
-              : tableNextOverallSortValue(row, column);
-          }"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """  if (state.view === \"next\" && statColumns.includes(column)) {
-            return tableNextOverallSortValue(row, column);
-          }"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '    return column === "overall"\n      ? tableNextOverallPreciseValue(row)\n      : tableNextOverallSortValue(row, column);'
+          new = '    return tableNextOverallSortValue(row, column);'
           core = replace_once(core, old, new, "Next Overall sortable gap")
 
-          old = """  if (state.view === \"next\" && statColumns.includes(state.sortKey)) {
-            if (state.sortKey === \"overall\") {
-              return comparePrimitiveValues(
-                tableNextOverallPreciseValue(a),
-                tableNextOverallPreciseValue(b),
-                direction,
-                true,
-              );
-            }
-            return compareNextOverallRows(a, b, state.sortKey, direction);
-          }"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """  if (state.view === \"next\" && statColumns.includes(state.sortKey)) {
-            return compareNextOverallRows(a, b, state.sortKey, direction);
-          }"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '    if (state.sortKey === "overall") {\n      return comparePrimitiveValues(\n        tableNextOverallPreciseValue(a),\n        tableNextOverallPreciseValue(b),\n        direction,\n        true,\n      );\n    }\n    return compareNextOverallRows(a, b, state.sortKey, direction);'
+          new = '    return compareNextOverallRows(a, b, state.sortKey, direction);'
           core = replace_once(core, old, new, "Next Overall comparator")
 
-          old = """    const staticRoutePending = staticHeader
-              && staticPage
-              && staticView
-              && (currentPage !== staticPage || currentView !== staticView);
-            if (staticRoutePending) return true;
-            if (staticHeader && staticSignature && staticSignature !== signature) return true;"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """    const initialRouteSuperseded = document.documentElement.classList.contains(\"mflInitialRouteSuperseded\");
-            const staticRoutePending = staticHeader
-              && !initialRouteSuperseded
-              && staticPage
-              && staticView
-              && (currentPage !== staticPage || currentView !== staticView);
-            if (staticRoutePending) return true;
-            if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return true;"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '    const staticRoutePending = staticHeader\n      && staticPage\n      && staticView\n      && (currentPage !== staticPage || currentView !== staticView);\n    if (staticRoutePending) return true;\n    if (staticHeader && staticSignature && staticSignature !== signature) return true;'
+          new = '    const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");\n    const staticRoutePending = staticHeader\n      && !initialRouteSuperseded\n      && staticPage\n      && staticView\n      && (currentPage !== staticPage || currentView !== staticView);\n    if (staticRoutePending) return true;\n    if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return true;'
           core = replace_once(core, old, new, "canonical loading header guard")
 
-          old = """        const staticRoutePending = staticHeader
-                  && staticPage
-                  && staticView
-                  && (currentPage !== staticPage || currentView !== staticView);
-                if (staticRoutePending) return undefined;
-                if (staticHeader && staticSignature && staticSignature !== signature) return undefined;"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """        const initialRouteSuperseded = document.documentElement.classList.contains(\"mflInitialRouteSuperseded\");
-                const staticRoutePending = staticHeader
-                  && !initialRouteSuperseded
-                  && staticPage
-                  && staticView
-                  && (currentPage !== staticPage || currentView !== staticView);
-                if (staticRoutePending) return undefined;
-                if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return undefined;"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '        const staticRoutePending = staticHeader\n          && staticPage\n          && staticView\n          && (currentPage !== staticPage || currentView !== staticView);\n        if (staticRoutePending) return undefined;\n        if (staticHeader && staticSignature && staticSignature !== signature) return undefined;'
+          new = '        const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");\n        const staticRoutePending = staticHeader\n          && !initialRouteSuperseded\n          && staticPage\n          && staticView\n          && (currentPage !== staticPage || currentView !== staticView);\n        if (staticRoutePending) return undefined;\n        if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return undefined;'
           core = replace_once(core, old, new, "stable loading header guard")
 
-          old = """    window.__mflCancelIncrementalRouteRequest?.();
-            const transition = stageViewTransition(pageName, viewName, options);
-            if (!transition) return null;
-            document.documentElement.classList.add(\"mflInitialRouteSuperseded\");"""
-          old = "\n".join(line[10:] if line.startswith("          ") else line for line in old.splitlines())
-          new = """    window.__mflCancelIncrementalRouteRequest?.();
-            document.documentElement.classList.add(\"mflInitialRouteSuperseded\");
-            const transition = stageViewTransition(pageName, viewName, options);
-            if (!transition) return null;"""
-          new = "\n".join(line[10:] if line.startswith("          ") else line for line in new.splitlines())
+          old = '    window.__mflCancelIncrementalRouteRequest?.();\n    const transition = stageViewTransition(pageName, viewName, options);\n    if (!transition) return null;\n    document.documentElement.classList.add("mflInitialRouteSuperseded");'
+          new = '    window.__mflCancelIncrementalRouteRequest?.();\n    document.documentElement.classList.add("mflInitialRouteSuperseded");\n    const transition = stageViewTransition(pageName, viewName, options);\n    if (!transition) return null;'
           core = replace_once(core, old, new, "view transition header handoff")
 
           core_path.write_text(core)
