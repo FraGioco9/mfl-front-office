@@ -91,3 +91,5 @@ jobs:
           git add -A
           git commit -m "Fix sorting semantics and loading arrows"
           git push origin HEAD:fix/page-scoped-default-sorting
+
+# Retry after updating the regression marker.
