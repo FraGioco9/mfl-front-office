@@ -28,8 +28,8 @@ invariant(
 );
 
 invariant(
-  pageSource.includes('const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall ${direction}, player_id DESC`;'),
-  "Current-season and all-time views must sort the default overall key by overall progression.",
+  pageSource.includes('const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall DESC, player_id DESC`;'),
+  "Current-season and all-time views must sort by the selected progression value first and Overall descending as the tie-break.",
 );
 
 invariant(
