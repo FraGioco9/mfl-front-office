@@ -38,6 +38,8 @@ const state = {
   settingsDraftBaseline: null,
   settingsDraftDirty: false,
   tablePageStates: {},
+  tableSortSessionKey: "",
+  tableSortSessionSortState: null,
   toastTimer: null,
   menuOpen: true,
   playerAttributeView: "attributes",
@@ -1583,6 +1585,7 @@ function commitViewTransition(pageName, viewName, options = {}) {
   }
 
   updateViewButtons();
+  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
   window.__mflStaticUiRuntime?.sync?.();
   return nextView;
 }
@@ -1608,6 +1611,7 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
   if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
   document.body.dataset.page = routePageName;
+  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
 
   const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
     ...options,
@@ -2033,6 +2037,7 @@ function setView() {
 
 async function setPage(pageName, updateHash = true, options = {}) {
   const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
   if (plainEvaluationEntry) preparePlainEvaluationReentry();
@@ -2462,27 +2467,126 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
     renderPlayerPage(playerIdFromUrl());
   }
 }
-function defaultSortStateForView(viewName = defaultViewForPage(tablePageKey() || "progression")) {
+function defaultSortStateForView(
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  if (pageName === "club") {
+    return {
+      sortKey: "positions",
+      sortDirection: "asc",
+    };
+  }
   return {
     sortKey: "overall",
-    sortDirection: viewName === "next" ? "asc" : "desc",
+    sortDirection: "desc",
   };
 }
 
-function normalizedViewSortState(sortState, viewName = defaultViewForPage(tablePageKey() || "progression")) {
-  const defaultSortState = defaultSortStateForView(viewName);
+function sortKeySupportedByView(
+  sortKey,
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  if (normalizedPageName === "club" && sortKey === "positions") return true;
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  const visibleColumns = (views[normalizedView]?.columns || [])
+    .map((column) => displayColumnForPage(column, normalizedPageName));
+  return sortableColumns.has(sortKey) && visibleColumns.includes(sortKey);
+}
+
+function normalizedViewSortState(
+  sortState,
+  viewName = defaultViewForPage(tablePageKey() || "progression"),
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  const defaultSortState = defaultSortStateForView(viewName, pageName);
+  const sortKeyIsSupported = sortKeySupportedByView(sortState?.sortKey, viewName, pageName);
+  const sortKey = sortKeyIsSupported ? sortState.sortKey : defaultSortState.sortKey;
 
   return {
-    sortKey: sortableColumns.has(sortState?.sortKey) ? sortState.sortKey : defaultSortState.sortKey,
-    sortDirection: sortState?.sortDirection === "asc" || sortState?.sortDirection === "desc"
+    sortKey,
+    sortDirection: sortKeyIsSupported && (sortState?.sortDirection === "asc" || sortState?.sortDirection === "desc")
       ? sortState.sortDirection
       : defaultSortState.sortDirection,
   };
 }
 
+function tableSortSessionKey(pageName = state.currentPage, options = {}) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  if (normalizedPageName === "agents") {
+    const walletAddress = normalizeWalletAddress(
+      options.walletAddress || agentWalletAddressFromUrl() || state.currentAgentWalletAddress,
+    ).toLowerCase();
+    return `agents:${walletAddress || window.location.pathname}`;
+  }
+  if (normalizedPageName === "watchlist") {
+    const watchlistId = String(
+      options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "default",
+    ).trim();
+    return `watchlist:${watchlistId || "default"}`;
+  }
+  if (normalizedPageName === "club") {
+    const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
+    const clubId = String(options.clubId || clubRoute?.clubId || "").trim();
+    return `club:${clubId || window.location.pathname}`;
+  }
+  return tablePages.has(normalizedPageName) ? normalizedPageName : "";
+}
+
+function tableSortStateForView(
+  viewName = state.view,
+  pageName = tablePageKey() || state.currentPage || "progression",
+  fallbackSortState = null,
+) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  const sourceSortState = state.tableSortSessionSortState || fallbackSortState;
+  const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);
+  const resolvedSortState = normalizedViewSortState(
+    sourceSortState,
+    normalizedView,
+    normalizedPageName,
+  );
+  if (!sourceSortSupported && state.tableSortSessionKey) {
+    state.tableSortSessionSortState = resolvedSortState;
+  }
+  return resolvedSortState;
+}
+
+function rememberTableSortState(
+  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  viewName = state.view,
+  pageName = tablePageKey() || state.currentPage || "progression",
+) {
+  if (!state.tableSortSessionKey) return false;
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  if (!sortKeySupportedByView(sortState?.sortKey, normalizedView, normalizedPageName)) return false;
+  state.tableSortSessionSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
+  return true;
+}
+
+function resetTableSortSession(pageName, options = {}) {
+  const nextSessionKey = tableSortSessionKey(pageName, options);
+  if (nextSessionKey === state.tableSortSessionKey) return false;
+  state.tableSortSessionKey = nextSessionKey;
+  state.tableSortSessionSortState = null;
+  if (!nextSessionKey) return false;
+
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
+  const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
+  state.tableSortSessionSortState = defaultSortState;
+  state.sortKey = defaultSortState.sortKey;
+  state.sortDirection = defaultSortState.sortDirection;
+  return true;
+}
+
 function defaultTablePageState(pageName = tablePageKey() || "progression") {
   const defaultView = defaultViewForPage(pageName);
-  const defaultSortState = defaultSortStateForView(defaultView);
+  const defaultSortState = defaultSortStateForView(defaultView, pageName);
 
   return {
     hideRetired: true,
@@ -8784,9 +8888,10 @@ async function startApp() {
       };
     }
 
-    const targetSortState = normalizedViewSortState(
-      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
+    const targetSortState = tableSortStateForView(
       nextView,
+      pageKey || pageName,
+      { sortKey: previousSortKey, sortDirection: previousSortDirection },
     );
     if (stagedTransition) {
       state.sortKey = targetSortState.sortKey;
@@ -8829,6 +8934,7 @@ async function startApp() {
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    resetTableSortSession(pageName, options);
     const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)
       ? window.__mflTableLoadingRuntime?.beginRequest?.("progression") || 0
       : 0;
@@ -9122,12 +9228,15 @@ async function startApp() {
     const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
     const currentPage = String(state.currentPage || "").toLowerCase();
     const currentView = String(state.view || "").toLowerCase();
+    const stagedViewCommit = pendingViewTransition?.pageName === currentPage
+      && pendingViewTransition?.viewName === currentView;
     const staticRoutePending = staticHeader
+      && !stagedViewCommit
       && staticPage
       && staticView
       && (currentPage !== staticPage || currentView !== staticView);
     if (staticRoutePending) return true;
-    if (staticHeader && staticSignature && staticSignature !== signature) return true;
+    if (staticHeader && !stagedViewCommit && staticSignature && staticSignature !== signature) return true;
     const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
     if (needsCanonicalBuild) buildHeader();
     if (!head.rows[0]) return false;

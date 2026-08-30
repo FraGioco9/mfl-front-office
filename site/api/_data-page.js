@@ -213,12 +213,14 @@ function orderSql(scope, view, sortKey, sortDirection) {
 
   if (view === "next" && STAT_COLUMNS.has(key)) {
     const derived = key === "overall" ? "next_overall_gap" : `${key}_to_next_overall`;
-    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, next_overall DESC, player_id DESC`;
+    const gapDirection = direction === "DESC" ? "ASC" : "DESC";
+    const currentValue = key === "overall" ? "next_overall" : key;
+    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${gapDirection}, ${quoteIdentifier(currentValue)} ${direction}, player_id DESC`;
   }
 
   if (["current", "all"].includes(view) && STAT_COLUMNS.has(key)) {
     const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;
-    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall ${direction}, player_id DESC`;
+    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, ${quoteIdentifier(key)} ${direction}, player_id DESC`;
   }
 
   if (key === "active_contract_club_division") {

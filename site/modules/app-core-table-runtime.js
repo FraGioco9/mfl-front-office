@@ -297,6 +297,7 @@ function renderTableLoadingShell(pageName) {
   }
 
   updateViewButtons();
+  buildHeader();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   } else if (pageName !== "club") {
@@ -528,13 +529,15 @@ function tableNextOverallSortValue(row, statColumn) {
 function compareNextOverallRows(a, b, column, direction) {
   const aNeeded = tableNextOverallSortValue(a, column);
   const bNeeded = tableNextOverallSortValue(b, column);
-  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, direction, true);
+  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, -direction, true);
 
   if (primaryComparison !== 0) {
     return primaryComparison;
   }
 
-  return comparePrimitiveValues(tableNextOverallPreciseValue(a), tableNextOverallPreciseValue(b), -1, true);
+  const aCurrent = column === "overall" ? tableNextOverallPreciseValue(a) : getValue(a, column);
+  const bCurrent = column === "overall" ? tableNextOverallPreciseValue(b) : getValue(b, column);
+  return comparePrimitiveValues(aCurrent, bCurrent, direction, true);
 }
 
 function sortableValue(row, column) {
@@ -547,10 +550,10 @@ function sortableValue(row, column) {
     return tableNextOverallSortValue(row, column);
   }
 
-  if ((state.view === "current" || state.view === "all") && statColumns.includes(column)) {
+  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
-      getValue(row, getProgressionColumn(column)) || 0,
-      getValue(row, "overall") || 0,
+      getValue(row, getProgressionColumn(column)),
+      getValue(row, column),
     ];
   }
 
@@ -922,8 +925,8 @@ function tableBuildHeaderOwner() {
       }
 
       cell.addEventListener("click", () => {
-        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
-        const resetDirection = state.view === "next" ? "asc" : "desc";
+        const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
+        const resetDirection = "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
 
         if (state.sortKey !== column) {
@@ -938,6 +941,7 @@ function tableBuildHeaderOwner() {
           state.sortDirection = resetDirection;
         }
 
+        rememberTableSortState();
         state.page = 1;
         buildHeader();
         applyFilters();
@@ -1603,12 +1607,13 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
     state.pageSize = Number(savedState.pageSize);
   }
 
-  const viewSortState = normalizedViewSortState(
-    savedState.viewSortStates?.[state.view] || savedState,
-    state.view,
-  );
-  state.sortKey = viewSortState.sortKey;
-  state.sortDirection = viewSortState.sortDirection;
+  const viewSortState = tableSortStateForView(
+  state.view,
+  pageName,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+);
+state.sortKey = viewSortState.sortKey;
+state.sortDirection = viewSortState.sortDirection;
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -2052,7 +2057,9 @@ function tableApplyFiltersOwner(options = {}) {
     return true;
   });
 
-  state.filteredRows.sort(compareRows);
+  if (!state.incrementalApplying) {
+    state.filteredRows.sort(compareRows);
+  }
   updateFilterSummary();
   syncActiveWatchlistFromSet();
   if (options.save !== false) {
@@ -2653,12 +2660,13 @@ async function tableSetViewOwner(viewName) {
     updatePageUrl(pageKey, { updateUrl: true, view: viewName });
   }
 
-  const targetSortState = normalizedViewSortState(
-    pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
-    viewName,
-  );
-  state.sortKey = targetSortState.sortKey;
-  state.sortDirection = targetSortState.sortDirection;
+  const targetSortState = tableSortStateForView(
+  viewName,
+  pageKey || state.currentPage,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+);
+state.sortKey = targetSortState.sortKey;
+state.sortDirection = targetSortState.sortDirection;
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();
