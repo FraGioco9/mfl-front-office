@@ -297,6 +297,7 @@ function renderTableLoadingShell(pageName) {
   }
 
   updateViewButtons();
+  buildHeader();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   } else if (pageName !== "club") {
@@ -995,7 +996,8 @@ function compareRows(a, b) {
 
   if (Array.isArray(aValue) && Array.isArray(bValue)) {
     for (let index = 0; index < aValue.length; index += 1) {
-      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);
+      const comparisonDirection = state.currentPage === "progression" && index > 0 ? -1 : direction;
+      const comparison = comparePrimitiveValues(aValue[index], bValue[index], comparisonDirection, true);
 
       if (comparison !== 0) {
         return comparison;
@@ -1613,13 +1615,14 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
     state.pageSize = Number(savedState.pageSize);
   }
 
-const viewSortState = normalizedViewSortState(
-  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  const viewSortState = tableSortStateForView(
   state.view,
   pageName,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
 );
 state.sortKey = viewSortState.sortKey;
 state.sortDirection = viewSortState.sortDirection;
+rememberTableSortStateForView(state.view, pageName, viewSortState);
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -1969,6 +1972,7 @@ function appliedTableFilterSignature(rules) {
 }
 
 function tableApplyFiltersOwner(options = {}) {
+  rememberTableSortStateForView();
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
@@ -2658,19 +2662,22 @@ async function tableSetViewOwner(viewName) {
     };
   }
 
+  rememberTableSortStateForView(state.view, pageKey || state.currentPage);
+
   state.view = viewName;
   state.page = 1;
   if (pageKey) {
     updatePageUrl(pageKey, { updateUrl: true, view: viewName });
   }
 
-const targetSortState = normalizedViewSortState(
-  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  const targetSortState = tableSortStateForView(
   viewName,
   pageKey || state.currentPage,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
 );
-  state.sortKey = targetSortState.sortKey;
-  state.sortDirection = targetSortState.sortDirection;
+state.sortKey = targetSortState.sortKey;
+state.sortDirection = targetSortState.sortDirection;
+rememberTableSortStateForView(viewName, pageKey || state.currentPage, targetSortState);
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();

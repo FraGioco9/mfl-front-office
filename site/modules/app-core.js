@@ -36,6 +36,7 @@ const state = {
   settingsTimeFormat: "24h",
   tablePageStates: {},
   tableSortSessionKey: "",
+  tableSortSessionViewStates: {},
   toastTimer: null,
   menuAnimationTimer: null,
   menuOpen: true,
@@ -2919,6 +2920,7 @@ function commitViewTransition(pageName, viewName, options = {}) {
   }
 
   updateViewButtons();
+  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
   window.__mflStaticUiRuntime?.sync?.();
   return nextView;
 }
@@ -2944,6 +2946,7 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
   if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
   document.body.dataset.page = routePageName;
+  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
 
   const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
     ...options,
@@ -3212,6 +3215,7 @@ function renderTableLoadingShell(pageName) {
   }
 
   updateViewButtons();
+  buildHeader();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   } else if (pageName !== "club") {
@@ -3710,10 +3714,40 @@ function tableSortSessionKey(pageName = state.currentPage, options = {}) {
   return tablePages.has(normalizedPageName) ? normalizedPageName : "";
 }
 
+function tableSortStateForView(
+  viewName = state.view,
+  pageName = tablePageKey() || state.currentPage || "progression",
+  fallbackSortState = null,
+) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  const rememberedSortState = state.tableSortSessionViewStates?.[normalizedView];
+  return normalizedViewSortState(
+    rememberedSortState || fallbackSortState,
+    normalizedView,
+    normalizedPageName,
+  );
+}
+
+function rememberTableSortStateForView(
+  viewName = state.view,
+  pageName = tablePageKey() || state.currentPage || "progression",
+  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
+) {
+  if (!state.tableSortSessionKey) return false;
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  if (!sortKeySupportedByView(sortState?.sortKey, normalizedView, normalizedPageName)) return false;
+  const normalizedSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
+  state.tableSortSessionViewStates[normalizedView] = normalizedSortState;
+  return true;
+}
+
 function resetTableSortSession(pageName, options = {}) {
   const nextSessionKey = tableSortSessionKey(pageName, options);
   if (nextSessionKey === state.tableSortSessionKey) return false;
   state.tableSortSessionKey = nextSessionKey;
+  state.tableSortSessionViewStates = {};
   if (!nextSessionKey) return false;
 
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
@@ -3721,6 +3755,7 @@ function resetTableSortSession(pageName, options = {}) {
   const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
   state.sortKey = defaultSortState.sortKey;
   state.sortDirection = defaultSortState.sortDirection;
+  rememberTableSortStateForView(nextView, normalizedPageName, defaultSortState);
   return true;
 }
 
@@ -9723,7 +9758,8 @@ function compareRows(a, b) {
 
   if (Array.isArray(aValue) && Array.isArray(bValue)) {
     for (let index = 0; index < aValue.length; index += 1) {
-      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);
+      const comparisonDirection = state.currentPage === "progression" && index > 0 ? -1 : direction;
+      const comparison = comparePrimitiveValues(aValue[index], bValue[index], comparisonDirection, true);
 
       if (comparison !== 0) {
         return comparison;
@@ -10336,13 +10372,14 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
     state.pageSize = Number(savedState.pageSize);
   }
 
-const viewSortState = normalizedViewSortState(
-  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  const viewSortState = tableSortStateForView(
   state.view,
   pageName,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
 );
 state.sortKey = viewSortState.sortKey;
 state.sortDirection = viewSortState.sortDirection;
+rememberTableSortStateForView(state.view, pageName, viewSortState);
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -10873,6 +10910,7 @@ function appliedTableFilterSignature(rules) {
 }
 
 function applyFilters(options = {}) {
+  rememberTableSortStateForView();
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
@@ -11545,19 +11583,22 @@ async function setView(viewName) {
     };
   }
 
+  rememberTableSortStateForView(state.view, pageKey || state.currentPage);
+
   state.view = viewName;
   state.page = 1;
   if (pageKey) {
     updatePageUrl(pageKey, { updateUrl: true, view: viewName });
   }
 
-const targetSortState = normalizedViewSortState(
-  { sortKey: state.sortKey, sortDirection: state.sortDirection },
+  const targetSortState = tableSortStateForView(
   viewName,
   pageKey || state.currentPage,
+  { sortKey: state.sortKey, sortDirection: state.sortDirection },
 );
-  state.sortKey = targetSortState.sortKey;
-  state.sortDirection = targetSortState.sortDirection;
+state.sortKey = targetSortState.sortKey;
+state.sortDirection = targetSortState.sortDirection;
+rememberTableSortStateForView(viewName, pageKey || state.currentPage, targetSortState);
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();
@@ -14063,6 +14104,12 @@ async function startApp() {
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
     const previousPath = stagedTransition?.previousPath || currentNavigationPath();
 
+    rememberTableSortStateForView(
+      previousView,
+      pageKey || pageName,
+      { sortKey: previousSortKey, sortDirection: previousSortDirection },
+    );
+
     if (pageKey) {
       const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
       state.tablePageStates[pageKey] = {
@@ -14077,11 +14124,12 @@ async function startApp() {
       };
     }
 
-const targetSortState = normalizedViewSortState(
-  { sortKey: previousSortKey, sortDirection: previousSortDirection },
-  nextView,
-  pageKey || pageName,
-);
+    const targetSortState = tableSortStateForView(
+      nextView,
+      pageKey || pageName,
+      { sortKey: previousSortKey, sortDirection: previousSortDirection },
+    );
+    rememberTableSortStateForView(nextView, pageKey || pageName, targetSortState);
     if (stagedTransition) {
       state.sortKey = targetSortState.sortKey;
       state.sortDirection = targetSortState.sortDirection;
@@ -14123,6 +14171,7 @@ const targetSortState = normalizedViewSortState(
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    resetTableSortSession(pageName, options);
     const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)
       ? window.__mflTableLoadingRuntime?.beginRequest?.("progression") || 0
       : 0;
