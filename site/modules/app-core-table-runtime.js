@@ -2420,6 +2420,22 @@ function compactMobileJoinedAgency(value) {
   return String(value || "").trim().split(/\s+/, 1)[0] || "";
 }
 
+function tableCenterCellContents(cell) {
+  if (!(cell instanceof HTMLTableCellElement)) return cell;
+  const existingHost = cell.childNodes.length === 1
+    && cell.firstElementChild instanceof HTMLElement
+    && cell.firstElementChild.classList.contains("tableControlCellContent")
+    ? cell.firstElementChild
+    : null;
+  if (existingHost) return cell;
+
+  const contentHost = document.createElement("span");
+  contentHost.className = "tableControlCellContent";
+  while (cell.firstChild) contentHost.appendChild(cell.firstChild);
+  cell.appendChild(contentHost);
+  return cell;
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
@@ -2458,7 +2474,7 @@ function tableRenderTableOwner() {
     selectionContent.className = "tableControlCellContent tableControlCellContentCentered";
     selectionContent.appendChild(selectionInput);
     selectionCell.appendChild(selectionContent);
-    tableRow.appendChild(selectionCell);
+    tableRow.appendChild(tableCenterCellContents(selectionCell));
 
     const actionsCell = document.createElement("td");
     actionsCell.className = "rowActionsCell";
@@ -2466,7 +2482,7 @@ function tableRenderTableOwner() {
     actionsContent.className = "tableControlCellContent tableControlCellContentCentered";
     actionsContent.appendChild(createPlayerTableActionsButton(playerId));
     actionsCell.appendChild(actionsContent);
-    tableRow.appendChild(actionsCell);
+    tableRow.appendChild(tableCenterCellContents(actionsCell));
 
     currentViewColumns().forEach((column) => {
       const cell = document.createElement("td");
@@ -2618,7 +2634,7 @@ function tableRenderTableOwner() {
         cell.textContent = formatCellValue(row, column);
       }
 
-      tableRow.appendChild(cell);
+      tableRow.appendChild(tableCenterCellContents(cell));
     });
 
     fragment.appendChild(tableRow);
