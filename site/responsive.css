@@ -754,6 +754,42 @@ html:not(.mflInitialRouteResolved):is(
     overflow-x: auto;
   }
 
+  .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 35.625px;
+    position: relative;
+  }
+
+  .evaluationTableShell::before,
+  .evaluationTableShell::after {
+    content: "";
+    position: absolute;
+    top: var(--mfl-evaluation-table-body-top, var(--mfl-evaluation-table-header-height));
+    bottom: 0;
+    z-index: 2;
+    width: 54px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 140ms ease, visibility 0s linear 140ms;
+  }
+
+  .evaluationTableShell::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%);
+  }
+
+  .evaluationTableShell::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%);
+  }
+
+  .evaluationTableShell.mflPlayerTableCanScrollLeft::before,
+  .evaluationTableShell.mflPlayerTableCanScrollRight::after {
+    opacity: 0.94;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
   .evaluationSummaryTable {
     min-width: 520px;
   }
@@ -1217,8 +1253,37 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
-  .evaluationSummaryTable {
-    font-size: 11px;
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 35.625px;
+    --mfl-evaluation-summary-row-height: 35.625px;
+    --mfl-evaluation-season-row-height: 30px;
+  }
+
+  .evaluationSummaryTable thead tr,
+  .evaluationTableShell .evaluationTable thead tr,
+  .evaluationSummaryTable th,
+  .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+  }
+
+  .evaluationSummaryTable tbody tr,
+  .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+  }
+
+  .evaluationTableShell .evaluationTable tbody tr,
+  .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+  }
+
+  .evaluationSummaryTable th,
+  .evaluationTableShell .evaluationTable th {
+    font-size: 10px;
+  }
+
+  .evaluationSummaryTable td,
+  .evaluationTableShell .evaluationTable td {
+    font-size: 12px;
   }
 
   .evaluationSummaryTable th,
@@ -1636,8 +1701,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .playerHeroActions,
-  .evaluationButtons,
-  .evaluationMetrics {
+  .mflStatsFilterButtons,
+  .mflStatsDistributionModeButtons {
     grid-template-columns: 1fr;
   }
 
@@ -1895,21 +1960,451 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 8px;
   }
 
-  .evaluationSummaryTable {
-    min-width: 460px;
+  #evaluationPage {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 6px;
+    row-gap: 6px;
+  }
+
+  /* Route-ready Evaluation has a higher-specificity base visibility rule that uses block flow. */
+  html body[data-page="evaluation"] #evaluationPage {
+    display: grid;
+  }
+
+  #evaluationLoadModal {
+    padding: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadDialog {
+    width: min(100%, 420px);
+    max-width: 420px;
+    height: min(420px, calc(100dvh - 16px));
+    border-radius: 8px;
+  }
+
+  #evaluationLoadModal .filtersHeader {
+    min-height: 42px;
+    padding: 7px 9px;
+  }
+
+  #evaluationLoadModal .filtersHeader h2 {
+    font-size: 15px;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 4px;
+    grid-auto-rows: 52px;
+    padding: 6px 8px 10px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    grid-template-columns: minmax(0, 1fr) 72px auto;
+    gap: 6px;
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain {
+    gap: 1px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 9px;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 72px;
+    font-size: 11px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 4px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+  #evaluationPage .evaluationTitleRow,
+  #evaluationPage .evaluationTopBar,
+  #evaluationPage .evaluationSearchGroup,
+  #evaluationPage .evaluationActions {
+    display: contents;
+  }
+
+  #evaluationPage .evaluationTitleRow > .tablePageTitle {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 2px;
+  }
+
+  #evaluationPage .advancedSettingsButton {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 5px;
+    font-size: 11px;
+    line-height: 1;
+    text-align: center;
+  }
+
+  #evaluationPage .advancedSettingsButton span {
+    font-size: 13px;
+  }
+
+  #evaluationPage .evaluationMetrics {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    justify-self: stretch;
+  }
+
+  #evaluationPage .evaluationSearch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    gap: 6px;
+  }
+
+  #evaluationPage .evaluationSearch input {
+    height: 40px;
+  }
+
+  #evaluationPage .evaluationSearchResults {
+    top: 66px;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  #evaluationPage .evaluationSearchResult {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  #evaluationPage .evaluationButtons {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  #evaluationPage .evaluationButtons .evaluationPlayerPageButton {
+    width: 100%;
+  }
+
+  #evaluationPage .evaluationMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: calc(100% - 82px);
+  }
+
+  #evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: 1fr;
+    width: 76px;
+    justify-self: end;
+    align-self: end;
+  }
+
+  #evaluationPage #evaluationLoadButton {
+    height: 40px;
+    min-height: 40px;
+  }
+
+  #evaluationPage .evaluationOptionFilters {
+    grid-column: 1 / -1;
+    grid-row: 5;
+  }
+
+  #evaluationPage .evaluationPlayerPageButton {
+    height: 42px;
+    min-height: 42px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationMetric {
+    grid-template-rows: 15px 1fr;
+    gap: 1px;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    justify-items: end;
+    padding: 3px 5px;
+    border-radius: 6px;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetric span {
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  #evaluationPage .evaluationMetric strong {
+    font-size: 15px;
+    line-height: 1;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetricLabel {
+    width: 100%;
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetricIconButton {
+    flex-basis: 15px;
+    width: 15px;
+    height: 15px;
+    min-height: 15px;
+    padding: 0;
     font-size: 10px;
   }
 
-  .evaluationTableShell .evaluationTable {
-    min-width: 520px;
-    font-size: 10px;
+  #evaluationPage .evaluationMflUsdGroup {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    gap: 2px;
   }
 
-  .evaluationSummaryTable th,
-  .evaluationSummaryTable td,
-  .evaluationTableShell .evaluationTable th,
-  .evaluationTableShell .evaluationTable td {
-    padding-inline: 2px;
+  #evaluationPage .evaluationMflUsdEditor {
+    grid-template-columns: minmax(0, 1fr) 12px;
+    gap: 2px;
+  }
+
+  #evaluationPage .evaluationMflUsdInput {
+    height: 20px;
+    min-height: 20px;
+    padding: 0 2px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMflUsdStepper {
+    gap: 1px;
+  }
+
+  #evaluationPage .evaluationMflUsdStepper button {
+    width: 12px;
+    height: 8px;
+    min-height: 8px;
+    padding: 0;
+    font-size: 6px;
+    line-height: 1;
+  }
+
+  #evaluationPage .evaluationOptionFilters {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  #evaluationPage > .evaluationPanel {
+    grid-column: 1 / -1;
+  }
+
+  #evaluationPage .evaluationPanel h3 {
+    margin-bottom: 6px;
+    font-size: 16px;
+  }
+
+  #evaluationPage .evaluationSummaryShell {
+    margin-bottom: 10px;
+  }
+
+  #evaluationPage .evaluationSummaryShell .tableScroller {
+    overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  #evaluationPage .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 30.875px;
+  }
+
+  #evaluationPage .evaluationTableShell .tableScroller {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  #evaluationPage .evaluationTableShell::before,
+  #evaluationPage .evaluationTableShell::after {
+    width: 46px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationPage .evaluationTableShell::after {
+    opacity: 0.94;
+    visibility: visible;
+    transition: none;
+  }
+
+  #evaluationPage .evaluationSummaryTable {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    table-layout: fixed;
+    line-height: 1.05;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable {
+    width: 100%;
+    min-width: 580px;
+    max-width: none;
+    table-layout: fixed;
+    line-height: 1.05;
+  }
+
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 30.875px;
+    --mfl-evaluation-summary-row-height: 30.875px;
+    --mfl-evaluation-season-row-height: 26px;
+  }
+
+  #evaluationPage .evaluationHeaderFull {
+    display: none;
+  }
+
+  #evaluationPage .evaluationHeaderCompact {
+    display: inline;
+  }
+
+  #evaluationPage .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationSummaryTable :is(th, td),
+  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td) {
+    min-width: 0;
+    padding-inline: 1px;
+    overflow-wrap: anywhere;
+  }
+
+  #evaluationPage .evaluationSummaryTable :is(th, td):first-child,
+  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td):first-child {
+    padding-left: 6px;
+  }
+
+  #evaluationPage .evaluationSummaryTable th,
+  #evaluationPage .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+    font-size: 9px;
+    line-height: 1.05;
+  }
+
+  #evaluationPage .evaluationSummaryPositionSelect {
+    width: 100%;
+    min-height: 28px;
+    padding: 0 8px 0 1px;
+    font-size: inherit;
+  }
+
+  #evaluationPage .evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after {
+    left: auto;
+    right: 2px;
+    width: 4px;
+    height: 4px;
+    border-width: 1px;
+  }
+
+  #evaluationPage .evaluationOverallControl {
+    grid-template-columns: 16px 18px 16px;
+    gap: 0;
+    width: 100%;
+    height: 16px;
+    justify-content: start;
+  }
+
+  #evaluationPage .evaluationOverallControl strong {
+    min-width: 18px;
+  }
+
+  #evaluationPage .evaluationOverallControl button,
+  #evaluationPage .evaluationOverallControlSpacer {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    min-height: 16px;
+  }
+
+  #evaluationPage .evaluationOverallControl button {
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationOverallControl strong {
+    min-width: 0;
+    font-size: inherit;
+    line-height: 16px;
+  }
+
+  #evaluationPage .evaluationFooterActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  #evaluationPage .evaluationFooterSavedActions {
+    display: contents;
+  }
+
+  #evaluationPage #evaluationShareButton {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  #evaluationPage #evaluationSaveButton {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  #evaluationPage #evaluationDeleteButton {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
   }
 
   /* Small-screen Stats controls scale down, while the chart remains readable through local horizontal panning. */
@@ -2034,19 +2529,19 @@ html:not(.mflInitialRouteResolved):is(
     flex-direction: column;
   }
 
-  .evaluationLoadResult {
-    grid-template-columns: 1fr;
+  #evaluationLoadModal .evaluationLoadResult {
+    grid-template-columns: minmax(0, 1fr) 64px auto;
+    gap: 4px;
+    padding-inline: 6px;
   }
 
-  .evaluationLoadPresentValue,
-  .evaluationLoadActions {
-    grid-column: 1;
-    grid-row: auto;
-    width: 100%;
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 64px;
+    font-size: 10px;
   }
 
-  .evaluationLoadActions {
-    justify-content: flex-start;
+  #evaluationLoadModal .evaluationLoadActions {
+    justify-content: center;
   }
 
   .advancedSettingsFooter {
@@ -2196,14 +2691,57 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 520px;
   }
 
-  .evaluationSummaryTable {
-    min-width: 430px;
-    font-size: 9px;
+  #evaluationPage .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 28.5px;
   }
 
-  .evaluationTableShell .evaluationTable {
-    min-width: 480px;
-    font-size: 9px;
+  #evaluationPage .evaluationTableShell::before,
+  #evaluationPage .evaluationTableShell::after {
+    width: 40px;
+  }
+
+  #evaluationPage .evaluationSummaryTable {
+    min-width: 0;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable {
+    min-width: 520px;
+  }
+
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 28.5px;
+    --mfl-evaluation-summary-row-height: 28.5px;
+    --mfl-evaluation-season-row-height: 24px;
+  }
+
+  #evaluationPage .evaluationSummaryTable th,
+  #evaluationPage .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+    font-size: 8px;
+  }
+
+  #evaluationPage .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationButtons,
+  #evaluationPage .evaluationMetrics {
+    gap: 4px;
+  }
+
+  #evaluationPage .evaluationPlayerPageButton {
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationMetric {
+    padding-inline: 5px;
   }
 
   .mflStatsFilters {

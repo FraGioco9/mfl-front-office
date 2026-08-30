@@ -276,6 +276,12 @@ invariant(
 );
 
 invariant(!/\.col-(?:select|flag|name|listing|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive), "Responsive CSS must not override Uniform Width column percentages.");
+for (const variableName of evaluationVariables.filter((name) => name.startsWith("--mfl-evaluation-"))) {
+  invariant(
+    !responsive.includes(`${variableName}:`),
+    `Responsive CSS must inherit desktop Evaluation column proportions from Uniform Width: ${variableName}.`,
+  );
+}
 invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed player table width.");
 invariant(
   !responsive.includes(".mflTableLoadingRow"),

@@ -522,6 +522,24 @@
     shell.classList.toggle(FIRST_PAINT_PLAYER_TABLE_FADE_RIGHT_CLASS, overflowing && maxScroll - scrollLeft > FIRST_PAINT_OVERFLOW_EPSILON);
   }
 
+  function primeFirstPaintEvaluationTableFade() {
+    const shell = document.querySelector("#evaluationPage .evaluationTableShell");
+    if (!(shell instanceof HTMLElement)) return;
+    const routeState = firstPaintEvaluationRouteState();
+    const selectedEvaluation = routeState.evaluationRoute && !routeState.plain;
+    const head = shell.querySelector(".evaluationTable thead");
+    if (head instanceof HTMLTableSectionElement && head.getClientRects().length > 0) {
+      const shellRect = shell.getBoundingClientRect();
+      const headRect = head.getBoundingClientRect();
+      shell.style.setProperty("--mfl-evaluation-table-body-top", `${Math.max(0, headRect.bottom - shellRect.top)}px`);
+    }
+    shell.classList.remove(FIRST_PAINT_PLAYER_TABLE_FADE_LEFT_CLASS);
+    shell.classList.toggle(
+      FIRST_PAINT_PLAYER_TABLE_FADE_RIGHT_CLASS,
+      FIRST_PAINT_PHONE_TABLE_MEDIA.matches && selectedEvaluation,
+    );
+  }
+
   function firstPaintTableColumns(page, view) {
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
@@ -903,6 +921,7 @@
     });
     if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
     if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
+    if (target.id === "evaluationPage") primeFirstPaintEvaluationTableFade();
 
     const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((candidate) => {

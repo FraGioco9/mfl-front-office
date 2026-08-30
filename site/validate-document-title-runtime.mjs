@@ -30,8 +30,10 @@ includes(runtime, 'settings: "Settings"', "Settings must expose a route-aware br
 includes(runtime, 'changelog: "Changelog"', "Changelog must expose a route-aware browser title.");
 includes(runtime, 'textFrom("#playerDetail .playerTitleName")', "Player browser titles must reuse the rendered Player name.");
 includes(runtime, 'return withAppName(playerName);', "Player browser titles must include the MFL Front Office suffix.");
-includes(runtime, 'textFrom("#evaluationSummaryBody tr td:first-child")', "Evaluation browser titles must reuse the selected Player name.");
-includes(runtime, 'return `Evaluation - ${playerName}`;', "Selected Evaluation titles must be player-specific.");
+includes(runtime, 'document.getElementById("evaluationSearchInput")', "Evaluation browser titles must reuse the full selected Player identity kept in the Evaluation search input.");
+includes(runtime, 'searchInput instanceof HTMLInputElement ? cleanText(searchInput.value) : "";', "Evaluation browser titles must read the full selected Player name rather than the abbreviated table label.");
+excludes(runtime, 'textFrom("#evaluationSummaryBody tr td:first-child")', "Evaluation browser titles must not derive identity from the abbreviated N. Surname table cell.");
+includes(runtime, 'return `Evaluation - ${playerName}`;', "Selected Evaluation titles must stay in the Evaluation - Name Surname format.");
 includes(runtime, 'textFrom("#tablePageTitle")', "Club, Agent, and Watchlist browser titles must reuse canonical page-title identity.");
 includes(runtime, 'textFrom("#notFoundTitle")', "Typed not-found pages must reuse the canonical not-found label.");
 includes(runtime, 'document.documentElement.dataset.interactionBusy === "true"', "Entity titles must follow the shared route-loading lifecycle.");

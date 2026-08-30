@@ -5703,7 +5703,7 @@ function focusEmptyEvaluationSearchWhenReady() {
 function primeEmptyEvaluationSearch() {
   focusEmptyEvaluationSearchWhenReady();
   const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-  return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);
+  return typeof prime === "function" ? prime(false, true, true) : Promise.resolve(false);
 }
 
 function waitForEvaluationDiscountRate() {
@@ -5879,7 +5879,7 @@ function renderEvaluationTable(row) {
     updateEvaluationFooterActions();
     return;
   }
-  const playerName = formatCellValue(row, "name");
+  const playerName = formatCellValue(row, "name").replace(/^(\S)[^\s]*\s+(?:.*\s)?(\S+)$/, "$1. $2");
   const currentAge = Number(getValue(row, "age"));
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
   const currentOverall = overallValues[seasonOffset] ?? overallValues[0];
@@ -5975,6 +5975,7 @@ function renderEvaluationTable(row) {
 
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
+  window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
   updateEvaluationFooterActions();
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
     select.addEventListener("dblclick", (event) => {
@@ -9504,11 +9505,12 @@ async function startApp() {
     return true;
   }
 
-  async function ensureEvaluationRecentStateHydrated() {
-    if (evaluationRecentStateHydrated) return true;
+  async function ensureEvaluationRecentStateHydrated(options = {}) {
+    const force = Boolean(options.force);
+    if (evaluationRecentStateHydrated && !force) return true;
 
     const pendingStartup = window.__mflWalletPreferencesStartupPromise;
-    if (pendingStartup && typeof pendingStartup.then === "function") {
+    if (!force && pendingStartup && typeof pendingStartup.then === "function") {
       await Promise.resolve(pendingStartup).catch(() => undefined);
       if (evaluationRecentStateHydrated) return true;
     }
@@ -9520,7 +9522,8 @@ async function startApp() {
       return false;
     }
 
-    await loadWalletPreferences();
+    if (force) evaluationRecentStateHydrated = false;
+    await loadWalletPreferences({ force });
     return evaluationRecentStateHydrated;
   }
 

@@ -10,6 +10,7 @@
 
   let destroyed = false;
   let recentPrimePromise = null;
+  let recentSupabaseRefreshPromise = null;
   let recentPayload = null;
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
@@ -103,7 +104,16 @@
       && !field.value.trim();
   }
 
-  function waitForSupabaseRecentState() {
+  function waitForSupabaseRecentState(force = false) {
+    if (force) {
+      const ensure = coreContracts()?.ensureEvaluationRecentStateHydrated;
+      if (typeof ensure === "function") {
+        return Promise.resolve(ensure({ force: true })).catch((error) => {
+          console.warn("Could not refresh Supabase Evaluation recent-search state.", error);
+        });
+      }
+    }
+
     const pending = window.__mflWalletPreferencesStartupPromise;
     if (!pending || typeof pending.then !== "function") return Promise.resolve();
     return Promise.resolve(pending).catch((error) => {
@@ -304,22 +314,33 @@
     return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
   }
 
-  function primeRecentSearchData({ force = false, showLoading = false } = {}) {
+  function primeRecentSearchData({ force = false, showLoading = false, refreshSupabase = false } = {}) {
     const field = input();
     if (recentPrimePromise) {
       if (showLoading) renderRecentLoadingMessage(field);
-      return recentPrimePromise;
+      if (!refreshSupabase) return recentPrimePromise;
+      if (!recentSupabaseRefreshPromise) {
+        recentSupabaseRefreshPromise = recentPrimePromise
+          .then(() => {
+            if (destroyed) return false;
+            return primeRecentSearchData({ force, showLoading, refreshSupabase: true });
+          })
+          .finally(() => {
+            recentSupabaseRefreshPromise = null;
+          });
+      }
+      return recentSupabaseRefreshPromise;
     }
 
     const currentIds = recentEvaluationPlayerIds();
     const currentSignature = currentIds.join(",");
-    if (!force && recentPayload && recentPayloadSignature === currentSignature) {
+    if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature) {
       publishRecentPayload(recentPayload);
       return Promise.resolve(renderEmptySearchFromCore());
     }
 
     if (showLoading) renderRecentLoadingMessage(field);
-    recentPrimePromise = waitForSupabaseRecentState()
+    recentPrimePromise = waitForSupabaseRecentState(refreshSupabase)
       .then(() => {
         const ids = recentEvaluationPlayerIds();
         const signature = ids.join(",");
@@ -350,13 +371,17 @@
     return recentPrimePromise;
   }
 
-  function restoreEmptyRecentResults(force = false, showLoading = false) {
+  function restoreEmptyRecentResults(force = false, showLoading = false, refreshSupabase = false) {
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
     installCoreBridges();
     const currentSignature = recentEvaluationPlayerIds().join(",");
     const hasReadyRecentPayload = !force && recentPayload && recentPayloadSignature === currentSignature;
-    return primeRecentSearchData({ force, showLoading: showLoading || !hasReadyRecentPayload });
+    return primeRecentSearchData({
+      force,
+      showLoading: showLoading || !hasReadyRecentPayload,
+      refreshSupabase,
+    });
   }
 
   function sync() {

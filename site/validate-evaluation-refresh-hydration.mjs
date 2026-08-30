@@ -139,10 +139,14 @@ invariant(
 );
 
 invariant(
-  evaluationSearchState.includes("if (!force && recentPayload && recentPayloadSignature === currentSignature) {")
+  evaluationSearchState.includes("if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature) {")
+    && evaluationSearchState.includes("if (!refreshSupabase) return recentPrimePromise;")
+    && evaluationSearchState.includes("return primeRecentSearchData({ force, showLoading, refreshSupabase: true });")
+    && evaluationSearchState.includes("waitForSupabaseRecentState(refreshSupabase)")
+    && evaluationSearchState.includes("if (!force && recentPayload && recentPayloadSignature === signature) {")
     && evaluationSearchState.includes("publishRecentPayload(recentPayload);")
-    && evaluationSearchState.includes("return Promise.resolve(renderEmptySearchFromCore());"),
-  "An already loaded plain Evaluation must republish its recent-player data from the in-memory cache before any new request or loading gate.",
+    && evaluationSearchState.includes("return renderEmptySearchFromCore();"),
+  "Every plain Evaluation route entry must refresh recent-player IDs from Supabase before accepting cached recent results, while unchanged IDs may reuse the already-loaded player display payload after that authoritative refresh.",
 );
 
 invariant(

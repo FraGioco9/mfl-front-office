@@ -221,7 +221,7 @@ invariant(
   sharedCore.indexOf("window.__mflCoreContracts = Object.freeze({") < sharedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();"),
   "The core contract must exist before application-core loaded state is published.",
 );
-const evaluationHydrationStart = sharedCore.indexOf("async function ensureEvaluationRecentStateHydrated()");
+const evaluationHydrationStart = sharedCore.indexOf("async function ensureEvaluationRecentStateHydrated(options = {})");
 const evaluationHydrationEnd = sharedCore.indexOf("window.__mflCoreContracts = Object.freeze({", evaluationHydrationStart);
 const evaluationHydrationSource = evaluationHydrationStart >= 0 && evaluationHydrationEnd > evaluationHydrationStart
   ? sharedCore.slice(evaluationHydrationStart, evaluationHydrationEnd)
@@ -229,13 +229,15 @@ const evaluationHydrationSource = evaluationHydrationStart >= 0 && evaluationHyd
 invariant(
   sharedCore.includes("let evaluationRecentStateHydrated = false;")
     && sharedCore.includes("evaluationRecentStateHydrated = true;")
+    && evaluationHydrationSource.includes("const force = Boolean(options.force);")
     && evaluationHydrationSource.includes("pendingStartup")
     && evaluationHydrationSource.includes("__mflWalletPreferencesStartupPromise")
-    && evaluationHydrationSource.includes("loadWalletPreferences()")
-    && !evaluationHydrationSource.includes("force: true")
+    && evaluationHydrationSource.includes("if (!force && pendingStartup")
+    && evaluationHydrationSource.includes("if (force) evaluationRecentStateHydrated = false;")
+    && evaluationHydrationSource.includes("loadWalletPreferences({ force })")
     && !evaluationHydrationSource.includes("__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated")
     && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
-  "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner while awaiting and reusing the one startup wallet-preference hydration instead of forcing a duplicate read.",
+  "Generated shared core must keep Evaluation Supabase hydration inside the canonical lexical owner, reusing startup state normally and supporting an explicit forced refresh on default Evaluation entry.",
 );
 invariant(
   !sharedCore.includes("function installTableLoadingOwners(")
@@ -286,4 +288,4 @@ for (const legacyBridge of [
   invariant(!watchlistRuntime.includes(legacyBridge), `Watchlist route runtime must not restore legacy eval bridge ${legacyBridge}.`);
 }
 
-console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative late Evaluation Supabase hydration reusing the canonical startup preference lifecycle.");
+console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative Evaluation Supabase hydration reusing startup state normally and force-refreshing only on explicit default-route entry.");
