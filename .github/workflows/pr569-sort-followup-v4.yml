@@ -1,0 +1,208 @@
+name: PR 569 sorting follow-up v4
+
+on:
+  push:
+    branches:
+      - fix/page-scoped-default-sorting
+    paths:
+      - .github/workflows/pr569-sort-followup-v4.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/page-scoped-default-sorting
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Patch sorting semantics and loading header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def sub_once(text, pattern, replacement, label, flags=re.MULTILINE):
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count != 1:
+                  raise SystemExit(f"Missing or ambiguous patch target: {label} ({count})")
+              return updated
+
+          core_path = Path('site/modules/app-core.js')
+          core = core_path.read_text()
+
+          core = sub_once(
+              core,
+              r'''function tableSortStateForView\(\n  viewName = state\.view,\n  pageName = tablePageKey\(\) \|\| state\.currentPage \|\| "progression",\n  fallbackSortState = null,\n\) \{\n  const normalizedPageName = pageName === "mflstats" \? "mfl" : String\(pageName \|\| ""\);\n  const normalizedView = normalizeViewForPage\(viewName, normalizedPageName \|\| "progression"\);\n  return normalizedViewSortState\(\n    state\.tableSortSessionSortState \|\| fallbackSortState,\n    normalizedView,\n    normalizedPageName,\n  \);\n\}''',
+              '''function tableSortStateForView(
+  viewName = state.view,
+  pageName = tablePageKey() || state.currentPage || "progression",
+  fallbackSortState = null,
+) {
+  const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
+  const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
+  const sourceSortState = state.tableSortSessionSortState || fallbackSortState;
+  const sourceSortSupported = sortKeySupportedByView(sourceSortState?.sortKey, normalizedView, normalizedPageName);
+  const resolvedSortState = normalizedViewSortState(
+    sourceSortState,
+    normalizedView,
+    normalizedPageName,
+  );
+  if (!sourceSortSupported && state.tableSortSessionKey) {
+    state.tableSortSessionSortState = resolvedSortState;
+  }
+  return resolvedSortState;
+}''',
+              'page-level unsupported-view fallback',
+          )
+
+          core = sub_once(
+              core,
+              r'''  if \(state\.view === "next" && statColumns\.includes\(state\.sortKey\)\) \{\n(?:    .*\n)+?    return compareNextOverallRows\(a, b, state\.sortKey, direction\);\n  \}''',
+              '''  if (state.view === "next" && statColumns.includes(state.sortKey)) {
+    return compareNextOverallRows(a, b, state.sortKey, direction);
+  }''',
+              'Next Overall comparator',
+          )
+
+          core = sub_once(
+              core,
+              r'''  if \(state\.view === "next" && statColumns\.includes\(column\)\) \{\n(?:    .*\n)+?  \}''',
+              '''  if (state.view === "next" && statColumns.includes(column)) {
+    return tableNextOverallSortValue(row, column);
+  }''',
+              'Next Overall sortable value',
+          )
+
+          core = sub_once(
+              core,
+              r'''(?P<indent>\s*)const staticRoutePending = staticHeader\n(?P=indent)  && staticPage\n(?P=indent)  && staticView\n(?P=indent)  && \(currentPage !== staticPage \|\| currentView !== staticView\);\n(?P=indent)if \(staticRoutePending\) return true;\n(?P=indent)if \(staticHeader && staticSignature && staticSignature !== signature\) return true;''',
+              '''\g<indent>const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");
+\g<indent>const staticRoutePending = staticHeader
+\g<indent>  && !initialRouteSuperseded
+\g<indent>  && staticPage
+\g<indent>  && staticView
+\g<indent>  && (currentPage !== staticPage || currentView !== staticView);
+\g<indent>if (staticRoutePending) return true;
+\g<indent>if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return true;''',
+              'canonical static header guard',
+          )
+
+          core = sub_once(
+              core,
+              r'''(?P<indent>\s*)const staticRoutePending = staticHeader\n(?P=indent)  && staticPage\n(?P=indent)  && staticView\n(?P=indent)  && \(currentPage !== staticPage \|\| currentView !== staticView\);\n(?P=indent)if \(staticRoutePending\) return undefined;\n(?P=indent)if \(staticHeader && staticSignature && staticSignature !== signature\) return undefined;''',
+              '''\g<indent>const initialRouteSuperseded = document.documentElement.classList.contains("mflInitialRouteSuperseded");
+\g<indent>const staticRoutePending = staticHeader
+\g<indent>  && !initialRouteSuperseded
+\g<indent>  && staticPage
+\g<indent>  && staticView
+\g<indent>  && (currentPage !== staticPage || currentView !== staticView);
+\g<indent>if (staticRoutePending) return undefined;
+\g<indent>if (staticHeader && !initialRouteSuperseded && staticSignature && staticSignature !== signature) return undefined;''',
+              'stable buildHeader static guard',
+          )
+
+          core = sub_once(
+              core,
+              r'''    window\.__mflCancelIncrementalRouteRequest\?\.\(\);\n    const transition = stageViewTransition\(pageName, viewName, options\);\n    if \(!transition\) return null;\n    document\.documentElement\.classList\.add\("mflInitialRouteSuperseded"\);''',
+              '''    window.__mflCancelIncrementalRouteRequest?.();
+    document.documentElement.classList.add("mflInitialRouteSuperseded");
+    const transition = stageViewTransition(pageName, viewName, options);
+    if (!transition) return null;''',
+              'view transition header handoff',
+          )
+          core_path.write_text(core)
+
+          api_path = Path('site/api/_data-page.js')
+          api = api_path.read_text()
+          api = sub_once(
+              api,
+              r'''return `\$\{quoteIdentifier\(derived\)\} IS NULL, \$\{quoteIdentifier\(derived\)\} \$\{direction\}, overall \$\{direction\}, player_id DESC`;''',
+              '''return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall DESC, player_id DESC`;''',
+              'Progression server-side tie-break',
+          )
+          api_path.write_text(api)
+
+          validator = Path('site/validate-table-sort-session.mjs')
+          text = validator.read_text()
+          if 'const dataPage = ' not in text:
+              text = text.replace(
+                  'const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");\n',
+                  'const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");\nconst dataPage = fs.readFileSync(new URL("./api/_data-page.js", import.meta.url), "utf8");\n',
+                  1,
+              )
+
+          text = sub_once(
+              text,
+              r'''const standardViewSource = sourceBetween\(core, "async function setView\(viewName\)", "function mflChunkFromPublicData"\);\nassert\.doesNotMatch\(standardViewSource, /rememberTableSortState/u, "View switching must not rewrite the page-level sort intent\."\);\nassert\.match\(standardViewSource, /tableSortStateForView\\\(\[\\s\\S\]\*viewName/u, "Standard view switches must resolve the existing page sort against the destination view\."\);''',
+              '''const sortResolverSource = sourceBetween(core, "function tableSortStateForView", "function rememberTableSortState");
+assert.match(sortResolverSource, /sourceSortSupported = sortKeySupportedByView/u, "View sorting must detect whether the destination supports the active sort column.");
+assert.match(sortResolverSource, /if \(!sourceSortSupported && state\.tableSortSessionKey\) \{\s*state\.tableSortSessionSortState = resolvedSortState;/u, "Unsupported destination views must replace the page session sort with their canonical default.");
+
+const standardViewSource = sourceBetween(core, "async function setView(viewName)", "function mflChunkFromPublicData");
+assert.doesNotMatch(standardViewSource, /rememberTableSortState/u, "View switching must not restore an older per-view sort.");
+assert.match(standardViewSource, /tableSortStateForView\([\s\S]*viewName/u, "Standard view switches must resolve sorting against the destination view.");''',
+              'validator view fallback assertions',
+          )
+
+          text = sub_once(
+              text,
+              r'''assert\.match\(core, /state\\\.view === "next"\[\\s\\S\]\{0,180\}column === "overall"\[\\s\\S\]\{0,120\}tableNextOverallPreciseValue\\\(row\\\)/u, "Next Overall sortable values must use the displayed precise Overall value\."\);\nassert\.match\(core, /state\\\.sortKey === "overall"\[\\s\\S\]\{0,220\}tableNextOverallPreciseValue\\\(a\\\)\[\\s\\S\]\{0,120\}tableNextOverallPreciseValue\\\(b\\\)/u, "Next Overall comparisons must sort the displayed Overall value instead of the needed gain\."\);''',
+              '''assert.match(core, /state\.view === "next" && statColumns\.includes\(column\)[\s\S]{0,100}return tableNextOverallSortValue\(row, column\);/u, "Next Overall must sort Overall and stats by gap to the next Overall +1 target.");
+assert.match(core, /state\.view === "next" && statColumns\.includes\(state\.sortKey\)[\s\S]{0,100}compareNextOverallRows\(a, b, state\.sortKey, direction\)/u, "Next Overall comparisons must use the gap comparator for Overall and every stat.");
+assert.match(dataPage, /view === "next" && STAT_COLUMNS\.has\(key\)[\s\S]{0,180}key === "overall" \? "next_overall_gap" : `\$\{key\}_to_next_overall`/u, "Incremental Next Overall sorting must use next_overall_gap for Overall and *_to_next_overall for stats.");''',
+              'validator Next Overall assertions',
+          )
+
+          progression_marker = 'assert.match(core, /comparisonDirection = state\\.currentPage === "progression" && index > 0 \\? -1 : direction/u, "Progression tie-breaks must keep higher Overall first after equal progression.");\n'
+          if progression_marker not in text:
+              raise SystemExit('Missing Progression validator marker')
+          text = text.replace(
+              progression_marker,
+              progression_marker + 'assert.match(dataPage, /\\["current", "all"\\]\\.includes\\(view\\)[\\s\\S]{0,300}overall DESC, player_id DESC/u, "Incremental Progression sorting must use progression first and Overall descending as the tie-break.");\n',
+              1,
+          )
+
+          header_marker = 'assert.match(commitViewSource, /buildHeader\\(\\);/u, "View transitions must rebuild the sorted header before their runtime paint.");\n'
+          if header_marker not in text:
+              raise SystemExit('Missing header validator marker')
+          text = text.replace(
+              header_marker,
+              header_marker + '''const runViewTransitionSource = sourceBetween(core, "async function runViewTransition", "function tableLoadingTitle");
+assert.ok(runViewTransitionSource.indexOf('classList.add("mflInitialRouteSuperseded")') < runViewTransitionSource.indexOf("stageViewTransition(pageName, viewName, options)"), "View transitions must release bootstrap header ownership before destination header paint.");
+const canonicalHeaderSource = sourceBetween(core, "function ensureCanonicalTableHeader", "function installTableLoadingOwners");
+assert.match(canonicalHeaderSource, /initialRouteSuperseded[\s\S]{0,350}!initialRouteSuperseded[\s\S]{0,350}buildHeader\(\)/u, "Loading headers must remain rebuildable after the initial route is superseded, including Club views.");
+''',
+              1,
+          )
+          validator.write_text(text)
+          PY
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      - name: Rebuild generated runtime chunks
+        working-directory: site
+        run: npm run build:core
+      - name: Run dedicated sorting regression
+        working-directory: site
+        run: node validate-table-sort-session.mjs
+      - name: Stage generated contract
+        run: git add site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/api/_data-page.js site/validate-table-sort-session.mjs
+      - name: Run full site checks
+        working-directory: site
+        run: npm run check
+      - name: Commit fix and remove helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/pr569-sort-followup-v3.yml .github/workflows/pr569-sort-followup-v4.yml
+          git add -A
+          git commit -m "Fix sorting semantics and loading arrows"
+          git push origin HEAD:fix/page-scoped-default-sorting
