@@ -9218,8 +9218,9 @@ function renderSearchResultsNow() {
   playerSearchResults.classList.add("filledSearchResults");
 
   if (!results.length) {
+    if (query) return;
     playerSearchResults.classList.remove("filledSearchResults");
-    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players, clubs, or agents found." : "Recent searches will appear here."}</div>`;
+    playerSearchResults.innerHTML = '<div class="searchHint">Recent searches will appear here.</div>';
     return;
   }
 
