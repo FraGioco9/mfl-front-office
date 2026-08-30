@@ -1,0 +1,49 @@
+name: PR 569 Progression diagnostic
+
+on:
+  push:
+    branches:
+      - fix/page-scoped-default-sorting
+    paths:
+      - .github/workflows/pr569-progression-diagnostic.yml
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/page-scoped-default-sorting
+      - name: Inspect Progression sorting path
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('site/modules/app-core.js').read_text()
+          api = Path('site/api/_data-page.js').read_text()
+
+          def show(label, start, end):
+              a = source.find(start)
+              b = source.find(end, a + len(start)) if a >= 0 else -1
+              print(f'\n===== {label} =====')
+              print(f'start={a} end={b}')
+              if a >= 0:
+                  print(source[a:b if b >= 0 else a + 8000])
+
+          show('incrementalRouteTarget', 'function incrementalRouteTarget', 'function incrementalDataQuery')
+          show('incrementalDataQuery', 'function incrementalDataQuery', 'function incrementalRequestDetails')
+          show('reloadIncrementalPage', 'async function reloadIncrementalPage', 'window.mflReloadIncrementalPage')
+          show('incremental applyFilters wrapper', 'applyFilters = function applyFiltersWithIncrementalData', 'setView = async function setIncrementalView')
+          show('buildHeader', 'function buildHeader()', 'function isMissingSortValue')
+          show('compareRows', 'function compareRows', 'function activeFilterCount')
+
+          print('\n===== API orderSql =====')
+          a = api.find('function orderSql')
+          b = api.find('function integerIds', a)
+          print(api[a:b])
+          print('\n===== API query invocation =====')
+          for needle in ['const order = orderSql(', 'ORDER BY ${order}', 'queryRows(']:
+              pos = api.find(needle)
+              print(f'--- {needle} at {pos} ---')
+              if pos >= 0:
+                  print(api[max(0, pos-1000):pos+2500])
+          PY
