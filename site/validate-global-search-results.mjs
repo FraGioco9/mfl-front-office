@@ -143,9 +143,28 @@ invariant(
 );
 
 invariant(
+  core.includes('if (!results.length) {\n    if (query) return;')
+    && !core.includes('query ? "No players, clubs, or agents found."')
+    && runtime.includes('function renderSettledTypedSearchEmptyState(normalizedQuery) {')
+    && runtime.includes('if (results.querySelector(":scope > .searchResult")) return false;')
+    && runtime.includes('renderSearchMessage("No players, clubs, or agents found.");')
+    && runtime.includes('finishSearching(normalizedQuery);\n    renderSettledTypedSearchEmptyState(normalizedQuery);'),
+  "Only the authoritative request runtime may render the typed Global Search empty state, and only after the current query settles with zero final result cards.",
+);
+
+const searchResultCaptureSection = runtime.slice(
+  runtime.indexOf("function onSearchResultClickCapture(event)"),
+  runtime.indexOf("function onSearchResultClick(event)"),
+);
+invariant(
   runtime.includes("function searchResultTarget(event) {")
-    && runtime.includes("function onSearchResultClickCapture(event) {")
-    && runtime.includes("if (!target || !recentLoadedForSession) return;\n    promoteCanonicalRecentResult(target);")
+    && searchResultCaptureSection.includes("if (!target || !recentLoadedForSession) return;\n    promoteCanonicalRecentResult(target);")
+    && !searchResultCaptureSection.includes("preventDefault(")
+    && !searchResultCaptureSection.includes("stopPropagation(")
+    && !searchResultCaptureSection.includes("stopImmediatePropagation(")
+    && !searchResultCaptureSection.includes("navigateToAgentSearchResult")
+    && core.includes("rememberAgentSearchResult(result.walletAddress);")
+    && core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")
     && runtime.includes('document.addEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes('document.removeEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes("function onSearchResultClick(event) {")
@@ -153,7 +172,7 @@ invariant(
     && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
     && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
     && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
-  "Global Search must promote the clicked result during capture, before the core click handler snapshots table state, so Supabase receives clicked plus the previous four instead of a one-result stale snapshot.",
+  "Global Search capture may promote recents but must never suppress or replace the canonical Player, Club, or Agent result click navigation.",
 );
 
 invariant(
@@ -240,4 +259,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence without suppressing canonical result navigation, and uses identical 66px boxes with 8px gaps for recent and typed results.");

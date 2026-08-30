@@ -197,6 +197,15 @@
     results.classList.remove("filledSearchResults");
   }
 
+  function renderSettledTypedSearchEmptyState(normalizedQuery) {
+    const input = searchInput();
+    const results = searchResults();
+    if (!input || !results || !normalizedQuery || normalize(input.value) !== normalizedQuery) return false;
+    if (results.querySelector(":scope > .searchResult")) return false;
+    renderSearchMessage("No players, clubs, or agents found.");
+    return true;
+  }
+
   function normalizeSearchResults() {
     const input = searchInput();
     const results = searchResults();
@@ -419,6 +428,7 @@
     pendingQuery = "";
     renderCurrentResults();
     finishSearching(normalizedQuery);
+    renderSettledTypedSearchEmptyState(normalizedQuery);
     return true;
   }
 
@@ -713,6 +723,33 @@
     if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();
   }
 
+  function onAgentSearchResultClickCapture(event) {
+    const target = searchResultTarget(event);
+    if (!target) return;
+
+    const searchKey = String(target.dataset.searchKey || "").trim();
+    if (!searchKey.startsWith("agent:")) return;
+
+    const walletAddress = searchKey.slice(6).trim().toLowerCase();
+    const setPage = windowFunction("setPage");
+    const closeSearch = windowFunction("closeSearch");
+    if (!walletAddress || !setPage || !closeSearch) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    closeSearch();
+
+    const mflWalletAddress = String(window.__mflAppConfig?.routes?.mflWalletAddress || "").trim().toLowerCase();
+    const pageName = walletAddress === mflWalletAddress ? "mfl" : "agents";
+    const options = pageName === "mfl"
+      ? { view: "attributes" }
+      : { walletAddress, view: "attributes" };
+    void Promise.resolve(setPage(pageName, true, options)).catch((error) => {
+      console.error(error?.message || "Could not open Agent page.");
+    });
+    flushCanonicalRecentState();
+  }
+
   function onSearchResultClickCapture(event) {
     const target = searchResultTarget(event);
     if (!target || !recentLoadedForSession) return;
@@ -826,6 +863,7 @@
   document.addEventListener("input", onInput, true);
   document.addEventListener("click", onClearClick, true);
   document.addEventListener("click", onSearchResultClickCapture, true);
+  document.addEventListener("click", onAgentSearchResultClickCapture, true);
   document.addEventListener("click", onSearchResultClick);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
@@ -851,6 +889,7 @@
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("click", onClearClick, true);
     document.removeEventListener("click", onSearchResultClickCapture, true);
+    document.removeEventListener("click", onAgentSearchResultClickCapture, true);
     document.removeEventListener("click", onSearchResultClick);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
