@@ -594,8 +594,15 @@
     return scroller instanceof HTMLElement ? scroller : null;
   }
 
+  function evaluationTableScroller() {
+    const scroller = document.querySelector("#evaluationPage .evaluationTableShell .tableScroller");
+    return scroller instanceof HTMLElement ? scroller : null;
+  }
+
   function playerTableShell(scroller = playerTableScroller()) {
-    const shell = scroller instanceof HTMLElement ? scroller.closest("#progressionPage .tableShell") : null;
+    const shell = scroller instanceof HTMLElement
+      ? scroller.closest("#progressionPage .tableShell, #evaluationPage .evaluationTableShell")
+      : null;
     return shell instanceof HTMLElement ? shell : null;
   }
 
@@ -604,6 +611,16 @@
     if (!(shell instanceof HTMLElement)) return;
     shell.classList.toggle(PLAYER_TABLE_FADE_LEFT_CLASS, canScrollLeft);
     shell.classList.toggle(PLAYER_TABLE_FADE_RIGHT_CLASS, canScrollRight);
+  }
+
+  function syncEvaluationTableFadeBodyTop(scroller) {
+    if (!(scroller instanceof HTMLElement) || !scroller.matches("#evaluationPage .evaluationTableShell .tableScroller")) return;
+    const shell = playerTableShell(scroller);
+    const head = scroller.querySelector(".evaluationTable thead");
+    if (!(shell instanceof HTMLElement) || !(head instanceof HTMLTableSectionElement) || head.getClientRects().length === 0) return;
+    const shellRect = shell.getBoundingClientRect();
+    const headRect = head.getBoundingClientRect();
+    shell.style.setProperty("--mfl-evaluation-table-body-top", `${Math.max(0, headRect.bottom - shellRect.top)}px`);
   }
 
   function quickFiltersPlayerCount(views) {
@@ -833,6 +850,7 @@
 
   function syncPlayerTableFadeState(scroller = playerTableScroller()) {
     if (!(scroller instanceof HTMLElement)) return;
+    syncEvaluationTableFadeBodyTop(scroller);
     scroller.style.removeProperty("box-shadow");
     if (!MOBILE_TABLE_MEDIA.matches || scroller.getClientRects().length === 0) {
       setPlayerTableFadeDirections(scroller, false, false);
@@ -848,15 +866,18 @@
 
   function syncPlayerTableScroller() {
     const scroller = playerTableScroller();
+    const evaluationScroller = evaluationTableScroller();
     syncMobileColumnWidths();
     syncWidthAwareHeaderLabels();
-    if (!(scroller instanceof HTMLElement)) return;
-    syncPlayerTableFadeState(scroller);
+    if (scroller instanceof HTMLElement) syncPlayerTableFadeState(scroller);
+    if (evaluationScroller instanceof HTMLElement) syncPlayerTableFadeState(evaluationScroller);
   }
 
   function schedulePlayerTableSync() {
     if (destroyed) return;
     syncPlayerTableFadeState();
+    const evaluationScroller = evaluationTableScroller();
+    if (evaluationScroller instanceof HTMLElement) syncPlayerTableFadeState(evaluationScroller);
     if (playerSyncFrame) return;
     playerSyncFrame = requestAnimationFrame(() => {
       playerSyncFrame = 0;
@@ -1003,6 +1024,14 @@
     if (active instanceof HTMLElement && active.matches(CONTROL_SELECTOR)) releaseFocus(active);
   }
 
+  function onEvaluationTableScroll(event) {
+    const scroller = event.target;
+    if (!(scroller instanceof HTMLElement) || !scroller.matches("#evaluationPage .evaluationTableShell .tableScroller")) return;
+    clearTableHoverState();
+    window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
+    schedulePlayerTableSync();
+  }
+
   function onScroll() {
     clearTableHoverState();
   }
@@ -1032,6 +1061,7 @@
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("keydown", onKeyDown, true);
     scrollContainer?.removeEventListener("scroll", onScroll);
+    document.removeEventListener("scroll", onEvaluationTableScroll, true);
     MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
     PHONE_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     TINY_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
@@ -1067,6 +1097,7 @@
   document.addEventListener("change", onChange, true);
   document.addEventListener("keydown", onKeyDown, true);
   scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("scroll", onEvaluationTableScroll, true);
   MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
   PHONE_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
   TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);

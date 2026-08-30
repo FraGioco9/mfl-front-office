@@ -205,20 +205,30 @@ const recentOwnerSource = recentOwnerStart >= 0 && recentOwnerEnd > recentOwnerS
   : "";
 invariant(
   recentOwnerSource.includes("evaluationRecentStateHydrated = true;")
-    && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
-    && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
-    && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
-    && recentOwnerSource.includes("await loadWalletPreferences();")
-    && !recentOwnerSource.includes("force: true")
+    && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated(options = {})")
+    && recentOwnerSource.includes("const force = Boolean(options.force);")
+    && recentOwnerSource.includes("if (evaluationRecentStateHydrated && !force) return true;")
+    && recentOwnerSource.includes("if (!force && pendingStartup && typeof pendingStartup.then === \"function\")")
+    && recentOwnerSource.includes("if (force) evaluationRecentStateHydrated = false;")
+    && recentOwnerSource.includes("await loadWalletPreferences({ force });")
     && !recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
     && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
-  "Late Evaluation route ownership must reuse the published startup Supabase hydration and fall back only to the canonical non-forced preference loader without replacing readiness ownership.",
+  "Evaluation recent-state ownership must reuse startup hydration normally while allowing the default Evaluation route to force a fresh canonical Supabase preference read.",
 );
 invariant(
-  searchRuntime.includes("function waitForSupabaseRecentState()")
+  searchRuntime.includes("function waitForSupabaseRecentState(force = false)")
+    && searchRuntime.includes("coreContracts()?.ensureEvaluationRecentStateHydrated")
+    && searchRuntime.includes("ensure({ force: true })")
     && searchRuntime.includes("const pending = window.__mflWalletPreferencesStartupPromise;")
-    && searchRuntime.includes("return Promise.resolve(pending).catch"),
-  "Evaluation recent-search priming must await the published authoritative Supabase readiness promise instead of issuing its own wallet-preference request.",
+    && searchRuntime.includes("return Promise.resolve(pending).catch")
+    && searchRuntime.includes("let recentSupabaseRefreshPromise = null;")
+    && searchRuntime.includes("refreshSupabase = false")
+    && searchRuntime.includes("if (!refreshSupabase) return recentPrimePromise;")
+    && searchRuntime.includes("return primeRecentSearchData({ force, showLoading, refreshSupabase: true });")
+    && searchRuntime.includes("if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature)")
+    && searchRuntime.includes("waitForSupabaseRecentState(refreshSupabase)")
+    && appCoreSource.includes('return typeof prime === "function" ? prime(false, true, true) : Promise.resolve(false);'),
+  "Visiting the default Evaluation route must show Loading and force-refresh the authoritative Supabase recent-five state, while ordinary re-renders continue to reuse startup/cache ownership.",
 );
 const loadingVisibilityStart = searchRuntime.indexOf("function recentLoadingMessageVisible");
 const loadingVisibilityEnd = searchRuntime.indexOf("function renderRecentLoadingMessage", loadingVisibilityStart);
@@ -268,17 +278,20 @@ const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
 const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
 const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
 invariant(
-  primeSource.includes("function primeRecentSearchData({ force = false, showLoading = false } = {})")
+  primeSource.includes("function primeRecentSearchData({ force = false, showLoading = false, refreshSupabase = false } = {})")
     && primeSource.includes("if (recentPrimePromise) {")
     && primeSource.includes("if (showLoading) renderRecentLoadingMessage(field);")
-    && primeSource.includes("if (!force && recentPayload && recentPayloadSignature === currentSignature) {")
+    && primeSource.includes("if (!refreshSupabase) return recentPrimePromise;")
+    && primeSource.includes("return primeRecentSearchData({ force, showLoading, refreshSupabase: true });")
+    && primeSource.includes("if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature) {")
     && primeSource.includes("publishRecentPayload(recentPayload);")
     && primeSource.includes("return Promise.resolve(renderEmptySearchFromCore());")
     && primeSource.indexOf("return Promise.resolve(renderEmptySearchFromCore());") < primeSource.lastIndexOf("if (showLoading) renderRecentLoadingMessage(field);")
-    && primeSource.lastIndexOf("if (showLoading) renderRecentLoadingMessage(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
-    && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
+    && primeSource.lastIndexOf("if (showLoading) renderRecentLoadingMessage(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState(refreshSupabase)")
+    && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState(refreshSupabase)") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
+    && primeSource.includes("if (!force && recentPayload && recentPayloadSignature === signature) {")
     && primeSource.indexOf("const ids = recentEvaluationPlayerIds();") < primeSource.indexOf("return fetchRecentEvaluationPayload(ids).then"),
-  "Evaluation recent searches must reuse matching in-memory results before Loading… or a request, while uncached startup shows Loading… and then fetches the recent player rows.",
+  "Ordinary Evaluation rerenders may reuse matching recent-player data before Loading or a request, but explicit default-route refresh must bypass the early cache, wait for Supabase, and only then reuse unchanged player-display payloads or fetch the refreshed recent rows.",
 );
 invariant(
   primeSource.includes("publishRecentPayload(payload);")
@@ -340,14 +353,14 @@ const canonicalRecentPrimeSource = canonicalRecentPrimeStart >= 0 && canonicalRe
   : "";
 invariant(
   canonicalRecentPrimeSource.includes("const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;")
-    && canonicalRecentPrimeSource.includes('return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);')
+    && canonicalRecentPrimeSource.includes('return typeof prime === "function" ? prime(false, true, true) : Promise.resolve(false);')
     && !canonicalRecentPrimeSource.includes("requestDatabaseSearch")
     && !appCoreSource.includes("evaluationRecentSearchPrimed")
     && !appCoreSource.includes("evaluationRecentSearchPrimePromise"),
   "Canonical Evaluation readiness must start exactly one Supabase recent-results prime and paint Loading… synchronously instead of maintaining a second empty database-search loader.",
 );
 const recentStateOwnershipStart = appCoreSource.indexOf("function installEvaluationRecentStateOwnership()");
-const recentStateOwnershipEnd = appCoreSource.indexOf("async function ensureEvaluationRecentStateHydrated()", recentStateOwnershipStart);
+const recentStateOwnershipEnd = appCoreSource.indexOf("async function ensureEvaluationRecentStateHydrated(options = {})", recentStateOwnershipStart);
 const recentStateOwnershipSource = recentStateOwnershipStart >= 0 && recentStateOwnershipEnd > recentStateOwnershipStart
   ? appCoreSource.slice(recentStateOwnershipStart, recentStateOwnershipEnd)
   : "";
@@ -357,10 +370,10 @@ invariant(
     && !recentStateOwnershipSource.includes("__mflDataOnly")
     && !recentStateOwnershipSource.includes("finishEvaluationReadinessWithRecents")
     && !recentStateOwnershipSource.includes("__mflAwaitsRecentEvaluation")
-    && generatedSharedCore.includes('return typeof prime === "function" ? prime(false, true) : Promise.resolve(false);')
+    && generatedSharedCore.includes('return typeof prime === "function" ? prime(false, true, true) : Promise.resolve(false);')
     && !generatedSharedCore.includes("finishEvaluationReadinessWithRecents")
     && !generatedSharedCore.includes("__mflAwaitsRecentEvaluation"),
-  "Evaluation Supabase hydration must update the same recent-results prime without wrapping readiness or forcing a second request after the first one settles.",
+  "Evaluation Supabase state-change hydration must reuse the existing non-forced recent-results path, while canonical default-route readiness separately owns the explicit forced Supabase refresh.",
 );
 invariant(
   searchRuntime.includes("if (!field.value.trim()) void restoreEmptyRecentResults(false, true);")
@@ -378,4 +391,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, cached recent-player reuse, one continuous local recent-results Loading… lifecycle, cached plain-route re-entry without repeated loading, synchronous empty first paint, Supabase readiness, saved Load behavior, Discount Rate readiness, and result navigation.");
+console.log("Evaluation search lifecycle validation passed: typed-result persistence, direct-focus ownership, authoritative default-route Supabase recent-five refresh, post-refresh cached player-display reuse, one continuous local recent-results Loading… lifecycle, synchronous empty first paint, saved Load behavior, Discount Rate readiness, and result navigation.");

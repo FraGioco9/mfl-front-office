@@ -1,6 +1,7 @@
 const validators = [
   "validate-css-priority.mjs",
   "validate-responsive-layout.mjs",
+  "validate-evaluation-mobile-first-paint.mjs",
   "validate-runtime-style-ownership.mjs",
   "validate-sidebar-lifecycle-ownership.mjs",
   "validate-dropdown-style-ownership.mjs",

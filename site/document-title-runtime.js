@@ -130,7 +130,8 @@
     if (!routeBusy()) {
       const panel = document.getElementById("evaluationPanel");
       if (panel instanceof HTMLElement && !panel.hidden) {
-        const playerName = textFrom("#evaluationSummaryBody tr td:first-child");
+        const searchInput = document.getElementById("evaluationSearchInput");
+        const playerName = searchInput instanceof HTMLInputElement ? cleanText(searchInput.value) : "";
         if (playerName) return `Evaluation - ${playerName}`;
       }
     }

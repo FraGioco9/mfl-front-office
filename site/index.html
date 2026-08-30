@@ -218,7 +218,7 @@
         display: none;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {
-        display: block;
+        display: grid;
       }
       html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {
         align-items: flex-start;
@@ -636,11 +636,11 @@
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Position</th>
+                      <th aria-label="Position"><span class="evaluationHeaderFull">Position</span><span class="evaluationHeaderCompact" aria-hidden="true">POS</span></th>
                       <th>Age</th>
-                      <th>Overall</th>
-                      <th>Expected Seasons</th>
-                      <th>$MFL Return</th>
+                      <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
+                      <th aria-label="Expected Seasons"><span class="evaluationHeaderFull">Expected Seasons</span><span class="evaluationHeaderCompact" aria-hidden="true">EXP SZN</span></th>
+                      <th aria-label="$MFL Return"><span class="evaluationHeaderFull">$MFL Return</span><span class="evaluationHeaderCompact" aria-hidden="true">$MFL</span></th>
                       <th>Value</th>
                     </tr>
                   </thead>
@@ -655,12 +655,12 @@
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Season</th>
+                      <th aria-label="Season"><span class="evaluationHeaderFull">Season</span><span class="evaluationHeaderCompact" aria-hidden="true">SZN</span></th>
                       <th>Age</th>
-                      <th>Overall</th>
+                      <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
                       <th>$MFL</th>
                       <th>USD</th>
-                      <th>Discount Factor</th>
+                      <th aria-label="Discount Factor"><span class="evaluationHeaderFull">Discount Factor</span><span class="evaluationHeaderCompact" aria-hidden="true">DISC FACT</span></th>
                       <th>Value</th>
                     </tr>
                   </thead>
