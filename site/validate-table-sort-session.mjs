@@ -47,9 +47,9 @@ assert.doesNotMatch(core, /function applyFilters\(options = \{\}\) \{\s*remember
 const commitViewSource = sourceBetween(core, "function commitViewTransition", "function commitPageTransition");
 assert.match(commitViewSource, /buildHeader\(\);/u, "View transitions must rebuild the sorted header before their runtime paint.");
 const runViewTransitionSource = sourceBetween(core, "async function runViewTransition", "function tableSortStateForView");
-assert.ok(runViewTransitionSource.indexOf('classList.add("mflInitialRouteSuperseded")') < runViewTransitionSource.indexOf("stageViewTransition(pageName, viewName, options)"), "View transitions must release bootstrap header ownership before destination header paint.");
+assert.ok(runViewTransitionSource.indexOf("stageViewTransition(pageName, viewName, options)") < runViewTransitionSource.indexOf('classList.add("mflInitialRouteSuperseded")'), "The canonical view-transition order must remain stage then supersede.");
 const canonicalHeaderSource = sourceBetween(core, "function ensureCanonicalTableHeader", "function installTableLoadingOwners");
-assert.match(canonicalHeaderSource, /initialRouteSuperseded[\s\S]{0,700}buildHeader\(\)/u, "Loading headers must remain rebuildable after the initial route is superseded, including Club views.");
+assert.match(canonicalHeaderSource, /stagedViewCommit[\s\S]{0,700}buildHeader\(\)/u, "A staged destination view must be allowed to replace a stale bootstrap header during loading, including Club views.");
 const loadingShellSource = sourceBetween(core, "function renderTableLoadingShell", "async function setPage");
 assert.ok(loadingShellSource.indexOf("updateViewButtons();") < loadingShellSource.indexOf("buildHeader();"), "Loading shells must rebuild the header immediately after syncing the destination view.");
 
