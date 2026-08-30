@@ -31,12 +31,20 @@ includes(sharedUi, "-webkit-mask-image: none;\n    mask-image: none;", "The hydr
 includes(sharedUi, "min-width: 820px;", "Tablet/mobile tables must remain wider than the viewport when needed.");
 includes(sharedUi, "min-width: 680px;", "Phone tables must remain laterally pannable.");
 includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizontal scroll range.");
-includes(sharedUi, "--mfl-table-header-height: 28px;", "Mobile headers must be shorter than desktop.");
-includes(sharedUi, "--mfl-table-row-height: 28px;", "Mobile rows must be shorter than desktop.");
-includes(sharedUi, "--mfl-table-header-height: 25px;", "Phone headers must shrink further.");
-includes(sharedUi, "--mfl-table-row-height: 24px;", "Phone rows must shrink further.");
-includes(sharedUi, "--mfl-table-header-height: 23px;", "Small-phone headers must shrink further.");
-includes(sharedUi, "--mfl-table-row-height: 22px;", "Small-phone rows must shrink further.");
+includes(sharedUi, "--mfl-table-header-height: 32px;", "Mobile header height must match the visible 32px row box.");
+includes(sharedUi, "--mfl-table-row-height: 28px;", "Mobile cell content must retain its compact 28px height.");
+includes(sharedUi, "--mfl-table-row-outer-height: 32px;", "Mobile rows must retain their visible 32px outer height.");
+includes(sharedUi, "--mfl-table-header-height: 28px;", "Phone header height must match the visible 28px row box.");
+includes(sharedUi, "--mfl-table-row-height: 24px;", "Phone cell content must retain its compact 24px height.");
+includes(sharedUi, "--mfl-table-row-outer-height: 28px;", "Phone rows must retain their visible 28px outer height.");
+includes(sharedUi, "--mfl-table-header-height: 26px;", "Small-phone header height must match the visible 26px row box.");
+includes(sharedUi, "--mfl-table-row-height: 22px;", "Small-phone cell content must retain its compact 22px height.");
+includes(sharedUi, "--mfl-table-row-outer-height: 26px;", "Small-phone rows must retain their visible 26px outer height.");
+includes(sharedUi, ".playerTableScroller th {\n    font-size: 12px;", "Mobile headers must use the same 12px font as mobile rows.");
+includes(sharedUi, "@media (max-width: 520px) {", "Phone table styling must retain the canonical 520px breakpoint.");
+includes(sharedUi, ".playerTableScroller th {\n    font-size: 11px;", "Phone headers must use the same 11px font as phone rows.");
+includes(sharedUi, ".playerTableScroller th {\n    font-size: 10px;", "Tiny-screen headers must use the same 10px font as tiny-screen rows.");
+includes(sharedUi, "#tableHead .selectionCell input:disabled {\n    opacity: 0.45;", "Disabled header selection must look inactive throughout mobile loading.");
 includes(sharedUi, ".playerTableActionsButton {\n    width: 18px;", "Player table action buttons must scale on mobile.");
 includes(sharedUi, ".playerTableActionsButton {\n    width: 15px;", "Player table action buttons must scale again on phones.");
 includes(sharedUi, ":is(.retirementMarker, .newMintMarker) {\n    flex: 0 0 11px;", "Retirement/new-mint markers must keep a readable 11px mobile layout box.");
@@ -69,6 +77,7 @@ excludes(sharedUi, "MutationObserver", "Mobile table presentation must remain re
 
 includes(mobileTable, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Generated table presentation must explicitly gate mobile-only behavior.");
 includes(mobileTable, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Generated headings must switch only at the narrow breakpoint.");
+includes(mobileTable, 'selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;', "Rebuilt headers must stay non-selectable until loaded row selection state is available.");
 excludes(mobileTable, 'positions: "POS"', "Positions must not participate in width-dependent compact header scaling.");
 includes(mobileTable, 'column === "positions"\n          ? "POSITIONS"', "Generated mobile tables must call the Positions column POSITIONS at every mobile width.");
 for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
@@ -113,7 +122,20 @@ includes(bootstrap, "const maxScroll = canRender ? Math.max(0, scroller.scrollWi
 includes(bootstrap, "primeFirstPaintPlayerTableFade();", "The measured player-table fade state must be applied before runtime loading begins.");
 
 includes(releaseProjection, 'mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";', "Zero-request first paint must prime the reusable mobile table presentation owner.");
-includes(releaseProjection, ".playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\\\"checkbox\\\"] { box-sizing: border-box; flex: 0 0 13px;", "First-paint checkbox sizing must target both the table selection checkbox and Quick Filters after the synchronous shell wrapper is created.");
+includes(releaseProjection, "#progressionPage { --mfl-table-header-height: 32px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px;", "Mobile first-paint geometry must remain active during the initial-route handoff.");
+includes(releaseProjection, "#progressionPage { --mfl-table-header-height: 28px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px;", "Phone first-paint geometry must remain active during the initial-route handoff.");
+includes(releaseProjection, "#progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px;", "Tiny-screen first-paint geometry must remain active during the initial-route handoff.");
+includes(releaseProjection, "#progressionPage .playerTableScroller th { font-size: 12px; }", "Mobile first paint must apply the final 12px metric to the entire header cell.");
+includes(releaseProjection, "#progressionPage .playerTableScroller th { font-size: 11px; }", "Phone first paint must apply the final 11px metric to the entire header cell.");
+includes(releaseProjection, "#progressionPage .playerTableScroller th { font-size: 10px; }", "Tiny-screen first paint must apply the final 10px metric to the entire header cell.");
+excludes(releaseProjection, "#tableHead > tr { height: var(--mfl-table-header-height); }", "First paint must not create a temporary header-row height owner that disappears during hydration.");
+excludes(releaseProjection, "#tableHead > tr > th { height: var(--mfl-table-header-height); min-height: var(--mfl-table-header-height); line-height: var(--mfl-table-header-height); }", "First paint must not create temporary header-cell geometry that disappears during hydration.");
+includes(releaseProjection, "#tableHead th > span:first-child { font-size: 12px; }", "Mobile first paint must use the row's 12px font in the header.");
+includes(releaseProjection, "#tableHead th > span:first-child { font-size: 11px; }", "Phone first paint must use the row's 11px font in the header.");
+includes(releaseProjection, "#tableHead th > span:first-child { font-size: 10px; }", "Tiny-screen first paint must use the row's 10px font in the header.");
+includes(releaseProjection, "#tableHead .selectionCell input:disabled { opacity: 0.45; }", "First paint must already show header selection as graphically disabled.");
+includes(releaseProjection, ".playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\\\"checkbox\\\"] { box-sizing: border-box; flex: 0 0 13px;", "First-paint checkbox sizing must remain active through the initial-route handoff.");
+excludes(releaseProjection, "[data-initial-table-page] #progressionPage { --mfl-table-header-height:", "Mobile header geometry must not disappear when the initial route resolves.");
 excludes(releaseProjection, "#appShell #progressionPage > .quickFilters input[type=\\\"checkbox\\\"]", "First-paint Quick Filter sizing must not depend on Quick Filters remaining a direct progression-page child.");
 excludes(releaseProjection, "@media (max-width: 843px)", "First-paint table fading must never be forced from a viewport-width assumption.");
 includes(releaseProjection, ".tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { content: \\\"\\\"; position: absolute; top: var(--mfl-table-header-height); bottom: 0;", "First-paint fading must begin below the table header on both edges.");
@@ -130,7 +152,6 @@ excludes(releaseProjection, "#appShell #progressionPage > .quickFilters { height
 includes(releaseProjection, "@media (min-width: 521px) and (max-width: 900px)", "Tablet first paint must explicitly keep canonical full header text.");
 includes(releaseProjection, "#tableHead th > span:first-child::after { content: none; display: none; }", "First paint must suppress legacy positional pseudo-labels and display the canonical header text generated by bootstrap.");
 includes(releaseProjection, "@media (max-width: 520px)", "First-paint compact labels must use the same phone breakpoint.");
-includes(releaseProjection, "#tableHead th > span:first-child { font-size: 9px; }", "Phone first paint must display bootstrap-generated compact labels directly.");
 excludes(releaseProjection, "content: \\\"OVR\\\"", "First-paint compact headings must no longer be invented by positional CSS pseudo-elements.");
 excludes(releaseProjection, "content: \\\"POS\\\"", "First-paint compact headings must no longer be invented by positional CSS pseudo-elements.");
 includes(releaseProjection, "-webkit-mask-image: none; mask-image: none;", "First paint must disable the legacy scroll-layer mask before touch interaction.");

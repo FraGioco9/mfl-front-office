@@ -858,6 +858,7 @@ function tableBuildHeaderOwner() {
   selectionHeader.className = "selectionCell";
   selectVisibleInput.id = "selectVisiblePlayersInput";
   selectVisibleInput.type = "checkbox";
+  selectVisibleInput.disabled = true;
   selectVisibleInput.setAttribute("aria-label", "Select visible players");
 
   selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
@@ -892,6 +893,7 @@ function tableBuildHeaderOwner() {
       defense: "DEF",
       physical: "PHY",
       goalkeeping: "GK",
+      player_seasons: "SZN",
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
@@ -2414,6 +2416,10 @@ function compactMobilePlayerName(value) {
   return initial ? `${initial}. ${parts.at(-1)}` : fullName;
 }
 
+function compactMobileJoinedAgency(value) {
+  return String(value || "").trim().split(/\s+/, 1)[0] || "";
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
@@ -2553,7 +2559,10 @@ function tableRenderTableOwner() {
         );
         cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
-        cell.textContent = formatCellValue(row, column);
+        const joinedAgencyValue = formatCellValue(row, column);
+        cell.textContent = window.matchMedia("(max-width: 520px)").matches
+          ? compactMobileJoinedAgency(joinedAgencyValue)
+          : joinedAgencyValue;
       } else if (column === "active_contract_club_division") {
         const division = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, column)) : null;
         if (division) {
