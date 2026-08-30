@@ -1,0 +1,138 @@
+name: PR 569 sort semantics v5
+
+on:
+  push:
+    branches:
+      - fix/page-scoped-default-sorting
+    paths:
+      - .github/workflows/pr569-sort-semantics-v5.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/page-scoped-default-sorting
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Apply sorting semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"Missing target: {label}")
+              return text.replace(old, new, 1)
+
+          core_path = Path("site/modules/app-core.js")
+          core = core_path.read_text()
+
+          core = replace_once(
+              core,
+              '        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";\n        const resetDirection = state.view === "next" ? "asc" : "desc";',
+              '        const defaultDirection = numberColumns.has(column) ? "desc" : "asc";\n        const resetDirection = "desc";',
+              "header direction semantics",
+          )
+
+          core = replace_once(
+              core,
+              'function compareNextOverallRows(a, b, column, direction) {\n  const aNeeded = tableNextOverallSortValue(a, column);\n  const bNeeded = tableNextOverallSortValue(b, column);\n  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, direction, true);\n\n  if (primaryComparison !== 0) {\n    return primaryComparison;\n  }\n\n  return comparePrimitiveValues(tableNextOverallPreciseValue(a), tableNextOverallPreciseValue(b), -1, true);\n}',
+              'function compareNextOverallRows(a, b, column, direction) {\n  const aNeeded = tableNextOverallSortValue(a, column);\n  const bNeeded = tableNextOverallSortValue(b, column);\n  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, -direction, true);\n\n  if (primaryComparison !== 0) {\n    return primaryComparison;\n  }\n\n  const aCurrent = column === "overall" ? tableNextOverallPreciseValue(a) : getValue(a, column);\n  const bCurrent = column === "overall" ? tableNextOverallPreciseValue(b) : getValue(b, column);\n  return comparePrimitiveValues(aCurrent, bCurrent, direction, true);\n}',
+              "Next Overall client ordering",
+          )
+
+          core = replace_once(
+              core,
+              '      getValue(row, getProgressionColumn(column)) || 0,\n      getValue(row, "overall") || 0,',
+              '      getValue(row, getProgressionColumn(column)) || 0,\n      getValue(row, column) || 0,',
+              "Progression selected raw stat tie-break",
+          )
+
+          core = replace_once(
+              core,
+              '      const comparisonDirection = state.currentPage === "progression" && index > 0 ? -1 : direction;\n      const comparison = comparePrimitiveValues(aValue[index], bValue[index], comparisonDirection, true);',
+              '      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);',
+              "Progression symmetric direction",
+          )
+
+          core_path.write_text(core)
+
+          api_path = Path("site/api/_data-page.js")
+          api = api_path.read_text()
+          api = replace_once(
+              api,
+              '  if (view === "next" && STAT_COLUMNS.has(key)) {\n    const derived = key === "overall" ? "next_overall_gap" : `${key}_to_next_overall`;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, next_overall DESC, player_id DESC`;\n  }',
+              '  if (view === "next" && STAT_COLUMNS.has(key)) {\n    const derived = key === "overall" ? "next_overall_gap" : `${key}_to_next_overall`;\n    const gapDirection = direction === "DESC" ? "ASC" : "DESC";\n    const currentValue = key === "overall" ? "next_overall" : key;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${gapDirection}, ${quoteIdentifier(currentValue)} ${direction}, player_id DESC`;\n  }',
+              "Next Overall API ordering",
+          )
+          api = replace_once(
+              api,
+              '  if (["current", "all"].includes(view) && STAT_COLUMNS.has(key)) {\n    const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall DESC, player_id DESC`;\n  }',
+              '  if (["current", "all"].includes(view) && STAT_COLUMNS.has(key)) {\n    const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, ${quoteIdentifier(key)} ${direction}, player_id DESC`;\n  }',
+              "Progression API selected raw stat tie-break",
+          )
+          api_path.write_text(api)
+
+          validator_path = Path("site/validate-table-sort-session.mjs")
+          validator = validator_path.read_text()
+          validator = replace_once(
+              validator,
+              'assert.match(core, /state\\.view === "next" && statColumns\\.includes\\(state\\.sortKey\\)[\\s\\S]{0,120}compareNextOverallRows\\(a, b, state\\.sortKey, direction\\)/u, "Next Overall comparisons must use the gap comparator for Overall and every stat.");',
+              'assert.match(core, /state\\.view === "next" && statColumns\\.includes\\(state\\.sortKey\\)[\\s\\S]{0,120}compareNextOverallRows\\(a, b, state\\.sortKey, direction\\)/u, "Next Overall comparisons must use the gap comparator for Overall and every stat.");\nassert.match(core, /primaryComparison = comparePrimitiveValues\\(aNeeded, bNeeded, -direction, true\\)/u, "Next Overall descending must put the lowest required gap first.");\nassert.match(core, /column === "overall" \\? tableNextOverallPreciseValue\\(a\\) : getValue\\(a, column\\)[\\s\\S]{0,180}comparePrimitiveValues\\(aCurrent, bCurrent, direction, true\\)/u, "Next Overall tie-breaks must use the selected Overall/stat current value with the visible direction.");\nassert.doesNotMatch(core, /state\\.view === "next" && statColumns\\.includes\\(column\\) \\? "asc"/u, "Next Overall columns must use the normal descending numeric arrow semantics.");',
+              "Next Overall validator assertions",
+          )
+          validator = replace_once(
+              validator,
+              'assert.match(dataPage, /view === "next" && STAT_COLUMNS\\.has\\(key\\)[\\s\\S]{0,220}key === "overall" \\? "next_overall_gap" : `\\$\\{key\\}_to_next_overall`/u, "Incremental Next Overall sorting must use next_overall_gap for Overall and *_to_next_overall for stats.");',
+              'assert.match(dataPage, /view === "next" && STAT_COLUMNS\\.has\\(key\\)[\\s\\S]{0,360}gapDirection = direction === "DESC" \\? "ASC" : "DESC"[\\s\\S]{0,220}currentValue = key === "overall" \\? "next_overall" : key/u, "Incremental Next Overall descending must order the lowest gap first and apply the same rule to every stat.");',
+              "Next Overall API validator",
+          )
+          validator = replace_once(
+              validator,
+              'assert.match(core, /state\\.currentPage === "progression" && \\(state\\.view === "current" \\|\\| state\\.view === "all"\\) && statColumns\\.includes\\(column\\)[\\s\\S]{0,180}getProgressionColumn\\(column\\)[\\s\\S]{0,100}getValue\\(row, "overall"\\)/u, "Progression sorting must compare Overall/stat progression first and Overall second.");\nassert.match(core, /comparisonDirection = state\\.currentPage === "progression" && index > 0 \\? -1 : direction/u, "Progression tie-breaks must keep higher Overall first after equal progression.");\nassert.match(dataPage, /\\["current", "all"\\]\\.includes\\(view\\)[\\s\\S]{0,320}overall DESC, player_id DESC/u, "Incremental Progression sorting must use progression first and Overall descending as the tie-break in both directions.");',
+              'assert.match(core, /state\\.currentPage === "progression" && \\(state\\.view === "current" \\|\\| state\\.view === "all"\\) && statColumns\\.includes\\(column\\)[\\s\\S]{0,180}getProgressionColumn\\(column\\)[\\s\\S]{0,100}getValue\\(row, column\\)/u, "Progression sorting must compare the selected Overall/stat progression first and that same raw Overall/stat second.");\nassert.doesNotMatch(core, /comparisonDirection = state\\.currentPage === "progression"/u, "Progression primary and raw selected-stat tie-break must use the same visible sort direction.");\nassert.match(dataPage, /\\["current", "all"\\]\\.includes\\(view\\)[\\s\\S]{0,320}quoteIdentifier\\(key\\)\\} \\$\\{direction\\}, player_id DESC/u, "Incremental Progression sorting must use selected progression first and the matching raw Overall/stat second.");',
+              "Progression validator assertions",
+          )
+          validator_path.write_text(validator)
+
+          retired_path = Path("site/validate-progression-retired-filter.mjs")
+          retired = retired_path.read_text()
+          retired = replace_once(
+              retired,
+              '  pageSource.includes(\'const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, overall DESC, player_id DESC`;\'),\n  "Current-season and all-time views must sort by the selected progression value first and Overall descending as the tie-break.",',
+              '  pageSource.includes(\'const derived = `${key}_${view === "current" ? "prog_current_season" : "prog_all"}`;\\n    return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, ${quoteIdentifier(key)} ${direction}, player_id DESC`;\'),\n  "Current-season and all-time views must sort by the selected progression value first and the matching raw Overall/stat second.",',
+              "Progression retired validator",
+          )
+          retired_path.write_text(retired)
+          PY
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Rebuild generated runtime chunks
+        working-directory: site
+        run: npm run build:core
+      - name: Run sorting regression
+        working-directory: site
+        run: node validate-table-sort-session.mjs
+      - name: Stage generated contract
+        run: git add site/modules/app-core.js site/modules/app-core-runtime.js site/modules/app-core-table-runtime.js site/api/_data-page.js site/validate-table-sort-session.mjs site/validate-progression-retired-filter.mjs
+      - name: Run full checks
+        working-directory: site
+        run: npm run check
+      - name: Commit implementation and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/pr569-sort-semantics-v5.yml
+          git add -A
+          git commit -m "Align sort directions across table stats"
+          git push origin HEAD:fix/page-scoped-default-sorting
