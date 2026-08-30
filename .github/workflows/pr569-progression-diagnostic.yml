@@ -35,19 +35,12 @@ jobs:
 
           core_path = Path("site/modules/app-core.js")
           core = core_path.read_text()
-          old = '''  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
-            return [
-              getValue(row, getProgressionColumn(column)) || 0,
-              getValue(row, column) || 0,
-            ];
-          }'''.replace("            ", "    ", 4)
-          new = '''  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
-            return [
-              getValue(row, getProgressionColumn(column)),
-              getValue(row, column),
-            ];
-          }'''.replace("            ", "    ", 4)
-          core = replace_once(core, old, new, "preserve missing Progression values")
+          core = replace_once(
+              core,
+              "      getValue(row, getProgressionColumn(column)) || 0,\n      getValue(row, column) || 0,",
+              "      getValue(row, getProgressionColumn(column)),\n      getValue(row, column),",
+              "preserve missing Progression values",
+          )
           core = replace_once(
               core,
               "  state.filteredRows.sort(compareRows);\n  updateFilterSummary();",
