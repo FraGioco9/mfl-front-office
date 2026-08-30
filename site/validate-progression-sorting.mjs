@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import { DatabaseSync } from "node:sqlite";
 
+// Execute the exact API ORDER BY contract so Progression sorting cannot regress behind source-only assertions.
 const require = createRequire(import.meta.url);
 const { orderSql } = require("./api/_data-page.js");
 const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
