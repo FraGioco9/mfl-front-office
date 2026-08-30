@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 
+// Sorting stays page-scoped until a destination view cannot represent the active key; that destination default then becomes the new page intent.
 const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
 const bootstrap = fs.readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
 const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");
