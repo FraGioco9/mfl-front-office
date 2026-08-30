@@ -1,5 +1,9 @@
 [
   [
+    "v1.127.4",
+    "Refine mobile tables, search, sorting, and persisted state"
+  ],
+  [
     "v1.127.3",
     "Refine Filters, navigation, mobile layout, progression emails, and table controls"
   ],
