@@ -35,101 +35,99 @@ jobs:
 
           core_path = Path("site/modules/app-core.js")
           core = core_path.read_text()
-
           old = '''  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
-    return [
-      getValue(row, getProgressionColumn(column)) || 0,
-      getValue(row, column) || 0,
-    ];
-  }'''
+            return [
+              getValue(row, getProgressionColumn(column)) || 0,
+              getValue(row, column) || 0,
+            ];
+          }'''.replace("            ", "    ", 4)
           new = '''  if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
-    return [
-      getValue(row, getProgressionColumn(column)),
-      getValue(row, column),
-    ];
-  }'''
+            return [
+              getValue(row, getProgressionColumn(column)),
+              getValue(row, column),
+            ];
+          }'''.replace("            ", "    ", 4)
           core = replace_once(core, old, new, "preserve missing Progression values")
-
-          old = '''  state.filteredRows.sort(compareRows);
-  updateFilterSummary();'''
-          new = '''  if (!state.incrementalApplying) {
-    state.filteredRows.sort(compareRows);
-  }
-  updateFilterSummary();'''
-          core = replace_once(core, old, new, "keep API order while applying incremental payload")
+          core = replace_once(
+              core,
+              "  state.filteredRows.sort(compareRows);\n  updateFilterSummary();",
+              "  if (!state.incrementalApplying) {\n    state.filteredRows.sort(compareRows);\n  }\n  updateFilterSummary();",
+              "keep API order while applying incremental payload",
+          )
           core_path.write_text(core)
-
-          validator_path = Path("site/validate-progression-sorting.mjs")
-          validator_path.write_text(r'''import assert from "node:assert/strict";
-import fs from "node:fs";
-import { createRequire } from "node:module";
-import { DatabaseSync } from "node:sqlite";
-
-const require = createRequire(import.meta.url);
-const { orderSql } = require("./api/_data-page.js");
-const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
-
-assert.match(
-  core,
-  /if \(!state\.incrementalApplying\) \{\s*state\.filteredRows\.sort\(compareRows\);\s*\}/u,
-  "Incremental payload application must preserve the API's global sort order instead of sorting the page a second time.",
-);
-assert.match(
-  core,
-  /state\.currentPage === "progression"[\s\S]{0,220}getValue\(row, getProgressionColumn\(column\)\),[\s\S]{0,80}getValue\(row, column\),/u,
-  "Progression client tuples must preserve missing values and use the matching raw Overall/stat as the tie-break.",
-);
-
-const db = new DatabaseSync(":memory:");
-db.exec(`
-  CREATE TABLE players (
-    player_id INTEGER PRIMARY KEY,
-    overall REAL,
-    pace REAL,
-    overall_prog_current_season REAL,
-    pace_prog_current_season REAL,
-    overall_prog_all REAL,
-    pace_prog_all REAL
-  );
-`);
-
-const insert = db.prepare(`
-  INSERT INTO players (
-    player_id, overall, pace,
-    overall_prog_current_season, pace_prog_current_season,
-    overall_prog_all, pace_prog_all
-  ) VALUES (?, ?, ?, ?, ?, ?, ?)
-`);
-[
-  [1, 80, 70, 3, 5, 7, 2],
-  [2, 90, 60, 3, 5, 7, 4],
-  [3, 85, 95, 4, 1, 6, 4],
-  [4, 95, 80, null, 6, null, null],
-  [5, 70, 90, 1, null, 9, 5],
-].forEach((row) => insert.run(...row));
-
-function ids(view, key, direction) {
-  const order = orderSql("progression", view, key, direction);
-  return db.prepare(`SELECT player_id FROM players ORDER BY ${order}`).all().map((row) => Number(row.player_id));
-}
-
-assert.deepEqual(ids("current", "overall", "desc"), [3, 2, 1, 5, 4], "Current Season Overall descending must use biggest increase, then highest Overall, with missing progression last.");
-assert.deepEqual(ids("current", "overall", "asc"), [5, 1, 2, 3, 4], "Current Season Overall ascending must reverse progression and Overall while keeping missing progression last.");
-assert.deepEqual(ids("current", "pace", "desc"), [4, 1, 2, 3, 5], "Current Season Pace descending must use biggest Pace increase, then highest Pace, with missing progression last.");
-assert.deepEqual(ids("current", "pace", "asc"), [3, 2, 1, 4, 5], "Current Season Pace ascending must reverse Pace progression and Pace while keeping missing progression last.");
-assert.deepEqual(ids("all", "overall", "desc"), [5, 2, 1, 3, 4], "All Time Overall descending must use biggest increase, then highest Overall, with missing progression last.");
-assert.deepEqual(ids("all", "pace", "desc"), [5, 3, 2, 1, 4], "All Time Pace descending must use biggest Pace increase, then highest Pace, with missing progression last.");
-
-console.log("Executable Progression sorting validation passed.");
-''')
 
           domain_path = Path("site/validate-domain-table.mjs")
           domain = domain_path.read_text()
-          old = '  "validate-table-sort-session.mjs",\n  "validate-header-selection-loading.mjs",'
-          new = '  "validate-table-sort-session.mjs",\n  "validate-progression-sorting.mjs",\n  "validate-header-selection-loading.mjs",'
-          domain = replace_once(domain, old, new, "register executable Progression sorting regression")
+          domain = replace_once(
+              domain,
+              '  "validate-table-sort-session.mjs",\n  "validate-header-selection-loading.mjs",',
+              '  "validate-table-sort-session.mjs",\n  "validate-progression-sorting.mjs",\n  "validate-header-selection-loading.mjs",',
+              "register executable Progression sorting regression",
+          )
           domain_path.write_text(domain)
           PY
+          cat > site/validate-progression-sorting.mjs <<'EOF'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          import { createRequire } from "node:module";
+          import { DatabaseSync } from "node:sqlite";
+
+          const require = createRequire(import.meta.url);
+          const { orderSql } = require("./api/_data-page.js");
+          const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
+
+          assert.match(
+            core,
+            /if \(!state\.incrementalApplying\) \{\s*state\.filteredRows\.sort\(compareRows\);\s*\}/u,
+            "Incremental payload application must preserve the API global sort order instead of sorting the page a second time.",
+          );
+          assert.match(
+            core,
+            /state\.currentPage === "progression"[\s\S]{0,220}getValue\(row, getProgressionColumn\(column\)\),[\s\S]{0,80}getValue\(row, column\),/u,
+            "Progression client tuples must preserve missing values and use the matching raw Overall/stat as the tie-break.",
+          );
+
+          const db = new DatabaseSync(":memory:");
+          db.exec(`
+            CREATE TABLE players (
+              player_id INTEGER PRIMARY KEY,
+              overall REAL,
+              pace REAL,
+              overall_prog_current_season REAL,
+              pace_prog_current_season REAL,
+              overall_prog_all REAL,
+              pace_prog_all REAL
+            );
+          `);
+          const insert = db.prepare(`
+            INSERT INTO players (
+              player_id, overall, pace,
+              overall_prog_current_season, pace_prog_current_season,
+              overall_prog_all, pace_prog_all
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          `);
+          [
+            [1, 80, 70, 3, 5, 7, 2],
+            [2, 90, 60, 3, 5, 7, 4],
+            [3, 85, 95, 4, 1, 6, 4],
+            [4, 95, 80, null, 6, null, null],
+            [5, 70, 90, 1, null, 9, 5],
+          ].forEach((row) => insert.run(...row));
+
+          function ids(view, key, direction) {
+            const order = orderSql("progression", view, key, direction);
+            return db.prepare(`SELECT player_id FROM players ORDER BY ${order}`).all().map((row) => Number(row.player_id));
+          }
+
+          assert.deepEqual(ids("current", "overall", "desc"), [3, 2, 1, 5, 4]);
+          assert.deepEqual(ids("current", "overall", "asc"), [5, 1, 2, 3, 4]);
+          assert.deepEqual(ids("current", "pace", "desc"), [4, 1, 2, 3, 5]);
+          assert.deepEqual(ids("current", "pace", "asc"), [3, 2, 1, 4, 5]);
+          assert.deepEqual(ids("all", "overall", "desc"), [5, 2, 1, 3, 4]);
+          assert.deepEqual(ids("all", "pace", "desc"), [5, 3, 2, 1, 4]);
+
+          console.log("Executable Progression sorting validation passed.");
+          EOF
       - name: Install dependencies
         working-directory: site
         run: npm ci
