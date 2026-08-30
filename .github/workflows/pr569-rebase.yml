@@ -1,0 +1,45 @@
+name: PR 569 rebase
+
+on:
+  push:
+    branches:
+      - fix/page-scoped-default-sorting
+    paths:
+      - .github/workflows/pr569-rebase.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/page-scoped-default-sorting
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Rebase onto latest main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Verify rebased branch
+        working-directory: site
+        run: npm run check
+      - name: Remove helper and push rebased branch
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/pr569-rebase.yml
+          git add -A
+          git commit -m "Remove PR 569 rebase helper"
+          git push --force-with-lease origin HEAD:fix/page-scoped-default-sorting
