@@ -1498,13 +1498,14 @@ button:disabled:not(.menuButton) {
 .advancedPlayerTable th {
   background: var(--header-bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: inherit;
   font-weight: 800;
   text-transform: uppercase;
 }
 
 .advancedPlayerTable thead th {
   position: sticky;
+  font-size: 10px;
   top: 0;
   z-index: 32;
 }

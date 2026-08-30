@@ -745,8 +745,8 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 11px;
   }
 
-  .advancedPlayerTable th {
-    font-size: 12px;
+  .advancedPlayerTable thead th {
+    font-size: 9px;
   }
 
   .evaluationSummaryShell .tableScroller,
@@ -1891,8 +1891,8 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 10px;
   }
 
-  .advancedPlayerTable th {
-    font-size: 11px;
+  .advancedPlayerTable thead th {
+    font-size: 8px;
   }
 
   .evaluationSummaryTable {

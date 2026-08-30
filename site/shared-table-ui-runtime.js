@@ -99,7 +99,7 @@
     padding-inline: 2px;
   }
   #progressionPage .playerTableScroller th {
-    font-size: 12px;
+    font-size: 10px;
   }
   #progressionPage #tableHead .selectionCell input:disabled {
     opacity: 0.45;
@@ -251,7 +251,7 @@
 @media (min-width: 521px) and (max-width: 900px) {
   #progressionPage #tableHead th:nth-child(6) > span:first-child,
   #progressionPage #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child {
-    font-size: 12px;
+    font-size: 10px;
   }
   #progressionPage #tableHead th:nth-child(6) > span:first-child::after,
   #progressionPage #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after {
@@ -293,7 +293,7 @@
     min-width: 680px;
   }
   #progressionPage .playerTableScroller th {
-    font-size: 11px;
+    font-size: 9px;
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
@@ -380,7 +380,7 @@
     min-width: 600px;
   }
   #progressionPage .playerTableScroller th {
-    font-size: 10px;
+    font-size: 8px;
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
