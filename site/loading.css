@@ -5,10 +5,8 @@ body[data-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pag
   display: none;
 }
 
-/* View navigation hides pager chrome immediately; Table loading keeps it hidden until the active request settles. */
-html.mflNavigationPending #progressionPage nav.pager {
-  display: none;
-}
+/* Pager visibility belongs to the rendered page and the destination table-loading owner.
+ * Pending navigation alone must not hide chrome from the still-visible outgoing page. */
 
 /* Route commits own horizontal-cue visibility; suppress only the cue transition while a page switch is pending. */
 html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollButton {
