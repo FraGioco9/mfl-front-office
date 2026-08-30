@@ -74,15 +74,41 @@
     return controller && typeof controller === "object" ? controller : null;
   }
 
-  function syncWatchlistSelectorNavigationIntent(target) {
-    if (!(target instanceof Element)) return;
+  function navigationIntentPage(target) {
+    if (!(target instanceof Element)) return "";
+
     const control = target.closest("#sidebar .navButton[data-page]");
-    if (!(control instanceof HTMLElement)) return;
+    if (control instanceof HTMLElement) return String(control.dataset.page || "");
+
+    const link = target.closest("a[href]");
+    if (!(link instanceof HTMLAnchorElement)) return "";
+    if (link.hasAttribute("download")) return "";
+    const linkTarget = String(link.getAttribute("target") || "").toLowerCase();
+    if (linkTarget && linkTarget !== "_self") return "";
+
+    let url;
+    try {
+      url = new URL(link.href, window.location.href);
+    } catch {
+      return "";
+    }
+    if (url.origin !== window.location.origin) return "";
+
+    const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
+    if (typeof canonicalRequest !== "function") return "";
+    return String(canonicalRequest(url.pathname)?.pageName || "");
+  }
+
+  function syncWatchlistSelectorNavigationIntent(event) {
+    if (!(event instanceof MouseEvent)) return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const targetPage = navigationIntentPage(event.target);
+    if (!targetPage) return;
 
     const switcher = document.getElementById("watchlistSwitcher");
     if (!(switcher instanceof HTMLElement)) return;
 
-    const targetPage = String(control.dataset.page || "");
     const show = targetPage === "watchlist"
       && document.documentElement.dataset.storedWalletOptIn === "true";
     switcher.hidden = !show;
@@ -253,7 +279,7 @@
       return;
     }
 
-    syncWatchlistSelectorNavigationIntent(event.target);
+    syncWatchlistSelectorNavigationIntent(event);
     if (beginNavigationIntent(event.target)) handOffNavigationIntent();
   }
 

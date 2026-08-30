@@ -25,6 +25,48 @@ invariant(
 );
 
 invariant(
+  controls.includes("function navigationIntentPage(target) {"),
+  "Immediate Watchlist selector visibility must resolve the actual destination page for navigation intent.",
+);
+invariant(
+  controls.includes('target.closest("#sidebar .navButton[data-page]")'),
+  "Watchlist selector intent must continue supporting sidebar page navigation.",
+);
+invariant(
+  controls.includes('target.closest("a[href]")'),
+  "Watchlist selector intent must support internal entity links such as Watchlist-to-Club navigation.",
+);
+invariant(
+  controls.includes('if (url.origin !== window.location.origin) return "";')
+    && controls.includes("window.__mflAppConfig?.routes?.canonicalRequest"),
+  "Internal link intent must ignore external URLs and reuse the canonical route classifier.",
+);
+invariant(
+  controls.includes("function syncWatchlistSelectorNavigationIntent(event) {")
+    && controls.includes("event.metaKey || event.ctrlKey || event.shiftKey || event.altKey"),
+  "Immediate selector updates must run only for navigation that will replace the current page.",
+);
+invariant(
+  controls.includes("const targetPage = navigationIntentPage(event.target);")
+    && controls.includes('const show = targetPage === "watchlist"'),
+  "The Watchlist selector must be synchronized from the destination route instead of the current page.",
+);
+invariant(
+  controls.includes("switcher.hidden = !show;")
+    && controls.includes('if (dropdown instanceof HTMLElement) dropdown.hidden = true;')
+    && controls.includes('button.setAttribute("aria-expanded", "false")'),
+  "Leaving Watchlist must hide the selector and close its dropdown synchronously.",
+);
+const selectorIntent = controls.indexOf("syncWatchlistSelectorNavigationIntent(event);");
+const navigationHandoff = controls.indexOf("if (beginNavigationIntent(event.target)) handOffNavigationIntent();");
+invariant(
+  controls.includes('document.addEventListener("click", onClick, true);')
+    && selectorIntent >= 0
+    && navigationHandoff > selectorIntent,
+  "Watchlist selector visibility must update in capture phase before asynchronous route handoff begins.",
+);
+
+invariant(
   releaseProjection.includes('#progressionPage .views > #openFiltersButton { order: -2; }')
     && releaseProjection.includes('#progressionPage .views > #viewControlsSeparator { order: -1; }'),
   "The zero-request mobile first-paint stylesheet must place Filters and its separator before every view button.",
@@ -103,4 +145,4 @@ invariant(
   "Bootstrap view ordering must remain safe while the mobile Watchlist selector is outside Views.",
 );
 
-console.log("Canonical mobile first-paint and page-transition chrome validation passed.");
+console.log("Canonical Watchlist selector navigation, mobile first-paint, and page-transition chrome validation passed.");
