@@ -40,7 +40,7 @@
     style.textContent = `
 @media (max-width: 900px) {
   #progressionPage {
-    --mfl-table-header-height: 28px;
+    --mfl-table-header-height: 32px;
     --mfl-table-row-height: 28px;
     --mfl-table-row-outer-height: 32px;
   }
@@ -97,6 +97,12 @@
   }
   #progressionPage .playerTableScroller :is(th, td) {
     padding-inline: 2px;
+  }
+  #progressionPage .playerTableScroller th {
+    font-size: 12px;
+  }
+  #progressionPage #tableHead .selectionCell input:disabled {
+    opacity: 0.45;
   }
   #progressionPage .playerTableScroller :is(th, td).col-listing {
     padding-inline: 0;
@@ -245,7 +251,7 @@
 @media (min-width: 521px) and (max-width: 900px) {
   #progressionPage #tableHead th:nth-child(6) > span:first-child,
   #progressionPage #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child {
-    font-size: 10px;
+    font-size: 12px;
   }
   #progressionPage #tableHead th:nth-child(6) > span:first-child::after,
   #progressionPage #tableHead th:nth-child(n+9):nth-child(-n+15) > span:first-child::after {
@@ -275,7 +281,7 @@
 }
 @media (max-width: 520px) {
   #progressionPage {
-    --mfl-table-header-height: 25px;
+    --mfl-table-header-height: 28px;
     --mfl-table-row-height: 24px;
     --mfl-table-row-outer-height: 28px;
   }
@@ -285,6 +291,9 @@
   }
   #progressionPage .playerTableScroller table {
     min-width: 680px;
+  }
+  #progressionPage .playerTableScroller th {
+    font-size: 11px;
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
@@ -348,9 +357,10 @@
     height: 7px;
   }
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex-basis: 4px;
-    width: 4px;
-    height: 4px;
+    flex-basis: 5px;
+    width: 5px;
+    height: 5px;
+    margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
     transform: scale(0.62);
@@ -358,7 +368,7 @@
 }
 @media (max-width: 380px) {
   #progressionPage {
-    --mfl-table-header-height: 23px;
+    --mfl-table-header-height: 26px;
     --mfl-table-row-height: 22px;
     --mfl-table-row-outer-height: 26px;
   }
@@ -368,6 +378,9 @@
   }
   #progressionPage .playerTableScroller table {
     min-width: 600px;
+  }
+  #progressionPage .playerTableScroller th {
+    font-size: 10px;
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
@@ -428,9 +441,10 @@
     height: 6px;
   }
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex-basis: 3px;
-    width: 3px;
-    height: 3px;
+    flex-basis: 5px;
+    width: 5px;
+    height: 5px;
+    margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
     transform: scale(0.54);

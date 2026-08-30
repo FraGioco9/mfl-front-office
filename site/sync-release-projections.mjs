@@ -14,6 +14,8 @@ const FIRST_PAINT_CONFIG_START = "        // BEGIN GENERATED FIRST-PAINT ROUTE C
 const FIRST_PAINT_CONFIG_END = "        // END GENERATED FIRST-PAINT ROUTE CONFIG";
 const MOBILE_WATCHLIST_FIRST_PAINT_START = "          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->";
 const MOBILE_WATCHLIST_FIRST_PAINT_END = "          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->";
+const MOBILE_TABLE_FIRST_PAINT_CASCADE_START = "    <!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->";
+const MOBILE_TABLE_FIRST_PAINT_CASCADE_END = "    <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->";
 const MFL_STATS_FILTERS_START = "              <!-- BEGIN GENERATED MFL STATS FILTERS -->";
 const MFL_STATS_FILTERS_END = "              <!-- END GENERATED MFL STATS FILTERS -->";
 
@@ -62,7 +64,7 @@ export function firstPaintRouteConfigProjectionSource() {
     '        mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";',
     "        mobileTableFirstPaintStyle.textContent = `",
     "@media (max-width: 900px) {",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 28px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px; --mfl-table-col-listing: 4.2%; --mfl-table-col-positions: 9.699243795931409%; }",
+    "  #progressionPage { --mfl-table-header-height: 32px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px; --mfl-table-col-listing: 4.2%; --mfl-table-col-positions: 9.699243795931409%; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #openFiltersButton { order: -2; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #viewControlsSeparator { order: -1; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell { position: relative; }",
@@ -72,32 +74,51 @@ export function firstPaintRouteConfigProjectionSource() {
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollLeft::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollRight::after { opacity: 0.94; visibility: visible; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller { display: block; width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: auto; -webkit-mask-image: none; mask-image: none; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 820px; max-width: none; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { box-sizing: border-box; flex: 0 0 13px; width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; aspect-ratio: 1 / 1; background-size: 8px 6px; border-radius: 3px; }",
+    "  #progressionPage .playerTableScroller th { font-size: 12px; }",
+    "  #progressionPage #tableHead th > span:first-child { font-size: 12px; }",
+    "  #progressionPage #tableHead .selectionCell input:disabled { opacity: 0.45; }",
+    "  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { box-sizing: border-box; flex: 0 0 13px; width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; aspect-ratio: 1 / 1; background-size: 8px 6px; border-radius: 3px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.75); transform-origin: center; }",
     "}",
     "@media (min-width: 521px) and (max-width: 900px) {",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "  #progressionPage #tableHead th > span:first-child { font-size: 12px; }",
+    "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
     "}",
     "@media (max-width: 520px) {",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 25px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px; --mfl-table-col-listing: 3.8%; --mfl-table-col-positions: 10.099243795931411%; }",
+    "  #progressionPage { --mfl-table-header-height: 28px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px; --mfl-table-col-listing: 3.8%; --mfl-table-col-positions: 10.099243795931411%; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 680px; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child { font-size: 9px; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }",
+    "  #progressionPage .playerTableScroller th { font-size: 11px; }",
+    "  #progressionPage #tableHead th > span:first-child { font-size: 11px; }",
+    "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }",
     "}",
     "@media (max-width: 380px) {",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 23px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.6%; --mfl-table-col-positions: 10.29924379593141%; }",
+    "  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.6%; --mfl-table-col-positions: 10.29924379593141%; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 40px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 600px; }",
-    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }",
+    "  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }",
+    "  #progressionPage .playerTableScroller th { font-size: 10px; }",
+    "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.54); }",
     "}",
     "`;",
     "        document.head.appendChild(mobileTableFirstPaintStyle);",
     FIRST_PAINT_CONFIG_END,
+  ].join("\n");
+}
+
+export function mobileTableFirstPaintCascadeProjectionSource() {
+  return [
+    MOBILE_TABLE_FIRST_PAINT_CASCADE_START,
+    "    <script>",
+    "      (() => {",
+    '        const style = document.getElementById("mflInitialMobileTableStyle");',
+    "        if (style instanceof HTMLStyleElement) document.head.appendChild(style);",
+    "      })();",
+    "    </script>",
+    MOBILE_TABLE_FIRST_PAINT_CASCADE_END,
   ].join("\n");
 }
 
@@ -141,6 +162,25 @@ export function normalizeBootstrapReleaseProjection(source, version, label = "bo
   );
 }
 
+export function normalizeBootstrapFirstPaintCompactLabels(source) {
+  return replaceExactlyOnce(
+    String(source || ""),
+    /^  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object\.freeze\(\{[\s\S]*?^  \}\);$/gm,
+    `  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
+    overall: "OVR",
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+    player_seasons: "SZN",
+  });`,
+    "bootstrap first-paint compact table labels",
+  );
+}
+
 export function normalizeIndexReleaseProjection(source, version) {
   const releaseVersion = semanticVersion(version);
   return replaceExactlyOnce(
@@ -167,6 +207,25 @@ export function normalizeIndexFirstPaintConfigProjection(source) {
     /^        const TABLE_VIEW_CONFIG = Object\.freeze\(\{[\s\S]*?^        const VIEW_BY_SLUG = Object\.freeze\(\{[\s\S]*?^        \}\);$/gm,
     firstPaintRouteConfigProjectionSource(),
     "index legacy first-paint route config projection",
+  );
+}
+
+export function normalizeIndexMobileTableFirstPaintCascadeProjection(source) {
+  const input = String(source || "");
+  const generatedPattern = /^    <!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->[\s\S]*?^    <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->$/gm;
+  const generatedMatches = input.match(generatedPattern) || [];
+  if (generatedMatches.length > 1) {
+    throw new Error(`index mobile table first-paint cascade projection expected exactly one owned projection, found ${generatedMatches.length}.`);
+  }
+  if (generatedMatches.length === 1) {
+    return input.replace(generatedPattern, mobileTableFirstPaintCascadeProjectionSource());
+  }
+
+  return replaceExactlyOnce(
+    input,
+    /^    <link rel="stylesheet" href="\/responsive\.css" data-mfl-responsive-layout="true">$/m,
+    (match) => `${match}\n${mobileTableFirstPaintCascadeProjectionSource()}`,
+    "index mobile table first-paint cascade insertion point",
   );
 }
 
@@ -228,12 +287,16 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
   const release = JSON.parse(await readFile(resolve(siteRoot, "release.json"), "utf8"));
   const version = semanticVersion(release?.version);
   const targets = [
-    ["bootstrap.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap.js")],
+    ["bootstrap.js", (source) => normalizeBootstrapFirstPaintCompactLabels(
+      normalizeBootstrapReleaseProjection(source, version, "bootstrap.js"),
+    )],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
     ["index.html", (source) => normalizeIndexTableConfigRuntimeProjection(
-      normalizeIndexMflStatsFiltersProjection(
-        normalizeIndexMobileWatchlistFirstPaintProjection(
-          normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+      normalizeIndexMobileTableFirstPaintCascadeProjection(
+        normalizeIndexMflStatsFiltersProjection(
+          normalizeIndexMobileWatchlistFirstPaintProjection(
+            normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+          ),
         ),
       ),
     )],

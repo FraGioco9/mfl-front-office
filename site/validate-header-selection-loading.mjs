@@ -5,11 +5,14 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [loadingRuntime, bootstrap, coreSource, tableRuntime] = await Promise.all([
+const [loadingRuntime, bootstrap, coreSource, tableRuntime, mobileTableSource, sharedTableUi, projectionSource] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./modules/app-core.js"),
   read("./modules/app-core-table-runtime.js"),
+  read("./modules/app-core-mobile-table.js"),
+  read("./shared-table-ui-runtime.js"),
+  read("./sync-release-projections.mjs"),
 ]);
 
 const neutralizeStart = loadingRuntime.indexOf("function neutralizeSelectionHeader() {");
@@ -52,6 +55,19 @@ invariant(
     && bootstrap.includes('selectionInput.id = "selectVisiblePlayersInput";')
     && bootstrap.includes("selectionInput.disabled = true;"),
   "First-paint table headers must expose the selection checkbox as disabled before runtime loading ownership begins.",
+);
+
+invariant(
+  mobileTableSource.includes('selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;')
+    && tableRuntime.includes('selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;'),
+  "Every hydrated table-header rebuild must begin with the selection checkbox disabled so it cannot flash selectable before data readiness.",
+);
+
+invariant(
+  sharedTableUi.includes("#progressionPage #tableHead .selectionCell input:disabled {")
+    && sharedTableUi.includes("opacity: 0.45;")
+    && projectionSource.includes("#tableHead .selectionCell input:disabled { opacity: 0.45; }"),
+  "First paint and hydration must give the disabled header checkbox the same visibly inactive appearance.",
 );
 
 for (const source of [coreSource, tableRuntime]) {

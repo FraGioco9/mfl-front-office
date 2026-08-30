@@ -40,6 +40,7 @@
     defense: "DEF",
     physical: "PHY",
     goalkeeping: "GK",
+    player_seasons: "SZN",
   });
   const MFL_STATS_FILTER_LABELS = Object.freeze(
     APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label])),

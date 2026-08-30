@@ -75,6 +75,18 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
 
   table = replaceRequired(
     table,
+    `  selectVisibleInput.id = "selectVisiblePlayersInput";
+  selectVisibleInput.type = "checkbox";
+  selectVisibleInput.setAttribute("aria-label", "Select visible players");`,
+    `  selectVisibleInput.id = "selectVisiblePlayersInput";
+  selectVisibleInput.type = "checkbox";
+  selectVisibleInput.disabled = true;
+  selectVisibleInput.setAttribute("aria-label", "Select visible players");`,
+    "header selection disabled until visible data exists",
+  );
+
+  table = replaceRequired(
+    table,
     "  currentViewColumns().forEach((column) => {",
     `  const mobileTable = window.matchMedia("(max-width: 900px)").matches;
   const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
@@ -97,6 +109,7 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
       defense: "DEF",
       physical: "PHY",
       goalkeeping: "GK",
+      player_seasons: "SZN",
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
@@ -123,8 +136,12 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
   return initial ? \`${"${initial}"}. ${"${parts.at(-1)}"}\` : fullName;
 }
 
+function compactMobileJoinedAgency(value) {
+  return String(value || "").trim().split(/\\s+/, 1)[0] || "";
+}
+
 function tableRenderTableOwner() {`,
-    "mobile player-name compaction helper",
+    "mobile compact table value helpers",
   );
 
   table = replaceRequired(
@@ -175,6 +192,18 @@ function tableRenderTableOwner() {`,
           cell.setAttribute("aria-label", "Not For Sale");
         }`,
     "mobile icon-only Listing cell",
+  );
+
+  table = replaceRequired(
+    table,
+    `      } else if (column === joinedAgencyColumn) {
+        cell.textContent = formatCellValue(row, column);`,
+    `      } else if (column === joinedAgencyColumn) {
+        const joinedAgencyValue = formatCellValue(row, column);
+        cell.textContent = window.matchMedia("(max-width: 520px)").matches
+          ? compactMobileJoinedAgency(joinedAgencyValue)
+          : joinedAgencyValue;`,
+    "small-screen Joined Agency date-only value",
   );
 
   return Object.freeze({
