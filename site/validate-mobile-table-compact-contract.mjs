@@ -49,27 +49,27 @@ assert.doesNotMatch(
   "First-paint SZN must be real bootstrap text rather than a CSS pseudo-label.",
 );
 
-for (const [breakpoint, fontSize] of [["900", "12"], ["520", "11"], ["380", "10"]]) {
+for (const [breakpoint, fontSize] of [["900", "10"], ["520", "9"], ["380", "8"]]) {
   assert.match(
     projectionSource,
     new RegExp(`@media \\(max-width: ${breakpoint}px\\)[\\s\\S]*#tableHead th > span:first-child \\{ font-size: ${fontSize}px; \\}`),
-    `First-paint headers at <=${breakpoint}px must use the final ${fontSize}px row font.`,
+    `First-paint headers at <=${breakpoint}px must stay two pixels smaller than row text at ${fontSize}px.`,
   );
 }
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 900px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 12px;/,
-  "Hydrated mobile headers must use the same 12px font as mobile rows.",
+  /@media \(max-width: 900px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 10px;/,
+  "Hydrated mobile headers must use 10px text against 12px rows.",
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 520px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 11px;/,
-  "Hydrated phone headers must use the same 11px font as phone rows.",
+  /@media \(max-width: 520px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 9px;/,
+  "Hydrated phone headers must use 9px text against 11px rows.",
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 380px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 10px;/,
-  "Hydrated tiny-screen headers must use the same 10px font as tiny-screen rows.",
+  /@media \(max-width: 380px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 8px;/,
+  "Hydrated tiny-screen headers must use 8px text against 10px rows.",
 );
 assert.match(
   responsiveSource,

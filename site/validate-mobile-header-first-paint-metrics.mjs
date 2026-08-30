@@ -8,16 +8,16 @@ const projectionSource = readFileSync(resolve(root, "sync-release-projections.mj
 const sharedTableUiSource = readFileSync(resolve(root, "shared-table-ui-runtime.js"), "utf8");
 const stylesSource = readFileSync(resolve(root, "styles.css"), "utf8");
 
-for (const [breakpoint, fontSize] of [[900, 12], [520, 11], [380, 10]]) {
+for (const [breakpoint, headerSize, rowSize] of [[900, 10, 12], [520, 9, 11], [380, 8, 10]]) {
   assert.match(
     projectionSource,
-    new RegExp(`@media \\(max-width: ${breakpoint}px\\)[\\s\\S]*#progressionPage \\.playerTableScroller th \\{ font-size: ${fontSize}px; \\}`),
-    `First paint must size the complete table header cell to ${fontSize}px at <=${breakpoint}px, not only its label span.`,
+    new RegExp(`@media \\(max-width: ${breakpoint}px\\)[\\s\\S]*#progressionPage \\.playerTableScroller th \\{ font-size: ${headerSize}px; \\}`),
+    `First paint must size the complete table header cell to ${headerSize}px against ${rowSize}px rows at <=${breakpoint}px, not only its label span.`,
   );
   assert.match(
     sharedTableUiSource,
-    new RegExp(`@media \\(max-width: ${breakpoint}px\\)[\\s\\S]*#progressionPage \\.playerTableScroller th \\{[\\s\\S]*font-size: ${fontSize}px;`),
-    `Hydrated table headers must retain the same ${fontSize}px cell font metric at <=${breakpoint}px.`,
+    new RegExp(`@media \\(max-width: ${breakpoint}px\\)[\\s\\S]*#progressionPage \\.playerTableScroller th \\{[\\s\\S]*font-size: ${headerSize}px;`),
+    `Hydrated table headers must retain the ${headerSize}px cell font metric against ${rowSize}px rows at <=${breakpoint}px.`,
   );
 }
 
