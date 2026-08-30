@@ -241,7 +241,7 @@ body[data-page="club"] #progressionPage .rowsField {
   vertical-align: middle;
 }
 
-#progressionPage #tableBody .tableControlCellContent {
+#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
   display: flex;
   align-items: center;
   width: 100%;
@@ -313,13 +313,6 @@ body[data-page="club"] #progressionPage .rowsField {
   flex-basis: 14px;
   width: 14px;
   height: 14px;
-}
-
-#progressionPage #tableBody .tableOverallCellContent {
-  display: inline-flex;
-  align-items: center;
-  height: var(--mfl-table-row-height);
-  min-height: var(--mfl-table-row-height);
 }
 
 #progressionPage #tableBody .tableOverallRarityCircle {
