@@ -5,13 +5,15 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCore, generatedCore, tableLoading, bootstrap, styles, stylesBase] = await Promise.all([
+const [appCore, generatedCore, tableLoading, bootstrap, styles, stylesBase, loading, scrollbars] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles.css"),
   read("./styles-base.css"),
+  read("./loading.css"),
+  read("./scrollbars.css"),
 ]);
 
 const filterReload = 'void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });';
@@ -30,13 +32,30 @@ invariant(
 invariant(
   bootstrap.includes("const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];")
     && bootstrap.includes('row.className = "mflTableLoadingRow";'),
-  "Filter loading must reuse the existing five-row table loading skeleton.",
+  "Filter loading must reuse exactly the existing five-row table loading skeleton.",
 );
 invariant(
   styles.includes("--mfl-table-row-outer-height: 39px;")
     && styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);\n  vertical-align: middle;\n}"),
+  "Populated and loading table rows must share the canonical tbody/tr/td height contract.",
+);
+invariant(
+  !loading.includes(".mflTableLoadingRow {\n  height:")
+    && !loading.includes(".mflTableLoadingRow > td {\n  height:")
+    && !loading.includes(".mflTableLoadingRow:last-child"),
+  "Loading presentation must not own separate row height or last-row border geometry; all five placeholders must inherit the desktop row contract.",
+);
+invariant(
+  styles.includes("#tableBody > .mflTableLoadingRow > td {\n  padding-top: 0;\n  padding-bottom: 0;\n  background: var(--surface-muted);")
     && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
-  "The five filter-loading rows must inherit the same 39px rendered outer height as populated rows.",
+  "Loading rows may own appearance only, never a competing height declaration.",
+);
+invariant(
+  scrollbars.includes(".playerTableScroller {\n      scrollbar-width: none;")
+    && scrollbars.includes(".playerTableScroller {\n    -ms-overflow-style: none;")
+    && scrollbars.includes(".playerTableScroller::-webkit-scrollbar {\n    display: none;\n    width: 0;\n    height: 0;"),
+  "Mobile player-table scrolling must stay native while its horizontal scrollbar chrome is hidden so it cannot appear as a sixth loading row.",
 );
 invariant(
   stylesBase.includes(".pager[hidden] {\n  display: none;\n}"),
@@ -63,4 +82,4 @@ invariant(
   "The canonical table-loading owner must hide both pager navigation and the Showing x/y players summary.",
 );
 
-console.log("Quick Filter loading keeps five blank rows and all pager metadata under the latest table-loading request owner.");
+console.log("Quick Filter loading keeps exactly five equal blank rows on canonical row geometry, with mobile scrollbar chrome removed from the loading surface.");

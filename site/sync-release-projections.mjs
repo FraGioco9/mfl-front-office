@@ -12,6 +12,8 @@ const DEFAULT_SITE_ROOT = dirname(fileURLToPath(import.meta.url));
 // Keep this projection inline in index.html so route/view state remains zero-request before first paint.
 const FIRST_PAINT_CONFIG_START = "        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG";
 const FIRST_PAINT_CONFIG_END = "        // END GENERATED FIRST-PAINT ROUTE CONFIG";
+const MOBILE_WATCHLIST_FIRST_PAINT_START = "          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->";
+const MOBILE_WATCHLIST_FIRST_PAINT_END = "          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->";
 const MFL_STATS_FILTERS_START = "              <!-- BEGIN GENERATED MFL STATS FILTERS -->";
 const MFL_STATS_FILTERS_END = "              <!-- END GENERATED MFL STATS FILTERS -->";
 
@@ -56,7 +58,66 @@ export function firstPaintRouteConfigProjectionSource() {
     "        const VIEW_BY_SLUG = Object.freeze({",
     ...viewSlugLines,
     "        });",
+    "        const mobileTableFirstPaintStyle = document.createElement(\"style\");",
+    '        mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";',
+    "        mobileTableFirstPaintStyle.textContent = `",
+    "@media (max-width: 900px) {",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 28px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px; --mfl-table-col-listing: 4.2%; --mfl-table-col-positions: 9.699243795931409%; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #openFiltersButton { order: -2; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #viewControlsSeparator { order: -1; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell { position: relative; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { content: \"\"; position: absolute; top: var(--mfl-table-header-height); bottom: 0; z-index: 2; width: 54px; opacity: 0; visibility: hidden; pointer-events: none; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before { left: 0; background: linear-gradient(90deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%); }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { right: 0; background: linear-gradient(270deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%); }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollLeft::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollRight::after { opacity: 0.94; visibility: visible; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller { display: block; width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: auto; -webkit-mask-image: none; mask-image: none; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 820px; max-width: none; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { box-sizing: border-box; flex: 0 0 13px; width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; aspect-ratio: 1 / 1; background-size: 8px 6px; border-radius: 3px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.75); transform-origin: center; }",
+    "}",
+    "@media (min-width: 521px) and (max-width: 900px) {",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "}",
+    "@media (max-width: 520px) {",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 25px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px; --mfl-table-col-listing: 3.8%; --mfl-table-col-positions: 10.099243795931411%; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 680px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child { font-size: 9px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] body #appShell #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }",
+    "}",
+    "@media (max-width: 380px) {",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage { --mfl-table-header-height: 23px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.6%; --mfl-table-col-positions: 10.29924379593141%; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 40px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 600px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }",
+    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.54); }",
+    "}",
+    "`;",
+    "        document.head.appendChild(mobileTableFirstPaintStyle);",
     FIRST_PAINT_CONFIG_END,
+  ].join("\n");
+}
+
+export function mobileWatchlistFirstPaintProjectionSource() {
+  return [
+    MOBILE_WATCHLIST_FIRST_PAINT_START,
+    "          <script>",
+    "            (() => {",
+    "              const root = document.documentElement;",
+    '              if (!window.matchMedia("(max-width: 900px)").matches) return;',
+    '              if (root.dataset.initialTablePage !== "watchlist" || root.dataset.storedWalletOptIn !== "true") return;',
+    '              const views = document.querySelector("#progressionPage > .views");',
+    '              const switcher = document.getElementById("watchlistSwitcher");',
+    "              if (!(views instanceof HTMLElement) || !(switcher instanceof HTMLElement)) return;",
+    "              switcher.hidden = false;",
+    '              switcher.classList.add("mflMobileWatchlistSwitcher");',
+    '              views.insertAdjacentElement("afterend", switcher);',
+    "            })();",
+    "          </script>",
+    MOBILE_WATCHLIST_FIRST_PAINT_END,
   ].join("\n");
 }
 
@@ -109,6 +170,25 @@ export function normalizeIndexFirstPaintConfigProjection(source) {
   );
 }
 
+export function normalizeIndexMobileWatchlistFirstPaintProjection(source) {
+  const input = String(source || "");
+  const generatedPattern = /^          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->[\s\S]*?^          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->$/gm;
+  const generatedMatches = input.match(generatedPattern) || [];
+  if (generatedMatches.length > 1) {
+    throw new Error(`index mobile Watchlist first-paint projection expected exactly one owned projection, found ${generatedMatches.length}.`);
+  }
+  if (generatedMatches.length === 1) {
+    return input.replace(generatedPattern, mobileWatchlistFirstPaintProjectionSource());
+  }
+
+  return replaceExactlyOnce(
+    input,
+    /^          <\/section>\n\n          <section class="quickFilters" aria-label="Quick filters">$/m,
+    `          </section>\n${mobileWatchlistFirstPaintProjectionSource()}\n\n          <section class="quickFilters" aria-label="Quick filters">`,
+    "index mobile Watchlist first-paint insertion point",
+  );
+}
+
 export function normalizeIndexMflStatsFiltersProjection(source) {
   const input = String(source || "");
   const generatedPattern = /^              <!-- BEGIN GENERATED MFL STATS FILTERS -->[\s\S]*?^              <!-- END GENERATED MFL STATS FILTERS -->$/gm;
@@ -152,7 +232,9 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
     ["index.html", (source) => normalizeIndexTableConfigRuntimeProjection(
       normalizeIndexMflStatsFiltersProjection(
-        normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+        normalizeIndexMobileWatchlistFirstPaintProjection(
+          normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+        ),
       ),
     )],
   ];

@@ -16,10 +16,31 @@ evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRate
 export function splitEvaluationApplicationCoreRuntime(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
   const routeChunks = input.routeChunks && typeof input.routeChunks === "object" ? input.routeChunks : {};
-  const existingEvaluation = String(routeChunks.evaluation || "").replace(/\s*$/, "");
+  let existingEvaluation = String(routeChunks.evaluation || "").replace(/\s*$/, "");
   if (!existingEvaluation) {
     throw new Error("Evaluation route chunk must exist before Evaluation ownership splitting.");
   }
+
+  existingEvaluation = replaceRequired(
+    existingEvaluation,
+    `function attachEvaluationLoadActionTooltip(button) {
+  button.addEventListener("mouseenter", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("focus", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
+  button.addEventListener("blur", hideEvaluationLoadActionTooltip);
+}`,
+    `function attachEvaluationLoadActionTooltip(button) {
+  const showTooltip = () => {
+    if (window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches) return;
+    showEvaluationLoadActionTooltip(button);
+  };
+  button.addEventListener("mouseenter", showTooltip);
+  button.addEventListener("focus", showTooltip);
+  button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
+  button.addEventListener("blur", hideEvaluationLoadActionTooltip);
+}`,
+    "Evaluation action tooltip mobile ownership",
+  );
 
   let core = normalizeEvaluationSnapshotEditRoute(
     normalizeApplicationCoreSource(input.core, "Evaluation ownership"),
