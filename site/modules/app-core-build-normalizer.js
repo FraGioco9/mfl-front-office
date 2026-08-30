@@ -9,6 +9,7 @@ import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { addSettingsEmailResetRuntime } from "./app-core-settings-email-reset.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
+import { addTableRowVerticalCentering } from "./app-core-table-row-centering.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
@@ -24,7 +25,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const filterArtifacts = addActiveFilterControlState(playerArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(filterArtifacts);
   const mobileTableArtifacts = addMobileTablePresentation(tableArtifacts);
-  const walletArtifacts = splitWalletApplicationCoreRuntime(mobileTableArtifacts);
+  const centeredTableArtifacts = addTableRowVerticalCentering(mobileTableArtifacts);
+  const walletArtifacts = splitWalletApplicationCoreRuntime(centeredTableArtifacts);
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   return watchlistArtifacts;
 }
