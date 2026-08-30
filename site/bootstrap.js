@@ -549,21 +549,11 @@
   }
 
   function firstPaintTableSortState(page, view) {
-    const normalizedPage = String(page || "").toLowerCase();
-    const normalizedView = String(view || "").toLowerCase();
-    const pageState = storedTablePageState(normalizedPage);
-    const viewState = pageState?.viewSortStates?.[normalizedView] || pageState || null;
-    const savedSortKey = String(viewState?.sortKey || "");
-    const savedSortDirection = String(viewState?.sortDirection || "");
-    if (FIRST_PAINT_SORTABLE_COLUMNS.has(savedSortKey)) {
-      return {
-        sortKey: savedSortKey,
-        sortDirection: savedSortDirection === "asc" ? "asc" : "desc",
-      };
-    }
-    if (normalizedPage === "club") return { sortKey: "positions", sortDirection: "asc" };
-    return { sortKey: "overall", sortDirection: normalizedView === "next" ? "asc" : "desc" };
-  }
+  const normalizedPage = String(page || "").toLowerCase();
+  void view;
+  if (normalizedPage === "club") return { sortKey: "positions", sortDirection: "asc" };
+  return { sortKey: "overall", sortDirection: "desc" };
+}
 
   function firstPaintTableHeaderSignature(page, view) {
     const normalizedPage = String(page || "").toLowerCase();

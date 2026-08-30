@@ -941,6 +941,7 @@ function tableBuildHeaderOwner() {
           state.sortDirection = resetDirection;
         }
 
+        rememberTableSortState();
         state.page = 1;
         buildHeader();
         applyFilters();
@@ -1622,7 +1623,6 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
 );
 state.sortKey = viewSortState.sortKey;
 state.sortDirection = viewSortState.sortDirection;
-rememberTableSortStateForView(state.view, pageName, viewSortState);
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -1972,7 +1972,6 @@ function appliedTableFilterSignature(rules) {
 }
 
 function tableApplyFiltersOwner(options = {}) {
-  rememberTableSortStateForView();
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
@@ -2662,8 +2661,6 @@ async function tableSetViewOwner(viewName) {
     };
   }
 
-  rememberTableSortStateForView(state.view, pageKey || state.currentPage);
-
   state.view = viewName;
   state.page = 1;
   if (pageKey) {
@@ -2677,7 +2674,6 @@ async function tableSetViewOwner(viewName) {
 );
 state.sortKey = targetSortState.sortKey;
 state.sortDirection = targetSortState.sortDirection;
-rememberTableSortStateForView(viewName, pageKey || state.currentPage, targetSortState);
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();

@@ -36,7 +36,7 @@ const state = {
   settingsTimeFormat: "24h",
   tablePageStates: {},
   tableSortSessionKey: "",
-  tableSortSessionViewStates: {},
+  tableSortSessionSortState: null,
   toastTimer: null,
   menuAnimationTimer: null,
   menuOpen: true,
@@ -3721,25 +3721,23 @@ function tableSortStateForView(
 ) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
-  const rememberedSortState = state.tableSortSessionViewStates?.[normalizedView];
   return normalizedViewSortState(
-    rememberedSortState || fallbackSortState,
+    state.tableSortSessionSortState || fallbackSortState,
     normalizedView,
     normalizedPageName,
   );
 }
 
-function rememberTableSortStateForView(
+function rememberTableSortState(
+  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
   viewName = state.view,
   pageName = tablePageKey() || state.currentPage || "progression",
-  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
 ) {
   if (!state.tableSortSessionKey) return false;
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
   if (!sortKeySupportedByView(sortState?.sortKey, normalizedView, normalizedPageName)) return false;
-  const normalizedSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
-  state.tableSortSessionViewStates[normalizedView] = normalizedSortState;
+  state.tableSortSessionSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
   return true;
 }
 
@@ -3747,15 +3745,15 @@ function resetTableSortSession(pageName, options = {}) {
   const nextSessionKey = tableSortSessionKey(pageName, options);
   if (nextSessionKey === state.tableSortSessionKey) return false;
   state.tableSortSessionKey = nextSessionKey;
-  state.tableSortSessionViewStates = {};
+  state.tableSortSessionSortState = null;
   if (!nextSessionKey) return false;
 
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
   const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
+  state.tableSortSessionSortState = defaultSortState;
   state.sortKey = defaultSortState.sortKey;
   state.sortDirection = defaultSortState.sortDirection;
-  rememberTableSortStateForView(nextView, normalizedPageName, defaultSortState);
   return true;
 }
 
@@ -9703,6 +9701,7 @@ function buildHeader() {
           state.sortDirection = resetDirection;
         }
 
+        rememberTableSortState();
         state.page = 1;
         buildHeader();
         applyFilters();
@@ -10379,7 +10378,6 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
 );
 state.sortKey = viewSortState.sortKey;
 state.sortDirection = viewSortState.sortDirection;
-rememberTableSortStateForView(state.view, pageName, viewSortState);
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
 }
@@ -10910,7 +10908,6 @@ function appliedTableFilterSignature(rules) {
 }
 
 function applyFilters(options = {}) {
-  rememberTableSortStateForView();
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
@@ -11583,8 +11580,6 @@ async function setView(viewName) {
     };
   }
 
-  rememberTableSortStateForView(state.view, pageKey || state.currentPage);
-
   state.view = viewName;
   state.page = 1;
   if (pageKey) {
@@ -11598,7 +11593,6 @@ async function setView(viewName) {
 );
 state.sortKey = targetSortState.sortKey;
 state.sortDirection = targetSortState.sortDirection;
-rememberTableSortStateForView(viewName, pageKey || state.currentPage, targetSortState);
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();
@@ -14104,12 +14098,6 @@ async function startApp() {
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
     const previousPath = stagedTransition?.previousPath || currentNavigationPath();
 
-    rememberTableSortStateForView(
-      previousView,
-      pageKey || pageName,
-      { sortKey: previousSortKey, sortDirection: previousSortDirection },
-    );
-
     if (pageKey) {
       const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
       state.tablePageStates[pageKey] = {
@@ -14129,7 +14117,6 @@ async function startApp() {
       pageKey || pageName,
       { sortKey: previousSortKey, sortDirection: previousSortDirection },
     );
-    rememberTableSortStateForView(nextView, pageKey || pageName, targetSortState);
     if (stagedTransition) {
       state.sortKey = targetSortState.sortKey;
       state.sortDirection = targetSortState.sortDirection;

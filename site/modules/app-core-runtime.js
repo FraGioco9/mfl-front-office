@@ -39,7 +39,7 @@ const state = {
   settingsDraftDirty: false,
   tablePageStates: {},
   tableSortSessionKey: "",
-  tableSortSessionViewStates: {},
+  tableSortSessionSortState: null,
   toastTimer: null,
   menuOpen: true,
   playerAttributeView: "attributes",
@@ -2542,25 +2542,23 @@ function tableSortStateForView(
 ) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
-  const rememberedSortState = state.tableSortSessionViewStates?.[normalizedView];
   return normalizedViewSortState(
-    rememberedSortState || fallbackSortState,
+    state.tableSortSessionSortState || fallbackSortState,
     normalizedView,
     normalizedPageName,
   );
 }
 
-function rememberTableSortStateForView(
+function rememberTableSortState(
+  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
   viewName = state.view,
   pageName = tablePageKey() || state.currentPage || "progression",
-  sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
 ) {
   if (!state.tableSortSessionKey) return false;
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
   if (!sortKeySupportedByView(sortState?.sortKey, normalizedView, normalizedPageName)) return false;
-  const normalizedSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
-  state.tableSortSessionViewStates[normalizedView] = normalizedSortState;
+  state.tableSortSessionSortState = normalizedViewSortState(sortState, normalizedView, normalizedPageName);
   return true;
 }
 
@@ -2568,15 +2566,15 @@ function resetTableSortSession(pageName, options = {}) {
   const nextSessionKey = tableSortSessionKey(pageName, options);
   if (nextSessionKey === state.tableSortSessionKey) return false;
   state.tableSortSessionKey = nextSessionKey;
-  state.tableSortSessionViewStates = {};
+  state.tableSortSessionSortState = null;
   if (!nextSessionKey) return false;
 
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
   const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
+  state.tableSortSessionSortState = defaultSortState;
   state.sortKey = defaultSortState.sortKey;
   state.sortDirection = defaultSortState.sortDirection;
-  rememberTableSortStateForView(nextView, normalizedPageName, defaultSortState);
   return true;
 }
 
@@ -8870,12 +8868,6 @@ async function startApp() {
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
     const previousPath = stagedTransition?.previousPath || currentNavigationPath();
 
-    rememberTableSortStateForView(
-      previousView,
-      pageKey || pageName,
-      { sortKey: previousSortKey, sortDirection: previousSortDirection },
-    );
-
     if (pageKey) {
       const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
       state.tablePageStates[pageKey] = {
@@ -8895,7 +8887,6 @@ async function startApp() {
       pageKey || pageName,
       { sortKey: previousSortKey, sortDirection: previousSortDirection },
     );
-    rememberTableSortStateForView(nextView, pageKey || pageName, targetSortState);
     if (stagedTransition) {
       state.sortKey = targetSortState.sortKey;
       state.sortDirection = targetSortState.sortDirection;
