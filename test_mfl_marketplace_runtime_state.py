@@ -31,6 +31,28 @@ class MarketplaceRuntimeStateTests(unittest.TestCase):
             {"42": "125.50000000", "43": "0.00000000"},
         )
 
+    def test_runtime_payload_rebuild_does_not_retain_removed_listing(self) -> None:
+        listed = runtime_payload(
+            {
+                "generated_at": "2026-08-26T00:00:00Z",
+                "source": "flow-mainnet-nftstorefront-events",
+                "flow_block_height": 123456,
+                "players": {"42": {"listing_price": "125.50000000"}},
+            }
+        )
+        sold = runtime_payload(
+            {
+                "generated_at": "2026-08-26T00:15:00Z",
+                "source": "flow-mainnet-nftstorefront-events",
+                "flow_block_height": 124000,
+                "players": {},
+            }
+        )
+
+        self.assertEqual(listed["prices"], {"42": "125.50000000"})
+        self.assertEqual(sold["prices"], {})
+        self.assertEqual(sold["listed_player_count"], 0)
+
     def test_runtime_location_is_stable(self) -> None:
         self.assertEqual(RUNTIME_BUCKET, "mfl-runtime")
         self.assertEqual(RUNTIME_OBJECT, "marketplace/listings.json")

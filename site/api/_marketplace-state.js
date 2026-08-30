@@ -1,6 +1,6 @@
 const MARKETPLACE_BUCKET = "mfl-runtime";
 const MARKETPLACE_OBJECT = "marketplace/listings.json";
-const MARKETPLACE_CACHE_TTL_MS = 30_000;
+const MARKETPLACE_CACHE_TTL_MS = 5_000;
 const MARKETPLACE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const MARKETPLACE_FETCH_TIMEOUT_MS = 3_000;
 
@@ -77,12 +77,9 @@ async function marketplaceState(now = Date.now()) {
       return state;
     })
     .catch(() => {
-      if (cachedState && cachedState.generatedAt) {
-        const generatedAtMs = Date.parse(cachedState.generatedAt);
-        if (Number.isFinite(generatedAtMs) && now - generatedAtMs <= MARKETPLACE_MAX_AGE_MS) {
-          return cachedState;
-        }
-      }
+      // Listing presence must fail closed. Re-serving an older positive price after
+      // an authoritative read fails can make a completed sale look active even
+      // though the latest snapshot already removed it.
       cachedState = emptyState();
       cachedAt = now;
       return cachedState;

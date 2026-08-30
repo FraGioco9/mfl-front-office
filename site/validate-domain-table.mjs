@@ -5,6 +5,7 @@ const validators = [
   "validate-table-progression-spacing.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-listing-column.mjs",
+  "validate-marketplace-state-freshness.mjs",
   "validate-player-table-actions.mjs",
   "validate-player-table-action-menu-rerender.mjs",
   "validate-selection-action-menu-readiness.mjs",
