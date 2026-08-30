@@ -57,4 +57,3 @@ assert.match(core, /compareRowsWithClubPositionOrder|clubPositionSort/u, "Existi
 assert.match(entry, /sortKey:\s*"positions"[\s\S]{0,80}sortDirection:\s*"asc"/u, "Club route bootstrap must keep Positions ascending.");
 
 console.log("Table sort session validation passed.");
-
