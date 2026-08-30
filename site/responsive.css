@@ -1271,6 +1271,26 @@ html:not(.mflInitialRouteResolved):is(
     min-height: 280px;
     height: min(52dvh, 420px);
     overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollRight:not(.mflStatsCanScrollLeft) {
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent 100%);
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollLeft:not(.mflStatsCanScrollRight) {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 100%);
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollLeft.mflStatsCanScrollRight {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
   }
 
   .mflStatsHistogram {
@@ -1375,7 +1395,6 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .advancedPlayerTableSection,
-  .mflStatsAgeDistribution,
   .sidebar,
   .playerAttributeViews,
   .evaluationLoadList,
@@ -1607,19 +1626,35 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 10px;
   }
 
-  .homeStats,
-  #databaseStatsPage .databaseStatsCards,
-  .mflStatsCards {
+  .homeStats {
     grid-template-columns: 1fr;
   }
 
-  #databaseStatsPage .databaseStatsCustomFilter,
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .playerHeroActions,
   .evaluationButtons,
-  .evaluationMetrics,
-  .mflStatsFilterButtons,
-  .mflStatsDistributionModeButtons {
+  .evaluationMetrics {
     grid-template-columns: 1fr;
+  }
+
+  #databaseStatsPage .databaseStatsCustomFilter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #databaseStatsPage .databaseStatsCustomFilter > button {
+    grid-column: 1 / -1;
+  }
+
+  .mflStatsFilterButtons {
+    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  }
+
+  .mflStatsDistributionModeButtons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .quickFilters {
@@ -1877,8 +1912,117 @@ html:not(.mflInitialRouteResolved):is(
     padding-inline: 2px;
   }
 
+  /* Small-screen Stats controls scale down, while the chart remains readable through local horizontal panning. */
+  .mflStatsPage {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .mflStatsPage .tablePageTitle {
+    font-size: 18px;
+  }
+
+  .mflStatsViews {
+    margin-bottom: 5px;
+  }
+
+  .mflStatsFilters {
+    gap: 4px;
+    margin-bottom: 5px;
+    padding: 5px 6px;
+  }
+
+  .mflStatsFilters > span {
+    font-size: 10px;
+  }
+
+  .mflStatsFilterButtons {
+    gap: 4px;
+  }
+
+  .mflStatsFilterButton {
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  .mflStatsCards {
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .mflStatsCards article {
+    min-height: 56px;
+    padding: 6px 7px;
+  }
+
+  .mflStatsCards span,
+  .mflStatsCards small {
+    font-size: 9px;
+  }
+
+  .mflStatsCards strong {
+    margin-top: 2px;
+    font-size: 18px;
+  }
+
+  .mflStatsDistribution {
+    padding: 6px 7px;
+  }
+
+  .mflStatsDistributionHeader {
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .mflStatsDistributionHeader h3 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .mflStatsDistributionModeButtons {
+    gap: 4px;
+  }
+
+  .mflStatsDistributionModeButton {
+    width: 100%;
+    min-width: 0;
+    height: 26px;
+    min-height: 26px;
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
+  .mflStatsAgeDistribution {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 200px;
+    height: clamp(200px, 42dvh, 300px);
+  }
+
   .mflStatsHistogram {
+    width: 100%;
     min-width: 520px;
+    gap: clamp(1px, 0.4vw, 3px);
+    padding-top: 24px;
+  }
+
+  .mflStatsHistogramItem {
+    gap: 2px;
+  }
+
+  .mflStatsHistogramBar {
+    min-height: 90px;
+  }
+
+  .mflStatsHistogramLabel {
+    min-height: 12px;
+    font-size: clamp(6px, 2vw, 9px);
   }
 
   .detailGrid {
@@ -2062,8 +2206,62 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 9px;
   }
 
+  .mflStatsFilters {
+    padding-inline: 5px;
+  }
+
+  .mflStatsFilterButtons {
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+    gap: 3px;
+  }
+
+  .mflStatsFilterButton {
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .mflStatsCards article {
+    min-height: 52px;
+    padding: 5px 6px;
+  }
+
+  .mflStatsCards strong {
+    font-size: 17px;
+  }
+
+  .mflStatsDistribution {
+    padding: 5px 6px;
+  }
+
+  .mflStatsDistributionHeader h3 {
+    font-size: 13px;
+  }
+
+  .mflStatsDistributionModeButton {
+    height: 24px;
+    min-height: 24px;
+    font-size: 9px;
+  }
+
+  .mflStatsAgeDistribution {
+    min-height: 185px;
+    height: clamp(185px, 40dvh, 260px);
+  }
+
   .mflStatsHistogram {
+    width: 100%;
     min-width: 460px;
+    gap: 1px;
+    padding-top: 20px;
+  }
+
+  .mflStatsHistogramBar {
+    min-height: 78px;
+  }
+
+  .mflStatsHistogramLabel {
+    min-height: 10px;
+    font-size: 6px;
   }
 
   .changelogMinorToggle {

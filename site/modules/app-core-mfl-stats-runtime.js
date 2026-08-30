@@ -159,6 +159,7 @@ function renderMflStatsDistribution(packableRows) {
 
   if (!counts.size) {
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
     return;
   }
 
@@ -189,6 +190,7 @@ function renderMflStatsDistribution(packableRows) {
 
   fragment.appendChild(histogram);
   mflStatsAgeDistribution.replaceChildren(fragment);
+  window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
 }
 
 function renderMflStatsPage() {

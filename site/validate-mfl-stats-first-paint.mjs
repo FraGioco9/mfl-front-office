@@ -102,10 +102,10 @@ includes(
   ".mflStatsFilterButton {\n  flex: 1 1 86px;\n  min-width: 86px;\n}",
   "Both Stats pages must use the same label-independent flex basis so filter spacing cannot shift when fonts or runtime bindings settle.",
 );
-excludes(
+includes(
   responsive,
-  ".mflStatsFilterButton {",
-  "Responsive layout must not assign a second Overall-filter button size or replace the shared first-paint button rule.",
+  ".mflStatsFilterButton {\n    width: 100%;\n    min-width: 0;\n    height: 24px;",
+  "Phone Stats filters may use a compact responsive size because responsive.css is loaded before first paint and does not require a runtime geometry handoff.",
 );
 excludes(
   styles,

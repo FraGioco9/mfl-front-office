@@ -180,6 +180,7 @@ function mflStatsRows() {
 
   if (!counts.size) {
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
     return;
   }
 
@@ -206,6 +207,14 @@ ${STATIC_HISTOGRAM_LAYOUT}`,
   if (state.incrementalRoute?.scope !== "mflstats") return;
   const rows = mflStatsRows();`,
     "MFL Stats waits for its own incremental data before rendering",
+  );
+
+  normalized = replaceRequired(
+    normalized,
+    `  mflStatsAgeDistribution.replaceChildren(fragment);`,
+    `  mflStatsAgeDistribution.replaceChildren(fragment);
+  window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();`,
+    "MFL Stats histogram render resyncs horizontal cues",
   );
 
   normalized = replaceRequired(
