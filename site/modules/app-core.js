@@ -9320,13 +9320,15 @@ function tableNextOverallSortValue(row, statColumn) {
 function compareNextOverallRows(a, b, column, direction) {
   const aNeeded = tableNextOverallSortValue(a, column);
   const bNeeded = tableNextOverallSortValue(b, column);
-  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, direction, true);
+  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, -direction, true);
 
   if (primaryComparison !== 0) {
     return primaryComparison;
   }
 
-  return comparePrimitiveValues(tableNextOverallPreciseValue(a), tableNextOverallPreciseValue(b), -1, true);
+  const aCurrent = column === "overall" ? tableNextOverallPreciseValue(a) : getValue(a, column);
+  const bCurrent = column === "overall" ? tableNextOverallPreciseValue(b) : getValue(b, column);
+  return comparePrimitiveValues(aCurrent, bCurrent, direction, true);
 }
 
 function sortableValue(row, column) {
@@ -9342,7 +9344,7 @@ function sortableValue(row, column) {
   if (state.currentPage === "progression" && (state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
       getValue(row, getProgressionColumn(column)) || 0,
-      getValue(row, "overall") || 0,
+      getValue(row, column) || 0,
     ];
   }
 
@@ -9689,8 +9691,8 @@ function buildHeader() {
       }
 
       cell.addEventListener("click", () => {
-        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
-        const resetDirection = state.view === "next" ? "asc" : "desc";
+        const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
+        const resetDirection = "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
 
         if (state.sortKey !== column) {
@@ -9753,8 +9755,7 @@ function compareRows(a, b) {
 
   if (Array.isArray(aValue) && Array.isArray(bValue)) {
     for (let index = 0; index < aValue.length; index += 1) {
-      const comparisonDirection = state.currentPage === "progression" && index > 0 ? -1 : direction;
-      const comparison = comparePrimitiveValues(aValue[index], bValue[index], comparisonDirection, true);
+      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);
 
       if (comparison !== 0) {
         return comparison;
