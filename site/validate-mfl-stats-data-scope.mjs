@@ -77,9 +77,12 @@ invariant(
   /\.mflStatsFilterButton\s*\{[^}]*flex:\s*1 1 86px;[^}]*min-width:\s*86px;/s.test(styles),
   "Database Stats and MFL Stats Overall filters must share a fixed intrinsic flex basis while filling all available filter-box width.",
 );
+invariant(
+  /@media \(max-width: 520px\)[\s\S]*?\.mflStatsFilterButton\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*height:\s*24px;/s.test(responsive),
+  "responsive.css may scale Stats Overall-filter buttons only through the dedicated phone breakpoint loaded before first paint.",
+);
 
 for (const [fileName, source] of [
-  ["responsive.css", responsive],
   ["dropdowns.css", dropdowns],
   ["scrollbars.css", scrollbars],
 ]) {

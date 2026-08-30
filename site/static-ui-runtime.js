@@ -326,7 +326,7 @@
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    if (target.id === "progressionPage") window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
   }
 
   function showNotFound(kind = "Page") {
@@ -358,6 +358,7 @@
     }
     if (pageChanged || viewChanged) {
       window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
+      window.__mflSharedTableUiRuntime?.resetStatsHistogramScroll?.();
     }
 
     if (state.page === "notfound") document.body.dataset.page = "notfound";

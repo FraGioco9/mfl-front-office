@@ -255,7 +255,8 @@ includes(responsive, "min-height: 0;\n    height: auto;\n    font-size: 9px;", "
 includes(responsive, '[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"]::after {\n    font-size: 10px;\n  }', "Club first paint must use the same compact phone view-label scale before route resolution.");
 includes(responsive, "#progressionPage .playerTableScroller table {\n    min-width: 620px;\n  }", "Phone player tables must become denser instead of retaining tablet-scale geometry.");
 includes(responsive, ".evaluationSummaryTable {\n    min-width: 460px;\n    font-size: 10px;\n  }", "Evaluation summary data must compact at phone widths without clipping the page.");
-includes(responsive, ".mflStatsHistogram {\n    min-width: 520px;\n  }", "Stats histograms must reduce their horizontal floor on phones.");
+includes(responsive, ".mflStatsHistogram {\n    width: 100%;\n    min-width: 520px;", "Phone Stats histograms must keep a readable local horizontal floor inside their own scroller.");
+includes(responsive, ".mflStatsAgeDistribution {\n    width: 100%;\n    min-width: 0;\n    max-width: 100%;", "Phone Stats histogram viewports must remain constrained to the page width while their chart pans internally.");
 includes(responsive, "@media (max-width: 380px)", "Very narrow phones must have an additional layout safeguard.");
 includes(responsive, ".viewButton {\n    flex-basis: 68px;\n    width: 68px;\n    min-width: 68px;\n    max-width: 68px;", "Very narrow phones must keep every view button at the same 68px width.");
 includes(responsive, ".filtersDialog {\n    --mfl-filter-box-font-size: 11px;\n    --mfl-filter-box-line-height: 14px;\n    --mfl-popup-close-size: 26px;\n  }", "Very narrow phone Filters must keep 11px text centered on a 14px line box while the close glyph follows the canonical one-third box ratio.");

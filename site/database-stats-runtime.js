@@ -356,6 +356,7 @@
       empty.className = "mflStatsEmpty";
       empty.textContent = "No active players match this Overall filter.";
       container.replaceChildren(empty);
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       return;
     }
 
@@ -383,6 +384,7 @@
       histogram.appendChild(item);
     });
     container.replaceChildren(histogram);
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
   }
 
   async function loadData() {

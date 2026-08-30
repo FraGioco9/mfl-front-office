@@ -31,6 +31,18 @@
    * }} */
   const runtimeWindow = window;
 
+  function ensureStatsMobileUiRuntime() {
+    if (Reflect.get(runtimeWindow, "__mflStatsMobileUiRuntime")) return;
+    if (document.querySelector('script[data-mfl-stats-mobile-ui="true"]')) return;
+    const script = document.createElement("script");
+    script.src = "/stats-mobile-ui-runtime.js";
+    script.async = false;
+    script.dataset.mflStatsMobileUi = "true";
+    document.head.appendChild(script);
+  }
+
+  ensureStatsMobileUiRuntime();
+
   if (typeof runtimeWindow.__mflRouteCoreRuntime?.ensure === "function") {
     runtimeWindow.__mflEnsureRouteCore = runtimeWindow.__mflRouteCoreRuntime.ensure;
     if (typeof runtimeWindow.__mflRouteCoreRuntime.isReady === "function") {
