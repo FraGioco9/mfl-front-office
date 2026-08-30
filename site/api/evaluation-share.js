@@ -10,6 +10,8 @@ const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-p
 const { readActiveEvaluationShare } = require("./_evaluation-share-preview");
 const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
 
+const MAX_ACTIVE_EVALUATION_SHARES_PER_WALLET = 10;
+
 function evaluationShareExpiresAt(now = new Date()) {
   const expiresAt = new Date(now);
   const dayOfMonth = expiresAt.getUTCDate();
@@ -29,25 +31,25 @@ async function activeShareRows(wallet) {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function pruneOldestActiveShare(wallet) {
+async function pruneOldestActiveShares(wallet) {
   const rows = await activeShareRows(wallet);
+  const sharesToDelete = rows.slice(0, Math.max(
+    0,
+    rows.length - (MAX_ACTIVE_EVALUATION_SHARES_PER_WALLET - 1),
+  ));
 
-  if (rows.length < 5) {
-    return;
-  }
+  await Promise.all(sharesToDelete.map(async (share) => {
+    if (!share?.id) {
+      return;
+    }
 
-  const oldest = rows[0];
-
-  if (!oldest?.id) {
-    return;
-  }
-
-  await supabaseRequest(`evaluation_shares?id=eq.${encodeURIComponent(oldest.id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=minimal",
-    },
-  });
+    await supabaseRequest(`evaluation_shares?id=eq.${encodeURIComponent(share.id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+      method: "DELETE",
+      headers: {
+        Prefer: "return=minimal",
+      },
+    });
+  }));
 }
 
 async function snapshotPresentValue(payload) {
@@ -94,7 +96,7 @@ module.exports = async function handler(request, response) {
       }
 
       await snapshotPresentValue(payload);
-      await pruneOldestActiveShare(wallet);
+      await pruneOldestActiveShares(wallet);
 
       const id = generateEvaluationId();
       const expiresAt = evaluationShareExpiresAt();
