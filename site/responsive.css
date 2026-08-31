@@ -2438,9 +2438,12 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationPage .evaluationSummaryPositionSelect {
-    width: 100%;
+    --mfl-evaluation-position-trigger-width: 38px;
+    --mfl-evaluation-position-chevron-left: min(29px, calc(100% - 8px));
+    width: min(var(--mfl-evaluation-position-trigger-width), 100%);
+    max-width: 100%;
     min-height: 28px;
-    padding: 0 2px;
+    padding: 0 10px 0 0;
     font-size: inherit;
   }
 
