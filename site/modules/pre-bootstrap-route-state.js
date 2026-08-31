@@ -1,6 +1,9 @@
 // @ts-check
 
-import { replaceRequired } from "./app-core-splitter-utils.js";
+function replaceRequired(source, before, after, label) {
+  if (!source.includes(before)) throw new Error(`Missing ${label}.`);
+  return source.replace(before, after);
+}
 
 const APP_CONFIG_EXPORTS = `  window.__mflAppConfig = appConfig;
   window.__mflReleaseVersion = data.release.version;
