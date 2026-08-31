@@ -39,50 +39,24 @@ async function rewrite(path, replacements) {
 }
 
 await rewrite("validate-settings-route-core.mjs", [
-  [
-    'includes(buildCore, \'const settingsRuntimePath = resolve(siteRoot, "modules/app-core-settings-runtime.js");\', "The build must emit a generated Settings runtime.");',
-    'includes(buildCore, \'runtime: "app-core-settings-runtime.js"\', "The build must emit a generated Settings runtime.");',
-    "Settings runtime build assertion",
-  ],
-  [
-    'includes(buildCore, "artifacts.routeChunks?.settings", "The build must consume the Settings artifact.");',
-    'includes(buildCore, \'source: "settings.js"\', "The build must consume the canonical Settings source.");',
-    "Settings source build assertion",
-  ],
-  [
-    'const settingsBanner = "// Generated Settings core chunk from modules/app-core.js. Do not edit directly.\\n";',
-    'const settingsBanner = "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\\n";',
-    "Settings generated banner",
-  ],
+  ['includes(buildCore, \'const settingsRuntimePath = resolve(siteRoot, "modules/app-core-settings-runtime.js");\', "The build must emit a generated Settings runtime.");','includes(buildCore, \'runtime: "app-core-settings-runtime.js"\', "The build must emit a generated Settings runtime.");',"Settings runtime build assertion"],
+  ['includes(buildCore, "artifacts.routeChunks?.settings", "The build must consume the Settings artifact.");','includes(buildCore, \'source: "settings.js"\', "The build must consume the canonical Settings source.");',"Settings source build assertion"],
+  ['const settingsBanner = "// Generated Settings core chunk from modules/app-core.js. Do not edit directly.\\n";','const settingsBanner = "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\\n";',"Settings generated banner"],
 ]);
 
 await rewrite("validate-player-route-core.mjs", [
-  [
-    '  \'const playerRuntimePath = resolve(siteRoot, "modules/app-core-player-runtime.js");\',\n  "artifacts.routeChunks?.player",',
-    '  \'runtime: "app-core-player-runtime.js"\',\n  \'source: "player.js"\',',
-    "Player generated build assertions",
-  ],
-  [
-    'const playerBanner = "// Generated Player core chunk from modules/app-core.js. Do not edit directly.\\n";',
-    'const playerBanner = "// Generated Player core from modules/core-sources/player.js. Do not edit directly.\\n";',
-    "Player generated banner",
-  ],
+  ['  \'const playerRuntimePath = resolve(siteRoot, "modules/app-core-player-runtime.js");\',\n  "artifacts.routeChunks?.player",','  \'runtime: "app-core-player-runtime.js"\',\n  \'source: "player.js"\',',"Player generated build assertions"],
+  ['const playerBanner = "// Generated Player core chunk from modules/app-core.js. Do not edit directly.\\n";','const playerBanner = "// Generated Player core from modules/core-sources/player.js. Do not edit directly.\\n";',"Player generated banner"],
 ]);
 
 await rewrite("validate-watchlist-route-core.mjs", [
-  [
-    'includes(buildCore, \'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");\', "The build must emit a generated Watchlist runtime.");',
-    'includes(buildCore, \'runtime: "app-core-watchlist-runtime.js"\', "The build must emit a generated Watchlist runtime.");',
-    "Watchlist runtime build assertion",
-  ],
-  [
-    'includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");',
-    'includes(buildCore, \'source: "watchlist.js"\', "The build must consume the canonical Watchlist source.");',
-    "Watchlist source build assertion",
-  ],
-  [
-    'const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\\n";',
-    'const watchlistBanner = "// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.\\n";',
-    "Watchlist generated banner",
-  ],
+  ['includes(buildCore, \'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");\', "The build must emit a generated Watchlist runtime.");','includes(buildCore, \'runtime: "app-core-watchlist-runtime.js"\', "The build must emit a generated Watchlist runtime.");',"Watchlist runtime build assertion"],
+  ['includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");','includes(buildCore, \'source: "watchlist.js"\', "The build must consume the canonical Watchlist source.");',"Watchlist source build assertion"],
+  ['const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\\n";','const watchlistBanner = "// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.\\n";',"Watchlist generated banner"],
+]);
+
+await rewrite("validate-wallet-core.mjs", [
+  ['includes(buildCore, \'const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");\', "The build must emit a generated Wallet runtime.");','includes(buildCore, \'runtime: "app-core-wallet-runtime.js"\', "The build must emit a generated Wallet runtime.");',"Wallet runtime build assertion"],
+  ['includes(buildCore, "artifacts.routeChunks?.wallet", "The build must consume the Wallet artifact.");','includes(buildCore, \'source: "wallet.js"\', "The build must consume the canonical Wallet source.");',"Wallet source build assertion"],
+  ['const walletBanner = "// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.\\n";','const walletBanner = "// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.\\n";',"Wallet generated banner"],
 ]);
