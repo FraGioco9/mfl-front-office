@@ -5,38 +5,17 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [sourceCore, buildNormalizer] = await Promise.all([
-  Promise.all([
-    read("./modules/core-sources/shared.js"),
-    read("./modules/core-sources/evaluation.js"),
-    read("./modules/core-sources/mfl-stats.js"),
-    read("./modules/core-sources/club.js"),
-    read("./modules/core-sources/settings.js"),
-    read("./modules/core-sources/player.js"),
-    read("./modules/core-sources/table.js"),
-    read("./modules/core-sources/wallet.js"),
-    read("./modules/core-sources/watchlist.js"),
-  ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-build-normalizer.js"),
-]);
-
-const normalizedCore = sourceCore;
-
-invariant(
-  !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
-    && !buildNormalizer.includes("globalSearchArtifacts")
-    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
-    && !buildNormalizer.includes("homeSummaryArtifacts")
-    && !buildNormalizer.includes("normalizeStatsNavigationLifecycle")
-    && !buildNormalizer.includes("statsNavigationArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
-    && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
-    && !buildNormalizer.includes("evaluationLoadArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return watchlistArtifacts;"),
-  "Canonical application-core builds must consume source-owned Global Search, Stats navigation, Evaluation recent-readiness, and Evaluation Load behavior before later transforms.",
-);
+const sourceCore = await Promise.all([
+  read("./modules/core-sources/shared.js"),
+  read("./modules/core-sources/evaluation.js"),
+  read("./modules/core-sources/mfl-stats.js"),
+  read("./modules/core-sources/club.js"),
+  read("./modules/core-sources/settings.js"),
+  read("./modules/core-sources/player.js"),
+  read("./modules/core-sources/table.js"),
+  read("./modules/core-sources/wallet.js"),
+  read("./modules/core-sources/watchlist.js"),
+]).then((parts) => parts.join("\n"));
 
 invariant(
   sourceCore.includes("const renderAuthoritativeRecentSearches = async () => {")
@@ -47,24 +26,24 @@ invariant(
 );
 
 invariant(
-  normalizedCore.includes("const renderAuthoritativeRecentSearches = async () => {")
-    && normalizedCore.includes("void renderAuthoritativeRecentSearches().then((rendered) => {")
-    && normalizedCore.includes("if (!rendered && !playerSearchInput.value.trim()) renderSearchResultsNow();")
-    && normalizedCore.includes("await ensureSearchIndexes();\n  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();")
-    && !normalizedCore.includes("await ensureSearchIndexes();\n  renderSearchResultsNow();\n}"),
+  sourceCore.includes("const renderAuthoritativeRecentSearches = async () => {")
+    && sourceCore.includes("void renderAuthoritativeRecentSearches().then((rendered) => {")
+    && sourceCore.includes("if (!rendered && !playerSearchInput.value.trim()) renderSearchResultsNow();")
+    && sourceCore.includes("await ensureSearchIndexes();\n  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();")
+    && !sourceCore.includes("await ensureSearchIndexes();\n  renderSearchResultsNow();\n}"),
   "After search indexes become ready, openSearch must not overwrite canonical recent-five cards with whichever typed results remain in the mutable live indexes.",
 );
 
 invariant(
-  normalizedCore.includes("return [...playerResults, ...agentResults].slice(0, 10);")
-    && normalizedCore.includes("const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);")
-    && normalizedCore.includes("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,\n    ].slice(0, 10);")
-    && !normalizedCore.includes("return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];")
-    && !normalizedCore.includes("...playerResults.slice(0, 5),\n      ...clubResults,\n      ...agentResults.slice(0, 5),"),
+  sourceCore.includes("return [...playerResults, ...agentResults].slice(0, 10);")
+    && sourceCore.includes("const clubResults = clubs.slice(0, query ? 10 : 5).map(clubSearchResult);")
+    && sourceCore.includes("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,\n    ].slice(0, 10);")
+    && !sourceCore.includes("return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];")
+    && !sourceCore.includes("...playerResults.slice(0, 5),\n      ...clubResults,\n      ...agentResults.slice(0, 5),"),
   "Typed Global Search must use one ten-result budget across players, clubs and agents instead of reserving five-result category buckets.",
 );
 
-const mergedResultsStart = normalizedCore.indexOf("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,");
+const mergedResultsStart = sourceCore.indexOf("const mergedResults = [\n      ...playerResults,\n      ...clubResults,\n      ...agentResults,");
 invariant(
   mergedResultsStart >= 0,
   "Typed Global Search must preserve player -> club -> agent category priority while applying the shared ten-result cap.",

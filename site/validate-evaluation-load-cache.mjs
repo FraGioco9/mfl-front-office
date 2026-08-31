@@ -7,7 +7,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, appCoreSource, buildNormalizer] = await Promise.all([
+const [controls, appCoreSource] = await Promise.all([
   read("./controls.css"),
   Promise.all([
     read("./modules/core-sources/shared.js"),
@@ -20,17 +20,18 @@ const [controls, appCoreSource, buildNormalizer] = await Promise.all([
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const sharedCore = String(artifacts.core || "");
 const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
 
-invariant(
-  !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return watchlistArtifacts;"),
-  "Saved Evaluation valuation/cache behavior must be source-owned with Club sort as the terminal build artifact.",
-);
+for (const retiredOwner of [
+  "normalizeEvaluationSavedValuationCache",
+  "app-core-build-normalizer",
+  "app-core-evaluation-chunk",
+]) {
+  invariant(!appCoreSource.includes(retiredOwner), `Saved Evaluation behavior must remain source-owned without retired build owner ${retiredOwner}.`);
+}
 
 invariant(
   controls.includes(".evaluationSearchControl:hover #evaluationSearchInput:not(:disabled),")
@@ -154,4 +155,6 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape keeps the modal open while deselecting the active control, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");
+new Function(sharedCore);
+new Function(evaluationCore);
+console.log("Source-owned Evaluation Saved cache validation passed: Load clears stale focus, Escape keeps the modal open while deselecting the active control, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");

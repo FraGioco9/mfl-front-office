@@ -10,7 +10,7 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
-const [coreSource, dataPage, buildNormalizer] = await Promise.all([
+const [coreSource, dataPage] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"),
     read("./modules/core-sources/evaluation.js"),
@@ -23,7 +23,6 @@ const [coreSource, dataPage, buildNormalizer] = await Promise.all([
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
   read("./api/_data-page.js"),
-  read("./modules/app-core-build-normalizer.js"),
 ]);
 
 const artifacts = readCanonicalCoreArtifacts(coreSource);
@@ -116,21 +115,5 @@ includes(
 const preSave = eagerCore.indexOf('const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;');
 const transition = eagerCore.indexOf('const runTransition = Reflect.get(window, "__mflRunPageTransition");', preSave);
 invariant(preSave >= 0 && transition > preSave, "Source table state must be saved before the page transition commits the destination.");
-
-excludes(
-  buildNormalizer,
-  "normalizeClubSortLifecycle",
-  "Build composition must not rewrite source-owned Club sorting.",
-);
-excludes(
-  buildNormalizer,
-  "clubSortArtifacts",
-  "The obsolete Club sort build artifact must stay removed.",
-);
-includes(
-  buildNormalizer,
-  "return watchlistArtifacts;",
-  "Structural application-core splitting must return directly after watchlist route ownership.",
-);
 
 console.log("Club sorting validation passed: fixed Position -> Overall ordering is source-owned and every committed page path preserves destination sort state after Club navigation.");

@@ -5,11 +5,11 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [motion, styles, ownerSource, buildNormalizer, coreRuntime, tableRuntime, filterRuntime, sharedTableUi, controls] = await Promise.all([
+const [motion, styles, sharedSource, tableSource, coreRuntime, tableRuntime, filterRuntime, sharedTableUi, controls] = await Promise.all([
   read("./motion.css"),
   read("./filter-controls.css"),
-  read("./modules/app-core-filter-control-state.js"),
-  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/core-sources/shared.js"),
+  read("./modules/core-sources/table.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./filter-controls-runtime.js"),
@@ -51,40 +51,31 @@ invariant(
 );
 
 for (const required of [
-  'replaceRequiredFunction(',
-  '"updateFilterSummary"',
+  "function updateFilterSummary",
   "const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;",
   "const active = normalizedCount >= 1;",
   'filterSummary.textContent = String(normalizedCount);',
   'filterSummary.classList.toggle("hasActiveFilters", active);',
   'openFiltersButton?.classList.toggle("hasActiveFilters", active);',
 ]) {
-  invariant(ownerSource.includes(required), `Canonical active Filters owner is missing ${required}`);
-  invariant(tableRuntime.includes(required.replace('replaceRequiredFunction(', 'function updateFilterSummary(').replace('"updateFilterSummary"', 'function updateFilterSummary(')) || required === 'replaceRequiredFunction(' || required === '"updateFilterSummary"', `Generated table runtime is missing active Filters behavior: ${required}`);
+  invariant(tableSource.includes(required), `Canonical Table source is missing active Filters behavior: ${required}`);
+  invariant(tableRuntime.includes(required), `Generated Table runtime is missing active Filters behavior: ${required}`);
 }
 
-invariant(
-  buildNormalizer.includes('import { addActiveFilterControlState } from "./app-core-filter-control-state.js";')
-    && buildNormalizer.includes("const filterArtifacts = addActiveFilterControlState(playerArtifacts);")
-    && buildNormalizer.includes("splitTableApplicationCoreRuntime(filterArtifacts)"),
-  "Active Filters state must be applied in the canonical build pipeline before the table split.",
-);
-
 for (const required of [
-  'import { replaceRequired, replaceRequiredFunction } from "./app-core-splitter-utils.js";',
   "const crossPageNavigation = !runtimeReady",
   'String(pageName || "") !== String(state.currentPage || "")',
   'const canonicalFilterSummaryUpdater = Reflect.get(window, "updateFilterSummary");',
   'if (typeof canonicalFilterSummaryUpdater === "function") {',
   "canonicalFilterSummaryUpdater(0);",
-  '"cross-page active Filters presentation reset"',
 ]) {
-  invariant(ownerSource.includes(required), `Canonical active Filters owner is missing cross-page reset contract: ${required}`);
+  invariant(sharedSource.includes(required), `Canonical shared source is missing cross-page Filters reset contract: ${required}`);
+  invariant(coreRuntime.includes(required), `Generated shared runtime is missing cross-page Filters reset contract: ${required}`);
 }
 
 invariant(
-  !ownerSource.includes("      updateFilterSummary(0);"),
-  "The global route gate must not directly call table-owned updateFilterSummary before the lazy table runtime exists.",
+  !sharedSource.includes("      updateFilterSummary(0);"),
+  "The global route gate must not directly call table-owned updateFilterSummary before the lazy Table runtime exists.",
 );
 
 const routeGateStart = coreRuntime.indexOf("const routeRuntimeSetPage = async function setPageWithRouteRuntime");
@@ -105,7 +96,7 @@ invariant(
     && routeTransitionStart > routeResetCall
     && coreRuntime.slice(routeResetGuard, routeUpdaterLookup).includes('String(pageName || "") !== String(state.currentPage || "")')
     && !routeGatePrelude.includes("      updateFilterSummary(0);"),
-  "Generated route gate must reset Filters through an optional lazy-runtime lookup before saved-state and transition work, without a direct table-runtime call that can break non-table navigation.",
+  "Generated route gate must reset Filters through an optional lazy-runtime lookup before saved-state and transition work, without a direct Table-runtime call that can break non-table navigation.",
 );
 
 for (const required of [
@@ -136,4 +127,4 @@ invariant(!styles.includes("!important"), "Active Filters styles must not use CS
 invariant(!filterRuntime.includes('document.createElement("style")'), "Filter controls runtime must not inject styles dynamically.");
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Shared table UI must not inject active-filter styles dynamically.");
 
-console.log("Active Filters badge, collapsed zero count, centered inactive content, lazy-runtime-safe click-time reset, and canonical highlighted-state ownership validation passed.");
+console.log("Active Filters badge, collapsed zero count, centered inactive content, lazy-runtime-safe reset, and canonical highlighted-state ownership validation passed.");

@@ -9,7 +9,7 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, tableSplitter, playerSplitter, buildNormalizer, bootstrap, styles] = await Promise.all([
+const [coreSource, bootstrap, styles] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"),
     read("./modules/core-sources/evaluation.js"),
@@ -21,9 +21,6 @@ const [coreSource, tableSplitter, playerSplitter, buildNormalizer, bootstrap, st
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-table-chunk.js"),
-  read("./modules/app-core-player-chunk.js"),
-  read("./modules/app-core-build-normalizer.js"),
   read("./bootstrap.js"),
   read("./styles.css"),
 ]);
@@ -36,16 +33,6 @@ const playerCore = String(artifacts.routeChunks?.player || "");
 new Function(sharedCore);
 new Function(tableCore);
 new Function(playerCore);
-
-includes(
-  buildNormalizer,
-  "const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);",
-  "The build must continue splitting the canonical source directly.",
-);
-includes(tableSplitter, "const AGENT_PAGE_TITLE_RESOLVER =", "Table ownership must define Agent title readiness behavior.");
-includes(tableSplitter, '"Agent title loading completion gate"', "Table ownership must install the Agent title loading gate.");
-includes(tableSplitter, "__mflTableEnsureAgentPageTitleNameOwner = tableEnsureAgentPageTitleNameOwner;", "The lazy Table core must publish the Agent-title resolver through its shared facade.");
-includes(playerSplitter, '"Player Agent name handoff"', "Player ownership must explicitly hand its loaded Agent name to navigation.");
 
 includes(sharedCore, "function ensureAgentPageTitleName(address) {", "Shared setPage must retain only a small Agent-title readiness facade.");
 includes(sharedCore, 'function openAgentPage(walletAddress, agentName = "") {', "Agent navigation must accept an already-known name.");
@@ -83,30 +70,15 @@ includes(
   ".tablePageTitle {\n  display: flex;\n  align-items: center;\n  gap: 0;",
   "Agent title spacing must not depend on a flex gap that appears only after hydration.",
 );
-includes(
-  styles,
-  "line-height: var(--mfl-page-title-line-height);",
-  "Agent title line-height must remain stable before and after hydration.",
-);
-includes(
-  styles,
-  "white-space: pre;",
-  "Agent title literal separator spaces must be preserved before and after hydration.",
-);
+includes(styles, "line-height: var(--mfl-page-title-line-height);", "Agent title line-height must remain stable before and after hydration.");
+includes(styles, "white-space: pre;", "Agent title literal separator spaces must be preserved before and after hydration.");
 
-excludes(
-  tableSplitter,
-  "leaderboards/users/global",
-  "Normal Agent page loading must not fetch the full external leaderboard just to resolve one name.",
-);
-excludes(tableSplitter, "!important", "Agent title loading must not introduce CSS priority overrides.");
+excludes(tableCore, "leaderboards/users/global", "Normal Agent page loading must not fetch the full external leaderboard just to resolve one name.");
+excludes(tableCore, "!important", "Agent title loading must not introduce CSS priority overrides.");
 
 const runtimeNameRead = tableCore.indexOf("const runtimeName = runtimeAgentPageTitleName(normalizedAddress, hintedName);");
 const exactLookup = tableCore.indexOf('fetch("/api/data?" + parameters.toString()', runtimeNameRead);
-invariant(
-  runtimeNameRead >= 0 && exactLookup > runtimeNameRead,
-  "Already-known or cached Agent names must be checked before the exact fallback request.",
-);
+invariant(runtimeNameRead >= 0 && exactLookup > runtimeNameRead, "Already-known or cached Agent names must be checked before the exact fallback request.");
 
 const readinessStart = sharedCore.indexOf('const agentTitleReady = pageName === "agents"');
 const readinessAwait = sharedCore.indexOf("await agentTitleReady;", readinessStart);
