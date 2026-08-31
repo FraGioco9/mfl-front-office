@@ -23,6 +23,18 @@ assert.match(sharedFullHeightContent, /line-height: 1\.2;/, "Flex-centered row t
 assert.doesNotMatch(sharedFullHeightContent, /overflow:\s*(?:hidden|clip)/, "The shared row-content host must not clip glyph ascenders or descenders.");
 assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");
 
+const playerNameContent = styles.match(/#progressionPage #tableBody \.playerNameCell \{([\s\S]*?)\n\}/)?.[1] || "";
+assert.match(playerNameContent, /display: flex;/, "Player-name content must use flex layout rather than a full-height baseline box.");
+assert.match(playerNameContent, /align-items: center;/, "Player name, link, and markers must be vertically centered inside the row.");
+assert.match(playerNameContent, /width: 100%;/, "Player-name content must retain the full cell width while centering.");
+assert.match(playerNameContent, /height: var\(--mfl-table-row-height\);/, "Player-name content must own the full canonical row-content height.");
+assert.match(playerNameContent, /line-height: 1\.2;/, "Player-name text must retain the same descender-safe line box as every other centered row item.");
+
+const listingContent = styles.match(/#progressionPage #tableBody \.listingCellTableHost \{([\s\S]*?)\n\}/)?.[1] || "";
+assert.match(listingContent, /display: flex;/, "Listing content must remain a flex-centered row item.");
+assert.match(listingContent, /align-items: center;/, "Listing content must remain vertically centered inside the row.");
+assert.match(listingContent, /height: var\(--mfl-table-row-height\);/, "Listing content must retain the full canonical row-content height.");
+
 for (const source of [tableSource, generatedTable]) {
   assert.match(source, /function tableCenterCellContents\(cell\) \{/, "Canonical Table ownership must define one shared row-cell centering helper.");
   assert.match(source, /contentHost\.className = "tableControlCellContent";/, "Every newly wrapped cell must use the existing canonical full-height host class.");
@@ -48,4 +60,4 @@ for (const contentContract of [
 
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every player-table row item keeps viewport-independent flex centering with a descender-safe text line box.");
+console.log("Every player-table row item, including player names, markers, listings, controls, and stat content, keeps viewport-independent vertical centering with a descender-safe text line box.");

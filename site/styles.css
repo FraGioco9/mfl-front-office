@@ -325,8 +325,12 @@ body[data-page="club"] #progressionPage .rowsField {
 }
 
 #progressionPage #tableBody .playerNameCell {
+  display: flex;
+  align-items: center;
+  width: 100%;
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
+  line-height: 1.2;
 }
 
 #progressionPage #tableBody td > .retirementMarker {
