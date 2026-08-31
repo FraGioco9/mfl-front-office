@@ -41,9 +41,11 @@ for (const [header, row] of [[10, 12], [9, 11], [8, 10]]) {
 }
 
 assert.ok(
-  responsive.includes(".advancedPlayerTable {\n    min-width: 680px;\n    font-size: 11px;\n  }\n\n  .advancedPlayerTable thead th {\n    font-size: 9px;")
-    && responsive.includes(".advancedPlayerTable {\n    min-width: 560px;\n    font-size: 10px;\n  }\n\n  .advancedPlayerTable thead th {\n    font-size: 8px;"),
-  "Advanced responsive tables must keep headers two pixels smaller than row text.",
+  responsive.includes(".advancedPlayerTable {\n    min-width: 620px;\n    font-size: 11px;\n  }")
+    && responsive.includes(".advancedPlayerTable thead th {\n    font-size: 9px;")
+    && responsive.includes(".advancedPlayerTable {\n    min-width: 500px;\n    font-size: 10px;\n  }")
+    && responsive.includes(".advancedPlayerTable thead th {\n    font-size: 8px;"),
+  "Advanced responsive tables must keep headers two pixels smaller than row text while using compact width and height geometry.",
 );
 
 console.log("Table headers remain two pixels smaller than row text across shared, advanced, hydrated, and first-paint table variants.");

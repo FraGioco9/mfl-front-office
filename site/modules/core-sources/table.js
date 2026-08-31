@@ -870,8 +870,6 @@ function tableBuildHeaderOwner() {
   headerRow.appendChild(actionsHeader);
 
   const mobileTable = window.matchMedia("(max-width: 900px)").matches;
-  const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
-
   currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
@@ -884,6 +882,9 @@ function tableBuildHeaderOwner() {
     cell.dataset.tableColumn = column;
     const fullLabel = columnLabels[column] || "";
     const compactLabel = ({
+      age: "AGE",
+      positions: "POS",
+      player_seasons: "SZN",
       overall: "OVR",
       pace: "PAC",
       shooting: "SHO",
@@ -892,7 +893,11 @@ function tableBuildHeaderOwner() {
       defense: "DEF",
       physical: "PHY",
       goalkeeping: "GK",
-      player_seasons: "SZN",
+      wallet_name: "AGT",
+      owned_since: "JOIN",
+      active_contract_revenue_share: "REV",
+      active_contract_club_name: "CLUB",
+      active_contract_club_division: "DIV",
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
@@ -900,11 +905,7 @@ function tableBuildHeaderOwner() {
       ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
       : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
         ? ""
-        : column === "positions"
-          ? "POSITIONS"
-          : compactTableHeadings
-            ? compactLabel
-            : fullLabel;
+        : compactLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 

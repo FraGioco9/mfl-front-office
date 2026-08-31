@@ -26,15 +26,15 @@ excludes(sharedUi, 'document.createElement("style")', "Shared mobile table behav
 includes(sharedUi, "#progressionPage .playerTableScroller {\n    display: block;", "The real player table scroller must directly own mobile scrolling.");
 includes(sharedUi, "overflow-x: auto;\n    overflow-y: hidden;", "The real player table scroller must pan horizontally.");
 includes(sharedUi, "touch-action: auto;", "The player table must allow native touch panning.");
-includes(sharedUi, "min-width: 820px;", "Tablet/mobile tables must retain a real horizontal scroll range.");
-includes(sharedUi, "min-width: 680px;", "Phone tables must remain laterally pannable.");
-includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizontal scroll range.");
-includes(sharedUi, "--mfl-table-header-height: 32px;", "Mobile header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 28px;", "Mobile row content height must stay canonical.");
-includes(sharedUi, "--mfl-table-header-height: 28px;", "Phone header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 24px;", "Phone row content height must stay canonical.");
-includes(sharedUi, "--mfl-table-header-height: 26px;", "Tiny-screen header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 22px;", "Tiny-screen row content height must stay canonical.");
+includes(sharedUi, "min-width: 760px;", "Tablet/mobile tables must retain a compact horizontal scroll range.");
+includes(sharedUi, "min-width: 600px;", "Phone tables must remain compact and laterally pannable.");
+includes(sharedUi, "min-width: 540px;", "Small phones must retain a compact horizontal scroll range.");
+includes(sharedUi, "--mfl-table-header-height: 30px;", "Mobile header height must use the compact contract.");
+includes(sharedUi, "--mfl-table-row-height: 26px;", "Mobile row content height must use the compact contract.");
+includes(sharedUi, "--mfl-table-header-height: 26px;", "Phone header height must use the compact contract.");
+includes(sharedUi, "--mfl-table-row-height: 22px;", "Phone row content height must use the compact contract.");
+includes(sharedUi, "--mfl-table-header-height: 24px;", "Tiny-screen header height must use the compact contract.");
+includes(sharedUi, "--mfl-table-row-height: 20px;", "Tiny-screen row content height must use the compact contract.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 10px;", "Mobile headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 9px;", "Phone headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 8px;", "Tiny-screen headers must stay two pixels smaller than row text.");
@@ -46,10 +46,9 @@ includes(sharedUi, "function fadeShadow(canScrollLeft, canScrollRight, strength 
 excludes(sharedUi, "MutationObserver", "Mobile table presentation must remain render/resize driven.");
 
 includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Canonical Table source must explicitly gate mobile-only behavior.");
-includes(tableSource, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Canonical Table headings must switch only at the narrow breakpoint.");
 includes(tableSource, 'selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;', "Rebuilt headers must stay non-selectable until loaded selection state exists.");
-excludes(tableSource, 'positions: "POS"', "Positions must not participate in compact width-dependent abbreviation.");
-includes(tableSource, 'column === "positions"\n          ? "POSITIONS"', "Mobile tables must call the Positions column POSITIONS.");
+includes(tableSource, 'positions: "POS"', "Small-screen Positions headings must use POS.");
+excludes(tableSource, '? "POSITIONS"', "Small-screen headers must not restore long POSITIONS text.");
 for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(tableSource, `: "${label}"`, `Canonical compact headings must include ${label}.`);
 }
@@ -67,9 +66,8 @@ includes(staticUi, "if (MOBILE_TOOLTIP_MEDIA.matches) return;", "Hover/focus too
 includes(discountUi, "if (MOBILE_TOOLTIP_MEDIA.matches || !(metric instanceof HTMLElement)", "Discount-rate hover tooltip must be disabled on mobile.");
 includes(evaluationSource, 'window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches', "Evaluation hover-only actions must remain disabled on mobile.");
 
-includes(bootstrap, 'const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");', "Bootstrap must know the compact heading breakpoint before first paint.");
-excludes(bootstrap, 'positions: "POS"', "Bootstrap must not abbreviate Positions based on viewport width.");
-includes(bootstrap, 'if (column === "positions") return "POSITIONS";', "Positions must already read POSITIONS before first paint.");
+includes(bootstrap, 'positions: "POS"', "Bootstrap must render POS before first paint on small screens.");
+excludes(bootstrap, 'if (column === "positions") return "POSITIONS";', "Bootstrap must not restore long POSITIONS text.");
 includes(bootstrap, "function firstPaintTableColumnLabel(page, column)", "Bootstrap must derive first-paint labels from viewport and column identity.");
 
 excludes(buildCore, "app-core-mobile-table", "The canonical build must not depend on the retired mobile-table transform.");

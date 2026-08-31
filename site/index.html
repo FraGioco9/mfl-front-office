@@ -32,7 +32,7 @@
         mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";
         mobileTableFirstPaintStyle.textContent = `
 @media (max-width: 900px) {
-  #progressionPage { --mfl-table-header-height: 32px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px; --mfl-table-col-listing: 4.2%; --mfl-table-col-positions: 9.699243795931409%; }
+  #progressionPage { --mfl-table-header-height: 30px; --mfl-table-row-height: 26px; --mfl-table-row-outer-height: 30px; --mfl-table-col-listing: 4%; --mfl-table-col-positions: 9.89924379593141%; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #openFiltersButton { order: -2; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #viewControlsSeparator { order: -1; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell { position: relative; }
@@ -41,7 +41,7 @@
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { right: 0; background: linear-gradient(270deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%); }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollLeft::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollRight::after { opacity: 0.94; visibility: visible; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller { display: block; width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: auto; -webkit-mask-image: none; mask-image: none; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 820px; max-width: none; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 760px; max-width: none; }
   #progressionPage .playerTableScroller th { font-size: 10px; }
   #progressionPage #tableHead th > span:first-child { font-size: 10px; }
   #progressionPage #tableHead .selectionCell input:disabled { opacity: 0.45; }
@@ -53,9 +53,9 @@
   #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }
 }
 @media (max-width: 520px) {
-  #progressionPage { --mfl-table-header-height: 28px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px; --mfl-table-col-listing: 3.8%; --mfl-table-col-positions: 10.099243795931411%; }
+  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.5%; --mfl-table-col-positions: 10.39924379593141%; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 680px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 600px; }
   #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }
   #progressionPage .playerTableScroller th { font-size: 9px; }
   #progressionPage #tableHead th > span:first-child { font-size: 9px; }
@@ -63,9 +63,9 @@
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }
 }
 @media (max-width: 380px) {
-  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.6%; --mfl-table-col-positions: 10.29924379593141%; }
+  #progressionPage { --mfl-table-header-height: 24px; --mfl-table-row-height: 20px; --mfl-table-row-outer-height: 24px; --mfl-table-col-listing: 3%; --mfl-table-col-positions: 10.89924379593141%; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 40px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 600px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 540px; }
   #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }
   #progressionPage .playerTableScroller th { font-size: 8px; }
   #progressionPage #tableHead th > span:first-child { font-size: 8px; }
@@ -646,7 +646,7 @@
                       <th aria-label="Position"><span class="evaluationHeaderFull">Position</span><span class="evaluationHeaderCompact" aria-hidden="true">POS</span></th>
                       <th>Age</th>
                       <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
-                      <th aria-label="Expected Seasons"><span class="evaluationHeaderFull">Expected Seasons</span><span class="evaluationHeaderCompact" aria-hidden="true">EXP SZN</span></th>
+                      <th aria-label="Expected Seasons"><span class="evaluationHeaderFull">Expected Seasons</span><span class="evaluationHeaderCompact" aria-hidden="true">SZN</span></th>
                       <th aria-label="$MFL Return"><span class="evaluationHeaderFull">$MFL Return</span><span class="evaluationHeaderCompact" aria-hidden="true">$MFL</span></th>
                       <th>Value</th>
                     </tr>
@@ -667,7 +667,7 @@
                       <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
                       <th>$MFL</th>
                       <th>USD</th>
-                      <th aria-label="Discount Factor"><span class="evaluationHeaderFull">Discount Factor</span><span class="evaluationHeaderCompact" aria-hidden="true">DISC FACT</span></th>
+                      <th aria-label="Discount Factor"><span class="evaluationHeaderFull">Discount Factor</span><span class="evaluationHeaderCompact" aria-hidden="true">DISC</span></th>
                       <th>Value</th>
                     </tr>
                   </thead>
