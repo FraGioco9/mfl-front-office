@@ -11,6 +11,7 @@ on:
       - site/validate-evaluation-search-clear-selection.mjs
       - site/validate-stats-mobile-scaling.mjs
       - site/validate-listing-column.mjs
+      - site/validate-table-sort-session.mjs
       - .github/workflows/issue594-runtime-ownership-refactor.yml
 
 permissions:
