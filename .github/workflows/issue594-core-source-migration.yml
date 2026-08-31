@@ -27,11 +27,14 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - name: Promote shipped core artifacts to canonical sources
         run: node site/migrate-594-core-sources.mjs
+      - name: Generate source-owned core artifacts
+        working-directory: site
+        run: node build-app-core.mjs
       - name: Commit source-owned core migration locally
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/build-app-core.mjs site/modules/core-sources site/modules/app-core-runtime.js site/modules/app-core-evaluation-runtime.js site/modules/app-core-mfl-stats-runtime.js site/modules/app-core-club-runtime.js site/modules/app-core-settings-runtime.js site/modules/app-core-player-runtime.js site/modules/app-core-table-runtime.js site/modules/app-core-wallet-runtime.js site/modules/app-core-watchlist-runtime.js
+          git add site/build-app-core.mjs site/table-width-runtime.js site/modules/core-sources site/modules/app-core-runtime.js site/modules/app-core-evaluation-runtime.js site/modules/app-core-mfl-stats-runtime.js site/modules/app-core-club-runtime.js site/modules/app-core-settings-runtime.js site/modules/app-core-player-runtime.js site/modules/app-core-table-runtime.js site/modules/app-core-wallet-runtime.js site/modules/app-core-watchlist-runtime.js
           git commit -m "Make split application cores source-owned"
       - name: Install dependencies
         working-directory: site
