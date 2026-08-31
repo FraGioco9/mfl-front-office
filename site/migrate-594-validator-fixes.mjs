@@ -134,3 +134,24 @@ const generatedSources = [sharedCore, evaluationCore, mflStatsCore, clubCore, se
 if (!evalValidator.includes(legacyArtifactBlock)) throw new Error("Evaluation validator legacy artifact block was not found.");
 evalValidator = evalValidator.replace(legacyArtifactBlock, sourceOwnedArtifactBlock);
 await writeFile(evalValidatorUrl, evalValidator, "utf8");
+
+const statsValidatorUrl = new URL("./validate-stats-animation-owner.mjs", import.meta.url);
+let statsValidator = await readFile(statsValidatorUrl, "utf8");
+statsValidator = statsValidator.replace(
+  "const [databaseStats, databaseState, mflStats, normalizer, buildCore, stylesBase, loadingStyles] = await Promise.all([",
+  "const [databaseStats, databaseState, mflStats, mflStatsSource, buildCore, stylesBase, loadingStyles] = await Promise.all([",
+);
+statsValidator = statsValidator.replace(
+  '  read("./modules/app-core-stats-route-ownership.js"),',
+  '  read("./modules/core-sources/mfl-stats.js"),',
+);
+statsValidator = statsValidator.replaceAll("  normalizer,", "  mflStatsSource,");
+statsValidator = statsValidator.replace(
+  '  "normalizeMflStatsRouteOwnership",',
+  '  \'source: "mfl-stats.js"\',',
+);
+statsValidator = statsValidator.replace(
+  "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
+  "The canonical application-core build must consume the source-owned MFL Stats runtime.",
+);
+await writeFile(statsValidatorUrl, statsValidator, "utf8");
