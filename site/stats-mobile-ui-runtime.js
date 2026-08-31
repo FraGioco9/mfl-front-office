@@ -41,13 +41,18 @@
     return Number.isFinite(gap) ? Math.max(0, gap) : 0;
   }
 
-  function mobileHistogramColumnWidth(histogram, labelCount) {
+  function mobileHistogramLayout(scroller, histogram, labelCount) {
     const count = Math.max(1, Number(labelCount) || 1);
-    const availableWidth = Math.max(1, histogram instanceof HTMLElement ? histogram.clientWidth : 0);
     const gap = histogramColumnGap(histogram);
     const totalGapWidth = gap * Math.max(0, count - 1);
-    const fittedWidth = (availableWidth - totalGapWidth) / count;
-    return Math.max(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, fittedWidth);
+    const visibleWidth = Math.max(1, scroller instanceof HTMLElement ? scroller.clientWidth : 0);
+    const minimumContentWidth = (MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH * count) + totalGapWidth;
+    const contentWidth = Math.max(visibleWidth, minimumContentWidth);
+    const columnWidth = Math.max(
+      MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH,
+      (contentWidth - totalGapWidth) / count,
+    );
+    return { contentWidth, columnWidth };
   }
 
   function scaledHistogramRadius(barWidth, desktopRadius) {
@@ -62,9 +67,11 @@
     const items = Array.from(histogram.querySelectorAll(":scope > .mflStatsHistogramItem"));
 
     if (mobile) {
-      const columnWidth = mobileHistogramColumnWidth(histogram, items.length);
+      const { contentWidth, columnWidth } = mobileHistogramLayout(scroller, histogram, items.length);
+      const contentWidthPx = `${contentWidth}px`;
       const widthPx = `${columnWidth}px`;
       const gridColumns = `repeat(${Math.max(1, items.length)}, minmax(${widthPx}, 1fr))`;
+      if (histogram.style.minWidth !== contentWidthPx) histogram.style.minWidth = contentWidthPx;
       if (histogram.style.gridTemplateColumns !== gridColumns) histogram.style.gridTemplateColumns = gridColumns;
       if (histogram.style.getPropertyValue("--mfl-stats-bar-width") !== widthPx) {
         histogram.style.setProperty("--mfl-stats-bar-width", widthPx);
@@ -83,6 +90,7 @@
       return;
     }
 
+    histogram.style.removeProperty("min-width");
     if (histogram.style.gridTemplateColumns !== DEFAULT_HISTOGRAM_GRID_COLUMNS) {
       histogram.style.gridTemplateColumns = DEFAULT_HISTOGRAM_GRID_COLUMNS;
     }
