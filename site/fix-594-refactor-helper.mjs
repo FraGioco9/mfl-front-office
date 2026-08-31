@@ -40,4 +40,4 @@ for (const [before, after] of replacements) {
 }
 
 await writeFile(url, source, "utf8");
-console.log("Issue 594 refactor helper quoting and typing fixed.");
+console.log("Issue 594 refactor helper is ready for runtime ownership validation.");
