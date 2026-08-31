@@ -106,6 +106,10 @@ for (const name of names) {
     '"await loadExternalRouteCore(path);"',
     '"await resources().load(path, { versioned: true });"',
   );
+  source = source.replaceAll(
+    'const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("function walletAddressCandidatesFromValue", optOutStart) : -1;',
+    'const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("\\nfunction ", optOutStart + "function optOutWallet".length) : -1;',
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
