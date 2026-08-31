@@ -7,6 +7,7 @@ on:
     paths:
       - site/migrate-594-core-sources.mjs
       - site/migrate-594-source-validators.mjs
+      - site/migrate-594-validator-fixes.mjs
       - .github/workflows/issue594-core-source-migration.yml
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
         run: node site/migrate-594-core-sources.mjs
       - name: Migrate source ownership validators
         run: node site/migrate-594-source-validators.mjs
+      - name: Apply source validator fixes
+        run: node site/migrate-594-validator-fixes.mjs
       - name: Generate source-owned core artifacts
         working-directory: site
         run: node build-app-core.mjs
@@ -47,6 +50,6 @@ jobs:
         run: npm run check
       - name: Remove migration helpers and push
         run: |
-          git rm site/migrate-594-core-sources.mjs site/migrate-594-source-validators.mjs .github/workflows/issue594-core-source-migration.yml
+          git rm site/migrate-594-core-sources.mjs site/migrate-594-source-validators.mjs site/migrate-594-validator-fixes.mjs .github/workflows/issue594-core-source-migration.yml
           git commit -m "Remove issue 594 core migration helpers"
           git push origin HEAD:refactor/594-global-runtime-ownership
