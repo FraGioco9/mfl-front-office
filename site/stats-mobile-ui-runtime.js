@@ -3,10 +3,10 @@
 
   const MOBILE_MEDIA = window.matchMedia("(max-width: 900px)");
   const MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH = 12;
-  const MOBILE_HISTOGRAM_COLUMN_MAX_WIDTH = 96;
-  const MOBILE_HISTOGRAM_REFERENCE_WIDTH = 384;
+  const DESKTOP_HISTOGRAM_BAR_MAX_WIDTH = 34;
+  const DESKTOP_HISTOGRAM_RADIUS_TOP = 6;
+  const DESKTOP_HISTOGRAM_RADIUS_BOTTOM = 3;
   const DEFAULT_HISTOGRAM_GRID_COLUMNS = "repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr))";
-  const MOBILE_HISTOGRAM_GRID_COLUMNS = `repeat(var(--mfl-stats-bars, 1), minmax(${MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH}px, 1fr))`;
   const FADE_LEFT_CLASS = "mflStatsCanScrollLeft";
   const FADE_RIGHT_CLASS = "mflStatsCanScrollRight";
   const SCROLL_EPSILON = 2;
@@ -35,29 +35,54 @@
     return scroller.querySelector(":scope > .mflStatsHistogram, :scope > .mflStatsHistogramLayout");
   }
 
-  function mobileHistogramColumnMaxWidth(labelCount) {
+  function mobileHistogramColumnWidth(histogram, labelCount) {
     const count = Math.max(1, Number(labelCount) || 1);
-    const scaledWidth = Math.floor(MOBILE_HISTOGRAM_REFERENCE_WIDTH / count);
-    return Math.max(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, Math.min(MOBILE_HISTOGRAM_COLUMN_MAX_WIDTH, scaledWidth));
+    const availableWidth = Math.max(1, histogram instanceof HTMLElement ? histogram.clientWidth : 0);
+    const scaledWidth = availableWidth / count;
+    return Math.max(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, Math.min(DESKTOP_HISTOGRAM_BAR_MAX_WIDTH, scaledWidth));
+  }
+
+  function scaledHistogramRadius(barWidth, desktopRadius) {
+    const width = Math.max(0, Number(barWidth) || 0);
+    return (width / DESKTOP_HISTOGRAM_BAR_MAX_WIDTH) * desktopRadius;
   }
 
   function syncHistogramColumns(scroller) {
     const histogram = histogramForScroller(scroller);
     if (!(histogram instanceof HTMLElement)) return;
     const mobile = MOBILE_MEDIA.matches;
-    const gridColumns = mobile ? MOBILE_HISTOGRAM_GRID_COLUMNS : DEFAULT_HISTOGRAM_GRID_COLUMNS;
-    if (histogram.style.gridTemplateColumns !== gridColumns) histogram.style.gridTemplateColumns = gridColumns;
-    const items = histogram.querySelectorAll(":scope > .mflStatsHistogramItem");
-    const maxWidth = `${mobileHistogramColumnMaxWidth(items.length)}px`;
+    const items = Array.from(histogram.querySelectorAll(":scope > .mflStatsHistogramItem"));
+
+    if (mobile) {
+      const columnWidth = mobileHistogramColumnWidth(histogram, items.length);
+      const widthPx = `${columnWidth}px`;
+      const gridColumns = `repeat(${Math.max(1, items.length)}, minmax(${widthPx}, 1fr))`;
+      if (histogram.style.gridTemplateColumns !== gridColumns) histogram.style.gridTemplateColumns = gridColumns;
+      if (histogram.style.getPropertyValue("--mfl-stats-bar-width") !== widthPx) {
+        histogram.style.setProperty("--mfl-stats-bar-width", widthPx);
+      }
+
+      items.forEach((item) => {
+        if (!(item instanceof HTMLElement)) return;
+        const bar = item.querySelector(".mflStatsHistogramBar");
+        const fill = item.querySelector(".mflStatsHistogramFill");
+        if (!(bar instanceof HTMLElement) || !(fill instanceof HTMLElement)) return;
+        const barWidth = bar.getBoundingClientRect().width;
+        const topRadius = scaledHistogramRadius(barWidth, DESKTOP_HISTOGRAM_RADIUS_TOP);
+        const bottomRadius = scaledHistogramRadius(barWidth, DESKTOP_HISTOGRAM_RADIUS_BOTTOM);
+        fill.style.borderRadius = `${topRadius}px ${topRadius}px ${bottomRadius}px ${bottomRadius}px`;
+      });
+      return;
+    }
+
+    if (histogram.style.gridTemplateColumns !== DEFAULT_HISTOGRAM_GRID_COLUMNS) {
+      histogram.style.gridTemplateColumns = DEFAULT_HISTOGRAM_GRID_COLUMNS;
+    }
+    histogram.style.removeProperty("--mfl-stats-bar-width");
     items.forEach((item) => {
       if (!(item instanceof HTMLElement)) return;
-      if (mobile) {
-        item.style.maxWidth = maxWidth;
-        item.style.justifySelf = "center";
-      } else {
-        item.style.removeProperty("max-width");
-        item.style.removeProperty("justify-self");
-      }
+      const fill = item.querySelector(".mflStatsHistogramFill");
+      if (fill instanceof HTMLElement) fill.style.removeProperty("border-radius");
     });
   }
 
