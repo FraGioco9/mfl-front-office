@@ -110,6 +110,14 @@ for (const name of names) {
     'const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("function walletAddressCandidatesFromValue", optOutStart) : -1;',
     'const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("\\nfunction ", optOutStart + "function optOutWallet".length) : -1;',
   );
+  source = source.replaceAll(
+    '["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],',
+    '["void runViewTransition(pageName, viewName, {", "await setView(viewName);", "Club view"],',
+  );
+  source = source.replaceAll(
+    '["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],',
+    '["const transition = await runPageTransition(CLUB_PAGE, updateHistory, {", "await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Club page"],',
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
