@@ -84,8 +84,8 @@ await write("dropdowns-runtime.js", runtime);
 let shared = await read("modules/core-sources/shared.js");
 shared = replaceOnce(
   shared,
-  `<select class=\\"evaluationSummaryPositionSelect\\" data-evaluation-summary-position>`,
-  `<select class=\\"evaluationSummaryPositionSelect\\" data-mfl-dropdown-enhanced=\\"true\\" data-evaluation-summary-position>`,
+  `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>`,
+  `<select class="evaluationSummaryPositionSelect" data-mfl-dropdown-enhanced="true" data-evaluation-summary-position>`,
   "Evaluation Position first-render enhanced markup",
 );
 await write("modules/core-sources/shared.js", shared);
@@ -100,7 +100,7 @@ dropdownValidator = replaceOnce(
 dropdownValidator = replaceOnce(
   dropdownValidator,
   `invariant(\n  runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),\n  "Evaluation summary position selects must remain table-owned instead of receiving global dropdown enhancement.",\n);`,
-  `invariant(\n  !runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),\n  "Evaluation Position must participate in the canonical dropdown enhancer instead of being special-cased out.",\n);\ninvariant(\n  shared.includes('class=\\"evaluationSummaryPositionSelect\\" data-mfl-dropdown-enhanced=\\"true\\" data-evaluation-summary-position'),\n  "Evaluation Position must render with canonical dropdown ownership on its first rendered frame.",\n);\ninvariant(\n  dropdowns.includes('--mfl-dropdown-chevron-gap: auto;')\n    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced=\\"true\\"] {')\n    && dropdowns.includes('--mfl-dropdown-chevron-gap: 3px;')\n    && dropdowns.includes('margin: 0 0 0 var(--mfl-dropdown-chevron-gap);'),\n  "Evaluation Position must use the canonical dropdown trigger/menu styling with a compact text-to-chevron gap.",\n);\ninvariant(\n  !stylesBase.includes('.evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after')\n    && !stylesBase.includes('.evaluationSummaryPositionSelect {'),\n  "Evaluation Position must not retain its legacy custom trigger or pseudo-element chevron owner.",\n);`,
+  `invariant(\n  !runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),\n  "Evaluation Position must participate in the canonical dropdown enhancer instead of being special-cased out.",\n);\ninvariant(\n  shared.includes('class="evaluationSummaryPositionSelect" data-mfl-dropdown-enhanced="true" data-evaluation-summary-position'),\n  "Evaluation Position must render with canonical dropdown ownership on its first rendered frame.",\n);\ninvariant(\n  dropdowns.includes('--mfl-dropdown-chevron-gap: auto;')\n    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {')\n    && dropdowns.includes('--mfl-dropdown-chevron-gap: 3px;')\n    && dropdowns.includes('margin: 0 0 0 var(--mfl-dropdown-chevron-gap);'),\n  "Evaluation Position must use the canonical dropdown trigger/menu styling with a compact text-to-chevron gap.",\n);\ninvariant(\n  !stylesBase.includes('.evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after')\n    && !stylesBase.includes('.evaluationSummaryPositionSelect {'),\n  "Evaluation Position must not retain its legacy custom trigger or pseudo-element chevron owner.",\n);`,
   "Evaluation Position dropdown ownership validator",
 );
 await write("validate-dropdown-style-ownership.mjs", dropdownValidator);
