@@ -39,6 +39,14 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 @media (max-width: 900px) {
+  #evaluationPage .evaluationPlayerNameFull {
+    display: none;
+  }
+
+  #evaluationPage .evaluationPlayerNameCompact {
+    display: inline;
+  }
+
   :root {
     --pinned-sidebar-width: 0px;
     --mobile-nav-height: 58px;

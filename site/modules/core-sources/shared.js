@@ -5885,7 +5885,9 @@ function renderEvaluationTable(row) {
     updateEvaluationFooterActions();
     return;
   }
-  const playerName = formatCellValue(row, "name").replace(/^(\S)[^\s]*\s+(?:.*\s)?(\S+)$/, "$1. $2");
+  const playerName = formatCellValue(row, "name");
+  const compactPlayerName = playerName.replace(/^(\S)[^\s]*\s+(?:.*\s)?(\S+)$/, "$1. $2");
+  const playerNameMarkup = `<span class="evaluationPlayerNameFull">${escapeHtml(playerName)}</span><span class="evaluationPlayerNameCompact">${escapeHtml(compactPlayerName)}</span>`;
   const currentAge = Number(getValue(row, "age"));
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
   const currentOverall = overallValues[seasonOffset] ?? overallValues[0];
@@ -5921,7 +5923,7 @@ function renderEvaluationTable(row) {
     const discountFactor = evaluationDiscountFactor(discountRate, season);
     const presentValue = Number.isFinite(usdValue) && Number.isFinite(discountFactor) ? usdValue * discountFactor : null;
     const values = [
-      playerName,
+      playerNameMarkup,
       season,
       Number.isFinite(currentAge) ? currentAge + season - 1 : "",
       seasonOverall,
@@ -5941,7 +5943,7 @@ function renderEvaluationTable(row) {
 
     values.forEach((value) => {
       const cell = document.createElement("td");
-      if (typeof value === "string" && value.includes("evaluationOverallControl")) {
+      if (typeof value === "string" && (value.includes("evaluationOverallControl") || value.includes("evaluationPlayerName"))) {
         cell.innerHTML = value;
       } else {
         cell.textContent = value;
@@ -5960,7 +5962,7 @@ function renderEvaluationTable(row) {
     : null;
   const summaryRow = document.createElement("tr");
   [
-    playerName,
+    playerNameMarkup,
     evaluationSummaryPositionControl(row, summaryPosition),
     Number.isFinite(currentAge) ? currentAge + seasonOffset : "",
     summaryOverall,
@@ -5970,7 +5972,7 @@ function renderEvaluationTable(row) {
   ].forEach((value) => {
     const cell = document.createElement("td");
 
-    if (typeof value === "string" && value.includes("data-evaluation-summary-position")) {
+    if (typeof value === "string" && (value.includes("data-evaluation-summary-position") || value.includes("evaluationPlayerName"))) {
       cell.innerHTML = value;
     } else {
       cell.textContent = value;
