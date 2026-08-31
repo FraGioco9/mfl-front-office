@@ -3241,7 +3241,7 @@ function saveSettingsPreferencesAfterChange() {
 
   state.walletPreferencesSaveTimer = null;
 
-  void saveWalletPreferencesNow();
+  void saveWalletPreferencesNow({ domains: ["settings"] });
 }
 function currentWatchlistName() {
   const pinnedName = String(window.__mflWatchlistRouteUiRuntime?.currentName?.() || "").trim();
@@ -3957,7 +3957,7 @@ async function loadWalletPreferences(options = {}) {
       } else {
         // Supabase has been cleared but this browser still has the last usable
         // copy. Keep it active and write it back to the authoritative column.
-        void saveWalletPreferencesNow();
+        void saveWalletPreferencesNow({ domains: ["watchlists"] });
       }
       state.watchlistPlayerIdsAdded.clear();
       state.watchlistPlayerIdsRemoved.clear();
@@ -4130,7 +4130,7 @@ function saveWatchlistStateAfterAction() {
   if (state.linkedWalletAddress && hasWalletProof()) {
     window.clearTimeout(state.walletPreferencesSaveTimer);
     state.walletPreferencesSaveTimer = null;
-    void saveWalletPreferencesNow();
+    void saveWalletPreferencesNow({ domains: ["watchlists", "tableState", "settings"] });
   }
 }
 
@@ -4289,7 +4289,7 @@ function queueCloudTableStateSave() {
 
   window.clearTimeout(state.walletPreferencesSaveTimer);
   state.walletPreferencesSaveTimer = window.setTimeout(() => {
-    void saveWalletPreferencesNow();
+    void saveWalletPreferencesNow({ domains: ["tableState"] });
   }, 500);
 }
 
@@ -9413,7 +9413,7 @@ async function startApp() {
       return false;
     }
     try {
-      await saveWalletPreferencesNow();
+      await saveWalletPreferencesNow({ domains: ["tableState"] });
       return true;
     } catch {
       return false;

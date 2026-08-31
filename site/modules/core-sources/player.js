@@ -1503,7 +1503,7 @@ function queueWalletNotesSave() {
 
   window.clearTimeout(state.walletNotesSaveTimer);
   state.walletNotesSaveTimer = window.setTimeout(() => {
-    void saveWalletPreferencesNow();
+    void saveWalletPreferencesNow({ domains: ["playerNotes"] });
   }, 500);
 }
 
