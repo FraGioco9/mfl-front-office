@@ -10,6 +10,7 @@ on:
       - site/migrate-594-retired-validator-reads.mjs
       - site/validate-evaluation-search-clear-selection.mjs
       - site/validate-stats-mobile-scaling.mjs
+      - site/validate-listing-column.mjs
       - .github/workflows/issue594-runtime-ownership-refactor.yml
 
 permissions:
