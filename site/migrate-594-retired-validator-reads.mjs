@@ -31,6 +31,14 @@ for (const name of names) {
     'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")',
     'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));")',
   );
+  source = source.replaceAll(
+    '"if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {"',
+    '"if (incrementalRouteIsCached(route, 1)) return loadAndRender();"',
+  );
+  source = source.replaceAll(
+    `'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);'`,
+    `'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'`,
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
