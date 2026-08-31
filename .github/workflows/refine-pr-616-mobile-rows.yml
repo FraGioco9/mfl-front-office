@@ -43,7 +43,6 @@ jobs:
                   raise SystemExit(f"{path}: expected one match, found {count}")
               file.write_text(source.replace(old, new, 1), encoding="utf-8")
 
-          # Hydrated responsive geometry: preserve header scale, boost mobile row geometry by 8%.
           shared = "site/shared-table-ui-runtime.js"
           replace_once(shared,
               '--mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px));',
@@ -213,6 +212,16 @@ jobs:
           node site/build-app-core.mjs
           node site/sync-release-projections.mjs
 
+      - name: Snapshot generated artifacts for validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site
+          git diff --cached --check
+          git commit -m "Refine mobile table row proportions"
+
       - name: Install and validate site
         shell: bash
         run: |
@@ -221,14 +230,12 @@ jobs:
           npm ci
           npm run check
 
-      - name: Commit refinement and remove scaffolding
+      - name: Remove scaffolding and push validated refinement
         shell: bash
         run: |
           set -euo pipefail
           rm -f .github/workflows/refine-pr-616-mobile-rows.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "Refine mobile table row proportions"
+          git commit --amend --no-edit
           git push origin HEAD:fix/599-responsive-table-proportions
