@@ -3,7 +3,7 @@
 
   const MOBILE_MEDIA = window.matchMedia("(max-width: 900px)");
   const MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH = 12;
-  const DESKTOP_HISTOGRAM_BAR_MAX_WIDTH = 34;
+  const DESKTOP_HISTOGRAM_BAR_REFERENCE_WIDTH = 34;
   const DESKTOP_HISTOGRAM_RADIUS_TOP = 6;
   const DESKTOP_HISTOGRAM_RADIUS_BOTTOM = 3;
   const DEFAULT_HISTOGRAM_GRID_COLUMNS = "repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr))";
@@ -35,16 +35,24 @@
     return scroller.querySelector(":scope > .mflStatsHistogram, :scope > .mflStatsHistogramLayout");
   }
 
+  function histogramColumnGap(histogram) {
+    if (!(histogram instanceof HTMLElement)) return 0;
+    const gap = Number.parseFloat(getComputedStyle(histogram).columnGap);
+    return Number.isFinite(gap) ? Math.max(0, gap) : 0;
+  }
+
   function mobileHistogramColumnWidth(histogram, labelCount) {
     const count = Math.max(1, Number(labelCount) || 1);
     const availableWidth = Math.max(1, histogram instanceof HTMLElement ? histogram.clientWidth : 0);
-    const scaledWidth = availableWidth / count;
-    return Math.max(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, Math.min(DESKTOP_HISTOGRAM_BAR_MAX_WIDTH, scaledWidth));
+    const gap = histogramColumnGap(histogram);
+    const totalGapWidth = gap * Math.max(0, count - 1);
+    const fittedWidth = (availableWidth - totalGapWidth) / count;
+    return Math.max(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, fittedWidth);
   }
 
   function scaledHistogramRadius(barWidth, desktopRadius) {
     const width = Math.max(0, Number(barWidth) || 0);
-    return (width / DESKTOP_HISTOGRAM_BAR_MAX_WIDTH) * desktopRadius;
+    return (width / DESKTOP_HISTOGRAM_BAR_REFERENCE_WIDTH) * desktopRadius;
   }
 
   function syncHistogramColumns(scroller) {
