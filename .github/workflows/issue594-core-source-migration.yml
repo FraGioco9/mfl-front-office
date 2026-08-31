@@ -40,7 +40,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/build-app-core.mjs site/table-width-runtime.js site/modules/core-sources site/modules/app-core-runtime.js site/modules/app-core-evaluation-runtime.js site/modules/app-core-mfl-stats-runtime.js site/modules/app-core-club-runtime.js site/modules/app-core-settings-runtime.js site/modules/app-core-player-runtime.js site/modules/app-core-table-runtime.js site/modules/app-core-wallet-runtime.js site/modules/app-core-watchlist-runtime.js site/validate.mjs site/validate-app-core-splitter-architecture.mjs
+          git add -A site
           git commit -m "Make split application cores source-owned"
       - name: Install dependencies
         working-directory: site
