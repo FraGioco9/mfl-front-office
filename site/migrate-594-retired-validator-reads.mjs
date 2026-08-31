@@ -11,6 +11,17 @@ const canonicalCoreRead = `Promise.all([
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\\n"))`;
+const canonicalDirectCoreRead = `Promise.all([
+    readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/mfl-stats.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/club.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/settings.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/player.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/table.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
+  ]).then((parts) => parts.join("\\n"))`;
 
 const names = (await readdir(new URL("./", import.meta.url)))
   .filter((name) => /^validate.*\.mjs$/.test(name));
@@ -22,6 +33,14 @@ for (const name of names) {
   const original = source;
   source = source.replaceAll('read("./modules/app-core.js")', canonicalCoreRead);
   source = source.replaceAll("read('./modules/app-core.js')", canonicalCoreRead);
+  source = source.replaceAll(
+    'readFile(new URL("./modules/app-core.js", import.meta.url), "utf8")',
+    canonicalDirectCoreRead,
+  );
+  source = source.replaceAll(
+    "readFile(new URL('./modules/app-core.js', import.meta.url), 'utf8')",
+    canonicalDirectCoreRead,
+  );
   source = source.replaceAll(
     'import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";',
     'import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";',
