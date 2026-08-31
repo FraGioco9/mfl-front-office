@@ -1,10 +1,21 @@
 import ts from "@typescript/typescript6";
 
 import { readFile } from "node:fs/promises";
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
-const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const artifacts = Object.freeze({
+  core: await read("./modules/core-sources/shared.js"),
+  routeChunks: Object.freeze({
+    evaluation: await read("./modules/core-sources/evaluation.js"),
+    mflstats: await read("./modules/core-sources/mfl-stats.js"),
+    club: await read("./modules/core-sources/club.js"),
+    settings: await read("./modules/core-sources/settings.js"),
+    player: await read("./modules/core-sources/player.js"),
+    table: await read("./modules/core-sources/table.js"),
+    wallet: await read("./modules/core-sources/wallet.js"),
+    watchlist: await read("./modules/core-sources/watchlist.js"),
+  }),
+});
 
 function collectBindingNames(name, output) {
   if (!name) return;
@@ -99,7 +110,7 @@ const coreInfo = collectTopLevelDeclarations(artifacts.core, "app-core-runtime.j
 const startApp = coreInfo.file.statements.find((statement) => (
   ts.isFunctionDeclaration(statement) && statement.name?.text === "startApp"
 ));
-if (!startApp) throw new Error("Generated shared application core is missing startApp().");
+if (!startApp) throw new Error("Canonical shared application core is missing startApp().");
 const startupReferences = collectReferences(startApp);
 const eagerReferences = collectEagerTopLevelReferences(coreInfo.file);
 const routeOwnedNames = new Map();
@@ -145,7 +156,7 @@ for (const [chunkName, chunkInfo] of routeChunkInfo) {
 }
 
 if (crossChunkReferences.length) {
-  throw new Error(`Generated route cores reference undeclared lazy dependencies: ${crossChunkReferences.sort().join("; ")}`);
+  throw new Error(`Canonical route cores reference undeclared lazy dependencies: ${crossChunkReferences.sort().join("; ")}`);
 }
 
-console.log("Generated application-core eager/startup and route dependency audit passed.");
+console.log("Canonical application-core eager/startup and route dependency audit passed.");
