@@ -60,16 +60,18 @@ for (const name of names) {
   }
 
   for (const entry of generatedCores) {
-    const oldRuntimeLiteral = `const ${entry.variable} = resolve(siteRoot, \\"modules/${entry.runtime}\\");`;
-    const newRuntimeLiteral = `runtime: \\"${entry.runtime}\\"`;
+    const oldRuntimeLiteral = `const ${entry.variable} = resolve(siteRoot, "modules/${entry.runtime}");`;
+    const newRuntimeLiteral = `runtime: "${entry.runtime}"`;
     text = text.replaceAll(oldRuntimeLiteral, newRuntimeLiteral);
 
-    const doubleArtifactLiteral = `\\"artifacts.routeChunks?.${entry.key}\\"`;
-    const singleSourceLiteral = `\\'source: \\"${entry.source}\\"\\'`;
-    text = text.replaceAll(doubleArtifactLiteral, singleSourceLiteral);
-
-    const singleArtifactLiteral = `\\'artifacts.routeChunks?.${entry.key}\\'`;
-    text = text.replaceAll(singleArtifactLiteral, singleSourceLiteral);
+    text = text.replaceAll(
+      `"artifacts.routeChunks?.${entry.key}"`,
+      `'source: "${entry.source}"'`,
+    );
+    text = text.replaceAll(
+      `'artifacts.routeChunks?.${entry.key}'`,
+      `'source: "${entry.source}"'`,
+    );
   }
 
   if (text !== original) await writeFile(url, text, "utf8");
