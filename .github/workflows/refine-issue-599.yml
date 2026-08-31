@@ -1,0 +1,389 @@
+name: Refine issue 599
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Refine responsive table sizing and centering
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard 9e09523322294b29a160ad6fd285fe0f841703c7
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one occurrence, found {count}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          def regex_once(path, pattern, replacement, flags=0):
+              p = Path(path)
+              text = p.read_text()
+              next_text, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count != 1:
+                  raise SystemExit(f"{path}: regex expected one occurrence, found {count}: {pattern[:120]!r}")
+              p.write_text(next_text)
+
+          # Canonical desktop values remain unchanged; add typography variables and make
+          # both header/body cells defer vertical positioning to their flex content hosts.
+          styles = "site/styles.css"
+          replace_once(
+              styles,
+              "  --mfl-table-header-height: 38px;\n  --mfl-table-row-height: 34px;\n  --mfl-table-row-outer-height: 39px;",
+              "  --mfl-table-header-height: 38px;\n  --mfl-table-row-height: 34px;\n  --mfl-table-row-outer-height: 39px;\n  --mfl-table-header-font-size: 12px;\n  --mfl-table-row-font-size: 14px;",
+          )
+          replace_once(
+              styles,
+              "#progressionPage .playerTableScroller th {\n  height: var(--mfl-table-header-height);\n  min-height: var(--mfl-table-header-height);\n  line-height: var(--mfl-table-header-height);\n}",
+              "#progressionPage .playerTableScroller th {\n  height: var(--mfl-table-header-height);\n  min-height: var(--mfl-table-header-height);\n  font-size: var(--mfl-table-header-font-size);\n  line-height: 0;\n  vertical-align: middle;\n}\n\n#progressionPage #tableHead .tableHeaderCellContent {\n  display: inline-flex;\n  align-items: center;\n  max-width: 100%;\n  height: var(--mfl-table-header-height);\n  min-height: var(--mfl-table-header-height);\n  line-height: 1.2;\n  vertical-align: middle;\n}",
+          )
+          replace_once(
+              styles,
+              "#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);\n  vertical-align: middle;\n}",
+              "#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  font-size: var(--mfl-table-row-font-size);\n  line-height: 0;\n  vertical-align: middle;\n}",
+          )
+
+          # Responsive fallback typography now consumes the canonical variables rather
+          # than maintaining a second set of independent fixed font sizes.
+          responsive = "site/responsive.css"
+          for old in (10, 9, 8):
+              regex_once(
+                  responsive,
+                  rf"(#progressionPage \.playerTableScroller th \{{\n\s*)font-size: {old}px;",
+                  r"\1font-size: var(--mfl-table-header-font-size);",
+              )
+          for old in (12, 11, 10):
+              regex_once(
+                  responsive,
+                  rf"(#progressionPage \.playerTableScroller td \{{\n\s*)font-size: {old}px;",
+                  r"\1font-size: var(--mfl-table-row-font-size);",
+              )
+
+          # Hydrated mobile geometry: 10% roomier vertically than strict desktop-width
+          # scaling. Fonts scale with the mobile table widths from the <=900 reference.
+          shared = "site/shared-table-ui-runtime.js"
+          geometry = [
+              (
+                  "--mfl-table-header-height: 18.72596153846154px;\n    --mfl-table-row-height: 16.754807692307693px;\n    --mfl-table-row-outer-height: 19.21875px;",
+                  "--mfl-table-header-height: 20.598557692307694px;\n    --mfl-table-row-height: 18.430288461538463px;\n    --mfl-table-row-outer-height: 21.140625px;\n    --mfl-table-header-font-size: 11px;\n    --mfl-table-row-font-size: 13.2px;",
+              ),
+              (
+                  "--mfl-table-header-height: 15.528846153846153px;\n    --mfl-table-row-height: 13.89423076923077px;\n    --mfl-table-row-outer-height: 15.9375px;",
+                  "--mfl-table-header-height: 17.08173076923077px;\n    --mfl-table-row-height: 15.283653846153848px;\n    --mfl-table-row-outer-height: 17.53125px;\n    --mfl-table-header-font-size: 9.121951219512194px;\n    --mfl-table-row-font-size: 10.946341463414634px;",
+              ),
+              (
+                  "--mfl-table-header-height: 13.701923076923077px;\n    --mfl-table-row-height: 12.259615384615385px;\n    --mfl-table-row-outer-height: 14.0625px;",
+                  "--mfl-table-header-height: 15.072115384615385px;\n    --mfl-table-row-height: 13.485576923076925px;\n    --mfl-table-row-outer-height: 15.46875px;\n    --mfl-table-header-font-size: 8.048780487804878px;\n    --mfl-table-row-font-size: 9.658536585365853px;",
+              ),
+          ]
+          for old, new in geometry:
+              replace_once(shared, old, new)
+          for size in (10, 9, 8):
+              regex_once(shared, rf"\n  #progressionPage \.playerTableScroller th \{{\n    font-size: {size}px;\n  \}}", "")
+          regex_once(
+              shared,
+              r"\n@media \(min-width: 521px\) and \(max-width: 900px\) \{\n  #progressionPage #tableHead th:nth-child\(6\) > span:first-child,[\s\S]*?\n\}\n@media \(max-width: 700px\) \{",
+              "\n@media (max-width: 700px) {",
+          )
+
+          # Canonical header rendering: one compact label set for every <=900px table,
+          # and one flex-centering host for every header cell.
+          table = "site/modules/core-sources/table.js"
+          replace_once(
+              table,
+              "function tableBuildHeaderOwner() {",
+              "function tableCenterHeaderContents(cell) {\n  if (!(cell instanceof HTMLTableCellElement)) return cell;\n  const existingHost = cell.childNodes.length === 1\n    && cell.firstElementChild instanceof HTMLElement\n    && cell.firstElementChild.classList.contains(\"tableHeaderCellContent\")\n    ? cell.firstElementChild\n    : null;\n  if (existingHost) return cell;\n\n  const contentHost = document.createElement(\"span\");\n  contentHost.className = \"tableHeaderCellContent\";\n  while (cell.firstChild) contentHost.appendChild(cell.firstChild);\n  cell.appendChild(contentHost);\n  return cell;\n}\n\nfunction tableBuildHeaderOwner() {",
+          )
+          replace_once(table, "  headerRow.appendChild(selectionHeader);", "  headerRow.appendChild(tableCenterHeaderContents(selectionHeader));")
+          replace_once(table, "  headerRow.appendChild(actionsHeader);", "  headerRow.appendChild(tableCenterHeaderContents(actionsHeader));")
+          replace_once(table, "  const compactTableHeadings = window.matchMedia(\"(max-width: 520px)\").matches;\n", "")
+          replace_once(
+              table,
+              "    const compactLabel = ({\n      overall: \"OVR\",\n      pace: \"PAC\",\n      shooting: \"SHO\",\n      passing: \"PAS\",\n      dribbling: \"DRI\",\n      defense: \"DEF\",\n      physical: \"PHY\",\n      goalkeeping: \"GK\",\n      player_seasons: \"SZN\",\n    }[column] || fullLabel);",
+              "    const compactLabel = ({\n      wallet_name: \"AGT\",\n      owned_since: \"JOIN\",\n      name: \"NAME\",\n      age: \"AGE\",\n      positions: \"POS\",\n      player_seasons: \"SZN\",\n      overall: \"OVR\",\n      pace: \"PAC\",\n      shooting: \"SHO\",\n      passing: \"PAS\",\n      dribbling: \"DRI\",\n      defense: \"DEF\",\n      physical: \"PHY\",\n      goalkeeping: \"GK\",\n      active_contract_revenue_share: \"REV\",\n      active_contract_club_name: \"CLUB\",\n      active_contract_club_division: \"DIV\",\n    }[column] || fullLabel);",
+          )
+          replace_once(
+              table,
+              "    label.textContent = !mobileTable\n      ? (column === agentColumn && state.currentPage === \"mfl\" ? \"\" : fullLabel)\n      : column === \"listing_price\" || (column === agentColumn && state.currentPage === \"mfl\")\n        ? \"\"\n        : column === \"positions\"\n          ? \"POSITIONS\"\n          : compactTableHeadings\n            ? compactLabel\n            : fullLabel;",
+              "    label.textContent = !mobileTable\n      ? (column === agentColumn && state.currentPage === \"mfl\" ? \"\" : fullLabel)\n      : column === \"listing_price\" || (column === agentColumn && state.currentPage === \"mfl\")\n        ? \"\"\n        : compactLabel;",
+          )
+          replace_once(table, "    headerRow.appendChild(cell);", "    headerRow.appendChild(tableCenterHeaderContents(cell));")
+
+          # Bootstrap must build the exact same compact, vertically-centered header before
+          # hydrated Table source loads.
+          bootstrap = "site/bootstrap.js"
+          regex_once(
+              bootstrap,
+              r"  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object\.freeze\(\{[\s\S]*?\n  \}\);",
+              "  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({\n    wallet_name: \"AGT\",\n    owned_since: \"JOIN\",\n    name: \"NAME\",\n    age: \"AGE\",\n    positions: \"POS\",\n    player_seasons: \"SZN\",\n    overall: \"OVR\",\n    pace: \"PAC\",\n    shooting: \"SHO\",\n    passing: \"PAS\",\n    dribbling: \"DRI\",\n    defense: \"DEF\",\n    physical: \"PHY\",\n    goalkeeping: \"GK\",\n    active_contract_revenue_share: \"REV\",\n    active_contract_club_name: \"CLUB\",\n    active_contract_club_division: \"DIV\",\n  });",
+          )
+          replace_once(
+              bootstrap,
+              "    if (column === \"listing_price\" || (column === agentColumn && normalizedPage === \"mfl\")) return \"\";\n    if (column === \"positions\") return \"POSITIONS\";\n    return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;",
+              "    if (column === \"listing_price\" || (column === agentColumn && normalizedPage === \"mfl\")) return \"\";\n    return compactLabel;",
+          )
+          replace_once(
+              bootstrap,
+              "  function firstPaintTableColumnLabel(page, column) {",
+              "  function firstPaintCenterTableHeaderContents(cell) {\n    if (!(cell instanceof HTMLTableCellElement)) return cell;\n    const existingHost = cell.childNodes.length === 1\n      && cell.firstElementChild instanceof HTMLElement\n      && cell.firstElementChild.classList.contains(\"tableHeaderCellContent\")\n      ? cell.firstElementChild\n      : null;\n    if (existingHost) return cell;\n\n    const contentHost = document.createElement(\"span\");\n    contentHost.className = \"tableHeaderCellContent\";\n    while (cell.firstChild) contentHost.appendChild(cell.firstChild);\n    cell.appendChild(contentHost);\n    return cell;\n  }\n\n  function firstPaintTableColumnLabel(page, column) {",
+          )
+          replace_once(bootstrap, "    row.appendChild(selectionHeader);", "    row.appendChild(firstPaintCenterTableHeaderContents(selectionHeader));")
+          replace_once(bootstrap, "    row.appendChild(actionsHeader);", "    row.appendChild(firstPaintCenterTableHeaderContents(actionsHeader));")
+          # Only the first-paint table builder uses this exact append statement with header.
+          replace_once(bootstrap, "      row.appendChild(header);", "      row.appendChild(firstPaintCenterTableHeaderContents(header));")
+
+          # First-paint generated CSS uses the same geometry/font variables and no direct
+          # label-size phase override.
+          projection = "site/sync-release-projections.mjs"
+          projection_geometry = [
+              (
+                  "--mfl-table-header-height: 18.72596153846154px; --mfl-table-row-height: 16.754807692307693px; --mfl-table-row-outer-height: 19.21875px;",
+                  "--mfl-table-header-height: 20.598557692307694px; --mfl-table-row-height: 18.430288461538463px; --mfl-table-row-outer-height: 21.140625px; --mfl-table-header-font-size: 11px; --mfl-table-row-font-size: 13.2px;",
+              ),
+              (
+                  "--mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 13.89423076923077px; --mfl-table-row-outer-height: 15.9375px;",
+                  "--mfl-table-header-height: 17.08173076923077px; --mfl-table-row-height: 15.283653846153848px; --mfl-table-row-outer-height: 17.53125px; --mfl-table-header-font-size: 9.121951219512194px; --mfl-table-row-font-size: 10.946341463414634px;",
+              ),
+              (
+                  "--mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 12.259615384615385px; --mfl-table-row-outer-height: 14.0625px;",
+                  "--mfl-table-header-height: 15.072115384615385px; --mfl-table-row-height: 13.485576923076925px; --mfl-table-row-outer-height: 15.46875px; --mfl-table-header-font-size: 8.048780487804878px; --mfl-table-row-font-size: 9.658536585365853px;",
+              ),
+          ]
+          for old, new in projection_geometry:
+              replace_once(projection, old, new)
+          for line in [
+              '    "  #progressionPage .playerTableScroller th { font-size: 10px; }",\n',
+              '    "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",\n',
+              '    "  #progressionPage .playerTableScroller th { font-size: 9px; }",\n',
+              '    "  #progressionPage #tableHead th > span:first-child { font-size: 9px; }",\n',
+              '    "  #progressionPage .playerTableScroller th { font-size: 8px; }",\n',
+              '    "  #progressionPage #tableHead th > span:first-child { font-size: 8px; }",\n',
+          ]:
+              replace_once(projection, line, "")
+          replace_once(
+              projection,
+              '    "@media (min-width: 521px) and (max-width: 900px) {",\n    "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",\n    "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",\n    "}",\n',
+              "",
+          )
+          regex_once(
+              projection,
+              r"export function normalizeBootstrapFirstPaintCompactLabels\(source\) \{[\s\S]*?\n\}\n\nexport function normalizeIndexReleaseProjection",
+              '''export function normalizeBootstrapFirstPaintCompactLabels(source) {
+            return replaceExactlyOnce(
+              String(source || ""),
+              /^  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object\\.freeze\\(\\{[\\s\\S]*?^  \\}\\);$/gm,
+              `  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
+                wallet_name: "AGT",
+                owned_since: "JOIN",
+                name: "NAME",
+                age: "AGE",
+                positions: "POS",
+                player_seasons: "SZN",
+                overall: "OVR",
+                pace: "PAC",
+                shooting: "SHO",
+                passing: "PAS",
+                dribbling: "DRI",
+                defense: "DEF",
+                physical: "PHY",
+                goalkeeping: "GK",
+                active_contract_revenue_share: "REV",
+                active_contract_club_name: "CLUB",
+                active_contract_club_division: "DIV",
+              });`,
+              "bootstrap first-paint compact table labels",
+            );
+          }
+
+          export function normalizeIndexReleaseProjection''',
+          )
+
+          # Rewrite the proportionality regression around the intentional 10% vertical boost.
+          Path("site/validate-responsive-table-proportions.mjs").write_text('''import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { dirname, resolve } from "node:path";
+          import { fileURLToPath } from "node:url";
+
+          const root = dirname(fileURLToPath(import.meta.url));
+          const read = (name) => readFileSync(resolve(root, name), "utf8");
+          const styles = read("styles.css");
+          const shared = read("shared-table-ui-runtime.js");
+          const projection = read("sync-release-projections.mjs");
+          const index = read("index.html");
+          const responsiveCss = read("responsive.css");
+          const desktop = Object.freeze({ width: 1664, header: 38, row: 34, outer: 39 });
+          const verticalBoost = 1.1;
+          const responsive = Object.freeze([
+            Object.freeze({ breakpoint: 900, width: 820, header: 20.598557692307694, row: 18.430288461538463, outer: 21.140625, headerFont: 11, rowFont: 13.2, control: 16 }),
+            Object.freeze({ breakpoint: 520, width: 680, header: 17.08173076923077, row: 15.283653846153848, outer: 17.53125, headerFont: 9.121951219512194, rowFont: 10.946341463414634, control: 13 }),
+            Object.freeze({ breakpoint: 380, width: 600, header: 15.072115384615385, row: 13.485576923076925, outer: 15.46875, headerFont: 8.048780487804878, rowFont: 9.658536585365853, control: 12 }),
+          ]);
+          const close = (actual, expected, tolerance = 1e-10) => Math.abs(actual - expected) <= tolerance;
+
+          assert.match(styles, /--mfl-table-header-height: 38px;/);
+          assert.match(styles, /--mfl-table-row-height: 34px;/);
+          assert.match(styles, /--mfl-table-row-outer-height: 39px;/);
+          assert.match(styles, /--mfl-table-header-font-size: 12px;/);
+          assert.match(styles, /--mfl-table-row-font-size: 14px;/);
+          assert.match(styles, /--mfl-table-col-listing: 6\\.3904569176696135%;/);
+          assert.match(styles, /--mfl-table-col-positions: 7\\.508786878261796%;/);
+
+          const mobileHeaderFontRatio = responsive[0].headerFont / responsive[0].header;
+          const mobileRowFontRatio = responsive[0].rowFont / responsive[0].row;
+          for (const geometry of responsive) {
+            const widthScale = geometry.width / desktop.width;
+            const verticalScale = widthScale * verticalBoost;
+            assert.ok(close(geometry.header / desktop.header, verticalScale), `<=${geometry.breakpoint}px header must be 10% roomier than strict width scaling.`);
+            assert.ok(close(geometry.row / desktop.row, verticalScale), `<=${geometry.breakpoint}px row must be 10% roomier than strict width scaling.`);
+            assert.ok(close(geometry.outer / desktop.outer, verticalScale), `<=${geometry.breakpoint}px outer row must be 10% roomier than strict width scaling.`);
+            assert.ok(close(geometry.headerFont / geometry.header, mobileHeaderFontRatio), `<=${geometry.breakpoint}px header font must scale with header height.`);
+            assert.ok(close(geometry.rowFont / geometry.row, mobileRowFontRatio), `<=${geometry.breakpoint}px row font must scale with row height.`);
+            assert.ok(geometry.control <= geometry.row, `<=${geometry.breakpoint}px fixed controls must fit within row content.`);
+            for (const [name, source] of [["hydrated", shared], ["first-paint generator", projection], ["generated first-paint", index]]) {
+              assert.ok(source.includes(`--mfl-table-header-height: ${geometry.header}px;`), `${name} missing <=${geometry.breakpoint}px header.`);
+              assert.ok(source.includes(`--mfl-table-row-height: ${geometry.row}px;`), `${name} missing <=${geometry.breakpoint}px row.`);
+              assert.ok(source.includes(`--mfl-table-row-outer-height: ${geometry.outer}px;`), `${name} missing <=${geometry.breakpoint}px outer row.`);
+              assert.ok(source.includes(`--mfl-table-header-font-size: ${geometry.headerFont}px;`), `${name} missing <=${geometry.breakpoint}px header font.`);
+              assert.ok(source.includes(`--mfl-table-row-font-size: ${geometry.rowFont}px;`), `${name} missing <=${geometry.breakpoint}px row font.`);
+              assert.ok(source.includes(`min-width: ${geometry.width}px;`), `${name} missing <=${geometry.breakpoint}px table width.`);
+            }
+          }
+
+          assert.doesNotMatch(shared, /--mfl-table-col-(?:listing|positions)\\s*:/, "Hydrated mobile CSS must not alter desktop column percentages.");
+          assert.doesNotMatch(projection, /--mfl-table-col-(?:listing|positions)\\s*:/, "First-paint projection must not alter desktop column percentages.");
+          assert.match(responsiveCss, /font-size: var\\(--mfl-table-header-font-size\\);/);
+          assert.match(responsiveCss, /font-size: var\\(--mfl-table-row-font-size\\);/);
+          assert.match(shared, /overflow-x: auto;\\n    overflow-y: hidden;/);
+          assert.doesNotMatch(shared, /!important/);
+          console.log("Responsive player-table widths preserve desktop column proportions while vertical geometry is intentionally 10% roomier and typography follows row height.");
+          ''')
+
+          # Typography regression now verifies variable ownership instead of three unrelated fixed sizes.
+          Path("site/validate-table-header-typography.mjs").write_text('''import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { dirname, resolve } from "node:path";
+          import { fileURLToPath } from "node:url";
+
+          const root = dirname(fileURLToPath(import.meta.url));
+          const read = (path) => readFileSync(resolve(root, path), "utf8");
+          const base = read("styles-base.css");
+          const styles = read("styles.css");
+          const responsive = read("responsive.css");
+          const sharedRuntime = read("shared-table-ui-runtime.js");
+          const projections = read("sync-release-projections.mjs");
+
+          assert.ok(base.includes("th {\\n  background: var(--header-bg);\\n  color: var(--text);\\n  font-size: 12px;") && base.includes("td {\\n  font-size: 14px;"), "Shared desktop tables must keep 12px headers against 14px row text.");
+          assert.match(styles, /--mfl-table-header-font-size: 12px;/);
+          assert.match(styles, /--mfl-table-row-font-size: 14px;/);
+          assert.match(styles, /#progressionPage \\.playerTableScroller th \\{[\\s\\S]*font-size: var\\(--mfl-table-header-font-size\\);/);
+          assert.match(styles, /#progressionPage \\.playerTableScroller td \\{[\\s\\S]*font-size: var\\(--mfl-table-row-font-size\\);/);
+          assert.ok((responsive.match(/font-size: var\\(--mfl-table-header-font-size\\);/g) || []).length >= 3, "All responsive player-table breakpoints must consume the header font variable.");
+          assert.ok((responsive.match(/font-size: var\\(--mfl-table-row-font-size\\);/g) || []).length >= 3, "All responsive player-table breakpoints must consume the row font variable.");
+          for (const [header, row] of [["11", "13.2"], ["9.121951219512194", "10.946341463414634"], ["8.048780487804878", "9.658536585365853"]]) {
+            assert.ok(sharedRuntime.includes(`--mfl-table-header-font-size: ${header}px;`) && sharedRuntime.includes(`--mfl-table-row-font-size: ${row}px;`), `Hydrated responsive geometry must own ${header}px/${row}px typography.`);
+            assert.ok(projections.includes(`--mfl-table-header-font-size: ${header}px; --mfl-table-row-font-size: ${row}px;`), `First paint must own ${header}px/${row}px typography.`);
+          }
+          assert.doesNotMatch(sharedRuntime, /\\.playerTableScroller th \\{\\n    font-size: \\d/, "Hydration must not carry a second direct header-font owner.");
+          console.log("Player-table typography is derived from responsive geometry variables from first paint through hydration.");
+          ''')
+
+          # Extend the existing body-centering regression to first-paint and hydrated headers.
+          centering = "site/validate-table-row-vertical-centering.mjs"
+          replace_once(
+              centering,
+              'const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");',
+              'const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");\nconst bootstrap = readFileSync(resolve(root, "bootstrap.js"), "utf8");',
+          )
+          replace_once(
+              centering,
+              'assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");',
+              'assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");\n\nconst headerContent = styles.match(/#progressionPage #tableHead \\.tableHeaderCellContent \\{([\\s\\S]*?)\\n\\}/)?.[1] || "";\nassert.match(headerContent, /display: inline-flex;/, "Header content must retain inline horizontal behavior while using a flex centering context.");\nassert.match(headerContent, /align-items: center;/, "Every header object must be vertically centered by flex layout.");\nassert.match(headerContent, /height: var\\(--mfl-table-header-height\\);/, "Header content must own the complete header height.");\nassert.match(headerContent, /line-height: 1\\.2;/, "Header labels must use a descender-safe line box inside the centered host.");',
+          )
+          replace_once(
+              centering,
+              '  assert.match(source, /function tableCenterCellContents\\(cell\\) \\{/, "Canonical Table ownership must define one shared row-cell centering helper.");',
+              '  assert.match(source, /function tableCenterHeaderContents\\(cell\\) \\{/, "Canonical Table ownership must define one shared header-cell centering helper.");\n  assert.match(source, /contentHost\\.className = "tableHeaderCellContent";/, "Every header cell must use the canonical header centering host.");\n  assert.match(source, /headerRow\\.appendChild\\(tableCenterHeaderContents\\(selectionHeader\\)\\);/, "Header selection must use the universal centering helper.");\n  assert.match(source, /headerRow\\.appendChild\\(tableCenterHeaderContents\\(actionsHeader\\)\\);/, "Header actions must use the universal centering helper.");\n  assert.match(source, /headerRow\\.appendChild\\(tableCenterHeaderContents\\(cell\\)\\);/, "Every data header must use the universal centering helper.");\n  assert.match(source, /function tableCenterCellContents\\(cell\\) \\{/, "Canonical Table ownership must define one shared row-cell centering helper.");',
+          )
+          replace_once(
+              centering,
+              'assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");',
+              'assert.match(bootstrap, /function firstPaintCenterTableHeaderContents\\(cell\\) \\{/, "First paint must build the same centered header host before hydration.");\nassert.match(bootstrap, /row\\.appendChild\\(firstPaintCenterTableHeaderContents\\(selectionHeader\\)\\);/, "First-paint selection header must be centered.");\nassert.match(bootstrap, /row\\.appendChild\\(firstPaintCenterTableHeaderContents\\(actionsHeader\\)\\);/, "First-paint actions header must be centered.");\nassert.match(bootstrap, /row\\.appendChild\\(firstPaintCenterTableHeaderContents\\(header\\)\\);/, "Every first-paint data header must be centered. ");\nassert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");',
+          )
+
+          # Update compact-table regression expectations.
+          compact = "site/validate-mobile-table-compact-contract.mjs"
+          regex_once(
+              compact,
+              r"assert\.match\(\n  tableSource,\n  /const mobileTable =[\s\S]*?\n\);",
+              'assert.match(tableSource, /const mobileTable = window\\.matchMedia\\("\\(max-width: 900px\\)"\\)\\.matches;/, "Canonical Table source must retain the shared 900px mobile breakpoint.");',
+          )
+          for old, new in [
+              ("18.72596153846154", "20.598557692307694"), ("16.754807692307693", "18.430288461538463"), ("19.21875", "21.140625"),
+              ("15.528846153846153", "17.08173076923077"), ("13.89423076923077", "15.283653846153848"), ("15.9375", "17.53125"),
+              ("13.701923076923077", "15.072115384615385"), ("12.259615384615385", "13.485576923076925"), ("14.0625", "15.46875"),
+          ]:
+              Path(compact).write_text(Path(compact).read_text().replace(old, new))
+          regex_once(
+              compact,
+              r"\nfor \(const \[breakpoint, fontSize\][\s\S]*?assert\.match\(projectionSource, /@media \\(max-width: 900px\\)[\s\S]*?Tiny-screen row text must retain its 10px font contract\."\);",
+              '''
+          for (const [header, row] of [["11", "13.2"], ["9.121951219512194", "10.946341463414634"], ["8.048780487804878", "9.658536585365853"]]) {
+            assert.ok(sharedTableUiSource.includes(`--mfl-table-header-font-size: ${header}px;`) && sharedTableUiSource.includes(`--mfl-table-row-font-size: ${row}px;`), `Hydrated compact table must own proportional ${header}px/${row}px typography.`);
+            assert.ok(projectionSource.includes(`--mfl-table-header-font-size: ${header}px; --mfl-table-row-font-size: ${row}px;`), `First paint must own proportional ${header}px/${row}px typography.`);
+          }
+          assert.match(responsiveSource, /font-size: var\\(--mfl-table-header-font-size\\);/, "Responsive headers must consume the geometry-owned font variable.");
+          assert.match(responsiveSource, /font-size: var\\(--mfl-table-row-font-size\\);/, "Responsive rows must consume the geometry-owned font variable.");''',
+              flags=re.S,
+          )
+          replace_once(compact, 'assert.match(tableSource, /player_seasons: "SZN"/, "Hydrated small-screen Seasons headings must use SZN.");', 'for (const compactLabel of ["AGT", "JOIN", "NAME", "AGE", "POS", "SZN", "OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK", "REV", "CLUB", "DIV"]) {\n  assert.ok(tableSource.includes(`: "${compactLabel}"`), `Hydrated mobile headings must include ${compactLabel}.`);\n  assert.ok(bootstrapSource.includes(`: "${compactLabel}"`), `First-paint mobile headings must include ${compactLabel}.`);\n}')
+          replace_once(compact, '  "Bootstrap must render SZN as the real first-paint Seasons header text.",', '  "Bootstrap must render compact labels as real first-paint header text.",')
+          replace_once(compact, '  "First-paint SZN must be real bootstrap text rather than a CSS pseudo-label.",', '  "First-paint compact labels must be real bootstrap text rather than CSS pseudo-labels.",')
+          replace_once(compact, 'console.log("Source-owned mobile compact table contract validation passed.");', 'assert.doesNotMatch(tableSource, /compactTableHeadings/, "All <=900px tables must use compact headings rather than switching only on phones.");\nassert.doesNotMatch(tableSource, /POSITIONS/, "Mobile Positions must use the compact POS heading.");\nconsole.log("Source-owned mobile compact table contract validation passed.");')
+
+          # Retry regression: geometry/font values and compact-heading policy.
+          retry = "site/validate-mobile-table-retry.mjs"
+          replacements = {
+              "18.72596153846154": "20.598557692307694", "16.754807692307693": "18.430288461538463",
+              "15.528846153846153": "17.08173076923077", "13.89423076923077": "15.283653846153848",
+              "13.701923076923077": "15.072115384615385", "12.259615384615385": "13.485576923076925",
+          }
+          text = Path(retry).read_text()
+          for old, new in replacements.items(): text = text.replace(old, new)
+          text = text.replace('includes(sharedUi, ".playerTableScroller th {\\n    font-size: 10px;", "Mobile headers must stay two pixels smaller than row text.");\nincludes(sharedUi, ".playerTableScroller th {\\n    font-size: 9px;", "Phone headers must stay two pixels smaller than row text.");\nincludes(sharedUi, ".playerTableScroller th {\\n    font-size: 8px;", "Tiny-screen headers must stay two pixels smaller than row text.");', 'for (const [header, row] of [["11", "13.2"], ["9.121951219512194", "10.946341463414634"], ["8.048780487804878", "9.658536585365853"]]) {\n  includes(sharedUi, `--mfl-table-header-font-size: ${header}px;`, `Responsive header typography must include ${header}px.`);\n  includes(sharedUi, `--mfl-table-row-font-size: ${row}px;`, `Responsive row typography must include ${row}px.`);\n}')
+          text = text.replace('includes(tableSource, \'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;\', "Canonical Table headings must switch only at the narrow breakpoint.");\n', '')
+          text = text.replace('excludes(tableSource, \'positions: "POS"\', "Positions must not participate in compact width-dependent abbreviation.");\nincludes(tableSource, \'column === "positions"\\n          ? "POSITIONS"\', "Mobile tables must call the Positions column POSITIONS.");\nfor (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {', 'includes(tableSource, \'positions: "POS"\', "Positions must use POS on all mobile tables.");\nexcludes(tableSource, "compactTableHeadings", "Compact headings must apply across the full <=900px mobile range.");\nfor (const label of ["AGT", "JOIN", "NAME", "AGE", "POS", "SZN", "OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK", "REV", "CLUB", "DIV"]) {')
+          text = text.replace('includes(bootstrap, \'const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");\', "Bootstrap must know the compact heading breakpoint before first paint.");\nexcludes(bootstrap, \'positions: "POS"\', "Bootstrap must not abbreviate Positions based on viewport width.");\nincludes(bootstrap, \'if (column === "positions") return "POSITIONS";\', "Positions must already read POSITIONS before first paint.");', 'includes(bootstrap, \'const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");\', "Bootstrap must retain phone media for non-heading first-paint behavior.");\nincludes(bootstrap, \'positions: "POS"\', "Bootstrap must abbreviate Positions before first paint.");\nexcludes(bootstrap, \'if (column === "positions") return "POSITIONS";\', "Bootstrap must not restore the long Positions heading on mobile.");')
+          Path(retry).write_text(text)
+          PY
+          node site/sync-release-projections.mjs
+          cd site
+          npm ci
+          npm run check
+          cd ..
+          git config user.name "FraGioco9"
+          git config user.email "29951460+FraGioco9@users.noreply.github.com"
+          git add site
+          git commit -m "Refine small-screen table sizing"
+          git push --force-with-lease origin HEAD:fix/599-responsive-table-proportions
