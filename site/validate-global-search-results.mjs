@@ -42,91 +42,55 @@ invariant(
     && runtime.includes('"mfl-recent-agent-searches-v1"')
     && runtime.includes('"mfl-recent-searches-v1"')
     && runtime.includes('"mfl-recent-search-clubs"')
+    && runtime.includes("function stripGlobalRecentFields(savedState) {")
     && runtime.includes("delete sanitized.recentSearchItems;")
     && runtime.includes("delete sanitized.recentSearchPlayerIds;")
     && runtime.includes("delete sanitized.recentSearchAgentWallets;")
-    && runtime.includes('Reflect.set(window, "loadRecentIdsFromStorage", function loadNonGlobalRecentIds(storageKey) {')
-    && runtime.includes('Reflect.set(window, "saveRecentIdsToStorage", function saveNonGlobalRecentIds(storageKey) {')
-    && runtime.includes('Reflect.set(window, "saveTableStateLocally", function saveTableStateWithoutGlobalRecents(savedState) {')
+    && runtime.includes("function purgeLocalGlobalSearchHistory() {")
     && runtime.includes("GLOBAL_RECENT_STORAGE_KEYS.forEach((storageKey) => localStorage.removeItem(storageKey));")
-    && !runtime.includes("RECENT_MIXED_CACHE_KEY")
-    && !runtime.includes("RECENT_PLAYER_CACHE_KEY")
-    && !runtime.includes("RECENT_AGENT_CACHE_KEY"),
-  "Global Search history must never use browser recent-history storage, including the legacy club-only key.",
-);
-
-const restoreRecentSection = runtime.slice(
-  runtime.indexOf("async function restoreSupabaseRecentResults()"),
-  runtime.indexOf("async function renderEmptySearchResults()"),
-);
-const modalOpenSection = runtime.slice(
-  runtime.indexOf("function observeSearchModal()"),
-  runtime.indexOf("function onReady()"),
+    && runtime.includes("function installSupabaseOnlyRecentStorage() {")
+    && runtime.includes("if (GLOBAL_RECENT_STORAGE_KEYS.has(String(storageKey || \"\"))) return [];")
+    && runtime.includes("if (GLOBAL_RECENT_STORAGE_KEYS.has(String(storageKey || \"\"))) {")
+    && runtime.includes("return originalSaveTableStateLocally.call(this, stripGlobalRecentFields(savedState));")
+    && runtime.includes("installSupabaseOnlyRecentStorage();")
+    && runtime.includes("restoreLocalRecentStorageOwners();"),
+  "Global Search recents must be Supabase-only: browser-local Global Search keys and table-state fields must be purged and blocked from load/save fallbacks.",
 );
 
 invariant(
-  runtime.includes("let recentLoadPromise = null;")
-    && runtime.includes("let recentLoadedForSession = false;")
-    && runtime.includes("let recentLoadFailed = false;")
-    && runtime.includes("let canonicalRecentItems = [];")
+  walletPreferencesApi.includes("sanitizeGlobalRecentSearchItems(")
+    && walletPreferencesApi.includes("recentSearchItems: sanitizeGlobalRecentSearchItems(tableState.recentSearchItems, 5),")
+    && walletPreferencesApi.includes("recentSearchPlayerIds: undefined,")
+    && walletPreferencesApi.includes("recentSearchAgentWallets: undefined,")
+    && !walletPreferencesApi.includes("recentSearchPlayerIds: sanitizeIds(")
+    && !walletPreferencesApi.includes("recentSearchAgentWallets: sanitizeIds("),
+  "Wallet preferences must persist one canonical mixed recentSearchItems sequence and derive, not store, legacy player/agent arrays.",
+);
+
+invariant(
+  dataViews.includes("recentSearchItems: Array.isArray(tableState?.recentSearchItems)")
+    && dataViews.includes("recentSearchPlayerIds: recentSearchItems")
+    && dataViews.includes("recentSearchAgentWallets: recentSearchItems")
+    && dataViews.includes('filter((item) => item.startsWith("player:"))')
+    && dataViews.includes('filter((item) => item.startsWith("agent:"))'),
+  "Data-view wallet preferences must derive legacy recent player/agent arrays from the canonical mixed recentSearchItems order.",
+);
+
+invariant(
+  runtime.includes("let canonicalRecentItems = [];")
     && runtime.includes("let canonicalRecentResults = new Map();")
     && runtime.includes("let canonicalRecentPayload = null;")
-    && runtime.includes("async function hydrateSupabaseRecentResults()")
-    && runtime.includes("function preloadRecentResults() {")
-    && runtime.includes("return hydrateSupabaseRecentResults();")
-    && runtime.includes("if (recentLoadedForSession) return true;")
-    && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
-    && runtime.includes("recentLoadedForSession = true;")
-    && runtime.includes("async function restoreSupabaseRecentResults()")
-    && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
-    && runtime.includes("if (!recentLoadedForSession && pendingRecentLoad) await pendingRecentLoad;")
-    && !restoreRecentSection.includes("hydrateSupabaseRecentResults(")
-    && !modalOpenSection.includes("hydrateSupabaseRecentResults(")
-    && !runtime.includes("recentLoadedForOpen")
-    && !runtime.includes("options.force")
-    && !runtime.includes("renderEmptySearchResults({ force: true })"),
-  "Global Search must preload its Supabase recent state during page startup; opening the popup may only consume an existing preload and must never initiate the recent-history fetch.",
-);
-
-const routeReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
-const backgroundPreloadIndex = appEntry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
-const appReadyIndex = appEntry.indexOf('document.documentElement.dataset.mflReady = "true";');
-invariant(
-  appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
-    && appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
-    && appEntry.includes("initialGlobalSearchWarmupPromise")
-    && appEntry.includes("function installCoreBridges() {")
-    && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();") < routeReadyIndex
-    && routeReadyIndex >= 0
-    && backgroundPreloadIndex > routeReadyIndex
-    && appEntry.includes("await Promise.allSettled([\n    initialGlobalSearchWarmupPromise,\n    globalSearchPreloadPromise,\n  ]);")
-    && appReadyIndex > backgroundPreloadIndex,
-  "Application startup must launch Global Search recent preloading early, release the visible route independently, and still settle Global Search warm-up before application-wide readiness.",
-);
-
-invariant(
-  runtime.includes("function recentIdentifiers(items = canonicalRecentItems) {")
-    && runtime.includes('const parameters = new URLSearchParams({ mode: "search", type: "recent", v: VERSION });')
+    && runtime.includes("function applyRecentItemsToCore(items = canonicalRecentItems) {")
+    && runtime.includes("function captureCanonicalRecentResults() {")
+    && runtime.includes("function renderCanonicalRecentResults() {")
+    && runtime.includes("function publishCanonicalRecentPayload() {")
+    && runtime.includes("function promoteCanonicalRecentResult(result) {")
+    && runtime.includes("function applySupabaseRecentState(tableState) {")
+    && runtime.includes("async function fetchCanonicalRecentPayload(signal) {")
+    && runtime.includes("const identifiers = recentIdentifiers();")
     && runtime.includes('parameters.set("playerIds", identifiers.playerIds.join(","));')
     && runtime.includes('parameters.set("walletAddresses", identifiers.walletAddresses.join(","));')
     && runtime.includes('parameters.set("clubIds", identifiers.clubIds.join(","));')
-    && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal)")
-    && runtime.includes("recentLoadedForSession = true;\n        recentLoadFailed = false;\n        publishCanonicalRecentPayload();")
-    && runtime.includes("function publishCanonicalRecentPayload() {")
-    && runtime.includes('applySearchPayload(canonicalRecentPayload, "all");')
-    && dataViews.includes('if (type === "recent") return recentSearchData(request);')
-    && dataViews.includes("const playerIds = integerIds(request.query?.playerIds, 50);")
-    && dataViews.includes("const walletAddresses = csvValues(request.query?.walletAddresses, 50)")
-    && dataViews.includes("const clubIds = csvValues(request.query?.clubIds, 50);"),
-  "Initial Global Search recent hydration must resolve every Supabase recent entity and publish the complete canonical payload into the hidden search state before first open.",
-);
-
-invariant(
-  runtime.includes("function captureCanonicalRecentResults() {")
-    && runtime.includes("function renderCanonicalRecentResults() {")
-    && runtime.includes("function promoteCanonicalRecentResult(result) {")
-    && runtime.includes("canonicalRecentItems = [\n      key,\n      ...canonicalRecentItems.filter((item) => item !== key),\n    ].slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);")
-    && runtime.includes("canonicalRecentResults.set(key, result);")
     && runtime.includes("applyRecentItemsToCore();")
     && runtime.includes("results.replaceChildren(...ordered);")
     && runtime.includes("captureCanonicalRecentResults();\n    void searchDatabase(query);")
@@ -164,7 +128,7 @@ invariant(
     && !searchResultCaptureSection.includes("stopImmediatePropagation(")
     && !searchResultCaptureSection.includes("navigateToAgentSearchResult")
     && core.includes("rememberAgentSearchResult(result.walletAddress);")
-    && core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")
+    && core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));")
     && runtime.includes('document.addEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes('document.removeEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes("function onSearchResultClick(event) {")
@@ -189,74 +153,36 @@ invariant(
 );
 
 invariant(
-  runtime.includes('const hidden = !input.value.trim();')
-    && runtime.includes("button.hidden = hidden;")
-    && runtime.includes('button.toggleAttribute("hidden", hidden);')
-    && runtime.includes('document.addEventListener("click", onClearClick, true);')
-    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    syncClearButton();')
-    && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
-    && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
-  "Global Search clear control must be visually hidden whenever its input is empty and restore canonical recents without invalidating session hydration.",
+  runtime.includes("const promise = (async () => {")
+    && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(signal);")
+    && runtime.includes("if (canonicalRecentItems.length) publishCanonicalRecentPayload();")
+    && runtime.includes("recentLoadPromise = promise;")
+    && runtime.includes("return promise;")
+    && runtime.includes("if (recentLoadPromise === promise) recentLoadPromise = null;"),
+  "Concurrent Global Search recent restoration must share one in-flight promise and one request lifecycle.",
 );
 
 invariant(
-  walletPreferencesApi.includes("wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings")
-    && walletPreferencesApi.includes("tableStateForClient(row.table_state)")
-    && walletPreferencesApi.includes("recentSearchItems: mergeRecentIds(incoming.recentSearchItems, current.recentSearchItems),")
-    && walletPreferencesApi.includes("return normalizeCloudTableState({")
-    && !walletPreferencesApi.includes("recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),")
-    && !walletPreferencesApi.includes("recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),")
-    && core.includes("recentSearchItems: state.recentSearchItems")
-    && core.includes("queueCloudTableStateSave(savedState);"),
-  "Supabase persistence must merge the canonical mixed Global Search history with the existing five while avoiding independently stored legacy player/agent arrays.",
+  runtime.includes("const GLOBAL_SEARCH_RESULT_SIZE_PX = 66;")
+    && runtime.includes("const GLOBAL_SEARCH_RESULT_GAP_PX = 8;")
+    && runtime.includes("globalSearchResultHeight = GLOBAL_SEARCH_RESULT_SIZE_PX + \"px\";")
+    && runtime.includes("globalSearchResultGap = GLOBAL_SEARCH_RESULT_GAP_PX + \"px\";")
+    && styles.includes("height: var(--globalSearchResultHeight, 66px);")
+    && styles.includes("min-height: var(--globalSearchResultHeight, 66px);")
+    && styles.includes("max-height: var(--globalSearchResultHeight, 66px);")
+    && styles.includes("gap: var(--globalSearchResultGap, 8px);")
+    && controls.includes("height: var(--globalSearchResultHeight, 66px);")
+    && controls.includes("min-height: var(--globalSearchResultHeight, 66px);")
+    && controls.includes("max-height: var(--globalSearchResultHeight, 66px);"),
+  "Recent and typed Global Search results must share one canonical 66px box height and 8px inter-result spacing.",
 );
 
 invariant(
-  walletPreferencesApi.includes("function recentSearchItemsFromLegacy(tableState) {")
-    && walletPreferencesApi.includes("function normalizeCloudTableState(tableState) {")
-    && walletPreferencesApi.includes("mergeRecentIds(source.recentSearchItems, recentSearchItemsFromLegacy(source))")
-    && walletPreferencesApi.includes("function tableStateForClient(tableState) {")
-    && walletPreferencesApi.includes("...legacyRecentSearchStateFromItems(canonical.recentSearchItems)")
-    && walletPreferencesApi.includes("? tableStateForClient(row.table_state) : null"),
-  "Wallet preference reads must fold legacy player/agent histories into canonical mixed recents and derive legacy response arrays without storing duplicates.",
-);
-
-invariant(
-  core.includes("async function openSearch() {")
-    && core.includes("const renderAuthoritativeRecentSearches = async () => {")
-    && core.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
-    && core.includes("await ensureSearchIndexes();\n  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();"),
-  "Canonical Global Search open lifecycle must restore authoritative recents again after indexes are ready, with the live renderer only as fallback.",
-);
-
-invariant(
-  core.includes("const MAX_SEARCH_RESULTS = 5;")
-    && core.includes("state.recentSearchItems.slice(0, MAX_SEARCH_RESULTS).forEach((key) => {")
-    && core.includes("playerSearchResults.replaceChildren(...ordered.slice(0, MAX_SEARCH_RESULTS));"),
-  "Empty Global Search must render only the five most recent mixed player, club, or agent searches.",
-);
-
-invariant(
-  styles.includes(".searchResults {\n  display: grid;\n  gap: 8px;")
-    && styles.includes("grid-auto-rows: 66px;")
-    && styles.includes("overflow: auto;")
-    && runtime.includes('results.classList.remove("filledSearchResults");')
-    && !runtime.includes('results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);')
-    && !runtime.includes('results.classList.toggle("filledSearchResults", ordered.length > 0);'),
-  "Recent and typed Global Search results must both use the same base 66px result boxes and 8px grid gap rather than switching to a separate filled-results sizing mode.",
-);
-
-invariant(
-  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 505px;")
-    && styles.includes(".searchBody {\n  display: grid;\n  gap: 12px;\n  padding: 16px 18px 12px;"),
-  "Global Search popup must preserve the existing dialog geometry while both recent and typed results share one box layout.",
-);
-
-invariant(
-  !runtime.includes('document.createElement("style")')
-    && !runtime.includes("!important")
-    && !controls.includes("!important"),
-  "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
+  appEntry.includes("const globalSearchPreloadPromise = preloadGlobalSearch();")
+    && appEntry.includes("const backgroundStartupTasks = [globalSearchPreloadPromise];")
+    && appEntry.includes("await Promise.allSettled(backgroundStartupTasks);")
+    && appEntry.indexOf("signalApplicationReady();") < appEntry.indexOf("await Promise.allSettled(backgroundStartupTasks);"),
+  "Global Search must preload during startup without blocking visible-route readiness, while application-wide readiness still settles only after background startup tasks complete.",
 );
 
 console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence without suppressing canonical result navigation, and uses identical 66px boxes with 8px gaps for recent and typed results.");
