@@ -27,8 +27,9 @@ invariant(
 );
 invariant(
   !settingsCore.includes('fetch("/api/wallet-preferences"')
-    && settingsCore.includes("await loadWalletPreferences({ force });"),
-  "Canonical Settings source must reuse wallet-preferences hydration instead of issuing an independent GET.",
+    && appCore.includes("async function settingsRefreshCommittedFromSupabase(options = {})")
+    && appCore.includes('const response = await fetch("/api/wallet-preferences", {'),
+  "Settings route UI must delegate fresh committed-state reads to the shared canonical wallet-preferences owner instead of issuing a route-local GET.",
 );
 invariant(
   !appCore.includes("await loadWalletPreferences({ force: true });\n    return evaluationRecentStateHydrated;")
