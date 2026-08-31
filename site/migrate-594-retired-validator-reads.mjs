@@ -75,6 +75,10 @@ for (const name of names) {
     `'function updateFilterSummary(count = activeFilterCount()) {\\n  filterSummary.textContent = String(count);\\n}'`,
     `'function updateFilterSummary(count = activeFilterCount()) {\\n  const numericCount = Number(count);\\n  const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;\\n  const active = normalizedCount >= 1;\\n  filterSummary.textContent = String(normalizedCount);'`,
   );
+  source = source.replaceAll(
+    `'state.filterDraftRules = null;\\n  document.body.classList.remove("filtersOpen");\\n  hideModal(filtersModal, () => {\\n    openFiltersButton.focus();'`,
+    `'state.filterDraftRules = null;\\n  document.body.classList.remove("filtersOpen");\\n  hideModal(filtersModal, () => {\\n    if (restoreTriggerFocus) openFiltersButton.focus();'`,
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
