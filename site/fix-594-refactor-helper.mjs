@@ -50,4 +50,4 @@ for (const [before, after] of replacements) {
 }
 
 await writeFile(url, source, "utf8");
-console.log("Issue 594 refactor helper is ready for staged runtime ownership validation.");
+console.log("Issue 594 staged runtime ownership refactor is ready for canonical binding validation.");
