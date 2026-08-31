@@ -131,6 +131,10 @@ for (const name of names) {
     '["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],',
     '["const transition = await runPageTransition(CLUB_PAGE, updateHistory, {", "await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Club page"],',
   );
+  source = source.replaceAll(
+    `'function renderTable() {\\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'`,
+    `'function tableRenderTableOwner() {\\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'`,
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
