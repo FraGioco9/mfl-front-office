@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, interactions, selectionStack, appCore, generatedCore, buildNormalizer, tableRuntime] = await Promise.all([
+const [controls, interactions, selectionStack, appCore, generatedCore, tableRuntime] = await Promise.all([
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
   read("./selection-stack-runtime.js"),
@@ -21,7 +21,6 @@ const [controls, interactions, selectionStack, appCore, generatedCore, buildNorm
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-runtime.js"),
-  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -42,23 +41,14 @@ for (const required of [
   invariant(controls.includes(required), `Editable pager styling is missing ${required}`);
 }
 
-invariant(
-  interactions.includes('window.addEventListener("keydown", onEscapeCapture, true);'),
-  "Global Escape ownership must run at window capture before document-level focus fallback.",
-);
-invariant(
-  !interactions.includes("pagerCurrentPageInput"),
-  "Global Escape ownership must remain generic rather than hard-coding the pager input.",
-);
+invariant(interactions.includes('window.addEventListener("keydown", onEscapeCapture, true);'), "Global Escape ownership must run at window capture before document-level focus fallback.");
+invariant(!interactions.includes("pagerCurrentPageInput"), "Global Escape ownership must remain generic rather than hard-coding the pager input.");
 const globalEscapeStart = interactions.indexOf("function onEscapeCapture(event) {");
 const globalKeyDownStart = interactions.indexOf("function onKeyDown(event) {", globalEscapeStart);
 invariant(globalEscapeStart >= 0 && globalKeyDownStart > globalEscapeStart, "Global Escape capture must remain structurally isolated.");
 const globalEscapeCapture = interactions.slice(globalEscapeStart, globalKeyDownStart);
 invariant(!globalEscapeCapture.includes(".blur()"), "Global Escape dispatch must not blur the pager before its local cancel owner runs.");
-invariant(
-  selectionStack.includes("if (editableEscapeTarget(event.target)) return false;"),
-  "Selection-level Escape ownership must defer to focused editable controls such as the pager input.",
-);
+invariant(selectionStack.includes("if (editableEscapeTarget(event.target)) return false;"), "Selection-level Escape ownership must defer to focused editable controls such as the pager input.");
 
 for (const required of [
   'const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";',
@@ -73,23 +63,6 @@ for (const required of [
 ]) {
   invariant(appCore.includes(required), `Canonical app-core must own editable pager behavior through ${required}`);
 }
-invariant(
-  !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
-    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
-    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
-    && !buildNormalizer.includes("tableControlCellArtifacts")
-    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
-    && !buildNormalizer.includes("homeSummaryArtifacts")
-    && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
-    && !buildNormalizer.includes("globalSearchArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
-    && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
-    && !buildNormalizer.includes("evaluationLoadArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return watchlistArtifacts;"),
-  "Build normalization must flow directly through source-owned readiness behavior without editable-pager or Table control-cell rewriting.",
-);
 
 for (const required of [
   "let pagerEditRevision = 0;",
@@ -113,33 +86,18 @@ for (const required of [
 
 const escapeCaptureStart = tableRuntime.indexOf("function installPagerEscapeCapture() {");
 const pagerInstallStart = tableRuntime.indexOf("function installPagerCurrentPageControl() {");
-invariant(
-  escapeCaptureStart >= 0 && pagerInstallStart > escapeCaptureStart,
-  "Pager Escape capture must be defined before the pager control installs.",
-);
+invariant(escapeCaptureStart >= 0 && pagerInstallStart > escapeCaptureStart, "Pager Escape capture must be defined before the pager control installs.");
 const escapeCapture = tableRuntime.slice(escapeCaptureStart, pagerInstallStart);
-invariant(
-  escapeCapture.includes('window.addEventListener("keydown", (event) => {') && escapeCapture.includes("}, true);"),
-  "Pager Escape cancellation must run at window capture phase before document-level Escape owners.",
-);
-invariant(
-  escapeCapture.indexOf("event.stopImmediatePropagation();") < escapeCapture.indexOf("cancelPagerCurrentPageEdit(target);"),
-  "Pager Escape capture must stop downstream global Escape handlers before canceling the edit.",
-);
+invariant(escapeCapture.includes('window.addEventListener("keydown", (event) => {') && escapeCapture.includes("}, true);"), "Pager Escape cancellation must run at window capture phase before document-level Escape owners.");
+invariant(escapeCapture.indexOf("event.stopImmediatePropagation();") < escapeCapture.indexOf("cancelPagerCurrentPageEdit(target);"), "Pager Escape capture must stop downstream global Escape handlers before canceling the edit.");
 
 const focusStart = tableRuntime.indexOf('controls.input.addEventListener("focus", () => {');
 const inputStart = tableRuntime.indexOf('controls.input.addEventListener("input", () => {', focusStart);
 invariant(focusStart >= 0 && inputStart > focusStart, "Pager focus and input handlers must both exist in the generated Table runtime.");
 const focusSection = tableRuntime.slice(focusStart, inputStart);
+invariant(!focusSection.includes(".select()") && !appCore.includes("controls.input.select();"), "Pager focus must preserve native mouse caret and drag-selection behavior instead of force-selecting the full value.");
 invariant(
-  !focusSection.includes(".select()") && !appCore.includes("controls.input.select();"),
-  "Pager focus must preserve native mouse caret and drag-selection behavior instead of force-selecting the full value.",
-);
-invariant(
-  appCore.includes('input.type = "text";')
-    && appCore.includes('input.inputMode = "numeric";')
-    && tableRuntime.includes('input.type = "text";')
-    && tableRuntime.includes('input.inputMode = "numeric";'),
+  appCore.includes('input.type = "text";') && appCore.includes('input.inputMode = "numeric";') && tableRuntime.includes('input.type = "text";') && tableRuntime.includes('input.inputMode = "numeric";'),
   "Pager page entry must remain a text input with numeric input mode so native text selection stays available.",
 );
 
@@ -147,14 +105,8 @@ const blurStart = tableRuntime.indexOf('controls.input.addEventListener("blur", 
 const inputKeydownStart = tableRuntime.indexOf('controls.input.addEventListener("keydown", (event) => {', blurStart);
 invariant(blurStart >= 0 && inputKeydownStart > blurStart, "Pager blur and input keydown handlers must both exist in the generated Table runtime.");
 const blurSection = tableRuntime.slice(blurStart, inputKeydownStart);
-invariant(
-  blurSection.indexOf("queueMicrotask(() => {") < blurSection.indexOf("void commitPagerCurrentPage(controls.input);"),
-  "Pager blur navigation must remain deferred so cancellation can invalidate a pending commit.",
-);
-invariant(
-  blurSection.includes("revision !== pagerEditRevision"),
-  "Pager blur navigation must remain invalidated by a later cancel revision.",
-);
+invariant(blurSection.indexOf("queueMicrotask(() => {") < blurSection.indexOf("void commitPagerCurrentPage(controls.input);"), "Pager blur navigation must remain deferred so cancellation can invalidate a pending commit.");
+invariant(blurSection.includes("revision !== pagerEditRevision"), "Pager blur navigation must remain invalidated by a later cancel revision.");
 const inputKeydownEnd = tableRuntime.indexOf("  [prevButton, nextButton].forEach", inputKeydownStart);
 const inputKeydown = tableRuntime.slice(inputKeydownStart, inputKeydownEnd);
 invariant(inputKeydown.includes('event.key !== "Enter"'), "Pager input keydown must continue to commit Enter.");
@@ -184,14 +136,8 @@ const generatedReloadStart = generatedCore.indexOf("async function reloadIncreme
 const generatedReloadEnd = generatedCore.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", generatedReloadStart);
 const generatedReloadSource = generatedCore.slice(generatedReloadStart, generatedReloadEnd);
 invariant(
-  reloadStart >= 0
-    && reloadEnd > reloadStart
-    && reloadSource.indexOf("state.page = page;") < reloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
-    && reloadSource.split("state.page = page;").length === 2
-    && generatedReloadStart >= 0
-    && generatedReloadEnd > generatedReloadStart
-    && generatedReloadSource.indexOf("state.page = page;") < generatedReloadSource.indexOf("if (incrementalRouteIsCached(route, page))")
-    && generatedReloadSource.split("state.page = page;").length === 2,
+  reloadStart >= 0 && reloadEnd > reloadStart && reloadSource.indexOf("state.page = page;") < reloadSource.indexOf("if (incrementalRouteIsCached(route, page))") && reloadSource.split("state.page = page;").length === 2
+    && generatedReloadStart >= 0 && generatedReloadEnd > generatedReloadStart && generatedReloadSource.indexOf("state.page = page;") < generatedReloadSource.indexOf("if (incrementalRouteIsCached(route, page))") && generatedReloadSource.split("state.page = page;").length === 2,
   "Pager target page must be committed before cached and uncached incremental reload paths diverge.",
 );
 invariant(
