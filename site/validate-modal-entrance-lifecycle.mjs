@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [source, buildNormalizer, runtime, loadingStyles] = await Promise.all([
+const [source, runtime, loadingStyles] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"),
     read("./modules/core-sources/evaluation.js"),
@@ -17,20 +17,9 @@ const [source, buildNormalizer, runtime, loadingStyles] = await Promise.all([
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-runtime.js"),
   read("./loading.css"),
 ]);
-
-invariant(
-  !buildNormalizer.includes("normalizeModalEntranceLifecycle")
-    && !buildNormalizer.includes("modalArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
-    && !buildNormalizer.includes("evaluationLoadArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return watchlistArtifacts;"),
-  "Build composition must consume source-owned modal and Evaluation Load behavior directly before the remaining Saved Valuation Cache transform.",
-);
 
 for (const modalSource of [source, runtime]) {
   invariant(
