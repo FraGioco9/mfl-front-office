@@ -564,7 +564,6 @@
       return column === agentColumn && normalizedPage === "mfl" ? "" : fullLabel;
     }
     if (column === "listing_price" || (column === agentColumn && normalizedPage === "mfl")) return "";
-    if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";
     return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;
   }
 

@@ -902,11 +902,9 @@ function tableBuildHeaderOwner() {
       ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
       : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
         ? ""
-        : column === "positions"
-          ? (compactTableHeadings ? compactLabel : "POSITIONS")
-          : compactTableHeadings
-            ? compactLabel
-            : fullLabel;
+        : compactTableHeadings
+          ? compactLabel
+          : fullLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 

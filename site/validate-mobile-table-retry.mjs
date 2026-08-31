@@ -51,7 +51,8 @@ includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)
 includes(tableSource, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Canonical Table headings must switch only at the narrow breakpoint.");
 includes(tableSource, 'selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;', "Rebuilt headers must stay non-selectable until loaded selection state exists.");
 includes(tableSource, 'positions: "POS"', "Compact phone headings must abbreviate Positions to POS.");
-includes(tableSource, 'column === "positions"\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")', "Mobile tables must keep POSITIONS on wider tablets and use POS on compact phones.");
+excludes(tableSource, ': column === "positions"\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")', "Positions must not have a dedicated compact-heading branch.");
+includes(tableSource, ': compactTableHeadings\n          ? compactLabel\n          : fullLabel;', "Positions must flow through the same compact-heading branch as the other columns.");
 for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(tableSource, `: "${label}"`, `Canonical compact headings must include ${label}.`);
 }
@@ -71,7 +72,8 @@ includes(evaluationSource, 'window.matchMedia("(max-width: 900px), (hover: none)
 
 includes(bootstrap, 'const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");', "Bootstrap must know the compact heading breakpoint before first paint.");
 includes(bootstrap, 'positions: "POS"', "Bootstrap must know the compact Positions label before first paint.");
-includes(bootstrap, 'if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";', "First paint must keep POSITIONS on wider tablets and use POS on compact phones.");
+excludes(bootstrap, 'if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";', "First paint must not special-case Positions.");
+includes(bootstrap, 'return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;', "First paint must use the shared compact-label path for Positions and every other compact column.");
 includes(bootstrap, "function firstPaintTableColumnLabel(page, column)", "Bootstrap must derive first-paint labels from viewport and column identity.");
 
 excludes(buildCore, "app-core-mobile-table", "The canonical build must not depend on the retired mobile-table transform.");

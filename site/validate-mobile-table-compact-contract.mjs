@@ -35,12 +35,16 @@ assert.match(
 
 assert.match(tableSource, /player_seasons: "SZN"/, "Hydrated small-screen Seasons headings must use SZN.");
 assert.match(tableSource, /positions: "POS"/, "Hydrated compact headings must shorten Positions to POS.");
+assert.doesNotMatch(tableSource, /: column === "positions"\s*\? \(compactTableHeadings \? compactLabel : "POSITIONS"\)/, "Positions must use the same compact-heading branch as the other columns.");
+assert.match(tableSource, /: compactTableHeadings\s*\? compactLabel\s*: fullLabel;/, "Hydrated headers must share one compact-label decision path.");
 assert.match(
   bootstrapSource,
   /FIRST_PAINT_COMPACT_COLUMN_LABELS[\s\S]*player_seasons: "SZN"/,
   "Bootstrap must render SZN as the real first-paint Seasons header text.",
 );
 assert.match(bootstrapSource, /FIRST_PAINT_COMPACT_COLUMN_LABELS[\s\S]*positions: "POS"/, "Bootstrap compact headings must shorten Positions to POS.");
+assert.doesNotMatch(bootstrapSource, /if \(column === "positions"\) return FIRST_PAINT_PHONE_TABLE_MEDIA/, "First paint must not special-case Positions.");
+assert.match(bootstrapSource, /return FIRST_PAINT_PHONE_TABLE_MEDIA\.matches \? compactLabel : fullLabel;/, "First paint must share one compact-label decision path.");
 assert.doesNotMatch(
   projectionSource,
   /data-table-column=\\"player_seasons\\"[\s\S]*content: \\"SZN\\"/,
