@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generatedCore, tableRuntime] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource, generatedCore, tableRuntime] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
@@ -20,7 +20,6 @@ const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generated
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
@@ -238,27 +237,28 @@ invariant(
     && incrementalPageSource.includes("finally {\n        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);"),
   "Progression must acquire the canonical Table request token before route-transition paint and keep it through final render.",
 );
-invariant(
-  !buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
-    && !buildNormalizer.includes(requestBoundaryMarker)
-    && !buildNormalizer.includes(requestFinishMarker)
-    && !buildNormalizer.includes("tableRequestLoadingArtifacts")
-    && !buildNormalizer.includes("normalizePagerCurrentPageLifecycle")
-    && !buildNormalizer.includes("pagerCurrentPageArtifacts")
-    && !buildNormalizer.includes("normalizeTableControlCellAlignment")
-    && !buildNormalizer.includes("tableControlCellArtifacts")
-    && !buildNormalizer.includes("normalizeHomeSummaryLifecycle")
-    && !buildNormalizer.includes("homeSummaryArtifacts")
-    && !buildNormalizer.includes("normalizeGlobalSearchOpenLifecycle")
-    && !buildNormalizer.includes("globalSearchArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationRecentReadiness")
-    && !buildNormalizer.includes("evaluationRecentArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationLoadLifecycle")
-    && !buildNormalizer.includes("evaluationLoadArtifacts")
-    && !buildNormalizer.includes("normalizeEvaluationSavedValuationCache")
-    && buildNormalizer.includes("return watchlistArtifacts;"),
-  "The build normalizer must not inject Table request loading, control-cell, or Evaluation recent-readiness behavior after source authoring.",
-);
+
+for (const retiredOwner of [
+  "normalizeTableRequestLoadingBoundary",
+  "tableRequestLoadingArtifacts",
+  "normalizePagerCurrentPageLifecycle",
+  "pagerCurrentPageArtifacts",
+  "normalizeTableControlCellAlignment",
+  "tableControlCellArtifacts",
+  "normalizeHomeSummaryLifecycle",
+  "homeSummaryArtifacts",
+  "normalizeGlobalSearchOpenLifecycle",
+  "globalSearchArtifacts",
+  "normalizeEvaluationRecentReadiness",
+  "evaluationRecentArtifacts",
+  "normalizeEvaluationLoadLifecycle",
+  "evaluationLoadArtifacts",
+  "normalizeEvaluationSavedValuationCache",
+  "app-core-build-normalizer",
+]) {
+  invariant(!appCoreSource.includes(retiredOwner), `Canonical application source must not contain retired build owner ${retiredOwner}.`);
+  invariant(!generatedCore.includes(retiredOwner), `Generated shared runtime must not contain retired build owner ${retiredOwner}.`);
+}
 
 const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);
 const generatedPromiseIndex = generatedCore.indexOf("let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);");
@@ -314,4 +314,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("All table-backed routes keep one stable loading tbody, and Club refresh preserves its canonical first-paint header through the entire nested load until the final shared release.");
+console.log("All table-backed routes keep one source-owned stable loading tbody, and Club refresh preserves its canonical first-paint header through the entire nested load until the final shared release.");
