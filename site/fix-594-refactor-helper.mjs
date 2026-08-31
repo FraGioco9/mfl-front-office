@@ -50,4 +50,26 @@ for (const [before, after] of replacements) {
 }
 
 await writeFile(url, source, "utf8");
+
+const joinedAgencyUrl = new URL("./validate-progression-joined-agency-filter.mjs", import.meta.url);
+let joinedAgencySource = await readFile(joinedAgencyUrl, "utf8");
+const retiredJoinedAgencyRead = 'const app = readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");';
+const canonicalJoinedAgencyRead = `const app = [
+  "./modules/core-sources/shared.js",
+  "./modules/core-sources/evaluation.js",
+  "./modules/core-sources/mfl-stats.js",
+  "./modules/core-sources/club.js",
+  "./modules/core-sources/settings.js",
+  "./modules/core-sources/player.js",
+  "./modules/core-sources/table.js",
+  "./modules/core-sources/wallet.js",
+  "./modules/core-sources/watchlist.js",
+].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\\n");`;
+if (joinedAgencySource.includes(retiredJoinedAgencyRead)) {
+  joinedAgencySource = joinedAgencySource.replace(retiredJoinedAgencyRead, canonicalJoinedAgencyRead);
+  await writeFile(joinedAgencyUrl, joinedAgencySource, "utf8");
+} else if (!joinedAgencySource.includes("./modules/core-sources/shared.js")) {
+  throw new Error("Expected Joined Agency validator read was not found.");
+}
+
 console.log("Issue 594 staged runtime ownership refactor is ready for Global Search validation.");
