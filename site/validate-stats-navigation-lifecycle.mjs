@@ -1,24 +1,25 @@
 import { readFile } from "node:fs/promises";
 
-const normalizer = await readFile(new URL("./modules/app-core-build-normalizer.js", import.meta.url), "utf8");
 const source = await Promise.all([
-    readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/mfl-stats.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/club.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/settings.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/player.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/table.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
-    readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
-  ]).then((parts) => parts.join("\n"));
+  readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/mfl-stats.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/club.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/settings.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/player.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/table.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
+]).then((parts) => parts.join("\n"));
 const runtime = await readFile(new URL("./modules/app-core-runtime.js", import.meta.url), "utf8");
 const stateRuntime = await readFile(new URL("./database-stats-state-runtime.js", import.meta.url), "utf8");
 const validators = await readFile(new URL("./validate-all.mjs", import.meta.url), "utf8");
 const statsDomainValidators = await readFile(new URL("./validate-domain-stats.mjs", import.meta.url), "utf8");
 
-if (normalizer.includes("normalizeStatsNavigationLifecycle") || normalizer.includes("statsNavigationArtifacts")) {
-  throw new Error("Build normalization must not rewrite source-owned Stats navigation.");
+for (const retiredOwner of ["normalizeStatsNavigationLifecycle", "statsNavigationArtifacts", "app-core-build-normalizer"]) {
+  if (source.includes(retiredOwner) || runtime.includes(retiredOwner)) {
+    throw new Error(`Stats navigation must remain source-owned without retired build owner ${retiredOwner}.`);
+  }
 }
 if (
   !source.includes('state.currentPage === "database"\n      && state.view === "stats"\n      && pageName === "database"')
@@ -41,4 +42,4 @@ if (
   throw new Error("The post-#184 single Stats animation ownership validation must remain active through the Stats domain suite.");
 }
 
-console.log("Stats navigation lifecycle validation passed.");
+console.log("Source-owned Stats navigation lifecycle validation passed.");
