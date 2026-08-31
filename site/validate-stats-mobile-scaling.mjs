@@ -43,6 +43,24 @@ assert.doesNotMatch(responsive, /\.advancedPlayerTableSection,\s*\.mflStatsAgeDi
 assert.match(responsive, /\.mflStatsAgeDistribution\.mflStatsCanScrollRight:not\(\.mflStatsCanScrollLeft\)/);
 assert.match(responsive, /\.mflStatsAgeDistribution\.mflStatsCanScrollLeft\.mflStatsCanScrollRight/);
 
+assert.match(statsUi, /const MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH = 12;/);
+assert.match(statsUi, /const MOBILE_HISTOGRAM_COLUMN_MAX_WIDTH = 96;/);
+assert.match(statsUi, /const MOBILE_HISTOGRAM_REFERENCE_WIDTH = 384;/);
+assert.match(statsUi, /const DEFAULT_HISTOGRAM_GRID_COLUMNS = "repeat\(var\(--mfl-stats-bars, 1\), minmax\(0, 1fr\)\)";/);
+assert.match(statsUi, /const MOBILE_HISTOGRAM_GRID_COLUMNS = `repeat\(var\(--mfl-stats-bars, 1\), minmax\(\$\{MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH\}px, 1fr\)\)`;/);
+assert.match(statsUi, /function histogramForScroller\(scroller\)/);
+assert.match(statsUi, /function mobileHistogramColumnMaxWidth\(labelCount\)/);
+assert.match(statsUi, /const count = Math\.max\(1, Number\(labelCount\) \|\| 1\);/);
+assert.match(statsUi, /const scaledWidth = Math\.floor\(MOBILE_HISTOGRAM_REFERENCE_WIDTH \/ count\);/);
+assert.match(statsUi, /return Math\.max\(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, Math\.min\(MOBILE_HISTOGRAM_COLUMN_MAX_WIDTH, scaledWidth\)\);/);
+assert.match(statsUi, /function syncHistogramColumns\(scroller\)/);
+assert.match(statsUi, /const mobile = MOBILE_MEDIA\.matches;/);
+assert.match(statsUi, /const gridColumns = mobile \? MOBILE_HISTOGRAM_GRID_COLUMNS : DEFAULT_HISTOGRAM_GRID_COLUMNS;/);
+assert.match(statsUi, /const items = histogram\.querySelectorAll\(":scope > \.mflStatsHistogramItem"\);/);
+assert.match(statsUi, /const maxWidth = `\$\{mobileHistogramColumnMaxWidth\(items\.length\)\}px`;/);
+assert.match(statsUi, /item\.style\.maxWidth = maxWidth;\s*item\.style\.justifySelf = "center";/);
+assert.match(statsUi, /item\.style\.removeProperty\("max-width"\);\s*item\.style\.removeProperty\("justify-self"\);/);
+assert.match(statsUi, /syncHistogramColumns\(scroller\);\s*if \(!MOBILE_MEDIA\.matches \|\| scroller\.getClientRects\(\)\.length === 0\)/);
 assert.match(statsUi, /const FADE_LEFT_CLASS = "mflStatsCanScrollLeft";/);
 assert.match(statsUi, /const FADE_RIGHT_CLASS = "mflStatsCanScrollRight";/);
 assert.match(statsUi, /document\.getElementById\("databaseStatsDistribution"\)/);
@@ -80,4 +98,4 @@ assert.match(statsUi, /function suppressPointerCommittedViewClick\(event\)/);
 assert.match(statsUi, /event\.stopImmediatePropagation\(\);\s*clearPointerCommit\(\);/);
 assert.match(statsUi, /document\.addEventListener\("click", suppressPointerCommittedViewClick, true\);/);
 
-console.log("Stats mobile scrolling, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, canonical dependency loading, and view click-through validation passed.");
+console.log("Stats mobile scrolling, label-count-scaled histogram columns with a 12px floor, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, canonical dependency loading, and view click-through validation passed.");

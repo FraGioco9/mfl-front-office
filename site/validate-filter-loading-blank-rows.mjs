@@ -61,11 +61,31 @@ invariant(
     && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
   "Loading rows may own appearance only, never a competing height declaration.",
 );
+const horizontalStandardsRule = `.playerTableScroller,
+  .tableScroller,
+  .advancedPlayerTableSection,
+  .mflStatsAgeDistribution {
+    scrollbar-width: none;
+  }`;
+const horizontalMsRule = `.playerTableScroller,
+.tableScroller,
+.advancedPlayerTableSection,
+.mflStatsAgeDistribution {
+  -ms-overflow-style: none;
+}`;
+const horizontalWebkitRule = `.playerTableScroller::-webkit-scrollbar,
+.tableScroller::-webkit-scrollbar,
+.advancedPlayerTableSection::-webkit-scrollbar,
+.mflStatsAgeDistribution::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}`;
 invariant(
-  scrollbars.includes(".playerTableScroller {\n      scrollbar-width: none;")
-    && scrollbars.includes(".playerTableScroller {\n    -ms-overflow-style: none;")
-    && scrollbars.includes(".playerTableScroller::-webkit-scrollbar {\n    display: none;\n    width: 0;\n    height: 0;"),
-  "Mobile player-table scrolling must stay native while its horizontal scrollbar chrome is hidden so it cannot appear as a sixth loading row.",
+  scrollbars.includes(horizontalStandardsRule)
+    && scrollbars.includes(horizontalMsRule)
+    && scrollbars.includes(horizontalWebkitRule),
+  "Player-table scrolling must stay native while the shared horizontal-overflow scrollbar owner hides its chrome so it cannot appear as a sixth loading row.",
 );
 invariant(
   stylesBase.includes(".pager[hidden] {\n  display: none;\n}"),
@@ -92,4 +112,4 @@ invariant(
   "The canonical table-loading owner must hide both pager navigation and the Showing x/y players summary.",
 );
 
-console.log("Quick Filter loading keeps exactly five equal blank rows on canonical row geometry, with mobile scrollbar chrome removed from the loading surface.");
+console.log("Quick Filter loading keeps exactly five equal blank rows on canonical row geometry, with horizontal scrollbar chrome removed from the loading surface.");
