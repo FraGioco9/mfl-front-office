@@ -66,6 +66,8 @@ for (const name of names) {
   const original = source;
   source = source.replaceAll('read("./modules/app-core.js")', canonicalCoreRead);
   source = source.replaceAll("read('./modules/app-core.js')", canonicalCoreRead);
+  source = source.replaceAll('read("modules/app-core.js")', canonicalCoreRead);
+  source = source.replaceAll("read('modules/app-core.js')", canonicalCoreRead);
   source = source.replaceAll(
     'readFile(new URL("./modules/app-core.js", import.meta.url), "utf8")',
     canonicalDirectCoreRead,
