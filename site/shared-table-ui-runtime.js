@@ -40,9 +40,9 @@
     style.textContent = `
 @media (max-width: 900px) {
   #progressionPage {
-    --mfl-table-header-height: 32px;
-    --mfl-table-row-height: 28px;
-    --mfl-table-row-outer-height: 32px;
+    --mfl-table-header-height: 18.72596153846154px;
+    --mfl-table-row-height: 16.754807692307693px;
+    --mfl-table-row-outer-height: 19.21875px;
   }
   #progressionPage .tableShell {
     position: relative;
@@ -119,12 +119,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    min-width: 18px;
-    max-width: 18px;
-    height: 18px;
-    min-height: 18px;
-    max-height: 18px;
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+    height: 16px;
+    min-height: 16px;
+    max-height: 16px;
     margin-inline: auto;
     gap: 0;
     padding: 0;
@@ -150,12 +150,12 @@
     gap: 1px;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 18px;
-    min-width: 18px;
-    max-width: 18px;
-    height: 18px;
-    min-height: 18px;
-    max-height: 18px;
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+    height: 16px;
+    min-height: 16px;
+    max-height: 16px;
     padding: 0;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
@@ -281,9 +281,9 @@
 }
 @media (max-width: 520px) {
   #progressionPage {
-    --mfl-table-header-height: 28px;
-    --mfl-table-row-height: 24px;
-    --mfl-table-row-outer-height: 28px;
+    --mfl-table-header-height: 15.528846153846153px;
+    --mfl-table-row-height: 13.89423076923077px;
+    --mfl-table-row-outer-height: 15.9375px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
@@ -307,12 +307,12 @@
     background-size: 7px 5px;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 15px;
-    min-width: 15px;
-    max-width: 15px;
-    height: 15px;
-    min-height: 15px;
-    max-height: 15px;
+    width: 13px;
+    min-width: 13px;
+    max-width: 13px;
+    height: 13px;
+    min-height: 13px;
+    max-height: 13px;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
     width: 9px;
@@ -344,12 +344,12 @@
     font-size: 7px;
   }
   #progressionPage .playerTableScroller .listingCellContent {
-    width: 15px;
-    min-width: 15px;
-    max-width: 15px;
-    height: 15px;
-    min-height: 15px;
-    max-height: 15px;
+    width: 13px;
+    min-width: 13px;
+    max-width: 13px;
+    height: 13px;
+    min-height: 13px;
+    max-height: 13px;
   }
   #progressionPage .playerTableScroller .listingCellIcon {
     flex-basis: 7px;
@@ -368,9 +368,9 @@
 }
 @media (max-width: 380px) {
   #progressionPage {
-    --mfl-table-header-height: 26px;
-    --mfl-table-row-height: 22px;
-    --mfl-table-row-outer-height: 26px;
+    --mfl-table-header-height: 13.701923076923077px;
+    --mfl-table-row-height: 12.259615384615385px;
+    --mfl-table-row-outer-height: 14.0625px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
@@ -394,12 +394,12 @@
     background-size: 6px 4px;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 13px;
-    min-width: 13px;
-    max-width: 13px;
-    height: 13px;
-    min-height: 13px;
-    max-height: 13px;
+    width: 12px;
+    min-width: 12px;
+    max-width: 12px;
+    height: 12px;
+    min-height: 12px;
+    max-height: 12px;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
     width: 8px;
@@ -428,12 +428,12 @@
     height: 8px;
   }
   #progressionPage .playerTableScroller .listingCellContent {
-    width: 13px;
-    min-width: 13px;
-    max-width: 13px;
-    height: 13px;
-    min-height: 13px;
-    max-height: 13px;
+    width: 12px;
+    min-width: 12px;
+    max-width: 12px;
+    height: 12px;
+    min-height: 12px;
+    max-height: 12px;
   }
   #progressionPage .playerTableScroller .listingCellIcon {
     flex-basis: 6px;

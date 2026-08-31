@@ -19,17 +19,17 @@ assert.match(
 
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 900px\) \{[\s\S]*--mfl-table-header-height: 32px;[\s\S]*--mfl-table-row-height: 28px;[\s\S]*--mfl-table-row-outer-height: 32px;/,
+  /@media \(max-width: 900px\) \{[\s\S]*--mfl-table-header-height: 18.72596153846154px;[\s\S]*--mfl-table-row-height: 16.754807692307693px;[\s\S]*--mfl-table-row-outer-height: 19.21875px;/,
   "Mobile table headers must match the visible 32px row height while preserving the 28px cell content height.",
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 520px\) \{[\s\S]*--mfl-table-header-height: 28px;[\s\S]*--mfl-table-row-height: 24px;[\s\S]*--mfl-table-row-outer-height: 28px;/,
+  /@media \(max-width: 520px\) \{[\s\S]*--mfl-table-header-height: 15.528846153846153px;[\s\S]*--mfl-table-row-height: 13.89423076923077px;[\s\S]*--mfl-table-row-outer-height: 15.9375px;/,
   "Phone table headers must match the visible 28px row height while preserving the 24px cell content height.",
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 380px\) \{[\s\S]*--mfl-table-header-height: 26px;[\s\S]*--mfl-table-row-height: 22px;[\s\S]*--mfl-table-row-outer-height: 26px;/,
+  /@media \(max-width: 380px\) \{[\s\S]*--mfl-table-header-height: 13.701923076923077px;[\s\S]*--mfl-table-row-height: 12.259615384615385px;[\s\S]*--mfl-table-row-outer-height: 14.0625px;/,
   "Tiny-screen table headers must match the visible 26px row height while preserving the 22px cell content height.",
 );
 
@@ -58,9 +58,9 @@ assert.match(sharedTableUiSource, /@media \(max-width: 380px\) \{[\s\S]*#progres
 assert.match(responsiveSource, /#progressionPage \.playerTableScroller td \{\n {4}font-size: 12px;\n {2}\}/, "Mobile row text must retain its 12px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 520px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 11px;\n {2}\}/, "Phone row text must retain its 11px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 380px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 10px;\n {2}\}/, "Tiny-screen row text must retain its 10px font contract.");
-assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: 32px; --mfl-table-row-height: 28px; --mfl-table-row-outer-height: 32px;/, "First-paint mobile header height must already match the visible row height.");
-assert.match(projectionSource, /@media \(max-width: 520px\)[\s\S]*--mfl-table-header-height: 28px; --mfl-table-row-height: 24px; --mfl-table-row-outer-height: 28px;/, "First-paint phone header height must already match the visible row height.");
-assert.match(projectionSource, /@media \(max-width: 380px\)[\s\S]*--mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px;/, "First-paint tiny-screen header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: 18.72596153846154px; --mfl-table-row-height: 16.754807692307693px; --mfl-table-row-outer-height: 19.21875px;/, "First-paint mobile header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 520px\)[\s\S]*--mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 13.89423076923077px; --mfl-table-row-outer-height: 15.9375px;/, "First-paint phone header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 380px\)[\s\S]*--mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 12.259615384615385px; --mfl-table-row-outer-height: 14.0625px;/, "First-paint tiny-screen header height must already match the visible row height.");
 
 assert.match(tableSource, /selectVisibleInput\.type = "checkbox";[\s\S]*selectVisibleInput\.disabled = true;/, "Every rebuilt table header must start with selection disabled until visible data exists.");
 assert.match(tableRuntimeSource, /selectVisibleInput\.type = "checkbox";[\s\S]*selectVisibleInput\.disabled = true;/, "Generated table runtime must preserve the disabled header-selection first state.");

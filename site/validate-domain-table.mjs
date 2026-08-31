@@ -4,6 +4,7 @@ const validators = [
   "validate-table-column-layout.mjs",
   "validate-table-progression-spacing.mjs",
   "validate-table-row-vertical-centering.mjs",
+  "validate-responsive-table-proportions.mjs",
   "validate-table-header-typography.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-listing-column.mjs",

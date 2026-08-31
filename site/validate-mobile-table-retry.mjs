@@ -29,12 +29,12 @@ includes(sharedUi, "touch-action: auto;", "The player table must allow native to
 includes(sharedUi, "min-width: 820px;", "Tablet/mobile tables must retain a real horizontal scroll range.");
 includes(sharedUi, "min-width: 680px;", "Phone tables must remain laterally pannable.");
 includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizontal scroll range.");
-includes(sharedUi, "--mfl-table-header-height: 32px;", "Mobile header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 28px;", "Mobile row content height must stay canonical.");
-includes(sharedUi, "--mfl-table-header-height: 28px;", "Phone header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 24px;", "Phone row content height must stay canonical.");
-includes(sharedUi, "--mfl-table-header-height: 26px;", "Tiny-screen header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 22px;", "Tiny-screen row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-header-height: 18.72596153846154px;", "Mobile header height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 16.754807692307693px;", "Mobile row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-header-height: 15.528846153846153px;", "Phone header height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 13.89423076923077px;", "Phone row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-header-height: 13.701923076923077px;", "Tiny-screen header height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 12.259615384615385px;", "Tiny-screen row content height must stay canonical.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 10px;", "Mobile headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 9px;", "Phone headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 8px;", "Tiny-screen headers must stay two pixels smaller than row text.");
