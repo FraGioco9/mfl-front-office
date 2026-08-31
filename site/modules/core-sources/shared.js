@@ -1875,6 +1875,7 @@ let __mflTableTitleForPageOwner = null;
 let __mflTableEnsureAgentPageTitleNameOwner = null;
 let __mflTableBuildTableColGroupOwner = null;
 let __mflTableBuildHeaderOwner = null;
+let __mflTableUpdateSelectionHeaderOwner = null;
 let __mflTableBuildOperatorSelectOwner = null;
 let __mflTableRuleMatchesOwner = null;
 let __mflTableAddFilterRuleOwner = null;
@@ -1942,6 +1943,12 @@ function buildHeader() {
   head.dataset.mflHeaderSignature = signature;
   delete head.dataset.mflStaticHeader;
   return result;
+}
+
+function syncTableSelectionHeader() {
+  return typeof __mflTableUpdateSelectionHeaderOwner === "function"
+    ? __mflTableUpdateSelectionHeaderOwner.apply(this, arguments)
+    : undefined;
 }
 
 function buildOperatorSelect() {
@@ -9528,6 +9535,7 @@ async function startApp() {
 
   window.__mflCoreContracts = Object.freeze({
     ensureCanonicalTableHeader,
+    syncTableSelectionHeader,
     installSearchMatching,
     renderGlobalSearchResults,
     renderCurrentEvaluationSearchResults,
