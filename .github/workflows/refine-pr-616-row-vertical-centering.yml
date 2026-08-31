@@ -1,0 +1,78 @@
+name: Refine PR 616 row vertical centering
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+    paths:
+      - .github/workflows/refine-pr-616-row-vertical-centering.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/599-responsive-table-proportions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply canonical row centering refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              source = file.read_text(encoding="utf-8")
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              file.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          styles = "site/styles.css"
+          replace_once(
+              styles,
+              '''#progressionPage #tableBody .playerNameCell {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n}''',
+              '''#progressionPage #tableBody .playerNameCell {\n  display: flex;\n  align-items: center;\n  width: 100%;\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1.2;\n}''',
+          )
+
+          validator = Path("site/validate-table-row-vertical-centering.mjs")
+          source = validator.read_text(encoding="utf-8")
+          marker = '''assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");'''
+          addition = '''\n\nconst playerNameContent = styles.match(/#progressionPage #tableBody \\.playerNameCell \\{([\\s\\S]*?)\\n\\}/)?.[1] || "";\nassert.match(playerNameContent, /display: flex;/, "Player-name content must use flex layout rather than a full-height baseline box.");\nassert.match(playerNameContent, /align-items: center;/, "Player name, link, and markers must be vertically centered inside the row.");\nassert.match(playerNameContent, /width: 100%;/, "Player-name content must retain the full cell width while centering.");\nassert.match(playerNameContent, /height: var\\(--mfl-table-row-height\\);/, "Player-name content must own the full canonical row-content height.");\nassert.match(playerNameContent, /line-height: 1\\.2;/, "Player-name text must retain the same descender-safe line box as every other centered row item.");\n\nconst listingContent = styles.match(/#progressionPage #tableBody \\.listingCellTableHost \\{([\\s\\S]*?)\\n\\}/)?.[1] || "";\nassert.match(listingContent, /display: flex;/, "Listing content must remain a flex-centered row item.");\nassert.match(listingContent, /align-items: center;/, "Listing content must remain vertically centered inside the row.");\nassert.match(listingContent, /height: var\\(--mfl-table-row-height\\);/, "Listing content must retain the full canonical row-content height.");'''
+          if marker not in source:
+              raise SystemExit("vertical-centering validator marker missing")
+          source = source.replace(marker, marker + addition, 1)
+          source = source.replace(
+              'console.log("Every player-table row item keeps viewport-independent flex centering with a descender-safe text line box.");',
+              'console.log("Every player-table row item, including player names, markers, listings, controls, and stat content, keeps viewport-independent vertical centering with a descender-safe text line box.");',
+              1,
+          )
+          validator.write_text(source, encoding="utf-8")
+          PY
+      - name: Validate site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd site
+          npm ci
+          npm run check
+      - name: Remove scaffolding and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/styles.css site/validate-table-row-vertical-centering.mjs
+          git diff --cached --check
+          git commit -m "Center all table row content vertically"
+          git rm .github/workflows/refine-pr-616-row-vertical-centering.yml
+          git commit -m "Remove PR 616 row-centering scaffolding"
+          git push origin HEAD:fix/599-responsive-table-proportions
