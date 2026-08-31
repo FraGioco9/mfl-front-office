@@ -7,8 +7,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-
-const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles, responsive, index] = await Promise.all([
+const [coreSource, styles, responsive, index] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"),
     read("./modules/core-sources/evaluation.js"),
@@ -20,9 +19,6 @@ const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles, re
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-sidebar-lifecycle.js"),
-  read("./modules/app-core-route-chunks.js"),
-  read("./modules/app-core-build-normalizer.js"),
   read("./styles-base.css"),
   read("./responsive.css"),
   read("./index.html"),
@@ -41,37 +37,38 @@ for (const staleOwner of [
   '"sidebarCollapsed"',
   "menuButton.style.pointerEvents",
   "menuButton.style.cursor",
+  "normalizePinnedSidebarApplicationCoreRuntime",
 ]) {
-  invariant(!builtRuntime.includes(staleOwner), `Built runtime must not contain legacy pinned-sidebar ownership: ${staleOwner}`);
+  invariant(!builtRuntime.includes(staleOwner), `Canonical runtime must not contain legacy pinned-sidebar ownership: ${staleOwner}`);
 }
 
 invariant(
   shared.includes(`function updateMenuVisibility() {\n  state.menuOpen = true;`),
-  "Built shared core must force the pinned sidebar expanded at its canonical visibility owner.",
+  "Canonical shared source must force the pinned sidebar expanded at its visibility owner.",
 );
 invariant(
   shared.includes('  appShell.classList.remove("menuClosed");'),
-  "Built shared core must remove obsolete collapsed-shell state directly.",
+  "Canonical shared source must remove obsolete collapsed-shell state directly.",
 );
 invariant(
   shared.includes("  menuButton.disabled = true;\n  menuButton.tabIndex = -1;"),
-  "Built shared core must own the disabled pinned-sidebar menu button.",
+  "Canonical shared source must own the disabled pinned-sidebar menu button.",
 );
 invariant(
   shared.includes('  menuButton.setAttribute("aria-disabled", "true");\n  menuButton.setAttribute("aria-expanded", "true");'),
-  "Built shared core must own pinned-sidebar accessibility state.",
+  "Canonical shared source must own pinned-sidebar accessibility state.",
 );
 invariant(
   shared.includes(`function toggleMenu() {\n  updateMenuVisibility();\n}`),
-  "Built runtime must not retain animated/collapsible menu-toggle behavior.",
+  "Canonical runtime must not retain animated/collapsible menu-toggle behavior.",
 );
 invariant(
   shared.includes(`function restoreMenuState() {\n  state.menuOpen = true;\n}`),
-  "Built runtime must ignore historic persisted collapsed-menu state.",
+  "Canonical runtime must ignore historic persisted collapsed-menu state.",
 );
 invariant(
   !builtRuntime.includes("keepSidebarExpanded();"),
-  "Built runtime page transitions must not depend on the legacy sidebar helper.",
+  "Canonical page transitions must not depend on the legacy sidebar helper.",
 );
 invariant(
   styles.includes(".menuButton {")
@@ -87,16 +84,10 @@ invariant(
   "The global disabled-button fade must exclude the permanently disabled pinned Menu control.",
 );
 invariant(
-  sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
-  "Pinned-sidebar cleanup must use the dedicated structural owner.",
-);
-invariant(
-  routeSplitter.includes("let core = normalizePinnedSidebarApplicationCoreRuntime(source);"),
-  "Pinned-sidebar compatibility ownership must be removed inside the canonical route splitter.",
-);
-invariant(
-  buildNormalizer.includes("splitApplicationCoreRuntime(canonicalSource)"),
-  "The build must continue splitting canonical app-core source directly without a pre-split patch chain.",
+  !coreSource.includes("app-core-sidebar-lifecycle")
+    && !coreSource.includes("app-core-route-chunks")
+    && !coreSource.includes("app-core-build-normalizer"),
+  "Pinned-sidebar behavior must remain directly authored in canonical core sources without retired transform ownership.",
 );
 
 invariant(
@@ -140,5 +131,4 @@ invariant(
 
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle, desktop sidebar grid geometry, and mobile bottom-rail geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
-
+console.log("Source-owned pinned-sidebar lifecycle, desktop sidebar grid geometry, and mobile bottom-rail geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
