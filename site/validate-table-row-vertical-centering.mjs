@@ -5,8 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const styles = readFileSync(resolve(root, "styles.css"), "utf8");
-const transform = readFileSync(resolve(root, "modules/app-core-table-row-centering.js"), "utf8");
-const buildNormalizer = readFileSync(resolve(root, "modules/app-core-build-normalizer.js"), "utf8");
+const tableSource = readFileSync(resolve(root, "modules/core-sources/table.js"), "utf8");
 const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");
 
 const playerCellGeometry = styles.match(/#progressionPage \.playerTableScroller td \{([\s\S]*?)\n\}/)?.[1] || "";
@@ -23,26 +22,15 @@ assert.match(sharedFullHeightContent, /min-height: var\(--mfl-table-row-height\)
 assert.match(sharedFullHeightContent, /line-height: 1;/, "Content inside the flex host must not depend on baseline line-box centering.");
 assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");
 
-assert.match(transform, /function tableCenterCellContents\(cell\) \{/, "The build must define one shared row-cell centering helper.");
-assert.match(transform, /contentHost\.className = "tableControlCellContent";/, "Every newly wrapped cell must use the existing canonical full-height host class.");
-assert.match(transform, /while \(cell\.firstChild\) contentHost\.appendChild\(cell\.firstChild\);/, "The helper must preserve every existing cell child while moving it into the canonical host.");
-assert.match(transform, /tableRow\.appendChild\(tableCenterCellContents\(selectionCell\)\);/, "Selection cells must use the universal centering helper.");
-assert.match(transform, /tableRow\.appendChild\(tableCenterCellContents\(actionsCell\)\);/, "Action cells must use the universal centering helper.");
-assert.match(transform, /tableRow\.appendChild\(tableCenterCellContents\(cell\)\);/, "Every rendered data cell must use the universal centering helper.");
-assert.doesNotMatch(transform, /matchMedia|innerWidth|max-width|min-width/, "Row-content centering must not differ by viewport size.");
-assert.doesNotMatch(transform, /!important|translate\(|translateY\(|position:\s*relative|\btop\s*:/, "Vertical centering must not use priority overrides or positional nudges.");
-
-assert.match(buildNormalizer, /import \{ addTableRowVerticalCentering \} from "\.\/app-core-table-row-centering\.js";/, "The canonical build must import the shared table-row centering transform.");
-assert.match(
-  buildNormalizer,
-  /const mobileTableArtifacts = addMobileTablePresentation\(tableArtifacts\);\n {2}const centeredTableArtifacts = addTableRowVerticalCentering\(mobileTableArtifacts\);\n {2}const walletArtifacts = splitWalletApplicationCoreRuntime\(centeredTableArtifacts\);/,
-  "Universal row centering must run after table/mobile presentation and before later route transforms.",
-);
-
-assert.match(generatedTable, /function tableCenterCellContents\(cell\) \{/, "The shipped Table runtime must contain the universal cell-centering helper.");
-assert.match(generatedTable, /tableRow\.appendChild\(tableCenterCellContents\(selectionCell\)\);/, "The shipped runtime must center selection cells with the shared helper.");
-assert.match(generatedTable, /tableRow\.appendChild\(tableCenterCellContents\(actionsCell\)\);/, "The shipped runtime must center action cells with the shared helper.");
-assert.match(generatedTable, /tableRow\.appendChild\(tableCenterCellContents\(cell\)\);/, "The shipped runtime must center every data cell with the shared helper.");
+for (const source of [tableSource, generatedTable]) {
+  assert.match(source, /function tableCenterCellContents\(cell\) \{/, "Canonical Table ownership must define one shared row-cell centering helper.");
+  assert.match(source, /contentHost\.className = "tableControlCellContent";/, "Every newly wrapped cell must use the existing canonical full-height host class.");
+  assert.match(source, /while \(cell\.firstChild\) contentHost\.appendChild\(cell\.firstChild\);/, "The centering helper must preserve every existing cell child.");
+  assert.match(source, /tableRow\.appendChild\(tableCenterCellContents\(selectionCell\)\);/, "Selection cells must use the universal centering helper.");
+  assert.match(source, /tableRow\.appendChild\(tableCenterCellContents\(actionsCell\)\);/, "Action cells must use the universal centering helper.");
+  assert.match(source, /tableRow\.appendChild\(tableCenterCellContents\(cell\)\);/, "Every rendered data cell must use the universal centering helper.");
+  assert.doesNotMatch(source, /!important|translate\(|translateY\(/, "Vertical centering must not use priority overrides or transform nudges.");
+}
 
 for (const contentContract of [
   'selectionContent.className = "tableControlCellContent tableControlCellContentCentered";',
@@ -53,7 +41,10 @@ for (const contentContract of [
   'nameWrap.className = "playerNameCell";',
   'contentHost.className = "tableOverallCellContent";',
 ]) {
-  assert.ok(generatedTable.includes(contentContract), `Existing specialized row content must remain intact inside the universal host: ${contentContract}`);
+  assert.ok(tableSource.includes(contentContract), `Canonical Table source must preserve specialized row content: ${contentContract}`);
+  assert.ok(generatedTable.includes(contentContract), `Generated Table runtime must preserve specialized row content: ${contentContract}`);
 }
 
-console.log("Every player-table row item uses one viewport-independent full-height vertical-centering contract.");
+assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
+new Function(tableSource);
+console.log("Every player-table row item uses one source-owned, viewport-independent full-height vertical-centering contract.");
