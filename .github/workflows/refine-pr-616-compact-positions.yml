@@ -1,0 +1,114 @@
+name: Refine PR 616 compact Positions
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+    paths:
+      - .github/workflows/refine-pr-616-compact-positions.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refine-pr-616-compact-positions
+  cancel-in-progress: true
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/599-responsive-table-proportions
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Apply shared compact heading path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              source = file.read_text(encoding="utf-8")
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              file.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          table = "site/modules/core-sources/table.js"
+          replace_once(
+              table,
+              '''        : column === "positions"\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")\n          : compactTableHeadings\n            ? compactLabel\n            : fullLabel;''',
+              '''        : compactTableHeadings\n          ? compactLabel\n          : fullLabel;''',
+          )
+
+          bootstrap = "site/bootstrap.js"
+          replace_once(
+              bootstrap,
+              '''    if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";\n    return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;''',
+              '''    return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;''',
+          )
+
+          retry = "site/validate-mobile-table-retry.mjs"
+          replace_once(
+              retry,
+              '''includes(tableSource, 'column === "positions"\\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")', "Mobile tables must keep POSITIONS on wider tablets and use POS on compact phones.");''',
+              '''excludes(tableSource, ': column === "positions"\\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")', "Positions must not have a dedicated compact-heading branch.");\nincludes(tableSource, ': compactTableHeadings\\n          ? compactLabel\\n          : fullLabel;', "Positions must flow through the same compact-heading branch as the other columns.");''',
+          )
+          replace_once(
+              retry,
+              '''includes(bootstrap, 'if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";', "First paint must keep POSITIONS on wider tablets and use POS on compact phones.");''',
+              '''excludes(bootstrap, 'if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";', "First paint must not special-case Positions.");\nincludes(bootstrap, 'return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;', "First paint must use the shared compact-label path for Positions and every other compact column.");''',
+          )
+
+          compact = "site/validate-mobile-table-compact-contract.mjs"
+          marker = 'assert.match(tableSource, /positions: "POS"/, "Hydrated compact headings must shorten Positions to POS.");'
+          replace_once(
+              compact,
+              marker,
+              marker + '\nassert.doesNotMatch(tableSource, /: column === "positions"\\s*\\? \\(compactTableHeadings \\? compactLabel : "POSITIONS"\\)/, "Positions must use the same compact-heading branch as the other columns.");\nassert.match(tableSource, /: compactTableHeadings\\s*\\? compactLabel\\s*: fullLabel;/, "Hydrated headers must share one compact-label decision path.");',
+          )
+          marker = 'assert.match(bootstrapSource, /FIRST_PAINT_COMPACT_COLUMN_LABELS[\\s\\S]*positions: "POS"/, "Bootstrap compact headings must shorten Positions to POS.");'
+          replace_once(
+              compact,
+              marker,
+              marker + '\nassert.doesNotMatch(bootstrapSource, /if \\(column === "positions"\\) return FIRST_PAINT_PHONE_TABLE_MEDIA/, "First paint must not special-case Positions.");\nassert.match(bootstrapSource, /return FIRST_PAINT_PHONE_TABLE_MEDIA\\.matches \\? compactLabel : fullLabel;/, "First paint must share one compact-label decision path.");',
+          )
+          PY
+
+          cd site
+          node build-app-core.mjs
+          node sync-release-projections.mjs
+
+      - name: Snapshot generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site
+          git diff --cached --check
+          git commit -m "Make Positions use shared compact heading path"
+
+      - name: Validate site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd site
+          npm ci
+          npm run check
+
+      - name: Remove scaffolding and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/refine-pr-616-compact-positions.yml
+          git commit -m "Remove PR 616 compact heading scaffolding"
+          git push origin HEAD:fix/599-responsive-table-proportions
