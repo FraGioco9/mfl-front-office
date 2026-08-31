@@ -80,3 +80,57 @@ for (const name of names) {
 
   if (text !== original) await writeFile(url, text, "utf8");
 }
+
+const evalValidatorUrl = new URL("./validate-eval-ownership.mjs", import.meta.url);
+let evalValidator = await readFile(evalValidatorUrl, "utf8");
+evalValidator = evalValidator.replace(
+  'import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";\n\n',
+  "",
+);
+evalValidator = evalValidator.replace(
+  '  read("./modules/app-core.js"),',
+  `  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\\n")),`,
+);
+evalValidator = evalValidator.replace(
+  '  buildAppCore.includes("String evaluation leaked into generated application core"),',
+  '  buildAppCore.includes("String evaluation leaked into canonical application core"),',
+);
+const legacyArtifactBlock = `const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
+const sharedCore = String(artifacts.core || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
+const generatedSources = [sharedCore, ...Object.values(artifacts.routeChunks || {}).map((source) => String(source || ""))];`;
+const sourceOwnedArtifactBlock = `const [
+  sharedCore,
+  evaluationCore,
+  mflStatsCore,
+  clubCore,
+  settingsCore,
+  playerCore,
+  tableCore,
+  walletCore,
+  watchlistCore,
+] = await Promise.all([
+  read("./modules/core-sources/shared.js"),
+  read("./modules/core-sources/evaluation.js"),
+  read("./modules/core-sources/mfl-stats.js"),
+  read("./modules/core-sources/club.js"),
+  read("./modules/core-sources/settings.js"),
+  read("./modules/core-sources/player.js"),
+  read("./modules/core-sources/table.js"),
+  read("./modules/core-sources/wallet.js"),
+  read("./modules/core-sources/watchlist.js"),
+]);
+const generatedSources = [sharedCore, evaluationCore, mflStatsCore, clubCore, settingsCore, playerCore, tableCore, walletCore, watchlistCore];`;
+if (!evalValidator.includes(legacyArtifactBlock)) throw new Error("Evaluation validator legacy artifact block was not found.");
+evalValidator = evalValidator.replace(legacyArtifactBlock, sourceOwnedArtifactBlock);
+await writeFile(evalValidatorUrl, evalValidator, "utf8");
