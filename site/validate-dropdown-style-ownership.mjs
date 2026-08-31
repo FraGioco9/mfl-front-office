@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, dropdowns, runtime] = await Promise.all([
+const [stylesBase, styles, dropdowns, runtime, shared] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./dropdowns.css"),
   read("./dropdowns-runtime.js"),
+  read("./modules/core-sources/shared.js"),
 ]);
 
 for (const required of [
@@ -94,8 +95,24 @@ for (const legacySelector of [
 }
 
 invariant(
-  runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),
-  "Evaluation summary position selects must remain table-owned instead of receiving global dropdown enhancement.",
+  !runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),
+  "Evaluation Position must participate in the canonical dropdown enhancer instead of being special-cased out.",
+);
+invariant(
+  shared.includes('class="evaluationSummaryPositionSelect" data-mfl-dropdown-enhanced="true" data-evaluation-summary-position'),
+  "Evaluation Position must render with canonical dropdown ownership on its first rendered frame.",
+);
+invariant(
+  dropdowns.includes('--mfl-dropdown-chevron-gap: auto;')
+    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {')
+    && dropdowns.includes('--mfl-dropdown-chevron-gap: 3px;')
+    && dropdowns.includes('margin: 0 0 0 var(--mfl-dropdown-chevron-gap);'),
+  "Evaluation Position must use the canonical dropdown trigger/menu styling with a compact text-to-chevron gap.",
+);
+invariant(
+  !stylesBase.includes('.evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after')
+    && !stylesBase.includes('.evaluationSummaryPositionSelect {'),
+  "Evaluation Position must not retain its legacy custom trigger or pseudo-element chevron owner.",
 );
 
 for (const runtimeStyleOwner of [

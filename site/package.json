@@ -10,8 +10,7 @@
     "typecheck": "tsc -p jsconfig.json --noEmit",
     "verify:generated": "git diff --exit-code -- table-width-runtime.js \":(glob)modules/app-core*-runtime.js\"",
     "validate": "node validate-all.mjs",
-    "check": "npm run lint && npm run typecheck && npm run build:core && npm run verify:generated && npm run validate",
-    "postinstall": "git config user.name FraGioco9 && git config user.email giocolifrancesco@gmail.com && node temp-fix-597.mjs"
+    "check": "npm run lint && npm run typecheck && npm run build:core && npm run verify:generated && npm run validate"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
