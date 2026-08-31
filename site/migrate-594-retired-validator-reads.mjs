@@ -55,6 +55,17 @@ const canonicalSyncCoreRead = `[
   "modules/core-sources/wallet.js",
   "modules/core-sources/watchlist.js",
 ].map((path) => fs.readFileSync(path, "utf8")).join("\\n")`;
+const canonicalRepositoryCoreRead = `[
+  "site/modules/core-sources/shared.js",
+  "site/modules/core-sources/evaluation.js",
+  "site/modules/core-sources/mfl-stats.js",
+  "site/modules/core-sources/club.js",
+  "site/modules/core-sources/settings.js",
+  "site/modules/core-sources/player.js",
+  "site/modules/core-sources/table.js",
+  "site/modules/core-sources/wallet.js",
+  "site/modules/core-sources/watchlist.js",
+].map(read).join("\\n")`;
 
 const names = (await readdir(new URL("./", import.meta.url)))
   .filter((name) => /^validate.*\.mjs$/.test(name));
@@ -68,6 +79,8 @@ for (const name of names) {
   source = source.replaceAll("read('./modules/app-core.js')", canonicalCoreRead);
   source = source.replaceAll('read("modules/app-core.js")', canonicalCoreRead);
   source = source.replaceAll("read('modules/app-core.js')", canonicalCoreRead);
+  source = source.replaceAll('read("site/modules/app-core.js")', canonicalRepositoryCoreRead);
+  source = source.replaceAll("read('site/modules/app-core.js')", canonicalRepositoryCoreRead);
   source = source.replaceAll(
     'readFile(new URL("./modules/app-core.js", import.meta.url), "utf8")',
     canonicalDirectCoreRead,
