@@ -4,6 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
+    "postinstall": "node temp-fix-598-validator.mjs",
     "build:core": "node build-app-core.mjs",
     "build": "npm run build:core",
     "lint": "eslint bootstrap.js bootstrap-core.js build-app-core.mjs sync-release-projections.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate*.mjs",
