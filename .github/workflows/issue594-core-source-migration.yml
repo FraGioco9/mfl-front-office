@@ -27,17 +27,20 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - name: Promote shipped core artifacts to canonical sources
         run: node site/migrate-594-core-sources.mjs
+      - name: Commit source-owned core migration locally
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/build-app-core.mjs site/modules/core-sources site/modules/app-core-runtime.js site/modules/app-core-evaluation-runtime.js site/modules/app-core-mfl-stats-runtime.js site/modules/app-core-club-runtime.js site/modules/app-core-settings-runtime.js site/modules/app-core-player-runtime.js site/modules/app-core-table-runtime.js site/modules/app-core-wallet-runtime.js site/modules/app-core-watchlist-runtime.js
+          git commit -m "Make split application cores source-owned"
       - name: Install dependencies
         working-directory: site
         run: npm ci
       - name: Verify source-owned core build
         working-directory: site
         run: npm run check
-      - name: Commit migration and remove helper
+      - name: Remove migration helper and push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm site/migrate-594-core-sources.mjs .github/workflows/issue594-core-source-migration.yml
-          git add -A
-          git commit -m "Make split application cores source-owned"
+          git commit -m "Remove issue 594 core migration helper"
           git push origin HEAD:refactor/594-global-runtime-ownership
