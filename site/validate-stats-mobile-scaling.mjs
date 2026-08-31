@@ -44,21 +44,28 @@ assert.doesNotMatch(responsive, /\.advancedPlayerTableSection,\s*\.mflStatsAgeDi
 assert.match(responsive, /\.mflStatsAgeDistribution\.mflStatsCanScrollRight:not\(\.mflStatsCanScrollLeft\)/);
 assert.match(responsive, /\.mflStatsAgeDistribution\.mflStatsCanScrollLeft\.mflStatsCanScrollRight/);
 
+assert.match(stylesBase, /\.mflStatsHistogram \{[\s\S]*?gap: clamp\(3px, 0\.45vw, 7px\);/);
 assert.match(stylesBase, /\.mflStatsHistogramBar \{[\s\S]*?width: min\(98%, var\(--mfl-stats-bar-width, 34px\)\);/);
 assert.match(stylesBase, /\.mflStatsHistogramFill \{[\s\S]*?border-radius: 6px 6px 3px 3px;/);
 assert.match(statsUi, /const MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH = 12;/);
-assert.match(statsUi, /const DESKTOP_HISTOGRAM_BAR_MAX_WIDTH = 34;/);
+assert.match(statsUi, /const DESKTOP_HISTOGRAM_BAR_REFERENCE_WIDTH = 34;/);
 assert.match(statsUi, /const DESKTOP_HISTOGRAM_RADIUS_TOP = 6;/);
 assert.match(statsUi, /const DESKTOP_HISTOGRAM_RADIUS_BOTTOM = 3;/);
 assert.match(statsUi, /const DEFAULT_HISTOGRAM_GRID_COLUMNS = "repeat\(var\(--mfl-stats-bars, 1\), minmax\(0, 1fr\)\)";/);
 assert.match(statsUi, /function histogramForScroller\(scroller\)/);
+assert.match(statsUi, /function histogramColumnGap\(histogram\)/);
+assert.match(statsUi, /const gap = Number\.parseFloat\(getComputedStyle\(histogram\)\.columnGap\);/);
+assert.match(statsUi, /return Number\.isFinite\(gap\) \? Math\.max\(0, gap\) : 0;/);
 assert.match(statsUi, /function mobileHistogramColumnWidth\(histogram, labelCount\)/);
 assert.match(statsUi, /const count = Math\.max\(1, Number\(labelCount\) \|\| 1\);/);
 assert.match(statsUi, /const availableWidth = Math\.max\(1, histogram instanceof HTMLElement \? histogram\.clientWidth : 0\);/);
-assert.match(statsUi, /const scaledWidth = availableWidth \/ count;/);
-assert.match(statsUi, /return Math\.max\(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, Math\.min\(DESKTOP_HISTOGRAM_BAR_MAX_WIDTH, scaledWidth\)\);/);
+assert.match(statsUi, /const gap = histogramColumnGap\(histogram\);/);
+assert.match(statsUi, /const totalGapWidth = gap \* Math\.max\(0, count - 1\);/);
+assert.match(statsUi, /const fittedWidth = \(availableWidth - totalGapWidth\) \/ count;/);
+assert.match(statsUi, /return Math\.max\(MOBILE_HISTOGRAM_COLUMN_MIN_WIDTH, fittedWidth\);/);
+assert.doesNotMatch(statsUi, /Math\.min\([^\n]*BAR_MAX_WIDTH/);
 assert.match(statsUi, /function scaledHistogramRadius\(barWidth, desktopRadius\)/);
-assert.match(statsUi, /return \(width \/ DESKTOP_HISTOGRAM_BAR_MAX_WIDTH\) \* desktopRadius;/);
+assert.match(statsUi, /return \(width \/ DESKTOP_HISTOGRAM_BAR_REFERENCE_WIDTH\) \* desktopRadius;/);
 assert.match(statsUi, /const items = Array\.from\(histogram\.querySelectorAll\(":scope > \.mflStatsHistogramItem"\)\);/);
 assert.match(statsUi, /const columnWidth = mobileHistogramColumnWidth\(histogram, items\.length\);/);
 assert.match(statsUi, /const gridColumns = `repeat\(\$\{Math\.max\(1, items\.length\)\}, minmax\(\$\{widthPx\}, 1fr\)\)`;/);
@@ -107,4 +114,4 @@ assert.match(statsUi, /function suppressPointerCommittedViewClick\(event\)/);
 assert.match(statsUi, /event\.stopImmediatePropagation\(\);\s*clearPointerCommit\(\);/);
 assert.match(statsUi, /document\.addEventListener\("click", suppressPointerCommittedViewClick, true\);/);
 
-console.log("Stats mobile scrolling, label-count-scaled actual bar widths with a 12px floor, desktop-proportional bar radii, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, canonical dependency loading, and view click-through validation passed.");
+console.log("Stats mobile scrolling, gap-aware uncapped label-count bar widths with a 12px floor, desktop-proportional bar radii, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, canonical dependency loading, and view click-through validation passed.");
