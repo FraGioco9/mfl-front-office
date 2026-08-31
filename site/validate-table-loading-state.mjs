@@ -9,7 +9,17 @@ const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generated
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -202,7 +212,7 @@ invariant(
   appCoreSource.includes(requestBoundaryMarker)
     && !appCoreSource.includes("preservePager")
     && appCoreSource.includes(requestFinishMarker)
-    && appCoreSource.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
+    && appCoreSource.includes('function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
   "Canonical application source must preserve first-paint loading rows until data is authoritative and guard active requests.",
 );
 invariant(

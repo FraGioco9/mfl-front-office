@@ -3,7 +3,17 @@ import { access, readFile } from "node:fs/promises";
 const [markup, motion, appCore, controlInteractions, controls, stylesBase] = await Promise.all([
   readFile(new URL("./index.html", import.meta.url), "utf8"),
   readFile(new URL("./motion.css", import.meta.url), "utf8"),
-  readFile(new URL("./modules/app-core.js", import.meta.url), "utf8"),
+  Promise.all([
+    readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/mfl-stats.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/club.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/settings.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/player.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/table.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
+  ]).then((parts) => parts.join("\n")),
   readFile(new URL("./control-interactions-runtime.js", import.meta.url), "utf8"),
   readFile(new URL("./controls.css", import.meta.url), "utf8"),
   readFile(new URL("./styles-base.css", import.meta.url), "utf8"),

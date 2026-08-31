@@ -11,7 +11,17 @@ const [bootstrap, bootstrapCore, controlInteractions, appCoreSource] = await Pro
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./control-interactions-runtime.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
 ]);
 
 includes(
@@ -373,12 +383,12 @@ includes(
 );
 includes(
   appCoreSource,
-  "if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {",
+  "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",
   "Cached Club view transitions must bypass route loading.",
 );
 includes(
   appCoreSource,
-  'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
   "Uncached Club view transitions must enter the controller-owned route-loading reason.",
 );
 includes(

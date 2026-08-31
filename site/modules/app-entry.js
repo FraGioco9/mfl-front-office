@@ -2,7 +2,6 @@
 
 const nativeFetch = window.fetch.bind(window);
 const DEFAULT_TIMEOUT_MS = 60_000;
-const runtimeLoadPromises = new Map();
 
 /** @param {RequestInfo | URL} input */
 function isSameOriginApiRequest(input) {
@@ -50,67 +49,35 @@ function installApiFetchPolicy({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   };
 }
 
+function runtimeResources() {
+  const resources = Reflect.get(window, "__mflRuntimeResources");
+  if (!resources
+    || typeof resources.load !== "function"
+    || typeof resources.loadGroup !== "function"
+    || typeof resources.preload !== "function") {
+    throw new Error("Canonical runtime resource loader is unavailable.");
+  }
+  return resources;
+}
+
 /** @param {string} path */
-function assetUrl(path) {
-  return new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
-}
-
-/**
- * Start a classic-script request immediately while keeping browser execution order deterministic.
- * Dynamic classic scripts with async=false execute in insertion order even when their downloads overlap.
- * Duplicate requests share one promise so route groups can safely overlap.
- * @param {string} path
- * @returns {Promise<void>}
- */
 function loadClassicScript(path) {
-  const normalizedPath = String(path || "");
-  const existingPromise = runtimeLoadPromises.get(normalizedPath);
-  if (existingPromise) return existingPromise;
-
-  /** @type {Promise<void>} */
-  const loader = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = assetUrl(normalizedPath);
-    script.async = false;
-    script.dataset.mflRuntime = normalizedPath;
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", () => {
-      runtimeLoadPromises.delete(normalizedPath);
-      reject(new Error(`Could not load ${normalizedPath}.`));
-    }, { once: true });
-    document.head.appendChild(script);
-  });
-
-  runtimeLoadPromises.set(normalizedPath, loader);
-  return loader;
+  return runtimeResources().load(path);
 }
 
-/**
- * Fetch a group concurrently. async=false on each classic script retains insertion/execution order,
- * so dependent runtime owners keep the same semantics without serial network round trips.
- * @param {readonly string[]} paths
- */
-async function loadScriptGroup(paths) {
-  const loaders = paths.map((path) => loadClassicScript(path));
-  await Promise.all(loaders);
+/** @param {readonly string[]} paths */
+function loadScriptGroup(paths) {
+  return runtimeResources().loadGroup(paths);
 }
 
 /** @param {string} path */
 function preloadClassicScript(path) {
-  if (document.querySelector(`link[data-mfl-runtime-preload="${path}"]`)) return;
-  const link = document.createElement("link");
-  link.rel = "preload";
-  link.as = "script";
-  link.href = assetUrl(path);
-  link.dataset.mflRuntimePreload = path;
-  document.head.appendChild(link);
+  runtimeResources().preload(path);
 }
-
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
   "/global-search-runtime.js",
-  "/shared-table-ui-runtime.js",
 ]);
 
 const initialPathname = String(window.location.pathname || "/");

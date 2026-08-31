@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -16,7 +16,17 @@ const forbidAll = (source, values, label) => {
 };
 
 const [coreSource, playerSplitter, appConfig, routeLoader, buildCore, portraitCloseUp, stylesBase] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-player-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
@@ -26,7 +36,7 @@ const [coreSource, playerSplitter, appConfig, routeLoader, buildCore, portraitCl
 ]);
 const bootstrapSource = await read("./bootstrap.js");
 const walletPreferencesApi = await read("./api/wallet-preferences.js");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
 

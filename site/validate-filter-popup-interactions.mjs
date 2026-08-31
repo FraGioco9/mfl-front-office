@@ -13,7 +13,17 @@ const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, bui
   read("./static-ui-runtime.js"),
   read("./dropdowns-runtime.js"),
   read("./modules/app-core-build-normalizer.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -149,8 +159,8 @@ for (const required of [
 }
 
 for (const required of [
-  'function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}',
-  'state.filterDraftRules = null;\n  document.body.classList.remove("filtersOpen");\n  hideModal(filtersModal, () => {\n    openFiltersButton.focus();',
+  'function updateFilterSummary(count = activeFilterCount()) {\n  const numericCount = Number(count);\n  const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;\n  const active = normalizedCount >= 1;\n  filterSummary.textContent = String(normalizedCount);',
+  'state.filterDraftRules = null;\n  document.body.classList.remove("filtersOpen");\n  hideModal(filtersModal, () => {\n    if (restoreTriggerFocus) openFiltersButton.focus();',
 ]) {
   invariant(appCore.includes(required), `Canonical source must preserve Filters summary/close ownership through ${required}`);
 }

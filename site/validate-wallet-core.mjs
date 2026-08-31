@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -10,13 +10,23 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [coreSource, walletSplitter, appConfig, routeLoader, buildCore] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-wallet-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const walletCore = String(artifacts.routeChunks?.wallet || "");
 

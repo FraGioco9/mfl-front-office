@@ -15,7 +15,17 @@ const statsRuntime = await read("./database-stats-runtime.js");
 const controlInteractions = await read("./control-interactions-runtime.js");
 const controls = await read("./controls.css");
 const styles = await read("./styles.css");
-const coreSource = await read("./modules/app-core.js");
+const coreSource = await Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n"));
 
 const statsBlock = appConfig.match(/databaseStats: Object\.freeze\(\[([\s\S]*?)\]\),/)?.[1] || "";
 

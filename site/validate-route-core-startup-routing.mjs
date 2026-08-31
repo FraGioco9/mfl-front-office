@@ -7,7 +7,17 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const appCoreSource = await read("./modules/app-core.js");
+const appCoreSource = await Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n"));
 const appCoreExecution = appCoreSource.replace(/\/\/[^\n]*/g, "");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const appConfig = await read("./modules/app-config.js");

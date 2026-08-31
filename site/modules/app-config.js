@@ -89,6 +89,10 @@ export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
     "/selection-startup-reset-runtime.js",
     "/selection-stack-runtime.js",
   ]),
+  statsPre: Object.freeze([
+    "/shared-table-ui-runtime.js",
+    "/stats-mobile-ui-runtime.js",
+  ]),
   watchlistMyPlayersPost: Object.freeze([
     "/watchlist-myplayers-route-runtime.js",
   ]),
@@ -473,6 +477,7 @@ export function browserConfigRuntimeSource(release) {
     const table = tablePageSet.has(page) && !(page === "database" && view === "stats");
     const watchlist = page === "watchlist" || page === "myplayers";
     const databaseStats = page === "database" && view === "stats";
+    const stats = databaseStats || page === "mflstats" || (page === "mfl" && view === "stats");
     const core = [];
     const preCore = [];
     const postCore = [];
@@ -493,6 +498,7 @@ export function browserConfigRuntimeSource(release) {
       preCore.push(...data.routes.runtimeScripts.tablePre);
       postCore.push(...data.routes.runtimeScripts.tablePost);
     }
+    if (stats) preCore.push(...data.routes.runtimeScripts.statsPre);
     if (databaseStats) preCore.push(...data.routes.runtimeScripts.databaseStats);
     if (watchlist) postCore.push(...data.routes.runtimeScripts.watchlistMyPlayersPost);
     if (page === "evaluation") {
@@ -514,6 +520,7 @@ export function browserConfigRuntimeSource(release) {
       table,
       watchlist,
       databaseStats,
+      stats,
     });
   }
 

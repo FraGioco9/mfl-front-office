@@ -20,7 +20,7 @@ function replaceRequired(source, before, after, label) {
   function runtimeResourceUrl(path, options = {}) {
     const normalizedPath = String(path || "").trim();
     if (!normalizedPath) throw new Error("Runtime resource path is required.");
-    const url = new URL(normalizedPath.replace(/^\\/+/, ""), \\`${"${window.location.origin}"}/\\`);
+    const url = new URL(normalizedPath.replace(/^\\/+/, ""), window.location.origin + "/");
     if (options.versioned) {
       const version = String(window.__mflReleaseVersion || STATIC_RELEASE_VERSION || "").trim();
       if (version) url.searchParams.set("mfl_core", version);
@@ -33,6 +33,7 @@ function replaceRequired(source, before, after, label) {
     const existingPromise = runtimeResourcePromises.get(href);
     if (existingPromise) return existingPromise;
 
+    /** @type {Promise<void>} */
     const loader = new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = href;
@@ -42,7 +43,7 @@ function replaceRequired(source, before, after, label) {
       script.addEventListener("error", () => {
         runtimeResourcePromises.delete(href);
         script.remove();
-        reject(new Error(\\`Could not load ${"${path}"}.\\`));
+        reject(new Error("Could not load " + path + "."));
       }, { once: true });
       document.head.appendChild(script);
     });
@@ -56,7 +57,7 @@ function replaceRequired(source, before, after, label) {
 
   function preloadRuntime(path, options = {}) {
     const href = runtimeResourceUrl(path, options);
-    if (document.querySelector(\\`link[data-mfl-runtime-resource-preload="${"${href}"}"]\\`)) return;
+    if (document.querySelector('link[data-mfl-runtime-resource-preload="' + href + '"]')) return;
     const link = document.createElement("link");
     link.rel = "preload";
     link.as = "script";
@@ -65,12 +66,12 @@ function replaceRequired(source, before, after, label) {
     document.head.appendChild(link);
   }
 
-  window.__mflRuntimeResources = Object.freeze({
+  Reflect.set(window, "__mflRuntimeResources", Object.freeze({
     load: loadRuntime,
     loadGroup: loadRuntimeGroup,
     preload: preloadRuntime,
     url: runtimeResourceUrl,
-  });`;
+  }));`;
   source = source.slice(0, start) + replacement + source.slice(end);
   await write("bootstrap.js", source);
 }
@@ -83,7 +84,7 @@ function replaceRequired(source, before, after, label) {
   const end = source.indexOf("\nconst UNIVERSAL_RUNTIME_SCRIPTS", start);
   if (start < 0 || end < 0) throw new Error("app-entry classic-script loader block not found.");
   const replacement = `function runtimeResources() {
-  const resources = window.__mflRuntimeResources;
+  const resources = Reflect.get(window, "__mflRuntimeResources");
   if (!resources
     || typeof resources.load !== "function"
     || typeof resources.loadGroup !== "function"
@@ -148,7 +149,7 @@ await write("route-core-loader-runtime.js", `(() => {
   const loadedRouteCorePages = new Set();
 
   function resources() {
-    const loader = runtimeWindow.__mflRuntimeResources;
+    const loader = Reflect.get(runtimeWindow, "__mflRuntimeResources");
     if (!loader || typeof loader.load !== "function" || typeof loader.preload !== "function") {
       throw new Error("Canonical runtime resource loader is unavailable.");
     }
@@ -237,16 +238,6 @@ await write("route-core-loader-runtime.js", `(() => {
 // Obsolete post-authoring split/normalization stack is no longer a source of runtime behavior.
 for (const path of [
   "modules/app-core.js",
-  "modules/app-core-build-normalizer.js",
-  "modules/app-core-evaluation-chunk.js",
-  "modules/app-core-player-chunk.js",
-  "modules/app-core-route-chunks.js",
-  "modules/app-core-settings-chunk.js",
-  "modules/app-core-splitter-utils.js",
-  "modules/app-core-stats-route-ownership.js",
-  "modules/app-core-table-chunk.js",
-  "modules/app-core-wallet-chunk.js",
-  "modules/app-core-watchlist-route-chunk.js",
 ]) {
   await rm(file(path), { force: true });
 }

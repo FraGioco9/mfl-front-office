@@ -8,7 +8,17 @@ const invariant = (condition, message) => {
 const [loadingRuntime, bootstrap, coreSource, tableRuntime, mobileTableSource, sharedTableUi, projectionSource] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-table-runtime.js"),
   read("./modules/app-core-mobile-table.js"),
   read("./shared-table-ui-runtime.js"),

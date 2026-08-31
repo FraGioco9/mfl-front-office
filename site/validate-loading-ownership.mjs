@@ -13,7 +13,17 @@ const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, 
   read("./modules/app-entry.js"),
   read("./route-core-loader-runtime.js"),
   read("./table-loading-runtime.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
 ]);
 
 invariant(
@@ -289,7 +299,7 @@ const incrementalViewOwner = appCoreSource.slice(incrementalViewStart, increment
 invariant(
   incrementalViewStart >= 0
     && incrementalViewEnd > incrementalViewStart
-    && incrementalViewOwner.includes("const pageName = state.currentPage;\n    if (!tablePages.has(pageName)) {")
+    && incrementalViewOwner.includes("const pageName = state.currentPage;\n    if (!tablePages.has(pageName) && pageName !== \"club\") {")
     && !incrementalViewOwner.includes("if (!state.incrementalMode"),
   "Table view navigation must use route capability rather than completed-data state, so a view click during refresh cancels the old request and starts loading the selected view.",
 );

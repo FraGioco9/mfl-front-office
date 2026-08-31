@@ -10,7 +10,17 @@ const read = (path) => fs.readFile(path, "utf8");
 const preferences = await read(resolve(apiRoot, "wallet-preferences.js"));
 const walletOptIns = await read(resolve(apiRoot, "wallet-opt-ins.js"));
 const walletPresence = await read(resolve(apiRoot, "_wallet-presence.js"));
-const appCore = await read(resolve(siteRoot, "modules/app-core.js"));
+const appCore = await Promise.all([
+    read(resolve(siteRoot, "modules/core-sources/shared.js")),
+    read(resolve(siteRoot, "modules/core-sources/evaluation.js")),
+    read(resolve(siteRoot, "modules/core-sources/mfl-stats.js")),
+    read(resolve(siteRoot, "modules/core-sources/club.js")),
+    read(resolve(siteRoot, "modules/core-sources/settings.js")),
+    read(resolve(siteRoot, "modules/core-sources/player.js")),
+    read(resolve(siteRoot, "modules/core-sources/table.js")),
+    read(resolve(siteRoot, "modules/core-sources/wallet.js")),
+    read(resolve(siteRoot, "modules/core-sources/watchlist.js")),
+  ]).then((parts) => parts.join("\n"));
 const schema = await read(resolve(repoRoot, "supabase-schema.sql"));
 const migration = await read(resolve(repoRoot, "supabase/migrations/20260823140000_minimize_wallet_preferences_table_state.sql"));
 const documentation = await read(resolve(repoRoot, "SUPABASE_PERSISTENCE.md"));

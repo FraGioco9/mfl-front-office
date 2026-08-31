@@ -1,14 +1,24 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const coreSource = await read("./modules/app-core.js");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const coreSource = await Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n"));
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const eagerCore = String(artifacts.core || "");
 
 const parserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");

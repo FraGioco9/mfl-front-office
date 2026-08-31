@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -8,11 +8,21 @@ const invariant = (condition, message) => {
 };
 
 const [appCoreSource, splitter, buildNormalizer] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-evaluation-chunk.js"),
   read("./modules/app-core-build-normalizer.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
+const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
 

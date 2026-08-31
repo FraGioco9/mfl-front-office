@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -20,7 +20,17 @@ const [
   tableLoading,
   watchlistRouteRuntime,
 ] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-watchlist-route-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
@@ -31,7 +41,7 @@ const [
   read("./watchlist-myplayers-route-runtime.js"),
 ]);
 
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
 const watchlistCore = String(artifacts.routeChunks?.watchlist || "");
@@ -142,12 +152,12 @@ excludes(
 );
 includes(
   coreSource,
-  "if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {",
+  "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",
   "Cached Club views must bypass route loading at the source-owned view boundary.",
 );
 includes(
   coreSource,
-  'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
   "Uncached Club views must enter canonical route loading at the source-owned view boundary.",
 );
 includes(

@@ -26,7 +26,17 @@ const [
   read("./control-interactions-runtime.js"),
   read("./database-stats-state-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./styles.css"),
   read("./dropdowns.css"),
 ]);
@@ -52,7 +62,7 @@ const guardedReplace = coreSource.indexOf('if (!lockedOptOutRoute && options.rep
 const guardedUpdate = coreSource.indexOf('if (!lockedOptOutRoute) {\n    updatePageUrl(pageName', lockedRouteDecision);
 invariant(lockedRouteDecision > setPageStart && lockedRouteGuard > lockedRouteDecision && guardedReplace > lockedRouteDecision && guardedUpdate > lockedRouteDecision, "Opted-out protected routes must preserve the requested refresh URL and reuse one scoped setPage lock decision.");
 const optOutStart = coreSource.indexOf("function optOutWallet() {");
-const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("function walletAddressCandidatesFromValue", optOutStart) : -1;
+const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("\nfunction ", optOutStart + "function optOutWallet".length) : -1;
 invariant(optOutStart >= 0 && optOutEnd > optOutStart, "Wallet opt-out transition owner must remain in canonical app core.");
 const optOutSource = coreSource.slice(optOutStart, optOutEnd);
 includes(optOutSource, 'const routeAtOptOut = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);', "Wallet opt-out must capture the live URL route before clearing wallet identity.");
@@ -213,8 +223,8 @@ invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransition
 for (const [transitionMarker, loaderMarker, label] of [
   ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
-  ["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],
-  ["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],
+  ["void runViewTransition(pageName, viewName, {", "await setView(viewName);", "Club view"],
+  ["const transition = await runPageTransition(CLUB_PAGE, updateHistory, {", "await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Club page"],
 ]) {
   const transitionIndex = coreSource.indexOf(transitionMarker);
   const loaderIndex = coreSource.indexOf(loaderMarker, transitionIndex);

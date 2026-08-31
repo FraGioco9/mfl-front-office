@@ -4,7 +4,17 @@ import { fileURLToPath } from "node:url";
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const canonicalCore = await readFile(join(siteRoot, "modules/app-core.js"), "utf8");
+const canonicalCore = await Promise.all([
+    readFile(join(siteRoot, "modules/core-sources/shared.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/evaluation.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/mfl-stats.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/club.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/settings.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/player.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/table.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/wallet.js"), "utf8"),
+    readFile(join(siteRoot, "modules/core-sources/watchlist.js"), "utf8"),
+  ]).then((parts) => parts.join("\n"));
 const generatedEvaluation = await readFile(join(siteRoot, "modules/app-core-evaluation-runtime.js"), "utf8");
 const baseStyles = await readFile(join(siteRoot, "styles-base.css"), "utf8");
 
