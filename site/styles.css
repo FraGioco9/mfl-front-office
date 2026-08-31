@@ -247,7 +247,7 @@ body[data-page="club"] #progressionPage .rowsField {
   width: 100%;
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
-  line-height: 1;
+  line-height: 1.2;
 }
 
 #progressionPage #tableBody .tableControlCellContentCentered {

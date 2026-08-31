@@ -19,7 +19,8 @@ assert.match(sharedFullHeightContent, /align-items: center;/, "The canonical row
 assert.match(sharedFullHeightContent, /width: 100%;/, "The canonical row-content host must own the full cell width.");
 assert.match(sharedFullHeightContent, /height: var\(--mfl-table-row-height\);/, "The canonical row-content host must own the full row-content height.");
 assert.match(sharedFullHeightContent, /min-height: var\(--mfl-table-row-height\);/, "The canonical row-content host must preserve the minimum row-content height.");
-assert.match(sharedFullHeightContent, /line-height: 1;/, "Content inside the flex host must not depend on baseline line-box centering.");
+assert.match(sharedFullHeightContent, /line-height: 1\.2;/, "Flex-centered row text must retain a descender-safe line box without changing row geometry.");
+assert.doesNotMatch(sharedFullHeightContent, /overflow:\s*(?:hidden|clip)/, "The shared row-content host must not clip glyph ascenders or descenders.");
 assert.doesNotMatch(sharedFullHeightContent, /inline-flex/, "The universal full-height host must not participate in inline baseline layout.");
 
 for (const source of [tableSource, generatedTable]) {
@@ -47,4 +48,4 @@ for (const contentContract of [
 
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every player-table row item uses one source-owned, viewport-independent full-height vertical-centering contract.");
+console.log("Every player-table row item keeps viewport-independent flex centering with a descender-safe text line box.");
