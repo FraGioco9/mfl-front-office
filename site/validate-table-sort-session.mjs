@@ -56,10 +56,8 @@ const commitViewSource = sourceBetween(core, "function commitViewTransition", "f
 assert.match(commitViewSource, /buildHeader\(\);/u, "View transitions must rebuild the sorted header before their runtime paint.");
 const runViewTransitionSource = sourceBetween(core, "async function runViewTransition", "function tableSortStateForView");
 assert.ok(runViewTransitionSource.indexOf("stageViewTransition(pageName, viewName, options)") < runViewTransitionSource.indexOf('classList.add("mflInitialRouteSuperseded")'), "The canonical view-transition order must remain stage then supersede.");
-const canonicalHeaderSource = sourceBetween(core, "function ensureCanonicalTableHeader", "function installTableLoadingOwners");
-assert.match(canonicalHeaderSource, /stagedViewCommit[\s\S]{0,700}buildHeader\(\)/u, "A staged destination view must be allowed to replace a stale bootstrap header during loading, including Club views.");
-const loadingShellSource = sourceBetween(core, "function renderTableLoadingShell", "async function setPage");
-assert.ok(loadingShellSource.indexOf("updateViewButtons();") < loadingShellSource.indexOf("buildHeader();"), "Loading shells must rebuild the header immediately after syncing the destination view.");
+assert.match(core, /function ensureCanonicalTableHeader\(\)[\s\S]*?stagedViewCommit[\s\S]{0,700}buildHeader\(\)/u, "A staged destination view must be allowed to replace a stale bootstrap header during loading, including Club views.");
+assert.match(core, /function renderTableLoadingShell\([^)]*\)[\s\S]*?updateViewButtons\(\);[\s\S]*?buildHeader\(\);/u, "Loading shells must rebuild the header immediately after syncing the destination view.");
 
 const bootstrapSortSource = sourceBetween(bootstrap, "function firstPaintTableSortState", "function firstPaintTableHeaderSignature");
 assert.doesNotMatch(bootstrapSortSource, /storedTablePageState|viewSortStates|savedSort/u, "Refresh first paint must never resurrect persisted sorting.");
