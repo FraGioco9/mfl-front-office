@@ -3,6 +3,7 @@ const validators = [
   "validate-supabase-persistence.mjs",
   "validate-wallet-core.mjs",
   "validate-wallet-preferences-lifecycle.mjs",
+  "validate-wallet-preference-write-scoping.mjs",
   "validate-evaluation-share-expiry.mjs",
   "validate-evaluation-share-preview.mjs",
   "validate-evaluation-preview-portrait.mjs",
