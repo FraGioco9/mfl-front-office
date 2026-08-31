@@ -102,6 +102,10 @@ for (const name of names) {
     '"const pageName = state.currentPage;\\n    if (!tablePages.has(pageName)) {"',
     '"const pageName = state.currentPage;\\n    if (!tablePages.has(pageName) && pageName !== \\\"club\\\") {"',
   );
+  source = source.replaceAll(
+    '"await loadExternalRouteCore(path);"',
+    '"await resources().load(path, { versioned: true });"',
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
