@@ -98,6 +98,10 @@ for (const name of names) {
     `'state.filterDraftRules = null;\\n  document.body.classList.remove("filtersOpen");\\n  hideModal(filtersModal, () => {\\n    openFiltersButton.focus();'`,
     `'state.filterDraftRules = null;\\n  document.body.classList.remove("filtersOpen");\\n  hideModal(filtersModal, () => {\\n    if (restoreTriggerFocus) openFiltersButton.focus();'`,
   );
+  source = source.replaceAll(
+    '"const pageName = state.currentPage;\\n    if (!tablePages.has(pageName)) {"',
+    '"const pageName = state.currentPage;\\n    if (!tablePages.has(pageName) && pageName !== \\\"club\\\") {"',
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
