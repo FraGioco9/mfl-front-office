@@ -23,6 +23,11 @@ for (const name of names) {
   source = source.replaceAll('read("./modules/app-core.js")', canonicalCoreRead);
   source = source.replaceAll("read('./modules/app-core.js')", canonicalCoreRead);
   source = source.replaceAll(
+    'import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";',
+    'import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";',
+  );
+  source = source.replaceAll("normalizeBuiltApplicationCoreArtifacts(", "readCanonicalCoreArtifacts(");
+  source = source.replaceAll(
     'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")',
     'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));")',
   );
@@ -32,4 +37,4 @@ for (const name of names) {
   }
 }
 
-console.log(`Migrated ${changed} validator files away from retired app-core.js reads.`);
+console.log(`Migrated ${changed} validator files to canonical application-core sources.`);
