@@ -53,9 +53,10 @@
   #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }
 }
 @media (max-width: 520px) {
-  #progressionPage { --mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 15.005769230769232px; --mfl-table-row-outer-height: 17.2125px; }
+  #progressionPage { --mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 19px; --mfl-table-row-outer-height: 22px; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 680px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { --mfl-table-col-name: 12%; --mfl-table-col-listing: 4%; --mfl-table-col-positions: 12.41623176057088%; min-width: 680px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table:has(col.col-contract-revenue) { --mfl-table-col-name: 12%; }
   #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }
   #progressionPage .playerTableScroller th { font-size: 9px; }
   #progressionPage #tableHead th > span:first-child { font-size: 9px; }
@@ -63,7 +64,7 @@
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }
 }
 @media (max-width: 380px) {
-  #progressionPage { --mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 13.240384615384617px; --mfl-table-row-outer-height: 15.1875px; }
+  #progressionPage { --mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 18px; --mfl-table-row-outer-height: 21px; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 40px; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 600px; }
   #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }

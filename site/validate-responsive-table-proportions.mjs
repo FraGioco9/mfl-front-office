@@ -14,8 +14,8 @@ const mobileRowBoost = 1.08;
 const close = (actual, expected, tolerance = 1e-12) => Math.abs(actual - expected) <= tolerance;
 const tablet = Object.freeze({ width: 820, inset: 24, header: 18.72596153846154, row: 18.09519230769231, outer: 20.75625 });
 const fixed = Object.freeze([
-  Object.freeze({ breakpoint: 520, width: 680, header: 15.528846153846153, row: 15.005769230769232, outer: 17.2125, control: 13 }),
-  Object.freeze({ breakpoint: 380, width: 600, header: 13.701923076923077, row: 13.240384615384617, outer: 15.1875, control: 12 }),
+  Object.freeze({ breakpoint: 520, width: 680, header: 15.528846153846153, row: 19, outer: 22, control: 13 }),
+  Object.freeze({ breakpoint: 380, width: 600, header: 13.701923076923077, row: 18, outer: 21, control: 12 }),
 ]);
 const sources = Object.freeze([["hydrated", shared], ["first-paint generator", projection], ["generated first-paint", index]]);
 const tabletDeclarations = Object.freeze([
@@ -50,8 +50,8 @@ assert.ok(close((2.53125 * viewport / 100) - 0.6075, desktop.outer * renderedSca
 for (const geometry of fixed) {
   const scale = geometry.width / desktop.width;
   assert.ok(close(geometry.header / desktop.header, scale), `<=${geometry.breakpoint}px header/table scale mismatch.`);
-  assert.ok(close(geometry.row / desktop.row, scale * mobileRowBoost), `<=${geometry.breakpoint}px row must retain the mobile height boost.`);
-  assert.ok(close(geometry.outer / desktop.outer, scale * mobileRowBoost), `<=${geometry.breakpoint}px outer row must retain the mobile height boost.`);
+  assert.ok(geometry.row / desktop.row > scale * mobileRowBoost, `<=${geometry.breakpoint}px row must be taller than the tablet-proportional mobile row.`);
+  assert.ok(geometry.outer / desktop.outer > scale * mobileRowBoost, `<=${geometry.breakpoint}px outer row must be taller than the tablet-proportional mobile row.`);
   assert.ok(geometry.control <= geometry.row, `<=${geometry.breakpoint}px fixed controls must fit within row content.`);
   for (const [name, source] of sources) {
     assert.ok(source.includes(`--mfl-table-header-height: ${geometry.header}px;`), `${name} missing <=${geometry.breakpoint}px header.`);
@@ -61,13 +61,15 @@ for (const geometry of fixed) {
   }
 }
 
-assert.doesNotMatch(shared, /--mfl-table-col-(?:listing|positions)\s*:/, "Hydrated mobile CSS must not alter desktop column percentages.");
-assert.doesNotMatch(shared, /style\.setProperty\("--mfl-table-col-(?:listing|positions)"/, "Hydration must not rebalance canonical Listing or Positions percentages.");
-assert.doesNotMatch(projection, /--mfl-table-col-(?:listing|positions)\s*:/, "First-paint projection must not alter desktop column percentages.");
-assert.doesNotMatch(index, /--mfl-table-col-listing:\s*(?:4\.2|3\.8|3\.6)%|--mfl-table-col-positions:\s*(?:9\.699243795931409|10\.099243795931411|10\.29924379593141)%/);
+for (const [name, source] of sources) {
+  assert.ok(source.includes("--mfl-table-col-name: 12%;"), `${name} missing compact Name width.`);
+  assert.ok(source.includes("--mfl-table-col-listing: 4%;"), `${name} missing compact Listing width.`);
+  assert.ok(source.includes("--mfl-table-col-positions: 12.41623176057088%;"), `${name} missing expanded compact Positions width.`);
+}
+assert.doesNotMatch(shared, /style\.setProperty\("--mfl-table-col-(?:name|listing|positions)"/, "Hydration must not imperatively rebalance responsive column widths.");
 assert.match(shared, /overflow-x: auto;\n {4}overflow-y: hidden;/);
 assert.match(styles, /#progressionPage \.playerTableScroller col\.col-name \{ width: var\(--mfl-table-col-name\); \}/);
 assert.match(styles, /#progressionPage \.playerTableScroller th \{\n {2}height: var\(--mfl-table-header-height\);/);
 assert.match(styles, /#progressionPage \.playerTableScroller td \{\n {2}height: var\(--mfl-table-row-height\);/);
 assert.doesNotMatch(shared, /!important/);
-console.log("Responsive player-table headers preserve desktop scale while mobile rows remain slightly taller across first paint and hydration.");
+console.log("Responsive player-table headers preserve desktop scale while compact rows are intentionally taller and Name/Listing space is reallocated to Positions across first paint and hydration.");

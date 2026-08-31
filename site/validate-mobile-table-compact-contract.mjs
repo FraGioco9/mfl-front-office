@@ -24,17 +24,24 @@ assert.match(
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 520px\) \{[\s\S]*--mfl-table-header-height: 15.528846153846153px;[\s\S]*--mfl-table-row-height: 15.005769230769232px;[\s\S]*--mfl-table-row-outer-height: 17.2125px;/,
-  "Phone rows must keep the intentional 8% mobile height boost.",
+  /@media \(max-width: 520px\) \{[\s\S]*--mfl-table-header-height: 15.528846153846153px;[\s\S]*--mfl-table-row-height: 19px;[\s\S]*--mfl-table-row-outer-height: 22px;/,
+  "Phone rows must keep the compact-screen height boost.",
 );
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 380px\) \{[\s\S]*--mfl-table-header-height: 13.701923076923077px;[\s\S]*--mfl-table-row-height: 13.240384615384617px;[\s\S]*--mfl-table-row-outer-height: 15.1875px;/,
-  "Tiny-screen rows must keep the intentional 8% mobile height boost.",
+  /@media \(max-width: 380px\) \{[\s\S]*--mfl-table-header-height: 13.701923076923077px;[\s\S]*--mfl-table-row-height: 18px;[\s\S]*--mfl-table-row-outer-height: 21px;/,
+  "Tiny-screen rows must keep the compact-screen height boost.",
 );
 
 assert.match(tableSource, /player_seasons: "SZN"/, "Hydrated small-screen Seasons headings must use SZN.");
 assert.match(tableSource, /positions: "POS"/, "Hydrated compact headings must shorten Positions to POS.");
+assert.match(sharedTableUiSource, /const desired = mobile && column === "listing_price"[\s\S]*: compact && short[\s\S]*\? short[\s\S]*: full;/, "Hydrated resize/presentation sync must use the same compact-label path for Positions as the other headers.");
+assert.doesNotMatch(sharedTableUiSource, /mobile && column === "positions"/, "Hydrated presentation sync must not special-case Positions.");
+for (const declaration of ["--mfl-table-col-name: 12%;", "--mfl-table-col-listing: 4%;", "--mfl-table-col-positions: 12.41623176057088%;"]) {
+  assert.ok(sharedTableUiSource.includes(declaration), `Hydrated compact table missing ${declaration}`);
+  assert.ok(projectionSource.includes(declaration), `First-paint compact table missing ${declaration}`);
+}
+
 assert.doesNotMatch(tableSource, /: column === "positions"\s*\? \(compactTableHeadings \? compactLabel : "POSITIONS"\)/, "Positions must use the same compact-heading branch as the other columns.");
 assert.match(tableSource, /: compactTableHeadings\s*\? compactLabel\s*: fullLabel;/, "Hydrated headers must share one compact-label decision path.");
 assert.match(
@@ -65,8 +72,8 @@ assert.match(responsiveSource, /#progressionPage \.playerTableScroller td \{\n {
 assert.match(responsiveSource, /@media \(max-width: 520px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 11px;\n {2}\}/, "Phone row text must retain its 11px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 380px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 10px;\n {2}\}/, "Tiny-screen row text must retain its 10px font contract.");
 assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: max\(18\.72596153846154px, calc\(2\.2836538461538463vw - 0\.5480769230769231px\)\); --mfl-table-row-height: max\(18\.09519230769231px, calc\(2\.2067307692307696vw - 0\.5296153846153846px\)\); --mfl-table-row-outer-height: max\(20\.75625px, calc\(2\.53125vw - 0\.6075px\)\);/, "First-paint mobile header height must already match the visible row height.");
-assert.match(projectionSource, /@media \(max-width: 520px\)[\s\S]*--mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 15.005769230769232px; --mfl-table-row-outer-height: 17.2125px;/, "First-paint phone header height must already match the visible row height.");
-assert.match(projectionSource, /@media \(max-width: 380px\)[\s\S]*--mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 13.240384615384617px; --mfl-table-row-outer-height: 15.1875px;/, "First-paint tiny-screen header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 520px\)[\s\S]*--mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 19px; --mfl-table-row-outer-height: 22px;/, "First-paint phone header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 380px\)[\s\S]*--mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 18px; --mfl-table-row-outer-height: 21px;/, "First-paint tiny-screen header height must already match the visible row height.");
 
 assert.match(tableSource, /selectVisibleInput\.type = "checkbox";[\s\S]*selectVisibleInput\.disabled = true;/, "Every rebuilt table header must start with selection disabled until visible data exists.");
 assert.match(tableRuntimeSource, /selectVisibleInput\.type = "checkbox";[\s\S]*selectVisibleInput\.disabled = true;/, "Generated table runtime must preserve the disabled header-selection first state.");

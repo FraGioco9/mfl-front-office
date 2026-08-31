@@ -32,9 +32,9 @@ includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizon
 includes(sharedUi, "--mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px));", "Tablet header height must track rendered table width.");
 includes(sharedUi, "--mfl-table-row-height: max(18.09519230769231px, calc(2.2067307692307696vw - 0.5296153846153846px));", "Tablet row content height must track rendered table width.");
 includes(sharedUi, "--mfl-table-header-height: 15.528846153846153px;", "Phone header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 15.005769230769232px;", "Phone row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 19px;", "Phone row content height must stay canonical.");
 includes(sharedUi, "--mfl-table-header-height: 13.701923076923077px;", "Tiny-screen header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 13.240384615384617px;", "Tiny-screen row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 18px;", "Tiny-screen row content height must stay canonical.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 10px;", "Mobile headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 9px;", "Phone headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 8px;", "Tiny-screen headers must stay two pixels smaller than row text.");

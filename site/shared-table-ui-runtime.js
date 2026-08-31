@@ -282,15 +282,21 @@
 @media (max-width: 520px) {
   #progressionPage {
     --mfl-table-header-height: 15.528846153846153px;
-    --mfl-table-row-height: 15.005769230769232px;
-    --mfl-table-row-outer-height: 17.2125px;
+    --mfl-table-row-height: 19px;
+    --mfl-table-row-outer-height: 22px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
     width: 46px;
   }
   #progressionPage .playerTableScroller table {
+    --mfl-table-col-name: 12%;
+    --mfl-table-col-listing: 4%;
+    --mfl-table-col-positions: 12.41623176057088%;
     min-width: 680px;
+  }
+  #progressionPage .playerTableScroller table:has(col.col-contract-revenue) {
+    --mfl-table-col-name: 12%;
   }
   #progressionPage .playerTableScroller th {
     font-size: 9px;
@@ -369,8 +375,8 @@
 @media (max-width: 380px) {
   #progressionPage {
     --mfl-table-header-height: 13.701923076923077px;
-    --mfl-table-row-height: 13.240384615384617px;
-    --mfl-table-row-outer-height: 15.1875px;
+    --mfl-table-row-height: 18px;
+    --mfl-table-row-outer-height: 21px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
@@ -830,11 +836,9 @@
       const column = String(header.dataset.tableColumn || "");
       const desired = mobile && column === "listing_price"
         ? ""
-        : mobile && column === "positions"
-          ? "POSITIONS"
-          : compact && short
-            ? short
-            : full;
+        : compact && short
+          ? short
+          : full;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
