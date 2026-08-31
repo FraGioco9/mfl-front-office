@@ -5,6 +5,7 @@
   --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
   --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
   --mfl-dropdown-chevron-inset: 10px;
+  --mfl-dropdown-chevron-gap: auto;
   --mfl-dropdown-transition-duration: 150ms;
   --mfl-row-selector-width: 92px;
   --mfl-row-selector-slot-width: 150px;
@@ -13,6 +14,23 @@
 select[data-mfl-dropdown-enhanced="true"] {
   box-sizing: border-box;
   cursor: pointer;
+}
+
+.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {
+  --mfl-dropdown-chevron-gap: 3px;
+  display: inline-flex;
+  align-items: center;
+  width: 52px;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 1px 4px 1px 6px;
+  font: inherit;
+  font-weight: 800;
+  line-height: inherit;
+  text-align: left;
+  vertical-align: middle;
+  user-select: none;
 }
 
 select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
@@ -73,7 +91,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     align-self: center;
     width: 7px;
     height: 7px;
-    margin: 0 0 0 auto;
+    margin: 0 0 0 var(--mfl-dropdown-chevron-gap);
     border: 0;
     border-right: 1.5px solid currentColor;
     border-bottom: 1.5px solid currentColor;

@@ -128,7 +128,8 @@ includes(
   "The editable Overall control must keep compact square +/- buttons tightly grouped around its value on small phones.",
 );
 includes(responsive, "#evaluationPage .evaluationOverallControl strong {\n    min-width: 18px;\n  }", "The mobile Overall value track must stay compact between the +/- buttons.");
-includes(responsive, "#evaluationPage .evaluationSummaryPositionSelect {\n    width: 100%;", "The Evaluation position selector must fit its scaled summary column.");
+includes(responsive, "#evaluationPage .evaluationSummaryPositionSelect {\n    width: 100%;\n    min-height: 28px;\n    padding: 0 2px;", "The Evaluation position selector must fit its scaled summary column while keeping the canonical chevron close to its value.");
+excludes(responsive, "#evaluationPage .evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after", "Responsive Evaluation must not recreate a custom Position chevron.");
 includes(responsive, "#evaluationPage .evaluationOptionFilters {\n    align-items: center;\n    flex-direction: row;\n    flex-wrap: nowrap;", "Ignore discount rate and Ignore first season must remain on one small-phone row.");
 includes(responsive, "#evaluationPage .evaluationOverallControl button,\n  #evaluationPage .evaluationOverallControlSpacer {\n    width: 16px;\n    min-width: 16px;\n    height: 16px;\n    min-height: 16px;\n  }", "Evaluation +/- controls must remain reduced square buttons on small phones.");
 includes(responsive, "#evaluationPage .evaluationFooterActions {\n    display: grid;\n    grid-template-columns: repeat(2, minmax(0, 1fr));", "Evaluation Share and Save must share one equal-width mobile row.");
