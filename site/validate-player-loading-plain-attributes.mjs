@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [splitter, generated] = await Promise.all([
-  read("./modules/app-core-player-chunk.js"),
+const [source, generated] = await Promise.all([
+  read("./modules/core-sources/player.js"),
   read("./modules/app-core-player-runtime.js"),
 ]);
 
@@ -24,19 +24,16 @@ const sharedRequired = [
   "return renderPlayerAttributePanel(row);",
 ];
 
-for (const [label, source] of [["Player splitter", splitter], ["Generated Player runtime", generated]]) {
+for (const [label, runtime] of [["Canonical Player source", source], ["Generated Player runtime", generated]]) {
   for (const value of sharedRequired) {
-    if (!source.includes(value)) throw new Error(`${label}: missing ${value}`);
+    if (!runtime.includes(value)) throw new Error(`${label}: missing ${value}`);
   }
-
-  if (source.includes("pendingAttributeViewRestore")) {
+  if (runtime.includes("pendingAttributeViewRestore")) {
     throw new Error(`${label}: legacy event-based selected-view restoration must not remain.`);
   }
-
-  const pendingStart = source.indexOf("function pendingAttributeValue(context, column) {");
-  const pendingEnd = source.indexOf("function createPendingAttributesPanel(context) {", pendingStart);
-  const pendingBody = source.slice(pendingStart, pendingEnd);
-  if (pendingBody.includes("knownDisplayValue(context, column)")) {
+  const pendingStart = runtime.indexOf("function pendingAttributeValue(context, column) {");
+  const pendingEnd = runtime.indexOf("function createPendingAttributesPanel(context) {", pendingStart);
+  if (runtime.slice(pendingStart, pendingEnd).includes("knownDisplayValue(context, column)")) {
     throw new Error(`${label}: pending Attributes must never reuse cached display strings that can contain progression suffixes.`);
   }
 }
@@ -46,12 +43,11 @@ const renderRequired = [
   'const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;',
   "const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);",
   "state.playerAttributeView = normalizedAttributeView;",
-  "const displayRow = state.playerAttributeView === \"training\" ? trainingRow(row) : row;",
+  'const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;',
   "state.playerAttributeView = selectedAttributeView;",
   'if (viewName === "attributes") {',
   "return formattedValue;",
 ];
-
 for (const value of renderRequired) {
   if (!generated.includes(value)) throw new Error(`Generated Player runtime: missing ${value}`);
 }
