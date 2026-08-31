@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [appCore, settingsChunk, walletPreferencesApi] = await Promise.all([
+const [appCore, settingsCore, walletPreferencesApi] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"),
     read("./modules/core-sources/evaluation.js"),
@@ -15,7 +15,7 @@ const [appCore, settingsChunk, walletPreferencesApi] = await Promise.all([
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./modules/app-core-settings-chunk.js"),
+  read("./modules/core-sources/settings.js"),
   read("./api/wallet-preferences.js"),
 ]);
 
@@ -26,9 +26,9 @@ invariant(
   "Wallet preference reads must share one canonical in-flight hydration promise.",
 );
 invariant(
-  !settingsChunk.includes('fetch("/api/wallet-preferences"')
-    && settingsChunk.includes("await loadWalletPreferences({ force });"),
-  "Settings must reuse canonical wallet-preferences hydration instead of issuing an independent GET.",
+  !settingsCore.includes('fetch("/api/wallet-preferences"')
+    && settingsCore.includes("await loadWalletPreferences({ force });"),
+  "Canonical Settings source must reuse wallet-preferences hydration instead of issuing an independent GET.",
 );
 invariant(
   !appCore.includes("await loadWalletPreferences({ force: true });\n    return evaluationRecentStateHydrated;")
@@ -39,7 +39,7 @@ invariant(
   appCore.includes("walletPreferencesWritePromise: Promise.resolve()")
     && appCore.includes("state.walletPreferencesWritePromise = Promise.resolve(state.walletPreferencesWritePromise)")
     && appCore.includes("return state.walletPreferencesWritePromise;")
-    && settingsChunk.includes('saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true })'),
+    && settingsCore.includes('saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true })'),
   "Wallet preference writes must be serialized so browser saves cannot race one another.",
 );
 invariant(
@@ -67,7 +67,7 @@ invariant(
   appCore.includes("function currentSettingsPayloadForSave() {")
     && appCore.includes("const settingsPayload = currentSettingsPayloadForSave();")
     && !appCore.includes("const settingsPayload = pendingSettings || currentSettingsPayload();")
-    && settingsChunk.includes('timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),\n    theme: currentMflTheme(),'),
+    && settingsCore.includes('timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),\n    theme: currentMflTheme(),'),
   "Settings writes and pending drafts must use the complete current canonical snapshot, including theme.",
 );
 invariant(
