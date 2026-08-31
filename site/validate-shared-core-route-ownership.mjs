@@ -1,17 +1,20 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
-
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 const hasFunction = (source, name) => new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).test(source);
 
-const coreSource = await read("./modules/app-core.js");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
-const shared = String(artifacts.core || "");
-const chunks = artifacts.routeChunks || {};
+const shared = await read("./modules/core-sources/shared.js");
+const chunks = Object.freeze({
+  evaluation: await read("./modules/core-sources/evaluation.js"),
+  settings: await read("./modules/core-sources/settings.js"),
+  player: await read("./modules/core-sources/player.js"),
+  table: await read("./modules/core-sources/table.js"),
+  wallet: await read("./modules/core-sources/wallet.js"),
+  watchlist: await read("./modules/core-sources/watchlist.js"),
+});
 
 const routeOnlyFunctions = {
   evaluation: ["recoverInvalidEvaluationLink"],
@@ -24,10 +27,10 @@ const routeOnlyFunctions = {
 
 for (const [chunkName, names] of Object.entries(routeOnlyFunctions)) {
   const chunk = String(Reflect.get(chunks, chunkName) || "");
-  invariant(chunk, `Missing generated route chunk: ${chunkName}.`);
+  invariant(chunk, `Missing canonical route source: ${chunkName}.`);
   for (const name of names) {
     invariant(!hasFunction(shared, name), `Route-only function ${name} must not remain in the eager shared core.`);
-    invariant(hasFunction(chunk, name), `Route-only function ${name} must be owned by the ${chunkName} chunk.`);
+    invariant(hasFunction(chunk, name), `Route-only function ${name} must be owned by the ${chunkName} source.`);
   }
 }
 
@@ -64,7 +67,7 @@ try {
   const lines = shared.split("\n");
   const start = Math.max(0, lineNumber - 12);
   const end = Math.min(lines.length, lineNumber + 11);
-  console.error(`Generated shared-core syntax context around line ${lineNumber}:`);
+  console.error(`Canonical shared-core syntax context around line ${lineNumber}:`);
   for (let index = start; index < end; index += 1) {
     console.error(`${index + 1}: ${lines[index]}`);
   }
@@ -74,5 +77,5 @@ for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Ref
 
 const routeOnlyCount = Object.values(routeOnlyFunctions).reduce((total, names) => total + names.length, 0);
 console.log(
-  `Shared route ownership validation passed with ${routeOnlyCount} lazy helpers and valid shared/route chunk syntax.`,
+  `Shared route ownership validation passed with ${routeOnlyCount} lazy helpers and valid shared/route source syntax.`,
 );

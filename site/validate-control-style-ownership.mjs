@@ -16,7 +16,17 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./desktop-table-style-runtime.js"),
   read("./filter-controls-runtime.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
 ]);
 
 invariant(
@@ -274,7 +284,7 @@ invariant(
   "The build must not restore a post-split Tooltip Height rewrite layer.",
 );
 invariant(
-  coreBuild.includes('artifact.includes("function tableTooltipTarget(event)") || artifact.includes("showPlayerNoteTooltip(tooltip)")'),
+  coreBuild.includes('source.includes("function tableTooltipTarget(event)") || source.includes("showPlayerNoteTooltip(tooltip)")'),
   "The core build must reject delegated table tooltip ownership after generation.",
 );
 for (const reroute of [
@@ -287,11 +297,11 @@ for (const reroute of [
   invariant(!coreBuild.includes(reroute), `The core build must not reroute tooltip ownership through ${reroute}.`);
 }
 invariant(
-  coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
+  coreBuild.includes('source.includes("__mflTooltipSettings?.gap") || source.includes("anchorHeight = 14")'),
   "The core build must reject legacy specialized-tooltip spacing after generation.",
 );
 invariant(
-  coreBuild.includes("Generated application core does not position manual tooltips from the real generator rectangle."),
+  coreBuild.includes("Canonical application core does not position manual tooltips from the real generator rectangle."),
   "The build must verify that specialized manual tooltips use their real generator rectangle.",
 );
 

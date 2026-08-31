@@ -9,7 +9,17 @@ const [runtime, styles, controls, core, appEntry, walletPreferencesApi, dataView
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
   read("./controls.css"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
   read("./api/_data-views.js"),
@@ -164,7 +174,7 @@ invariant(
     && !searchResultCaptureSection.includes("stopImmediatePropagation(")
     && !searchResultCaptureSection.includes("navigateToAgentSearchResult")
     && core.includes("rememberAgentSearchResult(result.walletAddress);")
-    && core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")
+    && core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));")
     && runtime.includes('document.addEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes('document.removeEventListener("click", onSearchResultClickCapture, true);')
     && runtime.includes("function onSearchResultClick(event) {")

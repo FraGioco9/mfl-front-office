@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -20,7 +20,17 @@ const [
   tableLoading,
   watchlistRouteRuntime,
 ] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-watchlist-route-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
@@ -31,7 +41,7 @@ const [
   read("./watchlist-myplayers-route-runtime.js"),
 ]);
 
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
 const watchlistCore = String(artifacts.routeChunks?.watchlist || "");
@@ -84,8 +94,8 @@ includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(page
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical Watchlist route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct Watchlist startup must load Table and Watchlist dependencies before startApp.");
 
-includes(buildCore, 'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");', "The build must emit a generated Watchlist runtime.");
-includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");
+includes(buildCore, 'runtime: "app-core-watchlist-runtime.js"', "The build must emit a generated Watchlist runtime.");
+includes(buildCore, 'source: "watchlist.js"', "The build must consume the Watchlist artifact.");
 
 includes(
   bootstrapCore,
@@ -142,12 +152,12 @@ excludes(
 );
 includes(
   coreSource,
-  "if (!dataRoute || incrementalRouteIsCached(dataRoute, 1)) {",
+  "if (incrementalRouteIsCached(route, 1)) return loadAndRender();",
   "Cached Club views must bypass route loading at the source-owned view boundary.",
 );
 includes(
   coreSource,
-  'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);',
+  'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);',
   "Uncached Club views must enter canonical route loading at the source-owned view boundary.",
 );
 includes(
@@ -251,7 +261,7 @@ for (const forbidden of [
 }
 
 const generatedWatchlist = await read("./modules/app-core-watchlist-runtime.js");
-const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\n";
+const watchlistBanner = "// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.\n";
 invariant(generatedWatchlist.startsWith(watchlistBanner), "Generated Watchlist runtime must carry the build ownership banner.");
 invariant(
   generatedWatchlist.slice(watchlistBanner.length).replace(/\s*$/, "") === watchlistCore.replace(/\s*$/, ""),

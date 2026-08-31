@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const appCoreSource = fs.readFileSync("modules/app-core.js", "utf8");
+const appCoreSource = [
+  "modules/core-sources/shared.js",
+  "modules/core-sources/evaluation.js",
+  "modules/core-sources/mfl-stats.js",
+  "modules/core-sources/club.js",
+  "modules/core-sources/settings.js",
+  "modules/core-sources/player.js",
+  "modules/core-sources/table.js",
+  "modules/core-sources/wallet.js",
+  "modules/core-sources/watchlist.js",
+].map((path) => fs.readFileSync(path, "utf8")).join("\n");
 const routeSetPageAssignmentIndex = appCoreSource.indexOf("setPage = routeRuntimeSetPage;");
 const routeSetPageSection = routeSetPageAssignmentIndex >= 0
   ? appCoreSource.slice(appCoreSource.lastIndexOf(";(() => {", routeSetPageAssignmentIndex), routeSetPageAssignmentIndex + "setPage = routeRuntimeSetPage;".length)

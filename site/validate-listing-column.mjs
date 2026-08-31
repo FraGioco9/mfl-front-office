@@ -21,17 +21,30 @@ assert.ok(TABLE_SORTABLE_COLUMNS.includes("listing_price"));
 assert.equal(TABLE_COLUMN_LABELS.listing_price, "Listing");
 assert.equal(TABLE_COLUMN_CLASSES.listing_price, "col-listing");
 
-const core = read("site/modules/app-core.js");
+const core = [
+  "site/modules/core-sources/shared.js",
+  "site/modules/core-sources/evaluation.js",
+  "site/modules/core-sources/mfl-stats.js",
+  "site/modules/core-sources/club.js",
+  "site/modules/core-sources/settings.js",
+  "site/modules/core-sources/player.js",
+  "site/modules/core-sources/table.js",
+  "site/modules/core-sources/wallet.js",
+  "site/modules/core-sources/watchlist.js",
+].map(read).join("\n");
 assert.match(core, /listingFilterOptions/);
 assert.match(core, /value: "for_sale", label: "For Sale"/);
 assert.match(core, /value: "not_for_sale", label: "Not For Sale"/);
-assert.match(core, /label\.textContent = column === agentColumn && state\.currentPage === "mfl" \? "" : columnLabels\[column\];/);
-assert.doesNotMatch(core, /column === "listing_price"[^\n]*\? ""/);
+assert.match(core, /label\.textContent = !mobileTable/);
+assert.match(core, /\? \(column === agentColumn && state\.currentPage === "mfl" \? "" : fullLabel\)/);
+assert.match(core, /: column === "listing_price" \|\| \(column === agentColumn && state\.currentPage === "mfl"\)/);
 assert.match(core, /function listingPriceBadgeHtml\(row\)/);
 assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
 assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
 assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
-assert.match(core, /cell\.innerHTML = listingBadge \? `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>` : "";/);
+assert.match(core, /if \(listingBadge\) \{\s*if \(!window\.matchMedia\("\(max-width: 900px\)"\)\.matches\) \{\s*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
+assert.match(core, /const template = document\.createElement\("template"\);/);
+assert.match(core, /badge\.dataset\.tooltip = priceText;/);
 assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
 assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);

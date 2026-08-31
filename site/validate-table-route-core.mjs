@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -10,7 +10,17 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [coreSource, tableSplitter, buildNormalizerSource, appConfig, routeLoader, buildCore, appEntry] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-config.js"),
@@ -18,7 +28,7 @@ const [coreSource, tableSplitter, buildNormalizerSource, appConfig, routeLoader,
   read("./build-app-core.mjs"),
   read("./modules/app-entry.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
 
@@ -131,13 +141,13 @@ excludes(appEntry, "function routeNeedsTable", "app-entry must not retain a dupl
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical initial route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct table startup must load canonical route dependencies before startApp.");
 
-includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
+includes(buildCore, 'runtime: "app-core-table-runtime.js"', "The build must emit a generated Table runtime.");
 includes(coreSource, 'icon: "calendar-x-2"', "Canonical app-core source must own retired-player marker presentation directly.");
 includes(coreSource, 'icon: "calendar-clock"', "Canonical app-core source must own retiring-player marker presentation directly.");
 excludes(buildCore, "normalizeRetirementMarkerContract", "The build must not restore retirement-marker preprocessing.");
 excludes(buildCore, "normalizeTooltipHeightOwnership", "The build must not restore post-split tooltip rewriting.");
 const generatedTable = await read("./modules/app-core-table-runtime.js");
-const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
+const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");
 const generatedTableBody = generatedTable.slice(tableBanner.length).replace(/\s*$/, "");
 invariant(generatedTableBody.length > 20_000, "Generated Table runtime is unexpectedly small.");

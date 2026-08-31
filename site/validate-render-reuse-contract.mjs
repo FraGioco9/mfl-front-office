@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 // Keep render signatures limited to measured heavy DOM rebuilds; small routes should not acquire cache state for trivial writes.
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -12,10 +12,20 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [coreSource, playerSplitterSource] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-player-chunk.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
 

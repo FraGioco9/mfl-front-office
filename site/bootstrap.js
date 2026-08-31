@@ -935,24 +935,63 @@
   const footerVersion = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
   if (footerVersion) footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
-  function loadRuntime(path) {
+  const runtimeResourcePromises = new Map();
+
+  function runtimeResourceUrl(path, options = {}) {
+    const normalizedPath = String(path || "").trim();
+    if (!normalizedPath) throw new Error("Runtime resource path is required.");
+    const url = new URL(normalizedPath.replace(/^\/+/, ""), window.location.origin + "/");
+    if (options.versioned) {
+      const version = String(window.__mflReleaseVersion || STATIC_RELEASE_VERSION || "").trim();
+      if (version) url.searchParams.set("mfl_core", version);
+    }
+    return url.href;
+  }
+
+  function loadRuntime(path, options = {}) {
+    const href = runtimeResourceUrl(path, options);
+    const existingPromise = runtimeResourcePromises.get(href);
+    if (existingPromise) return existingPromise;
+
     /** @type {Promise<void>} */
     const loader = new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`);
-      if (existing) {
-        resolve();
-        return;
-      }
       const script = document.createElement("script");
-      script.src = path;
+      script.src = href;
       script.async = false;
-      script.dataset.mflBootstrapRuntime = path;
+      script.dataset.mflRuntimeResource = String(path || "");
       script.addEventListener("load", () => resolve(), { once: true });
-      script.addEventListener("error", () => reject(new Error(`Could not load ${path}.`)), { once: true });
+      script.addEventListener("error", () => {
+        runtimeResourcePromises.delete(href);
+        script.remove();
+        reject(new Error("Could not load " + path + "."));
+      }, { once: true });
       document.head.appendChild(script);
     });
+    runtimeResourcePromises.set(href, loader);
     return loader;
   }
+
+  async function loadRuntimeGroup(paths, options = {}) {
+    await Promise.all(Array.from(new Set(paths)).map((path) => loadRuntime(path, options)));
+  }
+
+  function preloadRuntime(path, options = {}) {
+    const href = runtimeResourceUrl(path, options);
+    if (document.querySelector('link[data-mfl-runtime-resource-preload="' + href + '"]')) return;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "script";
+    link.href = href;
+    link.dataset.mflRuntimeResourcePreload = href;
+    document.head.appendChild(link);
+  }
+
+  Reflect.set(window, "__mflRuntimeResources", Object.freeze({
+    load: loadRuntime,
+    loadGroup: loadRuntimeGroup,
+    preload: preloadRuntime,
+    url: runtimeResourceUrl,
+  }));
 
   void (async () => {
     try {

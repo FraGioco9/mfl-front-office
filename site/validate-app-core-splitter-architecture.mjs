@@ -5,61 +5,31 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const utilityPath = "./modules/app-core-splitter-utils.js";
-const splitterPaths = [
-  "./modules/app-core-route-chunks.js",
-  "./modules/app-core-evaluation-chunk.js",
-  "./modules/app-core-settings-chunk.js",
-  "./modules/app-core-player-chunk.js",
-  "./modules/app-core-table-chunk.js",
-  "./modules/app-core-wallet-chunk.js",
-  "./modules/app-core-watchlist-route-chunk.js",
-];
-const [utility, ...splitters] = await Promise.all([utilityPath, ...splitterPaths].map(read));
+const build = await read("./build-app-core.mjs");
+invariant(build.includes("modules/core-sources"), "Application-core build must consume canonical split sources.");
+invariant(!build.includes("app-core-build-normalizer"), "Application-core build must not depend on behavior-changing normalizers.");
+invariant(!build.includes("replaceRequired"), "Application-core build must not perform source-string behavior rewrites.");
+invariant(!build.includes("modules/app-core.js"), "Application-core build must not depend on the legacy monolith.");
 
-for (const helper of [
-  "normalizeApplicationCoreSource",
-  "normalizeSplitterInput",
-  "extractRequiredSection",
-  "extractRequiredSections",
-  "extractRequiredFunction",
-  "extractRequiredFunctions",
-  "insertBeforeRequiredMarker",
-  "replaceRequired",
-  "replaceRequiredFunction",
-  "renameRequiredFunctionOwner",
-  "finalizeSplitArtifacts",
-]) {
-  invariant(utility.includes(`export function ${helper}(`), `Shared splitter utility must own ${helper}.`);
+const pairs = [
+  ["shared.js", "app-core-runtime.js"],
+  ["evaluation.js", "app-core-evaluation-runtime.js"],
+  ["mfl-stats.js", "app-core-mfl-stats-runtime.js"],
+  ["club.js", "app-core-club-runtime.js"],
+  ["settings.js", "app-core-settings-runtime.js"],
+  ["player.js", "app-core-player-runtime.js"],
+  ["table.js", "app-core-table-runtime.js"],
+  ["wallet.js", "app-core-wallet-runtime.js"],
+  ["watchlist.js", "app-core-watchlist-runtime.js"],
+];
+
+for (const [sourceName, runtimeName] of pairs) {
+  const [source, runtime] = await Promise.all([
+    read(`./modules/core-sources/${sourceName}`),
+    read(`./modules/${runtimeName}`),
+  ]);
+  const runtimeBody = runtime.replace(/^\/\/ Generated[^\n]*\n/, "");
+  invariant(runtimeBody === source, `Generated ${runtimeName} must exactly match canonical ${sourceName}.`);
 }
 
-splitterPaths.forEach((path, index) => {
-  const source = splitters[index];
-  invariant(
-    source.includes('from "./app-core-splitter-utils.js";'),
-    `${path} must consume the shared splitter utility.`,
-  );
-  invariant(
-    !/function\s+extractRequired(?:Player|Settings|Table|Wallet|WatchlistRoute)?Section\s*\(/.test(source),
-    `${path} must not reintroduce a private required-section extractor.`,
-  );
-  invariant(
-    !/function\s+renameRequired(?:Table|Wallet|WatchlistRoute)Owner\s*\(/.test(source),
-    `${path} must not reintroduce a private owner-renaming helper.`,
-  );
-});
-
-invariant(
-  splitters.some((source) => source.includes("extractRequiredSections(")),
-  "Declarative multi-section extraction must remain in active splitter use.",
-);
-invariant(
-  splitters.some((source) => source.includes("extractRequiredFunctions(")),
-  "Route-only function extraction must remain centralized in the shared splitter utility.",
-);
-invariant(
-  splitters.some((source) => source.includes("finalizeSplitArtifacts(")),
-  "Shared split-result finalization must remain in active splitter use.",
-);
-
-console.log("Canonical application-core splitter architecture validation passed.");
+console.log("Canonical split application-core source ownership and generated equivalence validation passed.");

@@ -8,7 +8,17 @@ const invariant = (condition, message) => {
 const [selectionStartup, appEntry, coreSource] = await Promise.all([
   read("./selection-startup-reset-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
 ]);
 
 invariant(

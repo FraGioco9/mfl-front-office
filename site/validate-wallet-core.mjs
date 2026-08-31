@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -10,13 +10,23 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [coreSource, walletSplitter, appConfig, routeLoader, buildCore] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-wallet-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const walletCore = String(artifacts.routeChunks?.wallet || "");
 
@@ -61,11 +71,11 @@ includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical 
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'ensure("wallet")', "The Wallet chunk must not be eagerly primed during startup.");
 
-includes(buildCore, 'const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");', "The build must emit a generated Wallet runtime.");
-includes(buildCore, "artifacts.routeChunks?.wallet", "The build must consume the Wallet artifact.");
+includes(buildCore, 'runtime: "app-core-wallet-runtime.js"', "The build must emit a generated Wallet runtime.");
+includes(buildCore, 'source: "wallet.js"', "The build must consume the Wallet artifact.");
 
 const generatedWallet = await read("./modules/app-core-wallet-runtime.js");
-const walletBanner = "// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.\n";
+const walletBanner = "// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.\n";
 invariant(generatedWallet.startsWith(walletBanner), "Generated Wallet runtime must carry the build ownership banner.");
 invariant(generatedWallet.slice(walletBanner.length).replace(/\s*$/, "") === walletCore.replace(/\s*$/, ""), "Generated Wallet runtime must exactly match the Wallet build artifact.");
 

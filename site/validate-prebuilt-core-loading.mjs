@@ -41,7 +41,7 @@ for (const forbidden of [
 
 includes(
   routeCoreLoader,
-  "await loadExternalRouteCore(path);",
+  "await resources().load(path, { versioned: true });",
   "Route-owned application core chunks must load only from their prebuilt artifacts.",
 );
 includes(

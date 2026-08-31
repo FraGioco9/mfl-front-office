@@ -9,7 +9,18 @@ const responsive = read("responsive.css");
 const statsUi = read("stats-mobile-ui-runtime.js");
 const staticUi = read("static-ui-runtime.js");
 const routeCoreLoader = read("route-core-loader-runtime.js");
-const appCore = read("modules/app-core.js");
+const appConfig = read("modules/app-config.js");
+const appCore = [
+  "modules/core-sources/shared.js",
+  "modules/core-sources/evaluation.js",
+  "modules/core-sources/mfl-stats.js",
+  "modules/core-sources/club.js",
+  "modules/core-sources/settings.js",
+  "modules/core-sources/player.js",
+  "modules/core-sources/table.js",
+  "modules/core-sources/wallet.js",
+  "modules/core-sources/watchlist.js",
+].map(read).join("\n");
 const mflStatsRuntime = read("modules/app-core-mfl-stats-runtime.js");
 const databaseStats = read("database-stats-runtime.js");
 
@@ -50,8 +61,11 @@ assert.match(statsUi, /resetStatsHistogramScroll: reset/);
 assert.match(statsUi, /Object\.defineProperty\(window, "__mflSharedTableUiRuntime"/);
 assert.match(statsUi, /window\.__mflStatsMobileUiRuntime = Object\.freeze\(\{ sync, reset, destroy \}\)/);
 
-assert.match(routeCoreLoader, /script\.src = "\/stats-mobile-ui-runtime\.js";/);
-assert.match(routeCoreLoader, /script\.dataset\.mflStatsMobileUi = "true";/);
+assert.doesNotMatch(routeCoreLoader, /stats-mobile-ui-runtime\.js/);
+assert.match(routeCoreLoader, /resources\(\)\.load\(path, \{ versioned: true \}\)/);
+assert.match(appConfig, /statsPre: Object\.freeze\(\[\s*"\/shared-table-ui-runtime\.js",\s*"\/stats-mobile-ui-runtime\.js",\s*\]\)/);
+assert.match(appConfig, /const stats = databaseStats \|\| page === "mflstats" \|\| \(page === "mfl" && view === "stats"\);/);
+assert.match(appConfig, /if \(stats\) preCore\.push\(\.\.\.data\.routes\.runtimeScripts\.statsPre\);/);
 
 assert.match(staticUi, /window\.__mflSharedTableUiRuntime\?\.resetStatsHistogramScroll\?\.\(\);/);
 assert.match(staticUi, /window\.__mflSharedTableUiRuntime\?\.syncRouteHorizontalCuesNow\?\.\(\);/);
@@ -66,4 +80,4 @@ assert.match(statsUi, /function suppressPointerCommittedViewClick\(event\)/);
 assert.match(statsUi, /event\.stopImmediatePropagation\(\);\s*clearPointerCommit\(\);/);
 assert.match(statsUi, /document\.addEventListener\("click", suppressPointerCommittedViewClick, true\);/);
 
-console.log("Stats mobile scrolling, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, and view click-through validation passed.");
+console.log("Stats mobile scrolling, fades, tooltip tap behavior, route reset, vertical wheel/touch page scrolling, canonical dependency loading, and view click-through validation passed.");

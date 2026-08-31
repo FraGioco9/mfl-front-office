@@ -1,4 +1,4 @@
-// Generated Club core chunk from modules/app-core.js. Do not edit directly.
+// Generated Club core from modules/core-sources/club.js. Do not edit directly.
 (() => {
   const CLUB_PAGE = "club";
   const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";

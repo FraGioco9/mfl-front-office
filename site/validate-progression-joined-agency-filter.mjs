@@ -1,7 +1,17 @@
 
 import { readFileSync } from "node:fs";
 
-const app = readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
+const app = [
+  "./modules/core-sources/shared.js",
+  "./modules/core-sources/evaluation.js",
+  "./modules/core-sources/mfl-stats.js",
+  "./modules/core-sources/club.js",
+  "./modules/core-sources/settings.js",
+  "./modules/core-sources/player.js",
+  "./modules/core-sources/table.js",
+  "./modules/core-sources/wallet.js",
+  "./modules/core-sources/watchlist.js",
+].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 const api = readFileSync(new URL("./api/_data-page.js", import.meta.url), "utf8");
 
 function requireText(source, text, message) {

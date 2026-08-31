@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -8,10 +8,20 @@ const [staticUi, bootstrap, selectionStack, appCore, buildNormalizer] = await Pr
   read("./static-ui-runtime.js"),
   read("./bootstrap.js"),
   read("./selection-stack-runtime.js"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-build-normalizer.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(appCore);
+const artifacts = readCanonicalCoreArtifacts(appCore);
 const generated = [String(artifacts.core || ""), ...Object.values(artifacts.routeChunks || {}).map(String)].join("\n");
 
 invariant(

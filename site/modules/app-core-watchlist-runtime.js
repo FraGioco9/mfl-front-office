@@ -1,4 +1,4 @@
-// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.
+// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.
 function watchlistRenderSwitcherOwner() {
   if (!watchlistSwitcher || !watchlistButton || !watchlistButtonText || !watchlistDropdown) {
     updateWatchlistTitle();

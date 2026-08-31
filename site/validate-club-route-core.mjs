@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -19,7 +19,17 @@ const [
   dataPage,
   dataQuery,
 ] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-route-chunks.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-entry.js"),
@@ -29,7 +39,7 @@ const [
   read("./api/_data-query.js"),
 ]);
 const appConfig = await read("./modules/app-config.js");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
@@ -190,11 +200,11 @@ includes(coreSource, 'const initialRouteTarget = pageTargetFromPath(window.locat
 includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Club startup must load its route owner through the canonical dependency gate before startApp.");
 includes(coreSource, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");
 
-includes(buildCore, 'const clubRuntimePath = resolve(siteRoot, "modules/app-core-club-runtime.js");', "The build must emit a generated Club runtime.");
-includes(buildCore, "artifacts.routeChunks?.club", "The build must consume the Club artifact.");
+includes(buildCore, 'runtime: "app-core-club-runtime.js"', "The build must emit a generated Club runtime.");
+includes(buildCore, 'source: "club.js"', "The build must consume the Club artifact.");
 
 const generatedClub = await read("./modules/app-core-club-runtime.js");
-const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do not edit directly.\n";
+const clubBanner = "// Generated Club core from modules/core-sources/club.js. Do not edit directly.\n";
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 

@@ -1,10 +1,20 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
-const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
+const source = await Promise.all([
+    readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/mfl-stats.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/club.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/settings.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/player.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/table.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
+    readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
+  ]).then((parts) => parts.join("\n"));
 const appEntry = await readFile(new URL("./modules/app-entry.js", import.meta.url), "utf8");
-const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+const artifacts = readCanonicalCoreArtifacts(source);
 const generatedSources = new Map([
   ["core", String(artifacts.core || "")],
   ...Object.entries(artifacts.routeChunks || {}).map(([name, value]) => [name, String(value || "")]),

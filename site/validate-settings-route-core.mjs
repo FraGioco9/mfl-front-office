@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -10,7 +10,17 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [coreSource, settingsSplitter, appConfig, routeLoader, buildCore, indexHtml, bootstrap] = await Promise.all([
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   read("./modules/app-core-settings-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
@@ -18,7 +28,7 @@ const [coreSource, settingsSplitter, appConfig, routeLoader, buildCore, indexHtm
   read("./index.html"),
   read("./bootstrap.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const settingsCore = String(artifacts.routeChunks?.settings || "");
 
@@ -167,11 +177,11 @@ excludes(routeLoader, 'void ensure("settings")', "Home and unrelated routes must
 includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Settings startup must load its route owner through the canonical initial-route dependency gate.");
 includes(coreSource, "return startApp();", "Application startup must begin only after any direct Settings owner is ready.");
 
-includes(buildCore, 'const settingsRuntimePath = resolve(siteRoot, "modules/app-core-settings-runtime.js");', "The build must emit a generated Settings runtime.");
-includes(buildCore, "artifacts.routeChunks?.settings", "The build must consume the Settings artifact.");
+includes(buildCore, 'runtime: "app-core-settings-runtime.js"', "The build must emit a generated Settings runtime.");
+includes(buildCore, 'source: "settings.js"', "The build must consume the Settings artifact.");
 
 const generatedSettings = await read("./modules/app-core-settings-runtime.js");
-const settingsBanner = "// Generated Settings core chunk from modules/app-core.js. Do not edit directly.\n";
+const settingsBanner = "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\n";
 invariant(generatedSettings.startsWith(settingsBanner), "Generated Settings runtime must carry the build ownership banner.");
 invariant(generatedSettings.slice(settingsBanner.length).replace(/\s*$/, "") === settingsCore.replace(/\s*$/, ""), "Generated Settings runtime must exactly match the Settings build artifact.");
 

@@ -1,4 +1,4 @@
-// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.
+// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.
 function appOrigin() {
   return window.location.origin;
 }

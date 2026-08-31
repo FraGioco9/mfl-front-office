@@ -1,4 +1,4 @@
-// Generated Player core chunk from modules/app-core.js. Do not edit directly.
+// Generated Player core from modules/core-sources/player.js. Do not edit directly.
 (() => {
   "use strict";
 

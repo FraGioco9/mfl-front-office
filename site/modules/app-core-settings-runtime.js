@@ -1,4 +1,4 @@
-// Generated Settings core chunk from modules/app-core.js. Do not edit directly.
+// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.
 function settingsDraftPayload() {
   return {
     receiveEmailsFor: normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor),
