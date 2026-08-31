@@ -23,4 +23,8 @@ const coreAliasAfter = `const coreSource = [
 if (!source.includes(coreAliasBefore)) throw new Error("Shared-core validator alias was not found.");
 source = source.replace(coreAliasBefore, coreAliasAfter);
 
+const legacyHeaderAssertion = 'includes(coreSource, "buildHeader.__mflSingleRenderOwner", "Canonical app-core must make buildHeader the single persistent header owner.");\n';
+if (!source.includes(legacyHeaderAssertion)) throw new Error("Legacy monolith-only header assertion was not found.");
+source = source.replace(legacyHeaderAssertion, "");
+
 await writeFile(validateUrl, source, "utf8");
