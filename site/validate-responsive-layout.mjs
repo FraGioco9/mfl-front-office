@@ -32,7 +32,17 @@ const [indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, s
 includes(indexHtml, 'name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"', "The document viewport must support phone widths and safe areas.");
 includes(indexHtml, '<link rel="stylesheet" href="/responsive.css" data-mfl-responsive-layout="true">', "Responsive layout must keep one explicit stylesheet owner.");
 includes(indexHtml, 'class="navEmoji navJerseyIcon"', "My Players must keep the canonical shirt SVG markup.");
-includes(indexHtml, '4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08', "Settings must keep the original gear SVG path.");
+includes(stylesBase, ".advancedSettingValue {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;", "Advanced Settings value boxes must vertically center their content while preserving right alignment.");
+includes(stylesBase, ".advancedMflUsdResetButton {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;", "The MFL/USD Reset control must vertically center its content inside its box.");
+includes(stylesBase, ".advancedMflUsdStepper button {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;", "MFL/USD stepper controls must center their glyphs inside their boxes.");
+includes(stylesBase, ".advancedRewardRateResetButton {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;", "Late-career reward Reset controls must vertically center their content inside their boxes.");
+includes(stylesBase, ".advancedRewardRateStepper button {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;", "Late-career reward stepper controls must center their glyphs inside their boxes.");
+includes(stylesBase, ".advancedSettingChevron {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  align-self: center;\n  line-height: 1;", "Advanced Settings chevrons must be vertically centered in their header boxes.");
+includes(stylesBase, ".advancedPlayerTable th,\n.advancedPlayerTable td {\n  height: 32px;\n  vertical-align: middle;", "Advanced Settings table cells must vertically center their contents.");
+includes(indexHtml, 'id="settingsIconGlyph" viewBox="0 0 24 24"', "Settings must expose one canonical shared SVG symbol.");
+includes(indexHtml, 'class="navEmoji navSettingsIcon settingsIcon"', "Settings navigation must use the shared Settings icon.");
+includes(indexHtml, 'class="settingsIcon advancedSettingsIcon"', "Advanced Settings must use the same shared Settings icon.");
+includes(indexHtml, 'M12 2.5V6M12 18v3.5M2.5 12H6M18 12h3.5', "Settings must keep the redesigned symmetric gear geometry.");
 includes(indexHtml, '<button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter" hidden aria-hidden="true" tabindex="-1"></button>', "The legacy Add Filter plus control must be inert and hidden in canonical first-paint markup.");
 includes(indexHtml, '<select id="addFilterSelect">\n              <option value="">Add filter...</option>\n            </select>', "Canonical first-paint Filters markup must expose Add filter... without waiting for runtime normalization.");
 includes(controls, "#sidebar .navEmoji {\n  flex: 0 0 18px;\n  width: 18px;\n  min-width: 18px;\n  max-width: 18px;\n  height: 18px;", "Desktop navigation icons must share one 18px geometry contract.");

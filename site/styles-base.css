@@ -587,6 +587,14 @@ body[data-page="home"] .topbar .stats {
   line-height: 1.2;
 }
 
+.iconSprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .navEmoji {
   display: grid;
   place-items: center;
@@ -606,7 +614,7 @@ body[data-page="home"] .topbar .stats {
 .navDatabaseIcon,
 .navTrendIcon,
 .navEvaluationIcon,
-.navSettingsIcon {
+.settingsIcon {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1264,6 +1272,11 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedSettingChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  line-height: 1;
   color: var(--muted);
   font-size: 18px;
   font-weight: 800;
@@ -1312,6 +1325,9 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedMflUsdResetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 28px;
   min-height: 28px;
   padding: 0 8px;
@@ -1325,6 +1341,9 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedMflUsdStepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 13px;
   min-height: 13px;
@@ -1377,6 +1396,9 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedRewardRateResetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 24px;
   min-height: 24px;
   padding: 0 7px;
@@ -1399,6 +1421,9 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedRewardRateStepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 13px;
   min-height: 13px;
@@ -1431,6 +1456,9 @@ button:disabled:not(.menuButton) {
 }
 
 .advancedSettingValue {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   width: 112px;
   min-width: 112px;
   padding: 4px 10px;
@@ -1466,6 +1494,7 @@ button:disabled:not(.menuButton) {
 .advancedPlayerTable th,
 .advancedPlayerTable td {
   height: 32px;
+  vertical-align: middle;
   padding: 4px 5px;
   border-bottom: 1px solid var(--border);
   text-align: center;
@@ -2971,9 +3000,10 @@ button.playerIdText:active {
   border-color: var(--primary-hover);
   background: var(--row-hover);
 }
-.advancedSettingsButton span {
-  font-size: 16px;
-  line-height: 1;
+.advancedSettingsIcon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .evaluationTopBar {
