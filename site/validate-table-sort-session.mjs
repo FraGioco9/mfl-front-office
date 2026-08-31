@@ -2,7 +2,17 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 
 // Sorting stays page-scoped until a destination view cannot represent the active key; Next Overall desc means lowest gap first, while Progression desc means largest increase then highest matching raw stat.
-const core = fs.readFileSync(new URL("./modules/app-core.js", import.meta.url), "utf8");
+const core = [
+  "./modules/core-sources/shared.js",
+  "./modules/core-sources/evaluation.js",
+  "./modules/core-sources/mfl-stats.js",
+  "./modules/core-sources/club.js",
+  "./modules/core-sources/settings.js",
+  "./modules/core-sources/player.js",
+  "./modules/core-sources/table.js",
+  "./modules/core-sources/wallet.js",
+  "./modules/core-sources/watchlist.js",
+].map((path) => fs.readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 const bootstrap = fs.readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
 const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");
 const dataPage = fs.readFileSync(new URL("./api/_data-page.js", import.meta.url), "utf8");
@@ -30,13 +40,10 @@ const sortResolverSource = sourceBetween(core, "function tableSortStateForView",
 assert.match(sortResolverSource, /sourceSortSupported = sortKeySupportedByView/u, "View sorting must detect whether the destination supports the active sort column.");
 assert.match(sortResolverSource, /if \(!sourceSortSupported && state\.tableSortSessionKey\) \{\s*state\.tableSortSessionSortState = resolvedSortState;/u, "An unsupported destination view must reset the page session itself to that view's canonical default.");
 
-const standardViewSource = sourceBetween(core, "async function setView(viewName)", "function mflChunkFromPublicData");
-assert.doesNotMatch(standardViewSource, /rememberTableSortState/u, "View switching must not restore an older per-view sort.");
-assert.match(standardViewSource, /tableSortStateForView\([\s\S]*viewName/u, "Standard view switches must resolve sorting against the destination view.");
-
+assert.doesNotMatch(core, /async function setView\(viewName\)/u, "The retired normalized standard-view owner must not compete with canonical incremental table view loading.");
 const incrementalViewSource = sourceBetween(core, "setView = async function setIncrementalView", "setPage = async function setIncrementalPage");
 assert.doesNotMatch(incrementalViewSource, /rememberTableSortState/u, "Incremental view loading must not own a separate per-view sort state.");
-assert.match(incrementalViewSource, /tableSortStateForView\([\s\S]*nextView/u, "Incremental view switches must resolve the page sort against the destination view.");
+assert.match(incrementalViewSource, /tableSortStateForView\([\s\S]*nextView/u, "Canonical table view switches must resolve the page sort against the destination view.");
 
 const incrementalPageSource = sourceBetween(core, "setPage = async function setIncrementalPage", "function divisionInfo");
 assert.ok(incrementalPageSource.indexOf("resetTableSortSession(pageName, options);") < incrementalPageSource.indexOf("runPageTransition"), "Page sorting must reset before the destination transition can paint.");
