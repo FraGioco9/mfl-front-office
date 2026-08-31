@@ -116,7 +116,7 @@ await write("validate-responsive-layout.mjs", responsiveValidator);
 
 const packagePath = file("package.json");
 const pkg = JSON.parse(await readFile(packagePath, "utf8"));
-if (pkg.scripts?.postinstall !== "node temp-fix-597.mjs") {
+if (!String(pkg.scripts?.postinstall || "").includes("temp-fix-597.mjs")) {
   throw new Error("Unexpected package postinstall while cleaning issue 597 helper");
 }
 delete pkg.scripts.postinstall;
