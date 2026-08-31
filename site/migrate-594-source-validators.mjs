@@ -18,6 +18,7 @@ includes(buildCore, "modules/app-core-runtime.js", "The core build must write th
 includes(buildCore, "Do not edit directly", "Generated core artifacts must carry ownership banners.");
 
 const canonicalSharedCore = (await readSite("modules/core-sources/shared.js")).replace(/\\s*$/, "");
+const coreSource = canonicalSharedCore;
 invariant(canonicalSharedCore.length > 300_000, "Canonical shared core source is unexpectedly small.");
 includes(canonicalSharedCore, "const shellFirstTablePages = new Set();", "The shared core must keep destination shell-first rendering disabled.");
 includes(canonicalSharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The shared core must delegate Club view URLs to canonical route configuration.");
