@@ -30,6 +30,9 @@ jobs:
         run: node site/fix-594-refactor-helper.mjs
       - name: Apply runtime ownership refactor
         run: node site/refactor-594-runtime-ownership.mjs
+      - name: Generate source-owned artifacts
+        working-directory: site
+        run: node build-app-core.mjs
       - name: Commit refactor locally
         run: |
           git config user.name "github-actions[bot]"
