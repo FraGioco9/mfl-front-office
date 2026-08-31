@@ -50,6 +50,53 @@ invariant(
   "Controller-driven table loading must disable header selection even when existing rows remain rendered.",
 );
 
+
+const restoreStart = loadingRuntime.indexOf("function restoreSelectionHeader() {");
+const restoreEnd = loadingRuntime.indexOf("function primeLoadingRows()", restoreStart);
+const restoreSource = loadingRuntime.slice(restoreStart, restoreEnd);
+invariant(
+  restoreStart >= 0
+    && restoreEnd > restoreStart
+    && restoreSource.includes("coreContracts()?.syncTableSelectionHeader")
+    && restoreSource.includes("syncSelectionHeader();"),
+  "Loading completion must restore header selection through the canonical Table selection owner.",
+);
+
+const finishStart = loadingRuntime.indexOf("function finishRequest(token) {");
+const finishEnd = loadingRuntime.indexOf("function show(", finishStart);
+const finishSource = loadingRuntime.slice(finishStart, finishEnd);
+invariant(
+  finishStart >= 0
+    && finishEnd > finishStart
+    && finishSource.includes("activeRequestToken = 0;\n    hydrateInitialClubHeader();\n    sync();"),
+  "Finishing the last explicit table request must immediately resynchronize loading/header state even when no later controller snapshot fires.",
+);
+
+const releaseStart = loadingRuntime.indexOf("function release() {");
+const releaseEnd = loadingRuntime.indexOf("function sync(snapshot", releaseStart);
+const releaseSource = loadingRuntime.slice(releaseStart, releaseEnd);
+invariant(
+  releaseStart >= 0
+    && releaseEnd > releaseStart
+    && releaseSource.includes("if (!snapshot.dataLoading) {")
+    && releaseSource.includes("restoreSelectionHeader();")
+    && releaseSource.indexOf("restoreSelectionHeader();") < releaseSource.indexOf("page.hidden = false"),
+  "Loaded table release must recompute header selection state before exposing settled table chrome.",
+);
+
+invariant(
+  sharedCore.includes("let __mflTableUpdateSelectionHeaderOwner = null;")
+    && sharedCore.includes("function syncTableSelectionHeader() {")
+    && sharedCore.includes("__mflTableUpdateSelectionHeaderOwner.apply(this, arguments)")
+    && sharedCore.includes("ensureCanonicalTableHeader,\n    syncTableSelectionHeader,"),
+  "Shared core must expose selection-header synchronization only through the lazy Table owner bridge.",
+);
+invariant(
+  tableSource.includes("__mflTableUpdateSelectionHeaderOwner = updateSelectionHeader;")
+    && tableRuntime.includes("__mflTableUpdateSelectionHeaderOwner = updateSelectionHeader;"),
+  "Canonical and generated Table runtimes must bind header restoration to updateSelectionHeader.",
+);
+
 invariant(
   bootstrap.includes("function neutralizeFirstPaintSelectionHeader(head) {")
     && bootstrap.includes("input.disabled = true;")
@@ -73,10 +120,15 @@ invariant(
 
 for (const source of [canonical, tableRuntime]) {
   invariant(
-    source.includes('if (document.documentElement.classList.contains("mflDataLoading")) {')
+    source.includes("function updateSelectionHeader(pageRows = currentPageRows(), { rendered = false } = {}) {")
+      && source.includes('if (document.documentElement.classList.contains("mflDataLoading") && !rendered) {')
       && source.includes("selectVisibleInput.disabled = true;")
-      && source.includes("selectVisibleInput.disabled = visibleIds.length === 0;"),
-    "Canonical table selection state must disable the header checkbox during loading and restore normal availability after loaded rows render.",
+      && source.includes("selectVisibleInput.disabled = visibleIds.length === 0;")
+      && source.includes("function updateSelectionBar(pageRows = currentPageRows(), options = {}) {")
+      && source.includes("updateSelectionHeader(pageRows, options);")
+      && source.includes("updateSelectionBar(pageRows, { rendered: true });")
+      && source.indexOf("tableBody.replaceChildren(fragment);") < source.indexOf("updateSelectionBar(pageRows, { rendered: true });"),
+    "Canonical table selection state must stay disabled for preserved loading rows and restore immediately when current rows are committed.",
   );
 }
 

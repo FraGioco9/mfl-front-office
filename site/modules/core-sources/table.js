@@ -2080,14 +2080,14 @@ function currentPageRows() {
   return state.filteredRows.slice(start, start + state.pageSize);
 }
 
-function updateSelectionHeader(pageRows = currentPageRows()) {
+function updateSelectionHeader(pageRows = currentPageRows(), { rendered = false } = {}) {
   const selectVisibleInput = document.querySelector("#selectVisiblePlayersInput");
 
   if (!selectVisibleInput) {
     return;
   }
 
-  if (document.documentElement.classList.contains("mflDataLoading")) {
+  if (document.documentElement.classList.contains("mflDataLoading") && !rendered) {
   selectVisibleInput.checked = false;
   selectVisibleInput.indeterminate = false;
   selectVisibleInput.disabled = true;
@@ -2105,7 +2105,7 @@ function updateSelectionHeader(pageRows = currentPageRows()) {
   selectVisibleInput.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
 }
 
-function updateSelectionBar() {
+function updateSelectionBar(pageRows = currentPageRows(), options = {}) {
   const selectedCount = state.selectedPlayerIds.size;
   const optedIn = hasWalletOptIn();
   selectionBar.classList.toggle("visible", selectedCount > 0);
@@ -2115,7 +2115,7 @@ function updateSelectionBar() {
   if (moveToWatchlistButton) {
     moveToWatchlistButton.hidden = !optedIn || state.currentPage !== "watchlist" || selectedCount <= 0;
   }
-  updateSelectionHeader();
+  updateSelectionHeader(pageRows, options);
 }
 
 function setVisiblePlayersSelected(selected) {
@@ -2648,7 +2648,7 @@ function tableRenderTableOwner() {
   syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
-  updateSelectionBar();
+  updateSelectionBar(pageRows, { rendered: true });
 }
 
 function showTableBusyState() {
@@ -2706,6 +2706,7 @@ __mflTableTitleForPageOwner = tableTitleForPageOwner;
 __mflTableEnsureAgentPageTitleNameOwner = tableEnsureAgentPageTitleNameOwner;
 __mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
 __mflTableBuildHeaderOwner = tableBuildHeaderOwner;
+__mflTableUpdateSelectionHeaderOwner = updateSelectionHeader;
 __mflTableBuildOperatorSelectOwner = tableBuildOperatorSelectOwner;
 __mflTableRuleMatchesOwner = tableRuleMatchesOwner;
 __mflTableAddFilterRuleOwner = tableAddFilterRuleOwner;

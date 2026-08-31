@@ -125,6 +125,13 @@
     return true;
   }
 
+  function restoreSelectionHeader() {
+    const syncSelectionHeader = coreContracts()?.syncTableSelectionHeader;
+    if (typeof syncSelectionHeader !== "function") return false;
+    syncSelectionHeader();
+    return true;
+  }
+
   function primeLoadingRows() {
     const primeRows = Reflect.get(window, "__mflPrimeTableRows");
     if (typeof primeRows !== "function") return false;
@@ -196,6 +203,7 @@
     if (!requestToken || requestToken !== activeRequestToken) return false;
     activeRequestToken = 0;
     hydrateInitialClubHeader();
+    sync();
     return true;
   }
 
@@ -230,7 +238,10 @@
     }
     const snapshot = loadingSnapshot();
     const page = pager();
-    if (page && !snapshot.dataLoading) page.hidden = false;
+    if (!snapshot.dataLoading) {
+      restoreSelectionHeader();
+      if (page) page.hidden = false;
+    }
     return true;
   }
 

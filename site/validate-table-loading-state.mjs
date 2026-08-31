@@ -48,7 +48,9 @@ invariant(
 );
 
 const loadingGuardMarkers = [
-  'if (document.documentElement.classList.contains("mflDataLoading")) {',
+  'if (document.documentElement.classList.contains("mflDataLoading") && !rendered) {',
+  'function updateSelectionHeader(pageRows = currentPageRows(), { rendered = false } = {}) {',
+  'updateSelectionBar(pageRows, { rendered: true });',
   'selectVisibleInput.checked = false;',
   'selectVisibleInput.indeterminate = false;',
   'selectVisibleInput.disabled = true;',
