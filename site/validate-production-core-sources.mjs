@@ -22,16 +22,11 @@ const requiredProductionIgnoredPaths = [
   "site/types",
   "site/vercel.production.json",
   "site/build-app-core.mjs",
+  "site/sync-release-projections.mjs",
   "site/modules/app-config.js",
+  "site/modules/pre-bootstrap-route-state.js",
   "site/modules/package.json",
-  "site/modules/app-core.js",
-  "site/modules/app-core-build-normalizer.js",
-  "site/modules/app-core-route-chunks.js",
-  "site/modules/app-core-settings-chunk.js",
-  "site/modules/app-core-player-chunk.js",
-  "site/modules/app-core-table-chunk.js",
-  "site/modules/app-core-wallet-chunk.js",
-  "site/modules/app-core-watchlist-route-chunk.js",
+  "site/modules/core-sources",
 ];
 
 for (const path of requiredProductionIgnoredPaths) {
@@ -40,7 +35,24 @@ for (const path of requiredProductionIgnoredPaths) {
   }
 }
 
-const retiredNormalizerPaths = [
+const retiredApplicationCorePaths = [
+  "modules/app-core.js",
+  "modules/app-core-build-normalizer.js",
+  "modules/app-core-splitter-utils.js",
+  "modules/app-core-route-chunks.js",
+  "modules/app-core-sidebar-lifecycle.js",
+  "modules/app-core-evaluation-chunk.js",
+  "modules/app-core-evaluation-snapshot-edit-route.js",
+  "modules/app-core-settings-chunk.js",
+  "modules/app-core-settings-email-reset.js",
+  "modules/app-core-player-chunk.js",
+  "modules/app-core-filter-control-state.js",
+  "modules/app-core-table-chunk.js",
+  "modules/app-core-mobile-table.js",
+  "modules/app-core-table-row-centering.js",
+  "modules/app-core-wallet-chunk.js",
+  "modules/app-core-watchlist-route-chunk.js",
+  "modules/app-core-stats-route-ownership.js",
   "modules/app-core-normalizer.js",
   "modules/app-core-club-url-normalizer.js",
   "modules/app-core-route-request-normalizer.js",
@@ -49,14 +61,14 @@ const retiredNormalizerPaths = [
   "modules/app-core-table-events-normalizer.js",
   "modules/app-core-table-state-normalizer.js",
 ];
-for (const path of retiredNormalizerPaths) {
+for (const path of retiredApplicationCorePaths) {
   const productionPath = `site/${path}`;
   if (ignoredPaths.has(productionPath)) {
-    throw new Error(`Retired app-core normalizer must not leave a stale deployment-ignore entry: ${productionPath}`);
+    throw new Error(`Retired application-core source must not leave a stale deployment-ignore entry: ${productionPath}`);
   }
   try {
     await access(new URL(`./${path}`, import.meta.url));
-    throw new Error(`Retired app-core normalizer must stay deleted: ${path}`);
+    throw new Error(`Retired application-core source must stay deleted: ${path}`);
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
@@ -120,4 +132,4 @@ validatePrebuiltBuild(productionConfig, "Production");
 validateSpaRouting(canonicalConfig, "Canonical");
 validateSpaRouting(productionConfig, "Production");
 
-console.log("Shipped project-root Vercel config, prebuilt deployment, SPA deep-link shell routing, and application-owned canonicalization validation passed.");
+console.log("Canonical build-only source exclusions, retired application-core cleanup, prebuilt deployment, SPA routing, and generated runtime deployment validation passed.");
