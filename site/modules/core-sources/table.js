@@ -893,6 +893,7 @@ function tableBuildHeaderOwner() {
       physical: "PHY",
       goalkeeping: "GK",
       player_seasons: "SZN",
+      positions: "POS",
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
@@ -901,7 +902,7 @@ function tableBuildHeaderOwner() {
       : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
         ? ""
         : column === "positions"
-          ? "POSITIONS"
+          ? (compactTableHeadings ? compactLabel : "POSITIONS")
           : compactTableHeadings
             ? compactLabel
             : fullLabel;

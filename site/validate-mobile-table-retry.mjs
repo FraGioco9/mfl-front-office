@@ -30,11 +30,11 @@ includes(sharedUi, "min-width: 820px;", "Tablet/mobile tables must retain a real
 includes(sharedUi, "min-width: 680px;", "Phone tables must remain laterally pannable.");
 includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizontal scroll range.");
 includes(sharedUi, "--mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px));", "Tablet header height must track rendered table width.");
-includes(sharedUi, "--mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px));", "Tablet row content height must track rendered table width.");
+includes(sharedUi, "--mfl-table-row-height: max(18.09519230769231px, calc(2.2067307692307696vw - 0.5296153846153846px));", "Tablet row content height must track rendered table width.");
 includes(sharedUi, "--mfl-table-header-height: 15.528846153846153px;", "Phone header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 13.89423076923077px;", "Phone row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 15.005769230769232px;", "Phone row content height must stay canonical.");
 includes(sharedUi, "--mfl-table-header-height: 13.701923076923077px;", "Tiny-screen header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 12.259615384615385px;", "Tiny-screen row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-row-height: 13.240384615384617px;", "Tiny-screen row content height must stay canonical.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 10px;", "Mobile headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 9px;", "Phone headers must stay two pixels smaller than row text.");
 includes(sharedUi, ".playerTableScroller th {\n    font-size: 8px;", "Tiny-screen headers must stay two pixels smaller than row text.");
@@ -50,8 +50,8 @@ excludes(sharedUi, 'style.setProperty("--mfl-table-col-positions"', "Hydration m
 includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Canonical Table source must explicitly gate mobile-only behavior.");
 includes(tableSource, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Canonical Table headings must switch only at the narrow breakpoint.");
 includes(tableSource, 'selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;', "Rebuilt headers must stay non-selectable until loaded selection state exists.");
-excludes(tableSource, 'positions: "POS"', "Positions must not participate in compact width-dependent abbreviation.");
-includes(tableSource, 'column === "positions"\n          ? "POSITIONS"', "Mobile tables must call the Positions column POSITIONS.");
+includes(tableSource, 'positions: "POS"', "Compact phone headings must abbreviate Positions to POS.");
+includes(tableSource, 'column === "positions"\n          ? (compactTableHeadings ? compactLabel : "POSITIONS")', "Mobile tables must keep POSITIONS on wider tablets and use POS on compact phones.");
 for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(tableSource, `: "${label}"`, `Canonical compact headings must include ${label}.`);
 }
@@ -70,8 +70,8 @@ includes(discountUi, "if (MOBILE_TOOLTIP_MEDIA.matches || !(metric instanceof HT
 includes(evaluationSource, 'window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches', "Evaluation hover-only actions must remain disabled on mobile.");
 
 includes(bootstrap, 'const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");', "Bootstrap must know the compact heading breakpoint before first paint.");
-excludes(bootstrap, 'positions: "POS"', "Bootstrap must not abbreviate Positions based on viewport width.");
-includes(bootstrap, 'if (column === "positions") return "POSITIONS";', "Positions must already read POSITIONS before first paint.");
+includes(bootstrap, 'positions: "POS"', "Bootstrap must know the compact Positions label before first paint.");
+includes(bootstrap, 'if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";', "First paint must keep POSITIONS on wider tablets and use POS on compact phones.");
 includes(bootstrap, "function firstPaintTableColumnLabel(page, column)", "Bootstrap must derive first-paint labels from viewport and column identity.");
 
 excludes(buildCore, "app-core-mobile-table", "The canonical build must not depend on the retired mobile-table transform.");

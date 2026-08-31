@@ -41,8 +41,8 @@
 @media (max-width: 900px) {
   #progressionPage {
     --mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px));
-    --mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px));
-    --mfl-table-row-outer-height: max(19.21875px, calc(2.34375vw - 0.5625px));
+    --mfl-table-row-height: max(18.09519230769231px, calc(2.2067307692307696vw - 0.5296153846153846px));
+    --mfl-table-row-outer-height: max(20.75625px, calc(2.53125vw - 0.6075px));
   }
   #progressionPage .tableShell {
     position: relative;
@@ -282,8 +282,8 @@
 @media (max-width: 520px) {
   #progressionPage {
     --mfl-table-header-height: 15.528846153846153px;
-    --mfl-table-row-height: 13.89423076923077px;
-    --mfl-table-row-outer-height: 15.9375px;
+    --mfl-table-row-height: 15.005769230769232px;
+    --mfl-table-row-outer-height: 17.2125px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
@@ -369,8 +369,8 @@
 @media (max-width: 380px) {
   #progressionPage {
     --mfl-table-header-height: 13.701923076923077px;
-    --mfl-table-row-height: 12.259615384615385px;
-    --mfl-table-row-outer-height: 14.0625px;
+    --mfl-table-row-height: 13.240384615384617px;
+    --mfl-table-row-outer-height: 15.1875px;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {

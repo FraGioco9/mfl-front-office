@@ -41,6 +41,7 @@
     physical: "PHY",
     goalkeeping: "GK",
     player_seasons: "SZN",
+    positions: "POS",
   });
   const MFL_STATS_FILTER_LABELS = Object.freeze(
     APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label])),
@@ -563,7 +564,7 @@
       return column === agentColumn && normalizedPage === "mfl" ? "" : fullLabel;
     }
     if (column === "listing_price" || (column === agentColumn && normalizedPage === "mfl")) return "";
-    if (column === "positions") return "POSITIONS";
+    if (column === "positions") return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : "POSITIONS";
     return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;
   }
 
