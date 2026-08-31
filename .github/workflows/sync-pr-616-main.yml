@@ -1,0 +1,63 @@
+name: Sync PR 616 with main
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+    paths:
+      - .github/workflows/sync-pr-616-main.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-pr-616-main
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/599-responsive-table-proportions
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Merge current main and regenerate owned artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-ff origin/main -m "Sync PR 616 with main"
+          node site/build-app-core.mjs
+          node site/sync-release-projections.mjs
+          git add site
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit --amend --no-edit
+          fi
+
+      - name: Validate merged branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd site
+          npm ci
+          npm run check
+
+      - name: Remove sync scaffolding and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/sync-pr-616-main.yml
+          git add -A
+          git diff --cached --check
+          git commit --amend --no-edit
+          git push origin HEAD:fix/599-responsive-table-proportions
