@@ -2,7 +2,7 @@ const validators = [
   "validate-text-read-normalization.mjs",
   "validate.mjs",
   "validate-app-config.mjs",
-  "validate-app-core-splitter-architecture.mjs",
+  "validate-core-source-ownership.mjs",
   "validate-shared-core-route-ownership.mjs",
   "validate-asset-cache-policy.mjs",
   "validate-production-core-sources.mjs",
