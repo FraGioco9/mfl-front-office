@@ -44,6 +44,17 @@ const canonicalJoinedCoreRead = `Promise.all([
     readFile(join(siteRoot, "modules/core-sources/wallet.js"), "utf8"),
     readFile(join(siteRoot, "modules/core-sources/watchlist.js"), "utf8"),
   ]).then((parts) => parts.join("\\n"))`;
+const canonicalSyncCoreRead = `[
+  "modules/core-sources/shared.js",
+  "modules/core-sources/evaluation.js",
+  "modules/core-sources/mfl-stats.js",
+  "modules/core-sources/club.js",
+  "modules/core-sources/settings.js",
+  "modules/core-sources/player.js",
+  "modules/core-sources/table.js",
+  "modules/core-sources/wallet.js",
+  "modules/core-sources/watchlist.js",
+].map((path) => fs.readFileSync(path, "utf8")).join("\\n")`;
 
 const names = (await readdir(new URL("./", import.meta.url)))
   .filter((name) => /^validate.*\.mjs$/.test(name));
@@ -73,6 +84,8 @@ for (const name of names) {
     "readFile(join(siteRoot, 'modules/app-core.js'), 'utf8')",
     canonicalJoinedCoreRead,
   );
+  source = source.replaceAll('fs.readFileSync("modules/app-core.js", "utf8")', canonicalSyncCoreRead);
+  source = source.replaceAll("fs.readFileSync('modules/app-core.js', 'utf8')", canonicalSyncCoreRead);
   source = source.replaceAll(
     'import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";',
     'import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";',
