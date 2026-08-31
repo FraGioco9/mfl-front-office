@@ -17,20 +17,39 @@ select[data-mfl-dropdown-enhanced="true"] {
 }
 
 .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {
-  --mfl-dropdown-chevron-gap: 3px;
+  --mfl-dropdown-chevron-gap: auto;
+  --mfl-evaluation-position-trigger-width: 46px;
+  --mfl-evaluation-position-chevron-left: 35px;
+  position: relative;
   display: inline-flex;
   align-items: center;
-  width: 52px;
+  width: var(--mfl-evaluation-position-trigger-width);
   min-width: 0;
   height: auto;
   margin: 0;
-  padding: 1px 4px 1px 6px;
+  padding: 1px 12px 1px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
   font-weight: 800;
   line-height: inherit;
   text-align: left;
   vertical-align: middle;
+  box-shadow: none;
   user-select: none;
+}
+
+.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
+.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:focus:not(:disabled),
+.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled),
+.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:open {
+  outline: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
 }
 
 select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
@@ -99,6 +118,26 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     font-size: 0;
     transform: rotate(45deg);
     transition: none;
+  }
+
+  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]::picker(select) {
+    margin-block: 4px;
+    margin-inline-start: -5px;
+    padding-inline: 4px 5px;
+  }
+
+  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] option {
+    padding-inline: 0 9px;
+  }
+
+  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]::picker-icon,
+  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
+    position: absolute;
+    top: 50%;
+    right: auto;
+    left: var(--mfl-evaluation-position-chevron-left);
+    margin: 0;
+    transform: translateY(-50%) rotate(45deg);
   }
 
   select[data-mfl-dropdown-enhanced="true"] option,

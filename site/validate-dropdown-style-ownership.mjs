@@ -104,10 +104,17 @@ invariant(
 );
 invariant(
   dropdowns.includes('--mfl-dropdown-chevron-gap: auto;')
-    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {')
-    && dropdowns.includes('--mfl-dropdown-chevron-gap: 3px;')
-    && dropdowns.includes('margin: 0 0 0 var(--mfl-dropdown-chevron-gap);'),
-  "Evaluation Position must use the canonical dropdown trigger/menu styling with a compact text-to-chevron gap.",
+    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {\n  --mfl-dropdown-chevron-gap: auto;')
+    && dropdowns.includes('--mfl-evaluation-position-trigger-width: 46px;')
+    && dropdowns.includes('--mfl-evaluation-position-chevron-left: 35px;')
+    && dropdowns.includes('width: var(--mfl-evaluation-position-trigger-width);')
+    && dropdowns.includes('border: 0;\n  border-radius: 0;\n  background: transparent;')
+    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:open {\n  outline: 0;\n  border: 0;\n  background: transparent;')
+    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]::picker(select) {\n    margin-block: 4px;\n    margin-inline-start: -5px;\n    padding-inline: 4px 5px;')
+    && dropdowns.includes('.evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] option {\n    padding-inline: 0 9px;')
+    && dropdowns.includes('left: var(--mfl-evaluation-position-chevron-left);')
+    && dropdowns.includes('transform: translateY(-50%) rotate(45deg);'),
+  "Evaluation Position must keep a boxless trigger, anchor the chevron independently of value length, move the opened picker surface left, keep its option text aligned with the selected Position text, and use the compact 4px trigger-to-picker gap.",
 );
 invariant(
   !stylesBase.includes('.evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after')
