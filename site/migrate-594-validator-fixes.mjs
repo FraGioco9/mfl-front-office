@@ -55,9 +55,7 @@ for (const name of names) {
   let text = await readFile(url, "utf8");
   const original = text;
 
-  for (const [before, after] of bannerReplacements) {
-    text = text.replaceAll(before, after);
-  }
+  for (const [before, after] of bannerReplacements) text = text.replaceAll(before, after);
 
   for (const entry of generatedCores) {
     const oldRuntimeLiteral = `const ${entry.variable} = resolve(siteRoot, "modules/${entry.runtime}");`;
@@ -74,6 +72,10 @@ for (const name of names) {
   text = text.replaceAll(
     'artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")',
     'source.includes("__mflTooltipSettings?.gap") || source.includes("anchorHeight = 14")',
+  );
+  text = text.replaceAll(
+    "Generated application core does not position manual tooltips from the real generator rectangle.",
+    "Canonical application core does not position manual tooltips from the real generator rectangle.",
   );
 
   if (text !== original) await writeFile(url, text, "utf8");
