@@ -353,7 +353,8 @@ for (const variableName of [
   excludes(responsive, `${variableName}:`, `Small-screen Evaluation must preserve the desktop Uniform Width proportion for ${variableName}.`);
 }
 includes(appCore, 'const playerName = formatCellValue(row, "name").replace(/^(\\S)[^\\s]*\\s+(?:.*\\s)?(\\S+)$/, "$1. $2");', "Evaluation tables must abbreviate player names to first initial plus surname.");
-includes(responsive, "#evaluationLoadModal .evaluationLoadDialog {\n    width: min(100%, 420px);\n    max-width: 420px;\n    height: min(420px, calc(100dvh - 16px));", "The Load Evaluation popup must scale to a compact small-phone surface.");
+includes(responsive, "#advancedSettingsModal .advancedSettingsDialog,\n  #evaluationLoadModal .evaluationLoadDialog {\n    width: min(100%, 420px);\n    max-width: 420px;\n    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));", "Load Evaluation and Advanced Settings must share the compact safe-area-aware small-phone surface.");
+includes(responsive, "#advancedSettingsModal .advancedSettingsFooter {\n    display: grid;\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 6px;\n    padding: 6px 8px;", "Advanced Settings must keep Reset, Discard, and Apply on one compact phone footer row.");
 includes(responsive, "#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 72px auto;\n    gap: 6px;\n    min-height: 52px;", "Load Evaluation rows must remain compact instead of stacking on small phones.");
 includes(responsive, "#evaluationPage .evaluationSummaryTable :is(th, td):first-child,\n  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td):first-child {\n    padding-left: 6px;\n  }", "Small-phone Evaluation tables must retain left inset on their first column.");
 includes(stylesBase, ".evaluationTable td {\n  height: 32px;\n}", "Desktop Evaluation body rows must use the compact 32px height.");
