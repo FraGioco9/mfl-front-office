@@ -63,16 +63,18 @@ for (const name of names) {
     const oldRuntimeLiteral = `const ${entry.variable} = resolve(siteRoot, "modules/${entry.runtime}");`;
     const newRuntimeLiteral = `runtime: "${entry.runtime}"`;
     text = text.replaceAll(oldRuntimeLiteral, newRuntimeLiteral);
-
-    text = text.replaceAll(
-      `"artifacts.routeChunks?.${entry.key}"`,
-      `'source: "${entry.source}"'`,
-    );
-    text = text.replaceAll(
-      `'artifacts.routeChunks?.${entry.key}'`,
-      `'source: "${entry.source}"'`,
-    );
+    text = text.replaceAll(`"artifacts.routeChunks?.${entry.key}"`, `'source: "${entry.source}"'`);
+    text = text.replaceAll(`'artifacts.routeChunks?.${entry.key}'`, `'source: "${entry.source}"'`);
   }
+
+  text = text.replaceAll(
+    'artifact.includes("function tableTooltipTarget(event)") || artifact.includes("showPlayerNoteTooltip(tooltip)")',
+    'source.includes("function tableTooltipTarget(event)") || source.includes("showPlayerNoteTooltip(tooltip)")',
+  );
+  text = text.replaceAll(
+    'artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")',
+    'source.includes("__mflTooltipSettings?.gap") || source.includes("anchorHeight = 14")',
+  );
 
   if (text !== original) await writeFile(url, text, "utf8");
 }
