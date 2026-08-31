@@ -131,13 +131,13 @@ excludes(appEntry, "function routeNeedsTable", "app-entry must not retain a dupl
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical initial route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct table startup must load canonical route dependencies before startApp.");
 
-includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
+includes(buildCore, 'runtime: "app-core-table-runtime.js"', "The build must emit a generated Table runtime.");
 includes(coreSource, 'icon: "calendar-x-2"', "Canonical app-core source must own retired-player marker presentation directly.");
 includes(coreSource, 'icon: "calendar-clock"', "Canonical app-core source must own retiring-player marker presentation directly.");
 excludes(buildCore, "normalizeRetirementMarkerContract", "The build must not restore retirement-marker preprocessing.");
 excludes(buildCore, "normalizeTooltipHeightOwnership", "The build must not restore post-split tooltip rewriting.");
 const generatedTable = await read("./modules/app-core-table-runtime.js");
-const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
+const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");
 const generatedTableBody = generatedTable.slice(tableBanner.length).replace(/\s*$/, "");
 invariant(generatedTableBody.length > 20_000, "Generated Table runtime is unexpectedly small.");

@@ -190,11 +190,11 @@ includes(coreSource, 'const initialRouteTarget = pageTargetFromPath(window.locat
 includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Club startup must load its route owner through the canonical dependency gate before startApp.");
 includes(coreSource, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");
 
-includes(buildCore, 'const clubRuntimePath = resolve(siteRoot, "modules/app-core-club-runtime.js");', "The build must emit a generated Club runtime.");
-includes(buildCore, "artifacts.routeChunks?.club", "The build must consume the Club artifact.");
+includes(buildCore, 'runtime: "app-core-club-runtime.js"', "The build must emit a generated Club runtime.");
+includes(buildCore, 'source: "club.js"', "The build must consume the Club artifact.");
 
 const generatedClub = await read("./modules/app-core-club-runtime.js");
-const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do not edit directly.\n";
+const clubBanner = "// Generated Club core from modules/core-sources/club.js. Do not edit directly.\n";
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 

@@ -84,8 +84,8 @@ includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(page
 includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical Watchlist route before startApp.");
 includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct Watchlist startup must load Table and Watchlist dependencies before startApp.");
 
-includes(buildCore, 'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");', "The build must emit a generated Watchlist runtime.");
-includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");
+includes(buildCore, 'runtime: "app-core-watchlist-runtime.js"', "The build must emit a generated Watchlist runtime.");
+includes(buildCore, 'source: "watchlist.js"', "The build must consume the Watchlist artifact.");
 
 includes(
   bootstrapCore,
@@ -251,7 +251,7 @@ for (const forbidden of [
 }
 
 const generatedWatchlist = await read("./modules/app-core-watchlist-runtime.js");
-const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\n";
+const watchlistBanner = "// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.\n";
 invariant(generatedWatchlist.startsWith(watchlistBanner), "Generated Watchlist runtime must carry the build ownership banner.");
 invariant(
   generatedWatchlist.slice(watchlistBanner.length).replace(/\s*$/, "") === watchlistCore.replace(/\s*$/, ""),

@@ -1,4 +1,3 @@
-// Generated Table core from modules/core-sources/table.js. Do not edit directly.
 const agentPageTitleNamePromises = new Map();
 
 function runtimeAgentPageTitleName(address, hintedName = "") {

@@ -61,11 +61,11 @@ includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical 
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'ensure("wallet")', "The Wallet chunk must not be eagerly primed during startup.");
 
-includes(buildCore, 'const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");', "The build must emit a generated Wallet runtime.");
-includes(buildCore, "artifacts.routeChunks?.wallet", "The build must consume the Wallet artifact.");
+includes(buildCore, 'runtime: "app-core-wallet-runtime.js"', "The build must emit a generated Wallet runtime.");
+includes(buildCore, 'source: "wallet.js"', "The build must consume the Wallet artifact.");
 
 const generatedWallet = await read("./modules/app-core-wallet-runtime.js");
-const walletBanner = "// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.\n";
+const walletBanner = "// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.\n";
 invariant(generatedWallet.startsWith(walletBanner), "Generated Wallet runtime must carry the build ownership banner.");
 invariant(generatedWallet.slice(walletBanner.length).replace(/\s*$/, "") === walletCore.replace(/\s*$/, ""), "Generated Wallet runtime must exactly match the Wallet build artifact.");
 

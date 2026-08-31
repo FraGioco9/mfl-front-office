@@ -167,11 +167,11 @@ excludes(routeLoader, 'void ensure("settings")', "Home and unrelated routes must
 includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Settings startup must load its route owner through the canonical initial-route dependency gate.");
 includes(coreSource, "return startApp();", "Application startup must begin only after any direct Settings owner is ready.");
 
-includes(buildCore, 'const settingsRuntimePath = resolve(siteRoot, "modules/app-core-settings-runtime.js");', "The build must emit a generated Settings runtime.");
-includes(buildCore, "artifacts.routeChunks?.settings", "The build must consume the Settings artifact.");
+includes(buildCore, 'runtime: "app-core-settings-runtime.js"', "The build must emit a generated Settings runtime.");
+includes(buildCore, 'source: "settings.js"', "The build must consume the Settings artifact.");
 
 const generatedSettings = await read("./modules/app-core-settings-runtime.js");
-const settingsBanner = "// Generated Settings core chunk from modules/app-core.js. Do not edit directly.\n";
+const settingsBanner = "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\n";
 invariant(generatedSettings.startsWith(settingsBanner), "Generated Settings runtime must carry the build ownership banner.");
 invariant(generatedSettings.slice(settingsBanner.length).replace(/\s*$/, "") === settingsCore.replace(/\s*$/, ""), "Generated Settings runtime must exactly match the Settings build artifact.");
 

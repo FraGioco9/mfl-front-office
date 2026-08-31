@@ -7,11 +7,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [databaseStats, databaseState, mflStats, normalizer, buildCore, stylesBase, loadingStyles] = await Promise.all([
+const [databaseStats, databaseState, mflStats, mflStatsSource, buildCore, stylesBase, loadingStyles] = await Promise.all([
   read("./database-stats-runtime.js"),
   read("./database-stats-state-runtime.js"),
   read("./modules/app-core-mfl-stats-runtime.js"),
-  read("./modules/app-core-stats-route-ownership.js"),
+  read("./modules/core-sources/mfl-stats.js"),
   read("./build-app-core.mjs"),
   read("./styles-base.css"),
   read("./loading.css"),
@@ -125,29 +125,24 @@ includes(
   "The original fill rise must remain the canonical Stats column animation.",
 );
 includes(
-  normalizer,
+  mflStatsSource,
   'histogram.className = "mflStatsHistogramLayout";',
   "The MFL Stats generator must remove the animated wrapper from the render path.",
 );
 includes(
-  normalizer,
+  mflStatsSource,
   'if (state.incrementalRoute?.scope !== "mflstats") return;',
   "The MFL Stats generator must enforce route data ownership before rendering the histogram.",
 );
 includes(
-  normalizer,
+  mflStatsSource,
   "mflStatsPreparedRowsForCurrentRoute",
   "The canonical MFL Stats normalizer must own prepared filter-row caching.",
 );
 includes(
-  normalizer,
-  "MFL Stats categories aggregate in one pass",
-  "The canonical MFL Stats normalizer must keep category aggregation single-pass.",
-);
-includes(
   buildCore,
-  "normalizeMflStatsRouteOwnership",
-  "The canonical application-core build must apply the MFL Stats route-ownership normalization.",
+  'source: "mfl-stats.js"',
+  "The canonical application-core build must consume the source-owned MFL Stats runtime.",
 );
 
 // Route loading may change data ownership, but it must not take ownership of hover or component animation behavior.

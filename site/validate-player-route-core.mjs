@@ -337,12 +337,12 @@ requireAll(portraitCloseUp, [
 requireAll(appConfig, ['player: "/modules/app-core-player-runtime.js"'], "Player route config");
 requireAll(routeLoader, ["const ROUTE_CORE_PATHS = routeConfig.corePaths;"], "Route-core loader");
 requireAll(buildCore, [
-  'const playerRuntimePath = resolve(siteRoot, "modules/app-core-player-runtime.js");',
-  "artifacts.routeChunks?.player",
+  'runtime: "app-core-player-runtime.js"',
+  'source: "player.js"',
 ], "Player generated build");
 
 const generatedPlayer = await read("./modules/app-core-player-runtime.js");
-const playerBanner = "// Generated Player core chunk from modules/app-core.js. Do not edit directly.\n";
+const playerBanner = "// Generated Player core from modules/core-sources/player.js. Do not edit directly.\n";
 invariant(generatedPlayer.startsWith(playerBanner), "Generated Player runtime must carry the build ownership banner.");
 const generatedPlayerBody = generatedPlayer.slice(playerBanner.length).replace(/\s*$/, "");
 invariant(generatedPlayerBody.length > 12_000, "Generated Player runtime is unexpectedly small.");

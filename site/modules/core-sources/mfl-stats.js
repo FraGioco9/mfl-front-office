@@ -1,4 +1,3 @@
-// Generated MFL Stats core from modules/core-sources/mfl-stats.js. Do not edit directly.
 const mflStatsOverallFilterOptions = window.__mflAppConfig?.ui?.mflStatsOverallFilters || [];
 
 function mflStatsFilterById(filterId = state.mflStatsOverallFilter) {

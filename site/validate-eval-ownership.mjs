@@ -1,7 +1,5 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
-
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const exists = async (path) => {
   try {
@@ -38,7 +36,17 @@ const [
   read("./global-search-runtime.js"),
   read("./modules/app-entry.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core.js"),
+  Promise.all([
+    read("./modules/core-sources/shared.js"),
+    read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"),
+    read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"),
+    read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"),
+    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/watchlist.js"),
+  ]).then((parts) => parts.join("\n")),
   exists("./evaluation-load-intent-runtime.js"),
 ]);
 
@@ -205,14 +213,32 @@ invariant(
   "The build must reuse the shared normalizer sanitizer instead of duplicating Evaluation-tail removal.",
 );
 invariant(
-  buildAppCore.includes("String evaluation leaked into generated application core"),
+  buildAppCore.includes("String evaluation leaked into canonical application core"),
   "The build must reject any string-evaluation regression in emitted core artifacts.",
 );
 
-const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
-const sharedCore = String(artifacts.core || "");
-const tableCore = String(artifacts.routeChunks?.table || "");
-const generatedSources = [sharedCore, ...Object.values(artifacts.routeChunks || {}).map((source) => String(source || ""))];
+const [
+  sharedCore,
+  evaluationCore,
+  mflStatsCore,
+  clubCore,
+  settingsCore,
+  playerCore,
+  tableCore,
+  walletCore,
+  watchlistCore,
+] = await Promise.all([
+  read("./modules/core-sources/shared.js"),
+  read("./modules/core-sources/evaluation.js"),
+  read("./modules/core-sources/mfl-stats.js"),
+  read("./modules/core-sources/club.js"),
+  read("./modules/core-sources/settings.js"),
+  read("./modules/core-sources/player.js"),
+  read("./modules/core-sources/table.js"),
+  read("./modules/core-sources/wallet.js"),
+  read("./modules/core-sources/watchlist.js"),
+]);
+const generatedSources = [sharedCore, evaluationCore, mflStatsCore, clubCore, settingsCore, playerCore, tableCore, walletCore, watchlistCore];
 invariant(
   sharedCore.includes("window.__mflCoreContracts = Object.freeze({"),
   "The generated shared application core must retain the explicit lexical-owner contract after route splitting.",

@@ -2,8 +2,6 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { normalizeBuiltApplicationCore } from "./modules/app-core-build-normalizer.js";
-
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(siteRoot, "..");
 const readSite = (path) => readFile(resolve(siteRoot, path), "utf8");
@@ -78,40 +76,48 @@ excludes(bootstrapCore, "normalizeSingleRenderCore", "bootstrap-core must not re
 excludes(bootstrapCore, "installSingleRenderCoreTransform", "bootstrap-core must not install legacy fetch interception.");
 
 const buildCore = await readSite("build-app-core.mjs");
-includes(buildCore, "normalizeBuiltApplicationCoreArtifacts", "The core build must use the canonical build-time splitter.");
-includes(buildCore, "modules/app-core.js", "The core build must read app-core.js as its source.");
-includes(buildCore, "modules/app-core-runtime.js", "The core build must write the generated runtime artifact.");
-includes(buildCore, "Do not edit directly", "The generated core must carry an ownership banner.");
+includes(buildCore, "modules/core-sources", "The core build must consume canonical split source modules.");
+excludes(buildCore, "normalizeBuiltApplicationCoreArtifacts", "The core build must not behavior-patch application source after authoring.");
+excludes(buildCore, "modules/app-core.js", "The core build must not depend on the legacy application-core monolith.");
+includes(buildCore, 'runtime: "app-core-runtime.js"', "The core build must write the generated shared runtime artifact.");
+includes(buildCore, "Do not edit directly", "Generated core artifacts must carry ownership banners.");
 
-const coreSource = await readSite("modules/app-core.js");
-const buildNormalizerSource = await readSite("modules/app-core-build-normalizer.js");
-includes(buildNormalizerSource, "splitApplicationCoreRuntime(canonicalSource)", "The build must split the canonical source directly without a pre-split patch chain.");
-excludes(buildNormalizerSource, "normalizeBaseApplicationCore", "The build must not restore legacy pre-split source patching.");
-const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\s*$/, "");
-invariant(normalizedCore.length > 300_000, "Canonical core normalization produced an unexpectedly small runtime.");
-invariant(normalizedCore !== coreSource.replace(/\s*$/, ""), "The canonical splitter must remove route-owned code from the shared runtime.");
-includes(normalizedCore, "const shellFirstTablePages = new Set();", "The generated core must keep destination shell-first rendering disabled.");
-includes(normalizedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The generated core must delegate Club view URLs to the canonical route configuration.");
-excludes(normalizedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The generated core must not duplicate the Club view-to-slug mapping.");
-excludes(normalizedCore, "      renderIncrementalLoadingState(pageName, route);", "The generated core must not render a destination loading phase before canonical data.");
-includes(normalizedCore, "function copyDelegatedPlayerId(button, event)", "The generated core must own player-ID copying through table delegation.");
-includes(normalizedCore, 'tableBody?.addEventListener("click", (event) => {', "The generated core must have one delegated player-table click owner.");
-includes(normalizedCore, 'tableBody?.addEventListener("pointermove", (event) => {', "The generated core must delegate table hover state.");
-includes(normalizedCore, 'selectionInput.dataset.playerId = String(playerId);', "Rendered selection controls must carry player identity instead of row closures.");
-includes(normalizedCore, 'nameLink.dataset.playerId = String(playerId);', "Rendered player links must carry player identity instead of row closures.");
-includes(normalizedCore, 'link.dataset.walletAddress = String(walletAddress || "");', "Rendered agent links must carry wallet identity instead of row closures.");
-includes(normalizedCore, "clubLink.dataset.clubId = clubId;", "Rendered Club links must carry Club identity instead of row closures.");
-excludes(normalizedCore, 'selectionInput.addEventListener("click", (event) => setPlayerSelected', "Rows must not allocate selection click closures.");
-excludes(normalizedCore, 'nameLink.addEventListener("click", (event) => {', "Rows must not allocate player navigation closures.");
-excludes(normalizedCore, 'noteIcon.addEventListener("mouseenter"', "Rows must not allocate note tooltip closures.");
-excludes(normalizedCore, 'markerElement.addEventListener("mouseenter"', "Rows must not allocate marker tooltip closures.");
-excludes(normalizedCore, 'link.addEventListener("mouseenter", () => showPlayerNoteTooltip(link));', "Rows must not allocate agent tooltip closures.");
-excludes(normalizedCore, 'clubLink.addEventListener("click", (event) => {', "Rows must not allocate Club navigation closures.");
+const canonicalSharedCore = (await readSite("modules/core-sources/shared.js")).replace(/\s*$/, "");
+const coreSource = [
+  canonicalSharedCore,
+  await readSite("modules/core-sources/evaluation.js"),
+  await readSite("modules/core-sources/mfl-stats.js"),
+  await readSite("modules/core-sources/club.js"),
+  await readSite("modules/core-sources/settings.js"),
+  await readSite("modules/core-sources/player.js"),
+  await readSite("modules/core-sources/table.js"),
+  await readSite("modules/core-sources/wallet.js"),
+  await readSite("modules/core-sources/watchlist.js"),
+].join("\n");
+invariant(canonicalSharedCore.length > 300_000, "Canonical shared core source is unexpectedly small.");
+includes(canonicalSharedCore, "const shellFirstTablePages = new Set();", "The shared core must keep destination shell-first rendering disabled.");
+includes(canonicalSharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The shared core must delegate Club view URLs to canonical route configuration.");
+excludes(canonicalSharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The shared core must not duplicate the Club view-to-slug mapping.");
+excludes(canonicalSharedCore, "      renderIncrementalLoadingState(pageName, route);", "The shared core must not render a destination loading phase before canonical data.");
+includes(canonicalSharedCore, "function copyDelegatedPlayerId(button, event)", "The shared core must own player-ID copying through table delegation.");
+includes(canonicalSharedCore, 'tableBody?.addEventListener("click", (event) => {', "The shared core must have one delegated player-table click owner.");
+includes(canonicalSharedCore, 'tableBody?.addEventListener("pointermove", (event) => {', "The shared core must delegate table hover state.");
+includes(canonicalSharedCore, 'selectionInput.dataset.playerId = String(playerId);', "Rendered selection controls must carry player identity instead of row closures.");
+includes(canonicalSharedCore, 'nameLink.dataset.playerId = String(playerId);', "Rendered player links must carry player identity instead of row closures.");
+includes(canonicalSharedCore, 'link.dataset.walletAddress = String(walletAddress || "");', "Rendered agent links must carry wallet identity instead of row closures.");
+includes(canonicalSharedCore, "clubLink.dataset.clubId = clubId;", "Rendered Club links must carry Club identity instead of row closures.");
+excludes(canonicalSharedCore, 'selectionInput.addEventListener("click", (event) => setPlayerSelected', "Rows must not allocate selection click closures.");
+excludes(canonicalSharedCore, 'nameLink.addEventListener("click", (event) => {', "Rows must not allocate player navigation closures.");
+excludes(canonicalSharedCore, 'noteIcon.addEventListener("mouseenter"', "Rows must not allocate note tooltip closures.");
+excludes(canonicalSharedCore, 'markerElement.addEventListener("mouseenter"', "Rows must not allocate marker tooltip closures.");
+excludes(canonicalSharedCore, 'link.addEventListener("mouseenter", () => showPlayerNoteTooltip(link));', "Rows must not allocate agent tooltip closures.");
+excludes(canonicalSharedCore, 'clubLink.addEventListener("click", (event) => {', "Rows must not allocate Club navigation closures.");
 
 const generatedCore = await readOptionalSite("modules/app-core-runtime.js");
 if (generatedCore !== null) {
-  const banner = "// Generated by build-app-core.mjs from modules/app-core.js. Do not edit directly.\n";
-  invariant(generatedCore.startsWith(banner), "Generated app-core-runtime.js must carry the build ownership banner.");
+  const banner = "// Generated by build-app-core.mjs from modules/core-sources/shared.js. Do not edit directly.\n";
+  invariant(generatedCore.startsWith(banner), "Generated app-core-runtime.js must identify its canonical split source.");
+  invariant(generatedCore.slice(banner.length).replace(/\s*$/, "") === canonicalSharedCore, "Generated shared core must exactly reproduce its canonical source.");
   includes(generatedCore, 'icon: "calendar-x-2"', "Generated app-core-runtime.js must use the canonical retirement icon.");
 }
 
@@ -152,7 +158,6 @@ excludes(entry, "deferredRuntimePromise", "app-entry.js must not retain legacy d
 excludes(entry, "evaluationSearchRuntimePromise", "app-entry.js must not retain legacy Evaluation runtime bookkeeping.");
 
 const tableLoading = await readSite("table-loading-runtime.js");
-includes(coreSource, "buildHeader.__mflSingleRenderOwner", "Canonical app-core must make buildHeader the single persistent header owner.");
 includes(coreSource, "function ensureCanonicalTableHeader", "Canonical app-core must own table-header reconciliation directly.");
 includes(coreSource, "if (needsCanonicalBuild) buildHeader();", "Canonical app-core must invoke the canonical header when table state changes.");
 includes(tableLoading, "function hasRealRows", "Loading placeholders must never overwrite real table rows.");

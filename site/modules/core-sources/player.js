@@ -1,4 +1,3 @@
-// Generated Player core from modules/core-sources/player.js. Do not edit directly.
 (() => {
   "use strict";
 

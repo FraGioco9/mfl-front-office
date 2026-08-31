@@ -1,4 +1,3 @@
-// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.
 function watchlistRenderSwitcherOwner() {
   if (!watchlistSwitcher || !watchlistButton || !watchlistButtonText || !watchlistDropdown) {
     updateWatchlistTitle();

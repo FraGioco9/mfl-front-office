@@ -1,4 +1,3 @@
-// Generated Evaluation core from modules/core-sources/evaluation.js. Do not edit directly.
 async function recoverInvalidEvaluationLink() {
   if (window.location.pathname !== "/evaluation") {
     return false;
