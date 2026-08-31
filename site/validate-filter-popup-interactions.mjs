@@ -138,8 +138,8 @@ for (const required of [
 }
 
 const clearFiltersHandler = 'clearFiltersButton.addEventListener("click", () => {\n  clearAdvancedFilters(false);\n  applyAdvancedFilters();\n});';
-invariant(tableCore.includes(clearFiltersHandler), "Clear Filters must apply the cleared draft through the canonical Table owner.");
-invariant(tableRuntime.includes(clearFiltersHandler), "Generated Table runtime must preserve Clear Filters apply behavior.");
+invariant(sharedCore.includes(clearFiltersHandler), "Universal event binding must apply Clear Filters through the stable shared Table facades.");
+invariant(coreRuntime.includes(clearFiltersHandler), "Generated shared runtime must preserve Clear Filters apply behavior.");
 
 for (const required of [
   'const preserveOpenFilterDraft = document.body.classList.contains("filtersOpen") && !filtersModal.hidden;',
@@ -196,4 +196,4 @@ invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters b
 new Function(sharedCore);
 new Function(tableCore);
 
-console.log("Source-owned Filters markup, styling, transition reset, popup focus/Escape behavior, draft preservation, shared facade, and generated Table runtime validation passed.");
+console.log("Source-owned Filters markup, styling, transition reset, popup focus/Escape behavior, draft preservation, shared event facades, and generated runtime validation passed.");
