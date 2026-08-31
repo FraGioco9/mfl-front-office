@@ -29,8 +29,8 @@ includes(sharedUi, "touch-action: auto;", "The player table must allow native to
 includes(sharedUi, "min-width: 820px;", "Tablet/mobile tables must retain a real horizontal scroll range.");
 includes(sharedUi, "min-width: 680px;", "Phone tables must remain laterally pannable.");
 includes(sharedUi, "min-width: 600px;", "Small phones must retain a real horizontal scroll range.");
-includes(sharedUi, "--mfl-table-header-height: 18.72596153846154px;", "Mobile header height must stay canonical.");
-includes(sharedUi, "--mfl-table-row-height: 16.754807692307693px;", "Mobile row content height must stay canonical.");
+includes(sharedUi, "--mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px));", "Tablet header height must track rendered table width.");
+includes(sharedUi, "--mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px));", "Tablet row content height must track rendered table width.");
 includes(sharedUi, "--mfl-table-header-height: 15.528846153846153px;", "Phone header height must stay canonical.");
 includes(sharedUi, "--mfl-table-row-height: 13.89423076923077px;", "Phone row content height must stay canonical.");
 includes(sharedUi, "--mfl-table-header-height: 13.701923076923077px;", "Tiny-screen header height must stay canonical.");
@@ -44,6 +44,8 @@ includes(sharedUi, 'const PLAYER_TABLE_FADE_RIGHT_CLASS = "mflPlayerTableCanScro
 includes(sharedUi, "function setPlayerTableFadeDirections(scroller, canScrollLeft, canScrollRight)", "Player-table fades must track each direction independently.");
 includes(sharedUi, "function fadeShadow(canScrollLeft, canScrollRight, strength = 56)", "Views and Quick Filters must retain dynamic edge fading.");
 excludes(sharedUi, "MutationObserver", "Mobile table presentation must remain render/resize driven.");
+excludes(sharedUi, 'style.setProperty("--mfl-table-col-listing"', "Hydration must not rebalance the canonical Listing column.");
+excludes(sharedUi, 'style.setProperty("--mfl-table-col-positions"', "Hydration must not rebalance the canonical Positions column.");
 
 includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Canonical Table source must explicitly gate mobile-only behavior.");
 includes(tableSource, 'const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;', "Canonical Table headings must switch only at the narrow breakpoint.");

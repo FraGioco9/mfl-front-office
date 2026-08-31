@@ -19,7 +19,7 @@ assert.match(
 
 assert.match(
   sharedTableUiSource,
-  /@media \(max-width: 900px\) \{[\s\S]*--mfl-table-header-height: 18.72596153846154px;[\s\S]*--mfl-table-row-height: 16.754807692307693px;[\s\S]*--mfl-table-row-outer-height: 19.21875px;/,
+  /@media \(max-width: 900px\) \{[\s\S]*--mfl-table-header-height: max\(18\.72596153846154px, calc\(2\.2836538461538463vw - 0\.5480769230769231px\)\);[\s\S]*--mfl-table-row-height: max\(16\.754807692307693px, calc\(2\.043269230769231vw - 0\.49038461538461536px\)\);[\s\S]*--mfl-table-row-outer-height: max\(19\.21875px, calc\(2\.34375vw - 0\.5625px\)\);/,
   "Mobile table headers must match the visible 32px row height while preserving the 28px cell content height.",
 );
 assert.match(
@@ -58,7 +58,7 @@ assert.match(sharedTableUiSource, /@media \(max-width: 380px\) \{[\s\S]*#progres
 assert.match(responsiveSource, /#progressionPage \.playerTableScroller td \{\n {4}font-size: 12px;\n {2}\}/, "Mobile row text must retain its 12px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 520px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 11px;\n {2}\}/, "Phone row text must retain its 11px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 380px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 10px;\n {2}\}/, "Tiny-screen row text must retain its 10px font contract.");
-assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: 18.72596153846154px; --mfl-table-row-height: 16.754807692307693px; --mfl-table-row-outer-height: 19.21875px;/, "First-paint mobile header height must already match the visible row height.");
+assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: max\(18\.72596153846154px, calc\(2\.2836538461538463vw - 0\.5480769230769231px\)\); --mfl-table-row-height: max\(16\.754807692307693px, calc\(2\.043269230769231vw - 0\.49038461538461536px\)\); --mfl-table-row-outer-height: max\(19\.21875px, calc\(2\.34375vw - 0\.5625px\)\);/, "First-paint mobile header height must already match the visible row height.");
 assert.match(projectionSource, /@media \(max-width: 520px\)[\s\S]*--mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 13.89423076923077px; --mfl-table-row-outer-height: 15.9375px;/, "First-paint phone header height must already match the visible row height.");
 assert.match(projectionSource, /@media \(max-width: 380px\)[\s\S]*--mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 12.259615384615385px; --mfl-table-row-outer-height: 14.0625px;/, "First-paint tiny-screen header height must already match the visible row height.");
 

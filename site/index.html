@@ -32,7 +32,7 @@
         mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";
         mobileTableFirstPaintStyle.textContent = `
 @media (max-width: 900px) {
-  #progressionPage { --mfl-table-header-height: 18.72596153846154px; --mfl-table-row-height: 16.754807692307693px; --mfl-table-row-outer-height: 19.21875px; }
+  #progressionPage { --mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px)); --mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px)); --mfl-table-row-outer-height: max(19.21875px, calc(2.34375vw - 0.5625px)); }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #openFiltersButton { order: -2; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #viewControlsSeparator { order: -1; }
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell { position: relative; }

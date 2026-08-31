@@ -40,9 +40,9 @@
     style.textContent = `
 @media (max-width: 900px) {
   #progressionPage {
-    --mfl-table-header-height: 18.72596153846154px;
-    --mfl-table-row-height: 16.754807692307693px;
-    --mfl-table-row-outer-height: 19.21875px;
+    --mfl-table-header-height: max(18.72596153846154px, calc(2.2836538461538463vw - 0.5480769230769231px));
+    --mfl-table-row-height: max(16.754807692307693px, calc(2.043269230769231vw - 0.49038461538461536px));
+    --mfl-table-row-outer-height: max(19.21875px, calc(2.34375vw - 0.5625px));
   }
   #progressionPage .tableShell {
     position: relative;
@@ -809,22 +809,13 @@
   }
 
   function syncMobileColumnWidths() {
-    const page = document.getElementById("progressionPage");
-    if (!(page instanceof HTMLElement)) return;
-    page.style.removeProperty("--mfl-table-col-listing");
-    page.style.removeProperty("--mfl-table-col-name");
-    page.style.removeProperty("--mfl-table-col-contract-render-name");
-    page.style.removeProperty("--mfl-table-col-positions");
-    if (!MOBILE_TABLE_MEDIA.matches) return;
-
-    const baseStyle = getComputedStyle(page);
-    const baseListing = Number.parseFloat(baseStyle.getPropertyValue("--mfl-table-col-listing")) || 6.3904569176696135;
-    const basePositions = Number.parseFloat(baseStyle.getPropertyValue("--mfl-table-col-positions")) || 7.508786878261796;
-    const targetListing = TINY_TABLE_MEDIA.matches ? 3.6 : PHONE_TABLE_MEDIA.matches ? 3.8 : 4.2;
-    const reclaimed = Math.max(0, baseListing - targetListing);
-    page.style.setProperty("--mfl-table-col-listing", `${targetListing}%`);
-    page.style.setProperty("--mfl-table-col-positions", `${basePositions + reclaimed}%`);
-  }
+  const page = document.getElementById("progressionPage");
+  if (!(page instanceof HTMLElement)) return;
+  page.style.removeProperty("--mfl-table-col-listing");
+  page.style.removeProperty("--mfl-table-col-name");
+  page.style.removeProperty("--mfl-table-col-contract-render-name");
+  page.style.removeProperty("--mfl-table-col-positions");
+}
 
   function syncWidthAwareHeaderLabels() {
     const compact = PHONE_TABLE_MEDIA.matches;
