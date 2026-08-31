@@ -6,6 +6,7 @@ on:
       - refactor/594-global-runtime-ownership
     paths:
       - site/refactor-594-runtime-ownership.mjs
+      - site/fix-594-refactor-helper.mjs
       - .github/workflows/issue594-runtime-ownership-refactor.yml
 
 permissions:
@@ -25,6 +26,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: site/package-lock.json
+      - name: Fix refactor helper quoting
+        run: node site/fix-594-refactor-helper.mjs
       - name: Apply runtime ownership refactor
         run: node site/refactor-594-runtime-ownership.mjs
       - name: Commit refactor locally
@@ -41,6 +44,6 @@ jobs:
         run: npm run check
       - name: Remove helpers and push
         run: |
-          git rm site/refactor-594-runtime-ownership.mjs .github/workflows/issue594-runtime-ownership-refactor.yml
+          git rm site/refactor-594-runtime-ownership.mjs site/fix-594-refactor-helper.mjs .github/workflows/issue594-runtime-ownership-refactor.yml
           git commit -m "Remove issue 594 runtime ownership helpers"
           git push origin HEAD:refactor/594-global-runtime-ownership
