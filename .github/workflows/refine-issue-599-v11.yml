@@ -102,38 +102,40 @@ jobs:
           text = sync.read_text()
           start = text.index('export function normalizeBootstrapFirstPaintCompactLabels(source) {')
           end = text.index('\nexport function normalizeIndexReleaseProjection', start)
-          replacement = '''export function normalizeBootstrapFirstPaintCompactLabels(source) {
-  const current = String(source || "");
-  const startMarker = "  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({";
-  const endMarker = "\\n  });";
-  const start = current.indexOf(startMarker);
-  if (start < 0) throw new Error("bootstrap first-paint compact table labels start marker not found.");
-  const closeStart = current.indexOf(endMarker, start);
-  if (closeStart < 0) throw new Error("bootstrap first-paint compact table labels end marker not found.");
-  const end = closeStart + endMarker.length;
-  const replacement = `  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
-    wallet_name: "AGT",
-    owned_since: "JOIN",
-    name: "NAME",
-    age: "AGE",
-    positions: "POS",
-    player_seasons: "SZN",
-    overall: "OVR",
-    pace: "PAC",
-    shooting: "SHO",
-    passing: "PAS",
-    dribbling: "DRI",
-    defense: "DEF",
-    physical: "PHY",
-    goalkeeping: "GK",
-    active_contract_revenue_share: "REV",
-    active_contract_club_name: "CLUB",
-    active_contract_club_division: "DIV",
-  });`;
-  return `${current.slice(0, start)}${replacement}${current.slice(end)}`;
-}
-'''
-          sync.write_text(text[:start] + replacement + text[end:])
+          replacement_lines = [
+              'export function normalizeBootstrapFirstPaintCompactLabels(source) {',
+              '  const current = String(source || "");',
+              '  const startMarker = "  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({";',
+              '  const endMarker = "\\n  });";',
+              '  const start = current.indexOf(startMarker);',
+              '  if (start < 0) throw new Error("bootstrap first-paint compact table labels start marker not found.");',
+              '  const closeStart = current.indexOf(endMarker, start);',
+              '  if (closeStart < 0) throw new Error("bootstrap first-paint compact table labels end marker not found.");',
+              '  const end = closeStart + endMarker.length;',
+              '  const replacement = `  const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({',
+              '    wallet_name: "AGT",',
+              '    owned_since: "JOIN",',
+              '    name: "NAME",',
+              '    age: "AGE",',
+              '    positions: "POS",',
+              '    player_seasons: "SZN",',
+              '    overall: "OVR",',
+              '    pace: "PAC",',
+              '    shooting: "SHO",',
+              '    passing: "PAS",',
+              '    dribbling: "DRI",',
+              '    defense: "DEF",',
+              '    physical: "PHY",',
+              '    goalkeeping: "GK",',
+              '    active_contract_revenue_share: "REV",',
+              '    active_contract_club_name: "CLUB",',
+              '    active_contract_club_division: "DIV",',
+              '  });`;',
+              '  return `${current.slice(0, start)}${replacement}${current.slice(end)}`;',
+              '}',
+              '',
+          ]
+          sync.write_text(text[:start] + '\n'.join(replacement_lines) + text[end:])
           PY
           node site/sync-release-projections.mjs
           cd site
