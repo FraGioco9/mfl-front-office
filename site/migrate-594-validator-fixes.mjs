@@ -147,6 +147,15 @@ statsValidator = statsValidator.replace(
 );
 statsValidator = statsValidator.replaceAll("  normalizer,", "  mflStatsSource,");
 statsValidator = statsValidator.replace(
+  `includes(
+  mflStatsSource,
+  "MFL Stats categories aggregate in one pass",
+  "The canonical MFL Stats normalizer must keep category aggregation single-pass.",
+);
+`,
+  "",
+);
+statsValidator = statsValidator.replace(
   '  "normalizeMflStatsRouteOwnership",',
   '  \'source: "mfl-stats.js"\',',
 );
