@@ -3,7 +3,6 @@
 
   const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
   const PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
-  const TINY_TABLE_MEDIA = window.matchMedia("(max-width: 380px)");
   const MOBILE_PAGE_SIZE = "100";
   const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";
   const VIEW_SCROLL_VISIBLE_CLASS = "mflViewsScrollButtonVisible";
@@ -40,9 +39,11 @@
     style.textContent = `
 @media (max-width: 900px) {
   #progressionPage {
-    --mfl-table-header-height: 32px;
-    --mfl-table-row-height: 28px;
-    --mfl-table-row-outer-height: 32px;
+    --mfl-table-header-height: 30px;
+    --mfl-table-row-height: 26px;
+    --mfl-table-row-outer-height: 30px;
+    --mfl-table-col-listing: 4%;
+    --mfl-table-col-positions: 9.89924379593141%;
   }
   #progressionPage .tableShell {
     position: relative;
@@ -92,11 +93,11 @@
   }
   #progressionPage .playerTableScroller table {
     width: 100%;
-    min-width: 820px;
+    min-width: 760px;
     max-width: none;
   }
   #progressionPage .playerTableScroller :is(th, td) {
-    padding-inline: 2px;
+    padding-inline: 1px;
   }
   #progressionPage .playerTableScroller th {
     font-size: 10px;
@@ -281,16 +282,18 @@
 }
 @media (max-width: 520px) {
   #progressionPage {
-    --mfl-table-header-height: 28px;
-    --mfl-table-row-height: 24px;
-    --mfl-table-row-outer-height: 28px;
+    --mfl-table-header-height: 26px;
+    --mfl-table-row-height: 22px;
+    --mfl-table-row-outer-height: 26px;
+    --mfl-table-col-listing: 3.5%;
+    --mfl-table-col-positions: 10.39924379593141%;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
     width: 46px;
   }
   #progressionPage .playerTableScroller table {
-    min-width: 680px;
+    min-width: 600px;
   }
   #progressionPage .playerTableScroller th {
     font-size: 9px;
@@ -368,16 +371,18 @@
 }
 @media (max-width: 380px) {
   #progressionPage {
-    --mfl-table-header-height: 26px;
-    --mfl-table-row-height: 22px;
-    --mfl-table-row-outer-height: 26px;
+    --mfl-table-header-height: 24px;
+    --mfl-table-row-height: 20px;
+    --mfl-table-row-outer-height: 24px;
+    --mfl-table-col-listing: 3%;
+    --mfl-table-col-positions: 10.89924379593141%;
   }
   #progressionPage .tableShell::before,
   #progressionPage .tableShell::after {
     width: 40px;
   }
   #progressionPage .playerTableScroller table {
-    min-width: 600px;
+    min-width: 540px;
   }
   #progressionPage .playerTableScroller th {
     font-size: 8px;
@@ -808,26 +813,7 @@
     applyFadeShadow(views, canScrollLeft, canScrollRight, views.matches(".quickFilters") ? 72 : 96);
   }
 
-  function syncMobileColumnWidths() {
-    const page = document.getElementById("progressionPage");
-    if (!(page instanceof HTMLElement)) return;
-    page.style.removeProperty("--mfl-table-col-listing");
-    page.style.removeProperty("--mfl-table-col-name");
-    page.style.removeProperty("--mfl-table-col-contract-render-name");
-    page.style.removeProperty("--mfl-table-col-positions");
-    if (!MOBILE_TABLE_MEDIA.matches) return;
-
-    const baseStyle = getComputedStyle(page);
-    const baseListing = Number.parseFloat(baseStyle.getPropertyValue("--mfl-table-col-listing")) || 6.3904569176696135;
-    const basePositions = Number.parseFloat(baseStyle.getPropertyValue("--mfl-table-col-positions")) || 7.508786878261796;
-    const targetListing = TINY_TABLE_MEDIA.matches ? 3.6 : PHONE_TABLE_MEDIA.matches ? 3.8 : 4.2;
-    const reclaimed = Math.max(0, baseListing - targetListing);
-    page.style.setProperty("--mfl-table-col-listing", `${targetListing}%`);
-    page.style.setProperty("--mfl-table-col-positions", `${basePositions + reclaimed}%`);
-  }
-
   function syncWidthAwareHeaderLabels() {
-    const compact = PHONE_TABLE_MEDIA.matches;
     const mobile = MOBILE_TABLE_MEDIA.matches;
     document.querySelectorAll("#progressionPage #tableHead th > span:first-child").forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
@@ -839,11 +825,9 @@
       const column = String(header.dataset.tableColumn || "");
       const desired = mobile && column === "listing_price"
         ? ""
-        : mobile && column === "positions"
-          ? "POSITIONS"
-          : compact && short
-            ? short
-            : full;
+        : mobile && short
+          ? short
+          : full;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
@@ -867,7 +851,6 @@
   function syncPlayerTableScroller() {
     const scroller = playerTableScroller();
     const evaluationScroller = evaluationTableScroller();
-    syncMobileColumnWidths();
     syncWidthAwareHeaderLabels();
     if (scroller instanceof HTMLElement) syncPlayerTableFadeState(scroller);
     if (evaluationScroller instanceof HTMLElement) syncPlayerTableFadeState(evaluationScroller);
@@ -1089,7 +1072,6 @@
       player.style.removeProperty("box-shadow");
       setPlayerTableFadeDirections(player, false, false);
     }
-    syncMobileColumnWidths();
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);

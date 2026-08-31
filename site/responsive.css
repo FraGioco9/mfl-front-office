@@ -731,8 +731,12 @@ html:not(.mflInitialRouteResolved):is(
     max-width: none;
   }
 
+  .tableScroller table :is(th, td) {
+    padding-inline: 4px;
+  }
+
   #progressionPage .playerTableScroller :is(th, td) {
-    padding-inline: 2px;
+    padding-inline: 1px;
   }
 
   #progressionPage .playerTableScroller th {
@@ -749,9 +753,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .advancedPlayerTable {
-    min-width: 680px;
+    min-width: 620px;
     font-size: 11px;
   }
+
+  .advancedPlayerTable thead th { height: 28px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 26px; }
+  .advancedPlayerTable :is(th, td) { padding-inline: 2px; }
 
   .advancedPlayerTable thead th {
     font-size: 9px;
@@ -799,11 +807,11 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .evaluationSummaryTable {
-    min-width: 520px;
+    min-width: 480px;
   }
 
   .evaluationTableShell .evaluationTable {
-    min-width: 580px;
+    min-width: 540px;
   }
 
   .pager {
@@ -1262,10 +1270,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationPage {
-    --mfl-evaluation-header-row-height: 35.625px;
-    --mfl-evaluation-summary-row-height: 35.625px;
-    --mfl-evaluation-season-row-height: 30px;
+    --mfl-evaluation-header-row-height: 32px;
+    --mfl-evaluation-summary-row-height: 32px;
+    --mfl-evaluation-season-row-height: 27px;
   }
+
+  #evaluationPage .evaluationHeaderFull { display: none; }
+  #evaluationPage .evaluationHeaderCompact { display: inline; }
 
   .evaluationSummaryTable thead tr,
   .evaluationTableShell .evaluationTable thead tr,
@@ -1296,7 +1307,7 @@ html:not(.mflInitialRouteResolved):is(
 
   .evaluationSummaryTable th,
   .evaluationSummaryTable td {
-    padding-inline: 4px;
+    padding-inline: 3px;
   }
 
   .evaluationLoadResult {
@@ -1931,7 +1942,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage .playerTableScroller table {
-    min-width: 620px;
+    min-width: 600px;
   }
 
   #progressionPage .playerTableScroller th {
@@ -1960,9 +1971,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .advancedPlayerTable {
-    min-width: 560px;
+    min-width: 500px;
     font-size: 10px;
   }
+
+  .advancedPlayerTable thead th { height: 24px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 22px; }
+  .advancedPlayerTable :is(th, td) { padding-inline: 1px; }
 
   .advancedPlayerTable thead th {
     font-size: 8px;
@@ -2361,7 +2376,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationPage .evaluationTableShell {
-    --mfl-evaluation-table-header-height: 30.875px;
+    --mfl-evaluation-table-header-height: 27px;
   }
 
   #evaluationPage .evaluationTableShell .tableScroller {
@@ -2396,16 +2411,16 @@ html:not(.mflInitialRouteResolved):is(
 
   #evaluationPage .evaluationTableShell .evaluationTable {
     width: 100%;
-    min-width: 580px;
+    min-width: 500px;
     max-width: none;
     table-layout: fixed;
     line-height: 1.05;
   }
 
   #evaluationPage {
-    --mfl-evaluation-header-row-height: 30.875px;
-    --mfl-evaluation-summary-row-height: 30.875px;
-    --mfl-evaluation-season-row-height: 26px;
+    --mfl-evaluation-header-row-height: 27px;
+    --mfl-evaluation-summary-row-height: 27px;
+    --mfl-evaluation-season-row-height: 23px;
   }
 
   #evaluationPage .evaluationHeaderFull {
@@ -2861,7 +2876,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #progressionPage .playerTableScroller table {
-    min-width: 560px;
+    min-width: 540px;
   }
 
   #progressionPage .playerTableScroller th {
@@ -2873,11 +2888,14 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .advancedPlayerTable {
-    min-width: 520px;
+    min-width: 460px;
   }
 
+  .advancedPlayerTable thead th { height: 22px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 20px; }
+
   #evaluationPage .evaluationTableShell {
-    --mfl-evaluation-table-header-height: 28.5px;
+    --mfl-evaluation-table-header-height: 25px;
   }
 
   #evaluationPage .evaluationTableShell::before,
@@ -2890,13 +2908,13 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationPage .evaluationTableShell .evaluationTable {
-    min-width: 520px;
+    min-width: 460px;
   }
 
   #evaluationPage {
-    --mfl-evaluation-header-row-height: 28.5px;
-    --mfl-evaluation-summary-row-height: 28.5px;
-    --mfl-evaluation-season-row-height: 24px;
+    --mfl-evaluation-header-row-height: 25px;
+    --mfl-evaluation-summary-row-height: 25px;
+    --mfl-evaluation-season-row-height: 21px;
   }
 
   #evaluationPage .evaluationSummaryTable th,

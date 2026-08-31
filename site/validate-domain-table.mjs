@@ -18,6 +18,7 @@ const validators = [
   "validate-progression-joined-agency-filter.mjs",
   "validate-mobile-table-retry.mjs",
   "validate-mobile-table-compact-contract.mjs",
+  "validate-small-screen-table-compaction.mjs",
   "validate-mobile-first-paint-cascade.mjs",
   "validate-mobile-header-first-paint-metrics.mjs",
   "validate-mobile-pager-scaling.mjs",

@@ -32,6 +32,9 @@
   const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;
   const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;
   const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
+    age: "AGE",
+    positions: "POS",
+    player_seasons: "SZN",
     overall: "OVR",
     pace: "PAC",
     shooting: "SHO",
@@ -40,7 +43,11 @@
     defense: "DEF",
     physical: "PHY",
     goalkeeping: "GK",
-    player_seasons: "SZN",
+    wallet_name: "AGT",
+    owned_since: "JOIN",
+    active_contract_revenue_share: "REV",
+    active_contract_club_name: "CLUB",
+    active_contract_club_division: "DIV",
   });
   const MFL_STATS_FILTER_LABELS = Object.freeze(
     APP_CONFIG.ui.mflStatsOverallFilters.map(({ id, label }) => Object.freeze([id, label])),
@@ -563,8 +570,7 @@
       return column === agentColumn && normalizedPage === "mfl" ? "" : fullLabel;
     }
     if (column === "listing_price" || (column === agentColumn && normalizedPage === "mfl")) return "";
-    if (column === "positions") return "POSITIONS";
-    return FIRST_PAINT_PHONE_TABLE_MEDIA.matches ? compactLabel : fullLabel;
+    return compactLabel;
   }
 
   function firstPaintTableSortState(page, view) {

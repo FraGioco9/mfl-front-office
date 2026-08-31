@@ -105,8 +105,8 @@ invariant(
 );
 invariant(
   responsive.includes("#evaluationPage .evaluationTableShell .tableScroller {\n    display: block;\n    width: 100%;\n    max-width: 100%;\n    overflow-x: auto;\n    overflow-y: hidden;")
-    && responsive.includes("#evaluationPage .evaluationTableShell .evaluationTable {\n    width: 100%;\n    min-width: 580px;\n    max-width: none;")
-    && responsive.includes("#evaluationPage .evaluationTableShell .evaluationTable {\n    min-width: 520px;\n  }"),
+    && responsive.includes("#evaluationPage .evaluationTableShell .evaluationTable {\n    width: 100%;\n    min-width: 500px;\n    max-width: none;")
+    && responsive.includes("#evaluationPage .evaluationTableShell .evaluationTable {\n    min-width: 460px;\n  }"),
   "Season-by-season Evaluation must remain horizontally scrollable with readable width floors on small and tiny phones.",
 );
 invariant(
@@ -121,29 +121,23 @@ invariant(
 
 invariant(
   indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">POS</span>')
-    && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">EXP SZN</span>')
+    && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">SZN</span>')
     && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">OVR</span>')
     && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">$MFL</span>')
-    && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">DISC FACT</span>')
+    && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">DISC</span>')
     && indexHtml.includes('class="evaluationHeaderCompact" aria-hidden="true">SZN</span>'),
   "Evaluation compact phone headings must exist in first-paint markup before application hydration.",
 );
 invariant(
-  responsive.includes("--mfl-evaluation-header-row-height: 35.625px;\n    --mfl-evaluation-summary-row-height: 35.625px;\n    --mfl-evaluation-season-row-height: 30px;")
-    && responsive.includes("--mfl-evaluation-header-row-height: 30.875px;\n    --mfl-evaluation-summary-row-height: 30.875px;\n    --mfl-evaluation-season-row-height: 26px;")
-    && responsive.includes("--mfl-evaluation-header-row-height: 28.5px;\n    --mfl-evaluation-summary-row-height: 28.5px;\n    --mfl-evaluation-season-row-height: 24px;"),
-  "Evaluation header, Summary row, and Season row heights must preserve the desktop 38:38:32 proportions through every smaller breakpoint.",
+  responsive.includes("--mfl-evaluation-header-row-height: 32px;\n    --mfl-evaluation-summary-row-height: 32px;\n    --mfl-evaluation-season-row-height: 27px;")
+    && responsive.includes("--mfl-evaluation-header-row-height: 27px;\n    --mfl-evaluation-summary-row-height: 27px;\n    --mfl-evaluation-season-row-height: 23px;")
+    && responsive.includes("--mfl-evaluation-header-row-height: 25px;\n    --mfl-evaluation-summary-row-height: 25px;\n    --mfl-evaluation-season-row-height: 21px;"),
+  "Evaluation rows must progressively compact at tablet, phone, and tiny-phone breakpoints.",
 );
-
-
-const evaluationHeightTriples = [
-  [35.625, 35.625, 30],
-  [30.875, 30.875, 26],
-  [28.5, 28.5, 24],
-];
-for (const [header, summary, season] of evaluationHeightTriples) {
-  invariant(Math.abs((header / season) - (38 / 32)) < 1e-12, "Evaluation header-to-season row ratio must remain identical to desktop.");
-  invariant(Math.abs((summary / season) - (38 / 32)) < 1e-12, "Evaluation Summary-to-season row ratio must remain identical to desktop.");
-}
+invariant(
+  responsive.includes("#evaluationPage .evaluationHeaderFull { display: none; }")
+    && responsive.includes("#evaluationPage .evaluationHeaderCompact { display: inline; }"),
+  "Evaluation must use compact header labels throughout the <=900px contract.",
+);
 
 console.log("Evaluation mobile first-paint and hydration validation passed.");
