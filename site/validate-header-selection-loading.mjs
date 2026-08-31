@@ -1,29 +1,20 @@
 import { readFile } from "node:fs/promises";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [loadingRuntime, bootstrap, coreSource, tableRuntime, mobileTableSource, sharedTableUi, projectionSource] = await Promise.all([
+const [loadingRuntime, bootstrap, sharedCore, tableSource, tableRuntime, sharedTableUi, projectionSource] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
-  Promise.all([
-    read("./modules/core-sources/shared.js"),
-    read("./modules/core-sources/evaluation.js"),
-    read("./modules/core-sources/mfl-stats.js"),
-    read("./modules/core-sources/club.js"),
-    read("./modules/core-sources/settings.js"),
-    read("./modules/core-sources/player.js"),
-    read("./modules/core-sources/table.js"),
-    read("./modules/core-sources/wallet.js"),
-    read("./modules/core-sources/watchlist.js"),
-  ]).then((parts) => parts.join("\n")),
+  read("./modules/core-sources/shared.js"),
+  read("./modules/core-sources/table.js"),
   read("./modules/app-core-table-runtime.js"),
-  read("./modules/app-core-mobile-table.js"),
   read("./shared-table-ui-runtime.js"),
   read("./sync-release-projections.mjs"),
 ]);
+const canonical = `${sharedCore}\n${tableSource}`;
 
 const neutralizeStart = loadingRuntime.indexOf("function neutralizeSelectionHeader() {");
 const neutralizeEnd = loadingRuntime.indexOf("function primeLoadingRows()", neutralizeStart);
@@ -68,7 +59,7 @@ invariant(
 );
 
 invariant(
-  mobileTableSource.includes('selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;')
+  tableSource.includes('selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;')
     && tableRuntime.includes('selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;'),
   "Every hydrated table-header rebuild must begin with the selection checkbox disabled so it cannot flash selectable before data readiness.",
 );
@@ -80,7 +71,7 @@ invariant(
   "First paint and hydration must give the disabled header checkbox the same visibly inactive appearance.",
 );
 
-for (const source of [coreSource, tableRuntime]) {
+for (const source of [canonical, tableRuntime]) {
   invariant(
     source.includes('if (document.documentElement.classList.contains("mflDataLoading")) {')
       && source.includes("selectVisibleInput.disabled = true;")
@@ -89,4 +80,11 @@ for (const source of [coreSource, tableRuntime]) {
   );
 }
 
-console.log("Header selection loading lifecycle validation passed.");
+const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
+invariant(tableRuntime.startsWith(tableBanner), "Generated Table runtime must retain its canonical banner.");
+invariant(
+  tableRuntime.slice(tableBanner.length).replace(/\s*$/, "") === tableSource.replace(/\s*$/, ""),
+  "Generated Table runtime must exactly match canonical table.js.",
+);
+
+console.log("Source-owned header selection loading lifecycle validation passed.");
