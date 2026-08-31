@@ -1,0 +1,146 @@
+name: Refine PR 616 small-screen table
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+    paths:
+      - .github/workflows/refine-pr-616-small-screen-table.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: fix/599-responsive-table-proportions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply small-screen table refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              source = file.read_text(encoding="utf-8")
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:100]!r}")
+              file.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          shared = "site/shared-table-ui-runtime.js"
+          replace_once(
+              shared,
+              '''  #progressionPage {\n    --mfl-table-header-height: 15.528846153846153px;\n    --mfl-table-row-height: 15.005769230769232px;\n    --mfl-table-row-outer-height: 17.2125px;\n  }''',
+              '''  #progressionPage {\n    --mfl-table-header-height: 15.528846153846153px;\n    --mfl-table-row-height: 19px;\n    --mfl-table-row-outer-height: 22px;\n  }''',
+          )
+          replace_once(
+              shared,
+              '''  #progressionPage .playerTableScroller table {\n    min-width: 680px;\n  }''',
+              '''  #progressionPage .playerTableScroller table {\n    --mfl-table-col-name: 12%;\n    --mfl-table-col-listing: 4%;\n    --mfl-table-col-positions: 12.41623176057088%;\n    min-width: 680px;\n  }\n  #progressionPage .playerTableScroller table:has(col.col-contract-revenue) {\n    --mfl-table-col-name: 12%;\n  }''',
+          )
+          replace_once(
+              shared,
+              '''  #progressionPage {\n    --mfl-table-header-height: 13.701923076923077px;\n    --mfl-table-row-height: 13.240384615384617px;\n    --mfl-table-row-outer-height: 15.1875px;\n  }''',
+              '''  #progressionPage {\n    --mfl-table-header-height: 13.701923076923077px;\n    --mfl-table-row-height: 18px;\n    --mfl-table-row-outer-height: 21px;\n  }''',
+          )
+          replace_once(
+              shared,
+              '''      const desired = mobile && column === "listing_price"\n        ? ""\n        : mobile && column === "positions"\n          ? "POSITIONS"\n          : compact && short\n            ? short\n            : full;''',
+              '''      const desired = mobile && column === "listing_price"\n        ? ""\n        : compact && short\n          ? short\n          : full;''',
+          )
+
+          projection = "site/sync-release-projections.mjs"
+          replace_once(
+              projection,
+              '''    "  #progressionPage { --mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 15.005769230769232px; --mfl-table-row-outer-height: 17.2125px; }",''',
+              '''    "  #progressionPage { --mfl-table-header-height: 15.528846153846153px; --mfl-table-row-height: 19px; --mfl-table-row-outer-height: 22px; }",''',
+          )
+          replace_once(
+              projection,
+              '''    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 680px; }",''',
+              '''    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { --mfl-table-col-name: 12%; --mfl-table-col-listing: 4%; --mfl-table-col-positions: 12.41623176057088%; min-width: 680px; }",\n    "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table:has(col.col-contract-revenue) { --mfl-table-col-name: 12%; }",''',
+          )
+          replace_once(
+              projection,
+              '''    "  #progressionPage { --mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 13.240384615384617px; --mfl-table-row-outer-height: 15.1875px; }",''',
+              '''    "  #progressionPage { --mfl-table-header-height: 13.701923076923077px; --mfl-table-row-height: 18px; --mfl-table-row-outer-height: 21px; }",''',
+          )
+
+          responsive = Path("site/validate-responsive-table-proportions.mjs")
+          source = responsive.read_text(encoding="utf-8")
+          source = source.replace(
+              'Object.freeze({ breakpoint: 520, width: 680, header: 15.528846153846153, row: 15.005769230769232, outer: 17.2125, control: 13 })',
+              'Object.freeze({ breakpoint: 520, width: 680, header: 15.528846153846153, row: 19, outer: 22, control: 13 })',
+          ).replace(
+              'Object.freeze({ breakpoint: 380, width: 600, header: 13.701923076923077, row: 13.240384615384617, outer: 15.1875, control: 12 })',
+              'Object.freeze({ breakpoint: 380, width: 600, header: 13.701923076923077, row: 18, outer: 21, control: 12 })',
+          )
+          source = source.replace(
+              '  assert.ok(close(geometry.row / desktop.row, scale * mobileRowBoost), `<=${geometry.breakpoint}px row must retain the mobile height boost.`);\n  assert.ok(close(geometry.outer / desktop.outer, scale * mobileRowBoost), `<=${geometry.breakpoint}px outer row must retain the mobile height boost.`);',
+              '  assert.ok(geometry.row / desktop.row > scale * mobileRowBoost, `<=${geometry.breakpoint}px row must be taller than the tablet-proportional mobile row.`);\n  assert.ok(geometry.outer / desktop.outer > scale * mobileRowBoost, `<=${geometry.breakpoint}px outer row must be taller than the tablet-proportional mobile row.`);',
+          )
+          source = source.replace(
+              'assert.doesNotMatch(shared, /--mfl-table-col-(?:listing|positions)\\s*:/, "Hydrated mobile CSS must not alter desktop column percentages.");\nassert.doesNotMatch(shared, /style\\.setProperty\\("--mfl-table-col-(?:listing|positions)"/, "Hydration must not rebalance canonical Listing or Positions percentages.");\nassert.doesNotMatch(projection, /--mfl-table-col-(?:listing|positions)\\s*:/, "First-paint projection must not alter desktop column percentages.");\nassert.doesNotMatch(index, /--mfl-table-col-listing:\\s*(?:4\\.2|3\\.8|3\\.6)%|--mfl-table-col-positions:\\s*(?:9\\.699243795931409|10\\.099243795931411|10\\.29924379593141)%/);',
+              'for (const [name, source] of sources) {\n  assert.ok(source.includes("--mfl-table-col-name: 12%;"), `${name} missing compact Name width.`);\n  assert.ok(source.includes("--mfl-table-col-listing: 4%;"), `${name} missing compact Listing width.`);\n  assert.ok(source.includes("--mfl-table-col-positions: 12.41623176057088%;"), `${name} missing expanded compact Positions width.`);\n}\nassert.doesNotMatch(shared, /style\\.setProperty\\("--mfl-table-col-(?:name|listing|positions)"/, "Hydration must not imperatively rebalance responsive column widths.");',
+          )
+          source = source.replace(
+              'console.log("Responsive player-table headers preserve desktop scale while mobile rows remain slightly taller across first paint and hydration.");',
+              'console.log("Responsive player-table headers preserve desktop scale while compact rows are intentionally taller and Name/Listing space is reallocated to Positions across first paint and hydration.");',
+          )
+          responsive.write_text(source, encoding="utf-8")
+
+          for validator in ["site/validate-mobile-table-compact-contract.mjs", "site/validate-mobile-table-retry.mjs"]:
+              file = Path(validator)
+              source = file.read_text(encoding="utf-8")
+              source = source.replace("15.005769230769232px", "19px")
+              source = source.replace("17.2125px", "22px")
+              source = source.replace("13.240384615384617px", "18px")
+              source = source.replace("15.1875px", "21px")
+              source = source.replace("intentional 8% mobile height boost", "compact-screen height boost")
+              source = source.replace("intentional 8% mobile height", "compact-screen height")
+              file.write_text(source, encoding="utf-8")
+
+          compact = Path("site/validate-mobile-table-compact-contract.mjs")
+          source = compact.read_text(encoding="utf-8")
+          marker = 'assert.match(tableSource, /positions: "POS"/, "Hydrated compact headings must shorten Positions to POS.");'
+          if marker not in source:
+              raise SystemExit("compact validator POS marker missing")
+          source = source.replace(marker, marker + '\nassert.match(sharedTableUiSource, /const desired = mobile && column === "listing_price"[\\s\\S]*: compact && short[\\s\\S]*\\? short[\\s\\S]*: full;/, "Hydrated resize/presentation sync must use the same compact-label path for Positions as the other headers.");\nassert.doesNotMatch(sharedTableUiSource, /mobile && column === "positions"/, "Hydrated presentation sync must not special-case Positions.");\nfor (const declaration of ["--mfl-table-col-name: 12%;", "--mfl-table-col-listing: 4%;", "--mfl-table-col-positions: 12.41623176057088%;"]) {\n  assert.ok(sharedTableUiSource.includes(declaration), `Hydrated compact table missing ${declaration}`);\n  assert.ok(projectionSource.includes(declaration), `First-paint compact table missing ${declaration}`);\n}\n')
+          compact.write_text(source, encoding="utf-8")
+          PY
+
+          cd site
+          node build-app-core.mjs
+          node sync-release-projections.mjs
+      - name: Snapshot generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site
+          git diff --cached --check
+          git commit -m "Refine small-screen table geometry"
+      - name: Validate site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd site
+          npm ci
+          npm run check
+      - name: Remove scaffolding and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/refine-pr-616-small-screen-table.yml
+          git commit -m "Remove PR 616 small-screen table scaffolding"
+          git push origin HEAD:fix/599-responsive-table-proportions
