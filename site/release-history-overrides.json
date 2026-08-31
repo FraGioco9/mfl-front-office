@@ -1,5 +1,9 @@
 [
   [
+    "v1.127.6",
+    "Optimize Evaluation for small screens and stable loading"
+  ],
+  [
     "v1.127.5",
     "Refine mobile Stats, navigation transitions, and table typography"
   ],
