@@ -69,7 +69,7 @@ invariant(
 );
 
 const canonicalClearStart = appCoreSource.indexOf("function clearEvaluationSearch() {");
-const canonicalClearEnd = appCoreSource.indexOf("\n}\nfunction handleEvaluationSearchInput()", canonicalClearStart);
+const canonicalClearEnd = appCoreSource.indexOf("\n}\n\nfunction handleEvaluationSearchInput()", canonicalClearStart);
 const canonicalClearSource = canonicalClearStart >= 0 && canonicalClearEnd > canonicalClearStart
   ? appCoreSource.slice(canonicalClearStart, canonicalClearEnd)
   : "";
