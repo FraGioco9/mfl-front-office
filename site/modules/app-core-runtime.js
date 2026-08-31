@@ -5850,7 +5850,7 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
     return escapeHtml(selectedPosition || "");
   }
 
-  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
+  return `<select class="evaluationSummaryPositionSelect" data-mfl-dropdown-enhanced="true" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
 
 const evaluationTableRenderReuse = createRenderReuseGuard();
