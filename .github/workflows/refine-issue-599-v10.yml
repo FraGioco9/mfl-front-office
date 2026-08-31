@@ -1,0 +1,100 @@
+name: Validate final issue 599 table refinement
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Apply and validate final responsive table refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show d43daffa4d1e3dc8924408fc3cc8aa31b32106ee:.github/workflows/refine-issue-599.yml \
+            | sed -n "/^          python - <<'PY'$/,/^          PY$/p" \
+            | sed '1d;$d;s/^          //' > /tmp/refine-599.py
+          git show 273afb13ff801ba35aa664c41c0567784170812f:.github/workflows/refine-issue-599-v5.yml \
+            | sed -n "/^          python - <<'PY'$/,/^          PY$/p" \
+            | sed '1d;$d;s/^          //' > /tmp/finalize-599.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/finalize-599.py')
+          lines = path.read_text().splitlines()
+          start_one = next(i for i, line in enumerate(lines) if line.strip() == "'''function compactMobilePlayerName(value) {")
+          lines[start_one] = lines[start_one].replace("'''", '"""', 1)
+          end_one = next(i for i in range(start_one + 1, len(lines)) if lines[i].strip() == "}''',")
+          lines[end_one] = lines[end_one].replace("'''", '"""', 1)
+          start_two = next(i for i in range(end_one + 1, len(lines)) if lines[i].strip() == "'''const MOBILE_PLAYER_SURNAME_PARTICLES = new Set([")
+          lines[start_two] = lines[start_two].replace("'''", '"""', 1)
+          end_two = next(i for i in range(start_two + 1, len(lines)) if lines[i].strip() == "}''',")
+          lines[end_two] = lines[end_two].replace("'''", '"""', 1)
+          text = "\n".join(lines) + "\n"
+          text = text.replace("start_marker = '          # Update compact-table regression expectations.\\n'", "start_marker = '# Update compact-table regression expectations.\\n'", 1)
+          text = text.replace("end_marker = '          # Retry regression: geometry/font values and compact-heading policy.\\n'", "end_marker = '# Retry regression: geometry/font values and compact-heading policy.\\n'", 1)
+          text = text.replace("anchor = '          Path(retry).write_text(text)\\n'", "anchor = 'Path(retry).write_text(text)\\n'", 1)
+          path.write_text(text)
+          PY
+          python /tmp/finalize-599.py
+          git reset --hard 9e09523322294b29a160ad6fd285fe0f841703c7
+          python /tmp/refine-599.py
+          python - <<'PY'
+          from pathlib import Path
+
+          proportions = Path('site/validate-responsive-table-proportions.mjs')
+          text = proportions.read_text()
+          for value in [
+              '20.598557692307694', '18.430288461538463', '21.140625', '11', '13.2',
+              '17.08173076923077', '15.283653846153848', '17.53125', '9.121951219512194', '10.946341463414634',
+              '15.072115384615385', '13.485576923076925', '15.46875', '8.048780487804878', '9.658536585365853',
+          ]:
+              for field in ['header', 'row', 'outer', 'headerFont', 'rowFont']:
+                  text = text.replace(f'{field}: {value}', f'{field}: "{value}"')
+          text = text.replace(
+              'const mobileHeaderFontRatio = responsive[0].headerFont / responsive[0].header;',
+              'const mobileHeaderFontRatio = Number(responsive[0].headerFont) / Number(responsive[0].header);',
+          )
+          text = text.replace(
+              'const mobileRowFontRatio = responsive[0].rowFont / responsive[0].row;',
+              'const mobileRowFontRatio = Number(responsive[0].rowFont) / Number(responsive[0].row);',
+          )
+          text = text.replace('geometry.header / desktop.header', 'Number(geometry.header) / desktop.header')
+          text = text.replace('geometry.row / desktop.row', 'Number(geometry.row) / desktop.row')
+          text = text.replace('geometry.outer / desktop.outer', 'Number(geometry.outer) / desktop.outer')
+          text = text.replace('geometry.headerFont / geometry.header', 'Number(geometry.headerFont) / Number(geometry.header)')
+          text = text.replace('geometry.rowFont / geometry.row', 'Number(geometry.rowFont) / Number(geometry.row)')
+          text = text.replace('geometry.control <= geometry.row', 'geometry.control <= Number(geometry.row)')
+          text = text.replace('/overflow-x: auto;\\n    overflow-y: hidden;/', '/overflow-x: auto;\\n\\s{4}overflow-y: hidden;/')
+          proportions.write_text(text)
+
+          typography = Path('site/validate-table-header-typography.mjs')
+          text = typography.read_text().replace(
+              '/\\.playerTableScroller th \\{\\n    font-size: \\d/',
+              '/\\.playerTableScroller th \\{\\n\\s{4}font-size: \\d/',
+          )
+          typography.write_text(text)
+          PY
+          node site/sync-release-projections.mjs
+          cd site
+          npm ci
+          npm run check
+          cd ..
+          git config user.name "FraGioco9"
+          git config user.email "29951460+FraGioco9@users.noreply.github.com"
+          git add site
+          git commit -m "Refine small-screen table presentation"
+          git push --force-with-lease origin HEAD:fix/599-responsive-table-proportions
