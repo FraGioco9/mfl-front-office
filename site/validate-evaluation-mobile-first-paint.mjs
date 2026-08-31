@@ -78,13 +78,26 @@ invariant(
   "MFL/USD and Discount Rate box contents must stay right-aligned on small phones, including the MFL/USD editor.",
 );
 invariant(
-  responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    width: min(100%, 420px);\n    max-width: 420px;\n    height: min(420px, calc(100dvh - 16px));")
+  responsive.includes("#advancedSettingsModal,\n  #evaluationLoadModal {\n    padding:\n      max(8px, env(safe-area-inset-top))")
+    && responsive.includes("#advancedSettingsModal .advancedSettingsDialog,\n  #evaluationLoadModal .evaluationLoadDialog {\n    width: min(100%, 420px);\n    max-width: 420px;\n    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: min(420px, calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));\n  }")
     && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 72px auto;\n    gap: 6px;\n    min-height: 52px;"),
-  "Load Evaluation must use compact small-phone modal and result-row geometry.",
+  "Load Evaluation and Advanced Settings must share one safe-area-aware small-phone modal frame while Load Evaluation keeps compact result rows.",
 );
 invariant(
-  responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 64px auto;\n    gap: 4px;\n    padding-inline: 6px;\n  }"),
-  "Load Evaluation results must stay compact instead of stacking at very narrow phone widths.",
+  responsive.includes("#advancedSettingsModal .advancedSettingHeader,\n  #advancedSettingsModal .advancedLateSeasonRewardSetting {\n    align-items: center;\n    flex-direction: row;\n    gap: 8px;")
+    && responsive.includes("#advancedSettingsModal .advancedSettingHeaderControl,\n  #advancedSettingsModal .advancedRewardRateControlGroup {\n    justify-content: flex-end;\n    width: auto;\n    margin-left: auto;\n    gap: 6px;")
+    && responsive.includes("#advancedSettingsModal .advancedSettingsFooter {\n    display: grid;\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 6px;\n    padding: 6px 8px;")
+    && responsive.includes("#advancedSettingsModal .advancedSettingsFooter button {\n    width: 100%;\n    min-width: 0;\n    height: 36px;\n    min-height: 36px;"),
+  "Advanced Settings must stay vertically compact on phones without stacking section controls or its three footer actions.",
+);
+invariant(
+  responsive.includes("#advancedSettingsModal,\n  #evaluationLoadModal {\n    padding:\n      max(6px, env(safe-area-inset-top))")
+    && responsive.includes("#advancedSettingsModal .advancedSettingsDialog,\n  #evaluationLoadModal .evaluationLoadDialog {\n    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: min(390px, calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));\n  }")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadList {\n    grid-auto-rows: 48px;\n    padding: 5px 6px 8px;\n  }")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 64px auto;\n    gap: 4px;\n    min-height: 48px;\n    padding-inline: 6px;\n  }"),
+  "Both Evaluation popups must scale again at the tiny-phone breakpoint while Load Evaluation results remain one-line and touchable.",
 );
 invariant(
   responsive.includes("#evaluationPage .evaluationSummaryTable :is(th, td):first-child,\n  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td):first-child {\n    padding-left: 6px;\n  }"),
