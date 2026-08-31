@@ -122,11 +122,16 @@ for (const required of [
   invariant(canonicalRuntime.includes(required), `Canonical source must preserve Filters transition ownership through ${required}`);
 }
 
+invariant(
+  sharedCore.includes("function closeFilters() {")
+    && sharedCore.includes("__mflTableCloseFiltersOwner.apply(this, arguments)"),
+  "Shared core must retain the stable Filters close facade while Table ownership remains lazy.",
+);
 for (const required of [
   "function updateFilterSummary(count = activeFilterCount()) {",
   "const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;",
   'filterSummary.textContent = String(normalizedCount);',
-  "function closeFilters(commitChanges = false, restoreTriggerFocus = true) {",
+  "function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = true) {",
   "if (restoreTriggerFocus) openFiltersButton.focus();",
 ]) {
   invariant(tableCore.includes(required), `Canonical Table source must own Filters behavior through ${required}`);
@@ -191,4 +196,4 @@ invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters b
 new Function(sharedCore);
 new Function(tableCore);
 
-console.log("Source-owned Filters markup, styling, transition reset, popup focus/Escape behavior, draft preservation, and generated Table runtime validation passed.");
+console.log("Source-owned Filters markup, styling, transition reset, popup focus/Escape behavior, draft preservation, shared facade, and generated Table runtime validation passed.");
