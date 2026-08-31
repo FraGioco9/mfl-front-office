@@ -23,8 +23,13 @@ for (const [breakpoint, headerSize, rowSize] of [[900, 10, 12], [520, 9, 11], [3
 
 assert.match(
   stylesSource,
-  /#progressionPage \.playerTableScroller th \{\s*height: var\(--mfl-table-header-height\);\s*min-height: var\(--mfl-table-header-height\);\s*line-height: var\(--mfl-table-header-height\);\s*\}/,
-  "Canonical table CSS must own header height, minimum height, and line height for both first paint and hydration.",
+  /#progressionPage \.playerTableScroller th \{\s*height: var\(--mfl-table-header-height\);\s*min-height: var\(--mfl-table-header-height\);\s*line-height: 1\.2;\s*vertical-align: middle;\s*\}/,
+  "Canonical table CSS must own header height and native middle alignment without using the full header height as text line-height.",
+);
+assert.match(
+  stylesSource,
+  /#progressionPage #tableHead \.tableHeaderCellContent \{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?height: var\(--mfl-table-header-height\);/,
+  "Header labels, arrows, and controls must share one full-height flex centering host.",
 );
 
 assert.doesNotMatch(

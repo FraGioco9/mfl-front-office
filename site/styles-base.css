@@ -1700,7 +1700,8 @@ td {
   padding: 0 6px;
   text-align: left;
   white-space: nowrap;
-  line-height: 38px;
+  line-height: 1.2;
+  vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;

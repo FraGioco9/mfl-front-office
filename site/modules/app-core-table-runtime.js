@@ -863,12 +863,12 @@ function tableBuildHeaderOwner() {
 
   selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
   selectionHeader.appendChild(selectVisibleInput);
-  headerRow.appendChild(selectionHeader);
+  headerRow.appendChild(tableCenterHeaderCellContents(selectionHeader));
 
   const actionsHeader = document.createElement("th");
   actionsHeader.className = "rowActionsCell";
   actionsHeader.setAttribute("aria-label", "Player actions");
-  headerRow.appendChild(actionsHeader);
+  headerRow.appendChild(tableCenterHeaderCellContents(actionsHeader));
 
   const mobileTable = window.matchMedia("(max-width: 900px)").matches;
   const compactTableHeadings = window.matchMedia("(max-width: 520px)").matches;
@@ -949,7 +949,7 @@ function tableBuildHeaderOwner() {
       });
     }
 
-    headerRow.appendChild(cell);
+    headerRow.appendChild(tableCenterHeaderCellContents(cell));
   });
 
   tableHead.replaceChildren(headerRow);
@@ -2417,6 +2417,22 @@ function compactMobilePlayerName(value) {
 
 function compactMobileJoinedAgency(value) {
   return String(value || "").trim().split(/\s+/, 1)[0] || "";
+}
+
+function tableCenterHeaderCellContents(cell) {
+  if (!(cell instanceof HTMLTableCellElement)) return cell;
+  const existingHost = cell.childNodes.length === 1
+    && cell.firstElementChild instanceof HTMLElement
+    && cell.firstElementChild.classList.contains("tableHeaderCellContent")
+    ? cell.firstElementChild
+    : null;
+  if (existingHost) return cell;
+
+  const contentHost = document.createElement("span");
+  contentHost.className = "tableHeaderCellContent";
+  while (cell.firstChild) contentHost.appendChild(cell.firstChild);
+  cell.appendChild(contentHost);
+  return cell;
 }
 
 function tableCenterCellContents(cell) {

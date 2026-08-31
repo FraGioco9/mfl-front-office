@@ -47,8 +47,8 @@ invariant(
 invariant(
   styles.includes("--mfl-table-row-outer-height: 39px;")
     && styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
-    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);\n  vertical-align: middle;\n}"),
-  "Populated and loading table rows must share the canonical tbody/tr/td height contract.",
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1.2;\n  vertical-align: middle;\n}"),
+  "Populated and loading table rows must share the canonical tbody/tr/td height contract independently from text line-height.",
 );
 invariant(
   !loading.includes(".mflTableLoadingRow {\n  height:")

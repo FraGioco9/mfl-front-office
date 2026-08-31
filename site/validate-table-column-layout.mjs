@@ -182,9 +182,9 @@ invariant(
 );
 invariant(
   styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
-    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);")
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1.2;")
     && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
-  "Loaded and blank player rows must share the existing 39px outer row height while cell content remains compact at 34px.",
+  "Loaded and blank player rows must share the existing 39px outer row height and 34px cell height independently from text line-height.",
 );
 
 const baseRules = cssRules(stylesBase);

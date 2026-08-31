@@ -63,7 +63,7 @@ table :is(th, td) {
 
 table :is(th, td) > :is(a, span) {
   line-height: inherit;
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
 table :is(th, td) > :is(button, img, input, select, svg) {
@@ -227,7 +227,21 @@ body[data-page="club"] #progressionPage .rowsField {
 #progressionPage .playerTableScroller th {
   height: var(--mfl-table-header-height);
   min-height: var(--mfl-table-header-height);
-  line-height: var(--mfl-table-header-height);
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+#progressionPage #tableHead .tableHeaderCellContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--mfl-table-header-height);
+  min-height: var(--mfl-table-header-height);
+  line-height: 1.2;
+}
+
+#progressionPage #tableHead :is(.selectionCell, .rowActionsCell) .tableHeaderCellContent {
+  justify-content: center;
 }
 
 #progressionPage .playerTableScroller tbody > tr {
@@ -237,7 +251,7 @@ body[data-page="club"] #progressionPage .rowsField {
 #progressionPage .playerTableScroller td {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
-  line-height: var(--mfl-table-row-height);
+  line-height: 1.2;
   vertical-align: middle;
 }
 
