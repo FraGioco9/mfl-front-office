@@ -2440,17 +2440,11 @@ html:not(.mflInitialRouteResolved):is(
   #evaluationPage .evaluationSummaryPositionSelect {
     width: 100%;
     min-height: 28px;
-    padding: 0 8px 0 1px;
+    padding: 0 2px;
     font-size: inherit;
   }
 
-  #evaluationPage .evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after {
-    left: auto;
-    right: 2px;
-    width: 4px;
-    height: 4px;
-    border-width: 1px;
-  }
+  
 
   #evaluationPage .evaluationOverallControl {
     grid-template-columns: 16px 18px 16px;

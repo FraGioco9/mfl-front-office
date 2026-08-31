@@ -42,24 +42,29 @@ const standardsFallback = `@supports not selector(::-webkit-scrollbar) {
 if (!scrollbarSource.includes(standardsFallback)) {
   throw new Error("Standards-based scrollbar styling must be limited to browsers without WebKit scrollbar pseudo-elements.");
 }
+const horizontalOverflowHiddenStandardsFallback = `.playerTableScroller,
+  .tableScroller,
+  .advancedPlayerTableSection,
+  .mflStatsAgeDistribution {
+    scrollbar-width: none;
+  }`;
 const mobileHiddenStandardsFallback = `.views,
     .quickFilters,
     .filtersDialog .filterBuilder {
       scrollbar-width: none;
     }`;
-const playerTableHiddenStandardsFallback = `.playerTableScroller {
-      scrollbar-width: none;
-    }`;
-if (!scrollbarSource.includes(mobileHiddenStandardsFallback)
-  || !scrollbarSource.includes(playerTableHiddenStandardsFallback)) {
-  throw new Error("Mobile section-view, quick-filter, player-table, and Filters-body scrollers must hide standards-based scrollbars from the canonical scrollbar owner.");
+if (!scrollbarSource.includes(horizontalOverflowHiddenStandardsFallback)) {
+  throw new Error("Horizontally scrollable tables and histograms must hide standards-based scrollbar chrome from the canonical scrollbar owner.");
+}
+if (!scrollbarSource.includes(mobileHiddenStandardsFallback)) {
+  throw new Error("Mobile section-view, quick-filter, and Filters-body scrollers must hide standards-based scrollbars from the canonical scrollbar owner.");
 }
 // Chromium 121+ gives scrollbar-width/scrollbar-color precedence over WebKit pseudo-elements;
 // keeping these declarations out of WebKit-capable browsers preserves hidden native arrow buttons.
 const outsideStandardsFallback = scrollbarSource
   .replace(standardsFallback, "")
-  .replace(mobileHiddenStandardsFallback, "")
-  .replace(playerTableHiddenStandardsFallback, "");
+  .replace(horizontalOverflowHiddenStandardsFallback, "")
+  .replace(mobileHiddenStandardsFallback, "");
 if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFallback.includes("scrollbar-color:")) {
   throw new Error("Do not let standards scrollbar properties override WebKit thumb-only styling in Chromium/Safari.");
 }
@@ -97,6 +102,24 @@ if (!scrollbarSource.includes("*::-webkit-scrollbar-button {")
   || !scrollbarSource.includes("max-height: 0;")) {
   throw new Error("WebKit scrollbar buttons/arrows must stay globally hidden with zero-size button boxes.");
 }
+const horizontalOverflowHiddenWebkitScrollbar = `.playerTableScroller::-webkit-scrollbar,
+.tableScroller::-webkit-scrollbar,
+.advancedPlayerTableSection::-webkit-scrollbar,
+.mflStatsAgeDistribution::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}`;
+const horizontalOverflowHiddenMsScrollbar = `.playerTableScroller,
+.tableScroller,
+.advancedPlayerTableSection,
+.mflStatsAgeDistribution {
+  -ms-overflow-style: none;
+}`;
+if (!scrollbarSource.includes(horizontalOverflowHiddenWebkitScrollbar)
+  || !scrollbarSource.includes(horizontalOverflowHiddenMsScrollbar)) {
+  throw new Error("Horizontally scrollable tables and histograms must hide every native scrollbar through scrollbars.css without changing overflow behavior.");
+}
 const mobileHiddenWebkitScrollbar = `.views::-webkit-scrollbar,
   .quickFilters::-webkit-scrollbar,
   .filtersDialog .filterBuilder::-webkit-scrollbar {
@@ -104,23 +127,14 @@ const mobileHiddenWebkitScrollbar = `.views::-webkit-scrollbar,
     width: 0;
     height: 0;
   }`;
-const playerTableHiddenWebkitScrollbar = `.playerTableScroller::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-  }`;
 if (!scrollbarSource.includes("@media (max-width: 900px)")
   || !scrollbarSource.includes(mobileHiddenWebkitScrollbar)
-  || !scrollbarSource.includes(playerTableHiddenWebkitScrollbar)
   || !scrollbarSource.includes(`.views,
   .quickFilters,
   .filtersDialog .filterBuilder {
     -ms-overflow-style: none;
-  }`)
-  || !scrollbarSource.includes(`.playerTableScroller {
-    -ms-overflow-style: none;
   }`)) {
-  throw new Error("Mobile section-view, quick-filter, player-table, and Filters-body scrollers must hide every native scrollbar through scrollbars.css.");
+  throw new Error("Mobile section-view, quick-filter, and Filters-body scrollers must hide every native scrollbar through scrollbars.css.");
 }
 const modalThumbSelector = ":root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb";
 if (!scrollbarSource.includes(modalThumbSelector)) {
@@ -137,4 +151,4 @@ if (scrollbarSource.includes("--mfl-scrollbar-arrow") || scrollbarSource.include
   throw new Error("Scrollbar arrow styling must not be reintroduced; only the thumb should be visible.");
 }
 
-console.log("Canonical CSS priority, thumb-only scrollbar, and hidden mobile section-view/quick-filter/player-table/Filters-body scrollbar validation passed.");
+console.log("Canonical CSS priority, thumb-only scrollbar, hidden table/histogram horizontal scrollbars, and hidden mobile control scrollbars validation passed.");
