@@ -249,10 +249,15 @@ body[data-page="club"] #progressionPage .rowsField {
 }
 
 #progressionPage .playerTableScroller td {
-  height: var(--mfl-table-row-height);
-  min-height: var(--mfl-table-row-height);
+  height: var(--mfl-table-row-outer-height);
+  min-height: var(--mfl-table-row-outer-height);
+  padding-block: calc((var(--mfl-table-row-outer-height) - var(--mfl-table-row-height) - 1px) / 2);
   line-height: 1.2;
   vertical-align: middle;
+}
+
+#progressionPage .playerTableScroller tbody > tr:last-child > td {
+  padding-block: calc((var(--mfl-table-row-outer-height) - var(--mfl-table-row-height)) / 2);
 }
 
 #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {

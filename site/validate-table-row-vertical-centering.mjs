@@ -10,11 +10,15 @@ const tableSource = readFileSync(resolve(root, "modules/core-sources/table.js"),
 const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");
 
 const playerCellGeometry = styles.match(/#progressionPage \.playerTableScroller td \{([\s\S]*?)\n\}/)?.[1] || "";
-assert.match(playerCellGeometry, /height: var\(--mfl-table-row-height\);/, "Player cells must retain the canonical row-content height.");
-assert.match(playerCellGeometry, /min-height: var\(--mfl-table-row-height\);/, "Player cells must retain the canonical minimum row-content height.");
+assert.match(playerCellGeometry, /height: var\(--mfl-table-row-outer-height\);/, "Player cells must own the full rendered row height.");
+assert.match(playerCellGeometry, /min-height: var\(--mfl-table-row-outer-height\);/, "Player cells must retain the full rendered row height as their minimum.");
+assert.match(playerCellGeometry, /padding-block: calc\(\(var\(--mfl-table-row-outer-height\) - var\(--mfl-table-row-height\) - 1px\) \/ 2\);/, "Bordered player rows must split the outer/content height difference equally above and below the content host.");
 assert.match(playerCellGeometry, /line-height: 1\.2;/, "Player cells must not use full-row line-height as a vertical-positioning mechanism.");
 assert.match(playerCellGeometry, /vertical-align: middle;/, "Table cells must retain native middle alignment as the table-layout fallback.");
 assert.doesNotMatch(playerCellGeometry, /line-height: var\(--mfl-table-row-height\);/, "Player cells must not vertically position content with row-height line boxes.");
+
+const lastPlayerCellGeometry = styles.match(/#progressionPage \.playerTableScroller tbody > tr:last-child > td \{([\s\S]*?)\n\}/)?.[1] || "";
+assert.match(lastPlayerCellGeometry, /padding-block: calc\(\(var\(--mfl-table-row-outer-height\) - var\(--mfl-table-row-height\)\) \/ 2\);/, "The borderless last row must split the complete outer/content height difference equally above and below its content host.");
 
 const baseCellGeometry = baseStyles.match(/th,\ntd \{([\s\S]*?)\n\}/)?.[1] || "";
 assert.match(baseCellGeometry, /line-height: 1\.2;/, "Global table cells must use a normal text line box.");
@@ -86,4 +90,4 @@ for (const contentContract of [
 
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every table cell uses middle alignment without full-row line-height positioning, and every player-table header/body item shares a full-height centered content host.");
+console.log("Every player-table body cell owns the actual rendered row height and symmetrically centers its compact content host, including borderless last rows and responsive row sizes.");

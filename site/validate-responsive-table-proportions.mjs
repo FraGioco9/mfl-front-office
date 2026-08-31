@@ -70,6 +70,7 @@ assert.doesNotMatch(shared, /style\.setProperty\("--mfl-table-col-(?:name|listin
 assert.match(shared, /overflow-x: auto;\n {4}overflow-y: hidden;/);
 assert.match(styles, /#progressionPage \.playerTableScroller col\.col-name \{ width: var\(--mfl-table-col-name\); \}/);
 assert.match(styles, /#progressionPage \.playerTableScroller th \{\n {2}height: var\(--mfl-table-header-height\);/);
-assert.match(styles, /#progressionPage \.playerTableScroller td \{\n {2}height: var\(--mfl-table-row-height\);/);
+assert.match(styles, /#progressionPage \.playerTableScroller td \{\n {2}height: var\(--mfl-table-row-outer-height\);/);
+assert.match(styles, /padding-block: calc\(\(var\(--mfl-table-row-outer-height\) - var\(--mfl-table-row-height\) - 1px\) \/ 2\);/);
 assert.doesNotMatch(shared, /!important/);
 console.log("Responsive player-table headers preserve desktop scale while compact rows are intentionally taller and Name/Listing space is reallocated to Positions across first paint and hydration.");

@@ -182,9 +182,10 @@ invariant(
 );
 invariant(
   styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
-    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: 1.2;")
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-outer-height);\n  min-height: var(--mfl-table-row-outer-height);\n  padding-block: calc((var(--mfl-table-row-outer-height) - var(--mfl-table-row-height) - 1px) / 2);\n  line-height: 1.2;")
+    && styles.includes("#progressionPage .playerTableScroller tbody > tr:last-child > td {\n  padding-block: calc((var(--mfl-table-row-outer-height) - var(--mfl-table-row-height)) / 2);\n}")
     && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
-  "Loaded and blank player rows must share the existing 39px outer row height and 34px cell height independently from text line-height.",
+  "Loaded player cells must own the 39px rendered row while symmetrically centering the compact 34px content area; blank rows inherit the same outer geometry.",
 );
 
 const baseRules = cssRules(stylesBase);
