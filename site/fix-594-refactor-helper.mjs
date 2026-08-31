@@ -32,6 +32,16 @@ const replacements = [
     '    const loader = runtimeWindow.__mflRuntimeResources;',
     '    const loader = Reflect.get(runtimeWindow, "__mflRuntimeResources");',
   ],
+  ['  "modules/app-core-build-normalizer.js",\n', ''],
+  ['  "modules/app-core-evaluation-chunk.js",\n', ''],
+  ['  "modules/app-core-player-chunk.js",\n', ''],
+  ['  "modules/app-core-route-chunks.js",\n', ''],
+  ['  "modules/app-core-settings-chunk.js",\n', ''],
+  ['  "modules/app-core-splitter-utils.js",\n', ''],
+  ['  "modules/app-core-stats-route-ownership.js",\n', ''],
+  ['  "modules/app-core-table-chunk.js",\n', ''],
+  ['  "modules/app-core-wallet-chunk.js",\n', ''],
+  ['  "modules/app-core-watchlist-route-chunk.js",\n', ''],
 ];
 
 for (const [before, after] of replacements) {
@@ -40,4 +50,4 @@ for (const [before, after] of replacements) {
 }
 
 await writeFile(url, source, "utf8");
-console.log("Issue 594 refactor helper is ready for runtime ownership validation.");
+console.log("Issue 594 refactor helper is ready for staged runtime ownership validation.");
