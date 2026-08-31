@@ -16,13 +16,8 @@ site/vercel.production.json
 # Application-core compiler sources are build-only. Production serves the generated
 # shared core and route runtime artifacts created before Vercel packaging.
 site/build-app-core.mjs
+site/sync-release-projections.mjs
 site/modules/app-config.js
+site/modules/pre-bootstrap-route-state.js
 site/modules/package.json
-site/modules/app-core.js
-site/modules/app-core-build-normalizer.js
-site/modules/app-core-route-chunks.js
-site/modules/app-core-settings-chunk.js
-site/modules/app-core-player-chunk.js
-site/modules/app-core-table-chunk.js
-site/modules/app-core-wallet-chunk.js
-site/modules/app-core-watchlist-route-chunk.js
+site/modules/core-sources
