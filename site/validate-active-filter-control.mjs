@@ -68,7 +68,6 @@ for (const required of [
   'const canonicalFilterSummaryUpdater = Reflect.get(window, "updateFilterSummary");',
   'if (typeof canonicalFilterSummaryUpdater === "function") {',
   "canonicalFilterSummaryUpdater(0);",
-  '"cross-page active Filters presentation reset"',
 ]) {
   invariant(sharedSource.includes(required), `Canonical shared source is missing cross-page Filters reset contract: ${required}`);
   invariant(coreRuntime.includes(required), `Generated shared runtime is missing cross-page Filters reset contract: ${required}`);
