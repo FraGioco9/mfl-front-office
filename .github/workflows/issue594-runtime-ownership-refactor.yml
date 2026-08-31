@@ -31,6 +31,8 @@ jobs:
         run: node site/fix-594-refactor-helper.mjs
       - name: Apply runtime ownership refactor
         run: node site/refactor-594-runtime-ownership.mjs
+      - name: Restore current Global Search validator
+        run: git checkout origin/main -- site/validate-global-search-results.mjs
       - name: Migrate validators off retired authoring sources
         run: node site/migrate-594-retired-validator-reads.mjs
       - name: Generate source-owned artifacts
