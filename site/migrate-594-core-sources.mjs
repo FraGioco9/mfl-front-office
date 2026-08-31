@@ -78,7 +78,7 @@ for (const entry of CORE_SOURCES) {
   const runtimePath = resolve(siteRoot, "modules", entry.runtime);
   const source = String(await readFile(sourcePath, "utf8")).replace(/\\r\\n?/g, "\\n").replace(/\\s*$/, "");
   if (!source) throw new Error(\`Canonical core source is empty: \${entry.source}.\`);
-  artifacts.push(Object.freeze({ ...entry, sourcePath, runtimePath, source }));
+  artifacts.push(Object.freeze({ ...entry, sourceName: entry.source, sourcePath, runtimePath, source }));
 }
 
 if (!artifacts.some(({ source }) => source.includes('icon: "calendar-x-2"'))) {
@@ -90,7 +90,7 @@ if (!artifacts.some(({ source }) => source.includes('icon: "calendar-clock"'))) 
 if (!artifacts.some(({ source }) => source.includes("\`/retirement-\${marker.icon}.svg\`"))) {
   throw new Error("Canonical core sources do not render retirement marker SVG assets.");
 }
-const playerSource = artifacts.find(({ source: sourceName }) => sourceName === "player.js")?.source || "";
+const playerSource = artifacts.find(({ sourceName }) => sourceName === "player.js")?.source || "";
 if (!playerSource.includes('ageMarker.icon)}.svg')) {
   throw new Error("Canonical Player core source does not render retirement SVG markers.");
 }
