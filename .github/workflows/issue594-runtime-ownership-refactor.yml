@@ -8,6 +8,7 @@ on:
       - site/refactor-594-runtime-ownership.mjs
       - site/fix-594-refactor-helper.mjs
       - site/migrate-594-retired-validator-reads.mjs
+      - site/validate-evaluation-search-clear-selection.mjs
       - .github/workflows/issue594-runtime-ownership-refactor.yml
 
 permissions:
