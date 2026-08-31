@@ -71,6 +71,10 @@ for (const name of names) {
     `'await withInteractionBusy(loadClubData, Reflect.get(window, "__mflInteractionBusy")?.reason);'`,
     `'return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);'`,
   );
+  source = source.replaceAll(
+    `'function updateFilterSummary(count = activeFilterCount()) {\\n  filterSummary.textContent = String(count);\\n}'`,
+    `'function updateFilterSummary(count = activeFilterCount()) {\\n  const numericCount = Number(count);\\n  const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;\\n  const active = normalizedCount >= 1;\\n  filterSummary.textContent = String(normalizedCount);'`,
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
