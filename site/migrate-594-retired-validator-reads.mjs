@@ -22,6 +22,10 @@ for (const name of names) {
   const original = source;
   source = source.replaceAll('read("./modules/app-core.js")', canonicalCoreRead);
   source = source.replaceAll("read('./modules/app-core.js')", canonicalCoreRead);
+  source = source.replaceAll(
+    'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress));")',
+    'core.includes("navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));")',
+  );
   if (source !== original) {
     await writeFile(url, source, "utf8");
     changed += 1;
