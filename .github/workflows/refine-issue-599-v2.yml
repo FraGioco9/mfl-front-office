@@ -1,0 +1,60 @@
+name: Refine issue 599 v2
+
+on:
+  push:
+    branches:
+      - fix/599-responsive-table-proportions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Apply corrected responsive table refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show d43daffa4d1e3dc8924408fc3cc8aa31b32106ee:.github/workflows/refine-issue-599.yml \
+            | sed -n "/^          python - <<'PY'$/,/^          PY$/p" \
+            | sed '1d;$d;s/^          //' > /tmp/refine-599.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/refine-599.py')
+          lines = path.read_text().splitlines()
+          matched = 0
+          for index, line in enumerate(lines):
+              if 'for \\(const \\[breakpoint, fontSize' not in line:
+                  continue
+              matched += 1
+              if 'r"' not in line or not line.rstrip().endswith('",'):
+                  raise SystemExit(f'unexpected target line: {line}')
+              line = line.replace('r"', "r'''", 1)
+              line = line.rstrip()[:-2] + "''',"
+              lines[index] = line
+          if matched != 1:
+              raise SystemExit(f'expected one quoted-regex target, found {matched}')
+          path.write_text('\n'.join(lines) + '\n')
+          PY
+          git reset --hard 9e09523322294b29a160ad6fd285fe0f841703c7
+          python /tmp/refine-599.py
+          node site/sync-release-projections.mjs
+          cd site
+          npm ci
+          npm run check
+          cd ..
+          git config user.name "FraGioco9"
+          git config user.email "29951460+FraGioco9@users.noreply.github.com"
+          git add site
+          git commit -m "Refine small-screen table sizing"
+          git push --force-with-lease origin HEAD:fix/599-responsive-table-proportions
