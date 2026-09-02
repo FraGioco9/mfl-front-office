@@ -10,7 +10,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, syncWorkflow] = await Promise.all([
+const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, siteQualityWorkflow] = await Promise.all([
   read("./release.json"),
   read("./build-app-core.mjs"),
   read("./modules/pre-bootstrap-route-state.js"),
@@ -18,7 +18,7 @@ const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore,
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./table-width-runtime.js"),
-  read("../.github/workflows/release-projection-sync.yml"),
+  read("../.github/workflows/site-quality.yml"),
 ]);
 
 const release = JSON.parse(releaseSource);
@@ -44,9 +44,13 @@ invariant(
   "The canonical build must regenerate release projections from release.json before browser artifacts.",
 );
 invariant(
-  syncWorkflow.includes("node site/sync-release-projections.mjs")
-    && syncWorkflow.includes("site/bootstrap.js site/bootstrap-core.js site/index.html"),
-  "Pull requests must automatically persist generated bootstrap/footer release projections.",
+  siteQualityWorkflow.includes("run: npm run build")
+    && siteQualityWorkflow.includes("site/bootstrap.js")
+    && siteQualityWorkflow.includes("site/bootstrap-core.js")
+    && siteQualityWorkflow.includes("site/index.html")
+    && siteQualityWorkflow.includes("site/modules/app-core-*-runtime.js")
+    && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
+  "Site Quality must own one ordered build-and-commit path for release projections and generated application artifacts.",
 );
 invariant(
   preBootstrapSource.includes("window.__mflRelease = data.release;")
@@ -92,4 +96,4 @@ invariant(
   "Footer projection generation must replace a stale version from the canonical release input.",
 );
 
-console.log(`Single release source validation passed for v${version}: release.json owns the version and all browser literals are generated projections.`);
+console.log(`Single release source validation passed for v${version}: release.json owns the version and Site Quality persists every generated projection/artifact in one ordered path.`);
