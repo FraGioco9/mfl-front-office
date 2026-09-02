@@ -1,5 +1,9 @@
 [
   [
+    "v1.127.7",
+    "Consolidate UI architecture and protect Watchlist persistence"
+  ],
+  [
     "v1.127.6",
     "Optimize Evaluation for small screens and stable loading"
   ],
