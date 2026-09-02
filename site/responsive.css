@@ -2461,12 +2461,10 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationPage .evaluationSummaryPositionSelect {
-    --mfl-evaluation-position-trigger-width: 38px;
-    --mfl-evaluation-position-chevron-left: min(29px, calc(100% - 8px));
-    width: min(var(--mfl-evaluation-position-trigger-width), 100%);
+    width: max-content;
     max-width: 100%;
     min-height: 28px;
-    padding: 0 10px 0 0;
+    padding: 0;
     font-size: inherit;
   }
 
