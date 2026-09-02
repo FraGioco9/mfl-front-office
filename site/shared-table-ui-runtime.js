@@ -155,7 +155,7 @@
     align-self: center;
   }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
-    gap: 0;
+    gap: 1px;
   }
   #progressionPage .playerTableScroller td.col-age .playerAgeValue {
     flex: 0 0 auto;
