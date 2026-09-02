@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource] = await Promise.all([
+const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource, index] = await Promise.all([
   read("./styles.css"),
   read("./styles-base.css"),
   read("./loading.css"),
@@ -24,6 +24,7 @@ const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, 
     read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
+  read("./index.html"),
 ]);
 
 invariant(
@@ -229,11 +230,13 @@ invariant(
 );
 invariant(
   tableLoading.includes("function hidePager() {")
-    && tableLoading.includes("if (page) page.hidden = true;")
-    && tableLoading.includes("if (snapshot.dataLoading || requestActive()) {")
+    && tableLoading.includes("function syncRenderedRows() {")
+    && tableLoading.includes("const renderedRowsPresent = syncRenderedRows();")
+    && tableLoading.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
     && tableLoading.includes("hidePager();")
+    && !index.includes('html.mflDataLoading #progressionPage nav.pager')
     && !tableLoading.includes("preservePager"),
-  "Table loading must hide nav.pager for the full active request/loading window, including cached-row preservation."
+  "Table loading must hide nav.pager only while the loading surface is blank and expose it as soon as real rows render, even if broader loading remains active."
 );
 invariant(
   tableLoading.includes("controller.subscribe(sync)")
