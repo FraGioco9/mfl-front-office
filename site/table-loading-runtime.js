@@ -68,7 +68,7 @@
     if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
     const page = pager();
     if (page) page.hidden = !pagerRouteActive();
-    return Boolean(page && !page.hidden);
+    return true;
   }
 
   function hasCanonicalLoadingRows(body) {
@@ -269,10 +269,13 @@
       return;
     }
     if (snapshot.dataLoading || requestActive()) {
-      const renderedRowsVisible = syncRenderedRows();
-      if (!renderedRowsVisible) hidePager();
-      else hidePlayerCount();
+      const renderedRowsPresent = syncRenderedRows();
       neutralizeSelectionHeader();
+      if (renderedRowsPresent) {
+        hidePlayerCount();
+        return;
+      }
+      hidePager();
       if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;
       show({ replaceExisting: true });
     } else release();
