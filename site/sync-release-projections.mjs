@@ -231,6 +231,17 @@ export function normalizeIndexReleaseProjection(source, version) {
   );
 }
 
+export function normalizeIndexPagerLoadingProjection(source) {
+  return replaceExactlyOnce(
+    String(source || ""),
+    /^      html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager(?:,\n      html\.mflDataLoading #progressionPage nav\.pager)? \{\n        display: none;\n      \}$/gm,
+    `      html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
+        display: none;
+      }`,
+    "index pager data-render visibility projection",
+  );
+}
+
 export function normalizeIndexFirstPaintConfigProjection(source) {
   const input = String(source || "");
   const generatedPattern = /^        \/\/ BEGIN GENERATED FIRST-PAINT ROUTE CONFIG[\s\S]*?^        \/\/ END GENERATED FIRST-PAINT ROUTE CONFIG$/gm;
@@ -331,11 +342,13 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
       normalizeBootstrapReleaseProjection(source, version, "bootstrap.js"),
     )],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexTableConfigRuntimeProjection(
-      normalizeIndexMobileTableFirstPaintCascadeProjection(
-        normalizeIndexMflStatsFiltersProjection(
-          normalizeIndexMobileWatchlistFirstPaintProjection(
-            normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+    ["index.html", (source) => normalizeIndexPagerLoadingProjection(
+      normalizeIndexTableConfigRuntimeProjection(
+        normalizeIndexMobileTableFirstPaintCascadeProjection(
+          normalizeIndexMflStatsFiltersProjection(
+            normalizeIndexMobileWatchlistFirstPaintProjection(
+              normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+            ),
           ),
         ),
       ),
