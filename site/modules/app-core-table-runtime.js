@@ -1056,6 +1056,9 @@ function populateAddFilterSelect(pageName = tablePageKey() || state.currentPage 
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.textContent = "Add filter...";
+  placeholder.disabled = true;
+  placeholder.hidden = true;
+  placeholder.selected = true;
   fragment.appendChild(placeholder);
 
   availableFilterColumns(pageName)
