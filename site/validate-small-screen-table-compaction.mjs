@@ -44,6 +44,20 @@ assert.ok(
   shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.getClientRects().length === 0) return;'),
   "Fade ownership must clear only when leaving mobile and preserve the previous cue while the table is temporarily non-renderable.",
 );
+assert.ok(
+  shared.includes('function clearViewScrollerCues(views) {')
+    && shared.includes('if (!MOBILE_TABLE_MEDIA.matches || views.hidden) {\n      clearViewScrollerCues(views);\n      return;\n    }\n    if (views.getClientRects().length === 0) return;'),
+  "Views and Quick Filters must clear overflow cues only when intentionally unavailable, not during a temporary non-renderable hydration phase.",
+);
+assert.doesNotMatch(
+  shared,
+  /if \(!MOBILE_TABLE_MEDIA\.matches \|\| views\.getClientRects\(\)\.length === 0\) \{[\s\S]*?removeViewScrollShell\(views\);/,
+  "Temporary Views/Quick Filters invisibility must not destroy the fade/chevron shell.",
+);
+assert.ok(
+  shared.includes('const contentWidth = viewContentWidth(views);\n    if (contentWidth <= 0) return;'),
+  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful width measurement.",
+);
 
 for (const token of [
   '.playerTableActionsButton { width: 18px;',
@@ -87,4 +101,4 @@ for (const [breakpoint, width, rowHeight, fontSize, iconSize] of [
   assert.match(dropdowns, contract, `Player action controls must use the compact ${breakpoint}px geometry contract.`);
 }
 for (const source of [responsive, shared, dropdowns, table]) assert.doesNotMatch(source, /!important/, "Compact tables must not introduce !important.");
-console.log("Player, Evaluation, Advanced Settings, row actions, first-paint controls, and fade lifecycle share one compact small-screen contract.");
+console.log("Player, Evaluation, Advanced Settings, row actions, first-paint controls, table fades, and horizontal chevron cues share one compact small-screen contract.");
