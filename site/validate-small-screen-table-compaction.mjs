@@ -8,6 +8,7 @@ const read = (name) => readFileSync(resolve(root, name), "utf8");
 const responsive = read("responsive.css");
 const shared = read("shared-table-ui-runtime.js");
 const dropdowns = read("dropdowns.css");
+const projection = read("sync-release-projections.mjs");
 const table = read("modules/core-sources/table.js");
 const bootstrap = read("bootstrap.js");
 const index = read("index.html");
@@ -27,6 +28,48 @@ assert.doesNotMatch(shared, /function syncMobileColumnWidths/, "Responsive colum
 for (const width of [760, 600, 540]) assert.ok(shared.includes(`min-width: ${width}px;`), `Player table missing ${width}px compact floor.`);
 for (const geometry of ['30px;\n    --mfl-table-row-height: 26px', '26px;\n    --mfl-table-row-height: 22px', '24px;\n    --mfl-table-row-height: 20px']) assert.ok(shared.includes(geometry), `Player rows missing compact geometry ${geometry}`);
 for (const triggerSize of [18, 15, 13]) assert.ok(shared.includes(`width: ${triggerSize}px;`), `Player row action trigger missing ${triggerSize}px compact size.`);
+
+assert.ok(
+  shared.includes('const TINY_TABLE_MEDIA = window.matchMedia("(max-width: 380px)");')
+    && shared.includes('TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);')
+    && shared.includes('TINY_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);'),
+  "The tiny-screen media-query owner must exist for both runtime listener lifecycle paths.",
+);
+assert.doesNotMatch(
+  shared,
+  /if \(!MOBILE_TABLE_MEDIA\.matches \|\| scroller\.getClientRects\(\)\.length === 0\) \{\s*setPlayerTableFadeDirections\(scroller, false, false\);/,
+  "A temporarily hidden table must not clear an already-valid first-paint/hydrated fade direction.",
+);
+assert.ok(
+  shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.getClientRects().length === 0) return;'),
+  "Fade ownership must clear only when leaving mobile and preserve the previous cue while the table is temporarily non-renderable.",
+);
+
+for (const token of [
+  '.playerTableActionsButton { width: 18px;',
+  '.playerTableActionsButton svg { width: 12px;',
+  '.flagImage { width: 14px;',
+  ':is(.retirementMarker, .newMintMarker) { flex: 0 0 11px;',
+  '.playerNoteIcon { font-size: 9px;',
+  '.listingCellContent { width: 18px;',
+  '.listingCellIcon { flex: 0 0 9px;',
+  '.playerTableActionsButton { width: 15px;',
+  '.playerTableActionsButton svg { width: 9px;',
+  '.flagImage { width: 11px;',
+  ':is(.retirementMarker, .newMintMarker) { flex-basis: 9px;',
+  '.playerNoteIcon { font-size: 7px;',
+  '.listingCellContent { width: 15px;',
+  '.listingCellIcon { flex-basis: 7px;',
+  '.playerTableActionsButton { width: 13px;',
+  '.playerTableActionsButton svg { width: 8px;',
+  '.flagImage { width: 10px;',
+  ':is(.retirementMarker, .newMintMarker) { flex-basis: 8px;',
+  '.listingCellContent { width: 13px;',
+  '.listingCellIcon { flex-basis: 6px;',
+]) {
+  assert.ok(projection.includes(token), `First-paint mobile control geometry missing ${token}`);
+}
+
 assert.ok(responsive.includes('min-width: 500px;'), "Phone Evaluation table must use a reduced width floor.");
 assert.ok(responsive.includes('min-width: 460px;'), "Tiny Evaluation/Advanced tables must use a reduced width floor.");
 assert.ok(responsive.includes('--mfl-evaluation-header-row-height: 27px;') && responsive.includes('--mfl-evaluation-season-row-height: 23px;'), "Phone Evaluation rows must be compact.");
@@ -44,4 +87,4 @@ for (const [breakpoint, width, rowHeight, fontSize, iconSize] of [
   assert.match(dropdowns, contract, `Player action controls must use the compact ${breakpoint}px geometry contract.`);
 }
 for (const source of [responsive, shared, dropdowns, table]) assert.doesNotMatch(source, /!important/, "Compact tables must not introduce !important.");
-console.log("Player, Evaluation, Advanced Settings, and row action controls use one compact small-screen contract with stable first-paint/hydrated geometry.");
+console.log("Player, Evaluation, Advanced Settings, row actions, first-paint controls, and fade lifecycle share one compact small-screen contract.");
