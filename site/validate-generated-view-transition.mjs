@@ -134,17 +134,18 @@ invariant(
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");
 const pageLoaderStart = pageLoaderOwner.text.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
 const pageLoader = pageLoaderOwner.text.slice(pageLoaderStart);
-const pageRun = pageLoader.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+const pageRun = pageLoader.indexOf("return runPageTransition(pageName, navigationUpdatesHistory, options, (navigationTransition) => setPage(pageName, false, {");
 const pageRoutePrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", pageRun);
-const pageRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", pageRun);
+const pageRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1", pageRun);
 const firstPageLoad = [pageRoutePrepare, pageRequest].filter((index) => index >= 0).sort((a, b) => a - b)[0] ?? -1;
 invariant(
   pageRun >= 0 && firstPageLoad > pageRun,
-  "Generated page loading must begin only after the global page transition runner settles.",
+  "Generated page loading must run inside the global page-transition loader so destination loading remains active until settlement.",
 );
 invariant(
-  pageLoader.indexOf("updateHash = false;", pageRun) > pageRun,
-  "Generated page loader must suppress downstream duplicate history ownership after the global transition.",
+  pageLoader.indexOf("skipNavigationTransition: true", pageRun) > pageRun
+    && pageLoader.indexOf("__mflNavigationUpdatesHistory: navigationUpdatesHistory", pageRun) > pageRun,
+  "Generated page loader must recurse without a second transition while preserving the original history intent.",
 );
 
 const mflRouteOwner = sourceContaining(
@@ -157,7 +158,7 @@ invariant(
 );
 const mflStatsBranch = pageLoader.indexOf('if (pageName === "mfl" && requestedMflView === "stats") {');
 const mflStatsPrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", mflStatsBranch);
-const mflStatsRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", mflStatsPrepare);
+const mflStatsRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1", mflStatsPrepare);
 const mflStatsFinalRender = pageLoader.indexOf('originalSetPage.call(this, "mflstats"', mflStatsRequest);
 invariant(
   mflStatsBranch >= 0 && mflStatsPrepare > mflStatsBranch && mflStatsRequest > mflStatsPrepare && mflStatsFinalRender > mflStatsRequest,

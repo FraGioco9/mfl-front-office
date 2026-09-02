@@ -237,12 +237,13 @@ invariant(
 );
 
 const setPageIndex = coreSource.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
-const transitionIndex = coreSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)", setPageIndex);
-const statsBranchIndex = coreSource.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {', transitionIndex);
+const transitionIndex = coreSource.indexOf("return runPageTransition(pageName, navigationUpdatesHistory, options, (navigationTransition) => setPage(pageName, false, {", setPageIndex);
+const recursiveGuardIndex = coreSource.indexOf("skipNavigationTransition: true", transitionIndex);
+const statsBranchIndex = coreSource.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {', recursiveGuardIndex);
 const statsRuntimeIndex = coreSource.indexOf('await window.__mflEnsureRouteRuntime("database", { view: "stats" });', statsBranchIndex);
 invariant(
-  setPageIndex >= 0 && transitionIndex > setPageIndex && statsBranchIndex > transitionIndex && statsRuntimeIndex > statsBranchIndex,
-  "Database Stats runtime loading must occur only after the canonical global page transition.",
+  setPageIndex >= 0 && transitionIndex > setPageIndex && recursiveGuardIndex > transitionIndex && statsBranchIndex > recursiveGuardIndex && statsRuntimeIndex > statsBranchIndex,
+  "Database Stats runtime loading must run inside the canonical global page-transition loading window.",
 );
 
 console.log("Database Stats cached revisit rendering, Custom shared +1/-1 steppers, single histogram rebuild, preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");

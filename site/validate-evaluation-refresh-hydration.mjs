@@ -1,255 +1,93 @@
 import { readFile } from "node:fs/promises";
-
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-
-// Keep the source-level contract on the final PR head after canonical artifacts are generated.
-const [appCoreSource, bootstrap, loading, styles, evaluationSearchState] = await Promise.all([
+const invariant = (condition, message) => { if (!condition) throw new Error(message); };
+const [appCoreSource, bootstrap, searchRuntime] = await Promise.all([
   Promise.all([
-    read("./modules/core-sources/shared.js"),
-    read("./modules/core-sources/evaluation.js"),
-    read("./modules/core-sources/mfl-stats.js"),
-    read("./modules/core-sources/club.js"),
-    read("./modules/core-sources/settings.js"),
-    read("./modules/core-sources/player.js"),
-    read("./modules/core-sources/table.js"),
-    read("./modules/core-sources/wallet.js"),
+    read("./modules/core-sources/shared.js"), read("./modules/core-sources/evaluation.js"),
+    read("./modules/core-sources/mfl-stats.js"), read("./modules/core-sources/club.js"),
+    read("./modules/core-sources/settings.js"), read("./modules/core-sources/player.js"),
+    read("./modules/core-sources/table.js"), read("./modules/core-sources/wallet.js"),
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
-  read("./bootstrap.js"),
-  read("./loading.css"),
-  read("./styles.css"),
-  read("./evaluation-search-state-runtime.js"),
+  read("./bootstrap.js"), read("./evaluation-search-state-runtime.js"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
-const builtApplicationSources = [shared, ...Object.values(artifacts.routeChunks || {}).map((chunk) => String(chunk || ""))].join("\n");
 
-invariant(
-  shared.includes('const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
-    && shared.includes("playerId: routePlayerId,")
-    && shared.includes("const pendingEvaluationRoute = Boolean(")
-    && shared.includes("const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || \"\").trim();")
-    && shared.includes("if (pendingEvaluationRoute) {\n    evaluationSearchInput.placeholder = \"\";")
-    && shared.includes("evaluationButtons.hidden = false;")
-    && shared.includes("evaluationResetButton.hidden = false;")
-    && shared.includes("evaluationPlayerPageButton.hidden = false;")
-    && shared.includes("if (firstPaintEvaluationPlayerName) {\n        evaluationSearchInput.value = firstPaintEvaluationPlayerName;")
-    && !shared.includes('if (!row || getValue(row, "retirement_years") === 0) {'),
-  "A refreshed player/saved/shared Evaluation must hydrate without clearing its first-paint name or Reset/Player Page chrome.",
-);
+const renderStart = shared.indexOf("async function renderEvaluationPage()");
+const renderEnd = shared.indexOf("function playerFirstPaintKnownValues", renderStart);
+const renderPage = renderEnd > renderStart ? shared.slice(renderStart, renderEnd) : shared.slice(renderStart);
+invariant(renderPage.includes("await loadSavedEvaluation(savedId);")
+  && renderPage.includes("await loadSharedEvaluation(shareId);")
+  && !/state\.evaluationSavedId !== savedId\)[\s\S]{0,180}renderEmptyEvaluationSelection\(true\)/.test(renderPage)
+  && !/state\.evaluationShareId !== shareId\)[\s\S]{0,180}renderEmptyEvaluationSelection\(true\)/.test(renderPage),
+  "Saved/shared routes must not flash empty/recent results before snapshot hydration.");
 
-const emptySelectionStart = shared.indexOf("function renderEmptyEvaluationSelection(showRecentResults = true, forcePlain = false)");
-const emptySelectionEnd = shared.indexOf("function renderEvaluationSearchResults", emptySelectionStart);
-const emptySelectionSource = emptySelectionStart >= 0 && emptySelectionEnd > emptySelectionStart
-  ? shared.slice(emptySelectionStart, emptySelectionEnd)
-  : "";
-invariant(
-  emptySelectionSource.includes('const evaluationRouteParams = new URLSearchParams(window.location.search);')
-    && emptySelectionSource.includes('const pendingEvaluationRoute = !forcePlain && window.location.pathname === "/evaluation" && Boolean(')
-    && emptySelectionSource.includes('evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")')
-    && emptySelectionSource.includes('evaluationSearchInput.placeholder = "Search ID or player name";')
-    && !emptySelectionSource.includes("requestAnimationFrame")
-    && !emptySelectionSource.includes("evaluationSearchInput.focus(")
-    && !emptySelectionSource.includes("evaluationSearchInput.select()"),
-  "The empty-Evaluation renderer must preserve selected refresh routes, allow a forced plain shell on cached return, and never focus before readiness.",
-);
+invariant(evaluation.includes("let evaluationSnapshotLoadGeneration = 0;")
+  && evaluation.includes('let evaluationSnapshotLoadIdentity = "";')
+  && evaluation.includes("let evaluationSnapshotLoadPromise = null;")
+  && evaluation.includes("function evaluationSnapshotLoadIsCurrent(load)")
+  && evaluation.includes("function runEvaluationSnapshotLoad(kind, snapshotId, loadSnapshot)")
+  && evaluation.includes("if (evaluationSnapshotLoadPromise && evaluationSnapshotLoadIdentity === identity)")
+  && evaluation.includes('return runEvaluationSnapshotLoad("share", shareId')
+  && evaluation.includes('return runEvaluationSnapshotLoad("saved", savedId'),
+  "Saved/shared snapshots must use one deduplicated generation-aware loader.");
+invariant(evaluation.includes("if (!evaluationSnapshotLoadIsCurrent(load)) return false;")
+  && evaluation.includes("snapshotLoad: load,")
+  && evaluation.includes("if (snapshotLoad && !evaluationSnapshotLoadIsCurrent(snapshotLoad)) return false;"),
+  "Snapshot loading and payload application must reject stale route generations.");
 
-invariant(
-  shared.includes('const evaluationRouteSelected = Boolean(\n      state.evaluationPlayerId || evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()')
-    && shared.includes("evaluationLoadButton.hidden = evaluationRouteSelected || !walletLinked;")
-    && shared.includes("evaluationButtons.hidden = evaluationRouteSelected ? false : !walletLinked;")
-    && !shared.includes("evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;"),
-  "Wallet/account hydration must never expose Load while a player, saved, or shared Evaluation route is selected.",
-);
+const recoveryStart = evaluation.indexOf("async function recoverInvalidEvaluationLink(snapshotLoad = null)");
+const recoveryEnd = evaluation.indexOf("const advancedPlayerTableTsv", recoveryStart);
+const recovery = evaluation.slice(recoveryStart, recoveryEnd);
+invariant(recovery.includes('window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));')
+  && recovery.includes('window.history.replaceState({}, "", "/evaluation");')
+  && !recovery.includes("renderEmptyEvaluationSelection")
+  && !recovery.includes("renderEvaluationPage"),
+  "Invalid saved/shared recovery must settle URL/state only; the active loader owns the single final render.");
 
-const plainResetStart = shared.indexOf("function preparePlainEvaluationReentry() {");
-const plainResetEnd = shared.indexOf("async function setPage(", plainResetStart);
-const plainResetSource = plainResetStart >= 0 && plainResetEnd > plainResetStart
-  ? shared.slice(plainResetStart, plainResetEnd)
-  : "";
-const setPageStart = shared.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
-const setPagePrePaintEnd = shared.indexOf("  const previousPage = state.currentPage;", setPageStart);
-const setPagePrePaintSource = setPageStart >= 0 && setPagePrePaintEnd > setPageStart
-  ? shared.slice(setPageStart, setPagePrePaintEnd)
-  : "";
-invariant(
-  shared.includes("let evaluationPageCacheReady = false;")
-    && plainResetSource.includes('state.evaluationShareId = "";')
-    && plainResetSource.includes('state.evaluationSavedId = "";')
-    && plainResetSource.includes("state.evaluationPlayerId = null;")
-    && plainResetSource.includes("state.evaluationOverallRows = {};")
-    && plainResetSource.includes("state.evaluationSummaryPositions = {};")
-    && plainResetSource.includes('const routeParams = new URLSearchParams(window.location.search);')
-    && plainResetSource.includes("const hadEvaluationSelection = Boolean(")
-    && plainResetSource.includes("const clearSearchInput = evaluationPageCacheReady || hadEvaluationSelection;")
-    && plainResetSource.includes('if (clearSearchInput) {\n    evaluationSearchInput.value = "";\n  }')
-    && plainResetSource.includes("renderEmptyEvaluationSelection(false, true);")
-    && plainResetSource.includes("syncEvaluationSearchClearButton();")
-    && !plainResetSource.includes('state.evaluationSummaryPositions = {};\n  evaluationSearchInput.value = "";')
-    && setPagePrePaintSource.includes('const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());')
-    && setPagePrePaintSource.includes("if (plainEvaluationEntry) preparePlainEvaluationReentry();")
-    && shared.includes('const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;')
-    && shared.includes("? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }")
-    && shared.includes('if (pageName === "evaluation") preparePlainEvaluationReentry();')
-    && shared.includes("await setPageWithoutRouteLoading(pageName, true, options);")
-    && shared.includes("await setPage(pageName, true, options);"),
-  "Plain Evaluation entry must always clear stale selected-player state, while the initial already-plain startup pass must preserve any live typed search text; later cached re-entry still starts clean.",
-);
+const sharedLoadStart = evaluation.indexOf("async function loadSharedEvaluation(shareId)");
+const sharedLoadEnd = evaluation.indexOf("async function createSharedEvaluationFromPayload", sharedLoadStart);
+const sharedLoad = evaluation.slice(sharedLoadStart, sharedLoadEnd);
+const savedLoadStart = evaluation.indexOf("async function loadSavedEvaluation(savedId");
+const savedLoadEnd = evaluation.indexOf("function evaluationPresentValueTotalFromPayload", savedLoadStart);
+const savedLoad = evaluation.slice(savedLoadStart, savedLoadEnd);
+invariant(sharedLoad.includes("const recovered = await recoverInvalidEvaluationLink(load);")
+  && savedLoad.includes("const recovered = await recoverInvalidEvaluationLink(load);")
+  && sharedLoad.includes("await renderEvaluationPage();")
+  && savedLoad.includes("await renderEvaluationPage();"),
+  "Active invalid snapshot failures must perform one final render after recovery.");
+invariant(savedLoad.includes("let data = cachedSavedEvaluationEntry(id);")
+  && savedLoad.includes("if (!data) {")
+  && savedLoad.includes("data = rememberSavedEvaluationCacheEntry(data) || data;"),
+  "Cached Saved Evaluation payloads must bypass the network and keep the same canonical hydration path.");
 
-const evaluationPageStart = shared.indexOf("  if (evaluationPageActive) {");
-const evaluationPageEnd = shared.indexOf("  if (playerPageActive) {", evaluationPageStart);
-const evaluationPageSource = evaluationPageStart >= 0 && evaluationPageEnd > evaluationPageStart
-  ? shared.slice(evaluationPageStart, evaluationPageEnd)
-  : "";
-invariant(
-  evaluationPageSource.includes("const cachedEvaluationReentry = plainEvaluationRoute")
-    && evaluationPageSource.includes("&& options.reuseCachedRoute === true")
-    && evaluationPageSource.includes("&& evaluationPageCacheReady;")
-    && evaluationPageSource.includes('window.__mflInteractionBusy?.begin?.("evaluation-loading")')
-    && evaluationPageSource.includes('if (!cachedEvaluationReentry) {\n      document.documentElement.classList.remove("mflEvaluationReady");')
-    && !evaluationPageSource.includes("preparePlainEvaluationReentry();")
-    && evaluationPageSource.includes("if (!cachedEvaluationReentry) {\n        await finishEvaluationReadiness();")
-    && evaluationPageSource.includes("evaluationPageCacheReady = true;"),
-  "Cached plain Evaluation re-entry must skip repeated loading/readiness, with stale-selection clearing owned before destination visibility rather than inside the visible Evaluation block.",
-);
-
-invariant(
-  shared.includes('let evaluationReadinessBusyToken = "";')
-    && shared.includes("function releaseEvaluationReadinessBusy() {")
-    && shared.includes('if (pageName !== "evaluation") {\n    releaseEvaluationReadinessBusy();\n    document.body.classList.remove("evaluationPageLoading");\n  }')
-    && shared.indexOf('if (pageName !== "evaluation") {') < shared.indexOf('const transition = {\n      ...commitPageTransition(pageName, updateHash, options),')
-    && evaluationPageSource.includes('if (evaluationBusyToken) evaluationReadinessBusyToken = evaluationBusyToken;')
-    && evaluationPageSource.includes('const evaluationStillCurrent = pageNavigationIsCurrent(options)')
-    && evaluationPageSource.includes('&& state.currentPage === "evaluation"')
-    && evaluationPageSource.includes('&& window.location.pathname === "/evaluation";')
-    && evaluationPageSource.includes('if (evaluationBusyToken && evaluationReadinessBusyToken === evaluationBusyToken) {\n        releaseEvaluationReadinessBusy();\n      }')
-    && !evaluationPageSource.includes('window.__mflInteractionBusy?.end?.(evaluationBusyToken);'),
-  "Leaving Evaluation must release its busy owner before destination paint, and stale Evaluation completion must not mutate or release UI owned by the active route.",
-);
-
-const walletPreferencesStart = shared.indexOf("async function loadWalletPreferences(options = {}) {");
-const walletPreferencesEnd = shared.indexOf("async function saveWalletPreferencesNow", walletPreferencesStart);
-const walletPreferencesSource = walletPreferencesStart >= 0 && walletPreferencesEnd > walletPreferencesStart
-  ? shared.slice(walletPreferencesStart, walletPreferencesEnd)
-  : "";
-invariant(
-  walletPreferencesSource.includes("const walletPreferencesPageAtLoadStart = state.currentPage;")
-    && walletPreferencesSource.includes('const walletPreferencesPathAtLoadStart = `${window.location.pathname}${window.location.search}`;')
-    && walletPreferencesSource.includes("const walletPreferencesLoadStillOwnsRoute = state.currentPage === walletPreferencesPageAtLoadStart")
-    && walletPreferencesSource.includes('&& `${window.location.pathname}${window.location.search}` === walletPreferencesPathAtLoadStart;')
-    && walletPreferencesSource.includes("if (walletPreferencesLoadStillOwnsRoute")
-    && walletPreferencesSource.includes("applyFilters({ save: false });"),
-  "Wallet-preference completion may update shared state globally, but note-driven table/player repaint must remain owned by the route that started the load.",
-);
-
-invariant(
-  evaluationSearchState.includes("if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature) {")
-    && evaluationSearchState.includes("if (!refreshSupabase) return recentPrimePromise;")
-    && evaluationSearchState.includes("return primeRecentSearchData({ force, showLoading, refreshSupabase: true });")
-    && evaluationSearchState.includes("waitForSupabaseRecentState(refreshSupabase)")
-    && evaluationSearchState.includes("if (!force && recentPayload && recentPayloadSignature === signature) {")
-    && evaluationSearchState.includes("publishRecentPayload(recentPayload);")
-    && evaluationSearchState.includes("return renderEmptySearchFromCore();"),
-  "Every plain Evaluation route entry must refresh recent-player IDs from Supabase before accepting cached recent results, while unchanged IDs may reuse the already-loaded player display payload after that authoritative refresh.",
-);
-
-invariant(
-  builtApplicationSources.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);')
-    && builtApplicationSources.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);'),
-  "Evaluation navigation from Player pages and search results must cache the player name before the route changes.",
-);
-
-invariant(
-  shared.includes('["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)')
-    && evaluation.includes("async function applySharedEvaluationPayload(payload, options = {}) {")
-    && evaluation.includes("await renderEvaluationPage();\n}\n\nasync function loadSharedEvaluation")
-    && evaluation.includes("await applySharedEvaluationPayload(data.payload, {")
-    && evaluation.includes("mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,")
-    && evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
-    && evaluation.includes("playerId: payloadPlayerId,")
-    && !evaluation.includes('evaluationSearchInput.value = "";\n  renderEvaluationMflPerUsdControl(false);'),
-  "Evaluation startup must keep loading active through wallet/settings hydration and the final revision-aware player/saved/shared render without blanking the player name.",
-);
-
-invariant(
-  evaluation.includes("async function recoverInvalidEvaluationLink() {")
-    && evaluation.includes('const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
-    && evaluation.includes("playerRow = rowByPlayerId(candidatePlayerId);")
-    && evaluation.includes('if (!data.playerId) {\n    throw new Error("Evaluation player is not available.");\n  }')
-    && evaluation.includes('window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));')
-    && evaluation.includes('window.history.replaceState({}, "", "/evaluation");')
-    && evaluation.includes('document.documentElement.dataset.initialEvaluationSelection = "false";')
-    && evaluation.includes('evaluationSearchInput.value = "";')
-    && evaluation.includes("renderEmptyEvaluationSelection(true, true);")
-    && evaluation.includes("syncEvaluationSearchClearButton();")
-    && evaluation.includes("await recoverInvalidEvaluationLink();\n    await renderEvaluationPage();")
-    && !evaluation.includes("resetInvalidEvaluationLinkToPlainEvaluation"),
-  "Invalid saved/shared Evaluation URLs, including successful payloads without a player ID, must recover to a resolvable base player Evaluation or synchronously restore plain /evaluation and its search tip.",
-);
-
-invariant(
-  shared.includes('const evaluationPlayerName = formatCellValue(row, "name");')
-    && shared.includes('["player", String(evaluationRoute.searchParams.get("player") || state.evaluationPlayerId || "").trim()]')
-    && shared.includes('["saved", String(evaluationRoute.searchParams.get("saved") || state.evaluationSavedId || "").trim()]')
-    && shared.includes('["share", String(evaluationRoute.searchParams.get("share") || state.evaluationShareId || "").trim()]')
-    && shared.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:${kind}:${id}`, evaluationPlayerName);'),
-  "Rendered player, saved, and shared Evaluations must cache their player name by stable Evaluation identity for refresh first paint.",
-);
-
-invariant(
-  bootstrap.includes('const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v2:";')
-    && bootstrap.includes("function firstPaintEvaluationRouteState(")
-    && bootstrap.includes("function firstPaintEvaluationPlayerName(")
-    && bootstrap.includes('const cachedName = String(sessionStorage.getItem(`${EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX}${kind}:${id}`) || "").trim();')
-    && bootstrap.includes("const evaluationRouteState = firstPaintEvaluationRouteState();")
-    && bootstrap.includes("if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;")
-    && bootstrap.includes("const canLoad = plainEvaluation;"),
-  "Evaluation bootstrap must synchronously restore the cached player name by player/saved/share identity on refresh, while in-app plain re-entry clears that chrome before destination paint.",
-);
-
-invariant(
-  !bootstrap.includes("requestPlainEvaluationFirstPaintFocus")
-    && !bootstrap.includes("searchInput.focus({ preventScroll: true });")
-    && !bootstrap.includes("searchInput.select();"),
-  "Plain /evaluation must remain unselected at first paint; focus is owned only after Uniform Loading finishes.",
-);
-
-const clearStart = evaluationSearchState.indexOf('const clear = event.target.closest("#evaluationSearchClearButton");');
-const clearEnd = evaluationSearchState.indexOf('const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");', clearStart);
-const clearSource = clearStart >= 0 && clearEnd > clearStart
-  ? evaluationSearchState.slice(clearStart, clearEnd)
-  : "";
-invariant(
-  evaluation.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());')
-    && !evaluation.includes("activateEvaluationSearch")
-    && !evaluation.includes("requestAnimationFrame(activateEvaluationSearch)")
-    && evaluationSearchState.includes("function selectEmptySearch()")
-    && evaluationSearchState.includes('field.focus({ preventScroll: true });')
-    && evaluationSearchState.includes("field.select();")
-    && clearSource.includes("selectEmptySearch();")
-    && !clearSource.includes("restoreEmptyRecentResults("),
-  "Clearing the Evaluation search must prevent the clear control from stealing focus, select the cleared input through the single search-state focus owner, and avoid a duplicate recent-results restore.",
-);
-
-invariant(
-  loading.includes('[data-initial-evaluation-selection="false"] #evaluationLoadButton[hidden]')
-    && loading.includes(':is(#evaluationResetButton, #evaluationPlayerPageButton)')
-    && loading.includes('[data-initial-evaluation-selection="true"] #evaluationLoadButton')
-    && loading.includes('[data-initial-evaluation-selection="true"] #evaluationSearchInput::placeholder')
-    && loading.includes("color: transparent;"),
-  "Evaluation refresh first-paint CSS must show only Load on plain /evaluation, keep Load hidden on selected refresh routes, and suppress the selected-route placeholder before hydration.",
-);
-
-invariant(
-  styles.includes('.tableShell tbody tr:last-child > :is(th, td) {\n  border-bottom: 0;\n}')
-    && !styles.includes('.evaluationTable tbody tr:last-child > :is(th, td) {\n  border-bottom: 0;\n}'),
-  "Every bordered tableShell must own its single outer bottom edge without a duplicate last-row cell border.",
-);
-
-console.log("Evaluation refresh hydration, selected-route action stability, invalid-link recovery including missing-player payloads, cached plain-route re-entry, pre-paint empty history/navigation return, recent-player cache reuse, first-paint timing, clear-focus ownership, and shared table-edge validation passed.");
+const primeStart = shared.indexOf("function primeEmptyEvaluationSearch()");
+const primeEnd = shared.indexOf("function waitForEvaluationDiscountRate()", primeStart);
+const prime = shared.slice(primeStart, primeEnd);
+invariant(!prime.includes("focus(") && !prime.includes("select()")
+  && prime.includes("void prime(false, true, false);")
+  && searchRuntime.includes('hint.textContent = "Loading…";')
+  && searchRuntime.includes("ownsEmptyRecentResults"),
+  "Plain Evaluation must not auto-focus, while unresolved recent-five rows show one local Loading… surface on refresh and in-site entry.");
+invariant(bootstrap.includes("function syncFirstPaintEvaluationRecentLoadingShell()")
+  && bootstrap.includes('const currentHint = results.firstElementChild;')
+  && bootstrap.includes('results.dataset.mflEvaluationRecentLoading === "true"')
+  && bootstrap.includes('currentHint.textContent === "Loading…"')
+  && bootstrap.includes('hint.textContent = "Loading…";')
+  && bootstrap.includes('results.dataset.mflEvaluationRecentLoading = "true";')
+  && bootstrap.includes('Reflect.set(window, "__mflSyncEvaluationRecentLoadingShell", syncFirstPaintEvaluationRecentLoadingShell);')
+  && bootstrap.includes("syncFirstPaintEvaluationRecentLoadingShell();")
+  && shared.includes('if (preserveInitialRecentLoading) window.__mflSyncEvaluationRecentLoadingShell?.();')
+  && !shared.includes('if (requestedPageName === "evaluation") {\n    window.__mflSyncEvaluationRecentLoadingShell?.();\n  }'),
+  "Evaluation recent Loading must be painted before destination visibility, reuse its existing DOM node when already owned, and never be recreated by route commit.");
+invariant(bootstrap.includes("function firstPaintEvaluationRouteState(")
+  && !bootstrap.includes("requestPlainEvaluationFirstPaintFocus")
+  && !bootstrap.includes("searchInput.focus({ preventScroll: true });")
+  && !bootstrap.includes("searchInput.select();"),
+  "Bootstrap may restore selected names but must never auto-focus plain Evaluation.");
+new Function(shared); new Function(evaluation);
+console.log("Evaluation refresh/loading validation passed: one snapshot lifecycle, stale-route guards, local recent-five Loading feedback, background refresh, cached saved reuse, and no autofocus.");

@@ -1863,7 +1863,10 @@ function preparePlainEvaluationReentry() {
   if (clearSearchInput) {
     evaluationSearchInput.value = "";
   }
-  renderEmptyEvaluationSelection(false, true);
+  const preserveInitialRecentLoading = isPlainEvaluationUrl()
+    && document.documentElement.classList.contains("mflSingleRenderPending");
+  if (preserveInitialRecentLoading) window.__mflSyncEvaluationRecentLoadingShell?.();
+  renderEmptyEvaluationSelection(preserveInitialRecentLoading, true);
   syncEvaluationSearchClearButton();
 }
 
@@ -5591,23 +5594,26 @@ function renderEvaluationSearchEntryImmediately(entry, route) {
   return true;
 }
 
-function renderEvaluationSearchResults() {
+function renderEvaluationSearchResults(options = {}) {
   syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
+  const releaseRecentLoading = options.releaseRecentLoading === true;
 
   if (query && window.__mflEvaluationSearchStateRuntime?.shouldShowTypedResults?.() === false) {
     evaluationSearchResults.hidden = true;
-    return;
+    return false;
   }
 
-  if (!query && window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.()) {
-    return;
+  const evaluationRecentLoadingOwned = evaluationSearchResults.dataset.mflEvaluationRecentLoading === "true"
+    || window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.();
+  if (!query && evaluationRecentLoadingOwned && !releaseRecentLoading) {
+    return false;
   }
 
   if (!query && !shouldShowEvaluationRecentResults()) {
-    evaluationSearchResults.hidden = true;
     evaluationSearchResults.replaceChildren();
-    return;
+    evaluationSearchResults.hidden = true;
+    return true;
   }
 
   const results = query ? evaluationSearchMatches(query) : recentEvaluationRows();
@@ -5636,9 +5642,12 @@ function renderEvaluationSearchResults() {
         && child.dataset.playerId === playerId;
     });
 
-  evaluationSearchResults.hidden = resultEntries.length === 0;
-  if (reusableResults) return;
-  evaluationSearchResults.replaceChildren();
+  if (reusableResults) {
+    evaluationSearchResults.hidden = resultEntries.length === 0;
+    return true;
+  }
+
+  const fragment = document.createDocumentFragment();
 
   resultEntries.forEach(({ entry, playerId, metadataHtml }) => {
     const button = document.createElement("button");
@@ -5679,37 +5688,34 @@ function renderEvaluationSearchResults() {
         showToast(error?.message || "Could not load this player.");
       }
     });
-    evaluationSearchResults.appendChild(button);
+    fragment.appendChild(button);
   });
+  evaluationSearchResults.replaceChildren(fragment);
+  evaluationSearchResults.hidden = resultEntries.length === 0;
   evaluationSearchResults.dataset.mflEvaluationRenderSignature = renderSignature;
+  return true;
 }
 
 
 
-
-let evaluationEmptySearchFocusScheduled = false;
-
-function focusEmptyEvaluationSearchWhenReady() {
-  if (evaluationEmptySearchFocusScheduled) return;
-  evaluationEmptySearchFocusScheduled = true;
-
-  const focusSearch = () => {
-    evaluationEmptySearchFocusScheduled = false;
-    requestAnimationFrame(() => {
-      if (!isPlainEvaluationUrl() || state.evaluationPlayerId || evaluationSearchInput.value.trim()) return;
-      evaluationSearchInput.focus({ preventScroll: true });
-      renderEvaluationSearchResults();
-    });
-  };
-
-  if (document.documentElement.dataset.mflReady === "true") focusSearch();
-  else window.addEventListener("mfl:ready", focusSearch, { once: true });
-}
 
 function primeEmptyEvaluationSearch() {
-  focusEmptyEvaluationSearchWhenReady();
   const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-  return typeof prime === "function" ? prime(false, true, true) : Promise.resolve(false);
+  if (typeof prime !== "function") return Promise.resolve(false);
+
+  // Recent players are search chrome, not Evaluation page readiness. During the
+  // initial direct refresh, the first authoritative hydration already comes from
+  // the startup ownership chain, so do not schedule a second Supabase refresh.
+  const initialRefreshPending = isPlainEvaluationUrl()
+    && document.documentElement.classList.contains("mflSingleRenderPending");
+  void prime(false, true, false);
+  if (!initialRefreshPending) {
+    queueMicrotask(() => {
+      if (!isPlainEvaluationUrl() || state.evaluationPlayerId) return;
+      void prime(false, false, true);
+    });
+  }
+  return Promise.resolve(false);
 }
 
 function waitForEvaluationDiscountRate() {
@@ -5738,7 +5744,6 @@ function waitForEvaluationLayout() {
 
 async function finishEvaluationReadiness() {
   const dependencies = [primeGlobalSearchIndexes(), waitForEvaluationDiscountRate()];
-  if (!state.evaluationPlayerId) dependencies.push(primeEmptyEvaluationSearch());
   await Promise.allSettled(dependencies);
   await waitForEvaluationLayout();
 }
@@ -6012,18 +6017,12 @@ async function renderEvaluationPage() {
   if (savedId && !hasWalletOptIn()) {
     redirectSavedEvaluationLinkToBasicEvaluation();
   } else if (savedId && state.evaluationSavedId !== savedId) {
-    if (!document.body.classList.contains("loading")) {
-      renderEmptyEvaluationSelection(true);
-    }
     await loadSavedEvaluation(savedId);
     return;
   }
 
   const shareId = evaluationShareIdFromUrl();
   if (shareId && state.evaluationShareId !== shareId) {
-    if (!document.body.classList.contains("loading")) {
-      renderEmptyEvaluationSelection(true);
-    }
     await loadSharedEvaluation(shareId);
     return;
   }
@@ -7074,6 +7073,8 @@ window.__mflCancelIncrementalRouteRequest = invalidateIncrementalRouteRequest;
 
 async function requestIncrementalRoute(route, page = 1, options = {}) {
   const force = Boolean(options.force);
+  const navigationTransition = options.__mflNavigationTransition || null;
+  const navigationRequestIsCurrent = () => !navigationTransition || navigationTransitionIsCurrent(navigationTransition);
 
   if (route.scope === "empty") {
     const generation = beginIncrementalRouteRequest("empty", force);
@@ -7086,7 +7087,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
       sourceRows: 0,
       generatedAt: state.manifest?.generated_at || null,
     };
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
+    if (!incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) return null;
     applyIncrementalPayload(route, payload);
     state.incrementalMode = false;
     return payload;
@@ -7106,7 +7107,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     || 0;
 
   if (cachedPayload) {
-    if (!incrementalRouteRequestIsCurrent(generation)) {
+    if (!incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) {
       window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
       return null;
     }
@@ -7174,10 +7175,10 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
     throw error;
   }
-  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
+  if (!payload || !incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) {
     window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
   }
-  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
+  if (!payload || !incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) return null;
   try {
     applyIncrementalPayload(route, payload);
     state.incrementalLastKey = requestKey;
@@ -7934,6 +7935,7 @@ async function startApp() {
   loadTheme();
   setupChangelogSections();
   loadSavedTableState();
+  window.__mflCoreContracts?.installEvaluationRecentStateOwnership?.();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   commitPageTransition(initialTarget.pageName, false, initialTarget.options);
   const startupNavigationSequence = navigationTransitionSequence;
@@ -8829,8 +8831,12 @@ async function startApp() {
   }
 
   async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {}) {
-    const payload = await requestIncrementalRoute(route, 1, requestOptions);
-    if (!payload) return false;
+    if (!pageNavigationIsCurrent(options)) return false;
+    const payload = await requestIncrementalRoute(route, 1, {
+      ...requestOptions,
+      __mflNavigationTransition: options.__mflNavigationTransition || null,
+    });
+    if (!payload || !pageNavigationIsCurrent(options)) return false;
     if (tablePages.has(pageName)) {
       restoreSavedTableState(pageName, { view: route.view || options.view });
     }
@@ -8945,16 +8951,25 @@ async function startApp() {
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
     resetTableSortSession(pageName, options);
+    const navigationUpdatesHistory = options.__mflNavigationUpdatesHistory ?? updateHash;
+    if (!options.skipNavigationTransition) {
+      return runPageTransition(pageName, navigationUpdatesHistory, options, (navigationTransition) => setPage(pageName, false, {
+        ...options,
+        skipNavigationTransition: true,
+        __mflNavigationTransition: navigationTransition,
+        __mflNavigationUpdatesHistory: navigationUpdatesHistory,
+      }));
+    }
     const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)
       ? window.__mflTableLoadingRuntime?.beginRequest?.("progression") || 0
       : 0;
-    const navigationUpdatesHistory = updateHash;
-    if (!options.skipNavigationTransition) {
-      const navigationTransition = await runPageTransition(pageName, navigationUpdatesHistory, options);
-      if (!navigationTransition) {
-        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
-        return;
-      }
+    const navigationTransition = options.__mflNavigationTransition || null;
+    const navigationOptions = navigationTransition
+      ? { ...options, __mflNavigationTransition: navigationTransition }
+      : options;
+    if (!pageNavigationIsCurrent(navigationOptions)) {
+      window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
+      return null;
     }
     updateHash = false;
 
@@ -8963,21 +8978,21 @@ async function startApp() {
       : "";
     if (pageName === "mfl" && requestedMflView === "stats") {
       const route = prepareIncrementalRoute(pageName, {
-        ...options,
+        ...navigationOptions,
         view: "stats",
         ignoreCurrentClubRoute: navigationUpdatesHistory,
       });
       if (!route) {
         state.incrementalMode = false;
         return originalSetPage.call(this, "mflstats", false, {
-          ...options,
+          ...navigationOptions,
           replaceUrl: "",
           view: "stats",
           skipNavigationLoading: true,
         });
       }
-      const payload = await requestIncrementalRoute(route, 1);
-      if (!payload) return false;
+      const payload = await requestIncrementalRoute(route, 1, { __mflNavigationTransition: navigationTransition });
+      if (!payload || !pageNavigationIsCurrent(navigationOptions)) return false;
       state.dataAccess = currentDataAccess(pageName);
       state.incrementalApplying = true;
       try {
@@ -9000,6 +9015,7 @@ async function startApp() {
       if (typeof window.__mflEnsureRouteRuntime === "function") {
         await window.__mflEnsureRouteRuntime("database", { view: "stats" });
       }
+      if (!pageNavigationIsCurrent(navigationOptions)) return null;
       const statsOwner = window.__mflDatabaseStatsStateRuntime;
       if (typeof statsOwner?.render === "function") return statsOwner.render();
       if (typeof window.renderDatabaseStatsPage === "function") return window.renderDatabaseStatsPage(false);
@@ -9016,22 +9032,22 @@ async function startApp() {
     }
 
     const route = prepareIncrementalRoute(pageName, {
-      ...options,
+      ...navigationOptions,
       ignoreCurrentClubRoute: navigationUpdatesHistory,
     });
     const shellFirst = shellFirstTablePages.has(pageName);
     if (shellFirst) {
-      commitIncrementalLocation(pageName, updateHash, options);
+      commitIncrementalLocation(pageName, updateHash, navigationOptions);
       renderTableDestinationShell(pageName, route);
     }
     if (!route) {
       window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);
       state.incrementalMode = false;
-      return originalSetPage.call(this, pageName, updateHash, options);
+      return originalSetPage.call(this, pageName, updateHash, navigationOptions);
     }
 
     if (!shellFirst) {
-      commitIncrementalLocation(pageName, updateHash, options);
+      commitIncrementalLocation(pageName, updateHash, navigationOptions);
     } else {
       globalThis.syncQuickFilterLabels?.();
       updateViewButtons();
@@ -9039,7 +9055,7 @@ async function startApp() {
     }
     const loadAndRender = async () => {
       try {
-        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route, {
+        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, navigationOptions, route, {
           tableLoadingRequestToken: progressionLoadingRequestToken,
         });
         if (result === false) return false;
@@ -9356,10 +9372,9 @@ async function startApp() {
     return true;
   }
 
-  function renderCurrentEvaluationSearchResults() {
+  function renderCurrentEvaluationSearchResults(options = {}) {
     if (typeof renderEvaluationSearchResults !== "function") return false;
-    renderEvaluationSearchResults();
-    return true;
+    return renderEvaluationSearchResults(options) !== false;
   }
 
   function resetCurrentEvaluationSelection() {
@@ -9553,6 +9568,7 @@ async function startApp() {
     installEvaluationEmptySearchOwner,
     installEvaluationRecentWriteOwner,
     installEvaluationRecentStateOwnership,
+    evaluationRecentStateHydrated: () => evaluationRecentStateHydrated,
     ensureEvaluationRecentStateHydrated,
   });
 })();

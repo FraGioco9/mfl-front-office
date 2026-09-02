@@ -214,6 +214,40 @@
     }
   }
 
+  function syncFirstPaintEvaluationRecentLoadingShell() {
+    const results = document.getElementById("evaluationSearchResults");
+    if (!(results instanceof HTMLElement)) return false;
+    const routeState = firstPaintEvaluationRouteState();
+    if (!routeState.plain) {
+      delete results.dataset.mflEvaluationRecentLoading;
+      if (routeState.evaluationRoute) {
+        results.hidden = true;
+        results.replaceChildren();
+      }
+      return false;
+    }
+
+    const currentHint = results.firstElementChild;
+    if (results.dataset.mflEvaluationRecentLoading === "true"
+      && results.hidden === false
+      && results.children.length === 1
+      && currentHint instanceof HTMLElement
+      && currentHint.classList.contains("searchHint")
+      && currentHint.textContent === "Loading…") {
+      return true;
+    }
+
+    const hint = document.createElement("div");
+    hint.className = "searchHint";
+    hint.textContent = "Loading…";
+    results.dataset.mflEvaluationRecentLoading = "true";
+    results.replaceChildren(hint);
+    results.hidden = false;
+    return true;
+  }
+
+  Reflect.set(window, "__mflSyncEvaluationRecentLoadingShell", syncFirstPaintEvaluationRecentLoadingShell);
+
   function initialShellTarget() {
     const initialPage = String(root.dataset.initialPage || "home").toLowerCase();
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
@@ -883,10 +917,9 @@
     if (target.id === "evaluationPage") {
       const panel = document.getElementById("evaluationPanel");
       if (panel instanceof HTMLElement) panel.hidden = true;
-      const results = document.getElementById("evaluationSearchResults");
-      if (results instanceof HTMLElement) results.hidden = true;
       const searchInput = document.getElementById("evaluationSearchInput");
       const evaluationRouteState = firstPaintEvaluationRouteState();
+      syncFirstPaintEvaluationRecentLoadingShell();
       const initialPlayerName = firstPaintEvaluationPlayerName();
       if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;
       setLoadingValue("evaluationDiscountRate");
@@ -949,7 +982,9 @@
     const url = new URL(normalizedPath.replace(/^\/+/, ""), window.location.origin + "/");
     if (options.versioned) {
       const version = String(window.__mflReleaseVersion || STATIC_RELEASE_VERSION || "").trim();
-      if (version) url.searchParams.set("mfl_core", version);
+      const buildId = String(Reflect.get(window, "__mflCoreBuildId") || "").trim();
+      if (!/^[a-f0-9]{16}$/.test(buildId)) throw new Error("Application core build identity is unavailable.");
+      if (version) url.searchParams.set("mfl_core", `${version}-${buildId}`);
     }
     return url.href;
   }

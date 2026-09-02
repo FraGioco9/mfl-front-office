@@ -19,6 +19,11 @@ includes(
 );
 includes(
   entry,
+  'const immutableRevision = `${entryRelease.version}-${buildId}`;',
+  "The immutable shared-core URL must include its generated content identity as well as the release version.",
+);
+includes(
+  entry,
   "await loadClassicScript(prebuiltApplicationCorePath());",
   "The shared application core must load only from its prebuilt artifact.",
 );

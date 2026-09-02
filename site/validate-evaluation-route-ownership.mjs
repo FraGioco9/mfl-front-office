@@ -62,7 +62,7 @@ invariant(
   appCoreSource.includes('const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";')
     && appCoreSource.includes("...(savedId ? { savedId } : {})")
     && appCoreSource.includes("...(shareId ? { shareId } : {})")
-    && appCoreSource.includes("async function recoverInvalidEvaluationLink()")
+    && appCoreSource.includes("async function recoverInvalidEvaluationLink(snapshotLoad = null)")
     && appCoreSource.includes("async function applySharedEvaluationPayload(payload, options = {})")
     && appCoreSource.includes("await applySharedEvaluationPayload(data.payload, {")
     && appCoreSource.includes("mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,"),

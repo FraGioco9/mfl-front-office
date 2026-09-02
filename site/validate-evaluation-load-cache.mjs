@@ -85,12 +85,17 @@ invariant(
 );
 
 invariant(
-  evaluationCore.includes("const cachedEvaluations = savedEvaluationListCache();")
-    && evaluationCore.includes("if (cachedEvaluations) {")
-    && evaluationCore.includes("renderSavedEvaluationList(cachedEvaluations);")
-    && evaluationCore.includes("const rememberedEvaluations = rememberSavedEvaluationList(evaluations);")
-    && evaluationCore.includes("renderSavedEvaluationList(rememberedEvaluations);"),
-  "Saved Evaluations must reuse the complete wallet-scoped list after its first successful request.",
+  evaluationCore.includes("let savedEvaluationListPreloadPromise = null;")
+    && evaluationCore.includes("async function loadSavedEvaluationListData()")
+    && evaluationCore.includes("if (savedEvaluationListPreloadPromise) return savedEvaluationListPreloadPromise;")
+    && evaluationCore.includes('fetch("/api/evaluation-save", {')
+    && evaluationCore.includes("return rememberSavedEvaluationList(evaluations);")
+    && evaluationCore.includes("function preloadSavedEvaluationList()")
+    && evaluationCore.includes("queueMicrotask(() => {")
+    && evaluationCore.includes('window.addEventListener("mfl:evaluation-ready", () => {')
+    && evaluationCore.includes("const evaluations = await loadSavedEvaluationListData();")
+    && evaluationCore.includes("renderSavedEvaluationList(Array.isArray(evaluations) ? evaluations : []);"),
+  "Saved Evaluation list/player data must preload in the background on Evaluation entry and the Load modal must reuse the same cache/in-flight request.",
 );
 
 const listRenderStart = evaluationCore.indexOf("function renderSavedEvaluationList(rows)");
@@ -157,4 +162,4 @@ invariant(
 
 new Function(sharedCore);
 new Function(evaluationCore);
-console.log("Source-owned Evaluation Saved cache validation passed: Load clears stale focus, Escape keeps the modal open while deselecting the active control, cached rows retain names and valuations across page changes, saved hydration refreshes cached data without overwriting newer MFL/USD commits, and successful save/delete mutations invalidate stale data.");
+console.log("Source-owned Evaluation Saved cache validation passed: Saved lists/player rows preload in the background, Load reuses cache/in-flight work, cached rows retain names and valuations, and saved hydration remains source-owned.");

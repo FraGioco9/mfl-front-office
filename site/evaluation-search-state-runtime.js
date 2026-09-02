@@ -14,10 +14,9 @@
   let recentPayload = null;
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
-  let recentLoadingActive = false;
+  let recentLoadingActive = document.getElementById("evaluationSearchResults")?.dataset.mflEvaluationRecentLoading === "true";
   let resultPointerDown = false;
-  let directPointerFocus = false;
-  let directPointerFocusResetTimer = 0;
+  let committingRecentResults = false;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -45,7 +44,7 @@
 
   function shouldShowTypedResults(field = input()) {
     if (!(field instanceof HTMLInputElement) || !active()) return true;
-    if (!field.value.trim() || !playerSelected()) return true;
+    if (!field.value.trim()) return true;
     return document.activeElement === field || resultPointerDown;
   }
 
@@ -90,6 +89,7 @@
     const hint = document.createElement("div");
     hint.className = "searchHint";
     hint.textContent = "Loading…";
+    results.dataset.mflEvaluationRecentLoading = "true";
     results.replaceChildren(hint);
     results.hidden = false;
     recentLoadingActive = true;
@@ -104,20 +104,45 @@
       && !field.value.trim();
   }
 
+  function clearRecentLoadingOwnership() {
+    recentLoadingActive = false;
+    const results = document.getElementById("evaluationSearchResults");
+    if (results instanceof HTMLElement) delete results.dataset.mflEvaluationRecentLoading;
+  }
+
   function waitForSupabaseRecentState(force = false) {
-    if (force) {
-      const ensure = coreContracts()?.ensureEvaluationRecentStateHydrated;
-      if (typeof ensure === "function") {
-        return Promise.resolve(ensure({ force: true })).catch((error) => {
-          console.warn("Could not refresh Supabase Evaluation recent-search state.", error);
-        });
-      }
+    const ensure = coreContracts()?.ensureEvaluationRecentStateHydrated;
+    if (typeof ensure === "function") {
+      return Promise.resolve(ensure({ force })).catch((error) => {
+        console.warn("Could not load Supabase Evaluation recent-search state.", error);
+        return false;
+      });
     }
 
     const pending = window.__mflWalletPreferencesStartupPromise;
-    if (!pending || typeof pending.then !== "function") return Promise.resolve();
-    return Promise.resolve(pending).catch((error) => {
-      console.warn("Could not load Supabase Evaluation recent-search state.", error);
+    if (pending && typeof pending.then === "function") {
+      return Promise.resolve(pending).catch((error) => {
+        console.warn("Could not load Supabase Evaluation recent-search state.", error);
+        return false;
+      });
+    }
+
+    if (document.documentElement.dataset.mflReady === "true") return Promise.resolve(false);
+
+    return new Promise((resolve) => {
+      window.addEventListener("mfl:ready", () => {
+        const lateEnsure = coreContracts()?.ensureEvaluationRecentStateHydrated;
+        if (typeof lateEnsure !== "function") {
+          resolve(false);
+          return;
+        }
+        Promise.resolve(lateEnsure({ force }))
+          .then(resolve)
+          .catch((error) => {
+            console.warn("Could not load Supabase Evaluation recent-search state.", error);
+            resolve(false);
+          });
+      }, { once: true });
     });
   }
 
@@ -171,6 +196,31 @@
       : [];
   }
 
+  function recentStateSettled() {
+    return Boolean(coreContracts()?.evaluationRecentStateHydrated?.())
+      || document.documentElement.dataset.storedWalletOptIn !== "true";
+  }
+
+  function currentRecentEntries() {
+    return Array.isArray(window[RECENT_ENTRIES_KEY]) ? window[RECENT_ENTRIES_KEY] : [];
+  }
+
+  function recentEntriesMatch(ids, entries = currentRecentEntries()) {
+    const expectedIds = Array.isArray(ids)
+      ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
+      : [];
+    const entryIds = Array.isArray(entries)
+      ? entries.map((entry) => String(entry?.playerId || "").trim()).filter(Boolean)
+      : [];
+    return expectedIds.length === entryIds.length
+      && expectedIds.every((id, index) => id === entryIds[index]);
+  }
+
+  function recentPayloadMatches(ids, payload = recentPayload) {
+    if (!payload) return false;
+    return recentEntriesMatch(ids, buildRecentEntries(payload));
+  }
+
   function setRecentEvaluationPlayerIds(ids) {
     const normalizedIds = Array.isArray(ids)
       ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
@@ -184,7 +234,7 @@
     if (!key) return;
     const entry = coreContracts()?.evaluationSearchEntry?.(key);
     if (!entry || entry.retired) return;
-    const current = Array.isArray(window[RECENT_ENTRIES_KEY]) ? window[RECENT_ENTRIES_KEY] : [];
+    const current = currentRecentEntries();
     window[RECENT_ENTRIES_KEY] = [
       entry,
       ...current.filter((item) => String(item?.playerId || "") !== key),
@@ -237,6 +287,7 @@
     const install = coreContracts()?.installEvaluationEmptySearchOwner;
     if (typeof install !== "function") return false;
     return Boolean(install((force) => {
+      if (committingRecentResults) return Promise.resolve(true);
       const restore = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
       return typeof restore === "function" ? restore(Boolean(force)) : Promise.resolve(false);
     }));
@@ -258,26 +309,36 @@
   }
 
   function publishRecentPayload(payload) {
-    window[RECENT_ENTRIES_KEY] = buildRecentEntries(payload);
+    const entries = buildRecentEntries(payload);
+    window[RECENT_ENTRIES_KEY] = entries;
     installCoreRecentRowsBridge();
+    return entries;
   }
 
-  function renderEmptySearchFromCore() {
+  function renderEmptySearchFromCore(expectedIds = recentEvaluationPlayerIds()) {
     if (!active()) {
-      recentLoadingActive = false;
+      clearRecentLoadingOwnership();
       return false;
     }
     const field = input();
     if (!(field instanceof HTMLInputElement) || field.value.trim()) {
-      recentLoadingActive = false;
+      clearRecentLoadingOwnership();
       return false;
     }
-    recentLoadingActive = false;
+    if (!recentStateSettled() || !recentEntriesMatch(expectedIds)) {
+      renderRecentLoadingMessage(field);
+      return false;
+    }
+    committingRecentResults = true;
     try {
-      coreContracts()?.renderCurrentEvaluationSearchResults?.();
+      const committed = coreContracts()?.renderCurrentEvaluationSearchResults?.({ releaseRecentLoading: true });
+      if (!committed) return false;
+      clearRecentLoadingOwnership();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
       return false;
+    } finally {
+      committingRecentResults = false;
     }
     syncClearButton(field);
     return true;
@@ -285,45 +346,40 @@
 
   async function fetchRecentEvaluationPayload(ids) {
     if (!ids.length) return { columns: [], rows: [] };
-    const payloads = await Promise.all(ids.map(async (id) => {
-      const url = new URL("/api/data", window.location.origin);
-      url.searchParams.set("mode", "search");
-      url.searchParams.set("type", "players");
-      url.searchParams.set("q", id);
-      url.searchParams.set("limit", "5");
-      try {
-        const response = await fetch(url.toString(), { cache: "no-store", headers: { Accept: "application/json" } });
-        return response.ok ? response.json() : null;
-      } catch {
-        return null;
-      }
-    }));
-
-    let columns = [];
-    const rowsById = new Map();
-    payloads.forEach((payload, index) => {
-      const payloadColumns = Array.isArray(payload?.columns) ? payload.columns : [];
-      const payloadRows = Array.isArray(payload?.rows) ? payload.rows : [];
-      const idIndex = payloadColumns.indexOf("player_id");
-      if (idIndex < 0) return;
-      if (!columns.length) columns = payloadColumns;
-      const expectedId = ids[index];
-      const exact = payloadRows.find((row) => Array.isArray(row) && String(row[idIndex]) === expectedId);
-      if (exact) rowsById.set(expectedId, exact);
-    });
-    return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
+    const url = new URL("/api/data", window.location.origin);
+    url.searchParams.set("mode", "search");
+    url.searchParams.set("type", "recent");
+    url.searchParams.set("playerIds", ids.join(","));
+    try {
+      const response = await fetch(url.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return { columns: [], rows: [] };
+      const payload = await response.json().catch(() => ({}));
+      const players = payload?.players;
+      const columns = Array.isArray(players?.columns) ? players.columns : [];
+      const rows = Array.isArray(players?.rows) ? players.rows : [];
+      const idIndex = columns.indexOf("player_id");
+      if (idIndex < 0) return { columns, rows: [] };
+      const rowsById = new Map(rows
+        .filter(Array.isArray)
+        .map((row) => [String(row[idIndex]), row]));
+      return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
+    } catch {
+      return { columns: [], rows: [] };
+    }
   }
 
   function primeRecentSearchData({ force = false, showLoading = false, refreshSupabase = false } = {}) {
-    const field = input();
     if (recentPrimePromise) {
-      if (showLoading) renderRecentLoadingMessage(field);
+      if (showLoading) renderRecentLoadingMessage(input());
       if (!refreshSupabase) return recentPrimePromise;
       if (!recentSupabaseRefreshPromise) {
         recentSupabaseRefreshPromise = recentPrimePromise
           .then(() => {
             if (destroyed) return false;
-            return primeRecentSearchData({ force, showLoading, refreshSupabase: true });
+            return primeRecentSearchData({ force, showLoading: false, refreshSupabase: true });
           })
           .finally(() => {
             recentSupabaseRefreshPromise = null;
@@ -334,19 +390,31 @@
 
     const currentIds = recentEvaluationPlayerIds();
     const currentSignature = currentIds.join(",");
-    if (!force && !refreshSupabase && recentPayload && recentPayloadSignature === currentSignature) {
+    if (!force
+      && !refreshSupabase
+      && recentStateSettled()
+      && recentPayload
+      && recentPayloadSignature === currentSignature
+      && recentPayloadMatches(currentIds)) {
       publishRecentPayload(recentPayload);
-      return Promise.resolve(renderEmptySearchFromCore());
+      return Promise.resolve(renderEmptySearchFromCore(currentIds));
     }
 
-    if (showLoading) renderRecentLoadingMessage(field);
+    if (showLoading || recentLoadingActive) renderRecentLoadingMessage(input());
     recentPrimePromise = waitForSupabaseRecentState(refreshSupabase)
       .then(() => {
         const ids = recentEvaluationPlayerIds();
         const signature = ids.join(",");
-        if (!force && recentPayload && recentPayloadSignature === signature) {
+        if (!recentStateSettled()) {
+          renderRecentLoadingMessage(input());
+          return false;
+        }
+        if (!force
+          && recentPayload
+          && recentPayloadSignature === signature
+          && recentPayloadMatches(ids)) {
           publishRecentPayload(recentPayload);
-          return renderEmptySearchFromCore();
+          return renderEmptySearchFromCore(ids);
         }
 
         recentPayloadSignature = signature;
@@ -354,12 +422,15 @@
           if (destroyed || recentPayloadSignature !== signature) return false;
           recentPayload = payload;
           publishRecentPayload(payload);
-          return renderEmptySearchFromCore();
+          const rendered = renderEmptySearchFromCore(ids);
+          if (!rendered && ids.length) renderRecentLoadingMessage(input());
+          return rendered;
         });
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
-        return renderEmptySearchFromCore();
+        renderRecentLoadingMessage(input());
+        return false;
       })
       .finally(() => {
         recentPrimePromise = null;
@@ -371,17 +442,35 @@
     return recentPrimePromise;
   }
 
-  function restoreEmptyRecentResults(force = false, showLoading = false, refreshSupabase = false) {
+  function restoreEmptyRecentResults(force = false, showLoading = true, refreshSupabase = false) {
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
     installCoreBridges();
-    const currentSignature = recentEvaluationPlayerIds().join(",");
-    const hasReadyRecentPayload = !force && recentPayload && recentPayloadSignature === currentSignature;
-    return primeRecentSearchData({
+    const recentStateReady = recentStateSettled();
+    const currentIds = recentEvaluationPlayerIds();
+    const currentSignature = currentIds.join(",");
+    let cachedReady = Boolean(
+      recentStateReady
+      && !force
+      && recentPayload
+      && recentPayloadSignature === currentSignature
+      && recentPayloadMatches(currentIds)
+    );
+    let matchingEntriesReady = false;
+    if (cachedReady) {
+      publishRecentPayload(recentPayload);
+      cachedReady = renderEmptySearchFromCore(currentIds);
+    } else if (!force && recentStateReady && currentIds.length) {
+      matchingEntriesReady = recentEntriesMatch(currentIds);
+      if (matchingEntriesReady) matchingEntriesReady = renderEmptySearchFromCore(currentIds);
+    }
+    const primePromise = primeRecentSearchData({
       force,
-      showLoading: showLoading || !hasReadyRecentPayload,
+      showLoading: Boolean(showLoading && !cachedReady && !matchingEntriesReady),
       refreshSupabase,
     });
+    if (cachedReady || matchingEntriesReady) return Promise.resolve(true);
+    return Promise.resolve(primePromise).then((rendered) => Boolean(rendered));
   }
 
   function sync() {
@@ -392,13 +481,6 @@
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
     syncTypedResultVisibility(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
-  }
-
-  function clearDirectPointerFocus() {
-    directPointerFocus = false;
-    if (directPointerFocusResetTimer) window.clearTimeout(directPointerFocusResetTimer);
-    directPointerFocusResetTimer = 0;
   }
 
   function selectEmptySearch() {
@@ -409,71 +491,28 @@
       || field.value.trim()
       || window.__mflInteractionBusy?.isBusy?.()) return false;
 
-    directPointerFocus = true;
-    try {
-      field.focus({ preventScroll: true });
-      field.select();
-      return document.activeElement === field;
-    } finally {
-      clearDirectPointerFocus();
-    }
+    field.focus({ preventScroll: true });
+    field.select();
+    return document.activeElement === field;
   }
 
   function onPointerDown(event) {
-    const field = input();
-    clearDirectPointerFocus();
     resultPointerDown = event.target instanceof Element
       && Boolean(event.target.closest("#evaluationSearchResults .evaluationSearchResult"));
-    if (resultPointerDown) return;
-    if (event.target instanceof Element) {
-      const title = event.target.closest(".evaluationSearch .field > span");
-      if (title instanceof HTMLElement) {
-        event.preventDefault();
-        return;
-      }
-    }
-    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
-    directPointerFocus = true;
-    directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
+    if (resultPointerDown || !(event.target instanceof Element)) return;
+    const title = event.target.closest(".evaluationSearch .field > span");
+    if (title instanceof HTMLElement) event.preventDefault();
   }
 
   function onPointerUp() {
     resultPointerDown = false;
   }
 
-  function onRecentLoadingFocusCapture(event) {
-    const field = input();
-    if (!(field instanceof HTMLInputElement)
-      || event.target !== field
-      || !recentLoadingActive
-      || field.value.trim()) return;
-    event.stopImmediatePropagation();
-    clearDirectPointerFocus();
-    syncClearButton(field);
-  }
-
-  function onRecentLoadingBlurCapture(event) {
-    const field = input();
-    if (!(field instanceof HTMLInputElement)
-      || event.target !== field
-      || !recentLoadingActive
-      || field.value.trim()) return;
-    event.stopImmediatePropagation();
-    syncClearButton(field);
-  }
-
   function onFocus(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
-    if (!directPointerFocus) {
-      event.stopImmediatePropagation();
-      field.blur();
-      return;
-    }
-    clearDirectPointerFocus();
     syncClearButton(field);
     if (!field.value.trim()) {
-      if (recentLoadingActive) return;
       void restoreEmptyRecentResults(false);
       return;
     }
@@ -493,7 +532,6 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncClearButton(field);
     if (field.value.trim()) {
-      recentLoadingActive = false;
       return;
     }
     void restoreEmptyRecentResults(false);
@@ -527,18 +565,6 @@
       syncClearButton(field);
       syncTypedResultVisibility(field);
     }
-    void restoreEmptyRecentResults(false);
-  }
-
-  function onRouteActive() {
-    if (destroyed || !active()) return;
-    installCoreBridges();
-    const field = input();
-    if (!(field instanceof HTMLInputElement)) return;
-    syncSelectedPlayerLabel(field);
-    syncClearButton(field);
-    syncTypedResultVisibility(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
   purgeLegacyLocalRecentState();
@@ -546,15 +572,12 @@
   syncClearButton();
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointerup", onPointerUp, true);
-  document.addEventListener("focus", onRecentLoadingFocusCapture, true);
-  document.addEventListener("blur", onRecentLoadingBlurCapture, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
   window.addEventListener("storage", onLegacyRecentStorage, true);
   window.addEventListener("mfl:evaluation-ready", onReady);
-  window.addEventListener("mfl:evaluation-route-active", onRouteActive);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
 
@@ -562,22 +585,18 @@
     destroyed = true;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerup", onPointerUp, true);
-    document.removeEventListener("focus", onRecentLoadingFocusCapture, true);
-    document.removeEventListener("blur", onRecentLoadingBlurCapture, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("storage", onLegacyRecentStorage, true);
     window.removeEventListener("mfl:evaluation-ready", onReady);
-    window.removeEventListener("mfl:evaluation-route-active", onRouteActive);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
-    clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
-    recentLoadingActive = false;
+    clearRecentLoadingOwnership();
     resultPointerDown = false;
     recentWriteSequence += 1;
     delete window[RECENT_ENTRIES_KEY];
@@ -591,8 +610,8 @@
     restoreEmptyRecentResults,
     commitRecentPlayer,
     selectEmptySearch,
-    ownsEmptyRecentResults,
     shouldShowTypedResults,
+    ownsEmptyRecentResults,
     destroy,
   });
 })();
