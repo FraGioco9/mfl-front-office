@@ -3,6 +3,7 @@
 
   const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
   const PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
+  const TINY_TABLE_MEDIA = window.matchMedia("(max-width: 380px)");
   const MOBILE_PAGE_SIZE = "100";
   const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";
   const VIEW_SCROLL_VISIBLE_CLASS = "mflViewsScrollButtonVisible";
@@ -836,10 +837,11 @@
     if (!(scroller instanceof HTMLElement)) return;
     syncEvaluationTableFadeBodyTop(scroller);
     scroller.style.removeProperty("box-shadow");
-    if (!MOBILE_TABLE_MEDIA.matches || scroller.getClientRects().length === 0) {
+    if (!MOBILE_TABLE_MEDIA.matches) {
       setPlayerTableFadeDirections(scroller, false, false);
       return;
     }
+    if (scroller.getClientRects().length === 0) return;
     const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const scrollLeft = Math.min(maxScroll, Math.max(0, scroller.scrollLeft));
     const overflowing = maxScroll > PLAYER_TABLE_SCROLL_EPSILON;
