@@ -2273,6 +2273,7 @@ function pagerCurrentPageControl() {
   input.id = PAGER_CURRENT_PAGE_INPUT_ID;
   input.type = "text";
   input.inputMode = "numeric";
+  input.maxLength = 5;
   input.autocomplete = "off";
   input.setAttribute("role", "spinbutton");
   input.setAttribute("aria-label", "Current page");
@@ -2331,7 +2332,7 @@ async function commitPagerCurrentPage(input) {
   const total = Math.max(1, Number.parseInt(input.dataset.totalPages || "1", 10) || 1);
   const current = Math.min(total, Math.max(1, Number.parseInt(input.dataset.currentPage || String(state.page || 1), 10) || 1));
   const raw = input.value.trim();
-  const parsed = /^-?\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;
+  const parsed = /^\d{1,5}$/.test(raw) ? Number.parseInt(raw, 10) : current;
   const target = Math.min(total, Math.max(1, parsed));
 
   input.value = String(target);
@@ -2366,10 +2367,8 @@ function installPagerCurrentPageControl() {
 
   controls.input.addEventListener("input", () => {
     const raw = controls.input.value;
-    const negative = raw.trimStart().startsWith("-");
-    const digits = raw.replace(/\D+/g, "");
-    const normalized = negative ? "-" + digits : digits;
-    if (normalized !== raw) controls.input.value = normalized;
+    const digits = raw.replace(/\D+/g, "").slice(0, 5);
+    if (digits !== raw) controls.input.value = digits;
     controls.input.dataset.dirty = "true";
   });
 
