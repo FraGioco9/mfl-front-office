@@ -24,7 +24,7 @@ for (const required of [
   "function syncRenderedRows() {",
   "if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;",
   "if (page) page.hidden = !pagerRouteActive();",
-  'if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;',
+  "return true;",
   "show({ replaceExisting: true });",
 ]) {
   invariant(runtime.includes(required), `Background table loading stability is missing ${required}`);
@@ -48,13 +48,13 @@ const syncSource = runtime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.includes("const renderedRowsVisible = syncRenderedRows();")
-    && syncSource.includes("if (!renderedRowsVisible) hidePager();")
-    && syncSource.includes("else hidePlayerCount();")
-    && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("shouldPreserveRenderedRows()")
-    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({ replaceExisting: true })")
-    && syncSource.includes("!snapshot.reasons.includes(FILTER_LOADING_REASON)"),
-  "Global loading-state updates must reveal pager chrome as soon as real rows exist while preserving settled rows for background loads and allowing blank filter/page loads.",
+    && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
+    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("hidePager();")
+    && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("if (renderedRowsPresent)")
+    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("hidePager();")
+    && syncSource.indexOf("hidePager();") < syncSource.indexOf("show({ replaceExisting: true })"),
+  "Global loading-state updates must stop the loading-surface path as soon as real rows exist, before route-ready or broader loading flags finish.",
 );
 
 invariant(
@@ -78,4 +78,4 @@ invariant(
   "Release projection generation must canonically preserve the data-render pager visibility rule in index.html.",
 );
 
-console.log("Settled table rows remain stable during background loading, blank page/filter loads hide pager chrome, and nav.pager appears at the real-data render boundary.");
+console.log("Settled rows remain stable during background loading, blank loads hide pager chrome, and nav.pager appears with real data even before route-ready settles.");
