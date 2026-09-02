@@ -798,14 +798,13 @@
       return;
     }
     if (views.getClientRects().length === 0) return;
-    const contentWidth = viewContentWidth(views);
-    if (contentWidth <= 0) return;
+    if (!renderedViewItems(views).length) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
     setViewScrollButtonVisible(button, false);
     setViewScrollButtonVisible(leftButton, false);
-    const overflowing = contentWidth - views.clientWidth > VIEW_SCROLL_EPSILON;
+    const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
       applyFadeShadow(views, false, false, 0);
