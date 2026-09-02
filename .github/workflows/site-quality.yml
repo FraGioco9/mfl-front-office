@@ -148,10 +148,6 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm install --no-audit --no-fund
 
-      - name: Normalize release projections
-        if: steps.changes.outputs.site == 'true'
-        run: node sync-release-projections.mjs
-
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
         run: npm run build
