@@ -36,7 +36,23 @@ jobs:
           node-version: 22
 
       - name: Normalize release projections
-        run: node site/sync-release-projections.mjs
+        run: |
+          node site/sync-release-projections.mjs
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const path = "site/index.html";
+          const source = await readFile(path, "utf8");
+          const before = `      html:not([data-mfl-ready="true"]) #progressionPage nav.pager,
+      html.mflDataLoading #progressionPage nav.pager {
+        display: none;
+      }`;
+          const after = `      html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
+        display: none;
+      }`;
+          const matches = source.split(before).length - 1;
+          if (matches !== 1) throw new Error(`Expected one pager first-paint loading rule, found ${matches}.`);
+          await writeFile(path, source.replace(before, after));
+          NODE
 
       - name: Commit normalized projections
         shell: bash
