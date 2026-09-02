@@ -38,12 +38,10 @@ for (const [breakpoint, width, rowHeight, fontSize, iconSize] of [
   [520, 156, 24, 10, 12],
   [380, 144, 22, 9, 11],
 ]) {
-  const block = dropdowns.match(new RegExp(`@media \\(max-width: ${breakpoint}px\\) \\{([\\s\\S]*?)(?=\\n\\}|$)`))?.[1] || "";
-  assert.ok(block.includes(`.playerTableActionMenu`), `Player action menu must participate in the ${breakpoint}px compact contract.`);
-  assert.ok(block.includes(`width: ${width}px;`), `Player action menu must use a ${width}px width at <=${breakpoint}px.`);
-  assert.ok(block.includes(`height: ${rowHeight}px;`) && block.includes(`min-height: ${rowHeight}px;`), `Player action rows must use ${rowHeight}px geometry at <=${breakpoint}px.`);
-  assert.ok(block.includes(`font-size: ${fontSize}px;`), `Player action text must use ${fontSize}px at <=${breakpoint}px.`);
-  assert.ok(block.includes(`width: ${iconSize}px;`) && block.includes(`height: ${iconSize}px;`), `Player action icons must use ${iconSize}px at <=${breakpoint}px.`);
+  const contract = new RegExp(
+    `@media \\(max-width: ${breakpoint}px\\) \\{[\\s\\S]*?\\.playerTableActionMenu \\{[\\s\\S]*?width: ${width}px;[\\s\\S]*?min-width: ${width}px;[\\s\\S]*?\\.playerTableActionItem \\{[\\s\\S]*?height: ${rowHeight}px;[\\s\\S]*?min-height: ${rowHeight}px;[\\s\\S]*?font-size: ${fontSize}px;[\\s\\S]*?\\.playerTableActionIcon,[\\s\\S]*?width: ${iconSize}px;[\\s\\S]*?height: ${iconSize}px;`,
+  );
+  assert.match(dropdowns, contract, `Player action controls must use the compact ${breakpoint}px geometry contract.`);
 }
 for (const source of [responsive, shared, dropdowns, table]) assert.doesNotMatch(source, /!important/, "Compact tables must not introduce !important.");
 console.log("Player, Evaluation, Advanced Settings, and row action controls use one compact small-screen contract with stable first-paint/hydrated geometry.");
