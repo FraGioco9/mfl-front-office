@@ -8,6 +8,7 @@ const validators = [
   "validate-evaluation-route-ownership.mjs",
   "validate-evaluation-refresh-hydration.mjs",
   "validate-evaluation-responsive-player-names.mjs",
+  "validate-evaluation-metric-position-stability.mjs",
   "validate-evaluation-overall-hover.mjs",
   "validate-evaluation-mfl-usd-edit-cancel.mjs",
   "validate-evaluation-mfl-usd-loading-race.mjs",

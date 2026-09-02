@@ -5529,7 +5529,7 @@ function resetEvaluationSelection() {
   updateEvaluationFooterActions();
   state.evaluationPlayerId = null;
   syncEvaluationPlayerUrl(null);
-  renderEmptyEvaluationSelection(true);
+  renderEmptyEvaluationSelection(true, true);
 }
 
 function clearEvaluationSearchFocus() {
@@ -5665,6 +5665,7 @@ function renderEvaluationSearchResults() {
         const loadAndRender = async () => {
           const payload = await requestIncrementalRoute(route, 1);
           if (!payload) return false;
+          if (String(state.evaluationPlayerId || "") !== playerId || evaluationPlayerIdFromUrl() !== playerId) return false;
           const row = rowByPlayerId(playerId);
           if (row) {
             renderEvaluationTable(row);

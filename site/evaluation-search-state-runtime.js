@@ -406,8 +406,7 @@
     if (!(field instanceof HTMLInputElement)
       || !active()
       || playerSelected()
-      || field.value.trim()
-      || window.__mflInteractionBusy?.isBusy?.()) return false;
+      || field.value.trim()) return false;
 
     directPointerFocus = true;
     try {
