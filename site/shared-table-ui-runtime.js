@@ -784,21 +784,28 @@
     else scroller.style.removeProperty("box-shadow");
   }
 
+  function clearViewScrollerCues(views) {
+    views.classList.remove(VIEW_SCROLL_CLASS);
+    applyFadeShadow(views, false, false, 0);
+    if (views.scrollLeft) views.scrollLeft = 0;
+    removeViewScrollShell(views);
+  }
+
   function syncViewScroller(views) {
     if (!(views instanceof HTMLElement) || !views.isConnected) return;
-    if (!MOBILE_TABLE_MEDIA.matches || views.getClientRects().length === 0) {
-      views.classList.remove(VIEW_SCROLL_CLASS);
-      applyFadeShadow(views, false, false, 0);
-      if (views.scrollLeft) views.scrollLeft = 0;
-      removeViewScrollShell(views);
+    if (!MOBILE_TABLE_MEDIA.matches || views.hidden) {
+      clearViewScrollerCues(views);
       return;
     }
+    if (views.getClientRects().length === 0) return;
+    const contentWidth = viewContentWidth(views);
+    if (contentWidth <= 0) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
     setViewScrollButtonVisible(button, false);
     setViewScrollButtonVisible(leftButton, false);
-    const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
+    const overflowing = contentWidth - views.clientWidth > VIEW_SCROLL_EPSILON;
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
       applyFadeShadow(views, false, false, 0);
