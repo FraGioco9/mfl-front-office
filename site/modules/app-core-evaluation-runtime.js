@@ -1,12 +1,7 @@
 // Generated Evaluation core from modules/core-sources/evaluation.js. Do not edit directly.
-async function recoverInvalidEvaluationLink() {
-  if (window.location.pathname !== "/evaluation") {
-    return false;
-  }
-
-  if (!evaluationSavedIdFromUrl() && !evaluationShareIdFromUrl()) {
-    return false;
-  }
+async function recoverInvalidEvaluationLink(snapshotLoad = null) {
+  if (window.location.pathname !== "/evaluation") return false;
+  if (!evaluationSavedIdFromUrl() && !evaluationShareIdFromUrl()) return false;
 
   const candidatePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
   let playerRow = candidatePlayerId ? rowByPlayerId(candidatePlayerId) : null;
@@ -20,11 +15,14 @@ async function recoverInvalidEvaluationLink() {
         access: currentDataAccess("evaluation"),
         playerId: candidatePlayerId,
       }, 1, { force: true });
+      if (snapshotLoad && !evaluationSnapshotLoadIsCurrent(snapshotLoad)) return false;
       playerRow = rowByPlayerId(candidatePlayerId);
     } catch {
       playerRow = null;
     }
   }
+
+  if (snapshotLoad && !evaluationSnapshotLoadIsCurrent(snapshotLoad)) return false;
 
   const playerId = playerRow ? candidatePlayerId : "";
   state.evaluationSavedId = "";
@@ -39,8 +37,6 @@ async function recoverInvalidEvaluationLink() {
     evaluationSearchInput.value = "";
     window.history.replaceState({}, "", "/evaluation");
     document.documentElement.dataset.initialEvaluationSelection = "false";
-    renderEmptyEvaluationSelection(true, true);
-    syncEvaluationSearchClearButton();
   }
 
   return true;
@@ -187,6 +183,8 @@ function currentEvaluationSharePayload() {
 }
 
 async function applySharedEvaluationPayload(payload, options = {}) {
+  const snapshotLoad = options.snapshotLoad || null;
+  if (snapshotLoad && !evaluationSnapshotLoadIsCurrent(snapshotLoad)) return false;
   const data = normalizeSharedEvaluationPayload(payload);
   const mflPerUsdRevisionAtLoadStart = Number.isInteger(options.mflPerUsdRevisionAtLoadStart)
     ? options.mflPerUsdRevisionAtLoadStart
@@ -215,57 +213,117 @@ async function applySharedEvaluationPayload(payload, options = {}) {
     state.evaluationMflPerUsd = latestMflPerUsd;
   }
 
+  if (snapshotLoad && !evaluationSnapshotLoadIsCurrent(snapshotLoad)) return false;
   renderEvaluationMflPerUsdControl(false);
   await renderEvaluationPage();
+  return !snapshotLoad || evaluationSnapshotLoadIsCurrent(snapshotLoad);
+}
+
+let evaluationSnapshotLoadGeneration = 0;
+let evaluationSnapshotLoadIdentity = "";
+let evaluationSnapshotLoadPromise = null;
+
+function evaluationSnapshotRouteId(kind) {
+  if (window.location.pathname !== "/evaluation") return "";
+  const parameter = kind === "saved" ? "saved" : "share";
+  return String(new URLSearchParams(window.location.search).get(parameter) || "").trim();
+}
+
+function evaluationSnapshotLoadIsCurrent(load) {
+  return Boolean(
+    load
+    && load.generation === evaluationSnapshotLoadGeneration
+    && window.location.pathname === "/evaluation"
+    && evaluationSnapshotRouteId(load.kind) === load.id
+  );
+}
+
+function beginEvaluationSnapshotLoad(kind, id) {
+  const load = {
+    generation: ++evaluationSnapshotLoadGeneration,
+    kind,
+    id: String(id || "").trim(),
+  };
+  evaluationSnapshotLoadIdentity = `${kind}:${load.id}`;
+  state.evaluationShareLoading = kind === "share";
+  state.evaluationSavedLoading = kind === "saved";
+  clearEvaluationSearchFocus();
+  return load;
+}
+
+function runEvaluationSnapshotLoad(kind, snapshotId, loadSnapshot) {
+  const id = String(snapshotId || "").trim();
+  if (!id || typeof loadSnapshot !== "function") return Promise.resolve(false);
+  const identity = `${kind}:${id}`;
+  if (evaluationSnapshotLoadPromise && evaluationSnapshotLoadIdentity === identity) {
+    return evaluationSnapshotLoadPromise;
+  }
+
+  const load = beginEvaluationSnapshotLoad(kind, id);
+  const promise = (async () => {
+    try {
+      return await loadSnapshot(load);
+    } finally {
+      if (evaluationSnapshotLoadPromise === promise) {
+        evaluationSnapshotLoadPromise = null;
+        evaluationSnapshotLoadIdentity = "";
+      }
+      if (load.generation === evaluationSnapshotLoadGeneration) {
+        state.evaluationShareLoading = false;
+        state.evaluationSavedLoading = false;
+      }
+    }
+  })();
+  evaluationSnapshotLoadPromise = promise;
+  return promise;
 }
 
 async function loadSharedEvaluation(shareId) {
-  const id = String(shareId || "").trim();
-  const playerId = String(evaluationPlayerIdFromUrl() || "").trim();
+  return runEvaluationSnapshotLoad("share", shareId, async (load) => {
+    const id = load.id;
+    const playerId = String(evaluationPlayerIdFromUrl() || "").trim();
+    const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
 
-  if (!id || state.evaluationShareLoading) {
-    return;
-  }
+    try {
+      const requestUrl = new URL("/api/evaluation-share", window.location.origin);
+      requestUrl.searchParams.set("id", id);
+      if (playerId) requestUrl.searchParams.set("player", playerId);
 
-  state.evaluationShareLoading = true;
-  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
+      const response = await fetch(requestUrl.toString(), { cache: "no-store" });
+      if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+      if (!response.ok) throw new Error("Share not found.");
 
-  try {
-    const requestUrl = new URL("/api/evaluation-share", window.location.origin);
-    requestUrl.searchParams.set("id", id);
-    if (playerId) {
-      requestUrl.searchParams.set("player", playerId);
+      const data = await response.json();
+      if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+      const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
+      if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+        const playerPayload = await requestIncrementalRoute({
+          pageName: "evaluation",
+          scope: "evaluation",
+          view: "attributes",
+          access: currentDataAccess("evaluation"),
+          playerId: payloadPlayerId,
+        }, 1, { force: true });
+        if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+        if (!playerPayload) throw new Error("Evaluation player is not available.");
+      }
+
+      state.evaluationShareId = id;
+      state.evaluationSavedId = "";
+      return await applySharedEvaluationPayload(data.payload, {
+        mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
+        snapshotLoad: load,
+      });
+    } catch {
+      if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+      showToast("Shared evaluation has expired or could not be loaded.");
+      const recovered = await recoverInvalidEvaluationLink(load);
+      if (recovered && load.generation === evaluationSnapshotLoadGeneration && window.location.pathname === "/evaluation") {
+        await renderEvaluationPage();
+      }
+      return false;
     }
-
-    const response = await fetch(requestUrl.toString(), { cache: "no-store" });
-
-    if (!response.ok) {
-      throw new Error("Share not found.");
-    }
-
-    const data = await response.json();
-    const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
-    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
-      const playerPayload = await requestIncrementalRoute({
-        pageName: "evaluation",
-        scope: "evaluation",
-        view: "attributes",
-        access: currentDataAccess("evaluation"),
-        playerId: payloadPlayerId,
-      }, 1, { force: true });
-      if (!playerPayload) throw new Error("Evaluation player is not available.");
-    }
-    state.evaluationShareId = id;
-    await applySharedEvaluationPayload(data.payload, {
-      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
-    });
-  } catch {
-    showToast("Shared evaluation has expired or could not be loaded.");
-    await recoverInvalidEvaluationLink();
-    await renderEvaluationPage();
-  } finally {
-    state.evaluationShareLoading = false;
-  }
+  });
 }
 
 async function createSharedEvaluationFromPayload(payload, fallbackPlayerId = "") {
@@ -460,68 +518,65 @@ async function createSavedEvaluation() {
 }
 
 async function loadSavedEvaluation(savedId, playerId = "") {
-  const id = String(savedId || "").trim();
+  return runEvaluationSnapshotLoad("saved", savedId, async (load) => {
+    const id = load.id;
+    const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
 
-  if (!id || state.evaluationSavedLoading) {
-    return;
-  }
-
-  state.evaluationSavedLoading = true;
-  const evaluationMflPerUsdRevisionAtLoadStart = state.evaluationMflPerUsdRevision;
-
-  try {
-    const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
-    let data = cachedSavedEvaluationEntry(id);
-    showSavedEvaluationPlayerName(data, selectedPlayerId);
-
-    if (!data) {
-      const requestUrl = new URL("/api/evaluation-save", window.location.origin);
-      requestUrl.searchParams.set("id", id);
-      if (selectedPlayerId) {
-        requestUrl.searchParams.set("player", selectedPlayerId);
-      }
-
-      const response = await fetch(requestUrl.toString(), {
-        cache: "no-store",
-        headers: walletProofHeaders(true),
-      });
-
-      if (!response.ok) {
-        throw new Error("Saved evaluation not found.");
-      }
-
-      data = await response.json();
-      rememberSavedEvaluationCacheEntry(data);
+    try {
+      const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
+      let data = cachedSavedEvaluationEntry(id);
       showSavedEvaluationPlayerName(data, selectedPlayerId);
-    }
 
-    const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
-    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
-      const playerPayload = await requestIncrementalRoute({
-        pageName: "evaluation",
-        scope: "evaluation",
-        view: "attributes",
-        access: currentDataAccess("evaluation"),
-        playerId: payloadPlayerId,
-      }, 1, { force: true });
-      if (!playerPayload) throw new Error("Evaluation player is not available.");
+      if (!data) {
+        const requestUrl = new URL("/api/evaluation-save", window.location.origin);
+        requestUrl.searchParams.set("id", id);
+        if (selectedPlayerId) requestUrl.searchParams.set("player", selectedPlayerId);
+
+        const response = await fetch(requestUrl.toString(), {
+          cache: "no-store",
+          headers: walletProofHeaders(true),
+        });
+        if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+        if (!response.ok) throw new Error("Saved evaluation not found.");
+
+        data = await response.json();
+        if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+        rememberSavedEvaluationCacheEntry(data);
+        showSavedEvaluationPlayerName(data, selectedPlayerId);
+      }
+
+      const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
+      if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+        const playerPayload = await requestIncrementalRoute({
+          pageName: "evaluation",
+          scope: "evaluation",
+          view: "attributes",
+          access: currentDataAccess("evaluation"),
+          playerId: payloadPlayerId,
+        }, 1, { force: true });
+        if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+        if (!playerPayload) throw new Error("Evaluation player is not available.");
+      }
+
+      data = rememberSavedEvaluationCacheEntry(data) || data;
+      state.evaluationSavedId = id;
+      state.evaluationShareId = "";
+      updateEvaluationFooterActions();
+      return await applySharedEvaluationPayload(data.payload, {
+        mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
+        snapshotLoad: load,
+      });
+    } catch {
+      if (!evaluationSnapshotLoadIsCurrent(load)) return false;
+      showToast("Saved evaluation could not be loaded.");
+      const recovered = await recoverInvalidEvaluationLink(load);
+      updateEvaluationFooterActions();
+      if (recovered && load.generation === evaluationSnapshotLoadGeneration && window.location.pathname === "/evaluation") {
+        await renderEvaluationPage();
+      }
+      return false;
     }
-    data = rememberSavedEvaluationCacheEntry(data) || data;
-    state.evaluationSavedId = id;
-    state.evaluationShareId = "";
-    updateEvaluationFooterActions();
-    clearEvaluationSearchFocus();
-    await applySharedEvaluationPayload(data.payload, {
-      mflPerUsdRevisionAtLoadStart: evaluationMflPerUsdRevisionAtLoadStart,
-    });
-  } catch {
-    showToast("Saved evaluation could not be loaded.");
-    await recoverInvalidEvaluationLink();
-    updateEvaluationFooterActions();
-    await renderEvaluationPage();
-  } finally {
-    state.evaluationSavedLoading = false;
-  }
+  });
 }
 
 function evaluationPresentValueTotalFromPayload(payload) {
@@ -763,27 +818,19 @@ function renderSavedEvaluationList(rows) {
 }
 
 
-async function evaluationOpenSavedEvaluationsModalOwner() {
-  hideEvaluationLoadActionTooltip();
-  if (!hasWalletOptIn()) {
-    showToast("Opt in to load saved evaluations.");
-    return;
-  }
+let savedEvaluationListPreloadPromise = null;
 
-  showModal(evaluationLoadModal);
+async function loadSavedEvaluationListData() {
+  if (!hasWalletOptIn()) return null;
   const cachedEvaluations = savedEvaluationListCache();
-  if (cachedEvaluations) {
-    renderSavedEvaluationList(cachedEvaluations);
-    return;
-  }
+  if (cachedEvaluations) return cachedEvaluations;
+  if (savedEvaluationListPreloadPromise) return savedEvaluationListPreloadPromise;
 
-  evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
-  try {
+  savedEvaluationListPreloadPromise = (async () => {
     const response = await fetch("/api/evaluation-save", {
       cache: "no-store",
       headers: walletProofHeaders(true),
     });
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || "Could not load saved evaluations.");
@@ -805,8 +852,41 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       }, 1, { force: true });
     }
 
-    const rememberedEvaluations = rememberSavedEvaluationList(evaluations);
-    renderSavedEvaluationList(rememberedEvaluations);
+    return rememberSavedEvaluationList(evaluations);
+  })().finally(() => {
+    savedEvaluationListPreloadPromise = null;
+  });
+  return savedEvaluationListPreloadPromise;
+}
+
+function preloadSavedEvaluationList() {
+  if (!/^\/evaluation\/?$/i.test(window.location.pathname) || !hasWalletOptIn()) {
+    return Promise.resolve(null);
+  }
+  return loadSavedEvaluationListData().catch((error) => {
+    console.warn("Could not preload saved Evaluations.", error);
+    return null;
+  });
+}
+
+async function evaluationOpenSavedEvaluationsModalOwner() {
+  hideEvaluationLoadActionTooltip();
+  if (!hasWalletOptIn()) {
+    showToast("Opt in to load saved evaluations.");
+    return;
+  }
+
+  showModal(evaluationLoadModal);
+  const cachedEvaluations = savedEvaluationListCache();
+  if (cachedEvaluations) {
+    renderSavedEvaluationList(cachedEvaluations);
+    return;
+  }
+
+  evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
+  try {
+    const evaluations = await loadSavedEvaluationListData();
+    renderSavedEvaluationList(Array.isArray(evaluations) ? evaluations : []);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
     const message = document.createElement("p");
@@ -817,6 +897,13 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
 }
 
 __mflOpenSavedEvaluationsModalOwner = evaluationOpenSavedEvaluationsModalOwner;
+
+queueMicrotask(() => {
+  void preloadSavedEvaluationList();
+});
+window.addEventListener("mfl:evaluation-ready", () => {
+  void preloadSavedEvaluationList();
+});
 
 function evaluationDiscountRateValue() {
   const liveRate = window.__mflSupabaseDiscountRateFunction?.();

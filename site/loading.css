@@ -34,6 +34,28 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   display: none;
 }
 
+/* The plain Evaluation Loading… surface exists at parser/first paint, before bootstrap.js reaches
+ * the bottom of the document. Bootstrap replaces this generated first-paint text with the real
+ * loading node in-place; keep its typography identical to .searchHint so that handoff is invisible. */
+html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
+  #evaluationSearchResults[hidden]:empty {
+  display: grid;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
+  #evaluationSearchResults[hidden]:empty::before {
+  content: "Loading…";
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
+    #evaluationSearchResults[hidden]:empty::before {
+    font-size: 11px;
+  }
+}
+
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationSearchInput::placeholder {
   color: transparent;
 }

@@ -59,6 +59,20 @@ assert.ok(watchlistAwait >= 0 && watchlistGuard > watchlistAwait, "Watchlist rou
 const evaluationAwait = baseSetPage.indexOf("await renderEvaluationPage();");
 const evaluationGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", evaluationAwait);
 assert.ok(evaluationAwait >= 0 && evaluationGuard > evaluationAwait, "Non-table Evaluation completion must not reclaim UI after a table navigation wins.");
+
+const incrementalSetPageStart = appCoreSource.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
+const incrementalSetPageEnd = appCoreSource.indexOf("function divisionInfo(", incrementalSetPageStart);
+const incrementalSetPage = appCoreSource.slice(incrementalSetPageStart, incrementalSetPageEnd);
+assert.match(incrementalSetPage, /return runPageTransition\(pageName, navigationUpdatesHistory, options, \(navigationTransition\) => setPage\(pageName, false, \{/, "Incremental page loading must remain inside the winning route transition until its async load settles.");
+assert.match(incrementalSetPage, /skipNavigationTransition: true,[\s\S]*?__mflNavigationTransition: navigationTransition,[\s\S]*?__mflNavigationUpdatesHistory: navigationUpdatesHistory/, "The recursive incremental load must retain transition identity and original history ownership without starting another transition.");
+assert.match(incrementalSetPage, /const navigationTransition = options\.__mflNavigationTransition \|\| null;/, "Incremental page navigation must retain its owning transition identity.");
+assert.match(incrementalSetPage, /const navigationOptions = navigationTransition[\s\S]*?__mflNavigationTransition: navigationTransition/, "Incremental page navigation must propagate its owning transition to downstream renderers.");
+assert.match(incrementalSetPage, /renderLoadedIncrementalRoute\.call\(this, pageName, updateHash, navigationOptions, route,/, "Incremental route completion must render with the current navigation identity.");
+const incrementalRequestStart = appCoreSource.indexOf("async function requestIncrementalRoute(route, page = 1, options = {}) {");
+const incrementalRequestEnd = appCoreSource.indexOf("async function withInteractionBusy", incrementalRequestStart);
+const incrementalRequest = appCoreSource.slice(incrementalRequestStart, incrementalRequestEnd);
+assert.match(incrementalRequest, /const navigationRequestIsCurrent = \(\) => !navigationTransition \|\| navigationTransitionIsCurrent\(navigationTransition\);/, "Incremental payload application must understand page/view transition supersession.");
+assert.match(incrementalRequest, /!incrementalRouteRequestIsCurrent\(generation\) \|\| !navigationRequestIsCurrent\(\)/, "A stale navigation must be rejected before cached or network payload application.");
 assert.doesNotMatch(appCoreSource, /setPageWithStableHome/, "Home must use the canonical page transition owner instead of a post-load wrapper that can reclaim stale UI.");
 assert.doesNotMatch(appCoreSource, /requestAnimationFrame\(enforceHomePage\)/, "A completed stale Home load must never schedule a later page-shell reclaim.");
 

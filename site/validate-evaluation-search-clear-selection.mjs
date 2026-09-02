@@ -25,31 +25,30 @@ const [layoutRuntime, searchRuntime, appCoreSource, indexHtml] = await Promise.a
 invariant(
   !layoutRuntime.includes(".focus(")
     && !layoutRuntime.includes(".select(")
-    && !layoutRuntime.includes('window.addEventListener("mfl:ready"'),
-  "Evaluation layout must not focus/select the search input at first paint or generic application readiness.",
+    && !layoutRuntime.includes('window.addEventListener("mfl:ready"')
+    && !layoutRuntime.includes('window.addEventListener("mfl:loading-state"')
+    && !layoutRuntime.includes('window.addEventListener("mfl:evaluation-ready"')
+    && !layoutRuntime.includes("selectEmptySearchAfterLoading")
+    && !layoutRuntime.includes("suppressNextIdleSelection")
+    && !layoutRuntime.includes("SAVED_EVALUATIONS_LOADING_REASON"),
+  "Evaluation layout must never own automatic search focus/selection during first paint, route readiness, or loading settlement.",
 );
 
-for (const required of [
-  'const SAVED_EVALUATIONS_LOADING_REASON = "evaluation-load";',
-  "let suppressNextIdleSelection = false;",
-  "function selectEmptySearchAfterLoading(snapshot)",
-  "if (destroyed || snapshot?.busy || !evaluationActive()) return;",
-  "if (!input || input.value.trim()) return;",
-  "window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();",
-  "function onLoadingState(event)",
-  "snapshot.reasons.includes(SAVED_EVALUATIONS_LOADING_REASON)",
-  "suppressNextIdleSelection = true;",
-  "if (suppressNextIdleSelection) {",
-  "suppressNextIdleSelection = false;",
-  "function onEvaluationReady()",
-  "selectEmptySearchAfterLoading(window.__mflInteractionBusy?.snapshot?.());",
-  'window.addEventListener("mfl:loading-state", onLoadingState);',
-  'window.addEventListener("mfl:evaluation-ready", onEvaluationReady);',
-  'window.removeEventListener("mfl:loading-state", onLoadingState);',
-  'window.removeEventListener("mfl:evaluation-ready", onEvaluationReady);',
-]) {
-  invariant(layoutRuntime.includes(required), `Evaluation post-loading selection contract is missing ${required}`);
-}
+const layoutSyncStart = layoutRuntime.indexOf("function sync() {");
+const layoutSyncEnd = layoutRuntime.indexOf("function destroy()", layoutSyncStart);
+const layoutSyncSource = layoutSyncStart >= 0 && layoutSyncEnd > layoutSyncStart
+  ? layoutRuntime.slice(layoutSyncStart, layoutSyncEnd)
+  : "";
+invariant(
+  layoutRuntime.includes("function renderEmptyRecents()")
+    && layoutRuntime.includes("restoreEmptyRecentResults?.(false)")
+    && layoutRuntime.includes("function onPointerDown(event)")
+    && layoutRuntime.includes("if (input && document.activeElement === input) input.blur();")
+    && layoutRuntime.includes("queueMicrotask(renderEmptyRecents);")
+    && !layoutSyncSource.includes("renderEmptyRecents")
+    && !layoutSyncSource.includes("restoreEmptyRecentResults"),
+  "Evaluation layout may restore empty recents after an explicit outside pointer interaction, but startup sync must never become a second recent-five loader.",
+);
 
 const selectorStart = searchRuntime.indexOf("function selectEmptySearch()");
 const selectorEnd = searchRuntime.indexOf("function onPointerDown(event)", selectorStart);
@@ -61,11 +60,11 @@ invariant(
     && selectorSource.includes("playerSelected()")
     && selectorSource.includes("field.value.trim()")
     && selectorSource.includes("window.__mflInteractionBusy?.isBusy?.()")
-    && selectorSource.includes("directPointerFocus = true;")
     && selectorSource.includes("field.focus({ preventScroll: true });")
     && selectorSource.includes("field.select();")
-    && selectorSource.includes("clearDirectPointerFocus();"),
-  "Evaluation search selection must be empty-only, idle-only, and pass through the canonical focus owner.",
+    && !selectorSource.includes("directPointerFocus")
+    && !selectorSource.includes("clearDirectPointerFocus"),
+  "Explicit Evaluation search selection must be empty-only and idle-only without a route-owned focus gate.",
 );
 
 const clearStart = searchRuntime.indexOf('const clear = event.target.closest("#evaluationSearchClearButton");');
@@ -75,7 +74,7 @@ invariant(
   clearSource.includes("queueMicrotask(() => {")
     && clearSource.includes("selectEmptySearch();")
     && !clearSource.includes("restoreEmptyRecentResults("),
-  "The Evaluation search-state owner must retain only the delegated clear focus fallback and must not start a second recent-results restore.",
+  "The clear action must remain the explicit delegated focus path without starting a duplicate recent-results restore.",
 );
 
 const canonicalClearStart = appCoreSource.indexOf("function clearEvaluationSearch() {");
@@ -89,7 +88,7 @@ invariant(
     && canonicalClearSource.includes("window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();")
     && !canonicalClearSource.includes("evaluationSearchInput.focus()")
     && appCoreSource.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());'),
-  "Clicking the Evaluation clear X must select the empty search directly after the canonical core reset through the search-state owner without stealing pointer focus.",
+  "Clicking the Evaluation clear X must select the empty search only because the user explicitly requested a reset.",
 );
 
 invariant(
@@ -101,7 +100,7 @@ invariant(
 invariant(
   !searchRuntime.includes("blockSearchInteractionWhileLoading")
     && !searchRuntime.includes('addEventListener("beforeinput"'),
-  "Evaluation selection must not add keyboard blocking while loading.",
+  "Evaluation search must not block ordinary keyboard interaction while loading.",
 );
 
-console.log("Evaluation search selection validation passed: first paint stays unselected, normal loading focuses an empty search only after idle, cached Evaluation readiness focuses the same empty search without a loading transition, clear X selects after reset without a duplicate recent-results restore, and Saved Evaluations Load keeps it deselected.");
+console.log("Evaluation search selection validation passed: navigation/readiness never auto-focuses, empty recents remain passive, and only explicit user actions such as Clear may select the search field.");

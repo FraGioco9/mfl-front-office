@@ -52,7 +52,7 @@ for (const column of ["player_id", "name", "overall", "age", "positions", "retir
 
 const fastRender = section(
   "function renderEvaluationSearchEntryImmediately(entry, route) {",
-  "\nfunction renderEvaluationSearchResults() {",
+  "\nfunction renderEvaluationSearchResults(options = {}) {",
 );
 invariant(fastRender, "Evaluation search must define an immediate render fast path.");
 for (const required of [
@@ -69,8 +69,8 @@ invariant(
   "The immediate Evaluation search fast path must not make a blocking route request.",
 );
 
-const rendererStart = source.indexOf("function renderEvaluationSearchResults() {");
-const rendererEnd = source.indexOf("let evaluationEmptySearchFocusScheduled", rendererStart);
+const rendererStart = source.indexOf("function renderEvaluationSearchResults(options = {}) {");
+const rendererEnd = source.indexOf("function primeEmptyEvaluationSearch()", rendererStart);
 const fastCall = source.indexOf("if (renderEvaluationSearchEntryImmediately(entry, route)) return;", rendererStart);
 const fallbackRequest = source.indexOf("await requestIncrementalRoute(route, 1);", fastCall);
 invariant(rendererStart >= 0 && rendererEnd > rendererStart, "Evaluation search result renderer must be discoverable.");

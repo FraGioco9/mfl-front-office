@@ -217,7 +217,7 @@ invariant(
   "Canonical application source must preserve first-paint loading rows until data is authoritative and guard active requests.",
 );
 invariant(
-  appCoreSource.includes("requestIncrementalRoute(route, 1)")
+  appCoreSource.includes("requestIncrementalRoute(route, 1")
     && !appCoreSource.includes("preservePager"),
   "View transitions must use the same pager-hidden Table loading contract as every other uncached request."
 );
@@ -226,18 +226,21 @@ const incrementalPageStart = appCoreSource.indexOf("setPage = async function set
 const incrementalPageEnd = appCoreSource.indexOf("function divisionInfo(", incrementalPageStart);
 const incrementalPageSource = appCoreSource.slice(incrementalPageStart, incrementalPageEnd);
 const progressionTokenIndex = incrementalPageSource.indexOf('const progressionLoadingRequestToken = pageName === "progression" && !routeDataCacheReady(pageName, options)');
-const pageTransitionIndex = incrementalPageSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+const pageTransitionIndex = incrementalPageSource.indexOf("return runPageTransition(pageName, navigationUpdatesHistory, options, (navigationTransition) => setPage(pageName, false, {");
 invariant(
   appCoreSource.includes("const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);")
     && appCoreSource.includes("async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {})")
-    && appCoreSource.includes("const payload = await requestIncrementalRoute(route, 1, requestOptions);")
+    && appCoreSource.includes("const payload = await requestIncrementalRoute(route, 1, {")
+    && appCoreSource.includes("__mflNavigationTransition: options.__mflNavigationTransition || null")
     && incrementalPageStart >= 0
     && incrementalPageEnd > incrementalPageStart
-    && progressionTokenIndex >= 0
-    && pageTransitionIndex > progressionTokenIndex
+    && pageTransitionIndex >= 0
+    && progressionTokenIndex > pageTransitionIndex
+    && incrementalPageSource.includes("skipNavigationTransition: true")
+    && incrementalPageSource.includes("__mflNavigationUpdatesHistory: navigationUpdatesHistory")
     && incrementalPageSource.includes("tableLoadingRequestToken: progressionLoadingRequestToken")
     && incrementalPageSource.includes("finally {\n        window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);"),
-  "Progression must acquire the canonical Table request token before route-transition paint and keep it through final render.",
+  "Page loading must stay inside the route-transition loader, while Progression acquires its canonical Table request token only in the recursive loading pass and keeps it through final render.",
 );
 
 for (const retiredOwner of [

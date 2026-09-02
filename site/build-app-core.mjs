@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,7 +40,6 @@ await synchronizeReleaseProjections(siteRoot);
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release)).replace(/\s*$/, "");
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
-const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
 const artifacts = [];
 for (const entry of CORE_SOURCES) {
@@ -49,6 +49,12 @@ for (const entry of CORE_SOURCES) {
   if (!source) throw new Error(`Canonical core source is empty: ${entry.source}.`);
   artifacts.push(Object.freeze({ ...entry, sourceName: entry.source, sourcePath, runtimePath, source }));
 }
+
+const coreBuildId = createHash("sha256")
+  .update(artifacts.map(({ banner, source }) => `${banner}${source}\n`).join("\n"))
+  .digest("hex")
+  .slice(0, 16);
+const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});\nwindow.__mflCoreBuildId = "${coreBuildId}";`;
 
 if (!artifacts.some(({ source }) => source.includes('icon: "calendar-x-2"'))) {
   throw new Error("Canonical core sources do not use the calendar-x-2 icon for retired players.");
@@ -89,6 +95,7 @@ const runtimeChanges = await Promise.all(artifacts.map(({ runtimePath, banner, s
 
 if (process.env.MFL_BUILD_VERBOSE === "1") {
   console.log(`${tableWidthChanged ? "Generated" : "Unchanged"} ${tableWidthRuntimePath} (canonical config + Uniform Width).`);
+  console.log(`Application core build ID: ${coreBuildId}.`);
   artifacts.forEach(({ runtimePath, source }, index) => {
     console.log(`${runtimeChanges[index] ? "Generated" : "Unchanged"} ${runtimePath} (${Buffer.byteLength(source, "utf8")} source-owned bytes).`);
   });

@@ -10,5 +10,6 @@ This file records the canonical loading behavior enforced by the routing/loading
 - Table headers and static chrome remain destination-owned; loading rows are shown only when the active table request needs placeholders, and `nav.pager` hides as soon as a Table view navigation becomes pending and stays hidden through the full active Table loading window.
 - Settled table rows remain visible during background work, and cached destinations may render immediately.
 - Refresh and in-site navigation share the same route-loading identity and first-paint/static-shell contract.
+- Immutable application-core URLs include a generated content identity; a release version alone must never allow a current shell to execute a stale core.
 - Background warm-up must not delay visible route readiness, block navigation, or replace settled route content.
 - No loading fix may add `!important`, runtime repair styles, arbitrary delay-based race masking, or weaken stale-response guards.

@@ -105,6 +105,7 @@ const runtimeSandbox = {
 vm.runInNewContext(tableWidthSource, runtimeSandbox);
 const runtimeConfig = runtimeSandbox.window.__mflAppConfig;
 invariant(runtimeConfig, "Pre-bootstrap runtime must expose the canonical app configuration.");
+invariant(/^[a-f0-9]{16}$/.test(String(runtimeSandbox.window.__mflCoreBuildId || "")), "Pre-bootstrap runtime must expose the generated application-core build identity.");
 same(runtimeConfig.release, release, "pre-bootstrap release config");
 same(runtimeConfig.routes.tableViews, TABLE_VIEW_CONFIG, "pre-bootstrap route views");
 same(runtimeConfig.routes.viewBySlug, VIEW_BY_SLUG, "pre-bootstrap view slug map");

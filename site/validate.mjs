@@ -126,6 +126,8 @@ const appConfig = await readSite("modules/app-config.js");
 const routeCoreLoader = await readSite("route-core-loader-runtime.js");
 includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must use the build-time application core.");
 includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \"mfl_core\"", "The prebuilt core must use its dedicated cache-key query parameter.");
+includes(entry, 'const immutableRevision = `${entryRelease.version}-${buildId}`;', "The prebuilt core cache key must combine release and generated content identity.");
+includes(bootstrap, 'url.searchParams.set("mfl_core", `${version}-${buildId}`);', "Route-core cache keys must combine release and generated content identity.");
 includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading while critical runtimes load.");
 includes(entry, "await loadClassicScript(prebuiltApplicationCorePath());", "The production core must execute as an external classic script.");
 excludes(entry, "SOURCE_CORE_PATH", "app-entry.js must not restore a raw source-core fallback.");
@@ -165,6 +167,7 @@ excludes(tableLoading, "VIEW_COLUMNS", "Table loading must not own the table sch
 
 const tableWidth = await readSite("table-width-runtime.js");
 includes(tableWidth, "window.__mflUniformWidth", "Table widths must remain globally single-owned.");
+matches(tableWidth, /window\.__mflCoreBuildId = "[a-f0-9]{16}";/, "Pre-bootstrap config must expose the generated application-core build identity.");
 excludes(tableWidth, "MutationObserver", "The table width owner must not globally observe DOM mutations.");
 
 const sharedTableUi = await readSite("shared-table-ui-runtime.js");

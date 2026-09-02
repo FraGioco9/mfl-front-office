@@ -216,9 +216,13 @@ invariant(
   "Global view transitions must commit, paint, then load.",
 );
 
-const setPageTransitionIndex = coreSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
-const setPagePrepareIndex = coreSource.indexOf('const requestedMflView = pageName === "mfl"', setPageTransitionIndex);
-invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransitionIndex, "Every setPage path must settle the global transition before route-specific work starts.");
+const setPageTransitionIndex = coreSource.indexOf("return runPageTransition(pageName, navigationUpdatesHistory, options, (navigationTransition) => setPage(pageName, false, {");
+const setPageRecursiveGuardIndex = coreSource.indexOf("skipNavigationTransition: true", setPageTransitionIndex);
+const setPagePrepareIndex = coreSource.indexOf('const requestedMflView = pageName === "mfl"', setPageRecursiveGuardIndex);
+invariant(
+  setPageTransitionIndex >= 0 && setPageRecursiveGuardIndex > setPageTransitionIndex && setPagePrepareIndex > setPageRecursiveGuardIndex,
+  "Every setPage path must keep destination loading owned by the global transition while route-specific work runs in the guarded recursive pass.",
+);
 
 for (const [transitionMarker, loaderMarker, label] of [
   ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],

@@ -116,7 +116,9 @@ function initialRouteRuntimeRequest() {
   return { pageName: normalizeRoutePageName(request?.pageName), options };
 }
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
-const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
+const initialEvaluationParams = new URLSearchParams(window.location.search);
+const plainEvaluationStartup = initialRouteRuntime.pageName === "evaluation"
+  && !["player", "saved", "share"].some((key) => initialEvaluationParams.get(key));
 const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
   ...UNIVERSAL_RUNTIME_SCRIPTS,
   ...routeDependencyPlan(initialRouteRuntime.pageName, initialRouteRuntime.options).preCore,
@@ -124,6 +126,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
+ * __mflCoreBuildId?: string,
  * __mflInteractionBusy?: { reason?: string, begin?: (reason?: string) => string, end?: (token?: string) => void, waitForRoutePaint?: () => Promise<void>, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
  * __mflFilterControlsRuntime?: { sync?: () => void },
@@ -211,7 +214,10 @@ function assertApplicationCoreInitialized(sourceLabel) {
 }
 
 function prebuiltApplicationCorePath() {
-  return `${PREBUILT_CORE_PATH}?${PREBUILT_CORE_CACHE_QUERY}=${encodeURIComponent(entryRelease.version)}`;
+  const buildId = String(runtimeWindow.__mflCoreBuildId || "").trim();
+  if (!/^[a-f0-9]{16}$/.test(buildId)) throw new Error("Application core build identity is unavailable.");
+  const immutableRevision = `${entryRelease.version}-${buildId}`;
+  return `${PREBUILT_CORE_PATH}?${PREBUILT_CORE_CACHE_QUERY}=${encodeURIComponent(immutableRevision)}`;
 }
 
 preloadClassicScript(prebuiltApplicationCorePath());
@@ -395,7 +401,7 @@ async function start() {
     await runtimeWindow.__mflAppStartPromise;
   }
 
-  if (evaluationStartup) {
+  if (plainEvaluationStartup) {
     await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
 
