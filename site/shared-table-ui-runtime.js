@@ -148,8 +148,18 @@
     background-size: 8px 6px;
     border-radius: 3px;
   }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
+    align-items: center;
+  }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
+    align-self: center;
+  }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
-    gap: 1px;
+    gap: 0;
+  }
+  #progressionPage .playerTableScroller td.col-age .playerAgeValue {
+    flex: 0 0 auto;
+    min-width: 0;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
     width: 18px;
