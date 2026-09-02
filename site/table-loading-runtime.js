@@ -25,6 +25,11 @@
       || /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(location.pathname);
   }
 
+  function pagerRouteActive() {
+    if (/^\/(?:clubs?|club)(?:\/|$)/i.test(location.pathname)) return false;
+    return String(document.body?.dataset.page || "").toLowerCase() !== "club";
+  }
+
   function elements() {
     const body = document.getElementById("tableBody");
     const empty = document.getElementById("emptyState");
@@ -39,11 +44,15 @@
     return element instanceof HTMLElement ? element : null;
   }
 
+  function hidePlayerCount() {
+    const count = document.getElementById("watchlistPlayerCount");
+    if (count instanceof HTMLElement) count.hidden = true;
+  }
+
   function hidePager() {
     const page = pager();
     if (page) page.hidden = true;
-    const count = document.getElementById("watchlistPlayerCount");
-    if (count instanceof HTMLElement) count.hidden = true;
+    hidePlayerCount();
   }
 
   function loadingSnapshot() {
@@ -54,12 +63,20 @@
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
 
+  function syncRenderedRows() {
+    const { body } = elements();
+    if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
+    const page = pager();
+    if (page) page.hidden = !pagerRouteActive();
+    return Boolean(page && !page.hidden);
+  }
+
   function hasCanonicalLoadingRows(body) {
-  return body instanceof HTMLTableSectionElement
-    && body.dataset.staticLoading === "true"
-    && body.rows.length === 5
-    && Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS));
-}
+    return body instanceof HTMLTableSectionElement
+      && body.dataset.staticLoading === "true"
+      && body.rows.length === 5
+      && Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS));
+  }
 
   function shouldPreserveRenderedRows(body = elements().body) {
     if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;
@@ -240,7 +257,7 @@
     const page = pager();
     if (!snapshot.dataLoading) {
       restoreSelectionHeader();
-      if (page) page.hidden = false;
+      if (page) page.hidden = !pagerRouteActive();
     }
     return true;
   }
@@ -252,7 +269,9 @@
       return;
     }
     if (snapshot.dataLoading || requestActive()) {
-      hidePager();
+      const renderedRowsVisible = syncRenderedRows();
+      if (!renderedRowsVisible) hidePager();
+      else hidePlayerCount();
       neutralizeSelectionHeader();
       if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;
       show({ replaceExisting: true });
@@ -286,6 +305,7 @@
     beginRequest,
     finishRequest,
     requestActive,
+    syncRenderedRows,
     show,
     release,
     sync,
