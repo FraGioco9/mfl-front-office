@@ -45,11 +45,13 @@ const syncSource = loadingRuntime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.includes("hidePager();\n      neutralizeSelectionHeader();")
+    && syncSource.includes("const renderedRowsVisible = syncRenderedRows();")
+    && syncSource.includes("if (!renderedRowsVisible) hidePager();")
+    && syncSource.includes("else hidePlayerCount();")
+    && syncSource.includes("neutralizeSelectionHeader();")
     && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("shouldPreserveRenderedRows()"),
-  "Controller-driven table loading must disable header selection even when existing rows remain rendered.",
+  "Controller-driven table loading must disable header selection even when real rendered rows make pager chrome visible.",
 );
-
 
 const restoreStart = loadingRuntime.indexOf("function restoreSelectionHeader() {");
 const restoreEnd = loadingRuntime.indexOf("function primeLoadingRows()", restoreStart);
@@ -80,7 +82,7 @@ invariant(
     && releaseEnd > releaseStart
     && releaseSource.includes("if (!snapshot.dataLoading) {")
     && releaseSource.includes("restoreSelectionHeader();")
-    && releaseSource.indexOf("restoreSelectionHeader();") < releaseSource.indexOf("page.hidden = false"),
+    && releaseSource.indexOf("restoreSelectionHeader();") < releaseSource.indexOf("page.hidden = !pagerRouteActive()"),
   "Loaded table release must recompute header selection state before exposing settled table chrome.",
 );
 
@@ -139,4 +141,4 @@ invariant(
   "Generated Table runtime must exactly match canonical table.js.",
 );
 
-console.log("Source-owned header selection loading lifecycle validation passed.");
+console.log("Source-owned header selection loading lifecycle validation passed with pager visibility tied to real rendered rows.");
