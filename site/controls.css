@@ -728,10 +728,10 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 
 #pagerCurrentPageInput {
   box-sizing: border-box;
-  flex: 0 0 52px;
-  width: 52px;
-  min-width: 52px;
-  max-width: 52px;
+  flex: 0 0 calc(5ch + 12px);
+  width: calc(5ch + 12px);
+  min-width: calc(5ch + 12px);
+  max-width: calc(5ch + 12px);
   height: 24px;
   min-height: 24px;
   max-height: 24px;
