@@ -26,8 +26,14 @@ const [controls, interactions, selectionStack, appCore, generatedCore, tableRunt
 
 for (const required of [
   "#pagerCurrentPageInput {",
-  "width: 52px;",
+  "box-sizing: border-box;",
+  "flex: 0 0 calc(5ch + 12px);",
+  "width: calc(5ch + 12px);",
+  "min-width: calc(5ch + 12px);",
+  "max-width: calc(5ch + 12px);",
+  "padding: 0 5px;",
   "font: inherit;",
+  "font-variant-numeric: tabular-nums;",
   "#pagerCurrentPageInput:hover:not(:disabled),",
   "#pagerCurrentPageInput:focus:not(:disabled),",
   "border-color: var(--primary-hover);",
@@ -40,6 +46,11 @@ for (const required of [
 ]) {
   invariant(controls.includes(required), `Editable pager styling is missing ${required}`);
 }
+invariant(
+  !controls.includes("#pagerCurrentPageInput {\n  box-sizing: border-box;\n  flex: 0 0 52px;")
+    && !controls.includes("width: 52px;\n  min-width: 52px;\n  max-width: 52px;"),
+  "Pager current-page width must scale with its inherited font instead of using the old fixed 52px box.",
+);
 
 invariant(interactions.includes('window.addEventListener("keydown", onEscapeCapture, true);'), "Global Escape ownership must run at window capture before document-level focus fallback.");
 invariant(!interactions.includes("pagerCurrentPageInput"), "Global Escape ownership must remain generic rather than hard-coding the pager input.");
@@ -148,4 +159,4 @@ invariant(
   "Previous and next pager buttons must use the same canonical five-row blank loading path as direct page entry.",
 );
 
-console.log("Editable pager validation passed with native text selection, Escape cancellation, and cached/uncached page navigation coverage.");
+console.log("Editable pager validation passed with a scalable five-digit input, native text selection, Escape cancellation, and cached/uncached page navigation coverage.");
