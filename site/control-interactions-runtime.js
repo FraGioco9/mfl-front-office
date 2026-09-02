@@ -51,7 +51,12 @@
     if (!(select instanceof HTMLSelectElement)) return;
     select.hidden = false;
     const placeholder = Array.from(select.options).find((option) => option.value === "");
-    if (placeholder) placeholder.textContent = "Add filter...";
+    if (placeholder) {
+    placeholder.textContent = "Add filter...";
+    placeholder.disabled = true;
+    placeholder.hidden = true;
+    if (!select.value) placeholder.selected = true;
+  }
   }
 
   function initializeAddFilterControl() {
