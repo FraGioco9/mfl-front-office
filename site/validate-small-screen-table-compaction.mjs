@@ -55,8 +55,12 @@ assert.doesNotMatch(
   "Temporary Views/Quick Filters invisibility must not destroy the fade/chevron shell.",
 );
 assert.ok(
-  shared.includes('const contentWidth = viewContentWidth(views);\n    if (contentWidth <= 0) return;'),
-  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful width measurement.",
+  shared.includes('if (!renderedViewItems(views).length) return;'),
+  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful visible-content measurement.",
+);
+assert.ok(
+  shared.includes('const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;'),
+  "Once measurable, horizontal overflow must remain derived directly from rendered visible controls.",
 );
 
 for (const token of [
