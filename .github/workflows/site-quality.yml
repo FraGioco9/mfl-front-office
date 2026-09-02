@@ -150,7 +150,7 @@ jobs:
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build
+        run: npm run build:core && npm run build:styles
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'
