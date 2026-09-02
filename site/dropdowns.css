@@ -17,17 +17,15 @@ select[data-mfl-dropdown-enhanced="true"] {
 }
 
 .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] {
-  --mfl-dropdown-chevron-gap: auto;
-  --mfl-evaluation-position-trigger-width: 46px;
-  --mfl-evaluation-position-chevron-left: 35px;
-  position: relative;
+  --mfl-dropdown-chevron-gap: 4px;
   display: inline-flex;
   align-items: center;
-  width: var(--mfl-evaluation-position-trigger-width);
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
   height: auto;
   margin: 0;
-  padding: 1px 12px 1px 0;
+  padding: 1px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -120,25 +118,6 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     transition: none;
   }
 
-  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]::picker(select) {
-    margin-block: 4px;
-    margin-inline-start: -5px;
-    padding-inline: 4px 5px;
-  }
-
-  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"] option {
-    padding-inline: 0 9px;
-  }
-
-  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]::picker-icon,
-  .evaluationSummaryPositionSelect[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
-    position: absolute;
-    top: 50%;
-    right: auto;
-    left: var(--mfl-evaluation-position-chevron-left);
-    margin: 0;
-    transform: translateY(-50%) rotate(45deg);
-  }
 
   select[data-mfl-dropdown-enhanced="true"] option,
   .filtersDialog select option {
