@@ -45,11 +45,14 @@ const syncSource = loadingRuntime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.includes("hidePager();\n      neutralizeSelectionHeader();")
-    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("shouldPreserveRenderedRows()"),
-  "Controller-driven table loading must disable header selection even when existing rows remain rendered.",
+    && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
+    && syncSource.includes("neutralizeSelectionHeader();")
+    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("hidePager();")
+    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("if (renderedRowsPresent)")
+    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("shouldPreserveRenderedRows()"),
+  "Controller-driven table loading must keep header selection neutral while stopping the loading surface immediately when real rows render.",
 );
-
 
 const restoreStart = loadingRuntime.indexOf("function restoreSelectionHeader() {");
 const restoreEnd = loadingRuntime.indexOf("function primeLoadingRows()", restoreStart);
@@ -80,7 +83,7 @@ invariant(
     && releaseEnd > releaseStart
     && releaseSource.includes("if (!snapshot.dataLoading) {")
     && releaseSource.includes("restoreSelectionHeader();")
-    && releaseSource.indexOf("restoreSelectionHeader();") < releaseSource.indexOf("page.hidden = false"),
+    && releaseSource.indexOf("restoreSelectionHeader();") < releaseSource.indexOf("page.hidden = !pagerRouteActive()"),
   "Loaded table release must recompute header selection state before exposing settled table chrome.",
 );
 
@@ -139,4 +142,4 @@ invariant(
   "Generated Table runtime must exactly match canonical table.js.",
 );
 
-console.log("Source-owned header selection loading lifecycle validation passed.");
+console.log("Source-owned header selection loading lifecycle validation passed with pager visibility tied to real rendered rows.");

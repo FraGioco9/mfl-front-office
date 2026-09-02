@@ -118,7 +118,6 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     transition: none;
   }
 
-
   select[data-mfl-dropdown-enhanced="true"] option,
   .filtersDialog select option {
     min-height: 34px;
@@ -756,4 +755,82 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .playerTableActionItem:hover:not(:disabled) .playerTableActionIcon,
 .playerTableActionItem:focus-visible:not(:disabled) .playerTableActionIcon {
   color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .playerTableActionMenu {
+    width: 176px;
+    min-width: 176px;
+    padding: 4px;
+  }
+
+  .playerTableActionItem {
+    gap: 6px;
+    height: 26px;
+    min-height: 26px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .playerTableActionIcon,
+  .playerTableActionIcon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .playerTableActionIcon {
+    flex-basis: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .playerTableActionMenu {
+    width: 156px;
+    min-width: 156px;
+    padding: 3px;
+  }
+
+  .playerTableActionItem {
+    gap: 5px;
+    height: 24px;
+    min-height: 24px;
+    padding-inline: 5px;
+    font-size: 10px;
+  }
+
+  .playerTableActionIcon,
+  .playerTableActionIcon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .playerTableActionIcon {
+    flex-basis: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .playerTableActionMenu {
+    width: 144px;
+    min-width: 144px;
+    padding: 3px;
+  }
+
+  .playerTableActionItem {
+    gap: 4px;
+    height: 22px;
+    min-height: 22px;
+    padding-inline: 4px;
+    font-size: 9px;
+  }
+
+  .playerTableActionIcon,
+  .playerTableActionIcon svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .playerTableActionIcon {
+    flex-basis: 11px;
+  }
 }

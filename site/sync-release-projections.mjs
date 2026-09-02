@@ -78,11 +78,28 @@ export function firstPaintRouteConfigProjectionSource() {
     "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
     "  #progressionPage #tableHead .selectionCell input:disabled { opacity: 0.45; }",
     "  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { box-sizing: border-box; flex: 0 0 13px; width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; aspect-ratio: 1 / 1; background-size: 8px 6px; border-radius: 3px; }",
+    "  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) { align-items: center; }",
+    "  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * { align-self: center; }",
+    "  #progressionPage .playerTableScroller td.col-age .tableControlCellContent { gap: 1px; }",
+    "  #progressionPage .playerTableScroller td.col-age .playerAgeValue { flex: 0 0 auto; min-width: 0; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton { width: 18px; min-width: 18px; max-width: 18px; height: 18px; min-height: 18px; max-height: 18px; padding: 0; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 12px; height: 12px; }",
+    "  #progressionPage .playerTableScroller .flagImage { width: 14px; height: 14px; }",
+    "  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex: 0 0 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; margin: 0; transform: none; }",
+    "  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 11px; height: 11px; }",
+    "  #progressionPage .playerTableScroller .playerNoteIcon { font-size: 9px; line-height: 1; }",
+    "  #progressionPage .playerTableScroller .listingCellContent { width: 18px; min-width: 18px; max-width: 18px; height: 18px; min-height: 18px; max-height: 18px; }",
+    "  #progressionPage .playerTableScroller .listingCellIcon { flex: 0 0 9px; width: 9px; height: 9px; }",
+    "  #progressionPage #tableBody .tableOverallRarityCircle { flex: 0 0 5px; width: 5px; height: 5px; margin-right: 1px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.75); transform-origin: center; }",
     "}",
     "@media (min-width: 521px) and (max-width: 900px) {",
     "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
     "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "}",
+    "@media (max-width: 700px) {",
+    "  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; }",
+    "  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 10px; height: 10px; }",
     "}",
     "@media (max-width: 520px) {",
     "  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.5%; --mfl-table-col-positions: 10.39924379593141%; }",
@@ -92,6 +109,15 @@ export function firstPaintRouteConfigProjectionSource() {
     "  #progressionPage .playerTableScroller th { font-size: 9px; }",
     "  #progressionPage #tableHead th > span:first-child { font-size: 9px; }",
     "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton { width: 15px; min-width: 15px; max-width: 15px; height: 15px; min-height: 15px; max-height: 15px; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 9px; height: 9px; }",
+    "  #progressionPage .playerTableScroller .flagImage { width: 11px; height: 11px; }",
+    "  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 9px; width: 9px; min-width: 9px; max-width: 9px; height: 9px; min-height: 9px; max-height: 9px; }",
+    "  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 9px; height: 9px; }",
+    "  #progressionPage .playerTableScroller .playerNoteIcon { font-size: 7px; }",
+    "  #progressionPage .playerTableScroller .listingCellContent { width: 15px; min-width: 15px; max-width: 15px; height: 15px; min-height: 15px; max-height: 15px; }",
+    "  #progressionPage .playerTableScroller .listingCellIcon { flex-basis: 7px; width: 7px; height: 7px; }",
+    "  #progressionPage #tableBody .tableOverallRarityCircle { margin-right: 3px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }",
     "}",
     "@media (max-width: 380px) {",
@@ -101,6 +127,13 @@ export function firstPaintRouteConfigProjectionSource() {
     "  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type=\"checkbox\"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }",
     "  #progressionPage .playerTableScroller th { font-size: 8px; }",
     "  #progressionPage #tableHead th > span:first-child { font-size: 8px; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton { width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; }",
+    "  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 8px; height: 8px; }",
+    "  #progressionPage .playerTableScroller .flagImage { width: 10px; height: 10px; }",
+    "  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 8px; width: 8px; min-width: 8px; max-width: 8px; height: 8px; min-height: 8px; max-height: 8px; }",
+    "  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 8px; height: 8px; }",
+    "  #progressionPage .playerTableScroller .listingCellContent { width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; }",
+    "  #progressionPage .playerTableScroller .listingCellIcon { flex-basis: 6px; width: 6px; height: 6px; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.54); }",
     "}",
     "`;",
@@ -195,6 +228,17 @@ export function normalizeIndexReleaseProjection(source, version) {
     /<a href="\/changelog" data-page="changelog">MFL Front Office(?: v\d+\.\d+\.\d+)?<\/a>/g,
     `<a href="/changelog" data-page="changelog">MFL Front Office v${releaseVersion}</a>`,
     "index footer release projection",
+  );
+}
+
+export function normalizeIndexPagerLoadingProjection(source) {
+  return replaceExactlyOnce(
+    String(source || ""),
+    /^      html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager(?:,\n      html\.mflDataLoading #progressionPage nav\.pager)? \{\n        display: none;\n      \}$/gm,
+    `      html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
+        display: none;
+      }`,
+    "index pager data-render visibility projection",
   );
 }
 
@@ -298,11 +342,13 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
       normalizeBootstrapReleaseProjection(source, version, "bootstrap.js"),
     )],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexTableConfigRuntimeProjection(
-      normalizeIndexMobileTableFirstPaintCascadeProjection(
-        normalizeIndexMflStatsFiltersProjection(
-          normalizeIndexMobileWatchlistFirstPaintProjection(
-            normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+    ["index.html", (source) => normalizeIndexPagerLoadingProjection(
+      normalizeIndexTableConfigRuntimeProjection(
+        normalizeIndexMobileTableFirstPaintCascadeProjection(
+          normalizeIndexMflStatsFiltersProjection(
+            normalizeIndexMobileWatchlistFirstPaintProjection(
+              normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+            ),
           ),
         ),
       ),

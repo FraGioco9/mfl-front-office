@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 const runtime = String(await readFile(new URL("./table-loading-runtime.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const index = String(await readFile(new URL("./index.html", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const projection = String(await readFile(new URL("./sync-release-projections.mjs", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -19,8 +21,10 @@ for (const required of [
   "body.rows.length === 5",
   "Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS))",
   "if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();",
-  "hidePager();",
-  'if (shouldPreserveRenderedRows() && !snapshot.reasons.includes(FILTER_LOADING_REASON)) return;',
+  "function syncRenderedRows() {",
+  "if (!(body instanceof HTMLTableSectionElement) || !hasRealRows(body)) return false;",
+  "if (page) page.hidden = !pagerRouteActive();",
+  "return true;",
   "show({ replaceExisting: true });",
 ]) {
   invariant(runtime.includes(required), `Background table loading stability is missing ${required}`);
@@ -44,17 +48,34 @@ const syncSource = runtime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.indexOf("hidePager();") < syncSource.indexOf("shouldPreserveRenderedRows()")
-    && syncSource.indexOf("shouldPreserveRenderedRows()") < syncSource.indexOf("show({ replaceExisting: true })")
-    && syncSource.includes("!snapshot.reasons.includes(FILTER_LOADING_REASON)"),
-  "Global loading-state updates must preserve a settled table for background loads while allowing filter loads to show the canonical blank rows.",
+    && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
+    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("hidePager();")
+    && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("if (renderedRowsPresent)")
+    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("hidePager();")
+    && syncSource.indexOf("hidePager();") < syncSource.indexOf("show({ replaceExisting: true })"),
+  "Global loading-state updates must stop the loading-surface path as soon as real rows exist, before route-ready or broader loading flags finish.",
 );
 
 invariant(
   runtime.includes("function hidePager() {")
     && runtime.includes("if (page) page.hidden = true;")
+    && runtime.includes("function syncRenderedRows() {")
+    && runtime.includes("if (page) page.hidden = !pagerRouteActive();")
     && !runtime.includes("preservePager"),
-  "Every active Table load must hide pager chrome even when settled rows remain rendered.",
+  "Pager chrome must be hidden for blank loading rows and released from the same runtime as soon as real rows are rendered.",
 );
 
-console.log("Settled table rows remain visible during ordinary background loading, pager and filter page loads use blank rows, and every active Table load hides pager chrome until the request settles.");
+invariant(
+  index.includes('html:not([data-mfl-ready="true"]) #progressionPage nav.pager {\n        display: none;\n      }')
+    && !index.includes('html.mflDataLoading #progressionPage nav.pager'),
+  "First-paint CSS must not keep nav.pager hidden after real data renders merely because the broader data-loading class is still active.",
+);
+invariant(
+  projection.includes("export function normalizeIndexPagerLoadingProjection(source) {")
+    && projection.includes('html\\.mflDataLoading #progressionPage nav\\.pager')
+    && projection.includes("normalizeIndexPagerLoadingProjection("),
+  "Release projection generation must canonically preserve the data-render pager visibility rule in index.html.",
+);
+
+console.log("Settled rows remain stable during background loading, blank loads hide pager chrome, and nav.pager appears with real data even before route-ready settles.");

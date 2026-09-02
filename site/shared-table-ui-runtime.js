@@ -3,6 +3,7 @@
 
   const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");
   const PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
+  const TINY_TABLE_MEDIA = window.matchMedia("(max-width: 380px)");
   const MOBILE_PAGE_SIZE = "100";
   const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";
   const VIEW_SCROLL_VISIBLE_CLASS = "mflViewsScrollButtonVisible";
@@ -147,8 +148,18 @@
     background-size: 8px 6px;
     border-radius: 3px;
   }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
+    align-items: center;
+  }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
+    align-self: center;
+  }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
     gap: 1px;
+  }
+  #progressionPage .playerTableScroller td.col-age .playerAgeValue {
+    flex: 0 0 auto;
+    min-width: 0;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
     width: 18px;
@@ -783,15 +794,21 @@
     else scroller.style.removeProperty("box-shadow");
   }
 
+  function clearViewScrollerCues(views) {
+    views.classList.remove(VIEW_SCROLL_CLASS);
+    applyFadeShadow(views, false, false, 0);
+    if (views.scrollLeft) views.scrollLeft = 0;
+    removeViewScrollShell(views);
+  }
+
   function syncViewScroller(views) {
     if (!(views instanceof HTMLElement) || !views.isConnected) return;
-    if (!MOBILE_TABLE_MEDIA.matches || views.getClientRects().length === 0) {
-      views.classList.remove(VIEW_SCROLL_CLASS);
-      applyFadeShadow(views, false, false, 0);
-      if (views.scrollLeft) views.scrollLeft = 0;
-      removeViewScrollShell(views);
+    if (!MOBILE_TABLE_MEDIA.matches || views.hidden) {
+      clearViewScrollerCues(views);
       return;
     }
+    if (views.getClientRects().length === 0) return;
+    if (!renderedViewItems(views).length) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
@@ -836,10 +853,11 @@
     if (!(scroller instanceof HTMLElement)) return;
     syncEvaluationTableFadeBodyTop(scroller);
     scroller.style.removeProperty("box-shadow");
-    if (!MOBILE_TABLE_MEDIA.matches || scroller.getClientRects().length === 0) {
+    if (!MOBILE_TABLE_MEDIA.matches) {
       setPlayerTableFadeDirections(scroller, false, false);
       return;
     }
+    if (scroller.getClientRects().length === 0) return;
     const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const scrollLeft = Math.min(maxScroll, Math.max(0, scroller.scrollLeft));
     const overflowing = maxScroll > PLAYER_TABLE_SCROLL_EPSILON;

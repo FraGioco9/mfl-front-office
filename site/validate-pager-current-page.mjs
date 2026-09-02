@@ -26,8 +26,14 @@ const [controls, interactions, selectionStack, appCore, generatedCore, tableRunt
 
 for (const required of [
   "#pagerCurrentPageInput {",
-  "width: 52px;",
+  "box-sizing: border-box;",
+  "flex: 0 0 calc(5ch + 12px);",
+  "width: calc(5ch + 12px);",
+  "min-width: calc(5ch + 12px);",
+  "max-width: calc(5ch + 12px);",
+  "padding: 0 5px;",
   "font: inherit;",
+  "font-variant-numeric: tabular-nums;",
   "#pagerCurrentPageInput:hover:not(:disabled),",
   "#pagerCurrentPageInput:focus:not(:disabled),",
   "border-color: var(--primary-hover);",
@@ -40,6 +46,11 @@ for (const required of [
 ]) {
   invariant(controls.includes(required), `Editable pager styling is missing ${required}`);
 }
+invariant(
+  !controls.includes("#pagerCurrentPageInput {\n  box-sizing: border-box;\n  flex: 0 0 52px;")
+    && !controls.includes("width: 52px;\n  min-width: 52px;\n  max-width: 52px;"),
+  "Pager current-page width must scale with its inherited font instead of using the old fixed 52px box.",
+);
 
 invariant(interactions.includes('window.addEventListener("keydown", onEscapeCapture, true);'), "Global Escape ownership must run at window capture before document-level focus fallback.");
 invariant(!interactions.includes("pagerCurrentPageInput"), "Global Escape ownership must remain generic rather than hard-coding the pager input.");
@@ -57,6 +68,7 @@ for (const required of [
   "function installPagerEscapeCapture() {",
   "function syncPagerCurrentPage(currentPage, totalPages) {",
   "function installPagerCurrentPageControl() {",
+  "input.maxLength = 5;",
   "installPagerCurrentPageControl();",
   "syncPagerCurrentPage(1, 1);",
   "syncPagerCurrentPage(state.page, totalPages);",
@@ -75,6 +87,7 @@ for (const required of [
   "event.stopImmediatePropagation();",
   "cancelPagerCurrentPageEdit(target);",
   "installPagerEscapeCapture();",
+  "input.maxLength = 5;",
   "const revision = pagerEditRevision;",
   "queueMicrotask(() => {",
   "revision !== pagerEditRevision",
@@ -97,8 +110,13 @@ invariant(focusStart >= 0 && inputStart > focusStart, "Pager focus and input han
 const focusSection = tableRuntime.slice(focusStart, inputStart);
 invariant(!focusSection.includes(".select()") && !appCore.includes("controls.input.select();"), "Pager focus must preserve native mouse caret and drag-selection behavior instead of force-selecting the full value.");
 invariant(
-  appCore.includes('input.type = "text";') && appCore.includes('input.inputMode = "numeric";') && tableRuntime.includes('input.type = "text";') && tableRuntime.includes('input.inputMode = "numeric";'),
-  "Pager page entry must remain a text input with numeric input mode so native text selection stays available.",
+  appCore.includes('input.type = "text";')
+    && appCore.includes('input.inputMode = "numeric";')
+    && appCore.includes("input.maxLength = 5;")
+    && tableRuntime.includes('input.type = "text";')
+    && tableRuntime.includes('input.inputMode = "numeric";')
+    && tableRuntime.includes("input.maxLength = 5;"),
+  "Pager page entry must remain a numeric-mode text input with a native five-character limit so native text selection stays available.",
 );
 
 const blurStart = tableRuntime.indexOf('controls.input.addEventListener("blur", () => {');
@@ -113,18 +131,27 @@ invariant(inputKeydown.includes('event.key !== "Enter"'), "Pager input keydown m
 invariant(!inputKeydown.includes('"Escape"'), "Pager Escape must not depend on the later input-target keydown phase.");
 
 invariant(
-  appCore.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
-    && appCore.includes('const digits = raw.replace(/\\D+/g, "");')
+  appCore.includes("const parsed = /^\\d{1,5}$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && appCore.includes('const digits = raw.replace(/\\D+/g, "").slice(0, 5);')
+    && appCore.includes("if (digits !== raw) controls.input.value = digits;")
     && appCore.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
-    && tableRuntime.includes("const parsed = /^-?\\d+$/.test(raw) ? Number.parseInt(raw, 10) : current;")
-    && tableRuntime.includes('const digits = raw.replace(/\\D+/g, "");')
+    && tableRuntime.includes("const parsed = /^\\d{1,5}$/.test(raw) ? Number.parseInt(raw, 10) : current;")
+    && tableRuntime.includes('const digits = raw.replace(/\\D+/g, "").slice(0, 5);')
+    && tableRuntime.includes("if (digits !== raw) controls.input.value = digits;")
     && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
-  "Pager numeric entry must remain digit-aware and page changes must request the canonical blank loading rows.",
+  "Pager numeric entry must remain positive-digit-only, truncate input to five digits, and request the canonical blank loading rows for page changes.",
 );
 invariant(
-  !appCore.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+  !appCore.includes("const negative = raw.trimStart().startsWith(\"-\");")
+    && !appCore.includes("const parsed = /^-?\\d+$/.test(raw)")
+    && !tableRuntime.includes("const negative = raw.trimStart().startsWith(\"-\");")
+    && !tableRuntime.includes("const parsed = /^-?\\d+$/.test(raw)"),
+  "Pager entry must not retain the old negative or unbounded digit path.",
+);
+invariant(
+  !appCore.includes("const parsed = /^\\\\d{1,5}$/.test(raw)")
     && !appCore.includes('raw.replace(/\\\\D+/g, "")')
-    && !tableRuntime.includes("const parsed = /^-?\\\\d+$/.test(raw)")
+    && !tableRuntime.includes("const parsed = /^\\\\d{1,5}$/.test(raw)")
     && !tableRuntime.includes('raw.replace(/\\\\D+/g, "")'),
   "Pager digit regexes must not be double-escaped in authored or generated source.",
 );
@@ -148,4 +175,4 @@ invariant(
   "Previous and next pager buttons must use the same canonical five-row blank loading path as direct page entry.",
 );
 
-console.log("Editable pager validation passed with native text selection, Escape cancellation, and cached/uncached page navigation coverage.");
+console.log("Editable pager validation passed with a scalable five-digit input, a hard five-digit entry cap, native text selection, Escape cancellation, and cached/uncached page navigation coverage.");

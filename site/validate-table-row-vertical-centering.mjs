@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const styles = readFileSync(resolve(root, "styles.css"), "utf8");
+const sharedTableUi = readFileSync(resolve(root, "shared-table-ui-runtime.js"), "utf8");
+const releaseProjection = readFileSync(resolve(root, "sync-release-projections.mjs"), "utf8");
 const tableSource = readFileSync(resolve(root, "modules/core-sources/table.js"), "utf8");
 const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");
 
@@ -46,6 +48,31 @@ for (const contentContract of [
   assert.ok(generatedTable.includes(contentContract), `Generated Table runtime must preserve specialized row content: ${contentContract}`);
 }
 
+for (const source of [sharedTableUi, releaseProjection]) {
+  assert.ok(
+    source.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {')
+      && source.includes('align-items: center;'),
+    "Compact first-paint and hydrated row hosts must keep the canonical vertical center line.",
+  );
+  assert.ok(
+    source.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > *')
+      && source.includes('align-self: center;'),
+    "Every compact row element must explicitly share the row host center line.",
+  );
+  assert.ok(
+    source.includes('#progressionPage .playerTableScroller td.col-age .tableControlCellContent')
+      && source.includes('gap: 1px;'),
+    "Compact Age cells must keep only a slight 1px gap before retiring/retired/new-mint markers.",
+  );
+  assert.ok(
+    source.includes('#progressionPage .playerTableScroller td.col-age .playerAgeValue')
+      && source.includes('flex: 0 0 auto;')
+      && source.includes('min-width: 0;'),
+    "Compact Age text must not reserve the desktop 1.5em width before its marker.",
+  );
+}
+
+assert.doesNotMatch(sharedTableUi, /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{\s*gap:\s*(?:[2-9]|\d{2,})px;/, "Small-screen Age marker spacing must stay at the slight 1px gap.");
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every player-table row item keeps viewport-independent flex centering with a descender-safe text line box.");
+console.log("Every player-table row item stays vertically centered, and compact Age markers keep a slight 1px gap without reserved desktop spacing.");
