@@ -2,6 +2,7 @@ const validators = [
   "validate-release-history.mjs",
   "validate-release-version-source.mjs",
   "validate-release-runtime-ownership.mjs",
+  "validate-generated-styles.mjs",
   "validate-database-refresh-deployment.mjs",
 ];
 
