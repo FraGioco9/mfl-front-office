@@ -61,8 +61,8 @@ for (const source of [sharedTableUi, releaseProjection]) {
   );
   assert.ok(
     source.includes('#progressionPage .playerTableScroller td.col-age .tableControlCellContent')
-      && source.includes('gap: 0;'),
-    "Compact Age cells must not retain an extra flex gap before retiring/retired/new-mint markers.",
+      && source.includes('gap: 1px;'),
+    "Compact Age cells must keep only a slight 1px gap before retiring/retired/new-mint markers.",
   );
   assert.ok(
     source.includes('#progressionPage .playerTableScroller td.col-age .playerAgeValue')
@@ -72,7 +72,7 @@ for (const source of [sharedTableUi, releaseProjection]) {
   );
 }
 
-assert.doesNotMatch(sharedTableUi, /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{\s*gap:\s*[1-9]/, "Small-screen Age marker spacing must stay at zero gap.");
+assert.doesNotMatch(sharedTableUi, /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{\s*gap:\s*(?:[2-9]|\d{2,})px;/, "Small-screen Age marker spacing must stay at the slight 1px gap.");
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every player-table row item stays vertically centered, and compact Age markers sit directly beside the age value without reserved desktop spacing.");
+console.log("Every player-table row item stays vertically centered, and compact Age markers keep a slight 1px gap without reserved desktop spacing.");
