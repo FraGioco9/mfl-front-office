@@ -45,12 +45,13 @@ const syncSource = loadingRuntime.slice(syncStart, syncEnd);
 invariant(
   syncStart >= 0
     && syncEnd > syncStart
-    && syncSource.includes("const renderedRowsVisible = syncRenderedRows();")
-    && syncSource.includes("if (!renderedRowsVisible) hidePager();")
-    && syncSource.includes("else hidePlayerCount();")
+    && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
     && syncSource.includes("neutralizeSelectionHeader();")
-    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("shouldPreserveRenderedRows()"),
-  "Controller-driven table loading must disable header selection even when real rendered rows make pager chrome visible.",
+    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("hidePager();")
+    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("if (renderedRowsPresent)")
+    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("shouldPreserveRenderedRows()"),
+  "Controller-driven table loading must keep header selection neutral while stopping the loading surface immediately when real rows render.",
 );
 
 const restoreStart = loadingRuntime.indexOf("function restoreSelectionHeader() {");
