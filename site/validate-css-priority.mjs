@@ -77,6 +77,13 @@ if (!scrollbarSource.includes(`html body > #appShell > main {
 }`)) {
   throw new Error("The main scroller must always reserve stable scrollbar space.");
 }
+const mobileSymmetricScrollbarGutter = `@media (max-width: 900px) {
+  html body > #appShell > main {
+    scrollbar-gutter: stable both-edges;
+  }`;
+if (!scrollbarSource.includes(mobileSymmetricScrollbarGutter)) {
+  throw new Error("Mobile must reserve the main scrollbar gutter on both edges so page content stays visually symmetric.");
+}
 const modalScrollLock = `:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   overflow-y: hidden;
 }`;
@@ -151,4 +158,4 @@ if (scrollbarSource.includes("--mfl-scrollbar-arrow") || scrollbarSource.include
   throw new Error("Scrollbar arrow styling must not be reintroduced; only the thumb should be visible.");
 }
 
-console.log("Canonical CSS priority, thumb-only scrollbar, hidden table/histogram horizontal scrollbars, and hidden mobile control scrollbars validation passed.");
+console.log("Canonical CSS priority, symmetric mobile page gutter, thumb-only scrollbar, hidden table/histogram horizontal scrollbars, and hidden mobile control scrollbars validation passed.");

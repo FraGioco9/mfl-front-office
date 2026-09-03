@@ -5183,6 +5183,10 @@ html body > #appShell > main {
 
 /* Mobile control strips and the compact Filters body keep native scrolling without visible scrollbar chrome. */
 @media (max-width: 900px) {
+  html body > #appShell > main {
+    scrollbar-gutter: stable both-edges;
+  }
+
   @supports not selector(::-webkit-scrollbar) {
     .views,
     .quickFilters,
