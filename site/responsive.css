@@ -59,11 +59,10 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > .topbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "brand controls"
-      "search search";
-    gap: 8px 10px;
+    grid-template-columns: minmax(0, 1fr) 44px auto;
+    grid-template-areas: "brand search controls";
+    column-gap: 6px;
+    row-gap: 0;
     height: auto;
     min-height: 0;
     padding: 10px 12px;
@@ -83,9 +82,44 @@ html:not(.mflInitialRouteResolved):is(
 
   .topbar .searchButton {
     grid-area: search;
-    width: 100%;
-    min-width: 0;
-    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  :is(.topbar .searchButton, .themeButton) {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .topbar .searchButton .searchLabel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    gap: 0;
+  }
+
+  .topbar .searchButton .searchLabelText {
+    display: none;
+  }
+
+  .topbar .searchButton .searchIcon {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
   }
 
   .searchShortcut {
@@ -101,12 +135,6 @@ html:not(.mflInitialRouteResolved):is(
 
   .topbar .stats {
     display: none;
-  }
-
-  .themeButton {
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
   }
 
   .accountMenu {
