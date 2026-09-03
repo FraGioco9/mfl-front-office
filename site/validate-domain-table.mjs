@@ -17,6 +17,7 @@ const validators = [
   "validate-new-player-icon.mjs",
   "validate-progression-joined-agency-filter.mjs",
   "validate-mobile-table-retry.mjs",
+  "validate-mobile-progression-view-widths.mjs",
   "validate-mobile-table-compact-contract.mjs",
   "validate-small-screen-table-compaction.mjs",
   "validate-mobile-first-paint-cascade.mjs",

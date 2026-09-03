@@ -1945,6 +1945,20 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 600px;
   }
 
+
+/* Progression-bearing views need the tablet-width floor on phones so
+ * Overall/stat values plus progression remain readable. */
+html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+  [data-initial-table-view="next"],
+  [data-initial-table-view="current"],
+  [data-initial-table-view="all"]
+) #progressionPage .playerTableScroller table,
+#progressionPage:has(.viewButton[data-view="next"].active) .playerTableScroller table,
+#progressionPage:has(.viewButton[data-view="current"].active) .playerTableScroller table,
+#progressionPage:has(.viewButton[data-view="all"].active) .playerTableScroller table {
+  min-width: 760px;
+}
+
   #progressionPage .playerTableScroller th {
     font-size: 9px;
   }
