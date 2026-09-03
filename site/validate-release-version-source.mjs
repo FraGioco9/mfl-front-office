@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 import {
   normalizeBootstrapReleaseProjection,
@@ -10,7 +10,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, syncWorkflow] = await Promise.all([
+const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, releaseProjectionWorkflowExists] = await Promise.all([
   read("./release.json"),
   read("./build-app-core.mjs"),
   read("./modules/pre-bootstrap-route-state.js"),
@@ -18,7 +18,9 @@ const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore,
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./table-width-runtime.js"),
-  read("../.github/workflows/release-projection-sync.yml"),
+  read("../.github/workflows/site-quality.yml"),
+  read("../.github/workflows/cleanup-unused-branches.yml"),
+  access(new URL("../.github/workflows/release-projection-sync.yml", import.meta.url)).then(() => true, () => false),
 ]);
 
 const release = JSON.parse(releaseSource);
@@ -44,9 +46,24 @@ invariant(
   "The canonical build must regenerate release projections from release.json before browser artifacts.",
 );
 invariant(
-  syncWorkflow.includes("node site/sync-release-projections.mjs")
-    && syncWorkflow.includes("site/bootstrap.js site/bootstrap-core.js site/index.html"),
-  "Pull requests must automatically persist generated bootstrap/footer release projections.",
+  siteQualityWorkflow.includes("npm run build:core && npm run build:styles")
+    && siteQualityWorkflow.includes("site/bootstrap.js")
+    && siteQualityWorkflow.includes("site/bootstrap-core.js")
+    && siteQualityWorkflow.includes("site/index.html")
+    && siteQualityWorkflow.includes("site/styles-runtime.css")
+    && siteQualityWorkflow.includes("site/modules/app-core-*-runtime.js")
+    && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
+  "Site Quality must own one ordered build-and-commit path for release projections and generated site artifacts.",
+);
+invariant(
+  !releaseProjectionWorkflowExists,
+  "The retired Release projection sync workflow must stay deleted so no second workflow can race Site Quality writes.",
+);
+invariant(
+  cleanupWorkflow.includes("- site/release.json")
+    && cleanupWorkflow.includes("branches:\n      - main")
+    && cleanupWorkflow.includes('gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100"'),
+  "Release metadata changes on main must automatically trigger open-PR-safe unused-branch cleanup.",
 );
 invariant(
   preBootstrapSource.includes("window.__mflRelease = data.release;")
@@ -92,4 +109,4 @@ invariant(
   "Footer projection generation must replace a stale version from the canonical release input.",
 );
 
-console.log(`Single release source validation passed for v${version}: release.json owns the version and all browser literals are generated projections.`);
+console.log(`Single release source validation passed for v${version}: Site Quality is the sole generated-artifact writer and release merges automatically clean unused branches.`);

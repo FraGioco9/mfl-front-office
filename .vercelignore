@@ -13,9 +13,10 @@ site/jsconfig.json
 site/types
 site/vercel.production.json
 
-# Application-core compiler sources are build-only. Production serves the generated
-# shared core and route runtime artifacts created before Vercel packaging.
+# Site compiler sources are build-only. Production serves generated application-core
+# runtimes and the bundled primary stylesheet created before Vercel packaging.
 site/build-app-core.mjs
+site/build-styles.mjs
 site/sync-release-projections.mjs
 site/modules/app-config.js
 site/modules/pre-bootstrap-route-state.js

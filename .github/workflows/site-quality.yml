@@ -148,9 +148,9 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm install --no-audit --no-fund
 
-      - name: Build canonical application core
+      - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build:core
+        run: npm run build:core && npm run build:styles
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'
@@ -164,7 +164,7 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
 
-      - name: Commit generated application artifacts
+      - name: Commit generated site artifacts
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
@@ -175,16 +175,23 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          git add -- site/table-width-runtime.js site/modules/app-core-runtime.js site/modules/app-core-*-runtime.js
+          git add -- \
+            site/bootstrap.js \
+            site/bootstrap-core.js \
+            site/index.html \
+            site/styles-runtime.css \
+            site/table-width-runtime.js \
+            site/modules/app-core-runtime.js \
+            site/modules/app-core-*-runtime.js
           if git diff --cached --quiet; then
-            echo "Generated application artifacts are current."
+            echo "Generated site artifacts are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Regenerate application core"
+          git commit -m "Regenerate site artifacts"
           git push origin "HEAD:$HEAD_BRANCH"
 
-      - name: Verify generated application artifacts
+      - name: Verify generated site artifacts
         if: steps.changes.outputs.quality == 'true'
         run: npm run verify:generated

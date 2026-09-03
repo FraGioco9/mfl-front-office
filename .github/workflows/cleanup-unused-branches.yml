@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
+      - site/release.json
       - .github/workflows/cleanup-unused-branches.yml
   workflow_dispatch:
 
-# Maintenance trigger: v1.127.8
 permissions:
   contents: write
   pull-requests: read
