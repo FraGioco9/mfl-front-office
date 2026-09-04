@@ -4,14 +4,15 @@
     "node": "22.x"
   },
   "scripts": {
+    "build:config": "node build-vercel-config.mjs",
     "build:core": "node build-app-core.mjs",
     "build:styles": "node build-styles.mjs",
-    "build": "npm run build:core && npm run build:styles",
-    "lint": "eslint bootstrap.js bootstrap-core.js build-app-core.mjs build-styles.mjs sync-release-projections.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate*.mjs",
+    "build": "npm run build:config && npm run build:core && npm run build:styles",
+    "lint": "eslint bootstrap.js bootstrap-core.js build-app-core.mjs build-styles.mjs build-vercel-config.mjs style-bundle.mjs validation-text.mjs vercel-config-source.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
-    "verify:generated": "git diff --exit-code -- styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\"",
+    "verify:generated": "git diff --exit-code -- vercel.json vercel.production.json styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\"",
     "validate": "node validate-all.mjs",
-    "check": "npm run lint && npm run typecheck && npm run build:core && npm run build:styles && npm run verify:generated && npm run validate"
+    "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
