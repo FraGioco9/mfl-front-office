@@ -96,7 +96,7 @@
   function syncFooter() {
     const version = String(window.__mflReleaseVersion || window.__mflRelease?.version || "").trim();
     if (!/^\d+\.\d+\.\d+$/.test(version)) return;
-    const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    const footer = document.querySelector('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
     if (footer instanceof HTMLElement) footer.textContent = `MFL Front Office v${version}`;
     document.querySelectorAll("[data-app-version]").forEach((element) => {
       if (element instanceof HTMLElement) element.textContent = `v${version}`;
@@ -341,6 +341,11 @@
     });
   }
 
+  function resetMainPageScroll() {
+    const main = document.querySelector("body > #appShell > main");
+    if (main instanceof HTMLElement) main.scrollTop = 0;
+  }
+
   function syncRouteChrome(urlLike = window.location.href) {
     const state = routeState(urlLike);
     const previousPage = lastRoutePage;
@@ -351,6 +356,7 @@
     lastRoutePage = state.page;
     lastRouteView = state.view;
 
+    if (pageChanged) resetMainPageScroll();
     if (resetFilters) {
       document.documentElement.dataset.mflResetTableFilters = state.page;
     } else if (pageChanged) {

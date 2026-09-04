@@ -60,7 +60,7 @@
   }
 
   function visibleFooterTop() {
-    const footer = document.querySelector(".siteFooter");
+    const footer = document.querySelector(".siteFooterDetails");
     if (!(footer instanceof HTMLElement) || footer.hidden) return innerHeight;
     const style = getComputedStyle(footer);
     const rect = footer.getBoundingClientRect();

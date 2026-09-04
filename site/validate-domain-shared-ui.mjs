@@ -20,6 +20,7 @@ const validators = [
   "validate-checkbox-style.mjs",
   "validate-account-button-icon.mjs",
   "validate-theme-icons.mjs",
+  "validate-footer-redesign.mjs",
 ];
 
 for (const validator of validators) {

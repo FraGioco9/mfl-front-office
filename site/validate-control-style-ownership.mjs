@@ -99,9 +99,9 @@ invariant(
 );
 
 for (const required of [
-  '.siteFooter a[href="/changelog"]',
-  '.siteFooter a[data-page="changelog"]',
-  "font-size: 14px;",
+  '.siteFooterDetails a[href="/changelog"]',
+  '.siteFooterDetails a[data-page="changelog"]',
+  "font-size: 11px;",
   "cursor: pointer;",
   "pointer-events: auto;",
 ]) {

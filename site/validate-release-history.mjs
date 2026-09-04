@@ -56,8 +56,8 @@ invariant(
   "bootstrap-core.js must preserve the generated current release version in the footer.",
 );
 invariant(
-  indexHtml.includes(`<a href="/changelog" data-page="changelog">MFL Front Office v${currentVersion}</a>`),
-  "index.html must contain the generated current release footer projection.",
+  indexHtml.includes(`<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v${currentVersion}</a>`),
+  "index.html must contain the generated current release footer-title projection.",
 );
 
 const overrides = JSON.parse(overridesSource);

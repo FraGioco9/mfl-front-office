@@ -77,6 +77,7 @@ function preloadClassicScript(path) {
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
+  "/bug-report-runtime.js",
   "/global-search-runtime.js",
 ]);
 

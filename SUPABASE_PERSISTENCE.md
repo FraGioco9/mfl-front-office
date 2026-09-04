@@ -6,6 +6,8 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 `site/api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `site/api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned preference endpoints still require the existing signed-wallet proof before accessing a wallet row.
 
+`bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `site/api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
+
 ## Tables and owners
 
 ### `wallet_opt_ins`
@@ -89,6 +91,31 @@ The preview lookup selects only `id`, `player_id`, `payload`, and `expires_at`; 
 Preview metadata and the dynamic 2400x1260 social card are derived from the validated public share payload plus that public player context. Overall and Position come from the explicitly shared Evaluation inputs. The user-facing `Value` metric is the same discounted present-value sum shown in the Evaluation summary table, using the saved share horizon, shared Evaluation inputs, discount/first-season settings, and late-season reward rates. Invalid or expired links fall back to generic metadata/card output before any player lookup, and saved/private `evaluation_saves` data is never queried by either preview path.
 
 All persisted fields have direct sharing/lifecycle ownership and are retained.
+
+### `bug_reports`
+
+Owner: `site/api/bug-reports.js`. The browser-side form owner is `site/bug-report-runtime.js`; it sends reports only to the same-origin API endpoint and never receives Supabase credentials.
+
+Stored values:
+- `id`: generated report identifier.
+- `summary`: short reporter-provided problem summary.
+- `area`: validated product area matching the repository bug-report taxonomy.
+- `route`: route/page where the issue occurred; the form prefills the current route.
+- `reproduction`: reporter-provided steps to reproduce.
+- `expected_behavior`: expected result.
+- `actual_behavior`: observed result.
+- `environment`: device/browser context, prefilled by the browser and editable by the reporter.
+- `evidence`: optional links, console messages, or additional context.
+- `app_version`: current MFL Front Office release when the form is submitted.
+- `user_agent`: server-observed browser user-agent metadata.
+- `wallet_address`: optional verified wallet identity when the reporter already has a valid Dapper wallet proof; bug reporting itself does not require opt-in.
+- `reporter_hash`: HMAC-SHA256 of the request address using a server-only key, used only for abuse throttling. The raw IP address is never persisted.
+- `status`: internal triage lifecycle (`new`, `triaged`, `planned`, `resolved`, or `dismissed`).
+- `created_at`: submission timestamp.
+
+The endpoint accepts POST only, validates lengths and the allowed Area set, caps request size, and permits at most five reports from the same reporter hash per rolling hour. The reporter-hash/time index supports that lookup; the status/time index supports later triage views. `bug_reports` has RLS enabled and intentionally has no client policies or `anon`/`authenticated` table privileges. Only the server-side service-role application path can read or mutate reports.
+
+The GitHub issue URL remains in the footer as a no-JavaScript/modifier-click fallback. Normal in-site submissions are stored in Supabase first so reports can be triaged before any selected report is promoted to a GitHub issue.
 
 ### `mfl_season_ratios`
 
