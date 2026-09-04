@@ -19,7 +19,7 @@ const [indexHtml, footer, bootstrapCore, runtime, appEntry, api, schema, migrati
   read("../supabase/migrations/20260904231420_create_bug_reports.sql"),
 ]);
 
-includes(indexHtml, 'href="https://github.com/FraGioco9/mfl-front-office/issues/new"', "The static footer anchor must remain identifiable until guaranteed bootstrap ownership neutralizes it.");
+includes(indexHtml, 'href="https://github.com/FraGioco9/mfl-front-office/issues/new"', "The legacy static footer anchor must remain identifiable until bootstrap neutralizes external navigation.");
 includes(indexHtml, '>Report a bug</a>', "Footer support must expose Report a bug.");
 excludes(
   footer,
@@ -30,35 +30,29 @@ excludes(
 for (const token of [
   'const BUG_REPORT_CONTROL_SELECTOR =',
   'function prepareBugReportControl(control = document.querySelector(BUG_REPORT_CONTROL_SELECTOR))',
+  'control.dataset.bugReportControl = "true";',
   'control.removeAttribute("href");',
   'control.removeAttribute("target");',
   'control.removeAttribute("rel");',
+  'control.setAttribute("role", "button");',
+  'control.setAttribute("aria-haspopup", "dialog");',
+  'control.setAttribute("aria-controls", "bugReportModal");',
+  'prepareBugReportControl();',
+]) {
+  includes(bootstrapCore, token, `Early bug report neutralization contract is missing: ${token}`);
+}
+for (const forbidden of [
+  'function bugReportControlFromTarget(',
   'function bugReportRuntimeLoader()',
-  'return resources.load("/bug-report-runtime.js");',
   'function ensureBugReportRuntime()',
   'async function openBugReportForm()',
-  'runtime.open();',
-  'document.getElementById("bugReportModal")',
-  'modal.hidden = false;',
-  'modal.classList.remove("modalClosing");',
-  'modal.classList.add("modalOpen");',
   'function installBugReportBootstrap()',
-  'event.preventDefault();',
-  'event.stopImmediatePropagation();',
+  'resources.load("/bug-report-runtime.js")',
   'void openBugReportForm()',
-  'document.addEventListener("click", activate, true);',
-  'document.addEventListener("keydown", activateKeyboard, true);',
-  'void ensureBugReportRuntime().catch((error) => {',
-  'installBugReportBootstrap();',
 ]) {
-  includes(bootstrapCore, token, `Guaranteed bug report bootstrap contract is missing: ${token}`);
+  excludes(bootstrapCore, forbidden, `Bootstrap must not own bug-report activation or runtime loading: ${forbidden}`);
 }
-excludes(
-  bootstrapCore,
-  'if (window.__mflBugReportRuntime?.open) return;',
-  "Guaranteed bug report activation must not become inert once the form runtime is already loaded.",
-);
-excludes(bootstrapCore, "window.open", "Guaranteed bug report bootstrap must never open GitHub or any external window.");
+excludes(bootstrapCore, "window.open", "Bootstrap must never open GitHub or any external window for bug reports.");
 
 const controlIndex = appEntry.indexOf('"/control-interactions-runtime.js"');
 const bugRuntimeIndex = appEntry.indexOf('"/bug-report-runtime.js"');
@@ -67,7 +61,7 @@ if (controlIndex < 0 || bugRuntimeIndex <= controlIndex) {
 }
 
 for (const token of [
-  'const REPORT_LINK_SELECTOR =',
+  'const REPORT_CONTROL_SELECTOR =',
   'function ensureModal()',
   'id="bugReportSummary"',
   'id="bugReportArea"',
@@ -94,12 +88,10 @@ for (const token of [
   'function handleDocumentKeyDown(event)',
   'document.addEventListener("click", handleDocumentClick, true);',
   'document.addEventListener("keydown", handleDocumentKeyDown, true);',
-  'prepareReportControl(document.querySelector(REPORT_LINK_SELECTOR));',
-  'event.stopPropagation();',
-  'registerEscapeHandler?.(',
-  '"bug-report",',
-  '{ priority: 250 }',
-  'target.classList.remove("modalClosing", "modalOpen");',
+  'window.addEventListener("keydown", handleEscape, true);',
+  'prepareReportControl(document.querySelector(REPORT_CONTROL_SELECTOR));',
+  'event.stopImmediatePropagation();',
+  'target.classList.remove("modalClosing");',
   'target.hidden = false;',
   'target.classList.add("modalOpen");',
   'modal.classList.remove("modalOpen");',
@@ -108,19 +100,33 @@ for (const token of [
 ]) {
   includes(runtime, token, `Bug report runtime contract is missing: ${token}`);
 }
+
 const runtimeOpenStart = runtime.indexOf("function openModal()");
 const runtimeCloseStart = runtime.indexOf("function closeModal(");
 const runtimeOpenSection = runtime.slice(runtimeOpenStart, runtimeCloseStart);
+const visibleIndex = runtimeOpenSection.indexOf('target.hidden = false;');
+const openClassIndex = runtimeOpenSection.indexOf('target.classList.add("modalOpen");');
+const prefillIndex = runtimeOpenSection.indexOf('prefillContext();');
+const tooltipIndex = runtimeOpenSection.indexOf('window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });');
 if (
   runtimeOpenStart < 0
   || runtimeCloseStart <= runtimeOpenStart
-  || runtimeOpenSection.indexOf('target.hidden = false;') > runtimeOpenSection.indexOf('target.classList.add("modalOpen");')
+  || visibleIndex < 0
+  || openClassIndex <= visibleIndex
+  || (prefillIndex >= 0 && prefillIndex < openClassIndex)
+  || (tooltipIndex >= 0 && tooltipIndex < openClassIndex)
 ) {
-  throw new Error("Bug report modal must be unhidden before its canonical visible modalOpen state is applied.");
+  throw new Error("Bug report runtime must make the modal synchronously visible before optional context or tooltip work.");
 }
-excludes(runtime, 'reportLink.addEventListener("click"', "Bug report activation must not depend on one static footer node.");
-excludes(runtime, "event.metaKey", "Bug report activation must not retain modifier-click escape to GitHub.");
-excludes(runtime, "window.open", "Bug report activation must never open an external window.");
+
+for (const forbidden of [
+  'reportLink.addEventListener("click"',
+  'registerEscapeHandler?.(',
+  'event.metaKey',
+  'window.open',
+]) {
+  excludes(runtime, forbidden, `Bug report runtime retains a forbidden secondary activation/dependency path: ${forbidden}`);
+}
 
 for (const token of [
   'const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;',
@@ -167,4 +173,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with guaranteed bootstrap visibility, canonical modal lifecycle, delegated in-site activation, and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with bootstrap-only URL neutralization, one runtime activation owner, synchronous modal visibility, and no external escape path.");
