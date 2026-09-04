@@ -21,12 +21,15 @@ for (const token of [
   '<strong id="siteFooterDetailsTitle" class="siteFooterDetailsTitle">MFL Front Office</strong>',
   'Management, scouting, progression, and evaluation tools for MFL.',
   '<nav class="siteFooterDetailsNavigation" aria-label="Footer information">',
-  '<span>Resources</span>',
-  '>Source code</a>',
   '<span>Support</span>',
   '>Report a bug</a>',
   '<span>Creator</span>',
-  '>FraGioco9</a>',
+  '<strong class="siteFooterDetailsCreatorName">Francesco Giocoli</strong>',
+  'href="https://app.playmfl.com/users/0x9e5b126e993a771a"',
+  '>MFL</a>',
+  '<span class="siteFooterDetailsDiscord" title="Discord username: FraGioco9">Discord: FraGioco9</span>',
+  'href="https://x.com/FraGioco9"',
+  '>Twitter</a>',
   '<span id="statusText">Updated -</span>',
   'Independent community tool. Not an official MFL product.',
   '© 2026 MFL Front Office',
@@ -38,21 +41,30 @@ invariant(
   /<a href="\/changelog" data-page="changelog">MFL Front Office v\d+\.\d+\.\d+<\/a>/.test(indexHtml),
   "The sole footer must expose the generated version as its Changelog link.",
 );
+invariant(!indexHtml.includes('>Source code</a>'), "The footer must not expose the repository source-code link.");
+invariant(!indexHtml.includes('<span>Resources</span>'), "The footer must not keep the removed Resources group.");
 invariant(!indexHtml.includes('<footer class="siteFooter">'), "The legacy compact footer must be removed from the DOM.");
 invariant((indexHtml.match(/id="statusText"/g) || []).length === 1, "Data freshness must have exactly one footer owner.");
 
 const detailsIndex = indexHtml.indexOf('<footer class="siteFooterDetails"');
+const identityIndex = indexHtml.indexOf('<div class="siteFooterDetailsIdentity">', detailsIndex);
+const versionIndex = indexHtml.indexOf('<a href="/changelog" data-page="changelog">MFL Front Office v', identityIndex);
+const navigationIndex = indexHtml.indexOf('<nav class="siteFooterDetailsNavigation"', identityIndex);
 const mainCloseIndex = indexHtml.indexOf("      </main>", detailsIndex);
 invariant(detailsIndex >= 0 && mainCloseIndex > detailsIndex, "The sole footer must remain at the end of the main scroll surface.");
+invariant(identityIndex >= 0 && versionIndex > identityIndex && navigationIndex > versionIndex, "The live version must sit with product identity instead of inside footer navigation.");
 
 for (const token of [
   '.siteFooterDetails {',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
-  'grid-template-columns: repeat(3, minmax(0, 1fr));',
+  'grid-template-columns: repeat(2, minmax(0, 1fr));',
   '.siteFooterDetails a[href="/changelog"]',
   '.siteFooterDetails a[data-page="changelog"]',
-  'font-size: 11px;',
+  'margin-top: 7px;',
+  '.siteFooterDetailsCreatorName {',
+  '.siteFooterDetailsCreatorLinks {',
+  '.siteFooterDetailsDiscord {',
   '.siteFooterDetailsMeta {',
   'grid-template-columns: auto minmax(0, 1fr) auto;',
   '.siteFooterDetails #statusText {',
@@ -67,8 +79,10 @@ for (const token of [
   '@media (max-width: 900px)',
   '@media (max-width: 520px)',
   '@media (max-width: 380px)',
+  '.siteFooterDetailsCreatorName,',
+  '.siteFooterDetailsDiscord,',
   '.siteFooterDetailsInner {\n    grid-template-columns: 1fr;',
-  '.siteFooterDetailsNavigation {\n    grid-template-columns: repeat(3, minmax(0, 1fr));',
+  '.siteFooterDetailsNavigation {\n    grid-template-columns: repeat(2, minmax(0, 1fr));',
   '.siteFooterDetailsMeta {\n    grid-template-columns: minmax(0, 1fr) auto;',
   '.siteFooterDetailsMeta {\n    grid-template-columns: 1fr;',
 ]) {
