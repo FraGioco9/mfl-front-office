@@ -3,7 +3,7 @@
 
   window.__mflBugReportRuntime?.destroy?.();
 
-  const REPORT_LINK_SELECTOR = '.siteFooterDetails a[data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
+  const REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
   const MODAL_TRANSITION_MS = 190;
   const AREA_OPTIONS = [
     "Database / MFL",
@@ -20,7 +20,6 @@
   let modal = null;
   let form = null;
   let previousFocus = null;
-  let unregisterEscapeHandler = null;
   let submitting = false;
   let closeTimer = 0;
 
@@ -134,20 +133,26 @@
       window.clearTimeout(closeTimer);
       closeTimer = 0;
     }
+
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    target.classList.remove("modalClosing");
+    target.hidden = false;
+    target.classList.add("modalOpen");
+
     prefillContext();
     setStatus();
-    window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
-    target.classList.remove("modalClosing", "modalOpen");
-    target.hidden = false;
+    try {
+      window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
+    } catch (error) {
+      console.warn("Could not hide tooltips before opening the bug report form.", error);
+    }
+
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        if (target.hidden) return;
-        target.classList.add("modalOpen");
-        const summary = target.querySelector("#bugReportSummary");
-        if (summary instanceof HTMLInputElement) summary.focus();
-      });
+      if (target.hidden || !target.classList.contains("modalOpen")) return;
+      const summary = target.querySelector("#bugReportSummary");
+      if (summary instanceof HTMLInputElement) summary.focus();
     });
+    return target;
   }
 
   function closeModal({ reset = false } = {}) {
@@ -243,21 +248,28 @@
   }
 
   function reportControlFromTarget(target) {
-    if (!(target instanceof Element)) return null;
-    const control = target.closest(REPORT_LINK_SELECTOR);
-    return control instanceof HTMLAnchorElement ? control : null;
+    const element = target instanceof Element
+      ? target
+      : target instanceof Node
+        ? target.parentElement
+        : null;
+    if (!(element instanceof Element)) return null;
+    const control = element.closest(REPORT_CONTROL_SELECTOR);
+    return control instanceof HTMLElement ? control : null;
   }
 
   function prepareReportControl(control) {
-    if (!(control instanceof HTMLAnchorElement)) return false;
+    if (!(control instanceof HTMLElement)) return false;
     control.dataset.bugReportControl = "true";
-    control.removeAttribute("href");
-    control.removeAttribute("target");
-    control.removeAttribute("rel");
-    control.setAttribute("role", "button");
+    if (control instanceof HTMLAnchorElement) {
+      control.removeAttribute("href");
+      control.removeAttribute("target");
+      control.removeAttribute("rel");
+      control.setAttribute("role", "button");
+      control.tabIndex = 0;
+    }
     control.setAttribute("aria-haspopup", "dialog");
     control.setAttribute("aria-controls", "bugReportModal");
-    control.tabIndex = 0;
     return true;
   }
 
@@ -265,7 +277,7 @@
     const control = reportControlFromTarget(event.target);
     if (!control) return;
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     prepareReportControl(control);
     openModal();
   }
@@ -275,34 +287,29 @@
     const control = reportControlFromTarget(event.target);
     if (!control) return;
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     prepareReportControl(control);
     openModal();
   }
 
   function handleEscape(event) {
-    if (event.key !== "Escape" || !(modal instanceof HTMLElement) || modal.hidden || submitting) return false;
+    if (event.key !== "Escape" || !(modal instanceof HTMLElement) || modal.hidden || submitting) return;
     event.preventDefault();
+    event.stopImmediatePropagation();
     closeModal();
-    return true;
   }
 
   function bind() {
-    prepareReportControl(document.querySelector(REPORT_LINK_SELECTOR));
+    prepareReportControl(document.querySelector(REPORT_CONTROL_SELECTOR));
     document.addEventListener("click", handleDocumentClick, true);
     document.addEventListener("keydown", handleDocumentKeyDown, true);
-    unregisterEscapeHandler = window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
-      "bug-report",
-      handleEscape,
-      { priority: 250 },
-    ) || null;
+    window.addEventListener("keydown", handleEscape, true);
   }
 
   function destroy() {
     document.removeEventListener("click", handleDocumentClick, true);
     document.removeEventListener("keydown", handleDocumentKeyDown, true);
-    unregisterEscapeHandler?.();
-    unregisterEscapeHandler = null;
+    window.removeEventListener("keydown", handleEscape, true);
     if (closeTimer) window.clearTimeout(closeTimer);
     closeTimer = 0;
     modal?.remove();
