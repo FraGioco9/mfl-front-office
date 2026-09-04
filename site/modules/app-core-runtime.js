@@ -2104,6 +2104,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
+    if (!pageNavigationIsCurrent(options)) return null;
     if (shouldResetScroll) {
       resetPageScroll();
     }
@@ -2169,6 +2170,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   changelogPage.hidden = pageName !== "changelog";
   if (pageName === "agents") {
     await agentTitleReady;
+    if (!pageNavigationIsCurrent(options)) return null;
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   } else {
     tablePageTitle.textContent = tableTitleForPage(pageName);
@@ -2200,6 +2202,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
+    if (!pageNavigationIsCurrent(options)) return null;
 
     syncHomeLoginButton();
     if (shouldResetScroll) {
@@ -2212,12 +2215,15 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (settingsPageActive) {
     primeSettingsFreshFirstPaint();
     await waitForViewTransitionPaint();
+    if (!pageNavigationIsCurrent(options)) return null;
     renderSettingsIdentity();
     await settingsPrepareCommittedForEntry();
+    if (!pageNavigationIsCurrent(options)) return null;
     renderSettingsPage();
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
+    if (!pageNavigationIsCurrent(options)) return null;
 
     syncHomeLoginButton();
     if (shouldResetScroll) {
@@ -2250,6 +2256,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
       if (document.body.classList.contains("loading")) {
         await finishLoading();
       }
+      if (!pageNavigationIsCurrent(options)) return null;
 
       syncHomeLoginButton();
       if (shouldResetScroll) {
@@ -2281,6 +2288,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
+    if (!pageNavigationIsCurrent(options)) return null;
 
     syncHomeLoginButton();
     if (shouldResetScroll) {
@@ -2297,6 +2305,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
+  if (!pageNavigationIsCurrent(options)) return null;
 
   if (shouldResetScroll) {
     resetPageScroll();
@@ -7097,7 +7106,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
 
   if (cachedPayload) {
     if (!incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) {
-      window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+      finishOwnedTableLoadingRequest();
       return null;
     }
     try {
@@ -7106,7 +7115,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
       state.incrementalLastLoadedAt = Date.now();
       return cachedPayload;
     } finally {
-      window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+      finishOwnedTableLoadingRequest();
     }
   }
 
@@ -7160,12 +7169,12 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   try {
     payload = await requestPromise;
   } catch (error) {
-    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+    finishOwnedTableLoadingRequest();
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
     throw error;
   }
   if (!payload || !incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) {
-    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+    finishOwnedTableLoadingRequest();
   }
   if (!payload || !incrementalRouteRequestIsCurrent(generation) || !navigationRequestIsCurrent()) return null;
   try {
@@ -7174,8 +7183,14 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     state.incrementalLastLoadedAt = Date.now();
     return payload;
   } finally {
+    finishOwnedTableLoadingRequest();
+  }
+
+function finishOwnedTableLoadingRequest() {
+  if (inheritedTableLoadingRequestToken === 0 && tableLoadingRequestToken !== 0) {
     window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
   }
+}
 }
 
 async function withInteractionBusy(callback) { return callback(); }
@@ -7191,10 +7206,16 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
   }
 
   state.page = page;
+  const reloadLoadingRequestToken = (!incrementalRouteIsCached(route, page) || window.__mflTableLoadingRuntime?.requestActive?.())
+    ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: options.loadingMode }) || 0
+    : 0;
 
   const loadAndRender = async () => {
     try {
-      const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });
+      const payload = await requestIncrementalRoute(route, page, {
+        loadingMode: options.loadingMode,
+        tableLoadingRequestToken: reloadLoadingRequestToken,
+      });
       if (!payload) return false;
       state.incrementalApplying = true;
       try {
@@ -7207,6 +7228,8 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
     } catch (error) {
       showToast(error?.message || "Could not load this page.");
       return false;
+    } finally {
+      window.__mflTableLoadingRuntime?.finishRequest?.(reloadLoadingRequestToken);
     }
   };
 
@@ -7216,7 +7239,6 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
 
   return withInteractionBusy(loadAndRender, options.loadingReason);
 }
-
 window.mflReloadIncrementalPage = reloadIncrementalPage;
 
 let pendingViewButtonPointer = null;
@@ -8814,9 +8836,17 @@ async function startApp() {
   }
 
   async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {}) {
-    if (!pageNavigationIsCurrent(options)) return false;
+  if (!pageNavigationIsCurrent(options)) return false;
+  const inheritedTableLoadingRequestToken = Number(requestOptions.tableLoadingRequestToken || 0);
+  const renderLoadingRequestToken = inheritedTableLoadingRequestToken
+    || (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.()
+      ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: requestOptions.loadingMode }) || 0
+      : 0);
+  const ownsRenderLoadingRequestToken = inheritedTableLoadingRequestToken === 0 && renderLoadingRequestToken !== 0;
+  try {
     const payload = await requestIncrementalRoute(route, 1, {
       ...requestOptions,
+      tableLoadingRequestToken: renderLoadingRequestToken,
       __mflNavigationTransition: options.__mflNavigationTransition || null,
     });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
@@ -8826,15 +8856,21 @@ async function startApp() {
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;
     try {
-      return await originalSetPage.call(this, pageName, false, {
+      const result = await originalSetPage.call(this, pageName, false, {
         ...options,
         replaceUrl: "",
         skipNavigationLoading: true,
       });
+      return pageNavigationIsCurrent(options) ? result : false;
     } finally {
       state.incrementalApplying = false;
     }
+  } finally {
+    if (ownsRenderLoadingRequestToken) {
+      window.__mflTableLoadingRuntime?.finishRequest?.(renderLoadingRequestToken);
+    }
   }
+}
 
   applyFilters = function applyFiltersWithIncrementalData(options = {}) {
     if (!state.incrementalMode || state.incrementalApplying || options.localOnly) {
@@ -8904,9 +8940,14 @@ async function startApp() {
       if (!transition) return;
     }
 
+    const viewLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())
+      ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0
+      : 0;
     const loadAndRender = async () => {
       try {
-        const payload = await requestIncrementalRoute(route, 1);
+        const payload = await requestIncrementalRoute(route, 1, {
+          tableLoadingRequestToken: viewLoadingRequestToken,
+        });
         if (!payload) return;
         state.incrementalApplying = true;
         try {
@@ -8925,12 +8966,14 @@ async function startApp() {
         }
         updateViewButtons();
         showToast(error?.message || "Could not load this view.");
+      } finally {
+        window.__mflTableLoadingRuntime?.finishRequest?.(viewLoadingRequestToken);
       }
     };
 
     if (incrementalRouteIsCached(route, 1)) return loadAndRender();
     return withInteractionBusy(loadAndRender, Reflect.get(window, "__mflInteractionBusy")?.reason);
-  };
+};
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
     resetTableSortSession(pageName, options);
@@ -8974,7 +9017,14 @@ async function startApp() {
           skipNavigationLoading: true,
         });
       }
-      const payload = await requestIncrementalRoute(route, 1, { __mflNavigationTransition: navigationTransition });
+      const statsLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())
+      ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0
+      : 0;
+    try {
+      const payload = await requestIncrementalRoute(route, 1, {
+        tableLoadingRequestToken: statsLoadingRequestToken,
+        __mflNavigationTransition: navigationTransition,
+      });
       if (!payload || !pageNavigationIsCurrent(navigationOptions)) return false;
       state.dataAccess = currentDataAccess(pageName);
       state.incrementalApplying = true;
@@ -8988,6 +9038,9 @@ async function startApp() {
       } finally {
         state.incrementalApplying = false;
       }
+    } finally {
+      window.__mflTableLoadingRuntime?.finishRequest?.(statsLoadingRequestToken);
+    }
     }
 
     const requestedDatabaseView = pageName === "database"
