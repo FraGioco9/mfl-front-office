@@ -103,9 +103,8 @@
       const control = bugReportControlFromTarget(event.target);
       if (!control) return;
       prepareBugReportControl(control);
-      if (window.__mflBugReportRuntime?.open) return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       void ensureBugReportRuntime()
         .then((runtime) => runtime.open())
         .catch((error) => console.error("Could not open the bug report form.", error));
