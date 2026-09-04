@@ -59,6 +59,21 @@ assert.ok(watchlistAwait >= 0 && watchlistGuard > watchlistAwait, "Watchlist rou
 const evaluationAwait = baseSetPage.indexOf("await renderEvaluationPage();");
 const evaluationGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", evaluationAwait);
 assert.ok(evaluationAwait >= 0 && evaluationGuard > evaluationAwait, "Non-table Evaluation completion must not reclaim UI after a table navigation wins.");
+const agentTitleAwait = baseSetPage.indexOf("await agentTitleReady;");
+const agentTitleGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", agentTitleAwait);
+assert.ok(agentTitleAwait >= 0 && agentTitleGuard > agentTitleAwait, "A superseded Agent title lookup must not resume destination rendering.");
+const settingsPaintAwait = baseSetPage.indexOf("await waitForViewTransitionPaint();");
+const settingsPaintGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", settingsPaintAwait);
+const settingsPrepareAwait = baseSetPage.indexOf("await settingsPrepareCommittedForEntry();");
+const settingsPrepareGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", settingsPrepareAwait);
+assert.ok(settingsPaintAwait >= 0 && settingsPaintGuard > settingsPaintAwait && settingsPrepareAwait > settingsPaintGuard && settingsPrepareGuard > settingsPrepareAwait, "Settings must re-check navigation ownership after both async entry handoffs.");
+const mflStatsRender = baseSetPage.indexOf("renderMflStatsPage();");
+const mflStatsLoadingAwait = baseSetPage.indexOf("await finishLoading();", mflStatsRender);
+const mflStatsLoadingGuard = baseSetPage.indexOf("if (!pageNavigationIsCurrent(options)) return null;", mflStatsLoadingAwait);
+assert.ok(mflStatsRender >= 0 && mflStatsLoadingAwait > mflStatsRender && mflStatsLoadingGuard > mflStatsLoadingAwait, "MFL Stats must not finalize after a newer page navigation wins during loading completion.");
+const incrementalRendererStart = appCoreSource.indexOf("async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {})");
+const incrementalRendererOwnerCheck = appCoreSource.indexOf("return pageNavigationIsCurrent(options) ? result : false;", incrementalRendererStart);
+assert.ok(incrementalRendererStart >= 0 && incrementalRendererOwnerCheck > incrementalRendererStart, "Incremental rendering must verify navigation ownership again after the base page renderer settles.");
 
 const incrementalSetPageStart = appCoreSource.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
 const incrementalSetPageEnd = appCoreSource.indexOf("function divisionInfo(", incrementalSetPageStart);

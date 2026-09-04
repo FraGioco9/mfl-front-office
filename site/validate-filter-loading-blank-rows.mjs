@@ -27,10 +27,10 @@ const [appCore, generatedCore, tableLoading, bootstrap, styles, stylesBase, load
 ]);
 
 const filterReload = 'void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });';
-const requestForwarding = 'requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });';
+const requestForwarding = /requestIncrementalRoute\(route, page, \{\s*loadingMode: options\.loadingMode,\s*tableLoadingRequestToken: reloadLoadingRequestToken,\s*\}\);/u;
 for (const source of [appCore, generatedCore]) {
   invariant(source.includes(filterReload), "Filter reloads must opt directly into the canonical blank-row loading mode.");
-  invariant(source.includes(requestForwarding), "Incremental reloads must forward their table loading mode to the request owner.");
+  invariant(requestForwarding.test(source), "Incremental reloads must forward their table loading mode and render-owned request token together.");
   invariant(!source.includes('loadingReason: "table-filter-loading"'), "Filter reloads must not depend on the retired interaction-busy loading reason.");
 }
 

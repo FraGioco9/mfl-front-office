@@ -2504,7 +2504,7 @@ function tableCenterCellContents(cell) {
 }
 
 function tableRenderTableOwner() {
-  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;
+  if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
   const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
     && playerTableActionRenderSignature

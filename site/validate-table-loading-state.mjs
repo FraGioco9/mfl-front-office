@@ -200,9 +200,9 @@ invariant(
 );
 invariant(
   appCoreSource.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });')
-    && appCoreSource.includes('const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });')
+    && appCoreSource.includes('tableLoadingRequestToken: reloadLoadingRequestToken')
     && appCoreSource.includes(requestBoundaryMarker)
-    && generatedCore.includes('const payload = await requestIncrementalRoute(route, page, { loadingMode: options.loadingMode });')
+    && generatedCore.includes('tableLoadingRequestToken: reloadLoadingRequestToken')
     && generatedCore.includes(requestBoundaryMarker)
     && tableRuntime.includes('await reloadIncrementalPage(target, { loadingMode: "blank" });'),
   "Pager page changes must carry blank loading intent from the Table pager through the shared incremental request boundary.",
@@ -213,7 +213,7 @@ invariant(
   appCoreSource.includes(requestBoundaryMarker)
     && !appCoreSource.includes("preservePager")
     && appCoreSource.includes(requestFinishMarker)
-    && appCoreSource.includes('function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
+    && appCoreSource.includes('function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;'),
   "Canonical application source must preserve first-paint loading rows until data is authoritative and guard active requests.",
 );
 invariant(
@@ -278,7 +278,7 @@ invariant(
 );
 
 invariant(
-  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === \"true\" && !state.dataLoaded) return;"),
+  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;\n  if (tableBody.dataset.staticLoading === \"true\" && !state.dataLoaded) return;"),
   "The generated Table renderer must preserve first-paint loading rows until authoritative data exists and during active requests.",
 );
 invariant(
@@ -320,3 +320,46 @@ invariant(
 );
 
 console.log("All table-backed routes keep one source-owned stable loading tbody, and Club refresh preserves its canonical first-paint header through the entire nested load until the final shared release.");
+
+
+const requestTransactionStart = appCoreSource.indexOf("async function requestIncrementalRoute(route, page = 1, options = {}) {");
+const requestTransactionEnd = appCoreSource.indexOf("async function withInteractionBusy", requestTransactionStart);
+const requestTransaction = appCoreSource.slice(requestTransactionStart, requestTransactionEnd);
+invariant(
+  requestTransaction.includes("function finishOwnedTableLoadingRequest()")
+    && requestTransaction.includes("inheritedTableLoadingRequestToken === 0 && tableLoadingRequestToken !== 0")
+    && (requestTransaction.match(/finishOwnedTableLoadingRequest\(\);/g) || []).length === 5,
+  "Incremental fetches must release only request-owned loading tokens; render-owned tokens survive payload application.",
+);
+
+const pageRenderStart = appCoreSource.indexOf("async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {})");
+const pageRenderEnd = appCoreSource.indexOf("applyFilters = function applyFiltersWithIncrementalData", pageRenderStart);
+const pageRenderTransaction = appCoreSource.slice(pageRenderStart, pageRenderEnd);
+invariant(
+  pageRenderTransaction.includes("tableLoadingRequestToken: renderLoadingRequestToken")
+    && pageRenderTransaction.indexOf("originalSetPage.call") < pageRenderTransaction.indexOf("finishRequest?.(renderLoadingRequestToken)"),
+  "Page navigation must retain Table loading ownership through the authoritative originalSetPage DOM commit.",
+);
+
+const reloadTransactionStart = appCoreSource.indexOf("async function reloadIncrementalPage(page = state.page, options = {}) {");
+const reloadTransactionEnd = appCoreSource.indexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;", reloadTransactionStart);
+const reloadTransaction = appCoreSource.slice(reloadTransactionStart, reloadTransactionEnd);
+invariant(
+  reloadTransaction.includes("tableLoadingRequestToken: reloadLoadingRequestToken")
+    && reloadTransaction.indexOf("applyFilters({ save: options.save !== false });") < reloadTransaction.indexOf("finishRequest?.(reloadLoadingRequestToken)"),
+  "Pager/filter reloads must retain Table loading ownership through applyFilters and the row DOM commit.",
+);
+
+const viewTransactionStart = appCoreSource.indexOf("setView = async function setIncrementalView(viewName) {");
+const viewTransactionEnd = appCoreSource.indexOf("setPage = async function setIncrementalPage", viewTransactionStart);
+const viewTransaction = appCoreSource.slice(viewTransactionStart, viewTransactionEnd);
+invariant(
+  viewTransaction.includes("tableLoadingRequestToken: viewLoadingRequestToken")
+    && viewTransaction.indexOf("originalSetView.call(this, nextView)") < viewTransaction.indexOf("finishRequest?.(viewLoadingRequestToken)"),
+  "View switches must retain Table loading ownership through originalSetView and the row DOM commit.",
+);
+
+invariant(
+  tableRuntime.includes("requestActive?.() && !state.incrementalApplying"),
+  "Only the authoritative incremental apply transaction may replace loading rows while a request token remains active.",
+);
