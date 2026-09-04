@@ -341,6 +341,11 @@
     });
   }
 
+  function resetMainPageScroll() {
+    const main = document.querySelector("body > #appShell > main");
+    if (main instanceof HTMLElement) main.scrollTop = 0;
+  }
+
   function syncRouteChrome(urlLike = window.location.href) {
     const state = routeState(urlLike);
     const previousPage = lastRoutePage;
@@ -351,6 +356,7 @@
     lastRoutePage = state.page;
     lastRouteView = state.view;
 
+    if (pageChanged) resetMainPageScroll();
     if (resetFilters) {
       document.documentElement.dataset.mflResetTableFilters = state.page;
     } else if (pageChanged) {
