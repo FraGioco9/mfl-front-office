@@ -36,10 +36,16 @@ for (const token of [
   'function bugReportRuntimeLoader()',
   'return resources.load("/bug-report-runtime.js");',
   'function ensureBugReportRuntime()',
+  'async function openBugReportForm()',
+  'runtime.open();',
+  'document.getElementById("bugReportModal")',
+  'modal.hidden = false;',
+  'modal.classList.remove("modalClosing");',
+  'modal.classList.add("modalOpen");',
   'function installBugReportBootstrap()',
   'event.preventDefault();',
   'event.stopImmediatePropagation();',
-  'void ensureBugReportRuntime()\n        .then((runtime) => runtime.open())',
+  'void openBugReportForm()',
   'document.addEventListener("click", activate, true);',
   'document.addEventListener("keydown", activateKeyboard, true);',
   'void ensureBugReportRuntime().catch((error) => {',
@@ -62,7 +68,6 @@ if (controlIndex < 0 || bugRuntimeIndex <= controlIndex) {
 
 for (const token of [
   'const REPORT_LINK_SELECTOR =',
-  'const MODAL_TRANSITION_MS = 190;',
   'function ensureModal()',
   'id="bugReportSummary"',
   'id="bugReportArea"',
@@ -77,13 +82,6 @@ for (const token of [
   'window.__mflReleaseVersion',
   'fetch("/api/bug-reports", {',
   'Reflect.get(window, "walletProofHeaders")',
-  'target.classList.remove("modalClosing", "modalOpen");',
-  'target.hidden = false;',
-  'window.requestAnimationFrame(() => {\n      window.requestAnimationFrame(() => {',
-  'target.classList.add("modalOpen");',
-  'modal.classList.remove("modalOpen");',
-  'modal.classList.add("modalClosing");',
-  'modal.hidden = true;',
   'function reportControlFromTarget(target)',
   'function prepareReportControl(control)',
   'control.dataset.bugReportControl = "true";',
@@ -101,21 +99,25 @@ for (const token of [
   'registerEscapeHandler?.(',
   '"bug-report",',
   '{ priority: 250 }',
+  'target.classList.remove("modalClosing", "modalOpen");',
+  'target.hidden = false;',
+  'target.classList.add("modalOpen");',
+  'modal.classList.remove("modalOpen");',
+  'modal.classList.add("modalClosing");',
   'showToast("Bug report submitted.")',
 ]) {
   includes(runtime, token, `Bug report runtime contract is missing: ${token}`);
 }
-
-const modalRevealOrder = [
-  'target.classList.remove("modalClosing", "modalOpen");',
-  'target.hidden = false;',
-  'window.requestAnimationFrame(() => {\n      window.requestAnimationFrame(() => {',
-  'target.classList.add("modalOpen");',
-].map((token) => runtime.indexOf(token));
-if (modalRevealOrder.some((index) => index < 0) || modalRevealOrder.some((index, position) => position > 0 && index <= modalRevealOrder[position - 1])) {
-  throw new Error("Bug report modal must use the canonical painted closed-state frame before modalOpen makes it visible.");
+const runtimeOpenStart = runtime.indexOf("function openModal()");
+const runtimeCloseStart = runtime.indexOf("function closeModal(");
+const runtimeOpenSection = runtime.slice(runtimeOpenStart, runtimeCloseStart);
+if (
+  runtimeOpenStart < 0
+  || runtimeCloseStart <= runtimeOpenStart
+  || runtimeOpenSection.indexOf('target.hidden = false;') > runtimeOpenSection.indexOf('target.classList.add("modalOpen");')
+) {
+  throw new Error("Bug report modal must be unhidden before its canonical visible modalOpen state is applied.");
 }
-
 excludes(runtime, 'reportLink.addEventListener("click"', "Bug report activation must not depend on one static footer node.");
 excludes(runtime, "event.metaKey", "Bug report activation must not retain modifier-click escape to GitHub.");
 excludes(runtime, "window.open", "Bug report activation must never open an external window.");
@@ -165,4 +167,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with canonical visible-modal lifecycle, guaranteed direct opening, delegated in-site activation, and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with guaranteed bootstrap visibility, canonical modal lifecycle, delegated in-site activation, and no external escape path.");
