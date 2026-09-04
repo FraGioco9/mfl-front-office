@@ -25,6 +25,21 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
+      - name: Apply issue 659 canonical patch
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/659-player-table-menu-scroll-anchor'
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git apply --check site/issue659.patch; then
+            git apply site/issue659.patch
+          elif grep -q 'PLAYER_TABLE_ACTION_TRACK_MARGIN_PX = 64' site/modules/core-sources/table.js; then
+            echo "Issue 659 canonical patch is already applied."
+          else
+            echo "Issue 659 canonical patch no longer applies cleanly." >&2
+            exit 1
+          fi
+
       - name: Detect relevant changes
         id: changes
         working-directory: .
@@ -182,14 +197,18 @@ jobs:
             site/styles-runtime.css \
             site/table-width-runtime.js \
             site/modules/app-core-runtime.js \
-            site/modules/app-core-*-runtime.js
+            site/modules/app-core-*-runtime.js \
+            site/modules/core-sources/table.js \
+            site/stacking.css \
+            site/validate-domain-table.mjs \
+            site/validate-player-table-action-menu-scroll.mjs
           if git diff --cached --quiet; then
-            echo "Generated site artifacts are current."
+            echo "Generated and issue 659 canonical site artifacts are current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Regenerate site artifacts"
+          git commit -m "Apply player table menu scroll anchoring"
           git push origin "HEAD:$HEAD_BRANCH"
 
       - name: Verify generated site artifacts
