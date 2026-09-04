@@ -222,10 +222,10 @@
     transform-origin: center;
   }
   #progressionPage nav.pager {
-    --mfl-mobile-pager-button-width: clamp(60px, calc(43.923px + 4.231vw), 82px);
-    --mfl-mobile-pager-button-height: clamp(32px, calc(26.154px + 1.538vw), 40px);
-    --mfl-mobile-pager-font-size: clamp(10px, calc(8.538px + 0.385vw), 12px);
-    --mfl-mobile-pager-inline-padding: clamp(5px, calc(1.346px + 0.962vw), 10px);
+    --mfl-mobile-pager-button-width: clamp(30px, calc(25.615px + 1.154vw), 36px);
+    --mfl-mobile-pager-button-height: clamp(30px, calc(25.615px + 1.154vw), 36px);
+    --mfl-mobile-pager-font-size: clamp(9px, calc(7.538px + 0.385vw), 11px);
+    --mfl-mobile-pager-icon-size: clamp(12px, calc(9.077px + 0.769vw), 16px);
     --mfl-mobile-pager-page-gap: clamp(5px, calc(-0.115px + 1.346vw), 12px);
     --mfl-mobile-pager-block-padding: clamp(5px, calc(2.077px + 0.769vw), 9px);
     gap: 0;
@@ -233,6 +233,8 @@
     font-size: var(--mfl-mobile-pager-font-size);
   }
   #progressionPage nav.pager > :is(#prevButton, #nextButton) {
+    display: grid;
+    place-items: center;
     flex: 0 0 var(--mfl-mobile-pager-button-width);
     width: var(--mfl-mobile-pager-button-width);
     min-width: var(--mfl-mobile-pager-button-width);
@@ -240,8 +242,32 @@
     height: var(--mfl-mobile-pager-button-height);
     min-height: var(--mfl-mobile-pager-button-height);
     max-height: var(--mfl-mobile-pager-button-height);
-    padding-inline: var(--mfl-mobile-pager-inline-padding);
-    font-size: var(--mfl-mobile-pager-font-size);
+    padding: 0;
+  }
+  #progressionPage nav.pager > :is(#prevButton, #nextButton) > .pagerButtonLabel {
+    display: none;
+  }
+  #progressionPage nav.pager > :is(#prevButton, #nextButton)::before {
+    content: "";
+    display: block;
+    width: var(--mfl-mobile-pager-icon-size);
+    height: var(--mfl-mobile-pager-icon-size);
+    margin: 0;
+    background: currentColor;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  #progressionPage nav.pager > #prevButton::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M19%2012H5'/%3E%3Cpath%20d='m12%2019-7-7%207-7'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M19%2012H5'/%3E%3Cpath%20d='m12%2019-7-7%207-7'/%3E%3C/svg%3E");
+  }
+  #progressionPage nav.pager > #nextButton::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E");
   }
   #progressionPage nav.pager > span#pageText {
     flex: 0 0 auto;
