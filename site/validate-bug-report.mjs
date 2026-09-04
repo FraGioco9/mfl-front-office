@@ -62,6 +62,7 @@ if (controlIndex < 0 || bugRuntimeIndex <= controlIndex) {
 
 for (const token of [
   'const REPORT_LINK_SELECTOR =',
+  'const MODAL_TRANSITION_MS = 190;',
   'function ensureModal()',
   'id="bugReportSummary"',
   'id="bugReportArea"',
@@ -76,6 +77,13 @@ for (const token of [
   'window.__mflReleaseVersion',
   'fetch("/api/bug-reports", {',
   'Reflect.get(window, "walletProofHeaders")',
+  'target.classList.remove("modalClosing", "modalOpen");',
+  'target.hidden = false;',
+  'window.requestAnimationFrame(() => {\n      window.requestAnimationFrame(() => {',
+  'target.classList.add("modalOpen");',
+  'modal.classList.remove("modalOpen");',
+  'modal.classList.add("modalClosing");',
+  'modal.hidden = true;',
   'function reportControlFromTarget(target)',
   'function prepareReportControl(control)',
   'control.dataset.bugReportControl = "true";',
@@ -97,6 +105,17 @@ for (const token of [
 ]) {
   includes(runtime, token, `Bug report runtime contract is missing: ${token}`);
 }
+
+const modalRevealOrder = [
+  'target.classList.remove("modalClosing", "modalOpen");',
+  'target.hidden = false;',
+  'window.requestAnimationFrame(() => {\n      window.requestAnimationFrame(() => {',
+  'target.classList.add("modalOpen");',
+].map((token) => runtime.indexOf(token));
+if (modalRevealOrder.some((index) => index < 0) || modalRevealOrder.some((index, position) => position > 0 && index <= modalRevealOrder[position - 1])) {
+  throw new Error("Bug report modal must use the canonical painted closed-state frame before modalOpen makes it visible.");
+}
+
 excludes(runtime, 'reportLink.addEventListener("click"', "Bug report activation must not depend on one static footer node.");
 excludes(runtime, "event.metaKey", "Bug report activation must not retain modifier-click escape to GitHub.");
 excludes(runtime, "window.open", "Bug report activation must never open an external window.");
@@ -146,4 +165,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with guaranteed direct opening, delegated in-site activation, and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with canonical visible-modal lifecycle, guaranteed direct opening, delegated in-site activation, and no external escape path.");
