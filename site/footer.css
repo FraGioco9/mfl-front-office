@@ -42,7 +42,7 @@
 
 .siteFooterDetailsNavigation {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -77,16 +77,43 @@
 
 .siteFooterDetails a[href="/changelog"],
 .siteFooterDetails a[data-page="changelog"] {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 7px;
   color: var(--text);
   font-size: 11px;
   font-weight: 700;
+}
+
+.siteFooterDetailsCreatorName {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.siteFooterDetailsCreatorLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.siteFooterDetailsDiscord {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .siteFooterDetailsGroup a:hover {
   color: var(--primary);
 }
 
-.siteFooterDetailsGroup a:focus-visible {
+.siteFooterDetailsGroup a:focus-visible,
+.siteFooterDetailsIdentity > a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 3px;
