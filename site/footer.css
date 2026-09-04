@@ -80,6 +80,11 @@ main > .pageView:not([hidden]) {
   transition: color 120ms ease;
 }
 
+/* Do not allow the legacy external bug-report target to activate before the in-site modal runtime owns it. */
+.siteFooterDetailsGroup a[href*="/mfl-front-office/issues/new"] {
+  pointer-events: none;
+}
+
 .siteFooterDetails a[href="/changelog"],
 .siteFooterDetails a[data-page="changelog"] {
   display: inline-block;
@@ -93,8 +98,8 @@ main > .pageView:not([hidden]) {
   transition: color var(--mfl-motion-fast, 120ms) ease;
 }
 
-.siteFooterDetails a[href="/changelog"]:hover,
-.siteFooterDetails a[data-page="changelog"]:hover {
+body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,
+body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {
   color: var(--primary);
 }
 
