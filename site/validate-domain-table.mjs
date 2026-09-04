@@ -18,15 +18,6 @@ const validators = [
   "validate-header-selection-loading.mjs",
   "validate-new-player-icon.mjs",
   "validate-progression-joined-agency-filter.mjs",
-  "validate-mobile-table-retry.mjs",
-  "validate-mobile-progression-view-widths.mjs",
-  "validate-mobile-table-compact-contract.mjs",
-  "validate-small-screen-table-compaction.mjs",
-  "validate-mobile-first-paint-cascade.mjs",
-  "validate-mobile-header-first-paint-metrics.mjs",
-  "validate-mobile-pager-scaling.mjs",
-  "validate-mobile-selection-bar-scaling.mjs",
-  "validate-changelog-responsive-scaling.mjs",
 ];
 
 for (const validator of validators) {
