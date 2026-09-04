@@ -25,6 +25,7 @@ const validators = [
   "validate-mobile-header-first-paint-metrics.mjs",
   "validate-mobile-pager-scaling.mjs",
   "validate-mobile-selection-bar-scaling.mjs",
+  "validate-changelog-responsive-scaling.mjs",
 ];
 
 for (const validator of validators) {

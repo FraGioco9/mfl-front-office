@@ -1507,14 +1507,64 @@ html:not(.mflInitialRouteResolved):is(
     max-width: none;
   }
 
-  .changelogPatchList li {
-    grid-template-columns: 76px minmax(0, 1fr);
-    gap: 7px;
-    padding-inline: 6px;
+  .changelogPage {
+    margin-top: 10px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 4px;
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 14px;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .changelogList {
+    gap: 8px;
+  }
+
+  .changelogMinorSection {
+    border-radius: 5px;
   }
 
   .changelogMinorToggle {
     gap: 8px;
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 14px;
+  }
+
+  .changelogMinorMeta {
+    font-size: 11px;
+  }
+
+  .changelogMinorChevron {
+    font-size: 16px;
+  }
+
+  .changelogPatchList {
+    padding: 2px 8px;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 7px;
+    min-height: 31px;
+    padding: 4px 6px;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 22px;
+    font-size: 13px;
+    line-height: 1.15;
   }
 
   .siteFooter {
@@ -2863,6 +2913,60 @@ html:not(.mflInitialRouteResolved):is(
     grid-template-columns: 1fr;
   }
 
+  .changelogPage {
+    margin-top: 8px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 3px;
+    font-size: 19px;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .changelogList {
+    gap: 6px;
+  }
+
+  .changelogMinorToggle {
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 8px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 13px;
+  }
+
+  .changelogMinorMeta {
+    font-size: 10px;
+  }
+
+  .changelogMinorChevron {
+    font-size: 14px;
+  }
+
+  .changelogPatchList {
+    padding: 1px 6px;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 5px;
+    min-height: 27px;
+    padding: 3px 4px;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 20px;
+    font-size: 11px;
+  }
+
   .filtersFooter,
   .advancedSettingsFooter,
   .addWatchlistFooter,
@@ -3270,24 +3374,67 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 6px;
   }
 
+  .changelogPage {
+    margin-top: 6px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 2px;
+    font-size: 17px;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
+  .changelogList {
+    gap: 5px;
+  }
+
+  .changelogMinorSection {
+    border-radius: 4px;
+  }
+
   .changelogMinorToggle {
     grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+    min-height: 34px;
+    padding: 5px 6px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 12px;
   }
 
   .changelogMinorMeta {
     grid-column: 1;
     grid-row: 2;
+    font-size: 9px;
   }
 
   .changelogMinorChevron {
     grid-column: 2;
     grid-row: 1 / span 2;
+    font-size: 12px;
+  }
+
+  .changelogPatchList {
+    padding: 1px 4px;
   }
 
   .changelogPatchList li {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 1px;
+    min-height: 0;
+    padding: 4px 3px;
     align-items: start;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 0;
+    font-size: 10px;
   }
 }
 
