@@ -36,8 +36,8 @@ invariant(
   "bootstrap-core.js must contain the generated fallback projection of release.json.",
 );
 invariant(
-  indexHtml.includes(`<a href="/changelog" data-page="changelog">MFL Front Office v${version}</a>`),
-  "The static footer must contain the generated projection of release.json.",
+  indexHtml.includes(`<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v${version}</a>`),
+  "The static footer title must contain the generated projection of release.json.",
 );
 
 invariant(
@@ -101,12 +101,12 @@ invariant(
   "Bootstrap-core projection generation must replace a stale fallback from the canonical release input.",
 );
 const normalizedIndex = normalizeIndexReleaseProjection(
-  '<footer><a href="/changelog" data-page="changelog">MFL Front Office v9.9.9</a></footer>',
+  '<footer><a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v9.9.9</a></footer>',
   fakeVersion,
 );
 invariant(
   normalizedIndex.includes(`>MFL Front Office v${fakeVersion}</a>`) && !normalizedIndex.includes("9.9.9"),
-  "Footer projection generation must replace a stale version from the canonical release input.",
+  "Footer title projection generation must replace a stale version from the canonical release input.",
 );
 
 console.log(`Single release source validation passed for v${version}: Site Quality is the sole generated-artifact writer and release merges automatically clean unused branches.`);
