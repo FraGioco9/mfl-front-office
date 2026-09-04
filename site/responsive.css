@@ -3334,8 +3334,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .siteFooterDetailsIdentity p,
-  .siteFooterDetailsCreatorName,
-  .siteFooterDetailsDiscord,
+  .siteFooterDetailsCreatorDiscord,
   .siteFooterDetailsGroup a {
     font-size: 10px;
   }
@@ -3411,8 +3410,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .siteFooterDetailsIdentity p,
-  .siteFooterDetailsCreatorName,
-  .siteFooterDetailsDiscord,
+  .siteFooterDetailsCreatorDiscord,
   .siteFooterDetailsGroup a {
     font-size: 8px;
   }
