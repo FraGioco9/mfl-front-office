@@ -23,6 +23,7 @@ const validators = [
   "validate-mobile-first-paint-cascade.mjs",
   "validate-mobile-header-first-paint-metrics.mjs",
   "validate-mobile-pager-scaling.mjs",
+  "validate-mobile-selection-bar-scaling.mjs",
 ];
 
 for (const validator of validators) {
