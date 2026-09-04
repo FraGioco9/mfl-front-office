@@ -3,7 +3,7 @@
 
   window.__mflBugReportRuntime?.destroy?.();
 
-  const REPORT_LINK_SELECTOR = '.siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
+  const REPORT_LINK_SELECTOR = '.siteFooterDetails a[data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
   const AREA_OPTIONS = [
     "Database / MFL",
     "Club / Agent / Player pages",
@@ -224,11 +224,15 @@
   }
 
   function handleReportLink(event) {
-    if (event instanceof MouseEvent
-        && (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) {
-      return;
-    }
     event.preventDefault();
+    event.stopPropagation();
+    openModal();
+  }
+
+  function handleReportKeyDown(event) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
     openModal();
   }
 
@@ -239,9 +243,25 @@
     return true;
   }
 
+  function prepareReportControl() {
+    if (!(reportLink instanceof HTMLAnchorElement)) return false;
+    reportLink.dataset.bugReportControl = "true";
+    reportLink.removeAttribute("href");
+    reportLink.removeAttribute("target");
+    reportLink.removeAttribute("rel");
+    reportLink.setAttribute("role", "button");
+    reportLink.setAttribute("aria-haspopup", "dialog");
+    reportLink.setAttribute("aria-controls", "bugReportModal");
+    reportLink.tabIndex = 0;
+    return true;
+  }
+
   function bind() {
     reportLink = document.querySelector(REPORT_LINK_SELECTOR);
-    reportLink?.addEventListener("click", handleReportLink);
+    if (prepareReportControl()) {
+      reportLink.addEventListener("click", handleReportLink);
+      reportLink.addEventListener("keydown", handleReportKeyDown);
+    }
     unregisterEscapeHandler = window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
       "bug-report",
       handleEscape,
@@ -251,6 +271,7 @@
 
   function destroy() {
     reportLink?.removeEventListener("click", handleReportLink);
+    reportLink?.removeEventListener("keydown", handleReportKeyDown);
     unregisterEscapeHandler?.();
     unregisterEscapeHandler = null;
     modal?.remove();
