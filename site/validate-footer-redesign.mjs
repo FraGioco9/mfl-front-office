@@ -73,8 +73,8 @@ for (const token of [
   'font-size: 14px;',
   'font-weight: 800;',
   'transition: color var(--mfl-motion-fast, 120ms) ease;',
-  '.siteFooterDetails a[href="/changelog"]:hover,',
-  '.siteFooterDetails a[data-page="changelog"]:hover {',
+  'body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,',
+  'body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {',
   'color: var(--primary);',
   '.siteFooterDetailsCreatorLinks {',
   '.siteFooterDetailsCreatorLink {',
@@ -93,6 +93,7 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(!footer.includes('.siteFooterDetails a[href="/changelog"]:hover,\n.siteFooterDetails a[data-page="changelog"]:hover {'), "The Changelog title hover must not animate while Changelog is the active page.");
 invariant(!footer.includes('transform: translateY(-1px);'), "The footer title hover must not shift vertically.");
 invariant(!footer.includes('transition: color var(--mfl-motion-fast, 120ms) ease, transform'), "The footer title hover must not animate transforms.");
 invariant(!footer.includes('margin-top: clamp(40px, 6vh, 64px);'), "Footer spacing must be anchored from the page viewport, not inflated after the preceding content.");
