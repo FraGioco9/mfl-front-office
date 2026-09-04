@@ -6982,6 +6982,10 @@ html.mflDataLoading #pageSizeSelect {
   min-width: 0;
 }
 
+.siteFooterDetailsCreatorLinks > * {
+  margin: 0;
+}
+
 .siteFooterDetailsDiscord {
   color: var(--text-muted);
   font-size: 10px;
