@@ -72,10 +72,10 @@ for (const token of [
   'margin-top: 0;',
   'font-size: 14px;',
   'font-weight: 800;',
-  'transition: color var(--mfl-motion-fast, 120ms) ease, transform var(--mfl-motion-fast, 120ms) ease;',
+  'transition: color var(--mfl-motion-fast, 120ms) ease;',
   '.siteFooterDetails a[href="/changelog"]:hover,',
   '.siteFooterDetails a[data-page="changelog"]:hover {',
-  'transform: translateY(-1px);',
+  'color: var(--primary);',
   '.siteFooterDetailsCreatorLinks {',
   '.siteFooterDetailsCreatorLink {',
   '.siteFooterDetailsCreatorIcon {',
@@ -93,6 +93,8 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(!footer.includes('transform: translateY(-1px);'), "The footer title hover must not shift vertically.");
+invariant(!footer.includes('transition: color var(--mfl-motion-fast, 120ms) ease, transform'), "The footer title hover must not animate transforms.");
 invariant(!footer.includes('margin-top: clamp(40px, 6vh, 64px);'), "Footer spacing must be anchored from the page viewport, not inflated after the preceding content.");
 invariant(!footer.includes('grid-template-columns: auto minmax(0, 1fr) auto;'), "Desktop footer metadata must not size its side columns from changing content.");
 invariant(!footer.includes('.siteFooter a['), "footer.css must not retain the removed compact footer owner.");
