@@ -1945,22 +1945,11 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 600px;
   }
 
-
-/* Every actual mobile table view uses the same readable 760px floor. */
-html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
-  [data-initial-table-view="attributes"],
-  [data-initial-table-view="contracts"],
-  [data-initial-table-view="next"],
-  [data-initial-table-view="current"],
-  [data-initial-table-view="all"]
-) #progressionPage .playerTableScroller table,
-#progressionPage:has(.viewButton[data-view="attributes"].active) .playerTableScroller table,
-#progressionPage:has(.viewButton[data-view="contracts"].active) .playerTableScroller table,
-#progressionPage:has(.viewButton[data-view="next"].active) .playerTableScroller table,
-#progressionPage:has(.viewButton[data-view="current"].active) .playerTableScroller table,
-#progressionPage:has(.viewButton[data-view="all"].active) .playerTableScroller table {
-  min-width: 760px;
-}
+  /* Every resolved or active mobile table view uses the same readable 760px floor. */
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-view] #progressionPage .playerTableScroller table,
+  #progressionPage:has(.viewButton.active) .playerTableScroller table {
+    min-width: 760px;
+  }
 
   #progressionPage .playerTableScroller th {
     font-size: 9px;
