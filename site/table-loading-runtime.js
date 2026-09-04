@@ -217,7 +217,11 @@
 
   function finishRequest(token) {
     const requestToken = Number(token || 0);
-    if (!requestToken || requestToken !== activeRequestToken) return false;
+    if (!requestToken) {
+      if (!requestActive()) sync();
+      return false;
+    }
+    if (requestToken !== activeRequestToken) return false;
     activeRequestToken = 0;
     hydrateInitialClubHeader();
     sync();
