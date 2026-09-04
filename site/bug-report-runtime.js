@@ -4,6 +4,7 @@
   window.__mflBugReportRuntime?.destroy?.();
 
   const REPORT_LINK_SELECTOR = '.siteFooterDetails a[data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
+  const MODAL_TRANSITION_MS = 190;
   const AREA_OPTIONS = [
     "Database / MFL",
     "Club / Agent / Player pages",
@@ -21,6 +22,7 @@
   let previousFocus = null;
   let unregisterEscapeHandler = null;
   let submitting = false;
+  let closeTimer = 0;
 
   function currentRoute() {
     return `${window.location.pathname}${window.location.search}` || "/";
@@ -128,24 +130,42 @@
 
   function openModal() {
     const target = ensureModal();
+    if (closeTimer) {
+      window.clearTimeout(closeTimer);
+      closeTimer = 0;
+    }
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     prefillContext();
     setStatus();
     window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
+    target.classList.remove("modalClosing", "modalOpen");
     target.hidden = false;
-    requestAnimationFrame(() => {
-      const summary = target.querySelector("#bugReportSummary");
-      if (summary instanceof HTMLInputElement) summary.focus();
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (target.hidden) return;
+        target.classList.add("modalOpen");
+        const summary = target.querySelector("#bugReportSummary");
+        if (summary instanceof HTMLInputElement) summary.focus();
+      });
     });
   }
 
   function closeModal({ reset = false } = {}) {
     if (!(modal instanceof HTMLElement) || modal.hidden || submitting) return false;
-    modal.hidden = true;
+    modal.classList.remove("modalOpen");
+    modal.classList.add("modalClosing");
     setStatus();
-    if (reset && form instanceof HTMLFormElement) form.reset();
-    if (previousFocus?.isConnected) previousFocus.focus();
+    const focusTarget = previousFocus;
     previousFocus = null;
+    if (closeTimer) window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(() => {
+      closeTimer = 0;
+      if (!(modal instanceof HTMLElement)) return;
+      modal.hidden = true;
+      modal.classList.remove("modalClosing");
+      if (reset && form instanceof HTMLFormElement) form.reset();
+      if (focusTarget?.isConnected) focusTarget.focus();
+    }, MODAL_TRANSITION_MS);
     return true;
   }
 
@@ -283,6 +303,8 @@
     document.removeEventListener("keydown", handleDocumentKeyDown, true);
     unregisterEscapeHandler?.();
     unregisterEscapeHandler = null;
+    if (closeTimer) window.clearTimeout(closeTimer);
+    closeTimer = 0;
     modal?.remove();
     modal = null;
     form = null;
