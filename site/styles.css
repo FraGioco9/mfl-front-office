@@ -25,6 +25,8 @@
   --mfl-table-col-seasons: 5.506443710725317%;
   --mfl-table-col-overall: 6.603472148258601%;
   --mfl-table-col-stat: 5.907622395001243%;
+  --mfl-table-col-next-overall: 9%;
+  --mfl-table-col-next-name: 12.120460112898074%;
   --mfl-table-col-contract-revenue: 9.010544253914157%;
   --mfl-table-col-contract-club: 16.423474278410904%;
   --mfl-table-col-contract-division: 10.011715837682393%;
@@ -88,6 +90,14 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   --mfl-table-col-name: var(--mfl-table-col-contract-render-name);
   --mfl-table-col-contract-club: var(--mfl-table-col-contract-render-club);
   --mfl-table-col-agent: var(--mfl-table-col-contract-agent);
+}
+
+@media (max-width: 900px) {
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-view="next"] #progressionPage .playerTableScroller,
+  #progressionPage:has(.viewButton[data-view="next"].active) .playerTableScroller {
+    --mfl-table-col-name: var(--mfl-table-col-next-name);
+    --mfl-table-col-overall: var(--mfl-table-col-next-overall);
+  }
 }
 
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
@@ -250,6 +260,16 @@ body[data-page="club"] #progressionPage .rowsField {
   line-height: 1.2;
 }
 
+#progressionPage #tableBody .tableControlCellContent > :is(.progressionValue, .tableNextOverallValue) {
+  margin-left: 2px;
+}
+
+/* Overall progression keeps a non-breaking space in its text node; compensate
+ * for that glyph so its visible value-to-delta gap matches the 2px table gap. */
+#progressionPage #tableBody .tableOverallCellContent > .progressionValue {
+  margin-left: calc(2px - 0.25em);
+}
+
 #progressionPage #tableBody .tableControlCellContentCentered {
   justify-content: center;
 }
@@ -329,7 +349,8 @@ body[data-page="club"] #progressionPage .rowsField {
   min-height: var(--mfl-table-row-height);
 }
 
-#progressionPage #tableBody td > .retirementMarker {
+#progressionPage #tableBody td > :is(.retirementMarker, .newMintMarker) {
+  margin-left: 2px;
   vertical-align: middle;
 }
 
