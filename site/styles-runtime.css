@@ -7230,13 +7230,13 @@ body[data-page="club"] #progressionPage .rowsField {
 }
 
 #progressionPage #tableBody .tableControlCellContent > :is(.progressionValue, .tableNextOverallValue) {
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 /* Overall progression keeps a non-breaking space in its text node; compensate
- * for that glyph so its visible value-to-delta gap matches the 4px table gap. */
+ * for that glyph so its visible value-to-delta gap matches the 2px table gap. */
 #progressionPage #tableBody .tableOverallCellContent > .progressionValue {
-  margin-left: calc(4px - 0.25em);
+  margin-left: calc(2px - 0.25em);
 }
 
 #progressionPage #tableBody .tableControlCellContentCentered {
@@ -7318,7 +7318,8 @@ body[data-page="club"] #progressionPage .rowsField {
   min-height: var(--mfl-table-row-height);
 }
 
-#progressionPage #tableBody td > .retirementMarker {
+#progressionPage #tableBody td > :is(.retirementMarker, .newMintMarker) {
+  margin-left: 2px;
   vertical-align: middle;
 }
 
