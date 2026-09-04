@@ -1,24 +1,13 @@
-import { readFileSync } from "node:fs";
+import { coreSourceManifest } from "./modules/core-source-manifest.js";
+import { readValidationTextSync } from "./validation-text.mjs";
 
-const normalize = (value) => String(value).replace(/\r\n?/g, "\n");
-const read = (path) => normalize(readFileSync(new URL(path, import.meta.url), "utf8"));
-
-const routeSourcePaths = Object.freeze({
-  evaluation: "./modules/core-sources/evaluation.js",
-  mflstats: "./modules/core-sources/mfl-stats.js",
-  club: "./modules/core-sources/club.js",
-  settings: "./modules/core-sources/settings.js",
-  player: "./modules/core-sources/player.js",
-  table: "./modules/core-sources/table.js",
-  wallet: "./modules/core-sources/wallet.js",
-  watchlist: "./modules/core-sources/watchlist.js",
-});
-
-const routeChunks = Object.freeze(
-  Object.fromEntries(Object.entries(routeSourcePaths).map(([domain, path]) => [domain, read(path)])),
-);
+const routeEntries = coreSourceManifest.filter(({ domain }) => domain !== "shared");
+const routeChunks = Object.freeze(Object.fromEntries(routeEntries.map(({ domain, source }) => [
+  domain,
+  readValidationTextSync(`./modules/core-sources/${source}`, import.meta.url),
+])));
 const artifacts = Object.freeze({
-  core: read("./modules/core-sources/shared.js"),
+  core: readValidationTextSync("./modules/core-sources/shared.js", import.meta.url),
   routeChunks,
 });
 
