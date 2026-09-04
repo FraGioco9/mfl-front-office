@@ -6882,10 +6882,15 @@ html.mflDataLoading #pageSizeSelect {
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
+/* Keep the sole footer below the initial page area when route content is short or still loading. */
+main > .pageView:not([hidden]) {
+  min-height: calc(100% - 22px);
+}
+
 /* The sole footer lives at the end of the main scroll surface. */
 .siteFooterDetails {
   width: 100%;
-  margin-top: clamp(40px, 6vh, 64px);
+  margin-top: 22px;
   padding: 18px 0 14px;
   border-top: 1px solid var(--border);
   color: var(--text);
