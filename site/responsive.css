@@ -2047,6 +2047,12 @@ html:not(.mflInitialRouteResolved):is(
     min-width: 600px;
   }
 
+  /* Every resolved or active mobile table view uses the same readable 760px floor. */
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-view] #progressionPage .playerTableScroller table,
+  #progressionPage:has(.viewButton.active) .playerTableScroller table {
+    min-width: 760px;
+  }
+
   #progressionPage .playerTableScroller th {
     font-size: 9px;
   }
