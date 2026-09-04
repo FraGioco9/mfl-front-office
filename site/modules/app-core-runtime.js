@@ -9728,7 +9728,7 @@ window.__mflAppStartPromise = (async () => {
   window.__mflFooterSpaNavigationBound = true;
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
-    const footer = event.target.closest('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    const footer = event.target.closest('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
     if (!footer || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     event.stopImmediatePropagation();
