@@ -1946,13 +1946,16 @@ html:not(.mflInitialRouteResolved):is(
   }
 
 
-/* Progression-bearing views need the tablet-width floor on phones so
- * Overall/stat values plus progression remain readable. */
+/* Every actual mobile table view uses the same readable 760px floor. */
 html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
+  [data-initial-table-view="attributes"],
+  [data-initial-table-view="contracts"],
   [data-initial-table-view="next"],
   [data-initial-table-view="current"],
   [data-initial-table-view="all"]
 ) #progressionPage .playerTableScroller table,
+#progressionPage:has(.viewButton[data-view="attributes"].active) .playerTableScroller table,
+#progressionPage:has(.viewButton[data-view="contracts"].active) .playerTableScroller table,
 #progressionPage:has(.viewButton[data-view="next"].active) .playerTableScroller table,
 #progressionPage:has(.viewButton[data-view="current"].active) .playerTableScroller table,
 #progressionPage:has(.viewButton[data-view="all"].active) .playerTableScroller table {
