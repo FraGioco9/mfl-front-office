@@ -20,10 +20,10 @@ const [indexHtml, footer, runtime, appEntry, api, schema, migration] = await Pro
 
 includes(indexHtml, 'href="https://github.com/FraGioco9/mfl-front-office/issues/new"', "The static footer anchor must remain identifiable until the in-site runtime assumes ownership.");
 includes(indexHtml, '>Report a bug</a>', "Footer support must expose Report a bug.");
-includes(
+excludes(
   footer,
   '.siteFooterDetailsGroup a[href*="/mfl-front-office/issues/new"] {\n  pointer-events: none;',
-  "The legacy external bug-report target must be inert before the in-site runtime binds.",
+  "Report a bug must remain pointer-interactive while the in-site runtime assumes ownership.",
 );
 
 const controlIndex = appEntry.indexOf('"/control-interactions-runtime.js"');
@@ -48,13 +48,19 @@ for (const token of [
   'window.__mflReleaseVersion',
   'fetch("/api/bug-reports", {',
   'Reflect.get(window, "walletProofHeaders")',
-  'reportLink.dataset.bugReportControl = "true";',
-  'reportLink.removeAttribute("href");',
-  'reportLink.removeAttribute("target");',
-  'reportLink.removeAttribute("rel");',
-  'reportLink.setAttribute("role", "button");',
-  'reportLink.setAttribute("aria-haspopup", "dialog");',
-  'reportLink.addEventListener("keydown", handleReportKeyDown);',
+  'function reportControlFromTarget(target)',
+  'function prepareReportControl(control)',
+  'control.dataset.bugReportControl = "true";',
+  'control.removeAttribute("href");',
+  'control.removeAttribute("target");',
+  'control.removeAttribute("rel");',
+  'control.setAttribute("role", "button");',
+  'control.setAttribute("aria-haspopup", "dialog");',
+  'function handleDocumentClick(event)',
+  'function handleDocumentKeyDown(event)',
+  'document.addEventListener("click", handleDocumentClick, true);',
+  'document.addEventListener("keydown", handleDocumentKeyDown, true);',
+  'prepareReportControl(document.querySelector(REPORT_LINK_SELECTOR));',
   'event.stopPropagation();',
   'registerEscapeHandler?.(',
   '"bug-report",',
@@ -63,6 +69,7 @@ for (const token of [
 ]) {
   includes(runtime, token, `Bug report runtime contract is missing: ${token}`);
 }
+excludes(runtime, 'reportLink.addEventListener("click"', "Bug report activation must not depend on one static footer node.");
 excludes(runtime, "event.metaKey", "Bug report activation must not retain modifier-click escape to GitHub.");
 excludes(runtime, "window.open", "Bug report activation must never open an external window.");
 
@@ -111,4 +118,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with no external activation path.");
+console.log("Bug report popup and private Supabase intake validation passed with delegated in-site activation and no external escape path.");
