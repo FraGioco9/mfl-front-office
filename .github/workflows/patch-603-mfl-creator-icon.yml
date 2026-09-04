@@ -1,0 +1,30 @@
+name: Patch issue 603 MFL creator icon
+
+on:
+  push:
+    branches:
+      - fix/603-footer-redesign
+    paths:
+      - site/patch-603-mfl-creator-icon.mjs
+      - .github/workflows/patch-603-mfl-creator-icon.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Reuse canonical MFL icon in footer
+        run: node site/patch-603-mfl-creator-icon.mjs
+      - name: Commit footer icon sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/index.html site/footer.css site/validate-footer-redesign.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "Use canonical MFL icon in footer creator row"
+            git push
+          fi
