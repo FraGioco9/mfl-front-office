@@ -5,9 +5,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [indexHtml, responsive, bootstrap, sharedTableUi, appCore] = await Promise.all([
+const [indexHtml, responsive, stylesBase, bootstrap, sharedTableUi, appCore] = await Promise.all([
   read("./index.html"),
   read("./responsive.css"),
+  read("./styles-base.css"),
   read("./bootstrap.js"),
   read("./shared-table-ui-runtime.js"),
   Promise.all([
@@ -80,8 +81,9 @@ invariant(
 invariant(
   responsive.includes("#advancedSettingsModal,\n  #evaluationLoadModal {\n    padding:\n      max(8px, env(safe-area-inset-top))")
     && responsive.includes("#advancedSettingsModal .advancedSettingsDialog,\n  #evaluationLoadModal .evaluationLoadDialog {\n    width: min(100%, 420px);\n    max-width: 420px;\n    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));")
-    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: min(420px, calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));\n  }")
-    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 72px auto;\n    gap: 6px;\n    min-height: 52px;"),
+    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: auto;\n  }")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadList {\n    gap: 4px;\n    height: 269px;\n    max-height: 269px;\n    grid-auto-rows: 48px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    gap: 4px;\n    min-height: 48px;\n    padding: 5px 8px;"),
   "Load Evaluation and Advanced Settings must share one safe-area-aware small-phone modal frame while Load Evaluation keeps compact result rows.",
 );
 invariant(
@@ -94,10 +96,14 @@ invariant(
 invariant(
   responsive.includes("#advancedSettingsModal,\n  #evaluationLoadModal {\n    padding:\n      max(6px, env(safe-area-inset-top))")
     && responsive.includes("#advancedSettingsModal .advancedSettingsDialog,\n  #evaluationLoadModal .evaluationLoadDialog {\n    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));")
-    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: min(390px, calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));\n  }")
-    && responsive.includes("#evaluationLoadModal .evaluationLoadList {\n    grid-auto-rows: 48px;\n    padding: 5px 6px 8px;\n  }")
-    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    grid-template-columns: minmax(0, 1fr) 64px auto;\n    gap: 4px;\n    min-height: 48px;\n    padding-inline: 6px;\n  }"),
-  "Both Evaluation popups must scale again at the tiny-phone breakpoint while Load Evaluation results remain one-line and touchable.",
+    && responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: auto;\n  }")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadList {\n    gap: 3px;\n    height: 242px;\n    max-height: 242px;\n    grid-auto-rows: 44px;"),
+  "Phone modal framing must retain its safe-area-aware compact height independently from the tiny-card scaling contract.",
+);
+invariant(
+  !responsive.includes("#evaluationLoadModal .evaluationLoadDialog {\n    height: min(390px, calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));\n  }")
+    && responsive.split("#evaluationLoadModal .evaluationLoadDialog {\n    height: auto;\n  }").length - 1 >= 2,
+  "Load Evaluation must shrink-wrap the five-card stack at both phone breakpoints instead of restoring a fixed tiny-phone dialog height.",
 );
 invariant(
   responsive.includes("#evaluationPage .evaluationSummaryTable :is(th, td):first-child,\n  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td):first-child {\n    padding-left: 6px;\n  }"),
@@ -138,6 +144,93 @@ invariant(
   responsive.includes("#evaluationPage .evaluationHeaderFull { display: none; }")
     && responsive.includes("#evaluationPage .evaluationHeaderCompact { display: inline; }"),
   "Evaluation must use compact header labels throughout the <=900px contract.",
+);
+
+invariant(
+  responsive.includes("#evaluationPage .evaluationSearchResult {\n    min-height: 54px;\n    padding: 7px 10px;\n    border-radius: 7px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadList {\n    gap: 5px;\n    height: 342px;\n    max-height: 342px;\n    grid-auto-rows: 60px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    gap: 8px;\n    min-height: 60px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadIconButton {\n    width: 28px;\n    min-width: 28px;\n    height: 28px;\n    min-height: 28px;"),
+  "Tablet Evaluation recent and saved cards must scale together from the desktop geometry at <=900px.",
+);
+invariant(
+  responsive.includes("#evaluationPage .evaluationSearchResult {\n    min-height: 48px;\n    padding: 6px 8px;\n    border-radius: 6px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    gap: 4px;\n    min-height: 48px;\n    padding: 5px 8px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResultMain strong {\n    font-size: 12px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadIconButton {\n    width: 26px;\n    min-width: 26px;\n    height: 26px;\n    min-height: 26px;"),
+  "Phone Evaluation recent cards, saved cards, typography, and actions must compact together at <=520px.",
+);
+invariant(
+  responsive.includes("#evaluationPage .evaluationSearchResult {\n    min-height: 44px;\n    padding: 4px 6px;\n    border-radius: 5px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadResult {\n    gap: 3px;\n    min-height: 44px;\n    padding: 4px 6px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadPresentValue {\n    min-width: 56px;\n    font-size: 9px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadIconButton {\n    width: 24px;\n    min-width: 24px;\n    height: 24px;\n    min-height: 24px;")
+    && responsive.includes("#evaluationLoadModal .evaluationLoadIconButton svg {\n    width: 11px;\n    height: 11px;"),
+  "Tiny-phone Evaluation recent and saved cards must scale a third time, including text, value, button, and icon geometry.",
+);
+invariant(
+  (responsive.match(/#evaluationLoadModal \.evaluationLoadList \{[\s\S]{0,120}grid-auto-rows: 48px;/g) || []).length === 1,
+  "The <=520 Saved Evaluation row contract must have one canonical owner rather than duplicate 48px geometry blocks.",
+);
+invariant(
+  !responsive.includes("!important"),
+  "Responsive Evaluation card scaling must not introduce !important overrides.",
+);
+
+const loadDialogRuleStart = stylesBase.indexOf(".evaluationLoadDialog {");
+const loadDialogRuleEnd = stylesBase.indexOf("\n}", loadDialogRuleStart);
+const loadDialogRule = loadDialogRuleStart >= 0 && loadDialogRuleEnd >= 0
+  ? stylesBase.slice(loadDialogRuleStart, loadDialogRuleEnd + 2)
+  : "";
+invariant(
+  loadDialogRule.includes("border-radius: 8px;")
+    && loadDialogRule.includes("background: var(--surface);")
+    && loadDialogRule.includes("background-clip: padding-box;")
+    && loadDialogRule.includes("overflow: hidden;")
+    && !stylesBase.includes(".evaluationLoadDialog,\n.evaluationLoadList,\n.evaluationLoadResult,\n.evaluationLoadActions {\n  overflow: visible;"),
+  "Evaluation Load dialog background must remain clipped to its rounded border while body-portaled action tooltips stay independent of dialog overflow.",
+);
+const desktopLoadResultRuleStart = stylesBase.indexOf(".evaluationLoadResult {");
+const desktopLoadResultRuleEnd = stylesBase.indexOf("\n}", desktopLoadResultRuleStart);
+const desktopLoadResultRule = desktopLoadResultRuleStart >= 0 && desktopLoadResultRuleEnd >= 0
+  ? stylesBase.slice(desktopLoadResultRuleStart, desktopLoadResultRuleEnd + 2)
+  : "";
+const desktopLoadMainRuleStart = stylesBase.indexOf(".evaluationLoadResultMain {");
+const desktopLoadMainRuleEnd = stylesBase.indexOf("\n}", desktopLoadMainRuleStart);
+const desktopLoadMainRule = desktopLoadMainRuleStart >= 0 && desktopLoadMainRuleEnd >= 0
+  ? stylesBase.slice(desktopLoadMainRuleStart, desktopLoadMainRuleEnd + 2)
+  : "";
+const desktopLoadValueRuleStart = stylesBase.indexOf(".evaluationLoadPresentValue {");
+const desktopLoadValueRuleEnd = stylesBase.indexOf("\n}", desktopLoadValueRuleStart);
+const desktopLoadValueRule = desktopLoadValueRuleStart >= 0 && desktopLoadValueRuleEnd >= 0
+  ? stylesBase.slice(desktopLoadValueRuleStart, desktopLoadValueRuleEnd + 2)
+  : "";
+const desktopLoadActionsRuleStart = stylesBase.indexOf(".evaluationLoadActions {");
+const desktopLoadActionsRuleEnd = stylesBase.indexOf("\n}", desktopLoadActionsRuleStart);
+const desktopLoadActionsRule = desktopLoadActionsRuleStart >= 0 && desktopLoadActionsRuleEnd >= 0
+  ? stylesBase.slice(desktopLoadActionsRuleStart, desktopLoadActionsRuleEnd + 2)
+  : "";
+const desktopRecentResultRuleStart = stylesBase.indexOf(".evaluationSearchResult {");
+const desktopRecentResultRuleEnd = stylesBase.indexOf("\n}", desktopRecentResultRuleStart);
+const desktopRecentResultRule = desktopRecentResultRuleStart >= 0 && desktopRecentResultRuleEnd >= 0
+  ? stylesBase.slice(desktopRecentResultRuleStart, desktopRecentResultRuleEnd + 2)
+  : "";
+invariant(
+  desktopLoadResultRule.includes("grid-template-columns: minmax(0, 1fr) auto auto;")
+    && desktopLoadResultRule.includes("align-items: center;")
+    && desktopLoadResultRule.includes("text-align: center;")
+    && desktopLoadMainRule.includes("justify-items: start;")
+    && desktopLoadMainRule.includes("text-align: left;")
+    && stylesBase.includes(".searchResult,\n.evaluationSearchResult,\n.evaluationLoadResultMain {\n  align-content: center;\n  gap: 4px;\n}")
+    && desktopLoadValueRule.includes("text-align: center;")
+    && desktopLoadActionsRule.includes("align-items: center;")
+    && desktopLoadActionsRule.includes("justify-content: center;")
+    && desktopRecentResultRule.includes("padding: 10px 12px;")
+    && desktopRecentResultRule.includes("text-align: left;")
+    && (responsive.match(/#evaluationLoadModal \.evaluationLoadResult \{[\s\S]{0,140}grid-template-columns:/g) || []).length === 0
+    && !responsive.includes("#evaluationLoadModal .evaluationLoadActions {\n    gap: 4px;\n    justify-content: center;")
+    && !responsive.includes("#evaluationPage .evaluationSearchResult {\n    align-content: center;"),
+  "Evaluation card centering must remain desktop-owned; responsive rules may scale dimensions but must not redefine the card alignment model.",
 );
 
 console.log("Evaluation mobile first-paint and hydration validation passed.");

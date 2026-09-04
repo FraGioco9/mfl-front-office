@@ -889,7 +889,7 @@ html:not(.mflInitialRouteResolved):is(
   .searchDialog {
     width: min(680px, calc(100vw - 24px));
     max-width: calc(100vw - 24px);
-    height: min(435px, calc(100dvh - 24px));
+    height: auto;
     max-height: calc(100dvh - 24px);
   }
 
@@ -912,7 +912,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .evaluationLoadDialog {
-    height: min(560px, calc(100dvh - 16px));
+    height: auto;
   }
 
   .filtersHeader,
@@ -949,28 +949,36 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .searchResults {
-    gap: 6px;
+    gap: 5px;
     min-height: 0;
-    height: auto;
-    max-height: none;
-    grid-auto-rows: 56px;
+    height: 290px;
+    max-height: 290px;
+    grid-auto-rows: 54px;
   }
 
   .searchResults.filledSearchResults {
-    padding-bottom: 8px;
+    grid-template-rows: repeat(5, 54px);
+    padding-bottom: 0;
   }
 
   .searchResult {
-    align-content: center;
-    gap: 2px;
-    min-height: 56px;
+    min-height: 54px;
     padding: 7px 10px;
-    border-radius: 6px;
+    border-radius: 7px;
   }
 
-  .searchResult span,
+  .searchResult strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  .searchResult span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
   .searchHint {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .filterBuilder,
@@ -1338,20 +1346,73 @@ html:not(.mflInitialRouteResolved):is(
     padding-inline: 3px;
   }
 
-  .evaluationLoadResult {
-    grid-template-columns: minmax(0, 1fr) auto;
+  #evaluationPage .evaluationSearchResults {
+    gap: 5px;
+    padding: 7px;
   }
 
-  .evaluationLoadPresentValue {
-    grid-column: 1;
-    min-width: 0;
-    justify-self: start;
-    text-align: left;
+  #evaluationPage .evaluationSearchResult {
+    min-height: 54px;
+    padding: 7px 10px;
+    border-radius: 7px;
   }
 
-  .evaluationLoadActions {
-    grid-column: 2;
-    grid-row: 1 / span 2;
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 5px;
+    height: 342px;
+    max-height: 342px;
+    grid-auto-rows: 60px;
+    padding: 10px 12px 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    gap: 8px;
+    min-height: 60px;
+    padding: 8px 10px;
+    border-radius: 7px;
+  }
+
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 82px;
+    font-size: 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 5px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 14px;
+    height: 14px;
   }
 
   .mflStatsFilterButtons {
@@ -1930,7 +1991,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .searchDialog {
-    height: min(392px, calc(100dvh - 16px));
+    height: auto;
   }
 
   .searchBody {
@@ -1953,20 +2014,33 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .searchResults {
-    gap: 5px;
-    grid-auto-rows: 50px;
+    gap: 4px;
+    height: 256px;
+    max-height: 256px;
+    grid-auto-rows: 48px;
   }
 
   .searchResults.filledSearchResults {
-    padding-bottom: 6px;
+    grid-template-rows: repeat(5, 48px);
+    padding-bottom: 0;
   }
 
   .searchResult {
-    align-content: center;
-    gap: 1px;
-    min-height: 50px;
+    min-height: 48px;
     padding: 6px 8px;
     border-radius: 6px;
+  }
+
+  .searchResult strong {
+    font-size: 12px;
+  }
+
+  .searchResult span {
+    font-size: 9px;
+  }
+
+  .searchHint {
+    font-size: 9px;
   }
 
   #progressionPage .playerTableScroller table {
@@ -2040,7 +2114,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationLoadModal .evaluationLoadDialog {
-    height: min(420px, calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    height: auto;
   }
 
   #advancedSettingsModal .filtersHeader,
@@ -2150,20 +2224,19 @@ html:not(.mflInitialRouteResolved):is(
 
   #evaluationLoadModal .evaluationLoadList {
     gap: 4px;
-    grid-auto-rows: 52px;
-    padding: 6px 8px 10px;
+    height: 269px;
+    max-height: 269px;
+    grid-auto-rows: 48px;
+    padding: 5px 6px 8px;
   }
 
   #evaluationLoadModal .evaluationLoadResult {
-    grid-template-columns: minmax(0, 1fr) 72px auto;
-    gap: 6px;
-    min-height: 52px;
-    padding: 6px 8px;
+    gap: 4px;
+    min-height: 48px;
+    padding: 5px 8px;
+    border-radius: 6px;
   }
 
-  #evaluationLoadModal .evaluationLoadResultMain {
-    gap: 1px;
-  }
 
   #evaluationLoadModal .evaluationLoadResultMain strong {
     font-size: 12px;
@@ -2174,8 +2247,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationLoadModal .evaluationLoadPresentValue {
-    min-width: 72px;
-    font-size: 11px;
+    min-width: 64px;
+    font-size: 10px;
   }
 
   #evaluationLoadModal .evaluationLoadActions {
@@ -2183,11 +2256,16 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationLoadModal .evaluationLoadIconButton {
-    width: 28px;
-    min-width: 28px;
-    height: 28px;
-    min-height: 28px;
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
     padding: 0;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 12px;
+    height: 12px;
   }
   #evaluationPage .evaluationTitleRow,
   #evaluationPage .evaluationTopBar,
@@ -2249,6 +2327,15 @@ html:not(.mflInitialRouteResolved):is(
   #evaluationPage .evaluationSearchResult {
     min-height: 48px;
     padding: 6px 8px;
+    border-radius: 6px;
+  }
+
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 12px;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 9px;
   }
 
   #evaluationPage .evaluationButtons {
@@ -2696,7 +2783,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #evaluationLoadModal .evaluationLoadDialog {
-    height: min(390px, calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    height: auto;
   }
 
   #advancedSettingsModal .filtersHeader,
@@ -2749,26 +2836,6 @@ html:not(.mflInitialRouteResolved):is(
     padding: 5px 6px;
   }
 
-  #evaluationLoadModal .evaluationLoadList {
-    grid-auto-rows: 48px;
-    padding: 5px 6px 8px;
-  }
-
-  #evaluationLoadModal .evaluationLoadResult {
-    grid-template-columns: minmax(0, 1fr) 64px auto;
-    gap: 4px;
-    min-height: 48px;
-    padding-inline: 6px;
-  }
-
-  #evaluationLoadModal .evaluationLoadPresentValue {
-    min-width: 64px;
-    font-size: 10px;
-  }
-
-  #evaluationLoadModal .evaluationLoadActions {
-    justify-content: center;
-  }
 
   .advancedSettingsFooter {
     grid-template-columns: 1fr;
@@ -2892,13 +2959,33 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .searchResults {
-    grid-auto-rows: 48px;
+    gap: 3px;
+    height: 232px;
+    max-height: 232px;
+    grid-auto-rows: 44px;
+  }
+
+  .searchResults.filledSearchResults {
+    grid-template-rows: repeat(5, 44px);
+    padding-bottom: 0;
   }
 
   .searchResult {
-    align-content: center;
-    min-height: 48px;
-    padding: 5px 7px;
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  .searchResult strong {
+    font-size: 11px;
+  }
+
+  .searchResult span {
+    font-size: 8px;
+  }
+
+  .searchHint {
+    font-size: 8px;
   }
 
   #progressionPage .playerTableScroller table {
@@ -2971,6 +3058,69 @@ html:not(.mflInitialRouteResolved):is(
 
   #evaluationPage .evaluationMetric {
     padding-inline: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResults {
+    gap: 3px;
+    padding: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResult {
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 3px;
+    height: 242px;
+    max-height: 242px;
+    grid-auto-rows: 44px;
+    padding: 4px 5px 6px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    gap: 3px;
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 11px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 56px;
+    font-size: 9px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 3px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 11px;
+    height: 11px;
   }
 
   .mflStatsFilters {
