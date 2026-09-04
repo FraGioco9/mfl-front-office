@@ -96,6 +96,19 @@
     });
   }
 
+  async function openBugReportForm() {
+    const runtime = await ensureBugReportRuntime();
+    runtime.open();
+    const modal = document.getElementById("bugReportModal");
+    if (!(modal instanceof HTMLElement)) {
+      throw new Error("Bug report runtime did not create its on-site form.");
+    }
+    modal.hidden = false;
+    modal.classList.remove("modalClosing");
+    modal.classList.add("modalOpen");
+    return modal;
+  }
+
   function installBugReportBootstrap() {
     prepareBugReportControl();
 
@@ -105,8 +118,7 @@
       prepareBugReportControl(control);
       event.preventDefault();
       event.stopImmediatePropagation();
-      void ensureBugReportRuntime()
-        .then((runtime) => runtime.open())
+      void openBugReportForm()
         .catch((error) => console.error("Could not open the bug report form.", error));
     };
 
