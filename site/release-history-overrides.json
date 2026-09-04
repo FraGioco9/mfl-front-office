@@ -1,5 +1,9 @@
 [
   [
+    "v1.127.8",
+    "Refine mobile tables, Evaluation loading, and responsive controls"
+  ],
+  [
     "v1.127.7",
     "Consolidate UI architecture and protect Watchlist persistence"
   ],
