@@ -18,7 +18,6 @@
 
   let modal = null;
   let form = null;
-  let reportLink = null;
   let previousFocus = null;
   let unregisterEscapeHandler = null;
   let submitting = false;
@@ -223,16 +222,41 @@
     }
   }
 
-  function handleReportLink(event) {
+  function reportControlFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const control = target.closest(REPORT_LINK_SELECTOR);
+    return control instanceof HTMLAnchorElement ? control : null;
+  }
+
+  function prepareReportControl(control) {
+    if (!(control instanceof HTMLAnchorElement)) return false;
+    control.dataset.bugReportControl = "true";
+    control.removeAttribute("href");
+    control.removeAttribute("target");
+    control.removeAttribute("rel");
+    control.setAttribute("role", "button");
+    control.setAttribute("aria-haspopup", "dialog");
+    control.setAttribute("aria-controls", "bugReportModal");
+    control.tabIndex = 0;
+    return true;
+  }
+
+  function handleDocumentClick(event) {
+    const control = reportControlFromTarget(event.target);
+    if (!control) return;
     event.preventDefault();
     event.stopPropagation();
+    prepareReportControl(control);
     openModal();
   }
 
-  function handleReportKeyDown(event) {
+  function handleDocumentKeyDown(event) {
     if (event.key !== "Enter" && event.key !== " ") return;
+    const control = reportControlFromTarget(event.target);
+    if (!control) return;
     event.preventDefault();
     event.stopPropagation();
+    prepareReportControl(control);
     openModal();
   }
 
@@ -243,25 +267,10 @@
     return true;
   }
 
-  function prepareReportControl() {
-    if (!(reportLink instanceof HTMLAnchorElement)) return false;
-    reportLink.dataset.bugReportControl = "true";
-    reportLink.removeAttribute("href");
-    reportLink.removeAttribute("target");
-    reportLink.removeAttribute("rel");
-    reportLink.setAttribute("role", "button");
-    reportLink.setAttribute("aria-haspopup", "dialog");
-    reportLink.setAttribute("aria-controls", "bugReportModal");
-    reportLink.tabIndex = 0;
-    return true;
-  }
-
   function bind() {
-    reportLink = document.querySelector(REPORT_LINK_SELECTOR);
-    if (prepareReportControl()) {
-      reportLink.addEventListener("click", handleReportLink);
-      reportLink.addEventListener("keydown", handleReportKeyDown);
-    }
+    prepareReportControl(document.querySelector(REPORT_LINK_SELECTOR));
+    document.addEventListener("click", handleDocumentClick, true);
+    document.addEventListener("keydown", handleDocumentKeyDown, true);
     unregisterEscapeHandler = window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
       "bug-report",
       handleEscape,
@@ -270,14 +279,13 @@
   }
 
   function destroy() {
-    reportLink?.removeEventListener("click", handleReportLink);
-    reportLink?.removeEventListener("keydown", handleReportKeyDown);
+    document.removeEventListener("click", handleDocumentClick, true);
+    document.removeEventListener("keydown", handleDocumentKeyDown, true);
     unregisterEscapeHandler?.();
     unregisterEscapeHandler = null;
     modal?.remove();
     modal = null;
     form = null;
-    reportLink = null;
     previousFocus = null;
     submitting = false;
   }
