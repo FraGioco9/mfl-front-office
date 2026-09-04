@@ -51,17 +51,6 @@
     return { storedOptIn, storedAccess };
   }
 
-  function bugReportControlFromTarget(target) {
-    const element = target instanceof Element
-      ? target
-      : target instanceof Node
-        ? target.parentElement
-        : null;
-    if (!(element instanceof Element)) return null;
-    const control = element.closest(BUG_REPORT_CONTROL_SELECTOR);
-    return control instanceof HTMLElement ? control : null;
-  }
-
   function prepareBugReportControl(control = document.querySelector(BUG_REPORT_CONTROL_SELECTOR)) {
     if (!(control instanceof HTMLElement)) return null;
     control.dataset.bugReportControl = "true";
@@ -75,63 +64,6 @@
     control.setAttribute("aria-haspopup", "dialog");
     control.setAttribute("aria-controls", "bugReportModal");
     return control;
-  }
-
-  function bugReportRuntimeLoader() {
-    const resources = Reflect.get(window, "__mflRuntimeResources");
-    if (!resources || typeof resources.load !== "function") {
-      return Promise.reject(new Error("Bug report runtime loader is unavailable."));
-    }
-    return resources.load("/bug-report-runtime.js");
-  }
-
-  function ensureBugReportRuntime() {
-    prepareBugReportControl();
-    if (window.__mflBugReportRuntime?.open) return Promise.resolve(window.__mflBugReportRuntime);
-    return bugReportRuntimeLoader().then(() => {
-      if (!window.__mflBugReportRuntime?.open) {
-        throw new Error("Bug report runtime loaded without exposing its form controller.");
-      }
-      return window.__mflBugReportRuntime;
-    });
-  }
-
-  async function openBugReportForm() {
-    const runtime = await ensureBugReportRuntime();
-    runtime.open();
-    const modal = document.getElementById("bugReportModal");
-    if (!(modal instanceof HTMLElement)) {
-      throw new Error("Bug report runtime did not create its on-site form.");
-    }
-    modal.hidden = false;
-    modal.classList.remove("modalClosing");
-    modal.classList.add("modalOpen");
-    return modal;
-  }
-
-  function installBugReportBootstrap() {
-    prepareBugReportControl();
-
-    const activate = (event) => {
-      const control = bugReportControlFromTarget(event.target);
-      if (!control) return;
-      prepareBugReportControl(control);
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      void openBugReportForm()
-        .catch((error) => console.error("Could not open the bug report form.", error));
-    };
-
-    const activateKeyboard = (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      activate(event);
-    };
-
-    document.addEventListener("click", activate, true);
-    document.addEventListener("keydown", activateKeyboard, true);
-    void ensureBugReportRuntime().catch((error) => {
-      console.warn("Could not preload the bug report form runtime; activation will retry on demand.", error);
-    });
   }
 
   function createNavigationController() {
@@ -332,6 +264,7 @@
       if (!coreReady || !runtimeReady) return false;
       return window.__mflRouteDataCache?.isReady?.(pageName, normalizedOptions) === true;
     }
+
     function routeLoadingActive() {
       return currentSnapshot.reasons.includes(ROUTE_LOADING_REASON);
     }
@@ -440,7 +373,7 @@
   }
 
   syncStoredAccessFlags();
-  installBugReportBootstrap();
+  prepareBugReportControl();
 
   window.__mflNavigation = createNavigationController();
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;
