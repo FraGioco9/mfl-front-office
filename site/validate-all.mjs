@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-read-preload.mjs")).href;
 
 const validators = [
   "validate-domain-build-generated.mjs",
@@ -11,6 +10,7 @@ const validators = [
   "validate-domain-release-deployment.mjs",
   "validate-domain-api-persistence.mjs",
   "validate-domain-shared-ui.mjs",
+  "validate-domain-responsive-ui.mjs",
   "validate-domain-routing-loading.mjs",
   "validate-domain-evaluation.mjs",
   "validate-domain-stats.mjs",
@@ -31,7 +31,7 @@ function runValidator(validator) {
   return new Promise((resolveResult) => {
     const child = spawn(
       process.execPath,
-      ["--import", validationTextPreload, resolve(siteRoot, validator)],
+      [resolve(siteRoot, validator)],
       {
         cwd: siteRoot,
         stdio: ["ignore", "pipe", "pipe"],
