@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -73,7 +74,7 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeSettingsActions", primeSetti
 
 includes(appConfig, 'settings: "/modules/app-core-settings-runtime.js"', "Canonical app config must map Settings to its generated core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical core paths.");
-includes(buildCore, 'Object.freeze({ source: "settings.js", runtime: "app-core-settings-runtime.js"', "The core build must generate Settings directly from its canonical source.");
+invariant(coreSourceByDomain.settings?.source === "settings.js" && coreSourceByDomain.settings?.runtime === "app-core-settings-runtime.js", "The core manifest must generate Settings directly from its canonical source.");
 excludes(buildCore, "app-core-settings-chunk.js", "The core build must not depend on the retired Settings splitter.");
 
 const banner = "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\n";
