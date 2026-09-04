@@ -13,14 +13,12 @@ const phone = responsive.slice(phoneStart, tinyStart);
 const tiny = responsive.slice(tinyStart);
 
 assert.match(phone, /#progressionPage \.playerTableScroller table \{\s*min-width: 600px;\s*\}/);
-assert.match(phone, /\[data-initial-table-view="next"\]/);
-assert.match(phone, /\[data-initial-table-view="current"\]/);
-assert.match(phone, /\[data-initial-table-view="all"\]/);
-assert.match(phone, /#progressionPage:has\(\.viewButton\[data-view="next"\]\.active\) \.playerTableScroller table/);
-assert.match(phone, /#progressionPage:has\(\.viewButton\[data-view="current"\]\.active\) \.playerTableScroller table/);
-assert.match(phone, /#progressionPage:has\(\.viewButton\[data-view="all"\]\.active\) \.playerTableScroller table/);
+for (const view of ["attributes", "contracts", "next", "current", "all"]) {
+  assert.match(phone, new RegExp(`\\[data-initial-table-view="${view}"\\]`));
+  assert.match(phone, new RegExp(`#progressionPage:has\\(\\.viewButton\\[data-view="${view}"\\]\\.active\\) \\.playerTableScroller table`));
+}
 assert.match(phone, /min-width: 760px;/);
 assert.match(tiny, /#progressionPage \.playerTableScroller table \{\s*min-width: 540px;\s*\}/);
 assert.doesNotMatch(phone, /!important/);
 
-console.log("Mobile Next Overall, Current Season, and All Time keep the readable 760px table floor while compact phone views retain 600px.");
+console.log("All mobile player-table views resolve to the same readable 760px floor while generic compact fallbacks remain 600px/540px.");
