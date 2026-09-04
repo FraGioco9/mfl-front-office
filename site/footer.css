@@ -97,6 +97,7 @@ main > .pageView:not([hidden]) {
 body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,
 body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {
   color: var(--primary);
+  cursor: pointer;
 }
 
 .siteFooterDetailsCreatorLinks {
