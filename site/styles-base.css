@@ -2178,7 +2178,7 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 505px;
+  height: auto;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2196,28 +2196,26 @@ td a {
   display: grid;
   gap: 8px;
   min-height: 0;
-  height: 366px;
-  max-height: 366px;
+  height: 362px;
+  max-height: 362px;
   grid-auto-rows: 66px;
   align-content: start;
   overflow: auto;
 }
 
 .searchResults.filledSearchResults {
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-  align-content: stretch;
+  grid-template-rows: repeat(5, 66px);
+  align-content: start;
   box-sizing: border-box;
-  padding-bottom: 12px;
+  padding-bottom: 0;
 }
 
 .searchResults.filledSearchResults .searchResult {
   height: 100%;
-  align-content: center;
 }
 
 .searchResult {
   display: grid;
-  gap: 3px;
   min-height: 66px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3063,10 +3061,8 @@ button.playerIdText:active {
 
 .evaluationSearchResult {
   display: grid;
-  gap: 2px;
   min-height: 58px;
-  padding: 8px 10px;
-  align-content: center;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
@@ -3642,11 +3638,12 @@ button.playerIdText:active {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 492px;
+  height: auto;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+  background-clip: padding-box;
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
@@ -3667,7 +3664,9 @@ button.playerIdText:active {
   display: grid;
   gap: 6px;
   min-height: 0;
-  flex: 1;
+  flex: 0 1 auto;
+  height: 370px;
+  max-height: 370px;
   grid-auto-rows: 66px;
   align-content: start;
   margin-bottom: 16px;
@@ -3706,10 +3705,28 @@ button.playerIdText:active {
 
 .evaluationLoadResultMain {
   display: grid;
-  gap: 3px;
   min-width: 0;
   justify-items: start;
   text-align: left;
+}
+
+.searchResult,
+.evaluationSearchResult,
+.evaluationLoadResultMain {
+  align-content: center;
+  gap: 4px;
+}
+
+.searchResult > strong,
+.evaluationSearchResult > strong,
+.evaluationLoadResultMain > strong {
+  line-height: 1.1;
+}
+
+.searchResult > span,
+.evaluationSearchResult > span,
+.evaluationLoadResultMain > span {
+  line-height: 1.15;
 }
 
 .evaluationLoadResultMain span,
@@ -3787,7 +3804,6 @@ button.playerIdText:active {
 }
 
 
-.evaluationLoadDialog,
 .evaluationLoadList,
 .evaluationLoadResult,
 .evaluationLoadActions {

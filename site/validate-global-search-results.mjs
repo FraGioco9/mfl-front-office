@@ -5,9 +5,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, styles, controls, core, appEntry, walletPreferencesApi, dataViews] = await Promise.all([
+const [runtime, styles, responsive, controls, core, appEntry, walletPreferencesApi, dataViews] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
+  read("./responsive.css"),
   read("./controls.css"),
   Promise.all([
     read("./modules/core-sources/shared.js"),
@@ -247,8 +248,7 @@ invariant(
 );
 
 invariant(
-  styles.includes(".searchResults {\n  display: grid;\n  gap: 8px;")
-    && styles.includes("grid-auto-rows: 66px;")
+  styles.includes(".searchResults {\n  display: grid;\n  gap: 8px;\n  min-height: 0;\n  height: 362px;\n  max-height: 362px;\n  grid-auto-rows: 66px;")
     && styles.includes("overflow: auto;")
     && runtime.includes('results.classList.remove("filledSearchResults");')
     && !runtime.includes('results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);')
@@ -257,9 +257,28 @@ invariant(
 );
 
 invariant(
-  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 505px;")
+  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: auto;")
     && styles.includes(".searchBody {\n  display: grid;\n  gap: 12px;\n  padding: 16px 18px 12px;"),
   "Global Search popup must preserve the existing dialog geometry while both recent and typed results share one box layout.",
+);
+
+invariant(
+  styles.includes(".searchResult,\n.evaluationSearchResult,\n.evaluationLoadResultMain {\n  align-content: center;\n  gap: 4px;\n}")
+    && styles.includes(".searchResult {\n  display: grid;\n  min-height: 66px;")
+    && !responsive.includes(".searchResult {\n    align-content: center;"),
+  "Global Search result centering must remain desktop-owned while responsive rules scale dimensions only.",
+);
+invariant(
+  responsive.includes(".searchResults {\n    gap: 5px;\n    min-height: 0;\n    height: 290px;\n    max-height: 290px;\n    grid-auto-rows: 54px;")
+    && responsive.includes(".searchResults.filledSearchResults {\n    grid-template-rows: repeat(5, 54px);\n    padding-bottom: 0;")
+    && responsive.includes(".searchResults {\n    gap: 4px;\n    height: 256px;\n    max-height: 256px;\n    grid-auto-rows: 48px;")
+    && responsive.includes(".searchResults.filledSearchResults {\n    grid-template-rows: repeat(5, 48px);\n    padding-bottom: 0;")
+    && responsive.includes(".searchResults {\n    gap: 3px;\n    height: 232px;\n    max-height: 232px;\n    grid-auto-rows: 44px;")
+    && responsive.includes(".searchResults.filledSearchResults {\n    grid-template-rows: repeat(5, 44px);\n    padding-bottom: 0;")
+    && responsive.includes(".searchResult strong {\n    font-size: 13px;")
+    && responsive.includes(".searchResult strong {\n    font-size: 12px;")
+    && responsive.includes(".searchResult strong {\n    font-size: 11px;"),
+  "Global Search recent and typed result boxes must share the same fixed 54/48/44px tablet, phone, and tiny-phone scaling contract.",
 );
 
 invariant(
@@ -269,4 +288,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence without suppressing canonical result navigation, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves canonical mixed recents across partial/concurrent saves, derives legacy response arrays without duplicate cloud storage, promotes clicks before core persistence without suppressing canonical result navigation, and shares the canonical centered 4px name/info text stack while using identical desktop 66px boxes plus fixed 54/48/44px responsive boxes for recent and typed results.");
