@@ -70,13 +70,19 @@ for (const token of [
   '.siteFooterDetailsCreatorIcon {',
   '.siteFooterDetailsCreatorMflIcon {',
   '.siteFooterDetailsMeta {',
-  'grid-template-columns: auto minmax(0, 1fr) auto;',
+  'grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);',
   '.siteFooterDetails #statusText {',
+  'justify-self: start;',
+  '.siteFooterDetailsDisclaimer {',
+  'grid-column: 2;',
+  '.siteFooterDetailsCopyright {',
+  'justify-self: end;',
   'border-top: 1px solid var(--border);',
   'outline: 2px solid var(--primary);',
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(!footer.includes('grid-template-columns: auto minmax(0, 1fr) auto;'), "Desktop footer metadata must not size its side columns from changing content.");
 invariant(!footer.includes('.siteFooter a['), "footer.css must not retain the removed compact footer owner.");
 
 for (const token of [
