@@ -113,6 +113,11 @@
   fill: currentColor;
 }
 
+.siteFooterDetailsCreatorMflIcon {
+  flex-basis: 16px;
+  width: 16px;
+}
+
 .siteFooterDetailsCreatorDiscord {
   cursor: default;
 }
