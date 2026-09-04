@@ -10,46 +10,20 @@ const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-p
 const { readActiveEvaluationShare } = require("./_evaluation-share-preview");
 const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
 
-const MAX_ACTIVE_EVALUATION_SHARES_PER_WALLET = 10;
-
 function evaluationShareExpiresAt(now = new Date()) {
   const expiresAt = new Date(now);
+  const month = expiresAt.getUTCMonth();
   const dayOfMonth = expiresAt.getUTCDate();
   expiresAt.setUTCDate(1);
-  expiresAt.setUTCMonth(expiresAt.getUTCMonth() + 1);
+  expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
+  expiresAt.setUTCMonth(month);
   const daysInTargetMonth = new Date(Date.UTC(
     expiresAt.getUTCFullYear(),
-    expiresAt.getUTCMonth() + 1,
+    month + 1,
     0,
   )).getUTCDate();
   expiresAt.setUTCDate(Math.min(dayOfMonth, daysInTargetMonth));
   return expiresAt.toISOString();
-}
-
-async function activeShareRows(wallet) {
-  const rows = await supabaseRequest(`evaluation_shares?select=id,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.asc`);
-  return Array.isArray(rows) ? rows : [];
-}
-
-async function pruneOldestActiveShares(wallet) {
-  const rows = await activeShareRows(wallet);
-  const sharesToDelete = rows.slice(0, Math.max(
-    0,
-    rows.length - (MAX_ACTIVE_EVALUATION_SHARES_PER_WALLET - 1),
-  ));
-
-  await Promise.all(sharesToDelete.map(async (share) => {
-    if (!share?.id) {
-      return;
-    }
-
-    await supabaseRequest(`evaluation_shares?id=eq.${encodeURIComponent(share.id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
-      method: "DELETE",
-      headers: {
-        Prefer: "return=minimal",
-      },
-    });
-  }));
 }
 
 async function snapshotPresentValue(payload) {
@@ -96,7 +70,6 @@ module.exports = async function handler(request, response) {
       }
 
       await snapshotPresentValue(payload);
-      await pruneOldestActiveShares(wallet);
 
       const id = generateEvaluationId();
       const expiresAt = evaluationShareExpiresAt();
@@ -113,11 +86,12 @@ module.exports = async function handler(request, response) {
           expires_at: expiresAt,
         }]),
       });
+      const row = Array.isArray(rows) ? rows[0] : null;
 
       response.status(200).json({
-        id: Array.isArray(rows) && rows[0]?.id ? rows[0].id : id,
+        id: row?.id || id,
         playerId: payload.playerId,
-        expiresAt,
+        expiresAt: row?.expires_at || expiresAt,
       });
       return;
     }

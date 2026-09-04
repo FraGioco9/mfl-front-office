@@ -7,6 +7,8 @@ const {
   normalizeEvaluationPayload,
 } = require("./_evaluation-payload");
 
+const MAX_SAVED_EVALUATIONS_PER_WALLET = 100;
+
 async function savedEvaluationCount(wallet) {
   const rows = await supabaseRequest(`evaluation_saves?select=id&wallet_address=eq.${encodeURIComponent(wallet)}`);
   return Array.isArray(rows) ? rows.length : 0;
@@ -66,8 +68,8 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      if (await savedEvaluationCount(wallet) >= 10) {
-        response.status(429).json({ error: "You can save a maximum of 10 evaluations." });
+      if (await savedEvaluationCount(wallet) >= MAX_SAVED_EVALUATIONS_PER_WALLET) {
+        response.status(429).json({ error: `You can save a maximum of ${MAX_SAVED_EVALUATIONS_PER_WALLET} evaluations.` });
         return;
       }
 
@@ -117,7 +119,7 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=created_at.desc&limit=10`);
+      const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=created_at.desc&limit=${MAX_SAVED_EVALUATIONS_PER_WALLET}`);
       response.status(200).json({
         evaluations: Array.isArray(rows) ? rows.map((row) => ({
           id: row.id,
