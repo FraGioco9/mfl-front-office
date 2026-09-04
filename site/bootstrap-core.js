@@ -9,6 +9,7 @@
   const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
   const ROUTE_LOADING_REASON = "route-loading";
   const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";
+  const BUG_REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -48,6 +49,78 @@
     document.documentElement.dataset.storedWalletOptIn = storedOptIn ? "true" : "false";
     document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
     return { storedOptIn, storedAccess };
+  }
+
+  function bugReportControlFromTarget(target) {
+    const element = target instanceof Element
+      ? target
+      : target instanceof Node
+        ? target.parentElement
+        : null;
+    if (!(element instanceof Element)) return null;
+    const control = element.closest(BUG_REPORT_CONTROL_SELECTOR);
+    return control instanceof HTMLElement ? control : null;
+  }
+
+  function prepareBugReportControl(control = document.querySelector(BUG_REPORT_CONTROL_SELECTOR)) {
+    if (!(control instanceof HTMLElement)) return null;
+    control.dataset.bugReportControl = "true";
+    if (control instanceof HTMLAnchorElement) {
+      control.removeAttribute("href");
+      control.removeAttribute("target");
+      control.removeAttribute("rel");
+      control.setAttribute("role", "button");
+      control.tabIndex = 0;
+    }
+    control.setAttribute("aria-haspopup", "dialog");
+    control.setAttribute("aria-controls", "bugReportModal");
+    return control;
+  }
+
+  function bugReportRuntimeLoader() {
+    const resources = Reflect.get(window, "__mflRuntimeResources");
+    if (!resources || typeof resources.load !== "function") {
+      return Promise.reject(new Error("Bug report runtime loader is unavailable."));
+    }
+    return resources.load("/bug-report-runtime.js");
+  }
+
+  function ensureBugReportRuntime() {
+    prepareBugReportControl();
+    if (window.__mflBugReportRuntime?.open) return Promise.resolve(window.__mflBugReportRuntime);
+    return bugReportRuntimeLoader().then(() => {
+      if (!window.__mflBugReportRuntime?.open) {
+        throw new Error("Bug report runtime loaded without exposing its form controller.");
+      }
+      return window.__mflBugReportRuntime;
+    });
+  }
+
+  function installBugReportBootstrap() {
+    prepareBugReportControl();
+
+    const activate = (event) => {
+      const control = bugReportControlFromTarget(event.target);
+      if (!control) return;
+      prepareBugReportControl(control);
+      if (window.__mflBugReportRuntime?.open) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void ensureBugReportRuntime()
+        .then((runtime) => runtime.open())
+        .catch((error) => console.error("Could not open the bug report form.", error));
+    };
+
+    const activateKeyboard = (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      activate(event);
+    };
+
+    document.addEventListener("click", activate, true);
+    document.addEventListener("keydown", activateKeyboard, true);
+    void ensureBugReportRuntime().catch((error) => {
+      console.warn("Could not preload the bug report form runtime; activation will retry on demand.", error);
+    });
   }
 
   function createNavigationController() {
@@ -356,6 +429,7 @@
   }
 
   syncStoredAccessFlags();
+  installBugReportBootstrap();
 
   window.__mflNavigation = createNavigationController();
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;
@@ -417,7 +491,7 @@
   startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });
 
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
-  const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+  const footer = document.querySelector('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
   if (footer) footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
   void (async () => {
