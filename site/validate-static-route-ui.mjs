@@ -89,6 +89,10 @@ excludes(entry, "/table-view-runtime.js", "The retired table-view runtime must s
 includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reuse first-paint view configuration.");
 includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
 includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must be rendered by passive route chrome.");
+invariant(
+  !/navButtons\.forEach\(\(button\) => \{\s*button\.classList\.toggle\("active"/u.test(coreSource),
+  "Application core must not compete with passive route chrome for sidebar active-state ownership.",
+);
 includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "Active view state must be rendered by passive route chrome.");
 includes(staticUi, "const insertionPoint = switcher instanceof HTMLElement && switcher.parentElement === container", "View ordering must preserve the Watchlist/scroll-cue insertion boundary.");
 includes(staticUi, "container.insertBefore(button, insertionPoint);", "View order must be represented in DOM order.");

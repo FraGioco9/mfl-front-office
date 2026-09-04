@@ -58,6 +58,14 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active:not(:disabled) {
+    filter: brightness(0.9);
+  }
+
   body > .topbar {
     grid-template-columns: minmax(0, 1fr) 44px auto;
     grid-template-areas: "brand search controls";
@@ -189,7 +197,7 @@ html:not(.mflInitialRouteResolved):is(
     padding: 4px;
     overflow: visible;
     border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
-    border-radius: 999px;
+    border-radius: 16px;
     background: color-mix(in srgb, var(--surface) 88%, transparent);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
     backdrop-filter: blur(14px);
@@ -237,6 +245,7 @@ html:not(.mflInitialRouteResolved):is(
     line-height: 1;
     text-align: center;
     white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .menuRail .navButton .navEmoji {
@@ -272,9 +281,9 @@ html:not(.mflInitialRouteResolved):is(
 
   .menuRail .navButton.active,
   .menuRail .navButton.active:hover {
-    border-color: transparent;
-    background: transparent;
-    color: #4aa3df;
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
     box-shadow: none;
   }
 
@@ -287,9 +296,9 @@ html:not(.mflInitialRouteResolved):is(
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
-    border-color: transparent;
-    background: transparent;
-    color: #4aa3df;
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
     box-shadow: none;
   }
 
@@ -298,6 +307,13 @@ html:not(.mflInitialRouteResolved):is(
     border-color: transparent;
     background: var(--row-hover);
     color: var(--text);
+  }
+
+  .menuRail #sidebar .navButton:not(.active):active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    filter: brightness(0.9);
   }
 
   body.pinnedSidebarVisible main,

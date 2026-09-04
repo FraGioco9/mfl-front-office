@@ -31,6 +31,10 @@ const [indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, s
 
 includes(indexHtml, 'name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"', "The document viewport must support phone widths and safe areas.");
 includes(indexHtml, '<link rel="stylesheet" href="/responsive.css" data-mfl-responsive-layout="true">', "Responsive layout must keep one explicit stylesheet owner.");
+includes(responsive, "  button {\n    -webkit-tap-highlight-color: transparent;\n  }", "Mobile buttons must disable the browser-native rectangular tap highlight so press feedback can follow the rendered control shape.");
+includes(responsive, "  button:active:not(:disabled) {\n    filter: brightness(0.9);\n  }", "Mobile button press feedback must act on the rendered button itself so every border radius and shape is preserved.");
+excludes(responsive, "button:active:not(:disabled)::before", "Mobile press feedback must not use a fixed-shape pseudo-element overlay.");
+excludes(responsive, "button:active:not(:disabled)::after", "Mobile press feedback must not use a fixed-shape pseudo-element overlay.");
 includes(indexHtml, 'class="navEmoji navJerseyIcon"', "My Players must keep the canonical shirt SVG markup.");
 includes(stylesBase, ".advancedSettingValue {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;", "Advanced Settings value boxes must vertically center their content while preserving right alignment.");
 includes(stylesBase, ".advancedMflUsdResetButton {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;", "The MFL/USD Reset control must vertically center its content inside its box.");
@@ -73,14 +77,17 @@ includes(responsive, "@media (max-width: 900px)", "Tablet and mobile layout must
 includes(responsive, "--mobile-nav-height: 58px;", "Mobile navigation must reserve its compact bottom-rail height.");
 includes(responsive, "inset: auto auto 8px 50%;", "Mobile navigation must be anchored to the bottom of the application shell.");
 includes(responsive, "padding: 4px;\n    overflow: visible;\n    border: 1px solid color-mix", "Mobile navigation must allow long labels to spill beyond the rail instead of clipping them.");
-includes(responsive, "border-radius: 999px;", "Mobile navigation must keep the rounded floating-rail geometry.");
+includes(responsive, "border-radius: 16px;", "Mobile navigation rail must use a restrained outer radius instead of pill-shaped side caps.");
+includes(responsive, "padding: 4px 2px;\n    overflow: visible;\n    border-color: transparent;\n    border-radius: 12px;", "Mobile navigation cells must keep 12px corners inside the 16px rail so outer and inner corner geometry stays concentric.");
 includes(responsive, ".menuRail .navButton {\n    display: flex;\n    flex: 1 1 0;\n    flex-direction: column;", "Mobile navigation items must use the existing links as equal icon-over-label cells.");
 includes(responsive, "padding: 4px 2px;\n    overflow: visible;\n    border-color: transparent;", "Mobile navigation cells must not clip labels that exceed an equal-width cell.");
 includes(responsive, ".menuRail .navButton .navEmoji {\n    flex: 0 0 18px;\n    width: 18px;\n    height: 18px;\n    color: inherit;\n    font-size: 18px;\n    line-height: 18px;", "Mobile navigation icons must keep the same 18px geometry as desktop.");
 includes(responsive, ".menuRail .navButton .navText {\n    display: block;\n    width: max-content;\n    min-height: 9px;\n    max-width: none;\n    margin-left: 0;\n    overflow: visible;", "Mobile navigation labels must render fully without ellipsis or clipping.");
 includes(responsive, "text-overflow: clip;\n    white-space: nowrap;", "Mobile navigation labels must spill as one complete line.");
-includes(responsive, ".menuRail .navButton.active,\n  .menuRail .navButton.active:hover {\n    border-color: transparent;\n    background: transparent;\n    color: #4aa3df;\n    box-shadow: none;\n  }", "The selected mobile section must be indicated only by #4aa3df icon/text color, without an active box.");
-includes(responsive, '[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {\n    border-color: transparent;\n    background: transparent;\n    color: #4aa3df;\n    box-shadow: none;\n  }', "Mobile first paint must use the same color-only selected navigation state.");
+includes(responsive, ".menuRail .navButton.active,\n  .menuRail .navButton.active:hover {\n    border-color: var(--primary);\n    background: var(--primary);\n    color: #ffffff;\n    box-shadow: none;\n  }", "The selected mobile section must use the same filled primary treatment as desktop, with white icon/text.");
+includes(responsive, "white-space: nowrap;\n    -webkit-tap-highlight-color: transparent;", "Mobile menuRail links must suppress the browser-native rectangular tap highlight so press feedback follows the 12px navigation-cell shape.");
+includes(responsive, ".menuRail #sidebar .navButton:not(.active):active {\n    border-color: var(--primary);\n    background: var(--primary);\n    color: #ffffff;\n    filter: brightness(0.9);\n  }", "Mobile menuRail press feedback must use the same filled primary geometry and white content as the selected highlight.");
+includes(responsive, '[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {\n    border-color: var(--primary);\n    background: var(--primary);\n    color: #ffffff;\n    box-shadow: none;\n  }', "Mobile first paint must use the same filled primary selected navigation state as hydrated navigation.");
 includes(responsive, "#accountButton > span {", "The mobile account label must remain accessible while visually hidden.");
 includes(responsive, "#accountButton .accountButtonIcon {\n    width: 20px;\n    height: 20px;\n  }", "The mobile account button must center the existing account SVG as its only visible content.");
 includes(responsive, "#accountDropdown {\n    left: auto;\n    right: 0;\n    width: min(190px, calc(100vw - 24px));\n    transform-origin: top right;\n  }", "The mobile account dropdown must align its right border to the account button throughout its open/close animation.");

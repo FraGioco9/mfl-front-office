@@ -2099,9 +2099,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
           ? "In order to view settings, you need to opt in."
           : "In order to see your players, you need to opt in.";
     }
-    navButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === pageName);
-    });
     syncHomeLoginButton();
     if (document.body.classList.contains("loading")) {
       await finishLoading();
@@ -2141,9 +2138,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
       renderTableLoadingShell(pageName);
     }
 
-    navButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === pageName);
-    });
 
     const loaded = await ensureProgressionData();
 
@@ -2196,18 +2190,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
           ? "No agent players match the current filters."
           : "No players match the current filters.";
 
-  navButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.page === pageName);
-  });
 
   if (mflStatsActive) {
     state.view = "stats";
     rememberMflStatsView();
     updateViewButtons();
     renderMflStatsPage();
-    navButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === "mfl");
-    });
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
@@ -8764,9 +8752,6 @@ async function startApp() {
     settingsPage.hidden = true;
     changelogPage.hidden = true;
     tablePageTitle.textContent = tableTitleForPage(pageName);
-    navButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === pageName);
-    });
     if (route && route.scope !== "empty" && !incrementalRouteIsCached(route, 1)) {
       showTableBusyState();
     }
@@ -8792,9 +8777,6 @@ async function startApp() {
     settingsPage.hidden = true;
     changelogPage.hidden = true;
 
-    navButtons.forEach((button) => {
-      button.classList.toggle("active", route.scope !== "club" && button.dataset.page === pageName);
-    });
 
     if (tableRoute) {
       if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();
