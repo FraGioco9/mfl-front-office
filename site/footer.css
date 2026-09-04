@@ -80,11 +80,6 @@ main > .pageView:not([hidden]) {
   transition: color 120ms ease;
 }
 
-/* Do not allow the legacy external bug-report target to activate before the in-site modal runtime owns it. */
-.siteFooterDetailsGroup a[href*="/mfl-front-office/issues/new"] {
-  pointer-events: none;
-}
-
 .siteFooterDetails a[href="/changelog"],
 .siteFooterDetails a[data-page="changelog"] {
   display: inline-block;
@@ -95,6 +90,7 @@ main > .pageView:not([hidden]) {
   font-weight: 800;
   line-height: 1.1;
   text-decoration: none;
+  cursor: default;
   transition: color var(--mfl-motion-fast, 120ms) ease;
 }
 
