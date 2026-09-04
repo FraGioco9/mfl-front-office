@@ -64,6 +64,7 @@ for (const token of [
   'margin-top: 7px;',
   '.siteFooterDetailsCreatorName {',
   '.siteFooterDetailsCreatorLinks {',
+  '.siteFooterDetailsCreatorLinks > * {',
   '.siteFooterDetailsDiscord {',
   '.siteFooterDetailsMeta {',
   'grid-template-columns: auto minmax(0, 1fr) auto;',
