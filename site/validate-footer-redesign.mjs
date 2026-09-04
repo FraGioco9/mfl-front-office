@@ -94,6 +94,10 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(
+  footer.includes('body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,\nbody:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {\n  color: var(--primary);\n  cursor: pointer;\n}'),
+  "The Changelog title must show a pointer cursor only while hovering outside the active Changelog page.",
+);
 invariant(!footer.includes('.siteFooterDetails a[href="/changelog"]:hover,\n.siteFooterDetails a[data-page="changelog"]:hover {'), "The Changelog title hover must not animate while Changelog is the active page.");
 invariant(!footer.includes('transform: translateY(-1px);'), "The footer title hover must not shift vertically.");
 invariant(!footer.includes('transition: color var(--mfl-motion-fast, 120ms) ease, transform'), "The footer title hover must not animate transforms.");
