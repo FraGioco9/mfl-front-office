@@ -66,6 +66,8 @@ Stored values:
 - `payload`: normalized Evaluation state required to restore it.
 - `created_at`: ordering/limit metadata.
 
+The API permits up to 100 saved Evaluations per wallet. Overwriting an existing saved Evaluation does not consume another slot, and list reads return the full saved set up to that limit.
+
 `player_id` is retained separately from `payload` because it is a query/identity field; it is not an accidental UI-state duplicate.
 
 ### `evaluation_shares`
@@ -74,11 +76,13 @@ Write/lifecycle owner: `site/api/evaluation-share.js`. Active-share lookup owner
 
 Stored values:
 - `id`: share identifier.
-- `wallet_address`: creator scope used for per-wallet active-share limits.
+- `wallet_address`: creator identity retained for ownership/audit context; there is no per-wallet share-count limit.
 - `player_id`: validates/resolves the shared player context.
 - `payload`: normalized public Evaluation share state.
 - `created_at`: share ordering metadata.
-- `expires_at`: mandatory expiry and active-share filtering; new shares expire one calendar month after share creation.
+- `expires_at`: mandatory expiry and active-share filtering; new shares expire one calendar year after share creation.
+
+Shared Evaluations are unlimited per wallet. Creating a new share never prunes or replaces older active shares; each link remains valid independently until its own `expires_at` timestamp.
 
 The preview lookup selects only `id`, `player_id`, `payload`, and `expires_at`; it never exposes or selects the creator wallet. Only after that active share has been validated, the preview owner resolves the player's current public `name`, `age`, and `retirement_years` from the packaged public player database (`mfl_database.db`). Name and age keep the card aligned with the public player identity shown by the site. For valuation, the saved `overallValues` array is also the canonical saved Expected Seasons horizon because the Evaluation page creates exactly one Overall entry per raw expected season. Public age/retirement context is therefore only a backward-compatibility fallback when a legacy payload does not contain that horizon.
 
