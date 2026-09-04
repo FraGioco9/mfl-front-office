@@ -272,6 +272,14 @@
       .find((modal) => modal instanceof HTMLElement && modal.getClientRects().length > 0) || null;
   }
 
+  function bugReportModalOwnsKeyboard(target) {
+    const bugReportModal = document.getElementById("bugReportModal");
+    return bugReportModal instanceof HTMLElement
+      && !bugReportModal.hidden
+      && target instanceof Node
+      && bugReportModal.contains(target);
+  }
+
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
@@ -378,7 +386,7 @@
   }
 
   function onKeyDown(event) {
-    if (event.key === "Enter" && visibleModalBackdrop() && !openSelect()) {
+    if (event.key === "Enter" && visibleModalBackdrop() && !bugReportModalOwnsKeyboard(event.target) && !openSelect()) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
