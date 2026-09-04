@@ -1,0 +1,264 @@
+diff --git a/site/modules/core-sources/table.js b/site/modules/core-sources/table.js
+index 49c2a95..7491720 100644
+--- a/site/modules/core-sources/table.js
++++ b/site/modules/core-sources/table.js
+@@ -568,6 +568,11 @@ let playerTableActionWindowOuterWidth = 0;
+ let playerTableActionWindowOuterHeight = 0;
+ let playerTableActionScrollLeft = 0;
+ let playerTableActionScrollTop = 0;
++let playerTableActionAnchorOffsetLeft = 0;
++let playerTableActionAnchorOffsetTop = 0;
++let playerTableActionPositionFrame = 0;
++
++const PLAYER_TABLE_ACTION_TRACK_MARGIN_PX = 64;
+ 
+ const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
+   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg>',
+@@ -628,7 +633,7 @@ function restorePlayerTableActionMenuAfterRender(renderSignature) {
+   playerTableActionTrigger.setAttribute("aria-expanded", "true");
+   playerTableActionRenderSignature = currentPlayerTableActionRenderSignature(key);
+   capturePlayerTableActionGeometry();
+-  positionPlayerTableActionMenu();
++  positionPlayerTableActionMenu({ establishAnchorOffset: true });
+   return true;
+ }
+ 
+@@ -644,17 +649,58 @@ function handlePlayerTableActionWindowResize() {
+     closePlayerTableActionMenu();
+     return;
+   }
+-  positionPlayerTableActionMenu();
++  positionPlayerTableActionMenu({ establishAnchorOffset: true });
++}
++
++function playerTableActionAnchorIsTrackable() {
++  if (!(playerTableActionTrigger instanceof HTMLButtonElement) || !playerTableActionTrigger.isConnected) return false;
++  const triggerRect = playerTableActionTrigger.getBoundingClientRect();
++  const row = playerTableActionTrigger.closest("tr");
++  const rowRect = row instanceof HTMLTableRowElement ? row.getBoundingClientRect() : triggerRect;
++  const scroller = document.querySelector("#progressionPage .playerTableScroller");
++  const scrollerRect = scroller instanceof HTMLElement ? scroller.getBoundingClientRect() : null;
++  const visibleLeft = Math.max(0, scrollerRect?.left ?? 0);
++  const visibleRight = Math.min(window.innerWidth, scrollerRect?.right ?? window.innerWidth);
++  const visibleTop = Math.max(0, scrollerRect?.top ?? 0);
++  const visibleBottom = Math.min(window.innerHeight, scrollerRect?.bottom ?? window.innerHeight);
++  const margin = PLAYER_TABLE_ACTION_TRACK_MARGIN_PX;
++  return triggerRect.right >= visibleLeft - margin
++    && triggerRect.left <= visibleRight + margin
++    && rowRect.bottom >= visibleTop - margin
++    && rowRect.top <= visibleBottom + margin;
++}
++
++function syncPlayerTableActionMenuToAnchor() {
++  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return false;
++  if (!playerTableActionAnchorIsTrackable()) {
++    closePlayerTableActionMenu();
++    return false;
++  }
++  return positionPlayerTableActionMenu({ preserveAnchorOffset: true });
++}
++
++function schedulePlayerTableActionMenuPositionSync() {
++  if (playerTableActionPositionFrame) return;
++  playerTableActionPositionFrame = requestAnimationFrame(() => {
++    playerTableActionPositionFrame = 0;
++    syncPlayerTableActionMenuToAnchor();
++  });
+ }
+ 
+ function handlePlayerTableActionScrollerScroll(scroller) {
+   if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
+   if (!(scroller instanceof HTMLElement)) return;
+   if (scroller.scrollLeft !== playerTableActionScrollLeft || scroller.scrollTop !== playerTableActionScrollTop) {
+-    closePlayerTableActionMenu();
+-    return;
++    playerTableActionScrollLeft = scroller.scrollLeft;
++    playerTableActionScrollTop = scroller.scrollTop;
+   }
+-  positionPlayerTableActionMenu();
++  schedulePlayerTableActionMenuPositionSync();
++}
++
++function handlePlayerTableActionViewportScroll(event) {
++  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
++  if (event?.target instanceof Node && playerTableActionMenu.contains(event.target)) return;
++  schedulePlayerTableActionMenuPositionSync();
+ }
+ 
+ function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
+@@ -671,25 +717,41 @@ function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
+   playerTableActionWindowOuterHeight = 0;
+   playerTableActionScrollLeft = 0;
+   playerTableActionScrollTop = 0;
++  playerTableActionAnchorOffsetLeft = 0;
++  playerTableActionAnchorOffsetTop = 0;
++  if (playerTableActionPositionFrame) {
++    cancelAnimationFrame(playerTableActionPositionFrame);
++    playerTableActionPositionFrame = 0;
++  }
+   return true;
+ }
+ 
+-function positionPlayerTableActionMenu() {
++function positionPlayerTableActionMenu({ establishAnchorOffset = false, preserveAnchorOffset = false } = {}) {
+   if (!(playerTableActionMenu instanceof HTMLElement)
+     || !(playerTableActionTrigger instanceof HTMLButtonElement)
+     || !playerTableActionTrigger.isConnected) return false;
+   const triggerRect = playerTableActionTrigger.getBoundingClientRect();
+   const menuRect = playerTableActionMenu.getBoundingClientRect();
+-  const edgeGap = 8;
+-  const menuGap = 6;
+-  let left = triggerRect.left;
+-  left = Math.max(edgeGap, Math.min(left, window.innerWidth - menuRect.width - edgeGap));
+-  let top = triggerRect.bottom + menuGap;
+-  if (top + menuRect.height > window.innerHeight - edgeGap) {
+-    top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
++  let left;
++  let top;
++  if (preserveAnchorOffset) {
++    left = triggerRect.left + playerTableActionAnchorOffsetLeft;
++    top = triggerRect.top + playerTableActionAnchorOffsetTop;
++  } else {
++    const edgeGap = 8;
++    const menuGap = 6;
++    left = Math.max(edgeGap, Math.min(triggerRect.left, window.innerWidth - menuRect.width - edgeGap));
++    top = triggerRect.bottom + menuGap;
++    if (top + menuRect.height > window.innerHeight - edgeGap) {
++      top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
++    }
+   }
+   playerTableActionMenu.style.left = `${Math.round(left)}px`;
+   playerTableActionMenu.style.top = `${Math.round(top)}px`;
++  if (establishAnchorOffset || !Number.isFinite(playerTableActionAnchorOffsetLeft) || !Number.isFinite(playerTableActionAnchorOffsetTop)) {
++    playerTableActionAnchorOffsetLeft = left - triggerRect.left;
++    playerTableActionAnchorOffsetTop = top - triggerRect.top;
++  }
+   return true;
+ }
+ 
+@@ -708,6 +770,7 @@ function ensurePlayerTableActionMenu() {
+   if (playerTableActionMenu instanceof HTMLElement && playerTableActionMenu.isConnected) return playerTableActionMenu;
+   const menu = document.createElement("div");
+   menu.className = "playerTableActionMenu";
++  menu.style.setProperty("--mfl-z-dropdown", "var(--mfl-z-table-action-menu)");
+   menu.dataset.mflDropdownMenu = "true";
+   menu.dataset.open = "false";
+   menu.setAttribute("role", "menu");
+@@ -768,6 +831,7 @@ function ensurePlayerTableActionMenu() {
+     closePlayerTableActionMenu({ restoreFocus: true });
+   }, true);
+   window.addEventListener("resize", handlePlayerTableActionWindowResize);
++  window.addEventListener("scroll", handlePlayerTableActionViewportScroll, true);
+   const tableScroller = document.querySelector("#progressionPage .playerTableScroller");
+   tableScroller?.addEventListener("scroll", () => handlePlayerTableActionScrollerScroll(tableScroller), { passive: true });
+   return menu;
+@@ -800,12 +864,12 @@ function openPlayerTableActionMenu(trigger, playerId) {
+   items.push(createPlayerTableActionItem("copy", `#${key}`, "copy"));
+   menu.replaceChildren(...items);
+   menu.dataset.open = "false";
+-  positionPlayerTableActionMenu();
++  positionPlayerTableActionMenu({ establishAnchorOffset: true });
+   void menu.offsetWidth;
+   requestAnimationFrame(() => {
+     if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;
+     menu.dataset.open = "true";
+-    positionPlayerTableActionMenu();
++    positionPlayerTableActionMenu({ establishAnchorOffset: true });
+   });
+   return true;
+ }
+diff --git a/site/stacking.css b/site/stacking.css
+index b5d94c1..7eeeb08 100644
+--- a/site/stacking.css
++++ b/site/stacking.css
+@@ -26,6 +26,7 @@
+   --mfl-z-chrome: 500;
+   --mfl-z-floating-tooltip: 600;
+   --mfl-z-selection: 700;
++  --mfl-z-table-action-menu: 720;
+   --mfl-z-busy-shield: 740;
+ 
+   /* Legacy name for the highest ordinary non-popup layer. */
+diff --git a/site/validate-domain-table.mjs b/site/validate-domain-table.mjs
+index 7479f91..ebacb14 100644
+--- a/site/validate-domain-table.mjs
++++ b/site/validate-domain-table.mjs
+@@ -10,6 +10,7 @@ const validators = [
+   "validate-marketplace-state-freshness.mjs",
+   "validate-player-table-actions.mjs",
+   "validate-player-table-action-menu-rerender.mjs",
++  "validate-player-table-action-menu-scroll.mjs",
+   "validate-selection-action-menu-readiness.mjs",
+   "validate-table-sort-session.mjs",
+   "validate-progression-sorting.mjs",
+diff --git a/new/site/validate-player-table-action-menu-scroll.mjs b/site/validate-player-table-action-menu-scroll.mjs
+new file mode 100644
+index 0000000..fd1036f
+--- /dev/null
++++ b/site/validate-player-table-action-menu-scroll.mjs
+@@ -0,0 +1,65 @@
++import { readFile } from "node:fs/promises";
++
++const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
++const invariant = (condition, message) => {
++  if (!condition) throw new Error(message);
++};
++
++const [source, generatedTable, stacking] = await Promise.all([
++  read("./modules/core-sources/table.js"),
++  read("./modules/app-core-table-runtime.js"),
++  read("./stacking.css"),
++]);
++
++for (const code of [source, generatedTable]) {
++  invariant(
++    code.includes("const PLAYER_TABLE_ACTION_TRACK_MARGIN_PX = 64;")
++      && code.includes("function playerTableActionAnchorIsTrackable() {")
++      && code.includes('const row = playerTableActionTrigger.closest("tr");')
++      && code.includes("triggerRect.right >= visibleLeft - margin")
++      && code.includes("rowRect.bottom >= visibleTop - margin"),
++    "Player table action menus must track their originating trigger/row until it moves beyond the shared 64px detach margin.",
++  );
++
++  invariant(
++    code.includes("function schedulePlayerTableActionMenuPositionSync() {")
++      && code.includes("playerTableActionPositionFrame = requestAnimationFrame(() => {")
++      && code.includes("syncPlayerTableActionMenuToAnchor();")
++      && code.includes('window.addEventListener("scroll", handlePlayerTableActionViewportScroll, true);'),
++    "Player table action menu repositioning must be animation-frame-coalesced for table, page, and ancestor scrolling.",
++  );
++
++  const scrollerHandlerStart = code.indexOf("function handlePlayerTableActionScrollerScroll(scroller) {");
++  const scrollerHandlerEnd = code.indexOf("\n}\n\nfunction handlePlayerTableActionViewportScroll", scrollerHandlerStart);
++  const scrollerHandler = scrollerHandlerStart >= 0 && scrollerHandlerEnd > scrollerHandlerStart
++    ? code.slice(scrollerHandlerStart, scrollerHandlerEnd)
++    : "";
++  invariant(
++    scrollerHandler.includes("scroller.scrollLeft !== playerTableActionScrollLeft || scroller.scrollTop !== playerTableActionScrollTop")
++      && scrollerHandler.includes("schedulePlayerTableActionMenuPositionSync();")
++      && !scrollerHandler.includes("closePlayerTableActionMenu();"),
++    "Real table scrolling must update menu geometry instead of closing the menu on the first scroll delta.",
++  );
++
++  invariant(
++    code.includes("function positionPlayerTableActionMenu({ establishAnchorOffset = false, preserveAnchorOffset = false } = {}) {")
++      && code.includes("left = triggerRect.left + playerTableActionAnchorOffsetLeft;")
++      && code.includes("top = triggerRect.top + playerTableActionAnchorOffsetTop;")
++      && code.includes("positionPlayerTableActionMenu({ preserveAnchorOffset: true });"),
++    "An open Player action menu must preserve its established offset from the trigger while the table/page scrolls.",
++  );
++
++  invariant(
++    code.includes('menu.style.setProperty("--mfl-z-dropdown", "var(--mfl-z-table-action-menu)");'),
++    "Player table action menus must opt into the dedicated global table-action stacking layer.",
++  );
++}
++
++invariant(
++  stacking.includes("--mfl-z-selection: 700;")
++    && stacking.includes("--mfl-z-table-action-menu: 720;")
++    && stacking.includes("--mfl-z-busy-shield: 740;"),
++  "The Player table action menu stacking layer must remain above headers/footer selection UI and below busy/popup layers.",
++);
++
++console.log("Player table action-menu scroll anchoring validation passed.");
