@@ -97,12 +97,16 @@ jobs:
           fi
           ls -lh site/api/data-files/mfl_database.db
 
-      - name: Build canonical application core
+      - name: Build canonical deployment assets
         shell: bash
         run: |
           set -euo pipefail
+          node site/build-vercel-config.mjs
           node site/build-app-core.mjs
+          node site/build-styles.mjs
+          test -s site/vercel.production.json
           test -s site/modules/app-core-runtime.js
+          test -s site/styles-runtime.css
 
       - name: Show released site commit
         shell: bash
