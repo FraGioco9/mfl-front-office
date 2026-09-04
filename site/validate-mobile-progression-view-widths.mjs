@@ -64,13 +64,18 @@ assert.match(
 );
 assert.match(
   styles,
-  /#progressionPage #tableBody \.tableControlCellContent > :is\(\.progressionValue, \.tableNextOverallValue\) \{\s*margin-left: 4px;\s*\}/,
-  "Regular table progression deltas must use one 4px value-to-delta gap across Next, Current Season, and All Time.",
+  /#progressionPage #tableBody \.tableControlCellContent > :is\(\.progressionValue, \.tableNextOverallValue\) \{\s*margin-left: 2px;\s*\}/,
+  "Regular table progression deltas must use one 2px value-to-delta gap across Next, Current Season, and All Time.",
 );
 assert.match(
   styles,
-  /#progressionPage #tableBody \.tableOverallCellContent > \.progressionValue \{\s*margin-left: calc\(4px - 0\.25em\);\s*\}/,
-  "Overall progression must compensate its retained non-breaking-space glyph so its visible gap matches the same 4px table gap.",
+  /#progressionPage #tableBody \.tableOverallCellContent > \.progressionValue \{\s*margin-left: calc\(2px - 0\.25em\);\s*\}/,
+  "Overall progression must compensate its retained non-breaking-space glyph so its visible gap matches the same 2px table gap.",
+);
+assert.match(
+  styles,
+  /#progressionPage #tableBody td > :is\(\.retirementMarker, \.newMintMarker\) \{\s*margin-left: 2px;\s*vertical-align: middle;\s*\}/,
+  "Retired, retiring, and new-mint markers must use the same 2px gap from the age value in every player-table view.",
 );
 
-console.log("Resolved mobile refreshes paint directly at 760px; Next Overall uses an approximately 68px Overall column, Agent remains effectively 91px, and progression value-to-delta spacing is normalized.");
+console.log("Resolved mobile refreshes paint directly at 760px; Next Overall uses an approximately 68px Overall column, Agent remains effectively 91px, and table deltas plus age markers use the shared 2px spacing contract.");
