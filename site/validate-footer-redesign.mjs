@@ -18,7 +18,6 @@ const [indexHtml, footer, responsive, stylesBase, staticUi, bootstrap, shared, s
 
 for (const token of [
   '<footer class="siteFooterDetails" aria-labelledby="siteFooterDetailsTitle">',
-  '<strong id="siteFooterDetailsTitle" class="siteFooterDetailsTitle">MFL Front Office</strong>',
   'Management, scouting, progression, and evaluation tools for MFL.',
   '<nav class="siteFooterDetailsNavigation" aria-label="Footer information">',
   '<span>Support</span>',
@@ -41,9 +40,11 @@ for (const token of [
 }
 
 invariant(
-  /<a href="\/changelog" data-page="changelog">MFL Front Office v\d+\.\d+\.\d+<\/a>/.test(indexHtml),
-  "The sole footer must expose the generated version as its Changelog link.",
+  /<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="\/changelog" data-page="changelog">MFL Front Office v\d+\.\d+\.\d+<\/a>/.test(indexHtml),
+  "The footer title must expose the generated version as its Changelog link.",
 );
+invariant((indexHtml.match(/href="\/changelog" data-page="changelog"/g) || []).length === 1, "The footer must expose exactly one Changelog link.");
+invariant(!indexHtml.includes('<strong id="siteFooterDetailsTitle"'), "The footer title must be the Changelog link instead of a separate static label.");
 invariant(!indexHtml.includes('>Source code</a>'), "The footer must not expose the repository source-code link.");
 invariant(!indexHtml.includes('<span>Resources</span>'), "The footer must not keep the removed Resources group.");
 invariant(!indexHtml.includes('<footer class="siteFooter">'), "The legacy compact footer must be removed from the DOM.");
@@ -51,11 +52,12 @@ invariant((indexHtml.match(/id="statusText"/g) || []).length === 1, "Data freshn
 
 const detailsIndex = indexHtml.indexOf('<footer class="siteFooterDetails"');
 const identityIndex = indexHtml.indexOf('<div class="siteFooterDetailsIdentity">', detailsIndex);
-const versionIndex = indexHtml.indexOf('<a href="/changelog" data-page="changelog">MFL Front Office v', identityIndex);
+const versionIndex = indexHtml.indexOf('<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v', identityIndex);
+const descriptionIndex = indexHtml.indexOf('Management, scouting, progression, and evaluation tools for MFL.', identityIndex);
 const navigationIndex = indexHtml.indexOf('<nav class="siteFooterDetailsNavigation"', identityIndex);
 const mainCloseIndex = indexHtml.indexOf("      </main>", detailsIndex);
 invariant(detailsIndex >= 0 && mainCloseIndex > detailsIndex, "The sole footer must remain at the end of the main scroll surface.");
-invariant(identityIndex >= 0 && versionIndex > identityIndex && navigationIndex > versionIndex, "The live version must sit with product identity instead of inside footer navigation.");
+invariant(identityIndex >= 0 && versionIndex > identityIndex && descriptionIndex > versionIndex && navigationIndex > descriptionIndex, "The live version must be the product title above its description.");
 
 for (const token of [
   'main > .pageView:not([hidden]) {',
@@ -67,7 +69,9 @@ for (const token of [
   'grid-template-columns: repeat(2, minmax(0, 1fr));',
   '.siteFooterDetails a[href="/changelog"]',
   '.siteFooterDetails a[data-page="changelog"]',
-  'margin-top: 7px;',
+  'margin-top: 0;',
+  'font-size: 14px;',
+  'font-weight: 800;',
   '.siteFooterDetailsCreatorLinks {',
   '.siteFooterDetailsCreatorLink {',
   '.siteFooterDetailsCreatorIcon {',
