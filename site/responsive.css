@@ -2879,18 +2879,50 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .selectionBar {
-    align-items: stretch;
-    flex-direction: column;
+    width: min(400px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 7px 8px;
+    border-radius: 7px;
+  }
+
+  .selectionSummary {
+    grid-template-rows: repeat(2, 16px);
+    min-width: 74px;
+  }
+
+  .selectionBar span {
+    font-size: 12px;
+    line-height: 15px;
+  }
+
+  .selectionBar .textButton {
+    height: 24px;
+    min-height: 24px;
+    padding-inline: 0;
+    font-size: 11px;
+    line-height: 14px;
   }
 
   .selectionActions {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
+    display: inline-flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    width: auto;
+    gap: 6px;
   }
 
   .selectionBar button:not(.textButton) {
-    width: 100%;
+    width: auto;
+    min-width: 0;
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .siteFooter {
@@ -2899,6 +2931,41 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 @media (max-width: 380px) {
+  .selectionBar {
+    width: min(360px, calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    gap: 4px;
+    padding: 6px 7px;
+    border-radius: 6px;
+  }
+
+  .selectionSummary {
+    grid-template-rows: repeat(2, 15px);
+    min-width: 68px;
+  }
+
+  .selectionBar span {
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .selectionBar .textButton {
+    height: 22px;
+    min-height: 22px;
+    font-size: 10px;
+    line-height: 13px;
+  }
+
+  .selectionActions {
+    gap: 4px;
+  }
+
+  .selectionBar button:not(.textButton) {
+    height: 30px;
+    min-height: 30px;
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
   .topbar h1 {
     font-size: 18px;
   }
