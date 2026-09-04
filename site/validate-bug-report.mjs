@@ -8,11 +8,12 @@ const excludes = (source, token, message) => {
   if (source.includes(token)) throw new Error(message);
 };
 
-const [indexHtml, footer, bootstrapCore, runtime, appEntry, api, schema, migration] = await Promise.all([
+const [indexHtml, footer, bootstrapCore, runtime, controlInteractions, appEntry, api, schema, migration] = await Promise.all([
   read("./index.html"),
   read("./footer.css"),
   read("./bootstrap-core.js"),
   read("./bug-report-runtime.js"),
+  read("./control-interactions-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/bug-reports.js"),
   read("../supabase-schema.sql"),
@@ -129,6 +130,14 @@ for (const forbidden of [
 }
 
 for (const token of [
+  'function bugReportModalOwnsKeyboard(target)',
+  'document.getElementById("bugReportModal")',
+  '!bugReportModalOwnsKeyboard(event.target)',
+]) {
+  includes(controlInteractions, token, `Global modal keyboard handling must yield to the bug-report form: ${token}`);
+}
+
+for (const token of [
   'const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;',
   'const RATE_LIMIT_MAX_REPORTS = 5;',
   'crypto.createHmac("sha256", config.key)',
@@ -173,4 +182,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with bootstrap-only URL neutralization, one runtime activation owner, synchronous modal visibility, and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with bootstrap-only URL neutralization, one runtime activation owner, synchronous modal visibility, form-owned keyboard input, and no external escape path.");
