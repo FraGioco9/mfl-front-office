@@ -54,9 +54,10 @@ for (const required of [
 invariant(!index.includes('id="openFiltersButton" class="compactButton"'), "Legacy compact Filters markup must stay removed.");
 invariant(!index.includes('id="filterSummary">0 active'), "Legacy Filters active-count markup must stay removed.");
 invariant(
-  bootstrap.includes('if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0";')
+  bootstrap.includes('filterSummary.textContent = String(activeRuleCount);')
+    && bootstrap.includes('filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);')
     && !bootstrap.includes('filterSummary.textContent = "0 active"'),
-  "Bootstrap must render the count-only Filters summary directly.",
+  "Bootstrap must render the count-only saved Filters summary directly.",
 );
 
 for (const required of [

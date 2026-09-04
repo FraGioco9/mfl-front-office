@@ -109,6 +109,78 @@
         // END GENERATED FIRST-PAINT ROUTE CONFIG
         window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
 
+        const INITIAL_TABLE_FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+        const INITIAL_TABLE_FILTER_STAT_COLUMNS = new Set(["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"]);
+        const INITIAL_TABLE_FILTER_BASE_COLUMNS = new Set([
+          "player_id", "wallet_name", "name", "listing_price", "positions", "age", "player_seasons", "nationality",
+          ...INITIAL_TABLE_FILTER_STAT_COLUMNS,
+          "contract_status", "owned_since",
+        ]);
+
+        function storedInitialTablePageState(pageName) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(INITIAL_TABLE_FILTER_STORAGE_KEY) || "null");
+            const pages = saved?.pages && typeof saved.pages === "object" && !Array.isArray(saved.pages)
+              ? saved.pages
+              : null;
+            const pageState = pages?.[pageName];
+            return pageState && typeof pageState === "object" && !Array.isArray(pageState) ? pageState : null;
+          } catch {
+            return null;
+          }
+        }
+
+        function initialTableFilterColumnAllowed(pageName, viewName, column) {
+          const normalizedColumn = String(column || "");
+          if (!normalizedColumn) return false;
+          if (normalizedColumn.endsWith("_prog_current_season")) {
+            return viewName === "current" && INITIAL_TABLE_FILTER_STAT_COLUMNS.has(normalizedColumn.replace("_prog_current_season", ""));
+          }
+          if (normalizedColumn.endsWith("_prog_all")) {
+            return viewName === "all" && INITIAL_TABLE_FILTER_STAT_COLUMNS.has(normalizedColumn.replace("_prog_all", ""));
+          }
+          if (!INITIAL_TABLE_FILTER_BASE_COLUMNS.has(normalizedColumn)) return false;
+          if ((pageName === "mfl" || pageName === "agents") && normalizedColumn === "wallet_name") return false;
+          if (pageName === "mfl" && normalizedColumn === "contract_status") return false;
+          return true;
+        }
+
+        function initialTableActiveRuleCount(pageName, viewName, rules = []) {
+          if (pageName === "club" || !Array.isArray(rules)) return 0;
+          return rules.filter((rule) => {
+            if (!initialTableFilterColumnAllowed(pageName, viewName, rule?.column)) return false;
+            const operator = String(rule?.operator || "");
+            const value = String(rule?.value || "").trim();
+            const valueTo = String(rule?.valueTo || "").trim();
+            return operator === "between" || operator === "during"
+              ? Boolean(value && valueTo)
+              : Boolean(value);
+          }).length;
+        }
+
+        function normalizeInitialTableControlState(pageName, viewName, savedState = {}) {
+          const clubPage = pageName === "club";
+          const newMints = clubPage ? false : Boolean(savedState.newMints);
+          const mflPackable = pageName === "mfl"
+            ? (newMints ? false : (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true))
+            : false;
+          const rules = Array.isArray(savedState.rules) ? savedState.rules : [];
+          return Object.freeze({
+            pageName,
+            viewName,
+            hideRetired: clubPage ? false : savedState.hideRetired !== false,
+            hideRetiring: clubPage ? false : Boolean(savedState.hideRetiring),
+            hideMflPlayers: pageName === "database"
+              ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+              : false,
+            mflPackable,
+            newMints,
+            activeRuleCount: initialTableActiveRuleCount(pageName, viewName, rules),
+          });
+        }
+
+        window.__mflNormalizeInitialTableControlState = normalizeInitialTableControlState;
+
         const pathParts = String(window.location.pathname || "/").split("/").filter(Boolean);
         const firstPart = String(pathParts[0] || "").toLowerCase();
         const tablePage = firstPart === "my-players"
@@ -137,6 +209,11 @@
           const activeView = tableConfig.order.includes(requestedView) ? requestedView : tableConfig.fallback;
           root.dataset.initialTablePage = tablePage;
           root.dataset.initialTableView = activeView;
+          window.__mflInitialTableControlState = normalizeInitialTableControlState(
+            tablePage,
+            activeView,
+            storedInitialTablePageState(tablePage) || {},
+          );
 
           const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="${tablePage}"]`;
           const buttonSelector = (viewName) => `${routeSelector} #progressionPage .views > .viewButton[data-view="${viewName}"]`;
@@ -449,6 +526,49 @@
             </label>
             <span id="watchlistPlayerCount" class="watchlistPlayerCount" hidden>0 players</span>
           </section>
+          <script>
+            (() => {
+              const state = window.__mflInitialTableControlState;
+              if (!state || state.pageName !== document.documentElement.dataset.initialTablePage) return;
+
+              const setChecked = (id, checked) => {
+                const input = document.getElementById(id);
+                if (input instanceof HTMLInputElement) input.checked = Boolean(checked);
+              };
+              const quickFilters = document.querySelector("#progressionPage .quickFilters");
+              if (quickFilters instanceof HTMLElement) quickFilters.hidden = state.pageName === "club";
+
+              setChecked("hideRetiredInput", state.hideRetired);
+              setChecked("hideRetiringInput", state.hideRetiring);
+
+              const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
+              if (hideMflPlayersFilter instanceof HTMLElement) hideMflPlayersFilter.hidden = state.pageName !== "database";
+              setChecked("hideMflPlayersInput", state.hideMflPlayers);
+
+              const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+              if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = state.pageName !== "mfl";
+              setChecked("packablePlayersInput", state.mflPackable);
+              setChecked("newMintsInput", state.newMints);
+
+              const newMintsLabel = document.getElementById("newMintsLabel");
+              if (newMintsLabel instanceof HTMLElement) {
+                newMintsLabel.textContent = state.pageName === "mfl" ? "Only aged players" : "Only new mints";
+              }
+
+              const activeRuleCount = Number.isFinite(Number(state.activeRuleCount))
+                ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
+                : 0;
+              const filterSummary = document.getElementById("filterSummary");
+              const openFiltersButton = document.getElementById("openFiltersButton");
+              if (filterSummary instanceof HTMLElement) {
+                filterSummary.textContent = String(activeRuleCount);
+                filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+              }
+              if (openFiltersButton instanceof HTMLElement) {
+                openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+              }
+            })();
+          </script>
 
           <section class="controlsBar" aria-label="Table controls">
             <button id="quickClearFiltersButton" class="compactButton" type="button" hidden aria-hidden="true" tabindex="-1">Clear</button>

@@ -280,6 +280,40 @@
     }
   }
 
+  function normalizedBootstrapTableControlState(pageName, viewName, savedState = {}) {
+    const normalizer = Reflect.get(window, "__mflNormalizeInitialTableControlState");
+    if (typeof normalizer === "function") {
+      return normalizer(pageName, viewName, savedState);
+    }
+
+    const clubPage = pageName === "club";
+    const newMints = clubPage ? false : Boolean(savedState.newMints);
+    const mflPackable = pageName === "mfl"
+      ? (newMints ? false : (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true))
+      : false;
+    const rules = Array.isArray(savedState.rules) ? savedState.rules : [];
+    const activeRuleCount = clubPage ? 0 : rules.filter((rule) => {
+      const operator = String(rule?.operator || "");
+      const value = String(rule?.value || "").trim();
+      const valueTo = String(rule?.valueTo || "").trim();
+      return operator === "between" || operator === "during"
+        ? Boolean(value && valueTo)
+        : Boolean(value);
+    }).length;
+    return {
+      pageName,
+      viewName,
+      hideRetired: clubPage ? false : savedState.hideRetired !== false,
+      hideRetiring: clubPage ? false : Boolean(savedState.hideRetiring),
+      hideMflPlayers: pageName === "database"
+        ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+        : false,
+      mflPackable,
+      newMints,
+      activeRuleCount,
+    };
+  }
+
   function firstPaintTableTitle(page, urlLike = window.location.href) {
     if (page === "database") return "Database";
     if (page === "mfl") return "MFL Wallet";
@@ -400,45 +434,46 @@
     const clubPage = normalizedPage === "club";
     const resetFilters = Boolean(options.resetFilters);
     const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};
+    const controlState = normalizedBootstrapTableControlState(normalizedPage, view, savedState);
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters instanceof HTMLElement) quickFilters.hidden = clubPage;
 
     const hideRetiredInput = document.getElementById("hideRetiredInput");
-    if (hideRetiredInput instanceof HTMLInputElement) hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;
+    if (hideRetiredInput instanceof HTMLInputElement) hideRetiredInput.checked = controlState.hideRetired;
 
     const hideRetiringInput = document.getElementById("hideRetiringInput");
-    if (hideRetiringInput instanceof HTMLInputElement) hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);
+    if (hideRetiringInput instanceof HTMLInputElement) hideRetiringInput.checked = controlState.hideRetiring;
 
     const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
     if (hideMflPlayersFilter instanceof HTMLElement) hideMflPlayersFilter.hidden = normalizedPage !== "database";
     const hideMflPlayersInput = document.getElementById("hideMflPlayersInput");
-    if (hideMflPlayersInput instanceof HTMLInputElement) {
-      hideMflPlayersInput.checked = normalizedPage === "database"
-        ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
-        : false;
-    }
+    if (hideMflPlayersInput instanceof HTMLInputElement) hideMflPlayersInput.checked = controlState.hideMflPlayers;
 
     const packablePlayersFilter = document.getElementById("packablePlayersFilter");
     if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = normalizedPage !== "mfl";
     const packablePlayersInput = document.getElementById("packablePlayersInput");
-    if (packablePlayersInput instanceof HTMLInputElement) {
-      packablePlayersInput.checked = normalizedPage === "mfl"
-        ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
-        : false;
-    }
+    if (packablePlayersInput instanceof HTMLInputElement) packablePlayersInput.checked = controlState.mflPackable;
 
     const newMintsInput = document.getElementById("newMintsInput");
-    if (newMintsInput instanceof HTMLInputElement) newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);
+    if (newMintsInput instanceof HTMLInputElement) newMintsInput.checked = controlState.newMints;
     const newMintsLabel = document.getElementById("newMintsLabel");
     if (newMintsLabel instanceof HTMLElement) {
       newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
     }
 
+    const filterSummary = document.getElementById("filterSummary");
+    const openFiltersButton = document.getElementById("openFiltersButton");
+    const activeRuleCount = resetFilters ? 0 : controlState.activeRuleCount;
+    if (filterSummary instanceof HTMLElement) {
+      filterSummary.textContent = String(activeRuleCount);
+      filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+    }
+    if (openFiltersButton instanceof HTMLElement) {
+      openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+    }
     if (resetFilters) {
       const filterRules = document.getElementById("filterRules");
       if (filterRules instanceof HTMLElement) filterRules.replaceChildren();
-      const filterSummary = document.getElementById("filterSummary");
-      if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0";
     }
 
     const pager = document.querySelector("#progressionPage nav.pager");
