@@ -7059,6 +7059,87 @@ main > .pageView:not([hidden]) {
   white-space: nowrap;
 }
 
+/* Report-a-bug popup is owned by the footer/support surface and reuses the global modal backdrop/header/footer language. */
+.bugReportDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, calc(100vw - 24px));
+  max-height: min(760px, calc(100dvh - 24px));
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.bugReportForm {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bugReportBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 12px;
+  min-height: 0;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.bugReportFieldWide,
+.bugReportStatus {
+  grid-column: 1 / -1;
+}
+
+.bugReportBody input,
+.bugReportBody select,
+.bugReportBody textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.bugReportBody textarea {
+  min-height: 84px;
+  max-height: 220px;
+  resize: vertical;
+}
+
+.bugReportStatus {
+  min-height: 16px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.bugReportStatus.isError {
+  color: #e06b6b;
+}
+
+.bugReportFooter {
+  flex: 0 0 auto;
+}
+
+.bugReportFooter button {
+  min-width: 96px;
+}
+
+.bugReportSubmitButton {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.bugReportSubmitButton:hover:not(:disabled),
+.bugReportSubmitButton:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+}
+
 /* Source: loading.css */
 /* Canonical loading and first-paint state presentation for MFL Front Office. */
 
