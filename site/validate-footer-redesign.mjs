@@ -72,6 +72,7 @@ for (const token of [
   'margin-top: 0;',
   'font-size: 14px;',
   'font-weight: 800;',
+  'cursor: default;',
   'transition: color var(--mfl-motion-fast, 120ms) ease;',
   'body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,',
   'body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {',
