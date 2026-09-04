@@ -59,6 +59,7 @@ invariant(identityIndex >= 0 && versionIndex > identityIndex && navigationIndex 
 
 for (const token of [
   '.siteFooterDetails {',
+  'margin-top: clamp(40px, 6vh, 64px);',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
   'grid-template-columns: repeat(2, minmax(0, 1fr));',
@@ -82,6 +83,7 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(!footer.includes('margin-top: 22px;'), "The footer must keep a larger minimum gap from short or loading content.");
 invariant(!footer.includes('grid-template-columns: auto minmax(0, 1fr) auto;'), "Desktop footer metadata must not size its side columns from changing content.");
 invariant(!footer.includes('.siteFooter a['), "footer.css must not retain the removed compact footer owner.");
 
