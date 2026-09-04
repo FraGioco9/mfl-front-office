@@ -569,6 +569,11 @@ let playerTableActionWindowOuterWidth = 0;
 let playerTableActionWindowOuterHeight = 0;
 let playerTableActionScrollLeft = 0;
 let playerTableActionScrollTop = 0;
+let playerTableActionAnchorOffsetLeft = 0;
+let playerTableActionAnchorOffsetTop = 0;
+let playerTableActionPositionFrame = 0;
+
+const PLAYER_TABLE_ACTION_TRACK_MARGIN_PX = 64;
 
 const PLAYER_TABLE_ACTION_ICONS = Object.freeze({
   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg>',
@@ -629,7 +634,7 @@ function restorePlayerTableActionMenuAfterRender(renderSignature) {
   playerTableActionTrigger.setAttribute("aria-expanded", "true");
   playerTableActionRenderSignature = currentPlayerTableActionRenderSignature(key);
   capturePlayerTableActionGeometry();
-  positionPlayerTableActionMenu();
+  positionPlayerTableActionMenu({ establishAnchorOffset: true });
   return true;
 }
 
@@ -645,17 +650,58 @@ function handlePlayerTableActionWindowResize() {
     closePlayerTableActionMenu();
     return;
   }
-  positionPlayerTableActionMenu();
+  positionPlayerTableActionMenu({ establishAnchorOffset: true });
+}
+
+function playerTableActionAnchorIsTrackable() {
+  if (!(playerTableActionTrigger instanceof HTMLButtonElement) || !playerTableActionTrigger.isConnected) return false;
+  const triggerRect = playerTableActionTrigger.getBoundingClientRect();
+  const row = playerTableActionTrigger.closest("tr");
+  const rowRect = row instanceof HTMLTableRowElement ? row.getBoundingClientRect() : triggerRect;
+  const scroller = document.querySelector("#progressionPage .playerTableScroller");
+  const scrollerRect = scroller instanceof HTMLElement ? scroller.getBoundingClientRect() : null;
+  const visibleLeft = Math.max(0, scrollerRect?.left ?? 0);
+  const visibleRight = Math.min(window.innerWidth, scrollerRect?.right ?? window.innerWidth);
+  const visibleTop = Math.max(0, scrollerRect?.top ?? 0);
+  const visibleBottom = Math.min(window.innerHeight, scrollerRect?.bottom ?? window.innerHeight);
+  const margin = PLAYER_TABLE_ACTION_TRACK_MARGIN_PX;
+  return triggerRect.right >= visibleLeft - margin
+    && triggerRect.left <= visibleRight + margin
+    && rowRect.bottom >= visibleTop - margin
+    && rowRect.top <= visibleBottom + margin;
+}
+
+function syncPlayerTableActionMenuToAnchor() {
+  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return false;
+  if (!playerTableActionAnchorIsTrackable()) {
+    closePlayerTableActionMenu();
+    return false;
+  }
+  return positionPlayerTableActionMenu({ preserveAnchorOffset: true });
+}
+
+function schedulePlayerTableActionMenuPositionSync() {
+  if (playerTableActionPositionFrame) return;
+  playerTableActionPositionFrame = requestAnimationFrame(() => {
+    playerTableActionPositionFrame = 0;
+    syncPlayerTableActionMenuToAnchor();
+  });
 }
 
 function handlePlayerTableActionScrollerScroll(scroller) {
   if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
   if (!(scroller instanceof HTMLElement)) return;
   if (scroller.scrollLeft !== playerTableActionScrollLeft || scroller.scrollTop !== playerTableActionScrollTop) {
-    closePlayerTableActionMenu();
-    return;
+    playerTableActionScrollLeft = scroller.scrollLeft;
+    playerTableActionScrollTop = scroller.scrollTop;
   }
-  positionPlayerTableActionMenu();
+  schedulePlayerTableActionMenuPositionSync();
+}
+
+function handlePlayerTableActionViewportScroll(event) {
+  if (!(playerTableActionMenu instanceof HTMLElement) || playerTableActionMenu.dataset.open !== "true") return;
+  if (event?.target instanceof Node && playerTableActionMenu.contains(event.target)) return;
+  schedulePlayerTableActionMenuPositionSync();
 }
 
 function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
@@ -672,25 +718,41 @@ function closePlayerTableActionMenu({ restoreFocus = false } = {}) {
   playerTableActionWindowOuterHeight = 0;
   playerTableActionScrollLeft = 0;
   playerTableActionScrollTop = 0;
+  playerTableActionAnchorOffsetLeft = 0;
+  playerTableActionAnchorOffsetTop = 0;
+  if (playerTableActionPositionFrame) {
+    cancelAnimationFrame(playerTableActionPositionFrame);
+    playerTableActionPositionFrame = 0;
+  }
   return true;
 }
 
-function positionPlayerTableActionMenu() {
+function positionPlayerTableActionMenu({ establishAnchorOffset = false, preserveAnchorOffset = false } = {}) {
   if (!(playerTableActionMenu instanceof HTMLElement)
     || !(playerTableActionTrigger instanceof HTMLButtonElement)
     || !playerTableActionTrigger.isConnected) return false;
   const triggerRect = playerTableActionTrigger.getBoundingClientRect();
   const menuRect = playerTableActionMenu.getBoundingClientRect();
-  const edgeGap = 8;
-  const menuGap = 6;
   let left = triggerRect.left;
-  left = Math.max(edgeGap, Math.min(left, window.innerWidth - menuRect.width - edgeGap));
-  let top = triggerRect.bottom + menuGap;
-  if (top + menuRect.height > window.innerHeight - edgeGap) {
-    top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
+  let top = triggerRect.bottom;
+  if (preserveAnchorOffset) {
+    left = triggerRect.left + playerTableActionAnchorOffsetLeft;
+    top = triggerRect.top + playerTableActionAnchorOffsetTop;
+  } else {
+    const edgeGap = 8;
+    const menuGap = 6;
+    left = Math.max(edgeGap, Math.min(triggerRect.left, window.innerWidth - menuRect.width - edgeGap));
+    top = triggerRect.bottom + menuGap;
+    if (top + menuRect.height > window.innerHeight - edgeGap) {
+      top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
+    }
   }
   playerTableActionMenu.style.left = `${Math.round(left)}px`;
   playerTableActionMenu.style.top = `${Math.round(top)}px`;
+  if (establishAnchorOffset || !Number.isFinite(playerTableActionAnchorOffsetLeft) || !Number.isFinite(playerTableActionAnchorOffsetTop)) {
+    playerTableActionAnchorOffsetLeft = left - triggerRect.left;
+    playerTableActionAnchorOffsetTop = top - triggerRect.top;
+  }
   return true;
 }
 
@@ -709,6 +771,7 @@ function ensurePlayerTableActionMenu() {
   if (playerTableActionMenu instanceof HTMLElement && playerTableActionMenu.isConnected) return playerTableActionMenu;
   const menu = document.createElement("div");
   menu.className = "playerTableActionMenu";
+  menu.style.setProperty("--mfl-z-dropdown", "var(--mfl-z-table-action-menu)");
   menu.dataset.mflDropdownMenu = "true";
   menu.dataset.open = "false";
   menu.setAttribute("role", "menu");
@@ -769,6 +832,7 @@ function ensurePlayerTableActionMenu() {
     closePlayerTableActionMenu({ restoreFocus: true });
   }, true);
   window.addEventListener("resize", handlePlayerTableActionWindowResize);
+  window.addEventListener("scroll", handlePlayerTableActionViewportScroll, true);
   const tableScroller = document.querySelector("#progressionPage .playerTableScroller");
   tableScroller?.addEventListener("scroll", () => handlePlayerTableActionScrollerScroll(tableScroller), { passive: true });
   return menu;
@@ -801,12 +865,12 @@ function openPlayerTableActionMenu(trigger, playerId) {
   items.push(createPlayerTableActionItem("copy", `#${key}`, "copy"));
   menu.replaceChildren(...items);
   menu.dataset.open = "false";
-  positionPlayerTableActionMenu();
+  positionPlayerTableActionMenu({ establishAnchorOffset: true });
   void menu.offsetWidth;
   requestAnimationFrame(() => {
     if (playerTableActionTrigger !== trigger || !trigger.isConnected) return;
     menu.dataset.open = "true";
-    positionPlayerTableActionMenu();
+    positionPlayerTableActionMenu({ establishAnchorOffset: true });
   });
   return true;
 }

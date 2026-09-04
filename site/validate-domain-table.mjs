@@ -10,6 +10,7 @@ const validators = [
   "validate-marketplace-state-freshness.mjs",
   "validate-player-table-actions.mjs",
   "validate-player-table-action-menu-rerender.mjs",
+  "validate-player-table-action-menu-scroll.mjs",
   "validate-selection-action-menu-readiness.mjs",
   "validate-table-sort-session.mjs",
   "validate-progression-sorting.mjs",
