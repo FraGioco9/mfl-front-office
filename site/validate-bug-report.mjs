@@ -8,9 +8,10 @@ const excludes = (source, token, message) => {
   if (source.includes(token)) throw new Error(message);
 };
 
-const [indexHtml, footer, runtime, appEntry, api, schema, migration] = await Promise.all([
+const [indexHtml, footer, bootstrapCore, runtime, appEntry, api, schema, migration] = await Promise.all([
   read("./index.html"),
   read("./footer.css"),
+  read("./bootstrap-core.js"),
   read("./bug-report-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/bug-reports.js"),
@@ -18,7 +19,7 @@ const [indexHtml, footer, runtime, appEntry, api, schema, migration] = await Pro
   read("../supabase/migrations/20260904231420_create_bug_reports.sql"),
 ]);
 
-includes(indexHtml, 'href="https://github.com/FraGioco9/mfl-front-office/issues/new"', "The static footer anchor must remain identifiable until the in-site runtime assumes ownership.");
+includes(indexHtml, 'href="https://github.com/FraGioco9/mfl-front-office/issues/new"', "The static footer anchor must remain identifiable until guaranteed bootstrap ownership neutralizes it.");
 includes(indexHtml, '>Report a bug</a>', "Footer support must expose Report a bug.");
 excludes(
   footer,
@@ -26,10 +27,29 @@ excludes(
   "Report a bug must remain pointer-interactive while the in-site runtime assumes ownership.",
 );
 
+for (const token of [
+  'const BUG_REPORT_CONTROL_SELECTOR =',
+  'function prepareBugReportControl(control = document.querySelector(BUG_REPORT_CONTROL_SELECTOR))',
+  'control.removeAttribute("href");',
+  'control.removeAttribute("target");',
+  'control.removeAttribute("rel");',
+  'function bugReportRuntimeLoader()',
+  'return resources.load("/bug-report-runtime.js");',
+  'function ensureBugReportRuntime()',
+  'function installBugReportBootstrap()',
+  'document.addEventListener("click", activate, true);',
+  'document.addEventListener("keydown", activateKeyboard, true);',
+  'void ensureBugReportRuntime().catch((error) => {',
+  'installBugReportBootstrap();',
+]) {
+  includes(bootstrapCore, token, `Guaranteed bug report bootstrap contract is missing: ${token}`);
+}
+excludes(bootstrapCore, "window.open", "Guaranteed bug report bootstrap must never open GitHub or any external window.");
+
 const controlIndex = appEntry.indexOf('"/control-interactions-runtime.js"');
 const bugRuntimeIndex = appEntry.indexOf('"/bug-report-runtime.js"');
 if (controlIndex < 0 || bugRuntimeIndex <= controlIndex) {
-  throw new Error("Bug report runtime must load universally after the global control-interaction runtime.");
+  throw new Error("Bug report runtime must remain in the universal application runtime group after global control interactions.");
 }
 
 for (const token of [
@@ -118,4 +138,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with delegated in-site activation and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with guaranteed bootstrap ownership, delegated in-site activation, and no external escape path.");
