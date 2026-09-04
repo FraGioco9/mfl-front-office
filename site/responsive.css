@@ -3334,6 +3334,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .siteFooterDetailsIdentity p,
+  .siteFooterDetailsCreatorName,
+  .siteFooterDetailsDiscord,
   .siteFooterDetailsGroup a {
     font-size: 10px;
   }
@@ -3351,7 +3353,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .siteFooterDetailsNavigation {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -3409,6 +3411,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .siteFooterDetailsIdentity p,
+  .siteFooterDetailsCreatorName,
+  .siteFooterDetailsDiscord,
   .siteFooterDetailsGroup a {
     font-size: 8px;
   }
