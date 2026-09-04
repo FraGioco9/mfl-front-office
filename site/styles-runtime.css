@@ -6949,7 +6949,21 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
 @media (max-width: 900px) {
   html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
     #evaluationSearchResults[hidden]:empty::before {
-    font-size: 11px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
+    #evaluationSearchResults[hidden]:empty::before {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 380px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
+    #evaluationSearchResults[hidden]:empty::before {
+    font-size: 8px;
   }
 }
 

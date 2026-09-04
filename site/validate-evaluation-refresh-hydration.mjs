@@ -3,7 +3,7 @@ import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
-const [appCoreSource, bootstrap, searchRuntime] = await Promise.all([
+const [appCoreSource, bootstrap, searchRuntime, loading, responsive] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"), read("./modules/core-sources/evaluation.js"),
     read("./modules/core-sources/mfl-stats.js"), read("./modules/core-sources/club.js"),
@@ -12,6 +12,7 @@ const [appCoreSource, bootstrap, searchRuntime] = await Promise.all([
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
   read("./bootstrap.js"), read("./evaluation-search-state-runtime.js"),
+  read("./loading.css"), read("./responsive.css"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
@@ -73,6 +74,19 @@ invariant(!prime.includes("focus(") && !prime.includes("select()")
   && searchRuntime.includes('hint.textContent = "Loading…";')
   && searchRuntime.includes("ownsEmptyRecentResults"),
   "Plain Evaluation must not auto-focus, while unresolved recent-five rows show one local Loading… surface on refresh and in-site entry.");
+
+const firstPaintLoadingSelector = 'html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n  #evaluationSearchResults[hidden]:empty::before';
+invariant(
+  loading.includes(`${firstPaintLoadingSelector} {\n  content: "Loading…";\n  color: var(--text-soft);\n  font-size: 12px;\n}`)
+    && loading.includes(`@media (max-width: 900px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 10px;\n  }\n}`)
+    && loading.includes(`@media (max-width: 520px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 9px;\n  }\n}`)
+    && loading.includes(`@media (max-width: 380px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 8px;\n  }\n}`)
+    && responsive.includes(".searchHint {\n    font-size: 10px;\n  }")
+    && responsive.includes(".searchHint {\n    font-size: 9px;\n  }")
+    && responsive.includes(".searchHint {\n    font-size: 8px;\n  }"),
+  "Evaluation parser-time Loading… typography must match the hydrated searchHint contract at desktop, tablet, phone, and tiny-phone breakpoints.",
+);
+
 invariant(bootstrap.includes("function syncFirstPaintEvaluationRecentLoadingShell()")
   && bootstrap.includes('const currentHint = results.firstElementChild;')
   && bootstrap.includes('results.dataset.mflEvaluationRecentLoading === "true"')
@@ -90,4 +104,4 @@ invariant(bootstrap.includes("function firstPaintEvaluationRouteState(")
   && !bootstrap.includes("searchInput.select();"),
   "Bootstrap may restore selected names but must never auto-focus plain Evaluation.");
 new Function(shared); new Function(evaluation);
-console.log("Evaluation refresh/loading validation passed: one snapshot lifecycle, stale-route guards, local recent-five Loading feedback, background refresh, cached saved reuse, and no autofocus.");
+console.log("Evaluation refresh/loading validation passed: one snapshot lifecycle, stale-route guards, stable Loading typography, local recent-five Loading feedback, background refresh, cached saved reuse, and no autofocus.");
