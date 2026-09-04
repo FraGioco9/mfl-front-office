@@ -57,7 +57,15 @@ export default [
     rules: js.configs.recommended.rules,
   },
   {
-    files: ["build-app-core.mjs", "validate*.mjs"],
+    files: [
+      "build-*.mjs",
+      "style-bundle.mjs",
+      "validation-text.mjs",
+      "vercel-config-source.mjs",
+      "ci-quality-scope.mjs",
+      "sync-release-projections.mjs",
+      "validate*.mjs",
+    ],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
