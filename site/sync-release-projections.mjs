@@ -225,8 +225,8 @@ export function normalizeIndexReleaseProjection(source, version) {
   const releaseVersion = semanticVersion(version);
   return replaceExactlyOnce(
     String(source || ""),
-    /<a href="\/changelog" data-page="changelog">MFL Front Office(?: v\d+\.\d+\.\d+)?<\/a>/g,
-    `<a href="/changelog" data-page="changelog">MFL Front Office v${releaseVersion}</a>`,
+    /<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="\/changelog" data-page="changelog">MFL Front Office(?: v\d+\.\d+\.\d+)?<\/a>/g,
+    `<a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v${releaseVersion}</a>`,
     "index footer release projection",
   );
 }
