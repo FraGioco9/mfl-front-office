@@ -1,5 +1,5 @@
 diff --git a/site/modules/core-sources/table.js b/site/modules/core-sources/table.js
-index 49c2a95..7491720 100644
+index 49c2a95..44ede85 100644
 --- a/site/modules/core-sources/table.js
 +++ b/site/modules/core-sources/table.js
 @@ -568,6 +568,11 @@ let playerTableActionWindowOuterWidth = 0;
@@ -108,13 +108,12 @@ index 49c2a95..7491720 100644
    const menuRect = playerTableActionMenu.getBoundingClientRect();
 -  const edgeGap = 8;
 -  const menuGap = 6;
--  let left = triggerRect.left;
+   let left = triggerRect.left;
 -  left = Math.max(edgeGap, Math.min(left, window.innerWidth - menuRect.width - edgeGap));
 -  let top = triggerRect.bottom + menuGap;
 -  if (top + menuRect.height > window.innerHeight - edgeGap) {
 -    top = Math.max(edgeGap, triggerRect.top - menuRect.height - menuGap);
-+  let left;
-+  let top;
++  let top = triggerRect.bottom;
 +  if (preserveAnchorOffset) {
 +    left = triggerRect.left + playerTableActionAnchorOffsetLeft;
 +    top = triggerRect.top + playerTableActionAnchorOffsetTop;
