@@ -96,7 +96,7 @@
   function syncFooter() {
     const version = String(window.__mflReleaseVersion || window.__mflRelease?.version || "").trim();
     if (!/^\d+\.\d+\.\d+$/.test(version)) return;
-    const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    const footer = document.querySelector('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
     if (footer instanceof HTMLElement) footer.textContent = `MFL Front Office v${version}`;
     document.querySelectorAll("[data-app-version]").forEach((element) => {
       if (element instanceof HTMLElement) element.textContent = `v${version}`;

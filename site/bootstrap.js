@@ -1006,7 +1006,7 @@
 
   primeInitialShell();
 
-  const footerVersion = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+  const footerVersion = document.querySelector('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
   if (footerVersion) footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
   const runtimeResourcePromises = new Map();
