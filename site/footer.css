@@ -90,13 +90,12 @@ main > .pageView:not([hidden]) {
   font-weight: 800;
   line-height: 1.1;
   text-decoration: none;
-  transition: color var(--mfl-motion-fast, 120ms) ease, transform var(--mfl-motion-fast, 120ms) ease;
+  transition: color var(--mfl-motion-fast, 120ms) ease;
 }
 
 .siteFooterDetails a[href="/changelog"]:hover,
 .siteFooterDetails a[data-page="changelog"]:hover {
   color: var(--primary);
-  transform: translateY(-1px);
 }
 
 .siteFooterDetailsCreatorLinks {
