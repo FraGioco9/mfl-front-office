@@ -37,6 +37,9 @@ for (const token of [
   'return resources.load("/bug-report-runtime.js");',
   'function ensureBugReportRuntime()',
   'function installBugReportBootstrap()',
+  'event.preventDefault();',
+  'event.stopImmediatePropagation();',
+  'void ensureBugReportRuntime()\n        .then((runtime) => runtime.open())',
   'document.addEventListener("click", activate, true);',
   'document.addEventListener("keydown", activateKeyboard, true);',
   'void ensureBugReportRuntime().catch((error) => {',
@@ -44,6 +47,11 @@ for (const token of [
 ]) {
   includes(bootstrapCore, token, `Guaranteed bug report bootstrap contract is missing: ${token}`);
 }
+excludes(
+  bootstrapCore,
+  'if (window.__mflBugReportRuntime?.open) return;',
+  "Guaranteed bug report activation must not become inert once the form runtime is already loaded.",
+);
 excludes(bootstrapCore, "window.open", "Guaranteed bug report bootstrap must never open GitHub or any external window.");
 
 const controlIndex = appEntry.indexOf('"/control-interactions-runtime.js"');
@@ -138,4 +146,4 @@ for (const token of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup and private Supabase intake validation passed with guaranteed bootstrap ownership, delegated in-site activation, and no external escape path.");
+console.log("Bug report popup and private Supabase intake validation passed with guaranteed direct opening, delegated in-site activation, and no external escape path.");
