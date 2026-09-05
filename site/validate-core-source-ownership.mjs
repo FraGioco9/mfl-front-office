@@ -10,7 +10,8 @@ const invariant = (condition, message) => {
 
 const build = await read("./build-app-core.mjs");
 invariant(build.includes('import { coreSourceManifest } from "./modules/core-source-manifest.js";'), "Application-core build must consume the canonical core source manifest.");
-invariant(build.includes("modules/core-sources"), "Application-core build must consume canonical split sources.");
+invariant(build.includes("for (const entry of coreSourceManifest)"), "Application-core build must generate every canonical split source from the manifest.");
+invariant(build.includes('resolve(siteRoot, "modules", "core-sources", entry.source)'), "Application-core build must resolve canonical split source files from manifest entries.");
 invariant(!build.includes("app-core-build-normalizer"), "Application-core build must not depend on behavior-changing normalizers.");
 invariant(!build.includes("replaceRequired"), "Application-core build must not perform source-string behavior rewrites.");
 invariant(!build.includes("modules/app-core.js"), "Application-core build must not depend on the retired monolith.");
@@ -20,13 +21,17 @@ for (const entry of coreSourceManifest) {
   invariant(!domains.has(entry.domain), `Core source manifest domain must be unique: ${entry.domain}.`);
   domains.add(entry.domain);
   invariant(Number.isInteger(entry.maxSourceBytes) && entry.maxSourceBytes > 0, `Core source ${entry.domain} must have a positive ownership budget.`);
+  invariant(String(entry.banner || "").includes("Do not edit directly"), `Core source ${entry.domain} must define a generated ownership banner.`);
 
   const [source, runtime] = await Promise.all([
     read(`./modules/core-sources/${entry.source}`),
     read(`./modules/${entry.runtime}`),
   ]);
-  const runtimeBody = runtime.replace(/^\/\/ Generated[^\n]*\n/, "");
-  invariant(runtimeBody === source, `Generated ${entry.runtime} must exactly match canonical ${entry.source}.`);
+  invariant(runtime.startsWith(entry.banner), `Generated ${entry.runtime} must carry the manifest-owned banner.`);
+  invariant(
+    runtime.slice(entry.banner.length).replace(/\s*$/, "") === source.replace(/\s*$/, ""),
+    `Generated ${entry.runtime} must exactly match canonical ${entry.source}.`,
+  );
   invariant(Buffer.byteLength(source.replace(/\s*$/, ""), "utf8") <= entry.maxSourceBytes, `Canonical ${entry.domain} source exceeded its manifest ownership budget.`);
 }
 
