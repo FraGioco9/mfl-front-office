@@ -6,17 +6,6 @@ const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const MAX_BODY_BYTES = 32 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REPORTS = 5;
-const AREA_OPTIONS = new Set([
-  "Database / MFL",
-  "Club / Agent / Player pages",
-  "Watchlist / My Players",
-  "Evaluation",
-  "Search / Filters",
-  "Loading / Navigation",
-  "Settings / Account",
-  "Database builder / Data pipeline",
-  "Other",
-]);
 
 class BugReportValidationError extends Error {}
 class BugReportRateLimitError extends Error {}
@@ -34,23 +23,27 @@ function normalizedOptional(value, maxLength) {
 
 function normalizeBugReport(body) {
   const data = body && typeof body === "object" && !Array.isArray(body) ? body : {};
-  const area = normalizedRequired(data.area, "Area", 80);
-  if (!AREA_OPTIONS.has(area)) throw new BugReportValidationError("Area is invalid.");
-
+  const title = normalizedRequired(data.title ?? data.summary, "Title", 120);
+  const route = normalizedRequired(data.route, "Route or page", 300);
+  const description = normalizedRequired(
+    data.description ?? data.actual ?? data.actualBehavior ?? data.reproduction,
+    "Description",
+    4000,
+  );
   const appVersion = normalizedOptional(data.appVersion ?? data.app_version, 32);
   if (appVersion && !/^\d+\.\d+\.\d+$/.test(appVersion)) {
     throw new BugReportValidationError("App version is invalid.");
   }
 
   return {
-    summary: normalizedRequired(data.summary, "Summary", 120),
-    area,
-    route: normalizedRequired(data.route, "Route or page", 300),
-    reproduction: normalizedRequired(data.reproduction, "Steps to reproduce", 4000),
-    expected_behavior: normalizedRequired(data.expected ?? data.expectedBehavior, "Expected behavior", 2000),
-    actual_behavior: normalizedRequired(data.actual ?? data.actualBehavior, "Actual behavior", 2000),
-    environment: normalizedOptional(data.environment, 300),
-    evidence: normalizedOptional(data.evidence, 4000),
+    summary: title,
+    area: "Other",
+    route,
+    reproduction: description,
+    expected_behavior: "Not specified.",
+    actual_behavior: description.slice(0, 2000),
+    environment: "",
+    evidence: description.length > 2000 ? description.slice(2000, 4000) : "",
     app_version: appVersion,
   };
 }

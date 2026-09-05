@@ -3,34 +3,18 @@
 
   window.__mflBugReportRuntime?.destroy?.();
 
-  const REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
+  const REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"]';
   const MODAL_TRANSITION_MS = 190;
-  const AREA_OPTIONS = [
-    "Database / MFL",
-    "Club / Agent / Player pages",
-    "Watchlist / My Players",
-    "Evaluation",
-    "Search / Filters",
-    "Loading / Navigation",
-    "Settings / Account",
-    "Database builder / Data pipeline",
-    "Other",
-  ];
 
   let modal = null;
   let form = null;
   let previousFocus = null;
   let submitting = false;
   let closeTimer = 0;
+  let backdropPointerStarted = false;
 
   function currentRoute() {
     return `${window.location.pathname}${window.location.search}` || "/";
-  }
-
-  function currentEnvironment() {
-    const platform = String(navigator.userAgentData?.platform || navigator.platform || "").trim();
-    const userAgent = String(navigator.userAgent || "").trim();
-    return [platform, userAgent].filter(Boolean).join(" / ").slice(0, 300);
   }
 
   function currentVersion() {
@@ -39,10 +23,6 @@
   }
 
   function modalMarkup() {
-    const areaOptions = AREA_OPTIONS
-      .map((area) => `<option value="${area}">${area}</option>`)
-      .join("");
-
     return `<section class="bugReportDialog" role="dialog" aria-modal="true" aria-labelledby="bugReportTitle">
       <header class="filtersHeader">
         <h2 id="bugReportTitle">Report a bug</h2>
@@ -50,43 +30,23 @@
       </header>
       <form id="bugReportForm" class="bugReportForm">
         <div class="bugReportBody">
-          <label class="field bugReportFieldWide">
-            <span>Summary</span>
-            <input id="bugReportSummary" type="text" maxlength="120" autocomplete="off" required placeholder="Short description of the problem">
-          </label>
-          <label class="field">
-            <span>Area</span>
-            <select id="bugReportArea" required>${areaOptions}</select>
-          </label>
-          <label class="field">
-            <span>Route or page</span>
-            <input id="bugReportRoute" type="text" maxlength="300" autocomplete="off" required>
-          </label>
-          <label class="field bugReportFieldWide">
-            <span>Steps to reproduce</span>
-            <textarea id="bugReportReproduction" maxlength="4000" required placeholder="1. Open ...&#10;2. Click ...&#10;3. Observe ..."></textarea>
-          </label>
-          <label class="field bugReportFieldWide">
-            <span>Expected behavior</span>
-            <textarea id="bugReportExpected" maxlength="2000" required></textarea>
-          </label>
-          <label class="field bugReportFieldWide">
-            <span>Actual behavior</span>
-            <textarea id="bugReportActual" maxlength="2000" required></textarea>
-          </label>
-          <label class="field bugReportFieldWide">
-            <span>Device and browser</span>
-            <input id="bugReportEnvironment" type="text" maxlength="300" autocomplete="off">
-          </label>
-          <label class="field bugReportFieldWide">
-            <span>Screenshots, console errors, or extra context</span>
-            <textarea id="bugReportEvidence" maxlength="4000" placeholder="Paste links, console messages, or any additional context"></textarea>
-          </label>
+          <div class="field">
+            <span id="bugReportTitleLabel">Title</span>
+            <input id="bugReportTitleInput" type="text" maxlength="120" autocomplete="off" required aria-labelledby="bugReportTitleLabel">
+          </div>
+          <div class="field">
+            <span id="bugReportRouteLabel">Route or page</span>
+            <input id="bugReportRoute" type="text" maxlength="300" autocomplete="off" required aria-labelledby="bugReportRouteLabel">
+          </div>
+          <div class="field">
+            <span id="bugReportDescriptionLabel">Description</span>
+            <textarea id="bugReportDescription" maxlength="4000" required aria-labelledby="bugReportDescriptionLabel"></textarea>
+          </div>
           <p id="bugReportStatus" class="bugReportStatus" role="status" aria-live="polite" hidden></p>
         </div>
         <footer class="filtersFooter bugReportFooter">
           <button id="cancelBugReportButton" type="button">Cancel</button>
-          <button id="submitBugReportButton" class="bugReportSubmitButton" type="submit">Submit report</button>
+          <button id="submitBugReportButton" type="submit">Submit</button>
         </footer>
       </form>
     </section>`;
@@ -103,10 +63,18 @@
     document.body.appendChild(modal);
 
     form = modal.querySelector("#bugReportForm");
-    modal.querySelector("#closeBugReportButton")?.addEventListener("click", () => closeModal());
-    modal.querySelector("#cancelBugReportButton")?.addEventListener("click", () => closeModal());
+    modal.querySelector("#closeBugReportButton")?.addEventListener("click", () => closeModal({ reset: true }));
+    modal.querySelector("#cancelBugReportButton")?.addEventListener("click", () => closeModal({ reset: true }));
+    modal.addEventListener("pointerdown", (event) => {
+      backdropPointerStarted = event.target === modal;
+    });
+    modal.addEventListener("pointercancel", () => {
+      backdropPointerStarted = false;
+    });
     modal.addEventListener("click", (event) => {
-      if (event.target === modal) closeModal();
+      const shouldCloseFromBackdrop = event.target === modal && backdropPointerStarted;
+      backdropPointerStarted = false;
+      if (shouldCloseFromBackdrop) closeModal({ reset: true });
     });
     form?.addEventListener("submit", submitReport);
     return modal;
@@ -122,9 +90,7 @@
 
   function prefillContext() {
     const route = modal?.querySelector("#bugReportRoute");
-    const environment = modal?.querySelector("#bugReportEnvironment");
     if (route instanceof HTMLInputElement) route.value = currentRoute();
-    if (environment instanceof HTMLInputElement && !environment.value.trim()) environment.value = currentEnvironment();
   }
 
   function openModal() {
@@ -139,6 +105,8 @@
     target.hidden = false;
     target.classList.add("modalOpen");
 
+    backdropPointerStarted = false;
+    if (form instanceof HTMLFormElement) form.reset();
     prefillContext();
     setStatus();
     try {
@@ -149,13 +117,13 @@
 
     window.requestAnimationFrame(() => {
       if (target.hidden || !target.classList.contains("modalOpen")) return;
-      const summary = target.querySelector("#bugReportSummary");
-      if (summary instanceof HTMLInputElement) summary.focus();
+      const title = target.querySelector("#bugReportTitleInput");
+      if (title instanceof HTMLInputElement) title.focus();
     });
     return target;
   }
 
-  function closeModal({ reset = false } = {}) {
+  function closeModal({ reset = true } = {}) {
     if (!(modal instanceof HTMLElement) || modal.hidden || submitting) return false;
     modal.classList.remove("modalOpen");
     modal.classList.add("modalClosing");
@@ -176,9 +144,7 @@
 
   function fieldValue(id) {
     const field = modal?.querySelector(`#${id}`);
-    return field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement
-      ? field.value
-      : "";
+    return field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement ? field.value : "";
   }
 
   function walletHeaders() {
@@ -214,14 +180,9 @@
           ...walletHeaders(),
         },
         body: JSON.stringify({
-          summary: fieldValue("bugReportSummary"),
-          area: fieldValue("bugReportArea"),
+          title: fieldValue("bugReportTitleInput"),
           route: fieldValue("bugReportRoute"),
-          reproduction: fieldValue("bugReportReproduction"),
-          expected: fieldValue("bugReportExpected"),
-          actual: fieldValue("bugReportActual"),
-          environment: fieldValue("bugReportEnvironment"),
-          evidence: fieldValue("bugReportEvidence"),
+          description: fieldValue("bugReportDescription"),
           appVersion: currentVersion(),
         }),
       });
@@ -231,7 +192,7 @@
       submitting = false;
       if (submitButton instanceof HTMLButtonElement) {
         submitButton.disabled = false;
-        submitButton.textContent = "Submit report";
+        submitButton.textContent = "Submit";
       }
       closeModal({ reset: true });
       const showToast = Reflect.get(window, "showToast");
@@ -242,7 +203,7 @@
       submitting = false;
       if (submitButton instanceof HTMLButtonElement) {
         submitButton.disabled = false;
-        submitButton.textContent = "Submit report";
+        submitButton.textContent = "Submit";
       }
     }
   }
@@ -261,13 +222,6 @@
   function prepareReportControl(control) {
     if (!(control instanceof HTMLElement)) return false;
     control.dataset.bugReportControl = "true";
-    if (control instanceof HTMLAnchorElement) {
-      control.removeAttribute("href");
-      control.removeAttribute("target");
-      control.removeAttribute("rel");
-      control.setAttribute("role", "button");
-      control.tabIndex = 0;
-    }
     control.setAttribute("aria-haspopup", "dialog");
     control.setAttribute("aria-controls", "bugReportModal");
     return true;
@@ -296,7 +250,7 @@
     if (event.key !== "Escape" || !(modal instanceof HTMLElement) || modal.hidden || submitting) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    closeModal();
+    closeModal({ reset: true });
   }
 
   function bind() {
@@ -317,6 +271,7 @@
     form = null;
     previousFocus = null;
     submitting = false;
+    backdropPointerStarted = false;
   }
 
   bind();

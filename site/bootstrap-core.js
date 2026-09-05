@@ -9,7 +9,6 @@
   const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
   const ROUTE_LOADING_REASON = "route-loading";
   const INITIAL_ROUTE_BOOTSTRAP_REASON = "initial-route-bootstrap";
-  const BUG_REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"], .siteFooterDetails a[href*="/mfl-front-office/issues/new"]';
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -49,21 +48,6 @@
     document.documentElement.dataset.storedWalletOptIn = storedOptIn ? "true" : "false";
     document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
     return { storedOptIn, storedAccess };
-  }
-
-  function prepareBugReportControl(control = document.querySelector(BUG_REPORT_CONTROL_SELECTOR)) {
-    if (!(control instanceof HTMLElement)) return null;
-    control.dataset.bugReportControl = "true";
-    if (control instanceof HTMLAnchorElement) {
-      control.removeAttribute("href");
-      control.removeAttribute("target");
-      control.removeAttribute("rel");
-      control.setAttribute("role", "button");
-      control.tabIndex = 0;
-    }
-    control.setAttribute("aria-haspopup", "dialog");
-    control.setAttribute("aria-controls", "bugReportModal");
-    return control;
   }
 
   function createNavigationController() {
@@ -373,7 +357,6 @@
   }
 
   syncStoredAccessFlags();
-  prepareBugReportControl();
 
   window.__mflNavigation = createNavigationController();
   window.__mflUniformNavigationWorkflow = window.__mflNavigation;

@@ -6754,6 +6754,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   grid-template-columns: repeat(auto-fit, minmax(min(128px, 100%), 1fr));
 }
 
+.bugReportBody input,
+.bugReportBody textarea,
 .filtersDialog [data-filter-value],
 .filtersDialog select,
 #evaluationSearchInput,
@@ -6767,6 +6769,12 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   cursor: pointer;
 }
 
+.bugReportBody input:hover:not(:disabled),
+.bugReportBody input:focus:not(:disabled),
+.bugReportBody input:focus-visible:not(:disabled),
+.bugReportBody textarea:hover:not(:disabled),
+.bugReportBody textarea:focus:not(:disabled),
+.bugReportBody textarea:focus-visible:not(:disabled),
 .filtersDialog [data-filter-value]:hover:not(:disabled),
 .filtersDialog [data-filter-value]:focus:not(:disabled),
 .filtersDialog [data-filter-value]:focus-visible:not(:disabled),
@@ -7118,6 +7126,33 @@ main > .pageView {
   text-transform: uppercase;
 }
 
+.siteFooterDetailsSupportButton {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: left;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.siteFooterDetailsSupportButton:hover:not(:disabled),
+.siteFooterDetailsSupportButton:focus-visible:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  text-decoration: none;
+}
+
 .siteFooterDetailsGroup a {
   width: fit-content;
   max-width: 100%;
@@ -7237,11 +7272,11 @@ body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {
   white-space: nowrap;
 }
 
-/* Report-a-bug popup is owned by the footer/support surface and reuses the global modal backdrop/header/footer language. */
+/* Report-a-bug popup is owned by the footer/support surface and reuses the global modal, field, and button language. */
 .bugReportDialog {
   display: flex;
   flex-direction: column;
-  width: min(720px, calc(100vw - 24px));
+  width: min(620px, calc(100vw - 24px));
   max-height: min(760px, calc(100dvh - 24px));
   min-width: 0;
   border: 1px solid var(--border);
@@ -7260,28 +7295,35 @@ body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {
 
 .bugReportBody {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
   padding: 14px;
   overflow-y: auto;
 }
 
-.bugReportFieldWide,
+.bugReportBody .field,
 .bugReportStatus {
-  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .bugReportBody input,
-.bugReportBody select,
 .bugReportBody textarea {
   box-sizing: border-box;
   width: 100%;
 }
 
 .bugReportBody textarea {
-  min-height: 84px;
-  max-height: 220px;
+  min-height: 112px;
+  max-height: 260px;
+  padding: 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
   resize: vertical;
 }
 
@@ -7299,23 +7341,6 @@ body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {
 
 .bugReportFooter {
   flex: 0 0 auto;
-}
-
-.bugReportFooter button {
-  min-width: 96px;
-}
-
-.bugReportSubmitButton {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
-.bugReportSubmitButton:hover:not(:disabled),
-.bugReportSubmitButton:focus-visible:not(:disabled) {
-  border-color: var(--primary-hover);
-  background: var(--primary-hover);
-  color: #ffffff;
 }
 /* Source: loading.css */
 /* Canonical loading and first-paint state presentation for MFL Front Office. */
