@@ -1,8 +1,8 @@
 /* Canonical footer owner for MFL Front Office. */
 
-/* Keep the sole footer below the initial page area when route content is short or still loading. */
+/* Keep the sole footer below both the main scroll area and a route-independent page-top floor. */
 main > .pageView:not([hidden]) {
-  min-height: calc(100% - 22px);
+  min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));
 }
 
 /* The sole footer lives at the end of the main scroll surface. */

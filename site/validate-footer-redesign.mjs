@@ -61,7 +61,7 @@ invariant(identityIndex >= 0 && versionIndex > identityIndex && descriptionIndex
 
 for (const token of [
   'main > .pageView:not([hidden]) {',
-  'min-height: calc(100% - 22px);',
+  'min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));',
   '.siteFooterDetails {',
   'margin-top: 22px;',
   '.siteFooterDetailsInner {',
@@ -94,6 +94,10 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(
+  !footer.includes('min-height: calc(100% - 22px);'),
+  "Footer placement must not rely only on the active route's percentage height; short routes such as Player pages need the shared viewport floor.",
+);
 invariant(
   footer.includes('body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,\nbody:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {\n  color: var(--primary);\n  cursor: pointer;\n}'),
   "The Changelog title must show a pointer cursor only while hovering outside the active Changelog page.",
