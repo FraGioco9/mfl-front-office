@@ -264,6 +264,7 @@
     if (initialPage.startsWith("players/")) return document.getElementById("playerPage");
     if (initialPage === "settings") return document.getElementById("settingsPage");
     if (initialPage === "changelog") return document.getElementById("changelogPage");
+    if (initialPage === "privacy") return document.getElementById("privacyPage");
     return document.getElementById("homePage");
   }
 
@@ -434,6 +435,12 @@
     const clubPage = normalizedPage === "club";
     const resetFilters = Boolean(options.resetFilters);
     const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};
+    const pageSizeSelect = document.getElementById("pageSizeSelect");
+    const savedPageSize = Number(savedState.pageSize);
+    if (pageSizeSelect instanceof HTMLSelectElement
+      && Array.from(pageSizeSelect.options).some((option) => Number(option.value) === savedPageSize)) {
+      pageSizeSelect.value = String(savedPageSize);
+    }
     const controlState = normalizedBootstrapTableControlState(normalizedPage, view, savedState);
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters instanceof HTMLElement) quickFilters.hidden = clubPage;
@@ -748,6 +755,14 @@
   Reflect.set(window, "__mflPrimeTableHeaderSignature", firstPaintTableHeaderSignature);
   Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);
 
+  const TABLE_LOADING_ROW_OPACITIES = Object.freeze([0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.28, 0.20, 0.13, 0.07]);
+
+  function tableLoadingRowCount() {
+    return TABLE_LOADING_ROW_OPACITIES.length;
+  }
+
+  Reflect.set(window, "__mflTableLoadingRowCount", tableLoadingRowCount);
+
   function primeInitialTableRows(replaceExisting = false) {
     const body = document.getElementById("tableBody");
     const colGroup = document.getElementById("tableColGroup");
@@ -757,9 +772,10 @@
     const renderedColumns = Array.from(colGroup?.children || []);
     const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);
     const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));
-    const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
+    const rowCount = tableLoadingRowCount();
     const fragment = document.createDocumentFragment();
-    opacities.forEach((opacity, index) => {
+    Array.from({ length: rowCount }, (_, index) => {
+      const opacity = TABLE_LOADING_ROW_OPACITIES[index];
       const row = document.createElement("tr");
       row.className = "mflTableLoadingRow";
       row.dataset.loadingRow = String(index + 1);

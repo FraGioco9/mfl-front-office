@@ -241,6 +241,7 @@
     if (state.page === "player") return document.getElementById("playerPage");
     if (state.page === "settings") return document.getElementById("settingsPage");
     if (state.page === "changelog") return document.getElementById("changelogPage");
+    if (state.page === "privacy") return document.getElementById("privacyPage");
     return document.getElementById("homePage");
   }
 

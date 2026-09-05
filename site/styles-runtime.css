@@ -4835,6 +4835,20 @@ html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
   opacity: 1;
 }
 
+/* Privacy first paint. */
+html[data-initial-page="privacy"]:not(.mflInitialRouteResolved) body[data-page="home"]
+  :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
+  display: none;
+  visibility: hidden;
+}
+
+html[data-initial-page="privacy"]:not(.mflInitialRouteResolved) body[data-page="home"] #privacyPage,
+html[data-initial-page="privacy"] body[data-page="privacy"] #privacyPage {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
+
 html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {
   visibility: hidden;
 }
@@ -5058,6 +5072,49 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
   color: var(--primary);
   font-size: 10px;
   font-weight: 700;
+}
+
+
+/* Privacy static page. */
+.privacyPage {
+  width: 100%;
+  max-width: 780px;
+  margin: 14px auto 0;
+  position: relative;
+}
+
+.privacyPage h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.privacyIntro {
+  margin: 0 0 18px;
+  color: var(--text-soft);
+}
+
+.privacyContent {
+  display: grid;
+  gap: 10px;
+}
+
+.privacySection {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.privacySection h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.privacySection p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
 }
 /* Source: scrollbars.css */
 /* Canonical scrollbar owner for MFL Front Office. */
@@ -6981,16 +7038,21 @@ html.mflDataLoading #pageSizeSelect {
 /* Canonical footer owner for MFL Front Office. */
 
 /*
- * Reserve the footer floor on the main scroll surface itself. The explicit first
- * grid row exists before any route has revealed a pageView, so first paint and
- * settled route geometry share the same minimum footer position.
+ * The footer always follows real page content. Every route uses the same fixed
+ * content-top floor, while actual content can only push the footer farther
+ * down. Table loading stays independent of the Rows setting; the 10-row
+ * skeleton is a loading presentation contract, not footer geometry.
  */
 main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(calc(100% - 22px), auto) auto;
+  grid-template-rows: max-content max-content;
   align-content: start;
   row-gap: 22px;
+}
+
+main > .pageView {
+  min-height: 800px;
 }
 
 /* The sole footer lives at the end of the main scroll surface. */
@@ -7037,7 +7099,7 @@ main {
 
 .siteFooterDetailsNavigation {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -7129,6 +7191,12 @@ body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:ho
 
 .siteFooterDetailsGroup a:hover {
   color: var(--primary);
+}
+
+body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {
+  color: var(--text-muted);
+  cursor: default;
+  pointer-events: none;
 }
 
 .siteFooterDetailsGroup a:focus-visible,

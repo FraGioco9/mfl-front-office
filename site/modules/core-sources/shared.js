@@ -349,6 +349,7 @@ const settingsEmailDiscardButton = document.querySelector("#settingsEmailDiscard
 const settingsEmailSaveButton = document.querySelector("#settingsEmailSaveButton");
 const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
+const privacyPage = document.querySelector("#privacyPage");
 const navButtons = document.querySelectorAll(".navButton");
 const brandLinks = document.querySelectorAll(".brandLink");
 const openSearchButton = document.querySelector("#openSearchButton");
@@ -1461,7 +1462,7 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -2089,6 +2090,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     playerPage.hidden = true;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
+    privacyPage.hidden = true;
     if (optInLockedTitle) {
       optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
     }
@@ -2134,6 +2136,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     playerPage.hidden = !playerPageActive;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
+    privacyPage.hidden = true;
 
     if (tablePage) {
       renderTableLoadingShell(pageName);
@@ -2167,6 +2170,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   playerPage.hidden = !playerPageActive;
   settingsPage.hidden = !settingsPageActive;
   changelogPage.hidden = pageName !== "changelog";
+  privacyPage.hidden = pageName !== "privacy";
   if (pageName === "agents") {
     await agentTitleReady;
     if (!pageNavigationIsCurrent(options)) return null;
@@ -8773,6 +8777,7 @@ async function startApp() {
     playerPage.hidden = true;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
+    privacyPage.hidden = true;
     tablePageTitle.textContent = tableTitleForPage(pageName);
     if (route && route.scope !== "empty" && !incrementalRouteIsCached(route, 1)) {
       showTableBusyState();
@@ -8798,6 +8803,7 @@ async function startApp() {
     playerPage.hidden = !playerPageActive;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
+    privacyPage.hidden = true;
 
 
     if (tableRoute) {

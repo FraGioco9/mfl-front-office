@@ -448,6 +448,7 @@ export function browserConfigRuntimeSource(release) {
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
+    if (pageSegment === "privacy" && segments.length === 1) return requestResult(path, "privacy", {}, "/privacy");
 
     if (pageSegment === "database") return tableRequest(path, "database", "/database", segments);
     if (pageSegment === "mfl") return tableRequest(path, "mfl", "/mfl", segments);

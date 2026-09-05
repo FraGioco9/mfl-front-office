@@ -16,6 +16,7 @@
     agents: "Agent",
     settings: "Settings",
     changelog: "Changelog",
+    privacy: "Privacy",
     notfound: "Page not found",
   });
   const GENERIC_TABLE_TITLES = new Set([
@@ -57,7 +58,7 @@
     if (firstPart === "my-players") return "myplayers";
     if (["club", "clubs"].includes(firstPart)) return "club";
     if (firstPart === "players") return "player";
-    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog"].includes(firstPart)) {
+    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
     return "notfound";

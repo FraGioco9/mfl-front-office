@@ -117,12 +117,32 @@ includes(
 includes(
   bootstrap,
   "function primeInitialTableRows(replaceExisting = false) {",
-  "bootstrap.js must seed table routes with five rows before data arrives.",
+  "bootstrap.js must seed table routes with loading rows before data arrives.",
 );
 includes(
   bootstrap,
-  "const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];",
-  "Initial table loading must retain exactly five blank rows.",
+  "const TABLE_LOADING_ROW_OPACITIES = Object.freeze([0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.28, 0.20, 0.13, 0.07]);",
+  "Initial table loading must own exactly ten visibly faded rows.",
+);
+includes(
+  bootstrap,
+  "return TABLE_LOADING_ROW_OPACITIES.length;",
+  "Bootstrap table-loading height must be fixed at ten rows rather than following the Rows selector.",
+);
+includes(
+  bootstrap,
+  'Reflect.set(window, "__mflTableLoadingRowCount", tableLoadingRowCount);',
+  "Bootstrap must publish the fixed ten-row loading count as the sole table-loading height owner.",
+);
+includes(
+  bootstrap,
+  "Array.from({ length: rowCount }, (_, index) => {",
+  "Table loading must render all ten canonical loading rows.",
+);
+includes(
+  bootstrap,
+  "const opacity = TABLE_LOADING_ROW_OPACITIES[index];",
+  "Every one of the ten loading rows must use the canonical fade sequence.",
 );
 includes(
   bootstrap,

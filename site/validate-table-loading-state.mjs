@@ -88,10 +88,10 @@ const beginRequestSource = runtime.slice(beginRequestStart, beginRequestEnd);
 invariant(
   runtime.includes("function hasCanonicalLoadingRows(body) {")
     && runtime.includes('body.dataset.staticLoading === "true"')
-    && runtime.includes("body.rows.length === 5")
+    && runtime.includes("body.rows.length === loadingRowCount()")
     && runtime.includes("Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS))")
     && beginRequestSource.includes("if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();"),
-  "A refresh request must adopt the five blank rows already painted by bootstrap instead of replacing them a second time.",
+  "A refresh request must adopt the ten blank rows already painted by bootstrap instead of replacing them a second time.",
 );
 invariant(
   beginRequestStart >= 0
@@ -309,9 +309,10 @@ invariant(
 );
 
 invariant(
-  bootstrap.includes("const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];")
+  bootstrap.includes("const TABLE_LOADING_ROW_OPACITIES = Object.freeze([0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.28, 0.20, 0.13, 0.07]);")
+    && bootstrap.includes("return TABLE_LOADING_ROW_OPACITIES.length;")
     && bootstrap.includes('row.className = "mflTableLoadingRow";'),
-  "Table loading must continue rendering exactly five blank rows.",
+  "Table loading must continue rendering exactly ten blank rows.",
 );
 
 invariant(

@@ -4770,6 +4770,20 @@ html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
   opacity: 1;
 }
 
+/* Privacy first paint. */
+html[data-initial-page="privacy"]:not(.mflInitialRouteResolved) body[data-page="home"]
+  :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
+  display: none;
+  visibility: hidden;
+}
+
+html[data-initial-page="privacy"]:not(.mflInitialRouteResolved) body[data-page="home"] #privacyPage,
+html[data-initial-page="privacy"] body[data-page="privacy"] #privacyPage {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
+
 html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {
   visibility: hidden;
 }
@@ -4993,4 +5007,47 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
   color: var(--primary);
   font-size: 10px;
   font-weight: 700;
+}
+
+
+/* Privacy static page. */
+.privacyPage {
+  width: 100%;
+  max-width: 780px;
+  margin: 14px auto 0;
+  position: relative;
+}
+
+.privacyPage h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.privacyIntro {
+  margin: 0 0 18px;
+  color: var(--text-soft);
+}
+
+.privacyContent {
+  display: grid;
+  gap: 10px;
+}
+
+.privacySection {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.privacySection h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.privacySection p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
 }
