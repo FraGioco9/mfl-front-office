@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [indexHtml, footer, responsive, stylesBase, staticUi, bootstrap, shared, selectionStack] = await Promise.all([
+const [indexHtml, footer, responsive, stylesBase, styles, staticUi, bootstrap, shared, selectionStack] = await Promise.all([
   read("./index.html"),
   read("./footer.css"),
   read("./responsive.css"),
   read("./styles-base.css"),
+  read("./styles.css"),
   read("./static-ui-runtime.js"),
   read("./bootstrap.js"),
   read("./modules/core-sources/shared.js"),
@@ -21,6 +22,8 @@ for (const token of [
   'Management, scouting, progression, and evaluation tools for MFL.',
   '<nav class="siteFooterDetailsNavigation" aria-label="Footer information">',
   '<span>Support</span>',
+  '<span>Information</span>',
+  '<a href="/privacy" data-page="privacy">Privacy</a>',
   '>Report a bug</a>',
   '<span>Creator</span>',
   'href="https://app.playmfl.com/users/0x9e5b126e993a771a"',
@@ -63,7 +66,9 @@ for (const token of [
   'main {',
   'display: grid;',
   'grid-template-columns: minmax(0, 1fr);',
-  'grid-template-rows: minmax(calc(100% - 22px), auto) auto;',
+  'grid-template-rows: max-content max-content;',
+  'main > .pageView {',
+  'min-height: 800px;',
   'align-content: start;',
   'row-gap: 22px;',
   '.siteFooterDetails {',
@@ -72,7 +77,7 @@ for (const token of [
   'margin-top: 0;',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
-  'grid-template-columns: repeat(2, minmax(0, 1fr));',
+  'grid-template-columns: repeat(3, minmax(0, 1fr));',
   '.siteFooterDetails a[href="/changelog"]',
   '.siteFooterDetails a[data-page="changelog"]',
   'font-size: 14px;',
@@ -100,8 +105,16 @@ for (const token of [
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
 invariant(
-  footer.includes('main {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: minmax(calc(100% - 22px), auto) auto;\n  align-content: start;\n  row-gap: 22px;\n}'),
-  "The main scroll surface must reserve the footer floor itself so the same geometry exists before route hydration and on settled pages.",
+  footer.includes('main {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: max-content max-content;\n  align-content: start;\n  row-gap: 22px;\n}')
+    && footer.includes('main > .pageView {\n  min-height: 800px;\n}'),
+  "The footer must follow actual page content while every route preserves the shared 800px content-top floor independent of Rows.",
+);
+const tableScrollerStart = styles.indexOf('#progressionPage .playerTableScroller {');
+const tableScrollerEnd = styles.indexOf('\n}', tableScrollerStart);
+const tableScrollerBlock = tableScrollerStart >= 0 && tableScrollerEnd > tableScrollerStart ? styles.slice(tableScrollerStart, tableScrollerEnd) : '';
+invariant(
+  tableScrollerBlock && !tableScrollerBlock.includes('min-height:') && !tableScrollerBlock.includes('var(--mfl-table-row-outer-height)'),
+  "Footer placement must not be derived from table row geometry.",
 );
 invariant(
   footer.includes('.siteFooterDetails {\n  grid-column: 1;\n  grid-row: 2;\n  width: 100%;\n  margin-top: 0;'),
@@ -109,7 +122,7 @@ invariant(
 );
 invariant(
   !footer.includes('main > .pageView:not([hidden])'),
-  "Footer placement must not depend on a visible pageView because direct entity routes can temporarily hide every page section at first paint.",
+  "Footer placement must not depend on transient visible-state selectors; stable route classes own the minimum content floor instead.",
 );
 invariant(
   !footer.includes('min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));'),

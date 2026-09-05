@@ -197,6 +197,7 @@
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
+    if (pageSegment === "privacy" && segments.length === 1) return requestResult(path, "privacy", {}, "/privacy");
 
     if (pageSegment === "database") return tableRequest(path, "database", "/database", segments);
     if (pageSegment === "mfl") return tableRequest(path, "mfl", "/mfl", segments);
@@ -339,4 +340,4 @@ window.__mflUniformWidth = Object.freeze({
   source: "styles.css",
   unit: "%",
 });
-window.__mflCoreBuildId = "b3d02f0d142963f8";
+window.__mflCoreBuildId = "9aacf8c9da28bbf7";

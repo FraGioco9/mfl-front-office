@@ -28,6 +28,7 @@ includes(runtime, 'progression: "Progression"', "Progression must expose a route
 includes(runtime, 'myplayers: "My Players"', "My Players must expose a route-aware browser title.");
 includes(runtime, 'settings: "Settings"', "Settings must expose a route-aware browser title.");
 includes(runtime, 'changelog: "Changelog"', "Changelog must expose a route-aware browser title.");
+includes(runtime, 'privacy: "Privacy"', "Privacy must expose a route-aware browser title.");
 includes(runtime, 'textFrom("#playerDetail .playerTitleName")', "Player browser titles must reuse the rendered Player name.");
 includes(runtime, 'return withAppName(playerName);', "Player browser titles must include the MFL Front Office suffix.");
 includes(runtime, 'document.getElementById("evaluationSearchInput")', "Evaluation browser titles must reuse the full selected Player identity kept in the Evaluation search input.");

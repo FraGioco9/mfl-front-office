@@ -19,6 +19,8 @@ const validators = [
   "validate-account-button-icon.mjs",
   "validate-theme-icons.mjs",
   "validate-footer-redesign.mjs",
+  "validate-footer-loading-stability.mjs",
+  "validate-privacy-page.mjs",
 ];
 
 for (const validator of validators) {

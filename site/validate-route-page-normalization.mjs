@@ -233,6 +233,8 @@ const routeCases = [
   ["/settings", "settings", "", "/settings", ""],
   ["/settings/profile", "notfound", "", "/settings/profile", "Page"],
   ["/changelog", "changelog", "", "/changelog", ""],
+  ["/privacy", "privacy", "", "/privacy", ""],
+  ["/privacy/details", "notfound", "", "/privacy/details", "Page"],
   ["/changelog/1", "notfound", "", "/changelog/1", "Page"],
   ["/unknown", "notfound", "", "/unknown", "Page"],
 ];

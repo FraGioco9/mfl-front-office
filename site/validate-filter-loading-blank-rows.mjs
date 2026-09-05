@@ -40,9 +40,10 @@ invariant(
   "Blank-mode table requests must replace settled rows through the canonical table-loading runtime.",
 );
 invariant(
-  bootstrap.includes("const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];")
+  bootstrap.includes("const TABLE_LOADING_ROW_OPACITIES = Object.freeze([0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.28, 0.20, 0.13, 0.07]);")
+    && bootstrap.includes("return TABLE_LOADING_ROW_OPACITIES.length;")
     && bootstrap.includes('row.className = "mflTableLoadingRow";'),
-  "Filter loading must reuse exactly the existing five-row table loading skeleton.",
+  "Filter loading must reuse exactly ten canonical faded loading rows.",
 );
 invariant(
   styles.includes("--mfl-table-row-outer-height: 39px;")
@@ -54,7 +55,7 @@ invariant(
   !loading.includes(".mflTableLoadingRow {\n  height:")
     && !loading.includes(".mflTableLoadingRow > td {\n  height:")
     && !loading.includes(".mflTableLoadingRow:last-child"),
-  "Loading presentation must not own separate row height or last-row border geometry; all five placeholders must inherit the desktop row contract.",
+  "Loading presentation must not own separate row height or last-row border geometry; all ten placeholders must inherit the desktop row contract.",
 );
 invariant(
   styles.includes("#tableBody > .mflTableLoadingRow > td {\n  padding-top: 0;\n  padding-bottom: 0;\n  background: var(--surface-muted);")
@@ -112,4 +113,4 @@ invariant(
   "The canonical table-loading owner must hide both pager navigation and the Showing x/y players summary.",
 );
 
-console.log("Quick Filter loading keeps exactly five equal blank rows on canonical row geometry, with horizontal scrollbar chrome removed from the loading surface.");
+console.log("Quick Filter loading keeps exactly ten equal blank rows on canonical row geometry, with horizontal scrollbar chrome removed from the loading surface.");

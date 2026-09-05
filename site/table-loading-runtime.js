@@ -71,10 +71,16 @@
     return true;
   }
 
+  function loadingRowCount() {
+    const owner = Reflect.get(window, "__mflTableLoadingRowCount");
+    const count = typeof owner === "function" ? Number(owner()) : 10;
+    return Number.isInteger(count) && count > 0 ? count : 10;
+  }
+
   function hasCanonicalLoadingRows(body) {
     return body instanceof HTMLTableSectionElement
       && body.dataset.staticLoading === "true"
-      && body.rows.length === 5
+      && body.rows.length === loadingRowCount()
       && Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS));
   }
 

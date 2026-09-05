@@ -330,6 +330,7 @@
       playerPage.hidden = true;
       settingsPage.hidden = true;
       changelogPage.hidden = true;
+      privacyPage.hidden = true;
       state.page = 1;
       state.pageSize = Math.max(100, clubRows().length || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);

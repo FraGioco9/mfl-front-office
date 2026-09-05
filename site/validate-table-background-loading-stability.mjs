@@ -18,7 +18,7 @@ for (const required of [
   ": prepareLoadingSurface();",
   "function hasCanonicalLoadingRows(body) {",
   'body.dataset.staticLoading === "true"',
-  "body.rows.length === 5",
+  "body.rows.length === loadingRowCount()",
   "Array.from(body.rows).every((row) => row.classList.contains(BLANK_ROW_CLASS))",
   "if (body && !preserveRenderedRows && !hasCanonicalLoadingRows(body)) primeLoadingRows();",
   "function syncRenderedRows() {",
