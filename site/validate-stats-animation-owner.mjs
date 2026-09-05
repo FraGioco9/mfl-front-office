@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
+
 const read = async (path) => (await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -139,11 +141,12 @@ includes(
   "mflStatsPreparedRowsForCurrentRoute",
   "The canonical MFL Stats normalizer must own prepared filter-row caching.",
 );
-includes(
-  buildCore,
-  'source: "mfl-stats.js"',
-  "The canonical application-core build must consume the source-owned MFL Stats runtime.",
+invariant(
+  coreSourceByDomain.mflstats?.source === "mfl-stats.js"
+    && coreSourceByDomain.mflstats?.runtime === "app-core-mfl-stats-runtime.js",
+  "The core manifest must consume the source-owned MFL Stats runtime.",
 );
+excludes(buildCore, "app-core-stats-route-ownership", "The canonical application-core build must not restore the retired MFL Stats transform owner.");
 
 // Route loading may change data ownership, but it must not take ownership of hover or component animation behavior.
 invariant(!loadingStyles.includes("mflInteractionBusy"), "Stats animation ownership must not depend on a retired global busy blocker.");

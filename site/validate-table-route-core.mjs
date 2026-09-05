@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
+
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -24,7 +26,13 @@ new Function(tableCore);
 
 excludes(buildCore, "app-core-table-chunk", "The canonical build must not depend on the retired Table splitter.");
 excludes(buildCore, "app-core-build-normalizer", "The canonical build must not depend on the retired build normalizer.");
-includes(buildCore, 'Object.freeze({ source: "table.js", runtime: "app-core-table-runtime.js"', "The build must generate Table runtime directly from table.js.");
+includes(buildCore, 'from "./modules/core-source-manifest.js"', "The build must consume the canonical source manifest.");
+includes(buildCore, "for (const entry of coreSourceManifest)", "The build must generate Table and other core runtimes from the canonical manifest.");
+invariant(
+  coreSourceByDomain.table?.source === "table.js"
+    && coreSourceByDomain.table?.runtime === "app-core-table-runtime.js",
+  "Canonical manifest must map Table source ownership to its generated runtime.",
+);
 
 includes(sharedCore, "let __mflTableTitleForPageOwner = null;", "Shared core must keep the stable table-title facade slot.");
 includes(sharedCore, "const tableTitleForPage = function (pageName) {", "Shared core must expose tableTitleForPage before lazy Table loading.");
@@ -110,8 +118,8 @@ excludes(appEntry, "function routeNeedsTable", "app-entry must not duplicate Tab
 includes(sharedCore, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Startup must resolve the initial route canonically.");
 includes(sharedCore, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Startup must load route dependencies before startApp.");
 
-const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
-invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the canonical build banner.");
+const tableBanner = String(coreSourceByDomain.table?.banner || "");
+invariant(tableBanner && generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the canonical manifest-owned build banner.");
 invariant(
   generatedTable.slice(tableBanner.length).replace(/\s*$/, "") === tableCore.replace(/\s*$/, ""),
   "Generated Table runtime must exactly match canonical table.js.",

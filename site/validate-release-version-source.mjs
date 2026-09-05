@@ -1,11 +1,12 @@
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 
 import {
   normalizeBootstrapReleaseProjection,
   normalizeIndexReleaseProjection,
 } from "./sync-release-projections.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -46,14 +47,22 @@ invariant(
   "The canonical build must regenerate release projections from release.json before browser artifacts.",
 );
 invariant(
-  siteQualityWorkflow.includes("npm run build:core && npm run build:styles")
+  siteQualityWorkflow.includes("run: npm run build")
     && siteQualityWorkflow.includes("site/bootstrap.js")
     && siteQualityWorkflow.includes("site/bootstrap-core.js")
     && siteQualityWorkflow.includes("site/index.html")
+    && siteQualityWorkflow.includes("site/vercel.production.json")
     && siteQualityWorkflow.includes("site/styles-runtime.css")
     && siteQualityWorkflow.includes("site/modules/app-core-*-runtime.js")
     && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
   "Site Quality must own one ordered build-and-commit path for release projections and generated site artifacts.",
+);
+invariant(
+  siteQualityWorkflow.includes("checks: write")
+    && siteQualityWorkflow.includes("Publish exact generated-head quality check")
+    && siteQualityWorkflow.includes('name: "quality"')
+    && siteQualityWorkflow.includes('conclusion: "success"'),
+  "Site Quality must publish an explicit successful quality check on the exact bot-generated PR head after verification.",
 );
 invariant(
   !releaseProjectionWorkflowExists,
@@ -109,4 +118,4 @@ invariant(
   "Footer title projection generation must replace a stale version from the canonical release input.",
 );
 
-console.log(`Single release source validation passed for v${version}: Site Quality is the sole generated-artifact writer and release merges automatically clean unused branches.`);
+console.log(`Single release source validation passed for v${version}: Site Quality is the sole generated-artifact writer and exact generated heads receive a verified quality check.`);

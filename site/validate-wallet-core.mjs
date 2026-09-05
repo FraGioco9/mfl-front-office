@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -68,7 +69,7 @@ excludes(walletCore, "function optOutWallet() {", "Opt-out must not depend on lo
 includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical app config must map the Wallet action core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "Route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'ensure("wallet")', "Wallet core must not be eagerly primed during startup.");
-includes(buildCore, 'Object.freeze({ source: "wallet.js", runtime: "app-core-wallet-runtime.js"', "Core build must generate Wallet directly from canonical source.");
+invariant(coreSourceByDomain.wallet?.source === "wallet.js" && coreSourceByDomain.wallet?.runtime === "app-core-wallet-runtime.js", "Core manifest must generate Wallet directly from canonical source.");
 excludes(buildCore, "app-core-wallet-chunk.js", "Core build must not depend on the retired Wallet splitter.");
 
 const walletBanner = "// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.\n";

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -102,13 +103,21 @@ excludes(playerCore, "!important", "Player route core must not use CSS priority 
 
 includes(appConfig, 'player: "/modules/app-core-player-runtime.js"', "Canonical app config must map Player to its generated core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "Route-core loader must consume canonical core paths.");
-includes(buildCore, 'Object.freeze({ source: "player.js", runtime: "app-core-player-runtime.js"', "Core build must generate Player directly from its canonical source.");
+includes(buildCore, 'from "./modules/core-source-manifest.js"', "Core build must consume the canonical source manifest.");
+includes(buildCore, "for (const entry of coreSourceManifest)", "Core build must generate every runtime from the canonical manifest.");
+invariant(
+  coreSourceByDomain.player?.source === "player.js"
+    && coreSourceByDomain.player?.runtime === "app-core-player-runtime.js",
+  "Canonical manifest must map Player source ownership to its generated runtime.",
+);
 excludes(buildCore, "app-core-player-chunk.js", "Core build must not depend on the retired Player splitter.");
 
-const banner = "// Generated Player core from modules/core-sources/player.js. Do not edit directly.\n";
+const banner = String(coreSourceByDomain.player?.banner || "");
 invariant(
-  generatedPlayer.startsWith(banner) && generatedPlayer.slice(banner.length).replace(/\s*$/, "") === playerCore.replace(/\s*$/, ""),
-  "Generated Player runtime must exactly match its canonical source.",
+  banner
+    && generatedPlayer.startsWith(banner)
+    && generatedPlayer.slice(banner.length).replace(/\s*$/, "") === playerCore.replace(/\s*$/, ""),
+  "Generated Player runtime must exactly match its canonical manifest-owned source.",
 );
 
 console.log("Player route core validation passed: source-owned pending/detail rendering, stable hero geometry, note limits, lazy route ownership, and deterministic generated output.");

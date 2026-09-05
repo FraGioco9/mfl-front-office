@@ -8,17 +8,23 @@ supabase-schema.sql
 
 # Site development, validation, and deployment configuration assets.
 site/validate*.mjs
+site/validation-text.mjs
+site/ci-quality-scope.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types
 site/vercel.production.json
 
 # Site compiler sources are build-only. Production serves generated application-core
-# runtimes and the bundled primary stylesheet created before Vercel packaging.
+# runtimes, generated Vercel config, and the bundled primary stylesheet.
 site/build-app-core.mjs
 site/build-styles.mjs
+site/style-bundle.mjs
+site/build-vercel-config.mjs
+site/vercel-config-source.mjs
 site/sync-release-projections.mjs
 site/modules/app-config.js
+site/modules/core-source-manifest.js
 site/modules/pre-bootstrap-route-state.js
 site/modules/package.json
 site/modules/core-sources

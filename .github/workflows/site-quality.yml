@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  checks: write
 
 concurrency:
   group: site-quality-${{ github.event.pull_request.number || github.ref }}
@@ -25,94 +26,20 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
       - name: Detect relevant changes
         id: changes
         working-directory: .
-        shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            BASE_SHA="$PR_BASE_SHA"
-            HEAD_SHA="$PR_HEAD_SHA"
-          else
-            BASE_SHA="$BEFORE_SHA"
-            HEAD_SHA="$CURRENT_SHA"
-          fi
-
-          if [ -z "$BASE_SHA" ] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
-            BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || true)"
-          fi
-
-          if [ -z "$BASE_SHA" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            echo "site=true" >> "$GITHUB_OUTPUT"
-            echo "builder=true" >> "$GITHUB_OUTPUT"
-            echo "workflow=true" >> "$GITHUB_OUTPUT"
-            echo "quality=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          site=false
-          builder=false
-          workflow=false
-
-          mapfile -t CHANGED_FILES < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-          printf 'Changed files:\n'
-          printf '  %s\n' "${CHANGED_FILES[@]}"
-
-          for file in "${CHANGED_FILES[@]}"; do
-            case "$file" in
-              site/*|.gitattributes)
-                site=true
-                ;;
-              *.py|requirements*.txt|pyproject.toml)
-                builder=true
-                ;;
-              .vercelignore)
-                workflow=true
-                ;;
-              .github/workflows/*.yml|.github/workflows/*.yaml)
-                while IFS= read -r line; do
-                  case "$line" in
-                    +++*|---*|@@*)
-                      continue
-                      ;;
-                    +*|-*)
-                      changed_line="${line:1}"
-                      if [[ "$changed_line" =~ ^name:[[:space:]] ]]; then
-                        continue
-                      fi
-                      if [ -n "$changed_line" ]; then
-                        workflow=true
-                        break
-                      fi
-                      ;;
-                  esac
-                done < <(git diff --unified=0 "$BASE_SHA" "$HEAD_SHA" -- "$file")
-                ;;
-            esac
-          done
-
-          quality=false
-          if [ "$site" = true ] || [ "$builder" = true ] || [ "$workflow" = true ]; then
-            quality=true
-          fi
-
-          echo "site=$site" >> "$GITHUB_OUTPUT"
-          echo "builder=$builder" >> "$GITHUB_OUTPUT"
-          echo "workflow=$workflow" >> "$GITHUB_OUTPUT"
-          echo "quality=$quality" >> "$GITHUB_OUTPUT"
-
-          echo "Site changes: $site"
-          echo "Database builder changes: $builder"
-          echo "Substantive workflow/deployment changes: $workflow"
-          echo "Run repository validation: $quality"
+        run: node site/ci-quality-scope.mjs
 
       - uses: actions/setup-python@v7
         if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
@@ -134,11 +61,6 @@ jobs:
         working-directory: .
         run: python -m unittest discover -v -p "test_*.py"
 
-      - uses: actions/setup-node@v7
-        if: steps.changes.outputs.quality == 'true'
-        with:
-          node-version: 22
-
       - name: Reliable scheduler regression tests
         if: steps.changes.outputs.workflow == 'true'
         working-directory: .
@@ -150,7 +72,7 @@ jobs:
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build:core && npm run build:styles
+        run: npm run build
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'
@@ -165,6 +87,7 @@ jobs:
         run: npm run validate
 
       - name: Commit generated site artifacts
+        id: generated
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
@@ -179,19 +102,51 @@ jobs:
             site/bootstrap.js \
             site/bootstrap-core.js \
             site/index.html \
+            site/vercel.json \
+            site/vercel.production.json \
             site/styles-runtime.css \
             site/table-width-runtime.js \
             site/modules/app-core-runtime.js \
             site/modules/app-core-*-runtime.js
           if git diff --cached --quiet; then
             echo "Generated site artifacts are current."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Regenerate site artifacts"
           git push origin "HEAD:$HEAD_BRANCH"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Verify generated site artifacts
         if: steps.changes.outputs.quality == 'true'
         run: npm run verify:generated
+
+      - name: Publish exact generated-head quality check
+        if: steps.generated.outputs.committed == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GENERATED_HEAD: ${{ steps.generated.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DETAILS_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          jq -n \
+            --arg sha "$GENERATED_HEAD" \
+            --arg details "$DETAILS_URL" \
+            '{
+              name: "quality",
+              head_sha: $sha,
+              status: "completed",
+              conclusion: "success",
+              details_url: $details,
+              output: {
+                title: "Generated artifacts validated",
+                summary: "Site Quality validated the source commit, regenerated tracked artifacts, verified the generated tree, and published this result on the exact generated PR head."
+              }
+            }' \
+            | gh api --method POST "repos/${GITHUB_REPOSITORY}/check-runs" --input -

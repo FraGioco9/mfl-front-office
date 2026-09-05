@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
+
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -45,9 +47,9 @@ new Function(clubCore);
 
 excludes(buildCore, "app-core-route-chunks", "The canonical build must not depend on the retired route splitter.");
 excludes(buildCore, "app-core-build-normalizer", "The canonical build must not depend on the retired build normalizer.");
-includes(buildCore, 'Object.freeze({ source: "shared.js", runtime: "app-core-runtime.js"', "The build must generate shared runtime directly from shared.js.");
-includes(buildCore, 'Object.freeze({ source: "table.js", runtime: "app-core-table-runtime.js"', "The build must generate Table runtime directly from table.js.");
-includes(buildCore, 'Object.freeze({ source: "club.js", runtime: "app-core-club-runtime.js"', "The build must generate Club runtime directly from club.js.");
+invariant(coreSourceByDomain.shared?.source === "shared.js" && coreSourceByDomain.shared?.runtime === "app-core-runtime.js", "The core manifest must generate shared runtime directly from shared.js.");
+invariant(coreSourceByDomain.table?.source === "table.js" && coreSourceByDomain.table?.runtime === "app-core-table-runtime.js", "The core manifest must generate Table runtime directly from table.js.");
+invariant(coreSourceByDomain.club?.source === "club.js" && coreSourceByDomain.club?.runtime === "app-core-club-runtime.js", "The core manifest must generate Club runtime directly from club.js.");
 
 excludes(sharedCore, 'const CLUB_PAGE = "club";', "Club route implementation must not execute in shared core.");
 excludes(sharedCore, "async function openClubPage(clubId", "Club route hydration must remain Club-owned.");

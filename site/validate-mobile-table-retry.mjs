@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
+
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const includes = (source, expected, message) => {
   if (!source.includes(expected)) throw new Error(message);
@@ -71,7 +73,9 @@ excludes(bootstrap, 'if (column === "positions") return "POSITIONS";', "Bootstra
 includes(bootstrap, "function firstPaintTableColumnLabel(page, column)", "Bootstrap must derive first-paint labels from viewport and column identity.");
 
 excludes(buildCore, "app-core-mobile-table", "The canonical build must not depend on the retired mobile-table transform.");
-includes(buildCore, 'Object.freeze({ source: "table.js", runtime: "app-core-table-runtime.js"', "The canonical build must emit Table runtime directly from table.js.");
+if (coreSourceByDomain.table?.source !== "table.js" || coreSourceByDomain.table?.runtime !== "app-core-table-runtime.js") {
+  throw new Error("The core manifest must emit Table runtime directly from table.js.");
+}
 
 const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
 if (!generatedTable.startsWith(tableBanner)) throw new Error("Generated Table runtime is missing its canonical banner.");

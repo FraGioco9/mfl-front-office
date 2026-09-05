@@ -1,5 +1,6 @@
 const validators = [
-  "validate-text-read-normalization.mjs",
+  "validate-text-reader.mjs",
+  "validate-ci-quality-scope.mjs",
   "validate.mjs",
   "validate-app-config.mjs",
   "validate-core-source-ownership.mjs",
