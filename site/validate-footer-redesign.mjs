@@ -60,16 +60,21 @@ invariant(detailsIndex >= 0 && mainCloseIndex > detailsIndex, "The sole footer m
 invariant(identityIndex >= 0 && versionIndex > identityIndex && descriptionIndex > versionIndex && navigationIndex > descriptionIndex, "The live version must be the product title above its description.");
 
 for (const token of [
-  'main > .pageView:not([hidden]) {',
-  'min-height: calc(100% - 22px);',
+  'main {',
+  'display: grid;',
+  'grid-template-columns: minmax(0, 1fr);',
+  'grid-template-rows: minmax(calc(100% - 22px), auto) auto;',
+  'align-content: start;',
+  'row-gap: 22px;',
   '.siteFooterDetails {',
-  'margin-top: 22px;',
+  'grid-column: 1;',
+  'grid-row: 2;',
+  'margin-top: 0;',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
   'grid-template-columns: repeat(2, minmax(0, 1fr));',
   '.siteFooterDetails a[href="/changelog"]',
   '.siteFooterDetails a[data-page="changelog"]',
-  'margin-top: 0;',
   'font-size: 14px;',
   'font-weight: 800;',
   'cursor: default;',
@@ -94,6 +99,22 @@ for (const token of [
 ]) {
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
+invariant(
+  footer.includes('main {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: minmax(calc(100% - 22px), auto) auto;\n  align-content: start;\n  row-gap: 22px;\n}'),
+  "The main scroll surface must reserve the footer floor itself so the same geometry exists before route hydration and on settled pages.",
+);
+invariant(
+  footer.includes('.siteFooterDetails {\n  grid-column: 1;\n  grid-row: 2;\n  width: 100%;\n  margin-top: 0;'),
+  "The footer must occupy the explicit second grid row instead of relying on a visible route section to push it down.",
+);
+invariant(
+  !footer.includes('main > .pageView:not([hidden])'),
+  "Footer placement must not depend on a visible pageView because direct entity routes can temporarily hide every page section at first paint.",
+);
+invariant(
+  !footer.includes('min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));'),
+  "Footer placement must not use the superseded route-owned viewport floor.",
+);
 invariant(
   footer.includes('body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,\nbody:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {\n  color: var(--primary);\n  cursor: pointer;\n}'),
   "The Changelog title must show a pointer cursor only while hovering outside the active Changelog page.",

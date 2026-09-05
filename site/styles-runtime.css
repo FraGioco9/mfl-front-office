@@ -6980,15 +6980,25 @@ html.mflDataLoading #pageSizeSelect {
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
-/* Keep the sole footer below the initial page area when route content is short or still loading. */
-main > .pageView:not([hidden]) {
-  min-height: calc(100% - 22px);
+/*
+ * Reserve the footer floor on the main scroll surface itself. The explicit first
+ * grid row exists before any route has revealed a pageView, so first paint and
+ * settled route geometry share the same minimum footer position.
+ */
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(calc(100% - 22px), auto) auto;
+  align-content: start;
+  row-gap: 22px;
 }
 
 /* The sole footer lives at the end of the main scroll surface. */
 .siteFooterDetails {
+  grid-column: 1;
+  grid-row: 2;
   width: 100%;
-  margin-top: 22px;
+  margin-top: 0;
   padding: 18px 0 14px;
   border-top: 1px solid var(--border);
   color: var(--text);
