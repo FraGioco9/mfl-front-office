@@ -1495,9 +1495,15 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .settingsDateFormatOptions,
-  .settingsEmailAddressRow {
+  .settingsEmailAddressRow:not([data-settings-page-actions]) {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .settingsEmailAddressRow[data-settings-page-actions] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .settingsToggleButton,
@@ -1505,6 +1511,11 @@ html:not(.mflInitialRouteResolved):is(
   .settingsEmailActionButton {
     width: 100%;
     max-width: none;
+  }
+
+  .settingsEmailAddressRow[data-settings-page-actions] .settingsEmailActionButton {
+    min-width: 0;
+    padding-inline: 12px;
   }
 
   .changelogPage {
@@ -2655,7 +2666,7 @@ html:not(.mflInitialRouteResolved):is(
     font-size: inherit;
   }
 
-  
+
 
   #evaluationPage .evaluationOverallControl {
     grid-template-columns: 16px 18px 16px;
