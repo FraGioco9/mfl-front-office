@@ -64,11 +64,10 @@ invariant(identityIndex >= 0 && versionIndex > identityIndex && descriptionIndex
 
 for (const token of [
   'main {',
+  '--mfl-footer-page-floor: 800px;',
   'display: grid;',
   'grid-template-columns: minmax(0, 1fr);',
-  'grid-template-rows: max-content max-content;',
-  'main > .pageView {',
-  'min-height: 800px;',
+  'grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;',
   'align-content: start;',
   'row-gap: 22px;',
   '.siteFooterDetails {',
@@ -106,9 +105,8 @@ for (const token of [
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
 invariant(
-  footer.includes('main {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: max-content max-content;\n  align-content: start;\n  row-gap: 22px;\n}')
-    && footer.includes('main > .pageView {\n  min-height: 800px;\n}'),
-  "The footer must follow actual page content while every route preserves the shared 800px content-top floor independent of Rows.",
+  footer.includes('main {\n  --mfl-footer-page-floor: 800px;\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;\n  align-content: start;\n  row-gap: 22px;\n}'),
+  "The footer must follow actual page content while the first grid row owns the shared responsive floor even before a route shell is visible.",
 );
 const tableScrollerStart = styles.indexOf('#progressionPage .playerTableScroller {');
 const tableScrollerEnd = styles.indexOf('\n}', tableScrollerStart);
@@ -122,8 +120,8 @@ invariant(
   "The footer must occupy the explicit second grid row instead of relying on a visible route section to push it down.",
 );
 invariant(
-  !footer.includes('main > .pageView:not([hidden])'),
-  "Footer placement must not depend on transient visible-state selectors; stable route classes own the minimum content floor instead.",
+  !footer.includes('main > .pageView'),
+  "Footer minimum-distance ownership must stay on the shared first grid row so hidden first-paint route shells cannot collapse it.",
 );
 invariant(
   !footer.includes('min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));'),
