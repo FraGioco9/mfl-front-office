@@ -531,6 +531,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   grid-template-columns: repeat(auto-fit, minmax(min(128px, 100%), 1fr));
 }
 
+.bugReportBody input,
+.bugReportBody textarea,
 .filtersDialog [data-filter-value],
 .filtersDialog select,
 #evaluationSearchInput,
@@ -544,6 +546,12 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   cursor: pointer;
 }
 
+.bugReportBody input:hover:not(:disabled),
+.bugReportBody input:focus:not(:disabled),
+.bugReportBody input:focus-visible:not(:disabled),
+.bugReportBody textarea:hover:not(:disabled),
+.bugReportBody textarea:focus:not(:disabled),
+.bugReportBody textarea:focus-visible:not(:disabled),
 .filtersDialog [data-filter-value]:hover:not(:disabled),
 .filtersDialog [data-filter-value]:focus:not(:disabled),
 .filtersDialog [data-filter-value]:focus-visible:not(:disabled),
