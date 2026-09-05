@@ -919,9 +919,6 @@
     const playerDetail = document.getElementById("playerDetail");
     if (!(playerDetail instanceof HTMLElement)) return;
     const optedIn = root.dataset.storedWalletOptIn === "true";
-    const watchlistAction = optedIn
-      ? '<button class="playerWatchlistButton" type="button" disabled>Watchlist</button>'
-      : "";
     const notesPanel = optedIn
       ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/100</span></div></div>`
       : "";
@@ -932,16 +929,22 @@
 
     playerDetail.dataset.loadingShell = "true";
     playerDetail.innerHTML = `
-      <section class="playerHero" aria-hidden="true">
-        <div>
+      <section class="playerHero playerHeroPending" aria-hidden="true">
+        <div class="playerHeroMedia">
+          <div class="playerHeroOverall isPending"><strong>&nbsp;</strong></div>
+          <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
+        </div>
+        <div class="playerHeroIdentity">
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
           <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
           <p>&nbsp;</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">
-          <button class="playerEvaluateButton" type="button" disabled>Evaluate</button>
-          ${watchlistAction}
-          <a class="playerExternalButton" tabindex="-1" aria-hidden="true">Open link</a>
+          <div class="playerHeroActionMenu">
+            <a class="playerExternalButton playerHeroPrimaryAction" tabindex="-1" aria-hidden="true">Open link</a>
+            <button class="playerHeroActionMenuButton" type="button" disabled aria-hidden="true"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></button>
+            <div class="playerHeroActionMenuDropdown" hidden></div>
+          </div>
         </div>
       </section>
       <section class="playerGrid" aria-hidden="true">

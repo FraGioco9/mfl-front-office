@@ -8,6 +8,7 @@ const validators = [
   "validate-settings-route-core.mjs",
   "validate-settings-email-privacy.mjs",
   "validate-player-route-core.mjs",
+  "validate-player-mobile-scaling.mjs",
   "validate-player-overall-loading-color.mjs",
   "validate-player-loading-plain-attributes.mjs",
   "validate-player-loading-unknown-position.mjs",
