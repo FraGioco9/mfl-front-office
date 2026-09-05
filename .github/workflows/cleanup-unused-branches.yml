@@ -43,6 +43,7 @@ jobs:
 
           deleted=()
           kept=()
+          already_gone=()
 
           for branch in "${remote_branches[@]}"; do
             if [[ "$branch" == "main" ]]; then
@@ -55,8 +56,18 @@ jobs:
               continue
             fi
 
-            git push origin --delete "$branch"
-            deleted+=("$branch")
+            if git push origin --delete "$branch"; then
+              deleted+=("$branch")
+              continue
+            fi
+
+            # Another merge/cleanup may delete a branch after our initial snapshot.
+            # Treat that race as success, but fail if the branch still exists.
+            if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              echo "Failed to delete existing branch: $branch" >&2
+              exit 1
+            fi
+            already_gone+=("$branch")
           done
 
           {
@@ -65,6 +76,9 @@ jobs:
             echo "Deleted ${#deleted[@]} branch(es)."
             for branch in "${deleted[@]}"; do
               echo "- deleted: \`$branch\`"
+            done
+            for branch in "${already_gone[@]}"; do
+              echo "- already gone: \`$branch\`"
             done
             for branch in "${kept[@]}"; do
               echo "- kept: \`$branch\`"
