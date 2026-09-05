@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -69,7 +70,13 @@ includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(page
 includes(appEntry, "await loadScriptGroup(plan.postCore);", "app-entry must consume canonical post-core Watchlist dependencies.");
 excludes(appEntry, "/watchlist-ui-runtime.js", "Retired Watchlist compatibility runtime must stay removed.");
 
-includes(buildCore, 'Object.freeze({ source: "watchlist.js", runtime: "app-core-watchlist-runtime.js"', "Core build must generate Watchlist directly from canonical source.");
+includes(buildCore, 'from "./modules/core-source-manifest.js"', "Core build must consume the canonical source manifest.");
+includes(buildCore, "for (const entry of coreSourceManifest)", "Core build must generate Watchlist and other runtimes from the canonical manifest.");
+invariant(
+  coreSourceByDomain.watchlist?.source === "watchlist.js"
+    && coreSourceByDomain.watchlist?.runtime === "app-core-watchlist-runtime.js",
+  "Canonical manifest must map Watchlist source ownership to its generated runtime.",
+);
 excludes(buildCore, "app-core-watchlist-route-chunk.js", "Core build must not depend on the retired Watchlist splitter.");
 
 includes(bootstrapCore, 'const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";', "Watchlist must use the canonical Uniform Loading Workflow.");
@@ -88,8 +95,8 @@ for (const forbidden of ['classList.add("mflDataLoading"', 'classList.remove("mf
   excludes(watchlistRouteRuntime, forbidden, `Watchlist route coordination must not own loading presentation or eval (${forbidden}).`);
 }
 
-const watchlistBanner = "// Generated Watchlist core from modules/core-sources/watchlist.js. Do not edit directly.\n";
-invariant(generatedWatchlist.startsWith(watchlistBanner), "Generated Watchlist runtime must carry the build ownership banner.");
+const watchlistBanner = String(coreSourceByDomain.watchlist?.banner || "");
+invariant(watchlistBanner && generatedWatchlist.startsWith(watchlistBanner), "Generated Watchlist runtime must carry the manifest-owned build banner.");
 invariant(generatedWatchlist.slice(watchlistBanner.length).replace(/\s*$/, "") === watchlistCore.replace(/\s*$/, ""), "Generated Watchlist runtime must exactly match canonical Watchlist source.");
 
 console.log("Watchlist route-core ownership, stable delegates, loading coordination, and deterministic generated output validation passed.");
