@@ -1,21 +1,19 @@
 /* Canonical footer owner for MFL Front Office. */
 
 /*
- * The footer always follows real page content. Every route uses the same fixed
- * content-top floor, while actual content can only push the footer farther
+ * The footer always follows real page content. The first content grid row owns
+ * the shared minimum floor even while a direct-route shell is intentionally
+ * hidden before verification; actual content can only push the footer farther
  * down. Table loading stays independent of the Rows setting; the 10-row
  * skeleton is a loading presentation contract, not footer geometry.
  */
 main {
+  --mfl-footer-page-floor: 800px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: max-content max-content;
+  grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
   align-content: start;
   row-gap: 22px;
-}
-
-main > .pageView {
-  min-height: 800px;
 }
 
 /* The sole footer lives at the end of the main scroll surface. */

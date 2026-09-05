@@ -41,9 +41,8 @@ for (const token of [
 ]) includes(tableLoading, token, `Runtime ten-row footer loading contract is missing: ${token}`);
 
 for (const token of [
-  "grid-template-rows: max-content max-content;",
-  "main > .pageView {",
-  "min-height: 800px;",
+  "grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;",
+  "--mfl-footer-page-floor: 800px;",
   "row-gap: 22px;",
   "grid-row: 2;",
 ]) includes(footer, token, `Footer follow-content layout is missing: ${token}`);
@@ -60,4 +59,4 @@ for (const source of [footer, loading, stylesBase]) {
 }
 
 invariant(!footer.includes("!important"), "Footer loading stability must not add !important.");
-console.log("Footer follows actual page content with a shared fixed 800px content-top floor, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");
+console.log("Footer follows actual page content with one responsive grid-row floor that survives hidden first-paint route shells, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");

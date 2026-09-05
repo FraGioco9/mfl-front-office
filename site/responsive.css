@@ -325,6 +325,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > #appShell > main {
+    --mfl-footer-page-floor: clamp(560px, 80dvh, 680px);
     padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
     overflow-x: hidden;
   }
@@ -1745,6 +1746,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > #appShell > main {
+    --mfl-footer-page-floor: clamp(500px, 76dvh, 620px);
     padding-right: max(8px, env(safe-area-inset-right));
     padding-left: max(8px, env(safe-area-inset-left));
   }
@@ -3046,6 +3048,10 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 @media (max-width: 380px) {
+  body > #appShell > main {
+    --mfl-footer-page-floor: clamp(460px, 72dvh, 560px);
+  }
+
   .selectionBar {
     width: min(360px, calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)));
     gap: 4px;
