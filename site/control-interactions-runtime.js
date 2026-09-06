@@ -280,7 +280,27 @@
       && bugReportModal.contains(target);
   }
 
+  function preservePlayerAttributeViewScroll(target) {
+    if (!(target instanceof Element)) return;
+    const button = target.closest("#playerDetail [data-player-attribute-view]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const views = button.closest(".playerAttributeViews");
+    if (!(views instanceof HTMLElement)) return;
+
+    const pathname = String(window.location.pathname || "");
+    const scrollLeft = views.scrollLeft;
+    queueMicrotask(() => {
+      if (String(window.location.pathname || "") !== pathname) return;
+      const currentViews = document.querySelector("#playerDetail .playerAttributeViews");
+      if (!(currentViews instanceof HTMLElement)) return;
+      const maxScroll = Math.max(0, currentViews.scrollWidth - currentViews.clientWidth);
+      currentViews.scrollLeft = Math.min(maxScroll, Math.max(0, scrollLeft));
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    });
+  }
+
   function onClick(event) {
+    preservePlayerAttributeViewScroll(event.target);
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
       scheduleAddFilterNormalization();
