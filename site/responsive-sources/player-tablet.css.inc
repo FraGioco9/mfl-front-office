@@ -189,14 +189,13 @@
 .playerAttributeCard .attributeValueText {
   min-width: 0;
 }
-
-.detailGrid strong {
-  flex-wrap: nowrap;
-  overflow: hidden;
-  font-size: var(--mfl-player-value-font-size);
-  line-height: 1.2;
-  white-space: nowrap;
-}
+  .detailGrid strong {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    font-size: var(--mfl-player-value-font-size);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
 
 .detailGrid .contractDetailCard strong .playerContractTeam {
   font-size: var(--mfl-player-value-font-size);
@@ -205,15 +204,14 @@
 .detailGrid .contractDetailCard strong .playerContractDivision {
   font-size: var(--mfl-player-contract-division-font-size);
 }
+  .playerInfoPanel .detailGrid .nationalityDetailCard strong {
+    gap: var(--mfl-player-nationality-gap);
+  }
 
-.playerInfoPanel .detailGrid .nationalityDetailCard strong {
-  gap: var(--mfl-player-nationality-gap);
-}
-
-.playerInfoPanel .detailGrid .nationalityDetailCard .flagImage {
-  width: var(--mfl-player-profile-flag-size);
-  height: var(--mfl-player-profile-flag-size);
-}
+  .playerInfoPanel .detailGrid .nationalityDetailCard .flagImage {
+    width: var(--mfl-player-profile-flag-size);
+    height: var(--mfl-player-profile-flag-size);
+  }
 
 .playerInfoPanel .detailGrid strong .playerDetailAgeLine {
   gap: var(--mfl-player-age-icon-gap);
@@ -294,6 +292,7 @@
   grid-column: 1 / -1;
 }
 
+
 .trainingStatControls {
   min-width: 0;
   max-width: 100%;
@@ -372,29 +371,29 @@
   font-size: clamp(7.333px, 2.139vw, 9.778px);
 }
 
-.evaluationTitleRow {
-  align-items: stretch;
-  flex-direction: column;
-}
+  .evaluationTitleRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-.advancedSettingsButton {
-  width: 100%;
-}
+  .advancedSettingsButton {
+    width: 100%;
+  }
 
-.evaluationSearchGroup {
-  grid-template-columns: minmax(0, 1fr);
-}
+  .evaluationSearchGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.evaluationSearch {
-  width: 100%;
-  max-width: none;
-}
+  .evaluationSearch {
+    width: 100%;
+    max-width: none;
+  }
 
-.evaluationActions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  align-items: stretch;
-}
+  .evaluationActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
 
-.evaluationButtons,
+  .evaluationButtons,
