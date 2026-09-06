@@ -79,14 +79,16 @@ main {
   text-transform: uppercase;
 }
 
-.siteFooterDetailsSupportButton {
+/* Footer actions share one geometry/color contract regardless of link or button semantics. */
+.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {
   width: fit-content;
   max-width: 100%;
+  margin: 0;
   padding: 0;
   border: 0;
   appearance: none;
   background: transparent;
-  color: var(--text);
+  color: var(--text-muted);
   font-family: inherit;
   font-size: 10px;
   font-weight: 600;
@@ -96,6 +98,7 @@ main {
   overflow-wrap: anywhere;
   cursor: pointer;
   pointer-events: auto;
+  transition: color 120ms ease;
 }
 
 .siteFooterDetailsSupportButton:hover:not(:disabled),
@@ -104,20 +107,6 @@ main {
   background: transparent;
   box-shadow: none;
   text-decoration: none;
-}
-
-.siteFooterDetailsGroup a {
-  width: fit-content;
-  max-width: 100%;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1.15;
-  text-decoration: none;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: color 120ms ease;
 }
 
 .siteFooterDetails a[href="/changelog"],
@@ -177,7 +166,7 @@ body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:ho
   cursor: default;
 }
 
-.siteFooterDetailsGroup a:hover {
+.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton):hover {
   color: var(--primary);
 }
 
@@ -187,7 +176,7 @@ body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {
   pointer-events: none;
 }
 
-.siteFooterDetailsGroup a:focus-visible,
+.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton):focus-visible,
 .siteFooterDetailsIdentity > a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
