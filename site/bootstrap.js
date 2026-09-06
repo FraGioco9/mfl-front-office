@@ -559,7 +559,11 @@
       shell.appendChild(button);
     }
 
-    const label = scroller.matches("#progressionPage .quickFilters") ? "quick filters" : "views";
+    const label = scroller.matches("#progressionPage .quickFilters")
+      ? "quick filters"
+      : scroller.matches("#playerDetail .playerAttributeViews")
+        ? "attribute views"
+        : "views";
     button.setAttribute("aria-label", `Scroll ${label} right`);
     button.setAttribute("aria-hidden", "false");
     button.tabIndex = 0;
@@ -1073,7 +1077,7 @@
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
+    if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();
     if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
     if (target.id === "evaluationPage") primeFirstPaintEvaluationTableFade();
 
