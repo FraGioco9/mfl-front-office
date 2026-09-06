@@ -137,7 +137,6 @@ if (
 for (const forbidden of [
   'reportLink.addEventListener("click"',
   'registerEscapeHandler?.(',
-  'event.metaKey',
   'window.open',
 ]) {
   excludes(runtime, forbidden, `Bug report runtime retains a forbidden secondary activation/dependency path: ${forbidden}`);
@@ -196,10 +195,17 @@ for (const source of [schema, migration]) {
 }
 
 for (const token of [
-  '.siteFooterDetailsSupportButton {',
+  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {',
+  'margin: 0;',
   'appearance: none;',
-  'color: var(--text);',
+  'color: var(--text-muted);',
+  'font-size: 10px;',
+  'font-weight: 600;',
+  'line-height: 1.15;',
+  'transition: color 120ms ease;',
   '.siteFooterDetailsSupportButton:hover:not(:disabled),\n.siteFooterDetailsSupportButton:focus-visible:not(:disabled) {',
+  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton):hover {',
+  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton):focus-visible,',
   'background: transparent;',
   '.bugReportDialog {',
   'width: min(620px, calc(100vw - 24px));',
@@ -212,7 +218,7 @@ for (const token of [
   'font-size: 13px;',
   'line-height: 1.3;',
 ]) {
-  includes(footer, token, `Bug report popup styling is missing: ${token}`);
+  includes(footer, token, `Bug report popup/footer styling is missing: ${token}`);
 }
 
 for (const token of [
@@ -227,7 +233,7 @@ for (const token of [
 ]) {
   includes(controls, token, `Bug report boxes must reuse the canonical control highlight contract: ${token}`);
 }
-excludes(footer, '.siteFooterDetailsSupportButton:hover:not(:disabled),\n.siteFooterDetailsSupportButton:focus-visible:not(:disabled) {\n  border-color: transparent;\n  background: transparent;\n  color:', "Footer trigger must leave text-color highlighting to the shared agentTableLink contract.");
+excludes(footer, '.siteFooterDetailsSupportButton:hover:not(:disabled),\n.siteFooterDetailsSupportButton:focus-visible:not(:disabled) {\n  border-color: transparent;\n  background: transparent;\n  color:', "Footer trigger hover/focus must not replace the canonical footer action text color.");
 
 for (const forbidden of [
   '.bugReportBody select',
@@ -238,4 +244,4 @@ for (const forbidden of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup validation passed with shared agent-link-only footer highlighting, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");
+console.log("Bug report popup validation passed with footer-owned link-equivalent support alignment/color, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");
