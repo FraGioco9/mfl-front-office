@@ -9725,6 +9725,19 @@ html:not(.mflInitialRouteResolved):is(
   overflow-wrap: anywhere;
 }
 
+.playerTitle .playerListingBadge {
+  gap: 0;
+  cursor: pointer;
+}
+
+.playerTitle .playerListingBadge .listingCellPrice {
+  display: none;
+}
+
+.playerHero h2 .playerNoteIcon {
+  font-size: clamp(14px, 3.6vw, 17px);
+}
+
 .playerHeroActions {
   grid-area: actions;
   display: block;
@@ -9856,6 +9869,7 @@ html:not(.mflInitialRouteResolved):is(
     flex-wrap: nowrap;
     overflow: hidden;
     font-size: var(--mfl-player-value-font-size);
+    line-height: 1.2;
     white-space: nowrap;
   }
 
@@ -9993,8 +10007,6 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 .playerNotesCount {
-  right: var(--mfl-player-box-padding-inline);
-  bottom: clamp(5px, 1.2vw, 8px);
   font-size: clamp(9px, 2.2vw, 10px);
 }
 
