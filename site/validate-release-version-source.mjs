@@ -49,11 +49,12 @@ invariant(
     && siteQualityWorkflow.includes("site/bootstrap.js")
     && siteQualityWorkflow.includes("site/bootstrap-core.js")
     && siteQualityWorkflow.includes("site/index.html")
+    && siteQualityWorkflow.includes("site/responsive.css")
     && siteQualityWorkflow.includes("site/vercel.production.json")
     && siteQualityWorkflow.includes("site/styles-runtime.css")
     && siteQualityWorkflow.includes("site/modules/app-core-*-runtime.js")
     && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
-  "Site Quality must own one ordered build-and-commit path for release projections and generated site artifacts.",
+  "Site Quality must own one ordered build-and-commit path for release projections and every tracked generated site artifact.",
 );
 invariant(
   siteQualityWorkflow.includes("checks: write")
