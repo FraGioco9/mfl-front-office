@@ -3,13 +3,14 @@ import { readFile } from "node:fs/promises";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const includes = (source, token, message) => { if (!source.includes(token)) throw new Error(message); };
 
-const [indexHtml, appConfig, shared, club, bootstrap, staticUi, titles, styles, footer] = await Promise.all([
+const [indexHtml, appConfig, shared, club, bootstrap, staticUi, bugReportRuntime, titles, styles, footer] = await Promise.all([
   read("./index.html"),
   read("./modules/app-config.js"),
   read("./modules/core-sources/shared.js"),
   read("./modules/core-sources/club.js"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
+  read("./bug-report-runtime.js"),
   read("./document-title-runtime.js"),
   read("./styles-base.css"),
   read("./footer.css"),
@@ -42,6 +43,19 @@ includes(footer, 'grid-template-columns: repeat(3, minmax(0, 1fr));', "Desktop f
 includes(footer, 'body[data-page="privacy"] .siteFooterDetails a[data-page="privacy"] {', "Active Privacy footer link must have a route-scoped non-interactive state.");
 includes(footer, 'cursor: default;', "Active Privacy footer link must not show the pointer cursor.");
 includes(footer, 'pointer-events: none;', "Active Privacy footer link must not accept pointer clicks.");
+
+for (const token of [
+  'const PRIVACY_LINK_SELECTOR = \' .siteFooterDetails a[href="/privacy"][data-page="privacy"]\';'.replace("' .", "'."),
+  'function privacyLinkFromTarget(target)',
+  'function handlePrivacyNavigation(event)',
+  'event.preventDefault();',
+  'event.stopImmediatePropagation();',
+  'const setPage = Reflect.get(window, "setPage");',
+  'void Promise.resolve(setPage("privacy", true));',
+  'document.addEventListener("click", handlePrivacyNavigation, true);',
+  'document.removeEventListener("click", handlePrivacyNavigation, true);',
+]) includes(bugReportRuntime, token, `Privacy footer SPA navigation is missing: ${token}`);
+
 if (styles.includes('.privacyPage.privacyPage') || styles.includes('!important')) throw new Error("Privacy styling must not use specificity overrides or !important.");
 
-console.log("Privacy page, routing, first-paint, title, footer link, and general-copy validation passed.");
+console.log("Privacy page, direct routing, first-paint, title, footer link, and in-app no-repaint navigation validation passed.");

@@ -4,6 +4,7 @@
   window.__mflBugReportRuntime?.destroy?.();
 
   const REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"]';
+  const PRIVACY_LINK_SELECTOR = '.siteFooterDetails a[href="/privacy"][data-page="privacy"]';
   const MODAL_TRANSITION_MS = 190;
 
   let modal = null;
@@ -208,15 +209,23 @@
     }
   }
 
+  function targetElement(target) {
+    if (target instanceof Element) return target;
+    return target instanceof Node ? target.parentElement : null;
+  }
+
   function reportControlFromTarget(target) {
-    const element = target instanceof Element
-      ? target
-      : target instanceof Node
-        ? target.parentElement
-        : null;
+    const element = targetElement(target);
     if (!(element instanceof Element)) return null;
     const control = element.closest(REPORT_CONTROL_SELECTOR);
     return control instanceof HTMLElement ? control : null;
+  }
+
+  function privacyLinkFromTarget(target) {
+    const element = targetElement(target);
+    if (!(element instanceof Element)) return null;
+    const link = element.closest(PRIVACY_LINK_SELECTOR);
+    return link instanceof HTMLAnchorElement ? link : null;
   }
 
   function prepareReportControl(control) {
@@ -225,6 +234,21 @@
     control.setAttribute("aria-haspopup", "dialog");
     control.setAttribute("aria-controls", "bugReportModal");
     return true;
+  }
+
+  function handlePrivacyNavigation(event) {
+    const link = privacyLinkFromTarget(event.target);
+    if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (window.location.pathname === "/privacy") return;
+
+    const setPage = Reflect.get(window, "setPage");
+    if (typeof setPage === "function") {
+      void Promise.resolve(setPage("privacy", true));
+      return;
+    }
+    window.location.assign("/privacy");
   }
 
   function handleDocumentClick(event) {
@@ -255,12 +279,14 @@
 
   function bind() {
     prepareReportControl(document.querySelector(REPORT_CONTROL_SELECTOR));
+    document.addEventListener("click", handlePrivacyNavigation, true);
     document.addEventListener("click", handleDocumentClick, true);
     document.addEventListener("keydown", handleDocumentKeyDown, true);
     window.addEventListener("keydown", handleEscape, true);
   }
 
   function destroy() {
+    document.removeEventListener("click", handlePrivacyNavigation, true);
     document.removeEventListener("click", handleDocumentClick, true);
     document.removeEventListener("keydown", handleDocumentKeyDown, true);
     window.removeEventListener("keydown", handleEscape, true);
