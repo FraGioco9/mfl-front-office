@@ -181,6 +181,31 @@ assert.equal(
   "Player view restoration must use one layout-boundary frame instead of chained post-scroll writes.",
 );
 
+const cueReadyStart = interactions.indexOf("function currentPlayerViewCueReady() {");
+const cueReadyEnd = interactions.indexOf("\n  function syncInitialPlayerViewCue()", cueReadyStart);
+const cueReady = interactions.slice(cueReadyStart, cueReadyEnd);
+assert.ok(
+  cueReady.includes('button.classList.contains("mflViewsScrollButtonVisible")')
+    && cueReady.includes('button.getAttribute("aria-hidden") === "false"')
+    && cueReady.includes('Boolean(String(views.style.boxShadow || "").trim())'),
+  "The current real Player strip is not first-paint-ready until its right arrow has the final visible class/ARIA state and its right fade exists.",
+);
+
+const cueSyncStart = interactions.indexOf("function syncInitialPlayerViewCue() {");
+const cueSyncEnd = interactions.indexOf("\n  function observePlayerAttributeViewRenders()", cueSyncStart);
+const cueSync = interactions.slice(cueSyncStart, cueSyncEnd);
+const readinessFalseIndex = cueSync.indexOf('root.dataset.playerFirstPaintCuesReady = "false";');
+const cueSyncIndex = cueSync.indexOf("window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();");
+const cueVerifyIndex = cueSync.indexOf("const ready = currentPlayerViewCueReady();");
+const readinessTrueIndex = cueSync.indexOf('root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";');
+assert.ok(
+  readinessFalseIndex >= 0
+    && cueSyncIndex > readinessFalseIndex
+    && cueVerifyIndex > cueSyncIndex
+    && readinessTrueIndex > cueVerifyIndex,
+  "The real Player strip must invalidate stale parser readiness, synchronously build its shared cue, verify the exact visible right-arrow state, and only then release first-paint readiness.",
+);
+
 const observerStart = interactions.indexOf("function playerAttributeViewControlsChanged(record) {");
 const observerEnd = interactions.indexOf("\n  function onPlayerViewScrollMediaChange", observerStart);
 const observer = interactions.slice(observerStart, observerEnd);
@@ -192,18 +217,11 @@ assert.ok(
     && observer.includes('node.querySelector(".playerAttributeViews")'),
   "The Player observer must detect direct control rebuilds and real Player-grid replacements without mistaking shared cue-shell wrapping for another rerender.",
 );
-const readinessFalseIndex = observer.indexOf('root.dataset.playerFirstPaintCuesReady = "false";');
-const observerCueSyncIndex = observer.indexOf("window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();");
-const visibleClassIndex = observer.indexOf('button.classList.contains("mflViewsScrollButtonVisible")');
-const readinessTrueIndex = observer.indexOf('root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";');
+const observerCueSyncIndex = observer.indexOf("syncInitialPlayerViewCue()");
 const observerRestoreIndex = observer.lastIndexOf("schedulePlayerAttributeViewScrollRestore();");
 assert.ok(
-  readinessFalseIndex >= 0
-    && observerCueSyncIndex > readinessFalseIndex
-    && visibleClassIndex > readinessFalseIndex
-    && readinessTrueIndex > visibleClassIndex
-    && observerRestoreIndex > readinessTrueIndex,
-  "The real Player strip must invalidate stale parser readiness, synchronously gain the final visible right cue, then release first-paint readiness before any frame-bound scroll restoration.",
+  observerCueSyncIndex >= 0 && observerRestoreIndex > observerCueSyncIndex,
+  "The real Player grid must complete first-paint cue readiness in the MutationObserver checkpoint before any frame-bound scroll restoration.",
 );
 
 const ensureViewScrollersStart = shared.indexOf("function ensureViewScrollers() {");
