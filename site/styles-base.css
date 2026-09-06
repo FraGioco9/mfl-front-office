@@ -2260,7 +2260,6 @@ td a {
 
 .playerPage {
   max-width: 1180px;
-  min-height: 0;
   margin: 0 auto;
 }
 
@@ -4724,11 +4723,6 @@ body[data-page="club"] #progressionPage * {
 }
 
 
-/* Extend the empty Evaluation page to the footer. */
-body[data-page="evaluation"] #evaluationPage {
-  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px);
-  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px);
-}
 
 /* Stabilize Evaluation, MFL Stats, and modal state ownership. */
 
@@ -4806,9 +4800,6 @@ html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown)
   pointer-events: auto;
 }
 
-html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
-  min-height: 0;
-}
 
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {

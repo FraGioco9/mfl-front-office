@@ -286,9 +286,12 @@
       body[data-page="notfound"] main > .pageView:not(#notFoundPage) {
         display: none;
       }
-      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage,
-      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
         display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+        visibility: hidden;
+        pointer-events: none;
       }
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
@@ -866,8 +869,82 @@
           </section>
         </section>
         <section id="playerPage" class="pageView playerPage" hidden>
-          <div id="playerDetail" class="playerDetail"></div>
+          <div id="playerDetail" class="playerDetail" data-mfl-static-player-shell="true">
+            <section class="playerHero playerHeroPending" aria-hidden="true">
+              <div class="playerHeroMedia">
+                <div class="playerHeroOverall isPending"><strong>&nbsp;</strong></div>
+                <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
+              </div>
+              <div class="playerHeroIdentity">
+                <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
+                <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
+                <p>&nbsp;</p>
+              </div>
+              <div class="playerHeroActions" style="visibility:hidden">
+                <div class="playerHeroActionMenu">
+                  <a class="playerExternalButton playerHeroPrimaryAction" tabindex="-1" aria-hidden="true">Open link</a>
+                  <button class="playerHeroActionMenuButton" type="button" disabled aria-hidden="true"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></button>
+                  <div class="playerHeroActionMenuDropdown" hidden></div>
+                </div>
+              </div>
+            </section>
+            <section class="playerGrid" aria-hidden="true">
+              <div class="playerStack">
+                <div class="playerPanel playerInfoPanel">
+                  <h3>Profile</h3>
+                  <div class="detailGrid">
+                    <div><span>Nationality</span><strong>-</strong></div>
+                    <div><span>Age</span><strong>-</strong></div>
+                    <div><span>Height</span><strong>-</strong></div>
+                    <div><span>Foot</span><strong>-</strong></div>
+                    <div><span>Seasons</span><strong>-</strong></div>
+                    <div><span>Agent</span><strong>-</strong></div>
+                    <div class="contractDetailCard playerInfoFullWidthCard"><span>Contract</span><strong>-</strong></div>
+                    <div class="revShareDetailCard playerInfoFullWidthCard"><span>Rev Share</span><strong>-</strong></div>
+                  </div>
+                </div>
+                <div class="playerPanel attributesPanel">
+                  <div class="playerPanelHeader">
+                    <h3>Attributes</h3>
+                    <div class="playerAttributeViews" style="visibility:hidden">
+                      <button class="playerAttributeViewButton active" type="button" disabled>Attributes</button>
+                      <button class="playerAttributeViewButton" type="button" disabled>Training</button>
+                      <button class="playerAttributeViewButton" type="button" disabled>Next Overall</button>
+                      <button class="playerAttributeViewButton" type="button" disabled>Current Season</button>
+                      <button class="playerAttributeViewButton" type="button" disabled>All Time</button>
+                    </div>
+                  </div>
+                  <div class="attributeGrid">
+                    <div class="playerAttributeCard featured fullWidth"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>-</strong></div>
+                  </div>
+                </div>
+                <div class="playerPanel playerNotesPanel" data-mfl-static-player-notes="true">
+                  <h3>Notes</h3>
+                  <div class="playerNotesInputWrap">
+                    <textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea>
+                    <span class="playerNotesCount" style="visibility:hidden">0/100</span>
+                  </div>
+                </div>
+              </div>
+              <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"></div></div>
+            </section>
+          </div>
         </section>
+        <script>
+          (() => {
+            if (document.documentElement.dataset.initialEntityRoute !== "player") return;
+            const playerPage = document.getElementById("playerPage");
+            const notesPanel = document.querySelector("#playerPage [data-mfl-static-player-notes]");
+            if (playerPage instanceof HTMLElement) playerPage.hidden = false;
+            if (notesPanel instanceof HTMLElement) notesPanel.hidden = document.documentElement.dataset.storedWalletOptIn !== "true";
+          })();
+        </script>
 
         <section id="settingsPage" class="pageView settingsPage" hidden>
           <h2 class="tablePageTitle">Settings</h2>

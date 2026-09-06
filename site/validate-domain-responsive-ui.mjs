@@ -2,6 +2,7 @@ const validators = [
   "validate-responsive-layout.mjs",
   "validate-mobile-box-press-shape.mjs",
   "validate-mobile-footer-floor.mjs",
+  "validate-footer-route-coverage.mjs",
   "validate-player-mobile-scaling.mjs",
   "validate-settings-mobile-actions.mjs",
   "validate-evaluation-mobile-first-paint.mjs",

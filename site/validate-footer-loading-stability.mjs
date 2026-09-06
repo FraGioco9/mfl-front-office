@@ -41,13 +41,22 @@ for (const token of [
 ]) includes(tableLoading, token, `Runtime ten-row footer loading contract is missing: ${token}`);
 
 for (const token of [
-  "grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;",
   "--mfl-footer-page-floor: 800px;",
+  "display: flex;",
+  "flex-direction: column;",
   "row-gap: 22px;",
-  "grid-row: 2;",
+  "main > .pageView {\n  flex: 0 0 auto;\n  min-height: var(--mfl-footer-page-floor);",
+  "html:not(.mflInitialRouteResolved):not([data-initial-entity-route=\"player\"]) body > #appShell > main {",
+  "grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;",
+  "html:not(.mflInitialRouteResolved):not([data-initial-entity-route=\"player\"]) body > #appShell > main > .siteFooterDetails {",
 ]) includes(footer, token, `Footer follow-content layout is missing: ${token}`);
 
-invariant(!footer.includes("grid-template-rows: minmax(calc(100% - 22px), auto) auto;"), "Footer must not reserve a viewport-sized first grid row on table pages.");
+invariant(
+  !footer.includes('html:not(.mflInitialRouteResolved) body > #appShell > main {'),
+  "Direct Player loading must not be captured by the unresolved grid fallback; its real shell must remain in normal flex flow.",
+);
+invariant(!footer.includes('main:not(:has(> .pageView:not([hidden])))'), "Refresh first paint must not use hidden-attribute inference for footer placement.");
+invariant(!footer.includes("grid-template-rows: minmax(calc(100% - 22px), auto) auto;"), "Footer must not reserve a viewport-sized first grid row on settled table pages.");
 const scrollerStart = styles.indexOf("#progressionPage .playerTableScroller {");
 const scrollerEnd = styles.indexOf("\n}", scrollerStart);
 const scrollerBlock = scrollerStart >= 0 && scrollerEnd > scrollerStart ? styles.slice(scrollerStart, scrollerEnd) : "";
@@ -59,4 +68,4 @@ for (const source of [footer, loading, stylesBase]) {
 }
 
 invariant(!footer.includes("!important"), "Footer loading stability must not add !important.");
-console.log("Footer follows actual page content with one responsive grid-row floor that survives hidden first-paint route shells, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");
+console.log("Footer follows actual page content with Player loading kept in normal flow, one responsive floor, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");

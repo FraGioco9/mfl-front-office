@@ -219,7 +219,9 @@
         };
         void navigateHome();
       });
-      document.querySelector("main")?.appendChild(page);
+      const main = document.querySelector("main");
+      const footer = main?.querySelector(":scope > .siteFooterDetails");
+      if (main instanceof HTMLElement) main.insertBefore(page, footer instanceof HTMLElement ? footer : null);
     }
     const title = page.querySelector("#notFoundTitle");
     if (title instanceof HTMLElement) title.textContent = `${normalizedKind} not found`;
