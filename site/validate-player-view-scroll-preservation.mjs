@@ -28,7 +28,6 @@ for (const token of [
   'views.matches("#playerDetail .playerAttributeViews")',
   'function playerAttributeViewControlsChanged(record) {',
   'record.target.matches("#playerDetail .playerAttributeViews")',
-  'node.hasAttribute("data-mfl-view-scroll-end-spacer")',
   'node.matches(".playerAttributeViewButton, [data-player-attribute-view]")',
   'function observePlayerAttributeViewRenders() {',
   'playerAttributeViewMutationObserver = new MutationObserver((records) => {',
@@ -43,17 +42,13 @@ for (const token of [
 }
 
 for (const token of [
-  "const PLAYER_VIEW_SCROLL_END_GUTTER_PX = 10;",
-  'const VIEW_SCROLL_END_SPACER_ATTR = "data-mfl-view-scroll-end-spacer";',
-  "function playerViewEndSpacer(views) {",
-  "function syncPlayerViewEndSpacer(views, visible) {",
-  "const width = Math.max(0, PLAYER_VIEW_SCROLL_END_GUTTER_PX - gap);",
-  'spacer.setAttribute(VIEW_SCROLL_END_SPACER_ATTR, "");',
-  "child.hasAttribute(VIEW_SCROLL_END_SPACER_ATTR)",
-  "syncPlayerViewEndSpacer(views, overflowing);",
-  "syncPlayerViewEndSpacer(views, false);",
+  'const PLAYER_VIEW_SCROLL_END_GUTTER_PX',
+  'VIEW_SCROLL_END_SPACER_ATTR',
+  'function playerViewEndSpacer(',
+  'function syncPlayerViewEndSpacer(',
+  'data-mfl-view-scroll-end-spacer',
 ]) {
-  assert.ok(shared.includes(token), `Player view terminal scroll geometry is missing: ${token}`);
+  assert.ok(!shared.includes(token), `Player view scrolling must not retain synthetic terminal geometry: ${token}`);
 }
 
 for (const token of [
@@ -63,9 +58,21 @@ for (const token of [
   'if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();',
   'if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();',
   '? "attribute views"',
+  'const views = root.dataset.storedProgressionAccess === "true"',
+  '<div class="playerAttributeViews">${playerLoadingViewButtons()}</div>',
 ]) {
   assert.ok(bootstrap.includes(token), `Player first-paint horizontal cue ownership is missing: ${token}`);
 }
+assert.ok(
+  !bootstrap.includes('<div class="playerAttributeViews" style="visibility:hidden">'),
+  "The Player loading view row must be visible in the same first paint used to measure and place its arrow/fade.",
+);
+assert.ok(
+  player.includes('function storedProgressionAccess() {')
+    && player.includes('document.documentElement.dataset.storedProgressionAccess === "true"')
+    && player.includes('const items = storedProgressionAccess()'),
+  "Bootstrap and canonical Player loading must use the same stored progression-access decision for the visible first-paint view row.",
+);
 
 const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
 const activeControlIndex = interactions.indexOf("if (consumeActivePageViewFilterEvent(event)) return;", captureIndex);
@@ -119,9 +126,8 @@ const observerEnd = interactions.indexOf("\n  function onPlayerViewScrollMediaCh
 const observer = interactions.slice(observerStart, observerEnd);
 assert.ok(
   observer.includes('record.target.matches("#playerDetail .playerAttributeViews")')
-    && observer.includes('node.hasAttribute("data-mfl-view-scroll-end-spacer")')
     && observer.includes('node.matches(".playerAttributeViewButton, [data-player-attribute-view]")'),
-  "Only actual Player view-control rebuilds may schedule a scroll restoration; shared shells, arrows, and terminal spacers must be ignored.",
+  "Only actual Player view-control rebuilds may schedule a scroll restoration; shared shell/arrow bookkeeping must not do so.",
 );
 
 const ensureViewScrollersStart = shared.indexOf("function ensureViewScrollers() {");
@@ -133,30 +139,40 @@ assert.ok(
   "Real touch/momentum scrolling must not be imperatively clamped on every scroll event; clamping belongs only to layout synchronization.",
 );
 
+const renderedItemsStart = shared.indexOf("function renderedViewItems(views) {");
+const renderedItemsEnd = shared.indexOf("\n  function viewContentWidth", renderedItemsStart);
+const renderedItems = shared.slice(renderedItemsStart, renderedItemsEnd);
+assert.ok(
+  renderedItems.includes("Array.from(views.children)")
+    && !renderedItems.includes("SPACER")
+    && !renderedItems.includes("data-mfl-view-scroll-end-spacer"),
+  "Player view overflow must be derived only from the rendered controls, with no synthetic terminal child.",
+);
+assert.ok(
+  shared.includes("function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }"),
+  "The Player selector's natural scrollWidth/clientWidth difference must be the exact right boundary.",
+);
+
 const syncViewScrollerStart = shared.indexOf("function syncViewScroller(views) {");
 const syncViewScrollerEnd = shared.indexOf("\n  function syncWidthAwareHeaderLabels()", syncViewScrollerStart);
 const syncViewScroller = shared.slice(syncViewScrollerStart, syncViewScrollerEnd);
 const overflowIndex = syncViewScroller.indexOf("const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;");
-const spacerIndex = syncViewScroller.indexOf("syncPlayerViewEndSpacer(views, overflowing);");
 const maxIndex = syncViewScroller.indexOf("const maxScroll = viewMaxScroll(views);");
 assert.ok(
-  overflowIndex >= 0 && spacerIndex > overflowIndex && maxIndex > spacerIndex,
-  "Player view overflow must be classified from real controls first, then add the terminal gutter before calculating the native maximum scroll.",
+  overflowIndex >= 0 && maxIndex > overflowIndex,
+  "Player view overflow must be classified from the real controls before the natural native maximum is read.",
 );
 assert.ok(
-  shared.includes("if (!(child instanceof HTMLElement) || child.hidden || child.hasAttribute(VIEW_SCROLL_END_SPACER_ATTR)) return false;"),
-  "The terminal gutter must not count as a real Player view item or create overflow by itself.",
+  !syncViewScroller.includes("appendChild") && !syncViewScroller.includes("insertAdjacentElement"),
+  "Horizontal-cue synchronization must not extend the Player scroller's content width before calculating its endpoint.",
 );
-assert.ok(
-  shared.includes("const width = Math.max(0, PLAYER_VIEW_SCROLL_END_GUTTER_PX - gap);"),
-  "The spacer plus the existing flex gap must equal the intended 10px terminal gutter instead of double-counting spacing.",
-);
+
 const tablePrimeIndex = bootstrap.indexOf('if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();');
 const playerPrimeIndex = bootstrap.indexOf('if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();');
 const visibleShellIndex = bootstrap.indexOf('document.querySelectorAll("main > .pageView").forEach');
 assert.ok(
   visibleShellIndex >= 0 && tablePrimeIndex > visibleShellIndex && playerPrimeIndex > tablePrimeIndex,
-  "Player first-paint horizontal cues must be measured after the Player page is the visible initial shell and before hydration begins.",
+  "Player first-paint horizontal cues must be measured after the visible Player content row is in its initial shell and before hydration begins.",
 );
 
-console.log("Player view lateral scroll is first-paint aligned, momentum-stable, preserved across same-player rerenders, and reaches its real terminal gutter.");
+console.log("Player view cues paint with the selector, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
