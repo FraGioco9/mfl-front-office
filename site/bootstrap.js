@@ -1077,7 +1077,8 @@
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();
+    if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
+    if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();
     if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
     if (target.id === "evaluationPage") primeFirstPaintEvaluationTableFade();
 
