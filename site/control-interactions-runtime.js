@@ -365,10 +365,45 @@
       });
     }
 
+    if (!record.target.matches("#playerDetail")) return false;
     return Array.from(record.addedNodes).some((node) => (
       node instanceof HTMLElement
-      && (node.matches(".playerAttributeViews") || Boolean(node.querySelector(".playerAttributeViews")))
+      && node.matches(".playerGrid")
+      && Boolean(node.querySelector(".playerAttributeViews"))
     ));
+  }
+
+  function initialPlayerViewCuePending() {
+    const root = document.documentElement;
+    return root.dataset.initialEntityRoute === "player"
+      && !root.classList.contains("mflInitialRouteResolved")
+      && !root.classList.contains("mflInitialRouteSuperseded");
+  }
+
+  function currentPlayerViewCueReady() {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches) return true;
+    const views = currentPlayerAttributeViews();
+    if (!(views instanceof HTMLElement) || views.getClientRects().length === 0) return false;
+    const nativeOverflow = views.scrollWidth - views.clientWidth > 2;
+    if (!nativeOverflow) return true;
+    if (!views.classList.contains("mflViewsOverflowing")) return false;
+    const shell = views.parentElement;
+    if (!(shell instanceof HTMLElement) || !shell.classList.contains("viewsScrollerShell")) return false;
+    const button = shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight");
+    return button instanceof HTMLButtonElement
+      && button.classList.contains("mflViewsScrollButtonVisible")
+      && button.getAttribute("aria-hidden") === "false"
+      && Boolean(String(views.style.boxShadow || "").trim());
+  }
+
+  function syncInitialPlayerViewCue() {
+    if (!initialPlayerViewCuePending()) return true;
+    const root = document.documentElement;
+    root.dataset.playerFirstPaintCuesReady = "false";
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    const ready = currentPlayerViewCueReady();
+    root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";
+    return ready;
   }
 
   function observePlayerAttributeViewRenders() {
@@ -377,7 +412,8 @@
     playerAttributeViewMutationObserver?.disconnect();
     playerAttributeViewMutationObserver = new MutationObserver((records) => {
       if (!records.some(playerAttributeViewControlsChanged)) return;
-      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      if (!syncInitialPlayerViewCue()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      else if (!initialPlayerViewCuePending()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       schedulePlayerAttributeViewScrollRestore();
     });
     playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
