@@ -7365,12 +7365,14 @@ body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:ho
 }
 
 .siteFooterDetailsCreatorLink {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 16px auto;
   align-items: center;
+  justify-items: start;
   width: fit-content;
   max-width: 100%;
   margin: 0;
-  gap: 5px;
+  column-gap: 5px;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 600;
@@ -7379,15 +7381,19 @@ body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:ho
 }
 
 .siteFooterDetailsCreatorIcon {
-  flex: 0 0 12px;
+  justify-self: center;
+  align-self: center;
   width: 12px;
   height: 12px;
   fill: currentColor;
 }
 
 .siteFooterDetailsCreatorMflIcon {
-  flex-basis: 16px;
   width: 16px;
+}
+
+.siteFooterDetailsCreatorLink > span {
+  align-self: center;
 }
 
 .siteFooterDetailsCreatorDiscord {
