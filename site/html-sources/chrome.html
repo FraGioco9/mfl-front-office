@@ -47,7 +47,24 @@
           <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
           </div>
           <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon settingsIcon" viewBox="0 0 24 24" aria-hidden="true"><use href="#settingsIconGlyph"></use></svg><span class="navText">Settings</span></a>
+          <div id="settingsNavParking" hidden></div>
         </aside>
+        <script>
+          (() => {
+            const settingsNavButton = document.querySelector("#sidebar .settingsNavButton");
+            const settingsNavParking = document.querySelector("#settingsNavParking");
+            const sidebar = document.querySelector("#sidebar");
+            if (!(settingsNavButton instanceof HTMLElement)
+              || !(settingsNavParking instanceof HTMLElement)
+              || !(sidebar instanceof HTMLElement)) return;
+            const mobileNavigationMedia = window.matchMedia("(max-width: 900px)");
+            const syncSettingsNavPlacement = () => {
+              (mobileNavigationMedia.matches ? settingsNavParking : sidebar).appendChild(settingsNavButton);
+            };
+            syncSettingsNavPlacement();
+            mobileNavigationMedia.addEventListener("change", syncSettingsNavPlacement);
+          })();
+        </script>
       </div>
 
       <main>

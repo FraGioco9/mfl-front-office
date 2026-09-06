@@ -8758,11 +8758,6 @@ html:not(.mflInitialRouteResolved):is(
     opacity: 1;
   }
 
-  .menuRail .settingsNavButton {
-    align-self: stretch;
-    margin: 0;
-  }
-
   .menuRail .navButton.active,
   .menuRail .navButton.active:hover {
     border-color: var(--primary);
@@ -8778,8 +8773,7 @@ html:not(.mflInitialRouteResolved):is(
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"] {
     border-color: var(--primary);
     background: var(--primary);
     color: #ffffff;
