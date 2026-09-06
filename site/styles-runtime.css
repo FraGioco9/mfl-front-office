@@ -7377,6 +7377,7 @@ body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:ho
   font-size: 10px;
   font-weight: 600;
   line-height: 1.15;
+  text-decoration: none;
   white-space: nowrap;
 }
 
