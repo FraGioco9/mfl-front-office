@@ -807,10 +807,8 @@
     return Math.max(0, views.scrollWidth - views.clientWidth);
   }
 
-  function clampViewScroll(views, maxScroll = viewMaxScroll(views)) {
-    const clamped = Math.min(maxScroll, Math.max(0, views.scrollLeft));
-    if (Math.abs(views.scrollLeft - clamped) > VIEW_SCROLL_EPSILON) views.scrollLeft = clamped;
-    return clamped;
+  function boundedViewScroll(views, maxScroll = viewMaxScroll(views)) {
+    return Math.min(maxScroll, Math.max(0, views.scrollLeft));
   }
 
   function fadeShadow(canScrollLeft, canScrollRight, strength = 56) {
@@ -855,7 +853,7 @@
       return;
     }
     const maxScroll = viewMaxScroll(views);
-    const scrollLeft = clampViewScroll(views, maxScroll);
+    const scrollLeft = boundedViewScroll(views, maxScroll);
     const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;
     const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;
     setViewScrollButtonVisible(leftButton, canScrollLeft);

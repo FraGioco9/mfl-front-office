@@ -11,13 +11,19 @@ const appEntry = read("./modules/app-entry.js");
 
 for (const token of [
   'const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");',
+  'const PLAYER_VIEW_SCROLL_EPSILON = 2;',
+  'let playerAttributeViewScrollAtEnd = false;',
   'function currentPlayerPathname() {',
   'return /^\\/players\\/\\d{1,20}$/i.test(pathname) ? pathname : "";',
   'function rememberPlayerAttributeViewScroll(views = currentPlayerAttributeViews()) {',
-  'playerAttributeViewScrollLeft = views.scrollLeft;',
+  'const scrollLeft = Math.min(maxScroll, Math.max(0, views.scrollLeft));',
+  'playerAttributeViewScrollLeft = scrollLeft;',
+  'playerAttributeViewScrollAtEnd = maxScroll > PLAYER_VIEW_SCROLL_EPSILON',
+  '&& maxScroll - scrollLeft <= PLAYER_VIEW_SCROLL_EPSILON;',
   'function applyPlayerAttributeViewScroll() {',
   'const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);',
-  'const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));',
+  'const target = playerAttributeViewScrollAtEnd',
+  '? maxScroll',
   'if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;',
   'function schedulePlayerAttributeViewScrollRestore() {',
   'playerAttributeViewRestoring = true;',
@@ -25,7 +31,6 @@ for (const token of [
   'window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();',
   'function capturePlayerAttributeViewScroll(target) {',
   'target.closest("#playerDetail [data-player-attribute-view]")',
-  'queueMicrotask(schedulePlayerAttributeViewScrollRestore);',
   'function onPlayerAttributeViewScroll(event) {',
   'views.matches("#playerDetail .playerAttributeViews")',
   'function playerAttributeViewControlsChanged(record) {',
@@ -122,12 +127,25 @@ assert.ok(
   "The parser-first-paint Player strip must hide progression-only controls before measuring overflow.",
 );
 
-const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
+const suppressionIndex = interactions.indexOf("if (suppressDraggedClick(event)) {");
+const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);", suppressionIndex);
 const activeControlIndex = interactions.indexOf("if (consumeActivePageViewFilterEvent(event)) return;", captureIndex);
-assert.ok(captureIndex >= 0 && activeControlIndex > captureIndex, "Player view scroll must be captured in click capture before the Player view handler rerenders its strip.");
+assert.ok(
+  suppressionIndex >= 0 && captureIndex > suppressionIndex && activeControlIndex > captureIndex,
+  "A click synthesized by a Player horizontal drag must be suppressed before it can capture or schedule any Player scroll restoration.",
+);
 assert.ok(
   interactions.includes('document.addEventListener("click", onClick, true);'),
   "Player view selection must still be captured before the synchronous Player view handler runs.",
+);
+const captureStart = interactions.indexOf("function capturePlayerAttributeViewScroll(target) {");
+const captureEnd = interactions.indexOf("\n  function onPlayerAttributeViewScroll", captureStart);
+const capture = interactions.slice(captureStart, captureEnd);
+assert.ok(
+  capture.includes("rememberPlayerAttributeViewScroll(views);")
+    && !capture.includes("schedulePlayerAttributeViewScrollRestore")
+    && !capture.includes("queueMicrotask"),
+  "An ordinary Player view click may remember the current offset but must not queue a post-click scroll writer; real DOM replacement remains MutationObserver-owned.",
 );
 assert.ok(
   player.includes("function scheduleReadyControlsAfterLoading(playerIdValue) {")
@@ -154,7 +172,8 @@ assert.ok(
 );
 assert.ok(
   interactions.includes("if (pathname === playerAttributeViewScrollPathname) return pathname;")
-    && interactions.includes("playerAttributeViewScrollLeft = 0;"),
+    && interactions.includes("playerAttributeViewScrollLeft = 0;")
+    && interactions.includes("playerAttributeViewScrollAtEnd = false;"),
   "Changing to a different Player pathname must reset the transient scroll state instead of carrying it across players.",
 );
 assert.ok(
@@ -178,6 +197,36 @@ assert.equal(
   (restore.match(/requestAnimationFrame\(/g) || []).length,
   1,
   "Player view restoration must use one layout-boundary frame instead of chained post-scroll writes.",
+);
+
+const edgeRestoreTarget = (storedScrollLeft, atEnd, maxScroll) => atEnd
+  ? maxScroll
+  : Math.min(maxScroll, Math.max(0, storedScrollLeft));
+assert.equal(edgeRestoreTarget(14, true, 20), 20, "A Player strip at its old right edge must follow a wider settled native maximum exactly.");
+assert.equal(edgeRestoreTarget(14, false, 20), 14, "A non-edge Player strip must retain its actual lateral offset through rerenders.");
+assert.ok(
+  interactions.includes('startControl.matches("#playerDetail .playerAttributeViewButton")')
+    && interactions.includes("if (document.activeElement === startControl) startControl.blur();")
+    && interactions.includes('startControl.closest(".playerAttributeViews")')
+    && interactions.includes("suppressClickControl = draggedPlayerViewScroller instanceof HTMLElement")
+    && interactions.includes("if (!(draggedPlayerViewScroller instanceof HTMLElement)) scheduleClickSuppressionClear();"),
+  "Dragging a Player view must release focus immediately and keep the whole strip armed to suppress delayed compatibility clicks until either that click or the next pointer gesture clears it.",
+);
+
+const pointerCancelStart = interactions.indexOf("function onPointerCancel(event) {");
+const pointerCancelEnd = interactions.indexOf("\n  function onEscapeCapture", pointerCancelStart);
+const pointerCancel = interactions.slice(pointerCancelStart, pointerCancelEnd);
+assert.ok(
+  pointerCancel.includes("const startControl = gestureStartControl;")
+    && pointerCancel.includes('startControl.matches("#playerDetail .playerAttributeViewButton")')
+    && pointerCancel.includes('startControl.closest(".playerAttributeViews")')
+    && pointerCancel.includes("suppressClickControl = cancelledPlayerViewScroller;")
+    && pointerCancel.includes("} else {\n      clearClickSuppression();\n    }"),
+  "Chrome mobile emulation may terminate a native pan with pointercancel; a cancelled Player-strip gesture must keep strip-scoped compatibility-click suppression instead of clearing it.",
+);
+assert.ok(
+  pointerCancel.indexOf("clearGesture();") < pointerCancel.indexOf("suppressClickControl = cancelledPlayerViewScroller;"),
+  "Chrome pointercancel handling must preserve the cancelled Player strip before clearing transient gesture fields.",
 );
 
 const cueReadyStart = interactions.indexOf("function currentPlayerViewCueReady() {");
@@ -228,8 +277,8 @@ const ensureViewScrollersEnd = shared.indexOf("\n  function onMobileTableMediaCh
 const ensureViewScrollers = shared.slice(ensureViewScrollersStart, ensureViewScrollersEnd);
 assert.ok(
   ensureViewScrollers.includes("const onViewScroll = () => {\n          scheduleViewScrollerSync(candidate);\n        };")
-    && !ensureViewScrollers.includes("clampViewScroll(candidate);"),
-  "Real touch/momentum scrolling must not be imperatively clamped on every scroll event; clamping belongs only to layout synchronization.",
+    && !ensureViewScrollers.includes("clampViewScroll"),
+  "Real touch/momentum scrolling must not have any imperative scrollLeft clamp owner in cue synchronization.",
 );
 
 const renderedItemsStart = shared.indexOf("function renderedViewItems(views) {");
@@ -244,6 +293,12 @@ assert.ok(
 assert.ok(
   shared.includes("function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }"),
   "The Player selector's natural scrollWidth/clientWidth difference must be the exact right boundary.",
+);
+assert.ok(
+  shared.includes("function boundedViewScroll(views, maxScroll = viewMaxScroll(views)) {\n    return Math.min(maxScroll, Math.max(0, views.scrollLeft));\n  }")
+    && shared.includes("const scrollLeft = boundedViewScroll(views, maxScroll);")
+    && !shared.includes("function clampViewScroll"),
+  "Every overflowing Player cue update must read the native endpoint without writing scrollLeft.",
 );
 
 const syncViewScrollerStart = shared.indexOf("function syncViewScroller(views) {");
@@ -268,4 +323,4 @@ assert.ok(
   "Player first-paint horizontal cues must be measured after the visible Player content row is in its initial shell and before hydration begins.",
 );
 
-console.log("Player refresh keeps the real right cue visible before first paint, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
+console.log("Player native touch owns the right endpoint: pointerup and Chrome-style pointercancel both suppress compatibility clicks, while rerenders preserve semantic edge intent.");

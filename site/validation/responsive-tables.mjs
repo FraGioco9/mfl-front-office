@@ -120,7 +120,9 @@ export function validateResponsiveTables(context) {
   includes(sharedTableUi, "function renderedViewItems(views) {", "Horizontal overflow must be measured from rendered direct controls.");
   includes(sharedTableUi, "function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }", "The browser's native scroll extent must define the canonical right boundary once overlay chrome is outside the scroller.");
   includes(sharedTableUi, "const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;", "Horizontal scrolling must remain enabled only when visible contents exceed the strip width.");
-  includes(sharedTableUi, "const scrollLeft = clampViewScroll(views, maxScroll);", "Horizontal scrolling must retain a defensive clamp at the native scroll boundary.");
+  includes(sharedTableUi, "function boundedViewScroll(views, maxScroll = viewMaxScroll(views)) {\n    return Math.min(maxScroll, Math.max(0, views.scrollLeft));\n  }", "Horizontal cue state must use a bounded read of the browser-owned native scroll position.");
+  includes(sharedTableUi, "const scrollLeft = boundedViewScroll(views, maxScroll);", "Horizontal cue synchronization must never write scrollLeft while the strip overflows.");
+  excludes(sharedTableUi, "function clampViewScroll", "Horizontal cue synchronization must not retain a competing scrollLeft clamp owner.");
   includes(sharedTableUi, "const target = Math.min(maxScroll, views.scrollLeft + distance);\n      views.scrollTo({ left: target, behavior: \"smooth\" });", "Right-arrow clicks must stop at the browser's exact right boundary rather than scrolling into empty space.");
   includes(sharedTableUi, "const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;\n    const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;", "Each edge cue must appear only when additional content exists in its direction.");
   includes(sharedTableUi, "setViewScrollButtonVisible(leftButton, canScrollLeft);\n    setViewScrollButtonVisible(button, canScrollRight);", "Left and right cue transitions must track the actual scroll position independently.");

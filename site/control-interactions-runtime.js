@@ -18,6 +18,7 @@
   const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
   const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");
+  const PLAYER_VIEW_SCROLL_EPSILON = 2;
 
   let pointerFocusedControl = null;
   let gestureStartControl = null;
@@ -31,6 +32,7 @@
   let escapeHandlerSequence = 0;
   let playerAttributeViewScrollPathname = "";
   let playerAttributeViewScrollLeft = 0;
+  let playerAttributeViewScrollAtEnd = false;
   let playerAttributeViewRestoreFrame = 0;
   let playerAttributeViewRestoring = false;
   let playerAttributeViewMutationObserver = null;
@@ -301,6 +303,7 @@
     if (pathname === playerAttributeViewScrollPathname) return pathname;
     playerAttributeViewScrollPathname = pathname;
     playerAttributeViewScrollLeft = 0;
+    playerAttributeViewScrollAtEnd = false;
     playerAttributeViewRestoring = false;
     if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
     playerAttributeViewRestoreFrame = 0;
@@ -311,7 +314,11 @@
     if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !(views instanceof HTMLElement)) return;
     const pathname = syncPlayerAttributeViewScrollPath();
     if (!pathname || playerAttributeViewRestoring) return;
-    playerAttributeViewScrollLeft = views.scrollLeft;
+    const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
+    const scrollLeft = Math.min(maxScroll, Math.max(0, views.scrollLeft));
+    playerAttributeViewScrollLeft = scrollLeft;
+    playerAttributeViewScrollAtEnd = maxScroll > PLAYER_VIEW_SCROLL_EPSILON
+      && maxScroll - scrollLeft <= PLAYER_VIEW_SCROLL_EPSILON;
   }
 
   function applyPlayerAttributeViewScroll() {
@@ -320,7 +327,9 @@
     const views = currentPlayerAttributeViews();
     if (!(views instanceof HTMLElement)) return false;
     const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
-    const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));
+    const target = playerAttributeViewScrollAtEnd
+      ? maxScroll
+      : Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));
     if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;
     return true;
   }
@@ -345,7 +354,6 @@
     const views = button.closest(".playerAttributeViews");
     if (!(views instanceof HTMLElement)) return;
     rememberPlayerAttributeViewScroll(views);
-    queueMicrotask(schedulePlayerAttributeViewScrollRestore);
   }
 
   function onPlayerAttributeViewScroll(event) {
@@ -425,10 +433,15 @@
       return;
     }
     playerAttributeViewScrollLeft = 0;
+    playerAttributeViewScrollAtEnd = false;
     playerAttributeViewRestoring = false;
   }
 
   function onClick(event) {
+    if (suppressDraggedClick(event)) {
+      endNavigationIntent();
+      return;
+    }
     capturePlayerAttributeViewScroll(event.target);
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
@@ -436,10 +449,6 @@
     }
 
     if (consumeActivePageViewFilterEvent(event)) return;
-    if (suppressDraggedClick(event)) {
-      endNavigationIntent();
-      return;
-    }
 
     syncWatchlistSelectorNavigationIntent(event);
     if (beginNavigationIntent(event.target)) handOffNavigationIntent();
@@ -498,6 +507,14 @@
     const dy = event.clientY - gestureStartY;
     if ((dx * dx) + (dy * dy) >= DRAG_ACTIVATION_THRESHOLD_PX * DRAG_ACTIVATION_THRESHOLD_PX) {
       gestureDragged = true;
+      const startControl = gestureStartControl;
+      if (
+        startControl instanceof HTMLButtonElement
+        && startControl.matches("#playerDetail .playerAttributeViewButton")
+      ) {
+        if (document.activeElement === startControl) startControl.blur();
+        if (pointerFocusedControl === startControl) pointerFocusedControl = null;
+      }
     }
   }
 
@@ -508,20 +525,48 @@
     const dragged = gestureDragged;
     const releaseControl = buttonGestureFromTarget(event.target);
     const invalidButtonRelease = Boolean(startControl && (dragged || releaseControl !== startControl));
+    const draggedPlayerViewControl = Boolean(
+      dragged
+      && startControl instanceof HTMLButtonElement
+      && startControl.matches("#playerDetail .playerAttributeViewButton")
+    );
+    const draggedPlayerViewScroller = draggedPlayerViewControl
+      ? startControl.closest(".playerAttributeViews")
+      : null;
     clearGesture();
     if (!invalidButtonRelease) return;
 
+    if (draggedPlayerViewControl) {
+      if (document.activeElement === startControl) startControl.blur();
+      if (pointerFocusedControl === startControl) pointerFocusedControl = null;
+    }
     endNavigationIntent();
-    suppressClickControl = releaseControl;
+    suppressClickControl = draggedPlayerViewScroller instanceof HTMLElement
+      ? draggedPlayerViewScroller
+      : releaseControl;
     event.preventDefault();
     event.stopPropagation();
-    scheduleClickSuppressionClear();
+    if (!(draggedPlayerViewScroller instanceof HTMLElement)) scheduleClickSuppressionClear();
   }
 
   function onPointerCancel(event) {
     if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
+
+    const startControl = gestureStartControl;
+    const cancelledPlayerViewControl = startControl instanceof HTMLButtonElement
+      && startControl.matches("#playerDetail .playerAttributeViewButton");
+    const cancelledPlayerViewScroller = cancelledPlayerViewControl
+      ? startControl.closest(".playerAttributeViews")
+      : null;
+
     clearGesture();
-    clearClickSuppression();
+    if (cancelledPlayerViewScroller instanceof HTMLElement) {
+      if (document.activeElement === startControl) startControl.blur();
+      if (pointerFocusedControl === startControl) pointerFocusedControl = null;
+      suppressClickControl = cancelledPlayerViewScroller;
+    } else {
+      clearClickSuppression();
+    }
     endNavigationIntent();
   }
 

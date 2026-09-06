@@ -9773,6 +9773,7 @@ html:not(.mflInitialRouteResolved):is(
   gap: var(--mfl-player-box-gap);
   overflow-x: hidden;
   overflow-y: hidden;
+  overflow-anchor: none;
   overscroll-behavior-x: auto;
   touch-action: pan-y;
 }
@@ -9780,7 +9781,6 @@ html:not(.mflInitialRouteResolved):is(
 .playerAttributeViews.mflViewsOverflowing {
   overflow-x: auto;
   overscroll-behavior-x: none;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
 }
 
@@ -10453,8 +10453,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .views,
-  .quickFilters,
-  .playerAttributeViews {
+  .quickFilters {
     scroll-padding-inline: 10px;
   }
 

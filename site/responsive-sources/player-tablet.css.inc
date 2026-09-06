@@ -97,6 +97,7 @@
   gap: var(--mfl-player-box-gap);
   overflow-x: hidden;
   overflow-y: hidden;
+  overflow-anchor: none;
   overscroll-behavior-x: auto;
   touch-action: pan-y;
 }
@@ -104,7 +105,6 @@
 .playerAttributeViews.mflViewsOverflowing {
   overflow-x: auto;
   overscroll-behavior-x: none;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
 }
 

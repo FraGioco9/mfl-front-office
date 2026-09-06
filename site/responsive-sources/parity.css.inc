@@ -73,8 +73,7 @@
   }
 
   .views,
-  .quickFilters,
-  .playerAttributeViews {
+  .quickFilters {
     scroll-padding-inline: 10px;
   }
 
