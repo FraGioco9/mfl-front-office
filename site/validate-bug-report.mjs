@@ -195,7 +195,7 @@ for (const source of [schema, migration]) {
 }
 
 for (const token of [
-  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {',
+  '.siteFooterDetailsGroup > :is(a, .siteFooterDetailsSupportButton) {',
   'margin: 0;',
   'appearance: none;',
   'color: var(--text-muted);',
@@ -244,4 +244,4 @@ for (const forbidden of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup validation passed with footer-owned link-equivalent support alignment/color, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");
+console.log("Bug report popup validation passed with footer-owned direct-action support alignment/color, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");

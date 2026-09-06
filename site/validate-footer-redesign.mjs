@@ -86,7 +86,7 @@ for (const token of [
   'body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,',
   'body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {',
   'color: var(--primary);',
-  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {',
+  '.siteFooterDetailsGroup > :is(a, .siteFooterDetailsSupportButton) {',
   'margin: 0;',
   'color: var(--text-muted);',
   '.siteFooterDetailsCreatorLinks {',
@@ -107,7 +107,7 @@ for (const token of [
   invariant(footer.includes(token), `Canonical single-footer styling is missing: ${token}`);
 }
 
-const footerActionStart = footer.indexOf('.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {');
+const footerActionStart = footer.indexOf('.siteFooterDetailsGroup > :is(a, .siteFooterDetailsSupportButton) {');
 const footerActionEnd = footer.indexOf('\n}', footerActionStart);
 const footerActionBlock = footerActionStart >= 0 && footerActionEnd > footerActionStart
   ? footer.slice(footerActionStart, footerActionEnd)
@@ -124,6 +124,7 @@ for (const token of [
   invariant(footerActionBlock.includes(token), `Footer Support and Information actions must share natural-height alignment: ${token}`);
 }
 invariant(!footerActionBlock.includes('height: 40px;'), "Footer actions must not inherit the global 40px button height.");
+invariant(!footer.includes('.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {'), "Direct Support/Information geometry must not capture nested Creator links.");
 
 invariant(
   footer.includes('main {\n  --mfl-footer-page-floor: 800px;\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;\n  align-content: start;\n  row-gap: 22px;\n}'),
@@ -183,4 +184,4 @@ invariant(!footer.includes("!important"), "Footer redesign must not introduce !i
 invariant(!responsive.includes(".siteFooterDetails.siteFooterDetails"), "Footer redesign must not use specificity-boosting override selectors.");
 invariant(!stylesBase.includes(".siteFooterDetails"), "Single-footer structure must remain owned by footer.css, not styles-base.css.");
 
-console.log("Single bottom footer validation passed with unified natural-height footer action geometry and color.");
+console.log("Single bottom footer validation passed with direct natural-height actions and independent Creator row alignment.");
