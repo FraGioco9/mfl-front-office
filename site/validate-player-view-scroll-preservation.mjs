@@ -60,7 +60,8 @@ for (const token of [
   'scroller.matches("#playerDetail .playerAttributeViews")',
   '? ":scope > .playerAttributeViewButton"',
   'document.querySelector("#playerDetail .playerAttributeViews")',
-  'if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();',
+  'if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();',
+  'if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();',
   '? "attribute views"',
 ]) {
   assert.ok(bootstrap.includes(token), `Player first-paint horizontal cue ownership is missing: ${token}`);
@@ -150,9 +151,11 @@ assert.ok(
   shared.includes("const width = Math.max(0, PLAYER_VIEW_SCROLL_END_GUTTER_PX - gap);"),
   "The spacer plus the existing flex gap must equal the intended 10px terminal gutter instead of double-counting spacing.",
 );
+const tablePrimeIndex = bootstrap.indexOf('if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();');
+const playerPrimeIndex = bootstrap.indexOf('if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();');
+const visibleShellIndex = bootstrap.indexOf('document.querySelectorAll("main > .pageView").forEach');
 assert.ok(
-  bootstrap.indexOf('if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();')
-    > bootstrap.indexOf('document.querySelectorAll("main > .pageView").forEach'),
+  visibleShellIndex >= 0 && tablePrimeIndex > visibleShellIndex && playerPrimeIndex > tablePrimeIndex,
   "Player first-paint horizontal cues must be measured after the Player page is the visible initial shell and before hydration begins.",
 );
 
