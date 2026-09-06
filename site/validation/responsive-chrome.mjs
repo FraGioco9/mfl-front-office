@@ -22,6 +22,12 @@ export function validateResponsiveChrome(context) {
   includes(responsive, "border-radius: 16px;", "Mobile navigation rail must use a restrained outer radius instead of pill-shaped side caps.");
   includes(responsive, "padding: 4px 2px;\n    overflow: visible;\n    border-color: transparent;\n    border-radius: 12px;", "Mobile navigation cells must keep 12px corners inside the 16px rail so outer and inner corner geometry stays concentric.");
   includes(responsive, ".menuRail .navButton {\n    display: flex;\n    flex: 1 1 0;\n    flex-direction: column;", "Mobile navigation items must use the existing links as equal icon-over-label cells.");
+  includes(indexHtml, '<div id="settingsNavParking" hidden></div>', "Mobile first paint must provide a non-rendered structural parking owner for the desktop Settings link.");
+  includes(indexHtml, '(mobileNavigationMedia.matches ? settingsNavParking : sidebar).appendChild(settingsNavButton);', "Settings must leave the rendered mobile rail structurally and return to the desktop sidebar at the breakpoint.");
+  includes(indexHtml, 'mobileNavigationMedia.addEventListener("change", syncSettingsNavPlacement);', "Settings placement must stay synchronized when the viewport crosses the mobile breakpoint.");
+  excludes(indexHtml, 'settingsNavButton.hidden = window.matchMedia("(max-width: 900px)").matches;', "Mobile Settings removal must not rely on hidden because the mobile nav display rule can override it.");
+  excludes(responsive, "  .menuRail .settingsNavButton {", "Mobile navigation must not retain a Settings-specific layout slot.");
+  excludes(responsive, '[data-initial-page="settings"] #sidebar .navButton[data-page="settings"]', "Mobile first paint must not style a Settings destination that is absent from the mobile rail.");
   includes(responsive, "padding: 4px 2px;\n    overflow: visible;\n    border-color: transparent;", "Mobile navigation cells must not clip labels that exceed an equal-width cell.");
   includes(responsive, ".menuRail .navButton .navEmoji {\n    flex: 0 0 18px;\n    width: 18px;\n    height: 18px;\n    color: inherit;\n    font-size: 18px;\n    line-height: 18px;", "Mobile navigation icons must keep the same 18px geometry as desktop.");
   includes(responsive, ".menuRail .navButton .navText {\n    display: block;\n    width: max-content;\n    min-height: 9px;\n    max-width: none;\n    margin-left: 0;\n    overflow: visible;", "Mobile navigation labels must render fully without ellipsis or clipping.");

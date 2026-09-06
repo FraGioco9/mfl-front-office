@@ -121,10 +121,19 @@ invariant(
   "Settings must remain anchored at the bottom of the desktop sidebar with its existing bottom spacing.",
 );
 invariant(
+  index.includes('<div id="settingsNavParking" hidden></div>')
+    && index.includes('const settingsNavParking = document.querySelector("#settingsNavParking");')
+    && index.includes('(mobileNavigationMedia.matches ? settingsNavParking : sidebar).appendChild(settingsNavButton);')
+    && index.includes('mobileNavigationMedia.addEventListener("change", syncSettingsNavPlacement);')
+    && !index.includes('settingsNavButton.hidden = window.matchMedia("(max-width: 900px)").matches;'),
+  "First paint must structurally park Settings outside the rendered mobile rail instead of relying on the hidden attribute.",
+);
+invariant(
   responsive.includes("  .sidebarGrid {\n    display: contents;\n  }")
     && responsive.includes("  .menuRail .navButton {\n    display: flex;\n    flex: 1 1 0;\n    flex-direction: column;")
-    && responsive.includes("  .menuRail .settingsNavButton {\n    align-self: stretch;\n    margin: 0;\n  }"),
-  "Mobile navigation must flatten the desktop grid wrapper and distribute every existing destination, including Settings, evenly in the bottom rail.",
+    && !responsive.includes("  .menuRail .settingsNavButton {")
+    && !responsive.includes('[data-initial-page="settings"] #sidebar .navButton[data-page="settings"]'),
+  "Mobile navigation must distribute only mobile destinations, with no Settings-specific layout or selected-state rule.",
 );
 
 new Function(shared);
