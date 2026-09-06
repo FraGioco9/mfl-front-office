@@ -817,7 +817,6 @@ function animateReadyControls(container = document) {
   return true;
 }
 
-
   document.addEventListener("pointerdown", (event) => {
     if (!(activeHeroActionMenu instanceof HTMLElement)) return;
     const wrapper = activeHeroActionMenu.closest(".playerHeroActionMenu");
@@ -1247,11 +1246,14 @@ function stableAttributePanelHtml(row) {
     const identity = hero.querySelector(":scope > .playerHeroIdentity");
     if (identity instanceof HTMLElement) {
       const idText = identity.querySelector(".playerIdText");
-      if (idText instanceof HTMLElement) idText.textContent = "ID #" + context.playerId;
+      if (idText instanceof HTMLElement) {
+        idText.textContent = "ID #" + context.playerId;
+        syncPlayerIdTooltip(idText);
+      }
       const titleName = identity.querySelector(".playerTitleName");
       if (titleName instanceof HTMLElement) {
         titleName.classList.toggle("playerTitleNamePending", !context.name);
-        titleName.textContent = context.name || loadingBlank();
+        syncPlayerTitleName(titleName, context.name);
       }
       const noteIcon = identity.querySelector("[data-player-note-title-icon]");
       if (noteIcon instanceof HTMLElement && state.walletPreferencesLoaded && typeof playerNoteIconHtml === "function") {
@@ -1325,14 +1327,14 @@ function stableAttributePanelHtml(row) {
     eyebrow.id = "copyPlayerIdButton";
     eyebrow.className = "playerEyebrow playerIdText";
     eyebrow.type = "button";
-    eyebrow.dataset.tooltip = "Click to copy";
     eyebrow.setAttribute("aria-label", "Click to copy player ID");
     eyebrow.textContent = "ID #" + playerId;
+    syncPlayerIdTooltip(eyebrow);
     const title = document.createElement("h2");
     title.className = "playerTitle";
     const titleName = document.createElement("span");
     titleName.className = "playerTitleName" + (context.name ? "" : " playerTitleNamePending");
-    titleName.textContent = context.name || loadingBlank();
+    syncPlayerTitleName(titleName, context.name);
     const titleNoteIcon = document.createElement("span");
     titleNoteIcon.className = "playerTitleNoteIcon";
     titleNoteIcon.dataset.playerNoteTitleIcon = "";
@@ -1394,6 +1396,13 @@ function stableAttributePanelHtml(row) {
     document.querySelectorAll(".playerHeroActions").forEach((actions) => {
       if (actions instanceof HTMLElement) applyHeroActionMenuLayout(actions);
     });
+    const playerIdButton = document.querySelector("#playerDetail #copyPlayerIdButton");
+    if (playerIdButton instanceof HTMLElement) syncPlayerIdTooltip(playerIdButton);
+    document.querySelectorAll("#playerDetail .playerTitleName").forEach((titleName) => {
+      if (titleName instanceof HTMLElement) syncPlayerTitleName(titleName, titleName.dataset.playerFullName || "");
+    });
+    const listingBadge = document.querySelector("#playerDetail .playerTitle .listingCellContent");
+    if (listingBadge instanceof HTMLElement) syncPlayerListingTooltip(listingBadge);
   }, { passive: true });
 
   const pendingContext = window.__mflPlayerFirstPaintPendingContext;
@@ -1427,6 +1436,61 @@ function stableAttributePanelHtml(row) {
     detailDataReady,
   });
 })();
+
+function playerUsesMobileLayout() {
+  return Boolean(window.matchMedia?.("(max-width: 900px)")?.matches);
+}
+
+function compactPlayerPageName(value) {
+  const fullName = String(value || "").trim().replace(/\s+/g, " ");
+  if (!fullName) return "";
+  const parts = fullName.split(" ");
+  if (parts.length < 2) return fullName;
+  return `${parts[0].charAt(0).toUpperCase()}. ${parts.slice(1).join(" ")}`;
+}
+
+function playerPageDisplayName(value) {
+  const fullName = String(value || "").trim();
+  return playerUsesMobileLayout() ? compactPlayerPageName(fullName) : fullName;
+}
+
+function syncPlayerTitleName(target, fullNameValue) {
+  if (!(target instanceof HTMLElement)) return false;
+  const fullName = String(fullNameValue || target.dataset.playerFullName || "").trim();
+  target.dataset.playerFullName = fullName;
+  if (!fullName) {
+    target.removeAttribute("aria-label");
+    target.textContent = "\u00A0";
+    return true;
+  }
+  target.textContent = playerPageDisplayName(fullName);
+  target.setAttribute("aria-label", fullName);
+  return true;
+}
+
+function syncPlayerIdTooltip(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (playerUsesMobileLayout()) target.removeAttribute("data-tooltip");
+  else target.dataset.tooltip = "Click to copy";
+  return true;
+}
+
+function syncPlayerListingTooltip(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  target.classList.add("playerListingBadge");
+  const price = String(target.querySelector(".listingCellPrice")?.textContent || "").trim();
+  if (playerUsesMobileLayout() && price) {
+    target.dataset.tooltip = price;
+    target.setAttribute("role", "button");
+    target.tabIndex = 0;
+    target.setAttribute("aria-label", `Listing price ${price}`);
+  } else {
+    target.removeAttribute("data-tooltip");
+    target.removeAttribute("role");
+    target.removeAttribute("tabindex");
+  }
+  return true;
+}
 
 function showPlayerNoteTooltip(icon) {
   if (Date.now() < state.tooltipSuppressedUntil) {
@@ -1976,8 +2040,8 @@ function renderPlayerPageOwner(playerId) {
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div class="playerHeroIdentity">
-        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
-        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span>${listingPriceBadgeHtml(row)}<span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
+        <h2 class="playerTitle"><span class="playerTitleName" data-player-full-name="${escapeHtml(playerName)}" aria-label="${escapeHtml(playerName)}">${escapeHtml(playerPageDisplayName(playerName))}</span>${listingPriceBadgeHtml(row)}<span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
@@ -2018,6 +2082,8 @@ function renderPlayerPageOwner(playerId) {
     externalUrl: formatCellValue(row, linkColumn),
     knownValues: window.__mflPlayerFirstPaintRuntime?.snapshotRowKnownValues?.(row) || {},
   });
+  const listingBadge = playerDetail.querySelector(".playerTitle .listingCellContent");
+  if (listingBadge instanceof HTMLElement) syncPlayerListingTooltip(listingBadge);
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   if (watchButton) {
     const inAnyWatchlist = playerIsInAnyWatchlist(id);
@@ -2064,6 +2130,7 @@ function renderPlayerPageOwner(playerId) {
     }
   });
   const playerIdButton = playerDetail.querySelector("#copyPlayerIdButton");
+  syncPlayerIdTooltip(playerIdButton);
   playerIdButton.addEventListener("mouseenter", () => showPlayerNoteTooltip(playerIdButton));
   playerIdButton.addEventListener("focus", () => showPlayerNoteTooltip(playerIdButton));
   playerIdButton.addEventListener("mouseleave", hidePlayerNoteTooltip);
