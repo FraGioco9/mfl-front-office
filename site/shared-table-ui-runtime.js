@@ -14,6 +14,8 @@
   const PLAYER_TABLE_FADE_RIGHT_CLASS = "mflPlayerTableCanScrollRight";
   const VIEW_SCROLL_EPSILON = 2;
   const PLAYER_TABLE_SCROLL_EPSILON = 2;
+  const PLAYER_VIEW_SCROLL_END_GUTTER_PX = 10;
+  const VIEW_SCROLL_END_SPACER_ATTR = "data-mfl-view-scroll-end-spacer";
   const MOBILE_STYLE_ID = "mflInitialMobileTableStyle";
   const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
@@ -781,9 +783,38 @@
     return button;
   }
 
+  function playerViewEndSpacer(views) {
+    if (!(views instanceof HTMLElement) || !views.matches("#playerDetail .playerAttributeViews")) return null;
+    const spacer = views.querySelector(`:scope > [${VIEW_SCROLL_END_SPACER_ATTR}]`);
+    return spacer instanceof HTMLElement ? spacer : null;
+  }
+
+  function syncPlayerViewEndSpacer(views, visible) {
+    const existing = playerViewEndSpacer(views);
+    if (!(views instanceof HTMLElement) || !views.matches("#playerDetail .playerAttributeViews") || !visible) {
+      existing?.remove();
+      return null;
+    }
+    if (existing) return existing;
+
+    const style = getComputedStyle(views);
+    const gap = Number.parseFloat(style.columnGap || style.gap) || 0;
+    const width = Math.max(0, PLAYER_VIEW_SCROLL_END_GUTTER_PX - gap);
+    const spacer = document.createElement("span");
+    spacer.setAttribute(VIEW_SCROLL_END_SPACER_ATTR, "");
+    spacer.setAttribute("aria-hidden", "true");
+    spacer.style.flex = `0 0 ${width}px`;
+    spacer.style.width = `${width}px`;
+    spacer.style.minWidth = `${width}px`;
+    spacer.style.height = "1px";
+    spacer.style.pointerEvents = "none";
+    views.appendChild(spacer);
+    return spacer;
+  }
+
   function renderedViewItems(views) {
     return Array.from(views.children).filter((child) => {
-      if (!(child instanceof HTMLElement) || child.hidden) return false;
+      if (!(child instanceof HTMLElement) || child.hidden || child.hasAttribute(VIEW_SCROLL_END_SPACER_ATTR)) return false;
       const style = getComputedStyle(child);
       return style.display !== "none" && style.position !== "absolute" && child.getClientRects().length > 0;
     });
@@ -828,6 +859,7 @@
   }
 
   function clearViewScrollerCues(views) {
+    syncPlayerViewEndSpacer(views, false);
     views.classList.remove(VIEW_SCROLL_CLASS);
     applyFadeShadow(views, false, false, 0);
     if (views.scrollLeft) views.scrollLeft = 0;
@@ -841,11 +873,15 @@
       return;
     }
     if (views.getClientRects().length === 0) return;
-    if (!renderedViewItems(views).length) return;
+    if (!renderedViewItems(views).length) {
+      syncPlayerViewEndSpacer(views, false);
+      return;
+    }
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
     const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
+    syncPlayerViewEndSpacer(views, overflowing);
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
       setViewScrollButtonVisible(button, false);
@@ -1121,6 +1157,7 @@
     viewSyncFrame = 0;
     playerSyncFrame = 0;
     tableHorizontalScrollers().forEach((scroller) => {
+      syncPlayerViewEndSpacer(scroller, false);
       scroller.classList.remove(VIEW_SCROLL_CLASS);
       applyFadeShadow(scroller, false, false, 0);
       removeViewScrollShell(scroller);
