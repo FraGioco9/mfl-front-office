@@ -86,7 +86,9 @@ for (const token of [
   'body:not([data-page="changelog"]) .siteFooterDetails a[href="/changelog"]:hover,',
   'body:not([data-page="changelog"]) .siteFooterDetails a[data-page="changelog"]:hover {',
   'color: var(--primary);',
-  '.siteFooterDetailsSupportButton {',
+  '.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {',
+  'margin: 0;',
+  'color: var(--text-muted);',
   '.siteFooterDetailsCreatorLinks {',
   '.siteFooterDetailsCreatorLink {',
   '.siteFooterDetailsCreatorIcon {',
@@ -162,4 +164,4 @@ invariant(!footer.includes("!important"), "Footer redesign must not introduce !i
 invariant(!responsive.includes(".siteFooterDetails.siteFooterDetails"), "Footer redesign must not use specificity-boosting override selectors.");
 invariant(!stylesBase.includes(".siteFooterDetails"), "Single-footer structure must remain owned by footer.css, not styles-base.css.");
 
-console.log("Single bottom footer validation passed.");
+console.log("Single bottom footer validation passed with unified footer action geometry and color.");
