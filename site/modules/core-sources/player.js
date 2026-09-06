@@ -2049,6 +2049,10 @@ function renderPlayerPageOwner(playerId) {
     state.evaluationPlayerId = id;
     evaluationSearchInput.value = playerName;
     clearEvaluationSearchFocus();
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) evaluationLoadButton.hidden = true;
+    evaluationPlayerPageButton.hidden = false;
     setPage("evaluation", true, { playerId: id });
   };
 

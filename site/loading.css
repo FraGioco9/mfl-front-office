@@ -19,10 +19,21 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {
-  display: flex;
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (min-width: 521px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {
+    display: flex;
+  }
+}
+
+@media (max-width: 520px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {
+    display: grid;
+  }
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationLoadButton[hidden] {
@@ -78,6 +89,18 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (min-width: 521px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationButtons {
+    display: flex;
+  }
+}
+
+@media (max-width: 520px) {
+  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationButtons {
+    display: grid;
+  }
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"]

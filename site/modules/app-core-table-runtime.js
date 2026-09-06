@@ -810,6 +810,10 @@ function ensurePlayerTableActionMenu() {
         }
       }
       clearEvaluationSearchFocus();
+      evaluationButtons.hidden = false;
+      evaluationResetButton.hidden = false;
+      if (evaluationLoadButton) evaluationLoadButton.hidden = true;
+      evaluationPlayerPageButton.hidden = false;
       void setPage("evaluation", true, { playerId });
       return;
     }

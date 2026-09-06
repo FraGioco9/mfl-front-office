@@ -76,6 +76,11 @@ for (const input of [
 ]) includes(sharedCore, input, `Evaluation render signature must include ${input}`);
 includes(sharedCore, "if (evaluationTableRenderReuse.matches(renderSignature, reusableTable)) {\n    updateEvaluationFooterActions();\n    return;\n  }", "Evaluation reuse must preserve footer-action synchronization while skipping table reconstruction.");
 includes(sharedCore, "evaluationTableRenderReuse.commit(renderSignature);", "Evaluation must commit its signature only after a completed rebuild.");
+includes(sharedCore, 'function handleEvaluationOverallControlClick(event) {', "Evaluation +/- must use one stable delegated click owner.");
+includes(sharedCore, 'event.target.closest("[data-evaluation-overall-season][data-evaluation-overall-delta]")', "Evaluation +/- delegation must resolve the rendered overall control from the click target.");
+includes(sharedCore, 'evaluationTableBody?.addEventListener("click", handleEvaluationOverallControlClick);', "Evaluation +/- delegation must be attached once to the persistent table body.");
+includes(sharedCore, 'adjustEvaluationOverall(\n    playerId,\n    Number(target.dataset.evaluationOverallSeason),\n    Number(target.dataset.evaluationOverallDelta),', "Evaluation +/- delegation must call the canonical overall mutation owner.");
+excludes(sharedCore, 'evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach', "Evaluation +/- must not depend on per-render button listeners that disappear with DOM replacement/reuse.");
 
 const evaluationRendererStart = sharedCore.indexOf("function renderEvaluationTable(row) {");
 const evaluationPageStart = sharedCore.indexOf("\nasync function renderEvaluationPage()", evaluationRendererStart);

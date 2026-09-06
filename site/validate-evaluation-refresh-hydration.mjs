@@ -3,7 +3,7 @@ import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
-const [appCoreSource, bootstrap, searchRuntime, loading, responsive] = await Promise.all([
+const [appCoreSource, bootstrap, searchRuntime, loading, responsive, indexHtml] = await Promise.all([
   Promise.all([
     read("./modules/core-sources/shared.js"), read("./modules/core-sources/evaluation.js"),
     read("./modules/core-sources/mfl-stats.js"), read("./modules/core-sources/club.js"),
@@ -12,7 +12,7 @@ const [appCoreSource, bootstrap, searchRuntime, loading, responsive] = await Pro
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
   read("./bootstrap.js"), read("./evaluation-search-state-runtime.js"),
-  read("./loading.css"), read("./responsive.css"),
+  read("./loading.css"), read("./responsive.css"), read("./index.html"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
@@ -76,6 +76,30 @@ invariant(!prime.includes("focus(") && !prime.includes("select()")
   "Plain Evaluation must not auto-focus, while unresolved recent-five rows show one local Loading… surface on refresh and in-site entry.");
 
 const firstPaintLoadingSelector = 'html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n  #evaluationSearchResults[hidden]:empty::before';
+const evaluationHandoffMarker = '<!-- Evaluation first paint: expose the route only after top controls are fully parsed. -->';
+const evaluationHandoffIndex = indexHtml.indexOf(evaluationHandoffMarker);
+const evaluationOptionsIndex = indexHtml.indexOf('id="evaluationOptionFilters"');
+const evaluationPanelIndex = indexHtml.indexOf('id="evaluationPanel"');
+const evaluationRouteCommitIndex = indexHtml.indexOf('document.body.dataset.page = "evaluation";');
+invariant(
+  !indexHtml.includes('<body data-page="home" class="pinnedSidebarVisible">\n    <script>')
+    && evaluationOptionsIndex >= 0
+    && evaluationHandoffIndex > evaluationOptionsIndex
+    && evaluationRouteCommitIndex > evaluationHandoffIndex
+    && evaluationPanelIndex > evaluationRouteCommitIndex
+    && indexHtml.indexOf('page.hidden = false;', evaluationHandoffIndex) > evaluationRouteCommitIndex,
+  "Direct Evaluation refresh must not expose the route while the page subtree is parser-incomplete; commit route/action/page visibility atomically only after top controls are parsed.",
+);
+invariant(
+  loading.includes('@media (min-width: 521px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationButtons {\n    display: flex;\n  }\n}')
+    && loading.includes('@media (max-width: 520px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationButtons {\n    display: grid;\n  }\n}'),
+  "Selected Evaluation refresh must reserve the final Reset/Player Page action footprint before hydration on desktop, tablet, and mobile.",
+);
+invariant(
+  loading.includes('@media (max-width: 520px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {\n    display: grid;\n  }\n}')
+    && loading.includes('@media (min-width: 521px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {\n    display: flex;\n  }\n}'),
+  "Parser-time plain Evaluation actions must use final mobile grid and desktop/tablet flex display.",
+);
 invariant(
   loading.includes(`${firstPaintLoadingSelector} {\n  content: "Loading…";\n  color: var(--text-soft);\n  font-size: 12px;\n}`)
     && loading.includes(`@media (max-width: 900px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 10px;\n  }\n}`)

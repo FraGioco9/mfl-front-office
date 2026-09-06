@@ -5807,6 +5807,22 @@ function adjustEvaluationOverall(playerId, season, delta) {
   renderEvaluationTable(row);
 }
 
+function handleEvaluationOverallControlClick(event) {
+  const target = event.target instanceof Element
+    ? event.target.closest("[data-evaluation-overall-season][data-evaluation-overall-delta]")
+    : null;
+  if (!(target instanceof HTMLButtonElement) || !evaluationTableBody?.contains(target)) return;
+  const playerId = String(state.evaluationPlayerId || "").trim();
+  if (!playerId) return;
+  adjustEvaluationOverall(
+    playerId,
+    Number(target.dataset.evaluationOverallSeason),
+    Number(target.dataset.evaluationOverallDelta),
+  );
+}
+
+evaluationTableBody?.addEventListener("click", handleEvaluationOverallControlClick);
+
 function evaluationOverallControl(value, season) {
   const numericValue = Number(value);
   const reduceControl = numericValue <= 1
@@ -6002,9 +6018,6 @@ function renderEvaluationTable(row) {
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
       renderEvaluationTable(row);
     });
-  });
-  evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach((button) => {
-    button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
   });
   evaluationTableRenderReuse.commit(renderSignature);
 }
