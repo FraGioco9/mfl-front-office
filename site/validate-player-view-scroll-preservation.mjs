@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
+const bootstrap = read("./bootstrap.js");
 const interactions = read("./control-interactions-runtime.js");
 const shared = read("./shared-table-ui-runtime.js");
 const player = read("./modules/core-sources/player.js");
@@ -16,18 +17,22 @@ for (const token of [
   'const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);',
   'const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));',
   'if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;',
-  'window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();',
   'function schedulePlayerAttributeViewScrollRestore() {',
   'playerAttributeViewRestoring = true;',
   'playerAttributeViewRestoreFrame = requestAnimationFrame(() => {',
-  'playerAttributeViewRestoreReleaseFrame = requestAnimationFrame(() => {',
+  'window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();',
   'function capturePlayerAttributeViewScroll(target) {',
   'target.closest("#playerDetail [data-player-attribute-view]")',
   'queueMicrotask(schedulePlayerAttributeViewScrollRestore);',
   'function onPlayerAttributeViewScroll(event) {',
   'views.matches("#playerDetail .playerAttributeViews")',
+  'function playerAttributeViewControlsChanged(record) {',
+  'record.target.matches("#playerDetail .playerAttributeViews")',
+  'node.hasAttribute("data-mfl-view-scroll-end-spacer")',
+  'node.matches(".playerAttributeViewButton, [data-player-attribute-view]")',
   'function observePlayerAttributeViewRenders() {',
   'playerAttributeViewMutationObserver = new MutationObserver((records) => {',
+  'if (!records.some(playerAttributeViewControlsChanged)) return;',
   'schedulePlayerAttributeViewScrollRestore();',
   'playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });',
   'capturePlayerAttributeViewScroll(event.target);',
@@ -49,6 +54,16 @@ for (const token of [
   "syncPlayerViewEndSpacer(views, false);",
 ]) {
   assert.ok(shared.includes(token), `Player view terminal scroll geometry is missing: ${token}`);
+}
+
+for (const token of [
+  'scroller.matches("#playerDetail .playerAttributeViews")',
+  '? ":scope > .playerAttributeViewButton"',
+  'document.querySelector("#playerDetail .playerAttributeViews")',
+  'if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();',
+  '? "attribute views"',
+]) {
+  assert.ok(bootstrap.includes(token), `Player first-paint horizontal cue ownership is missing: ${token}`);
 }
 
 const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
@@ -79,6 +94,43 @@ assert.ok(
   !interactions.includes("sessionStorage.setItem") && !interactions.includes("localStorage.setItem"),
   "Player view lateral scroll must remain transient so a refresh starts from the normal left position.",
 );
+assert.ok(
+  !interactions.includes("playerAttributeViewRestoreReleaseFrame"),
+  "Player view restoration must not schedule a second release frame that can write after a completed user gesture.",
+);
+
+const restoreStart = interactions.indexOf("function schedulePlayerAttributeViewScrollRestore() {");
+const restoreEnd = interactions.indexOf("\n  function capturePlayerAttributeViewScroll", restoreStart);
+const restore = interactions.slice(restoreStart, restoreEnd);
+assert.equal(
+  (restore.match(/applyPlayerAttributeViewScroll\(\);/g) || []).length,
+  1,
+  "Each Player rerender must restore scrollLeft exactly once after final responsive geometry is ready.",
+);
+assert.equal(
+  (restore.match(/requestAnimationFrame\(/g) || []).length,
+  1,
+  "Player view restoration must use one layout-boundary frame instead of chained post-scroll writes.",
+);
+
+const observerStart = interactions.indexOf("function playerAttributeViewControlsChanged(record) {");
+const observerEnd = interactions.indexOf("\n  function onPlayerViewScrollMediaChange", observerStart);
+const observer = interactions.slice(observerStart, observerEnd);
+assert.ok(
+  observer.includes('record.target.matches("#playerDetail .playerAttributeViews")')
+    && observer.includes('node.hasAttribute("data-mfl-view-scroll-end-spacer")')
+    && observer.includes('node.matches(".playerAttributeViewButton, [data-player-attribute-view]")'),
+  "Only actual Player view-control rebuilds may schedule a scroll restoration; shared shells, arrows, and terminal spacers must be ignored.",
+);
+
+const ensureViewScrollersStart = shared.indexOf("function ensureViewScrollers() {");
+const ensureViewScrollersEnd = shared.indexOf("\n  function onMobileTableMediaChange", ensureViewScrollersStart);
+const ensureViewScrollers = shared.slice(ensureViewScrollersStart, ensureViewScrollersEnd);
+assert.ok(
+  ensureViewScrollers.includes("const onViewScroll = () => {\n          scheduleViewScrollerSync(candidate);\n        };")
+    && !ensureViewScrollers.includes("clampViewScroll(candidate);"),
+  "Real touch/momentum scrolling must not be imperatively clamped on every scroll event; clamping belongs only to layout synchronization.",
+);
 
 const syncViewScrollerStart = shared.indexOf("function syncViewScroller(views) {");
 const syncViewScrollerEnd = shared.indexOf("\n  function syncWidthAwareHeaderLabels()", syncViewScrollerStart);
@@ -98,5 +150,10 @@ assert.ok(
   shared.includes("const width = Math.max(0, PLAYER_VIEW_SCROLL_END_GUTTER_PX - gap);"),
   "The spacer plus the existing flex gap must equal the intended 10px terminal gutter instead of double-counting spacing.",
 );
+assert.ok(
+  bootstrap.indexOf('if (target.id === "progressionPage" || target.id === "playerPage") primeFirstPaintHorizontalOverflow();')
+    > bootstrap.indexOf('document.querySelectorAll("main > .pageView").forEach'),
+  "Player first-paint horizontal cues must be measured after the Player page is the visible initial shell and before hydration begins.",
+);
 
-console.log("Player view lateral scroll survives same-player rerenders, reaches a real terminal gutter, and resets across navigation/refresh.");
+console.log("Player view lateral scroll is first-paint aligned, momentum-stable, preserved across same-player rerenders, and reaches its real terminal gutter.");
