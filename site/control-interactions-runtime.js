@@ -355,15 +355,20 @@
   }
 
   function playerAttributeViewControlsChanged(record) {
-    if (record?.type !== "childList"
-      || !(record.target instanceof HTMLElement)
-      || !record.target.matches("#playerDetail .playerAttributeViews")) return false;
+    if (record?.type !== "childList" || !(record.target instanceof HTMLElement)) return false;
 
-    return [...record.addedNodes, ...record.removedNodes].some((node) => {
-      if (!(node instanceof HTMLElement) || node.hasAttribute("data-mfl-view-scroll-end-spacer")) return false;
-      return node.matches(".playerAttributeViewButton, [data-player-attribute-view]")
-        || Boolean(node.querySelector(".playerAttributeViewButton, [data-player-attribute-view]"));
-    });
+    if (record.target.matches("#playerDetail .playerAttributeViews")) {
+      return [...record.addedNodes, ...record.removedNodes].some((node) => {
+        if (!(node instanceof HTMLElement) || node.hasAttribute("data-mfl-view-scroll-end-spacer")) return false;
+        return node.matches(".playerAttributeViewButton, [data-player-attribute-view]")
+          || Boolean(node.querySelector(".playerAttributeViewButton, [data-player-attribute-view]"));
+      });
+    }
+
+    return Array.from(record.addedNodes).some((node) => (
+      node instanceof HTMLElement
+      && (node.matches(".playerAttributeViews") || Boolean(node.querySelector(".playerAttributeViews")))
+    ));
   }
 
   function observePlayerAttributeViewRenders() {
@@ -372,6 +377,7 @@
     playerAttributeViewMutationObserver?.disconnect();
     playerAttributeViewMutationObserver = new MutationObserver((records) => {
       if (!records.some(playerAttributeViewControlsChanged)) return;
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       schedulePlayerAttributeViewScrollRestore();
     });
     playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
