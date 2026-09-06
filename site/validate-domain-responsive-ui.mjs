@@ -1,6 +1,7 @@
 const validators = [
   "validate-responsive-layout.mjs",
   "validate-mobile-footer-floor.mjs",
+  "validate-player-mobile-scaling.mjs",
   "validate-settings-mobile-actions.mjs",
   "validate-evaluation-mobile-first-paint.mjs",
   "validate-evaluation-responsive-player-names.mjs",

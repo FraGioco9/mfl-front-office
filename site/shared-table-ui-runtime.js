@@ -627,8 +627,13 @@
     return filters instanceof HTMLElement ? filters : null;
   }
 
+  function playerAttributeViews() {
+    const views = document.querySelector("#playerDetail .playerAttributeViews");
+    return views instanceof HTMLElement ? views : null;
+  }
+
   function tableHorizontalScrollers() {
-    return [tableViews(), tableQuickFilters()].filter((scroller) => scroller instanceof HTMLElement);
+    return [tableViews(), tableQuickFilters(), playerAttributeViews()].filter((scroller) => scroller instanceof HTMLElement);
   }
 
   function playerTableScroller() {
@@ -728,7 +733,9 @@
   }
 
   function scrollerLabel(views) {
-    return views.matches("#progressionPage .quickFilters") ? "quick filters" : "views";
+    if (views.matches("#progressionPage .quickFilters")) return "quick filters";
+    if (views.matches("#playerDetail .playerAttributeViews")) return "attribute views";
+    return "views";
   }
 
   function viewScrollButton(views) {
@@ -838,11 +845,11 @@
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
-    setViewScrollButtonVisible(button, false);
-    setViewScrollButtonVisible(leftButton, false);
     const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
+      setViewScrollButtonVisible(button, false);
+      setViewScrollButtonVisible(leftButton, false);
       applyFadeShadow(views, false, false, 0);
       if (views.scrollLeft) views.scrollLeft = 0;
       return;
@@ -946,6 +953,7 @@
   function syncRouteHorizontalCuesNow() {
     if (destroyed) return;
     syncWatchlistSwitcherPlacement();
+    ensureViewScrollers();
     tableHorizontalScrollers().forEach(syncViewScroller);
     syncPlayerTableScroller();
   }
@@ -970,10 +978,10 @@
       const scrollers = new Set();
       entries.forEach((entry) => {
         const target = entry.target;
-        const views = target instanceof Element && target.matches("#progressionPage .views, #progressionPage .quickFilters")
+        const views = target instanceof Element && target.matches("#progressionPage .views, #progressionPage .quickFilters, #playerDetail .playerAttributeViews")
           ? target
           : target instanceof Element
-            ? target.closest("#progressionPage .views, #progressionPage .quickFilters")
+            ? target.closest("#progressionPage .views, #progressionPage .quickFilters, #playerDetail .playerAttributeViews")
             : null;
         if (views instanceof HTMLElement) scrollers.add(views);
       });
@@ -992,6 +1000,12 @@
   }
 
   function ensureViewScrollers() {
+    boundViewScrollers.forEach((handler, scroller) => {
+      if (scroller.isConnected) return;
+      scroller.removeEventListener("scroll", handler);
+      boundViewScrollers.delete(scroller);
+    });
+    viewResizeObserver?.disconnect();
     tableHorizontalScrollers().forEach((candidate) => {
       if (MOBILE_TABLE_MEDIA.matches) {
         viewScrollButton(candidate);

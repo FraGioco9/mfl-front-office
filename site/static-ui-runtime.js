@@ -285,13 +285,17 @@
 
   function primePlayerStaticLabels(target) {
     if (!(target instanceof HTMLElement) || target.id !== "playerPage") return;
-    const profileLabels = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
+    const profileLabels = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"];
     const profileCards = Array.from(target.querySelectorAll(".playerInfoPanel .detailGrid > div"));
     profileCards.slice(profileLabels.length).forEach((card) => card.remove());
     profileCards.slice(0, profileLabels.length).forEach((card, index) => {
-      const label = card.querySelector("span");
-      if (label instanceof HTMLElement) label.textContent = profileLabels[index];
-      if (index === profileLabels.length - 1) card.classList.add("contractDetailCard");
+      const labelText = profileLabels[index];
+      const label = card.querySelector(":scope > span");
+      if (label instanceof HTMLElement) label.textContent = labelText;
+      card.classList.remove("nationalityDetailCard", "contractDetailCard", "revShareDetailCard", "playerInfoFullWidthCard");
+      if (labelText === "Nationality") card.classList.add("nationalityDetailCard");
+      if (labelText === "Contract") card.classList.add("contractDetailCard", "playerInfoFullWidthCard");
+      if (labelText === "Rev Share") card.classList.add("revShareDetailCard", "playerInfoFullWidthCard");
     });
 
     const attributeLabels = ["Overall", "Pace", "Shooting", "Passing", "Dribbling", "Defense", "Physical"];
