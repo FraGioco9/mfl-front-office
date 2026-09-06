@@ -73,6 +73,11 @@ for (const required of [
   "max-height: var(--mfl-player-box-height);",
   ".playerAttributeCard.fullWidth {",
   "width: min(100%, clamp(240px, 70vw, 320px));",
+  ".pitchPositionCircle,\n.pitchPositionBlank {",
+  "width: clamp(33.333px, 9.722vw, 44.444px);",
+  "height: clamp(33.333px, 9.722vw, 44.444px);",
+  ".pitchPositionCircle strong {\n  font-size: clamp(12px, 3.5vw, 16px);\n}",
+  ".pitchPositionCircle small {\n  font-size: clamp(7.333px, 2.139vw, 9.778px);\n}",
   ".playerPage,\n.playerDetail,\n.playerGrid,\n.playerStack,\n.playerPanel,\n.detailGrid,\n.attributeGrid {",
   "max-width: 100%;",
 ]) includes(responsive, required, "Unified Player mobile geometry is missing " + required);
@@ -122,6 +127,15 @@ invariant(!styles.includes(".detailGrid span,\n.playerAttributeCard span {"), "P
 invariant(!responsive.includes(".detailGrid span,\n.playerAttributeCard span {"), "Profile nested value spans must not inherit mobile label sizing.");
 invariant(!player.includes("const ageMarkerHtml = playerAgeMarkerHtml(ageMarker);"), "Hydrated Player render must not call the first-paint helper outside its scope.");
 invariant(!player.includes('["Nationality", playerNationalityHtml(rawNationality, nationality)]'), "Hydrated Nationality render must use the exported first-paint helper instead of an out-of-scope call.");
+
+invariant(responsive.includes("width: clamp(33.333px, 9.722vw, 44.444px);"), "Mobile Player pitch circles must preserve the desktop 50/360 marker-to-pitch ratio.");
+invariant(responsive.includes("font-size: clamp(12px, 3.5vw, 16px);"), "Mobile Player pitch rating text must preserve the desktop 18/360 text-to-pitch ratio.");
+invariant(responsive.includes("font-size: clamp(7.333px, 2.139vw, 9.778px);"), "Mobile Player pitch position text must preserve the desktop 11/360 text-to-pitch ratio.");
+invariant(!responsive.includes("width: clamp(32px, 9vw, 44px);"), "Player pitch circles must not retain the old hand-tuned mobile scale.");
+invariant(styles.includes(".pitchPositionCircle strong {\n  font-size: 18px;\n}"), "Desktop Player pitch rating text must remain unchanged.");
+invariant(styles.includes(".pitchPositionCircle small {\n  margin-top: 0;\n  font-size: 11px;"), "Desktop Player pitch position text must remain unchanged.");
+invariant(player.includes('class="pitchPositionCircle ${familiarity}"'), "Hydrated Player pitch markers must keep the shared pitchPositionCircle class used by responsive scaling.");
+invariant(player.includes('class="pitchPositionBlank" aria-hidden="true"'), "Pending Player pitch slots must keep the shared pitchPositionBlank class so first-paint and settled marker geometry match.");
 
 const phoneStart = responsive.indexOf("@media (max-width: 520px)");
 const tinyStart = responsive.indexOf("@media (max-width: 380px)");
