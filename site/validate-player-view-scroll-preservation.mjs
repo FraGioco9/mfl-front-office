@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
+const buildAppCore = read("./build-app-core.mjs");
 const bootstrap = read("./bootstrap.js");
 const interactions = read("./control-interactions-runtime.js");
 const shared = read("./shared-table-ui-runtime.js");
@@ -72,6 +73,39 @@ assert.ok(
     && player.includes('document.documentElement.dataset.storedProgressionAccess === "true"')
     && player.includes('const items = storedProgressionAccess()'),
   "Bootstrap and canonical Player loading must use the same stored progression-access decision for the visible first-paint view row.",
+);
+
+for (const token of [
+  'html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage',
+  'const staticPlayerRevealScript = `',
+  'const views = document.querySelector("#playerPage .playerAttributeViews");',
+  'const progressionAccess = root.dataset.storedProgressionAccess === "true";',
+  'shell.className = "viewsScrollerShell";',
+  'views.scrollWidth - views.clientWidth > 2;',
+  'views.classList.toggle("mflViewsOverflowing", overflowing);',
+  'arrow.className = "viewsScrollButton viewsScrollButtonRight";',
+  'arrow.dataset.mflFirstPaintScrollButton = "true";',
+  'root.dataset.playerFirstPaintCuesReady = "true";',
+]) {
+  assert.ok(buildAppCore.includes(token), `Player parser-first-paint cue projection is missing: ${token}`);
+}
+const staticRevealStart = buildAppCore.indexOf('const staticPlayerRevealScript = `');
+const staticRevealEnd = buildAppCore.indexOf('`;\n  const staticPlayerShell', staticRevealStart);
+const staticReveal = buildAppCore.slice(staticRevealStart, staticRevealEnd);
+const staticPageLayoutIndex = staticReveal.indexOf("playerPage.hidden = false;");
+const staticOverflowIndex = staticReveal.indexOf("views.scrollWidth - views.clientWidth > 2;");
+const staticArrowIndex = staticReveal.indexOf('arrow.className = "viewsScrollButton viewsScrollButtonRight";');
+const staticReadyIndex = staticReveal.indexOf('root.dataset.playerFirstPaintCuesReady = "true";');
+assert.ok(
+  staticPageLayoutIndex >= 0
+    && staticOverflowIndex > staticPageLayoutIndex
+    && staticArrowIndex > staticOverflowIndex
+    && staticReadyIndex > staticArrowIndex,
+  "Player refresh must establish layout, measure overflow, create the right arrow, and only then release the first-paint cue gate.",
+);
+assert.ok(
+  staticReveal.includes('button.hidden = !progressionAccess;'),
+  "The parser-first-paint Player strip must hide progression-only controls before measuring overflow.",
 );
 
 const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
@@ -175,4 +209,4 @@ assert.ok(
   "Player first-paint horizontal cues must be measured after the visible Player content row is in its initial shell and before hydration begins.",
 );
 
-console.log("Player view cues paint with the selector, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
+console.log("Player refresh paints its right arrow with page content, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
