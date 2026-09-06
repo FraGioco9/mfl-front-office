@@ -79,8 +79,8 @@ main {
   text-transform: uppercase;
 }
 
-/* Footer actions share one geometry/color contract regardless of link or button semantics. */
-.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {
+/* Direct footer actions share one geometry/color contract; nested Creator rows own their own layout. */
+.siteFooterDetailsGroup > :is(a, .siteFooterDetailsSupportButton) {
   display: block;
   align-self: start;
   justify-self: start;
