@@ -327,20 +327,19 @@
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
         display: none;
       }
-      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {
-        display: grid;
-      }
-      html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {
-        align-items: flex-start;
-      }
-      html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow > .tablePageTitle {
-        margin-top: 0;
-        line-height: 1.2;
-      }
       html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
-        display: flex;
         visibility: visible;
         opacity: 1;
+      }
+      @media (min-width: 521px) {
+        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+          display: flex;
+        }
+      }
+      @media (max-width: 520px) {
+        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+          display: grid;
+        }
       }
       html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationLoadButton {
         display: inline-flex;
@@ -786,6 +785,36 @@
               </section>
             </section>
           </section>
+
+          <!-- Evaluation first paint: expose the route only after top controls are fully parsed. -->
+          <script>
+            (() => {
+              const root = document.documentElement;
+              const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
+              if (initialPage !== "evaluation") return;
+
+              const page = document.getElementById("evaluationPage");
+              const buttons = document.getElementById("evaluationButtons");
+              const resetButton = document.getElementById("evaluationResetButton");
+              const loadButton = document.getElementById("evaluationLoadButton");
+              const playerPageButton = document.getElementById("evaluationPlayerPageButton");
+              if (!(page instanceof HTMLElement)
+                || !(buttons instanceof HTMLElement)
+                || !(resetButton instanceof HTMLButtonElement)
+                || !(loadButton instanceof HTMLButtonElement)
+                || !(playerPageButton instanceof HTMLButtonElement)) return;
+
+              const selected = root.dataset.initialEvaluationSelection === "true";
+              const optedIn = root.dataset.storedWalletOptIn === "true";
+              buttons.hidden = false;
+              resetButton.hidden = !selected;
+              loadButton.hidden = selected || !optedIn;
+              playerPageButton.hidden = !selected;
+
+              document.body.dataset.page = "evaluation";
+              page.hidden = false;
+            })();
+          </script>
 
           <section id="evaluationPanel" class="evaluationPanel" hidden>
             <h3>Summary</h3>

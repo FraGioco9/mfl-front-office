@@ -24,17 +24,30 @@ const [indexHtml, responsive, stylesBase, bootstrap, sharedTableUi, appCore] = a
   ]).then((parts) => parts.join("\n")),
 ]);
 
+const evaluationHandoffMarker = '<!-- Evaluation first paint: expose the route only after top controls are fully parsed. -->';
+const evaluationHandoffIndex = indexHtml.indexOf(evaluationHandoffMarker);
+const evaluationOptionsIndex = indexHtml.indexOf('id="evaluationOptionFilters"');
+const evaluationPanelIndex = indexHtml.indexOf('id="evaluationPanel"');
 invariant(
-  indexHtml.includes('html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {\n        display: grid;\n      }'),
-  "Direct Evaluation first paint must expose the page as a grid so small-phone grid placement is effective before route hydration.",
+  !indexHtml.includes('html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage {\n        display: block;\n      }')
+    && indexHtml.includes('@media (min-width: 521px) {\n        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {\n          display: flex;')
+    && indexHtml.includes('@media (max-width: 520px) {\n        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {\n          display: grid;')
+    && !indexHtml.includes('html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #evaluationPage,')
+    && evaluationOptionsIndex >= 0
+    && evaluationHandoffIndex > evaluationOptionsIndex
+    && evaluationPanelIndex > evaluationHandoffIndex
+    && indexHtml.includes('buttons.hidden = false;\n              resetButton.hidden = !selected;\n              loadButton.hidden = selected || !optedIn;\n              playerPageButton.hidden = !selected;\n\n              document.body.dataset.page = "evaluation";\n              page.hidden = false;')
+    && !indexHtml.includes('html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {\n        align-items: flex-start;')
+    && !indexHtml.includes('html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow > .tablePageTitle {'),
+  "Evaluation must remain hidden until its complete top-control DOM is parsed, then atomically enter canonical route/layout state before first visible paint.",
 );
 invariant(
   responsive.includes("@media (max-width: 520px)"),
   "Evaluation small-phone layout must remain owned by the canonical 520px responsive breakpoint.",
 );
 invariant(
-  responsive.includes("#evaluationPage {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    column-gap: 6px;\n    row-gap: 6px;\n  }"),
-  "Small-phone Evaluation must retain its three-column responsive page grid independently from table column proportions.",
+  responsive.includes("#evaluationPage {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    align-content: start;\n    column-gap: 6px;\n    row-gap: 6px;\n  }"),
+  "Small-phone Evaluation must retain its three-column responsive page grid and start-align implicit rows so the shared page floor cannot stretch first-paint controls.",
 );
 invariant(
   !responsive.includes("#evaluationPage {\n    display: grid;\n    grid-template-columns: repeat(3, minmax(0, 1fr));"),
@@ -63,9 +76,14 @@ invariant(
   "Reset and Player Page must use the same two-track mobile sizing pattern as Share and Save.",
 );
 invariant(
-  responsive.includes("#evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch {\n    grid-column: 1 / -1;\n    grid-row: 3;\n    width: calc(100% - 82px);\n  }")
-    && responsive.includes("#evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])) {\n    grid-column: 1 / -1;\n    grid-row: 3;\n    grid-template-columns: 1fr;\n    width: 76px;"),
-  "Empty Evaluation search must use the full row except for the fixed Load control and shared gap.",
+  responsive.includes('#evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch,\n  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationSearch {\n    grid-column: 1 / -1;\n    grid-row: 3;\n    width: calc(100% - 82px);\n  }')
+    && responsive.includes('#evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])),\n  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationButtons {\n    grid-column: 1 / -1;\n    grid-row: 3;\n    grid-template-columns: 1fr;\n    width: 76px;'),
+  "Empty Evaluation Search/Load tracks must match before and after hydration removes hidden.",
+);
+invariant(
+  appCore.includes('clearEvaluationSearchFocus();\n      evaluationButtons.hidden = false;\n      evaluationResetButton.hidden = false;\n      if (evaluationLoadButton) evaluationLoadButton.hidden = true;\n      evaluationPlayerPageButton.hidden = false;\n      void setPage("evaluation", true, { playerId });')
+    && appCore.includes('clearEvaluationSearchFocus();\n    evaluationButtons.hidden = false;\n    evaluationResetButton.hidden = false;\n    if (evaluationLoadButton) evaluationLoadButton.hidden = true;\n    evaluationPlayerPageButton.hidden = false;\n    setPage("evaluation", true, { playerId: id });'),
+  "Player and table Evaluation actions must stage selected controls before in-site mobile destination visibility.",
 );
 invariant(
   responsive.includes("#evaluationPage .evaluationMetrics {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n    gap: 6px;\n  }"),

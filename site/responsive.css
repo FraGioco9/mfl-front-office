@@ -2545,6 +2545,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #evaluationPage {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
     column-gap: 6px;
     row-gap: 6px;
   }
@@ -2816,13 +2817,15 @@ html:not(.mflInitialRouteResolved):is(
     gap: 6px;
   }
 
-  #evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch {
+  #evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationSearch {
     grid-column: 1 / -1;
     grid-row: 3;
     width: calc(100% - 82px);
   }
 
-  #evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])) {
+  #evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])),
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationButtons {
     grid-column: 1 / -1;
     grid-row: 3;
     grid-template-columns: 1fr;
