@@ -7304,8 +7304,13 @@ main {
 
 /* Footer actions share one geometry/color contract regardless of link or button semantics. */
 .siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {
+  display: block;
+  align-self: start;
+  justify-self: start;
   width: fit-content;
   max-width: 100%;
+  height: auto;
+  min-height: 0;
   margin: 0;
   padding: 0;
   border: 0;
