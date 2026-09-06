@@ -102,6 +102,7 @@ jobs:
             site/bootstrap.js \
             site/bootstrap-core.js \
             site/index.html \
+            site/responsive.css \
             site/vercel.json \
             site/vercel.production.json \
             site/styles-runtime.css \
