@@ -32,7 +32,6 @@
   let playerAttributeViewScrollPathname = "";
   let playerAttributeViewScrollLeft = 0;
   let playerAttributeViewRestoreFrame = 0;
-  let playerAttributeViewRestoreReleaseFrame = 0;
   let playerAttributeViewRestoring = false;
   let playerAttributeViewMutationObserver = null;
   const escapeHandlers = new Map();
@@ -304,9 +303,7 @@
     playerAttributeViewScrollLeft = 0;
     playerAttributeViewRestoring = false;
     if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
-    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
     playerAttributeViewRestoreFrame = 0;
-    playerAttributeViewRestoreReleaseFrame = 0;
     return pathname;
   }
 
@@ -325,23 +322,19 @@
     const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
     const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));
     if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;
-    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
     return true;
   }
 
   function schedulePlayerAttributeViewScrollRestore() {
     if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !syncPlayerAttributeViewScrollPath()) return;
     playerAttributeViewRestoring = true;
-    applyPlayerAttributeViewScroll();
     if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
-    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
     playerAttributeViewRestoreFrame = requestAnimationFrame(() => {
       playerAttributeViewRestoreFrame = 0;
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       applyPlayerAttributeViewScroll();
-      playerAttributeViewRestoreReleaseFrame = requestAnimationFrame(() => {
-        playerAttributeViewRestoreReleaseFrame = 0;
-        playerAttributeViewRestoring = false;
-      });
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      playerAttributeViewRestoring = false;
     });
   }
 
@@ -361,12 +354,24 @@
     rememberPlayerAttributeViewScroll(views);
   }
 
+  function playerAttributeViewControlsChanged(record) {
+    if (record?.type !== "childList"
+      || !(record.target instanceof HTMLElement)
+      || !record.target.matches("#playerDetail .playerAttributeViews")) return false;
+
+    return [...record.addedNodes, ...record.removedNodes].some((node) => {
+      if (!(node instanceof HTMLElement) || node.hasAttribute("data-mfl-view-scroll-end-spacer")) return false;
+      return node.matches(".playerAttributeViewButton, [data-player-attribute-view]")
+        || Boolean(node.querySelector(".playerAttributeViewButton, [data-player-attribute-view]"));
+    });
+  }
+
   function observePlayerAttributeViewRenders() {
     const detail = document.getElementById("playerDetail");
     if (!(detail instanceof HTMLElement) || typeof MutationObserver !== "function") return;
     playerAttributeViewMutationObserver?.disconnect();
     playerAttributeViewMutationObserver = new MutationObserver((records) => {
-      if (!records.some((record) => record.type === "childList")) return;
+      if (!records.some(playerAttributeViewControlsChanged)) return;
       schedulePlayerAttributeViewScrollRestore();
     });
     playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
@@ -530,9 +535,7 @@
     playerAttributeViewMutationObserver?.disconnect();
     playerAttributeViewMutationObserver = null;
     if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
-    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
     playerAttributeViewRestoreFrame = 0;
-    playerAttributeViewRestoreReleaseFrame = 0;
     playerAttributeViewRestoring = false;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
