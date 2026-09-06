@@ -6380,6 +6380,27 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   --mfl-motion-slow: 220ms;
 }
 
+/* Non-button touch boxes extend the mobile button press contract without affecting text links. */
+@media (hover: none) and (pointer: coarse) {
+  :is(
+    input:not([type="hidden"]):not([type="range"]),
+    select,
+    textarea,
+    .playerExternalButton
+  ) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :is(
+    input:not([type="hidden"]):not([type="range"]),
+    select,
+    textarea,
+    .playerExternalButton
+  ):active:not(:disabled) {
+    filter: brightness(0.9);
+  }
+}
+
 /* Canonical shared control owner for MFL Front Office. */
 
 :root {
