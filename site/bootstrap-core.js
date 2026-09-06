@@ -312,6 +312,7 @@
           return result;
         };
         Object.defineProperty(wrappedHomeLoginButton, "__mflStoredAccessWrapped", { value: true });
+        Object.defineProperty(wrappedHomeLoginButton, "__mflStoredAccessOriginal", { value: homeLoginButton });
         replaceGlobalFunction("syncHomeLoginButton", homeLoginButton, wrappedHomeLoginButton);
       }
       syncStoredAccessFlags();
@@ -364,12 +365,55 @@
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
   const initialRouteToken = window.__mflInteractionBusy.begin(INITIAL_ROUTE_BOOTSTRAP_REASON);
   let initialRouteFinished = false;
+  let initialRouteFinishFrame = 0;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;
 
+  function initialPlayerViewCueReady() {
+    const root = document.documentElement;
+    if (root.dataset.initialEntityRoute !== "player") return true;
+
+    const routeMatch = String(window.location.pathname || "").match(/^\/players\/(\d{1,20})\/?$/i);
+    const playerId = routeMatch ? String(routeMatch[1] || "") : "";
+    const detail = document.getElementById("playerDetail");
+    const hero = detail?.querySelector(":scope > .playerHero[data-player-shell-id]");
+    if (!playerId
+      || !(detail instanceof HTMLElement)
+      || !(hero instanceof HTMLElement)
+      || hero.dataset.playerShellId !== playerId) return false;
+
+    if (!window.matchMedia("(max-width: 900px)").matches) return true;
+
+    const views = detail.querySelector(".playerAttributeViews");
+    if (!(views instanceof HTMLElement) || views.getClientRects().length === 0) return false;
+    const overflowing = views.scrollWidth - views.clientWidth > 2;
+    if (!overflowing) return true;
+
+    const shell = views.parentElement;
+    const rightArrow = shell instanceof HTMLElement && shell.classList.contains("viewsScrollerShell")
+      ? shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight")
+      : null;
+    return views.classList.contains("mflViewsOverflowing")
+      && rightArrow instanceof HTMLButtonElement
+      && rightArrow.classList.contains("mflViewsScrollButtonVisible")
+      && rightArrow.getAttribute("aria-hidden") === "false"
+      && Boolean(views.style.boxShadow);
+  }
+
   const finishInitialRoute = () => {
     if (initialRouteFinished) return;
+    if (!initialPlayerViewCueReady()) {
+      if (!initialRouteFinishFrame) {
+        initialRouteFinishFrame = requestAnimationFrame(() => {
+          initialRouteFinishFrame = 0;
+          finishInitialRoute();
+        });
+      }
+      return;
+    }
     initialRouteFinished = true;
+    if (initialRouteFinishFrame) cancelAnimationFrame(initialRouteFinishFrame);
+    initialRouteFinishFrame = 0;
     startupStateObserver?.disconnect();
     document.documentElement.classList.remove("mflSingleRenderPending");
     document.documentElement.classList.remove("mflInitialRouteSuperseded");
