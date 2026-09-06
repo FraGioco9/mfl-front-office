@@ -15,6 +15,7 @@ const [responsive, styles, bootstrap, staticUi, player, sharedTableUi, scrollbar
 ]);
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
+invariant(!styles.includes(".playerPage {\n  max-width: 1180px;\n  min-height: 0;"), "Player page must retain its natural block height so mobile Notes and Pitch contribute to footer placement.");
 const includes = (source, value, message) => invariant(source.includes(value), message);
 
 for (const required of [

@@ -381,7 +381,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > #appShell > main {
-    --mfl-footer-page-floor: clamp(560px, 80dvh, 680px);
+    --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
     padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
     overflow-x: hidden;
   }
@@ -2119,7 +2119,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   body > #appShell > main {
-    --mfl-footer-page-floor: clamp(500px, 76dvh, 620px);
+    --mfl-footer-page-floor: max(500px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
     padding-right: max(8px, env(safe-area-inset-right));
     padding-left: max(8px, env(safe-area-inset-left));
   }
@@ -3421,7 +3421,7 @@ html:not(.mflInitialRouteResolved):is(
 
 @media (max-width: 380px) {
   body > #appShell > main {
-    --mfl-footer-page-floor: clamp(460px, 72dvh, 560px);
+    --mfl-footer-page-floor: max(460px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
   }
 
   .selectionBar {

@@ -65,15 +65,17 @@ invariant(identityIndex >= 0 && versionIndex > identityIndex && descriptionIndex
 for (const token of [
   'main {',
   '--mfl-footer-page-floor: 800px;',
-  'display: grid;',
-  'grid-template-columns: minmax(0, 1fr);',
-  'grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;',
-  'align-content: start;',
+  'display: flex;',
+  'flex-direction: column;',
+  'align-items: stretch;',
   'row-gap: 22px;',
+  'main > .pageView {',
+  'min-height: var(--mfl-footer-page-floor);',
   '.siteFooterDetails {',
-  'grid-column: 1;',
-  'grid-row: 2;',
   'margin-top: 0;',
+  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {',
+  'grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;',
+  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
   'grid-template-columns: repeat(3, minmax(0, 1fr));',
@@ -127,8 +129,14 @@ invariant(!footerActionBlock.includes('height: 40px;'), "Footer actions must not
 invariant(!footer.includes('.siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {'), "Direct Support/Information geometry must not capture nested Creator links.");
 
 invariant(
-  footer.includes('main {\n  --mfl-footer-page-floor: 800px;\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;\n  align-content: start;\n  row-gap: 22px;\n}'),
-  "The footer must follow actual page content while the first grid row owns the shared responsive floor even before a route shell is visible.",
+  footer.includes(`main {
+  --mfl-footer-page-floor: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  row-gap: 22px;
+}`),
+  "The footer must follow actual page content in normal flow while every route shares the responsive floor.",
 );
 const tableScrollerStart = styles.indexOf('#progressionPage .playerTableScroller {');
 const tableScrollerEnd = styles.indexOf('\n}', tableScrollerStart);
@@ -138,13 +146,44 @@ invariant(
   "Footer placement must not be derived from table row geometry.",
 );
 invariant(
-  footer.includes('.siteFooterDetails {\n  grid-column: 1;\n  grid-row: 2;\n  width: 100%;\n  margin-top: 0;'),
-  "The footer must occupy the explicit second grid row instead of relying on a visible route section to push it down.",
+  footer.includes(`.siteFooterDetails {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 0;`),
+  "The footer must remain a normal-flow item after the visible route content.",
 );
 invariant(
-  !footer.includes('main > .pageView'),
-  "Footer minimum-distance ownership must stay on the shared first grid row so hidden first-paint route shells cannot collapse it.",
+  footer.includes(`main > .pageView {
+  flex: 0 0 auto;
+  min-height: var(--mfl-footer-page-floor);
+}`),
+  "Every application page must contribute its natural height while retaining the shared floor.",
 );
+invariant(
+  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
+  align-content: start;
+}`),
+  "Unresolved non-Player first paint must own an explicit minimum content track before route resolution.",
+);
+invariant(
+  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .pageView {
+  grid-column: 1;
+  grid-row: 1;
+}`)
+    && footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {
+  grid-column: 1;
+  grid-row: 2;
+}`),
+  "Unresolved non-Player route shells and the footer must stay on explicit fallback rows.",
+);
+invariant(
+  !footer.includes('html:not(.mflInitialRouteResolved) body > #appShell > main {'),
+  "Direct Player loading must remain in base flex flow so its actual bottom-most box pushes the footer down.",
+);
+invariant(!footer.includes('main:not(:has(> .pageView:not([hidden])))'), "Refresh first paint must not infer visibility from hidden attributes.");
 invariant(
   !footer.includes('min-height: max(calc(100% - 22px), calc(100dvh - var(--pinned-topbar-height) - 22px));'),
   "Footer placement must not use the superseded route-owned viewport floor.",
@@ -184,4 +223,4 @@ invariant(!footer.includes("!important"), "Footer redesign must not introduce !i
 invariant(!responsive.includes(".siteFooterDetails.siteFooterDetails"), "Footer redesign must not use specificity-boosting override selectors.");
 invariant(!stylesBase.includes(".siteFooterDetails"), "Single-footer structure must remain owned by footer.css, not styles-base.css.");
 
-console.log("Single bottom footer validation passed with direct natural-height actions and independent Creator row alignment.");
+console.log("Single bottom footer validation passed with direct Player loading in real normal flow, non-Player unresolved fallback geometry, and independent Creator row alignment.");
