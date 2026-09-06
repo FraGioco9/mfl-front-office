@@ -48,8 +48,9 @@ for (const token of [
   "align-items: center;",
   "justify-items: start;",
   "column-gap: 5px;",
+  "text-decoration: none;",
 ]) {
-  includes(creatorBlock, token, `Creator rows must share one icon/value alignment grid: ${token}`);
+  includes(creatorBlock, token, `Creator rows must share one icon/value alignment grid without link underlines: ${token}`);
 }
 
 const iconStart = footer.indexOf(".siteFooterDetailsCreatorIcon {");
@@ -76,6 +77,7 @@ includes(
   "Creator values must center in the same row as their icons.",
 );
 excludes(creatorBlock, "inline-flex", "Creator rows must use the shared icon/value grid rather than variable-width flex items.");
+excludes(footer, "text-decoration: underline", "Creator footer links must never underline their values.");
 excludes(footer, "transform: translate", "Creator footer alignment must not use positional transform nudges.");
 excludes(footer, "!important", "Creator footer alignment must not introduce !important overrides.");
 
@@ -85,4 +87,4 @@ for (const breakpoint of ["@media (max-width: 900px)", "@media (max-width: 520px
 excludes(responsive, ".siteFooterDetailsCreatorLink {", "Responsive CSS must not duplicate the canonical Creator row alignment owner.");
 excludes(responsive, ".siteFooterDetailsCreatorIcon {", "Responsive CSS must not duplicate the canonical Creator icon alignment owner.");
 
-console.log("Footer Creator rows own their grid and center values with icons across desktop and mobile.");
+console.log("Footer Creator rows own their grid, keep values unadorned, and center values with icons across desktop and mobile.");
