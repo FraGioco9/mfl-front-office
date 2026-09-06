@@ -1,15 +1,12 @@
-import { readFile } from "node:fs/promises";
+import { invariant, includes } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 import vm from "node:vm";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
+const read = (path) => readValidationText(path, import.meta.url);
 const occurrences = (source, value) => source.split(value).length - 1;
 
 const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, coreSource, releaseJson] = await Promise.all([

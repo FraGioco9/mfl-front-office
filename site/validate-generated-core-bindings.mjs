@@ -1,8 +1,10 @@
+// TypeScript 7.0.2 exposes version metadata but no createSourceFile/AST API.
+// Retain the TypeScript 6 API for this regression gate; see docs/ownership.md.
 import ts from "@typescript/typescript6";
 
-import { readFile } from "node:fs/promises";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const artifacts = Object.freeze({
   core: await read("./modules/core-sources/shared.js"),
   routeChunks: Object.freeze({

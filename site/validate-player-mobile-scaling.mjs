@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const [responsive, styles, bootstrap, staticUi, player, sharedTableUi, scrollbars, appConfig, responsiveDomain, routeDomain] = await Promise.all([
   read("./responsive.css"),
   read("./styles-base.css"),

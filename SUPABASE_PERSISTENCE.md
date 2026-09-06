@@ -37,7 +37,7 @@ These values are server-side access-control data and are not UI preferences.
 
 ### `wallet_preferences`
 
-Owner: `site/api/wallet-preferences.js`. Server-side progression email reads are performed by `send_progression_emails.py`; `.github/workflows/full-database-refresh.yml` only supplies that script with the Supabase credentials.
+Owner: `site/api/wallet-preferences.js`. Server-side progression email reads are performed by `scripts/email/send_progression_emails.py`; `.github/workflows/full-database-refresh.yml` only supplies that script with the Supabase credentials.
 
 Stored values:
 - `wallet_address`: row identity / ownership key.

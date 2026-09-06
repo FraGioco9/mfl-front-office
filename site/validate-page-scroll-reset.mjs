@@ -1,9 +1,7 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const source = String(await readFile(new URL("./static-ui-runtime.js", import.meta.url), "utf8"));
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const routeStart = source.indexOf("function syncRouteChrome(urlLike = window.location.href) {");
 const routeEnd = routeStart >= 0 ? source.indexOf("\n  function tooltipTargetFrom", routeStart) : -1;

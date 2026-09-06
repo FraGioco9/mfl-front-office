@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const [shared, styles, responsive] = await Promise.all([
-  readFile(new URL("./modules/core-sources/shared.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/evaluation.js", import.meta.url), "utf8"),
   readFile(new URL("./styles.css", import.meta.url), "utf8"),
   readFile(new URL("./responsive.css", import.meta.url), "utf8"),
 ]);

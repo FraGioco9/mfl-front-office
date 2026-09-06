@@ -53,7 +53,7 @@ jobs:
               continue
             fi
 
-            if python prepare_runtime_database.py mfl_database.db --validate-only; then
+            if python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only; then
               LATEST_RUN_ID="$RUN_ID"
               LATEST_ARTIFACT_ID="$ARTIFACT_ID"
               LATEST_CREATED_AT="$CREATED_AT"
@@ -86,7 +86,7 @@ jobs:
           rm -rf site/api/data-files
           mkdir -p site/api/data-files
           mv mfl_database.db site/api/data-files/mfl_database.db
-          python prepare_runtime_database.py site/api/data-files/mfl_database.db --validate-only
+          python -m scripts.database.prepare_runtime_database site/api/data-files/mfl_database.db --validate-only
 
           test -s site/api/data-files/mfl_database.db
           test -f site/api/_database.js

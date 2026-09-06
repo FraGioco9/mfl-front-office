@@ -1,0 +1,146 @@
+
+        <section id="progressionPage" class="pageView progressionPage" hidden>
+          <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
+          <section class="views" aria-label="Table views">
+            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
+            <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
+            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="stats">Stats</button>
+            <button class="viewButton" type="button" data-view="next">Next Overall</button>
+            <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+            <button class="viewButton active" type="button" data-view="current">Current Season</button>
+            <button class="viewButton" type="button" data-view="all">All Time</button>
+            <div id="watchlistSwitcher" class="watchlistSwitcher" hidden>
+              <span class="watchlistSwitcherLabel">Watchlist</span>
+              <button id="watchlistButton" class="watchlistButton" type="button" aria-haspopup="true" aria-expanded="false">
+                <span id="watchlistButtonText">Default</span>
+                <span class="watchlistButtonChevron" aria-hidden="true">&#9662;</span>
+              </button>
+              <div id="watchlistDropdown" class="watchlistDropdown" hidden></div>
+            </div>
+          </section>
+          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->
+          <script>
+            (() => {
+              const root = document.documentElement;
+              if (!window.matchMedia("(max-width: 900px)").matches) return;
+              if (root.dataset.initialTablePage !== "watchlist" || root.dataset.storedWalletOptIn !== "true") return;
+              const views = document.querySelector("#progressionPage > .views");
+              const switcher = document.getElementById("watchlistSwitcher");
+              if (!(views instanceof HTMLElement) || !(switcher instanceof HTMLElement)) return;
+              switcher.hidden = false;
+              switcher.classList.add("mflMobileWatchlistSwitcher");
+              views.insertAdjacentElement("afterend", switcher);
+            })();
+          </script>
+          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->
+
+          <section class="quickFilters" aria-label="Quick filters">
+            <label>
+              <input id="hideRetiredInput" type="checkbox" checked>
+              <span>Hide retired players</span>
+            </label>
+            <label>
+              <input id="hideRetiringInput" type="checkbox">
+              <span>Hide retiring players</span>
+            </label>
+            <label id="hideMflPlayersFilter" hidden>
+              <input id="hideMflPlayersInput" type="checkbox" checked>
+              <span>Hide MFL players</span>
+            </label>
+            <label id="packablePlayersFilter" hidden>
+              <input id="packablePlayersInput" type="checkbox" checked>
+              <span>Only packable players</span>
+            </label>
+            <label>
+              <input id="newMintsInput" type="checkbox">
+              <span id="newMintsLabel">Only new mints</span>
+            </label>
+            <span id="watchlistPlayerCount" class="watchlistPlayerCount" hidden>0 players</span>
+          </section>
+          <script>
+            (() => {
+              const state = window.__mflInitialTableControlState;
+              if (!state || state.pageName !== document.documentElement.dataset.initialTablePage) return;
+
+              const setChecked = (id, checked) => {
+                const input = document.getElementById(id);
+                if (input instanceof HTMLInputElement) input.checked = Boolean(checked);
+              };
+              const quickFilters = document.querySelector("#progressionPage .quickFilters");
+              if (quickFilters instanceof HTMLElement) quickFilters.hidden = state.pageName === "club";
+
+              setChecked("hideRetiredInput", state.hideRetired);
+              setChecked("hideRetiringInput", state.hideRetiring);
+
+              const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
+              if (hideMflPlayersFilter instanceof HTMLElement) hideMflPlayersFilter.hidden = state.pageName !== "database";
+              setChecked("hideMflPlayersInput", state.hideMflPlayers);
+
+              const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+              if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = state.pageName !== "mfl";
+              setChecked("packablePlayersInput", state.mflPackable);
+              setChecked("newMintsInput", state.newMints);
+
+              const newMintsLabel = document.getElementById("newMintsLabel");
+              if (newMintsLabel instanceof HTMLElement) {
+                newMintsLabel.textContent = state.pageName === "mfl" ? "Only aged players" : "Only new mints";
+              }
+
+              const activeRuleCount = Number.isFinite(Number(state.activeRuleCount))
+                ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
+                : 0;
+              const filterSummary = document.getElementById("filterSummary");
+              const openFiltersButton = document.getElementById("openFiltersButton");
+              if (filterSummary instanceof HTMLElement) {
+                filterSummary.textContent = String(activeRuleCount);
+                filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+              }
+              if (openFiltersButton instanceof HTMLElement) {
+                openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+              }
+            })();
+          </script>
+
+          <section class="controlsBar" aria-label="Table controls">
+            <button id="quickClearFiltersButton" class="compactButton" type="button" hidden aria-hidden="true" tabindex="-1">Clear</button>
+            <label class="field compact rowsField">
+              <span>Rows</span>
+              <select id="pageSizeSelect">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="tableShell" aria-label="Players table">
+            <div class="playerTableScroller">
+              <table>
+                <colgroup id="tableColGroup"></colgroup>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+            <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
+          </section>
+
+          <nav class="pager" aria-label="Pagination">
+            <button id="prevButton" type="button"><span class="pagerButtonLabel">Previous</span></button>
+            <span id="pageText">Page 1</span>
+            <button id="nextButton" type="button"><span class="pagerButtonLabel">Next</span></button>
+          </nav>
+
+          <div id="selectionBar" class="selectionBar">
+            <div class="selectionSummary">
+              <span id="selectionCount">0 selected</span>
+              <button id="clearSelectionButton" class="textButton" type="button">Clear</button>
+            </div>
+            <div class="selectionActions">
+              <button id="moveToWatchlistButton" type="button" hidden>Move to watchlist</button>
+              <button id="addToWatchlistButton" type="button">Add to watchlist</button>
+              <button id="openSelectedLinksButton" type="button">Open links</button>
+            </div>
+          </div>
+        </section>

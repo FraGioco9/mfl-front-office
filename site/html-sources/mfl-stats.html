@@ -1,0 +1,63 @@
+
+        <section id="mflStatsPage" class="pageView mflStatsPage" hidden>
+          <h2 class="tablePageTitle">MFL Wallet</h2>
+          <section class="views mflStatsViews" aria-label="MFL views">
+            <button class="viewButton" type="button" data-page="mfl" data-view="attributes">Attributes</button>
+            <button class="viewButton active" type="button" data-page="mfl" data-view="stats">Stats</button>
+          </section>
+
+          <section class="mflStatsFilters" aria-label="MFL stats overall filters">
+            <span>Overall Filters</span>
+            <div id="mflStatsOverallFilters" class="mflStatsFilterButtons">
+              <!-- BEGIN GENERATED MFL STATS FILTERS -->
+              <button class="mflStatsFilterButton active" type="button" data-static-value="all">All</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="90-94">90-94</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="legendary">Legendary</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="85-89">85-89</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="80-84">80-84</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="rare">Rare</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="75-79">75-79</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="70-74">70-74</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="uncommon">Uncommon</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="65-69">65-69</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="60-64">60-64</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="limited">Limited</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="55-59">55-59</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="50-54">50-54</button>
+              <button class="mflStatsFilterButton" type="button" data-static-value="common">Common</button>
+              <!-- END GENERATED MFL STATS FILTERS -->
+            </div>
+          </section>
+
+          <section class="mflStatsCards" aria-label="MFL wallet player statistics">
+            <article>
+              <span>MFL wallet total players</span>
+              <strong id="mflStatsTotalPlayers">-</strong>
+            </article>
+            <article>
+              <span>Packable players</span>
+              <strong id="mflStatsPackablePlayers">-</strong>
+            </article>
+            <article>
+              <span>Aged players</span>
+              <strong id="mflStatsAgedPlayers">-</strong>
+              <small>not available in packs</small>
+            </article>
+            <article>
+              <span>Other players</span>
+              <strong id="mflStatsOtherPlayers">-</strong>
+              <small>not available in packs</small>
+            </article>
+          </section>
+
+          <section class="mflStatsDistribution" aria-label="Packable players distribution">
+            <div class="mflStatsDistributionHeader">
+              <h3 id="mflStatsDistributionTitle">Packable Overall Distribution</h3>
+              <div id="mflStatsDistributionModeButtons" class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+                <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+                <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+              </div>
+            </div>
+            <div id="mflStatsAgeDistribution" class="mflStatsAgeDistribution"></div>
+          </section>
+        </section>

@@ -1,13 +1,9 @@
+import { invariant, includes, excludes } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
-const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [
   sharedCore,

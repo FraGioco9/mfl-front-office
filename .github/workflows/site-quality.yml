@@ -49,12 +49,12 @@ jobs:
       - name: Database builder syntax check
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
-        run: python -m compileall -q *.py
+        run: python -m compileall -q scripts tests
 
       - name: Database builder import smoke test
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
-        run: python -c "import rebuild_database; import rebuild_database_runner"
+        run: python -c "import scripts.database.rebuild_database; import scripts.database.rebuild_database_runner"
 
       - name: Python regression tests
         if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
@@ -64,7 +64,7 @@ jobs:
       - name: Reliable scheduler regression tests
         if: steps.changes.outputs.workflow == 'true'
         working-directory: .
-        run: node --test test_database_refresh_scheduler.mjs
+        run: node --test tests/test_database_refresh_scheduler.mjs
 
       - name: Install site dependencies
         if: steps.changes.outputs.quality == 'true'

@@ -1,3 +1,4 @@
+import { readWorkflowSource } from "./validation/workflow-source.mjs";
 import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -255,7 +256,7 @@ const productionCoreCacheRule = (vercelProduction.headers || []).find((rule) => 
 invariant(productionCoreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "Production versioned application core must retain immutable browser caching.");
 await mustNotExist(resolve(siteRoot, "vercel.mjs"), "Programmatic Vercel config must stay removed so local development uses the static safe config.");
 
-const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
+const databaseRefresh = await readWorkflowSource(new URL("../.github/workflows/full-database-refresh.yml", import.meta.url));
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
 excludes(databaseRefresh, "--workflow site-quality.yml", "Database refreshes must not publish the latest quality-check commit.");
 

@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const apiSource = String(await readFile(new URL("./api/data.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
@@ -12,9 +13,6 @@ const coreSource = String(await Promise.all([
     readFile(new URL("./modules/core-sources/wallet.js", import.meta.url), "utf8"),
     readFile(new URL("./modules/core-sources/watchlist.js", import.meta.url), "utf8"),
   ]).then((parts) => parts.join("\n"))).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 invariant(
   apiSource.includes('const playerEntityProgression = scope === "player";'),

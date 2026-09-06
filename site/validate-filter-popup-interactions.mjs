@@ -1,11 +1,9 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, coreSource, coreRuntime, tableRuntime] = await Promise.all([
   read("./index.html"),

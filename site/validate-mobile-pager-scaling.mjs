@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const sharedUi = String(
@@ -7,9 +8,6 @@ const index = String(
   await readFile(new URL("./index.html", import.meta.url), "utf8"),
 ).replace(/\r\n?/g, "\n");
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const pagerOwnerCount = sharedUi.split("#progressionPage nav.pager {").length - 1;
 invariant(

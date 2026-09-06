@@ -1,11 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { includes, excludes } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
-const excludes = (source, value, message) => invariant(!source.includes(value), message);
+const read = (path) => readValidationText(path, import.meta.url);
 
 const [indexHtml, bootstrap, appEntry, runtime] = await Promise.all([
   read("./index.html"),

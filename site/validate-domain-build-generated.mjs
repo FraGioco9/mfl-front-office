@@ -1,4 +1,5 @@
 const validators = [
+  "validate-fragment-ownership.mjs",
   "validate-text-reader.mjs",
   "validate-ci-quality-scope.mjs",
   "validate.mjs",

@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { readValidationText } from "./validation-text.mjs";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 const [appCoreSource, bootstrap, searchRuntime, loading, responsive, indexHtml] = await Promise.all([
   Promise.all([
@@ -18,9 +18,9 @@ const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
 
-const renderStart = shared.indexOf("async function renderEvaluationPage()");
-const renderEnd = shared.indexOf("function playerFirstPaintKnownValues", renderStart);
-const renderPage = renderEnd > renderStart ? shared.slice(renderStart, renderEnd) : shared.slice(renderStart);
+const renderStart = evaluation.indexOf("async function evaluationRenderPageOwner()");
+const renderEnd = evaluation.indexOf("__mflEvaluationRenderTableOwner =", renderStart);
+const renderPage = renderEnd > renderStart ? evaluation.slice(renderStart, renderEnd) : evaluation.slice(renderStart);
 invariant(renderPage.includes("await loadSavedEvaluation(savedId);")
   && renderPage.includes("await loadSharedEvaluation(shareId);")
   && !/state\.evaluationSavedId !== savedId\)[\s\S]{0,180}renderEmptyEvaluationSelection\(true\)/.test(renderPage)

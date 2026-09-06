@@ -1,0 +1,32 @@
+
+        <section id="settingsPage" class="pageView settingsPage" hidden>
+          <h2 class="tablePageTitle">Settings</h2>
+          <section class="settingsPanel" aria-label="Settings">
+            <section class="settingsIdentity" aria-label="Linked agent">
+              <div>
+                <span>Agent</span>
+                <strong id="settingsAgentName">-</strong>
+              </div>
+              <div>
+                <span>Wallet Address</span>
+                <strong id="settingsWalletAddress">-</strong>
+              </div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsDateFormatTitle">
+              <h3 id="settingsDateFormatTitle">Date format</h3>
+              <div id="settingsDateFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Date format"></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsTimeFormatTitle">
+              <h3 id="settingsTimeFormatTitle">Time format</h3>
+              <div id="settingsTimeFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Time format"></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailAddressTitle">
+              <h3 id="settingsEmailAddressTitle">Email address</h3>
+              <div class="settingsEmailAddressRow"><input id="settingsEmailAddressInput" class="settingsEmailAddressInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><button id="settingsEmailDiscardButton" class="settingsEmailActionButton settingsEmailDiscardButton" type="button">Discard</button><button id="settingsEmailSaveButton" class="settingsEmailActionButton primary" type="button">Save</button></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailTitle">
+              <h3 id="settingsEmailTitle">Receive emails for</h3>
+              <div id="settingsEmailOptions" class="settingsEmailOptions"></div>
+            </section>
+          </section>
+        </section>

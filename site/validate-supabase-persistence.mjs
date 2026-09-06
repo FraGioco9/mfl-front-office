@@ -214,7 +214,7 @@ for (const filename of apiFiles.filter((name) => name.endsWith(".js") && name !=
 
 includes(
   documentation,
-  "`send_progression_emails.py`",
+  "`scripts/email/send_progression_emails.py`",
   "The server-side progression email Supabase reader must be documented.",
 );
 includes(

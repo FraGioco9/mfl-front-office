@@ -8425,3 +8425,3976 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   height: 34px;
   margin: 0;
 }
+/* Source: responsive.css */
+/* Canonical responsive layout owner.
+ * Desktop geometry remains in styles.css; viewport-specific adaptations live here.
+ * Keep new mobile/tablet media queries out of component and runtime files.
+ */
+
+html:not(.mflInitialRouteResolved):is(
+  [data-initial-page^="database"],
+  [data-initial-page^="mfl"],
+  [data-initial-page^="progression"],
+  [data-initial-page^="agents"],
+  [data-initial-page^="watchlist"],
+  [data-initial-page^="my-players"],
+  [data-initial-page^="clubs/"],
+  [data-initial-page^="club/"]
+) #homePage {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.35fr) auto;
+    gap: 12px;
+    padding-inline: 18px;
+  }
+
+  .searchButton {
+    min-width: 0;
+  }
+
+  .stats div {
+    min-width: 96px;
+    padding-inline: 12px;
+  }
+
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  #evaluationPage .evaluationPlayerNameFull {
+    display: none;
+  }
+
+  #evaluationPage .evaluationPlayerNameCompact {
+    display: inline;
+  }
+
+  :root {
+    --pinned-sidebar-width: 0px;
+    --mobile-nav-height: 58px;
+    --mobile-nav-overlay-clearance: 126px;
+    --mfl-player-panel-gap: clamp(4px, 1vw, 8px);
+    --mfl-player-panel-padding: clamp(6px, 1.5vw, 10px);
+    --mfl-player-panel-radius: clamp(5px, 1.2vw, 8px);
+    --mfl-player-box-gap: clamp(3px, 0.8vw, 4px);
+    --mfl-player-box-height: clamp(38px, 8.4vw, 43px);
+    --mfl-player-box-padding-inline: clamp(6px, 1.8vw, 10px);
+    --mfl-player-contract-division-font-size: clamp(7.5px, 2vw, 10px);
+    --mfl-player-profile-flag-size: calc(var(--mfl-player-value-font-size) * 1.25);
+    --mfl-player-profile-icon-size: calc(var(--mfl-player-value-font-size) * 0.72);
+    --mfl-player-age-icon-gap: clamp(1px, 0.35vw, 2px);
+    --mfl-player-nationality-gap: calc(var(--mfl-player-age-icon-gap) + 2px);
+    --mfl-player-box-radius: clamp(5px, 1.2vw, 8px);
+    --mfl-player-label-font-size: clamp(9px, 2.1vw, 10px);
+    --mfl-player-value-font-size: clamp(12px, 3vw, 15px);
+    --mfl-player-attribute-font-size: clamp(16px, 4vw, 20px);
+    --mfl-player-featured-font-size: clamp(19px, 4.8vw, 24px);
+    --mfl-player-control-height: clamp(30px, 6.5vw, 34px);
+    --mfl-player-attribute-view-height: clamp(24px, 5vw, 26px);
+    --mfl-player-control-radius: clamp(5px, 1.2vw, 6px);
+    --mfl-player-training-control-size: clamp(16px, 4vw, 20px);
+    --mfl-player-training-control-gap: calc(var(--mfl-player-training-control-size) * 0.2);
+    --mfl-player-training-control-radius: calc(var(--mfl-player-training-control-size) * 0.3);
+    --mfl-player-training-control-font-size: calc(var(--mfl-player-training-control-size) * 0.7);
+    --mfl-player-training-reset-width: calc(var(--mfl-player-training-control-size) * 2.5);
+    --mfl-player-training-reset-font-size: calc(var(--mfl-player-training-control-size) * 0.55);
+    --mfl-player-hero-overall-size: clamp(58px, 15vw, 84px);
+    --mfl-player-portrait-height: clamp(66px, 17vw, 96px);
+    --mfl-player-portrait-width: clamp(120px, 31vw, 175px);
+    --mfl-player-portrait-radius: clamp(4px, 1vw, 6px);
+    --mfl-player-card-radius: var(--mfl-player-panel-radius);
+    --mfl-player-hero-media-gap: clamp(4px, 1vw, 6px);
+    --mfl-player-hero-media-width: clamp(182px, 47vw, 265px);
+    --mfl-player-hero-identity-width: 100%;
+    --mfl-player-hero-identity-action-gap: 0px;
+    --mfl-player-hero-identity-align-self: center;
+    --mfl-player-hero-actions-align-self: stretch;
+    --mfl-player-hero-actions-margin-left: 0px;
+    --mfl-player-hero-section-gap: var(--mfl-player-panel-gap);
+    --mfl-player-hero-overall-font-size: clamp(28px, 7.5vw, 42px);
+    --mfl-player-hero-eyebrow-font-size: clamp(10px, 2.4vw, 12px);
+    --mfl-player-hero-title-font-size: clamp(19px, 5vw, 25px);
+    --mfl-player-hero-positions-font-size: clamp(11px, 2.8vw, 14px);
+    --mfl-player-hero-action-menu-width: 100%;
+    --mfl-player-hero-primary-action-width: calc(100% - 38px);
+    --mfl-player-hero-action-chevron-width: 34px;
+    --mfl-player-hero-action-height: clamp(32px, 7vw, 36px);
+    --mfl-player-hero-action-font-size: clamp(12px, 3vw, 14px);
+    --mfl-player-hero-action-gap: 4px;
+    --mfl-player-hero-chevron-icon-size: clamp(13px, 3vw, 15px);
+    --mfl-player-hero-menu-item-height: 40px;
+    --mfl-player-hero-menu-item-font-size: clamp(11px, 2.8vw, 13px);
+    --mfl-player-hero-menu-icon-size: clamp(14px, 3.2vw, 16px);
+    --mfl-player-hero-menu-item-gap: clamp(5px, 1.2vw, 7px);
+    --mfl-player-hero-menu-item-padding-inline: clamp(7px, 1.8vw, 10px);
+    --mfl-player-hero-menu-padding: 4px;
+    --mfl-player-hero-menu-offset: 5px;
+  }
+
+  html,
+  body {
+    max-width: 100%;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active:not(:disabled) {
+    filter: brightness(0.9);
+  }
+
+  body > .topbar {
+    grid-template-columns: minmax(0, 1fr) 44px auto;
+    grid-template-areas: "brand search controls";
+    column-gap: 6px;
+    row-gap: 0;
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .topbar > :first-child {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    font-size: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .searchButton {
+    grid-area: search;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  :is(.topbar .searchButton, .themeButton) {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .topbar .searchButton .searchLabel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    gap: 0;
+  }
+
+  .topbar .searchButton .searchLabelText {
+    display: none;
+  }
+
+  .topbar .searchButton .searchIcon {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .searchShortcut {
+    display: none;
+  }
+
+  .headerControls {
+    grid-area: controls;
+    min-width: 0;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .topbar .stats {
+    display: none;
+  }
+
+  .accountMenu {
+    width: 44px;
+    flex: 0 0 44px;
+  }
+
+  #accountButton {
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    gap: 0;
+    padding: 0;
+  }
+
+  #accountButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  #accountButton .accountButtonIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  #accountDropdown {
+    left: auto;
+    right: 0;
+    width: min(190px, calc(100vw - 24px));
+    transform-origin: top right;
+  }
+
+  .appShell {
+    --sidebar-offset: 0px;
+    position: relative;
+  }
+
+  .menuRail {
+    position: absolute;
+    inset: auto auto 8px 50%;
+    z-index: var(--mfl-z-navigation-mobile);
+    width: min(720px, calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    height: var(--mobile-nav-height);
+    min-height: var(--mobile-nav-height);
+    padding: 4px;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(14px);
+    transform: translateX(-50%);
+  }
+
+  .menuButton {
+    display: none;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2px;
+    width: 100%;
+    min-height: 0;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .sidebarGrid {
+    display: contents;
+  }
+
+  .menuRail .navButton {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 48px;
+    margin: 0;
+    gap: 2px;
+    padding: 4px 2px;
+    overflow: visible;
+    border-color: transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-soft);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menuRail .navButton .navEmoji {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    color: inherit;
+    font-size: 18px;
+    line-height: 18px;
+  }
+
+  .menuRail .navButton .navText {
+    display: block;
+    width: max-content;
+    min-height: 9px;
+    max-width: none;
+    margin-left: 0;
+    overflow: visible;
+    color: inherit;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+    opacity: 1;
+  }
+
+  .menuRail .settingsNavButton {
+    align-self: stretch;
+    margin: 0;
+  }
+
+  .menuRail .navButton.active,
+  .menuRail .navButton.active:hover {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: none;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: none;
+  }
+
+  .menuRail .navButton:not(.active):hover:not(:disabled),
+  .menuRail .navButton:not(.active):focus-visible {
+    border-color: transparent;
+    background: var(--row-hover);
+    color: var(--text);
+  }
+
+  .menuRail #sidebar .navButton:not(.active):active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    filter: brightness(0.9);
+  }
+
+  body.pinnedSidebarVisible main,
+  body.pinnedSidebarVisible .siteFooter,
+  body:not(.pinnedSidebarVisible) main,
+  body:not(.pinnedSidebarVisible) .siteFooter {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  body > #appShell > main {
+    --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
+    padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
+    overflow-x: hidden;
+  }
+
+  body.pinnedSidebarVisible .myPlayersLockedPage,
+  body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
+    left: 0;
+    width: auto;
+  }
+
+  .homePage,
+  .changelogPage,
+  .playerPage,
+  .evaluationPage,
+  .settingsPage,
+  .mflStatsPage,
+  .progressionPage {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .homePage {
+    min-height: calc(100dvh - 220px);
+  }
+
+  .homeIntro p {
+    font-size: 16px;
+  }
+
+  .homeStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .homeStats span {
+    font-size: 24px;
+  }
+
+  .tablePageTitle,
+  .evaluationTitleRow {
+    margin-top: 2px;
+  }
+
+  .viewsScrollerShell {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    clip-path: inset(0);
+  }
+
+  .views {
+    --mfl-views-gap: 6px;
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--mfl-views-gap);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    overscroll-behavior-x: auto;
+    touch-action: pan-y;
+  }
+
+  .views.mflViewsOverflowing {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  #progressionPage .views::before,
+  #progressionPage .views::after,
+  #progressionPage .quickFilters::before,
+  #progressionPage .quickFilters::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #progressionPage .views::before {
+    right: -2px;
+    z-index: 3;
+    width: 86px;
+    height: 48px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .views::after {
+    right: 6px;
+    z-index: 4;
+    width: 18px;
+    height: 18px;
+    background: var(--text-soft);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .quickFilters::before {
+    right: -2px;
+    z-index: 3;
+    width: 60px;
+    height: 28px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+    transform: translateY(-50%);
+  }
+
+  #progressionPage .quickFilters::after {
+    right: 5px;
+    z-index: 4;
+    width: 14px;
+    height: 14px;
+    background: var(--text-soft);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M5%2012h14'/%3E%3Cpath%20d='m12%205%207%207-7%207'/%3E%3C/svg%3E") center / contain no-repeat;
+    transform: translateY(-50%);
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .views.mflViewsOverflowing::before,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .views.mflViewsOverflowing::after,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::before,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage > .quickFilters.mflViewsOverflowing::after {
+    opacity: 0.92;
+    visibility: visible;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage .views.mflViewsOverflowing {
+    box-shadow: inset -96px 0 96px -69px var(--page-bg);
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage .quickFilters.mflViewsOverflowing {
+    box-shadow: inset -72px 0 72px -52px var(--page-bg);
+  }
+
+  .viewsScrollButton {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    margin: 0;
+    padding: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-soft);
+    box-shadow: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    cursor: pointer;
+    transform: translateY(-50%) scale(0.94);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      visibility 0s linear 180ms;
+  }
+
+  .viewsScrollButton.mflViewsScrollButtonVisible {
+    opacity: 0.92;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+    transition-delay: 0s;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) .viewsScrollerShell .viewsScrollButton {
+    transition: none;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) .viewsScrollerShell:has(> .mflViewsOverflowing) > .viewsScrollButtonRight {
+    opacity: 0.92;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+  }
+
+  .viewsScrollButtonRight {
+    right: 0;
+  }
+
+  .viewsScrollButtonLeft {
+    left: 0;
+  }
+
+  .viewsScrollButton::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    bottom: -9px;
+    width: 86px;
+    pointer-events: none;
+  }
+
+  .viewsScrollButtonRight::before {
+    right: -2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+  }
+
+  .viewsScrollButtonLeft::before {
+    left: -2px;
+    background: linear-gradient(
+      270deg,
+      transparent 0%,
+      color-mix(in srgb, var(--page-bg) 54%, transparent) 38%,
+      color-mix(in srgb, var(--page-bg) 88%, transparent) 70%,
+      var(--page-bg) 100%
+    );
+  }
+
+  .viewsScrollButton:hover,
+  .viewsScrollButton:focus-visible,
+  .viewsScrollButton:active {
+    background: transparent;
+    opacity: 1;
+  }
+
+  .viewsScrollButton svg {
+    position: relative;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .viewsScrollButtonLeft svg {
+    transform: scaleX(-1);
+  }
+
+  .viewButton {
+    flex: 0 0 100px;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    height: 44px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .watchlistSwitcher,
+  .watchlistSwitcher.mflMobileWatchlistSwitcher {
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .watchlistSwitcher.mflMobileWatchlistSwitcher {
+    margin-top: 6px;
+    margin-bottom: 5px;
+  }
+
+  .watchlistSwitcherLabel {
+    flex: 0 0 auto;
+  }
+
+  .watchlistButton {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .watchlistDropdown {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #progressionPage > .quickFilters {
+    height: 46px;
+    min-height: 46px;
+    margin-bottom: 0;
+    padding: 0;
+    align-items: flex-start;
+  }
+
+  .quickFiltersScrollerShell {
+    position: relative;
+    height: 46px;
+    min-height: 46px;
+    margin-bottom: 0;
+  }
+
+  .quickFiltersScrollerShell > .quickFilters {
+    height: 28px;
+    min-height: 28px;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  .quickFiltersScrollerShell:has(> .quickFilters.mflViewsOverflowing) > .viewsScrollButton {
+    top: 14px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+    padding: 5px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton::before {
+    top: -2px;
+    bottom: -2px;
+    width: 60px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .quickFilters {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    overscroll-behavior-x: auto;
+    touch-action: pan-y;
+  }
+
+  .quickFilters.mflViewsOverflowing {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .quickFilters label {
+    flex: 0 0 auto;
+    min-height: 28px;
+    gap: 5px;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .quickFilters input[type="checkbox"] {
+    flex: 0 0 16px;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+
+  #progressionPage .watchlistPlayerCount:not([hidden]) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 14px;
+    min-height: 14px;
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #progressionPage .quickFiltersScrollerShell + .watchlistPlayerCount:not([hidden]) {
+    position: static;
+    margin-top: -16px;
+    margin-bottom: 2px;
+  }
+
+  #progressionPage > .quickFilters > .watchlistPlayerCount:not([hidden]) {
+    position: absolute;
+    top: 30px;
+    left: 0;
+  }
+
+  #progressionPage > .controlsBar {
+    display: none;
+  }
+
+  #openFiltersButton {
+    flex: 0 0 100px;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+  }
+
+  #filterSummary {
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+  }
+
+  #progressionPage .tableShell {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  #progressionPage .tableScroller,
+  .tableScroller {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #progressionPage .playerTableScroller table {
+    width: 100%;
+    min-width: 760px;
+    max-width: none;
+  }
+
+  .tableScroller table :is(th, td) {
+    padding-inline: 4px;
+  }
+
+  #progressionPage .playerTableScroller :is(th, td) {
+    padding-inline: 1px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 10px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 12px;
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: 16px;
+    height: 16px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 620px;
+    font-size: 11px;
+  }
+
+  .advancedPlayerTable thead th { height: 28px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 26px; }
+  .advancedPlayerTable :is(th, td) { padding-inline: 2px; }
+
+  .advancedPlayerTable thead th {
+    font-size: 9px;
+  }
+
+  .evaluationSummaryShell .tableScroller,
+  .evaluationTableShell .tableScroller {
+    overflow-x: auto;
+  }
+
+  .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 35.625px;
+    position: relative;
+  }
+
+  .evaluationTableShell::before,
+  .evaluationTableShell::after {
+    content: "";
+    position: absolute;
+    top: var(--mfl-evaluation-table-body-top, var(--mfl-evaluation-table-header-height));
+    bottom: 0;
+    z-index: 2;
+    width: 54px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 140ms ease, visibility 0s linear 140ms;
+  }
+
+  .evaluationTableShell::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%);
+  }
+
+  .evaluationTableShell::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%);
+  }
+
+  .evaluationTableShell.mflPlayerTableCanScrollLeft::before,
+  .evaluationTableShell.mflPlayerTableCanScrollRight::after {
+    opacity: 0.94;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .evaluationSummaryTable {
+    min-width: 480px;
+  }
+
+  .evaluationTableShell .evaluationTable {
+    min-width: 540px;
+  }
+
+  .pager {
+    left: 0;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .pager button {
+    width: auto;
+    min-width: 82px;
+    min-height: 44px;
+    flex: 0 0 auto;
+  }
+
+  #pageText {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .selectionBar {
+    width: calc(100vw - 24px);
+    max-width: 520px;
+    flex-wrap: wrap;
+    justify-content: center;
+    bottom: var(--mobile-nav-overlay-clearance);
+  }
+
+  .toastMessage {
+    bottom: var(--mobile-nav-overlay-clearance);
+  }
+
+  .selectionSummary,
+  .selectionActions {
+    min-width: 0;
+  }
+
+  .selectionActions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .modalBackdrop {
+    padding: 8px;
+  }
+
+  .searchDialog {
+    width: min(680px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    height: auto;
+    max-height: calc(100dvh - 24px);
+  }
+
+  .filtersDialog {
+    width: min(640px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    height: auto;
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+  }
+
+  .advancedSettingsDialog,
+  .evaluationLoadDialog,
+  .watchlistChoiceDialog,
+  .addWatchlistDialog,
+  .deleteWatchlistDialog {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .evaluationLoadDialog {
+    height: auto;
+  }
+
+  .filtersHeader,
+  .filtersFooter {
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .filtersHeader h2 {
+    font-size: 16px;
+  }
+
+  .searchBody {
+    flex: 1 1 auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .globalSearchControl #playerSearchInput {
+    height: 38px;
+    min-height: 38px;
+    padding-left: 10px;
+    padding-right: 38px;
+    font-size: 16px;
+  }
+
+  .playerSearchClearButton {
+    right: 3px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .searchResults {
+    gap: 5px;
+    min-height: 0;
+    height: 290px;
+    max-height: 290px;
+    grid-auto-rows: 54px;
+  }
+
+  .searchResults.filledSearchResults {
+    grid-template-rows: repeat(5, 54px);
+    padding-bottom: 0;
+  }
+
+  .searchResult {
+    min-height: 54px;
+    padding: 7px 10px;
+    border-radius: 7px;
+  }
+
+  .searchResult strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  .searchResult span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .searchHint {
+    font-size: 10px;
+  }
+
+  .filterBuilder,
+  .advancedSettingsBody,
+  .evaluationLoadList {
+    padding-inline: 12px;
+  }
+
+  .filterBuilder {
+    flex: 0 1 auto;
+    gap: 6px;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px 10px;
+    overflow-x: hidden;
+  }
+
+  .addFilterRow,
+  .filterRules {
+    min-width: 0;
+    max-width: 100%;
+    gap: 6px;
+  }
+
+
+  .filtersDialog .addFilterRow > *,
+  .filtersDialog .filterRule,
+  .filtersDialog .filterRule > *,
+  .filtersDialog .filterRule :is(
+    input,
+    select,
+    button,
+    [data-filter-value],
+    [data-filter-value-group],
+    .mflNumericStepperControl,
+    .betweenValue,
+    .dateValue,
+    .dateRangeValue
+  ),
+  .filtersDialog .filterRule :is(.betweenValue, .dateValue, .dateRangeValue, .mflNumericStepperControl, [data-filter-value-group]) > * {
+    min-width: 0;
+    max-width: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .filtersDialog .filterRule :is(
+    input,
+    select,
+    [data-filter-value],
+    [data-filter-value-group],
+    .mflNumericStepperControl,
+    .betweenValue,
+    .dateValue,
+    .dateRangeValue
+  ),
+  .filtersDialog .filterRule :is(.betweenValue, .dateValue, .dateRangeValue, .mflNumericStepperControl, [data-filter-value-group]) > :is(input, select, [data-filter-value]) {
+    width: 100%;
+    inline-size: 100%;
+  }
+
+  .filtersDialog .mflNumericStepperControl {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    gap: 2px;
+  }
+
+  .filtersDialog .mflNumericStepperControl > input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filtersDialog .mflIncrementStepper {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+  }
+
+  .filtersDialog .mflIncrementStepper button {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+  }
+
+
+  .filterRule {
+    --mfl-filter-edge-gap: 8px;
+    --mfl-filter-builder-inline-padding: 10px;
+    --mfl-filter-remove-size: 18px;
+    --mfl-filter-remove-strip: calc((2 * var(--mfl-filter-edge-gap)) + var(--mfl-filter-remove-size) - var(--mfl-filter-builder-inline-padding));
+    position: relative;
+    box-sizing: border-box;
+    width: calc(100% - var(--mfl-filter-remove-strip));
+    max-width: calc(100% - var(--mfl-filter-remove-strip));
+    margin-left: 0;
+    margin-right: var(--mfl-filter-remove-strip);
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-rows: 36px 36px;
+    gap: 4px;
+    min-height: 76px;
+  }
+
+  .filterRule > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(5) {
+    position: absolute;
+    top: 18px;
+    right: calc(var(--mfl-filter-edge-gap) - var(--mfl-filter-builder-inline-padding) - var(--mfl-filter-remove-strip));
+    width: var(--mfl-filter-remove-size);
+    min-width: var(--mfl-filter-remove-size);
+    max-width: var(--mfl-filter-remove-size);
+    height: var(--mfl-filter-remove-size);
+    min-height: var(--mfl-filter-remove-size);
+    transform: translateY(-50%);
+  }
+
+  .filterRule > :nth-child(5)::before,
+  .filterRule > :nth-child(5)::after {
+    width: 8px;
+    height: 1.5px;
+  }
+
+  .filterRule > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .filterRule > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .filtersDialog .filterRule > :is(:nth-child(2), :nth-child(4)) {
+    width: 100%;
+    inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    max-width: 100%;
+    max-inline-size: 100%;
+  }
+
+
+  .filterRule:first-child > :nth-child(1) {
+    display: none;
+  }
+
+  .filterRule:first-child > :nth-child(2) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule > :nth-child(3)[hidden] + :nth-child(4) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule select[hidden] {
+    display: none;
+  }
+
+  .betweenValue,
+  .dateRangeValue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .filtersFooter button {
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .advancedSettingHeader,
+  .advancedLateSeasonRewardSetting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .advancedSettingHeaderControl,
+  .advancedRewardRateControlGroup {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .advancedMflUsdControl,
+  .advancedPercentControl {
+    margin-left: auto;
+  }
+
+  .advancedPlayerTableSection {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .playerPage,
+.playerDetail,
+.playerGrid,
+.playerStack,
+.playerPanel,
+.detailGrid,
+.attributeGrid {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.playerDetail {
+  gap: var(--mfl-player-panel-gap);
+  margin-top: var(--mfl-player-panel-gap);
+}
+
+.playerHero {
+  display: grid;
+  grid-template-columns: var(--mfl-player-hero-media-width) minmax(0, 1fr);
+  grid-template-areas:
+    "media identity"
+    "actions actions";
+  align-items: center;
+  column-gap: clamp(8px, 2vw, 14px);
+  row-gap: var(--mfl-player-panel-gap);
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: var(--mfl-player-panel-padding);
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.playerHeroMedia {
+  grid-area: media;
+  max-width: 100%;
+}
+
+.playerHeroIdentity {
+  grid-area: identity;
+  min-width: 0;
+  margin-right: 0;
+}
+
+.playerHeroIdentity .playerTitle,
+.playerHeroIdentity > p {
+  overflow-wrap: anywhere;
+}
+
+.playerHeroActions {
+  grid-area: actions;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.playerHeroActionMenu {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.playerGrid {
+  grid-template-columns: 1fr;
+  gap: var(--mfl-player-panel-gap);
+}
+
+.playerStack {
+  gap: var(--mfl-player-panel-gap);
+  grid-template-rows: none;
+}
+
+.playerPanel {
+  padding: var(--mfl-player-panel-padding);
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.playerPanel h3 {
+  font-size: clamp(13px, 3.2vw, 16px);
+  line-height: 1.1;
+}
+
+.playerPanelHeader {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--mfl-player-box-gap);
+}
+
+.playerAttributeViews {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: var(--mfl-player-box-gap);
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: auto;
+  touch-action: pan-y;
+}
+
+.playerAttributeViews.mflViewsOverflowing {
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.playerAttributeViewButton {
+  flex: 1 0 clamp(68px, 18vw, 98px);
+  width: auto;
+  min-width: clamp(68px, 18vw, 98px);
+  height: var(--mfl-player-attribute-view-height);
+  min-height: var(--mfl-player-attribute-view-height);
+  max-height: var(--mfl-player-attribute-view-height);
+  padding-inline: 4px;
+  border-radius: var(--mfl-player-control-radius);
+  font-size: clamp(9px, 2.4vw, 11px);
+}
+
+.detailGrid,
+.attributeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mfl-player-box-gap);
+  margin-top: var(--mfl-player-box-gap);
+}
+
+.playerInfoPanel .detailGrid {
+  min-height: 0;
+  grid-template-rows: repeat(5, var(--mfl-player-box-height));
+}
+
+.playerInfoPanel .detailGrid > .playerInfoFullWidthCard {
+  grid-column: 1 / -1;
+}
+
+.attributeGrid {
+  grid-auto-rows: var(--mfl-player-box-height);
+}
+
+.detailGrid > div {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--mfl-player-box-height);
+  min-height: var(--mfl-player-box-height);
+  max-height: var(--mfl-player-box-height);
+  padding: 3px var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  overflow: hidden;
+}
+
+.playerAttributeCard,
+.playerAttributeCard.featured {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--mfl-player-box-height);
+  min-height: var(--mfl-player-box-height);
+  max-height: var(--mfl-player-box-height);
+  padding: 3px var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  overflow: hidden;
+}
+
+.detailGrid > div,
+.detailGrid strong,
+.detailGrid strong > *,
+.playerContractLine,
+.playerContractTeam,
+.playerAttributeCard strong,
+.playerAttributeCard .attributeValueText {
+  min-width: 0;
+}
+  .detailGrid strong {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    font-size: var(--mfl-player-value-font-size);
+    white-space: nowrap;
+  }
+
+.detailGrid .contractDetailCard strong .playerContractTeam {
+  font-size: var(--mfl-player-value-font-size);
+}
+
+.detailGrid .contractDetailCard strong .playerContractDivision {
+  font-size: var(--mfl-player-contract-division-font-size);
+}
+  .playerInfoPanel .detailGrid .nationalityDetailCard strong {
+    gap: var(--mfl-player-nationality-gap);
+  }
+
+  .playerInfoPanel .detailGrid .nationalityDetailCard .flagImage {
+    width: var(--mfl-player-profile-flag-size);
+    height: var(--mfl-player-profile-flag-size);
+  }
+
+.playerInfoPanel .detailGrid strong .playerDetailAgeLine {
+  gap: var(--mfl-player-age-icon-gap);
+  overflow: visible;
+}
+
+.playerInfoPanel .detailGrid .playerAgeMarker {
+  flex: 0 0 var(--mfl-player-profile-icon-size);
+  width: var(--mfl-player-profile-icon-size);
+  min-width: var(--mfl-player-profile-icon-size);
+  max-width: var(--mfl-player-profile-icon-size);
+  height: var(--mfl-player-profile-icon-size);
+  min-height: var(--mfl-player-profile-icon-size);
+  max-height: var(--mfl-player-profile-icon-size);
+  overflow: visible;
+  font-size: inherit;
+}
+
+.playerInfoPanel .detailGrid .playerAgeMarker::before,
+.playerInfoPanel .detailGrid .playerAgeMarker > img {
+  width: var(--mfl-player-profile-icon-size);
+  height: var(--mfl-player-profile-icon-size);
+}
+
+.playerInfoPanel .detailGrid .playerAgeMarker::before {
+  -webkit-mask-size: var(--mfl-player-profile-icon-size) var(--mfl-player-profile-icon-size);
+  mask-size: var(--mfl-player-profile-icon-size) var(--mfl-player-profile-icon-size);
+  background: var(--retirement-marker-color);
+}
+
+.playerInfoPanel .detailGrid .playerAgeMarker > img {
+  display: block;
+  flex: 0 0 var(--mfl-player-profile-icon-size);
+  object-fit: contain;
+}
+
+.detailGrid strong > a,
+.playerContractLine,
+.playerContractTeam {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailGrid > div > span,
+.playerAttributeCard > span {
+  font-size: var(--mfl-player-label-font-size);
+  line-height: 1.1;
+}
+
+.playerAttributeCard strong {
+  flex-wrap: nowrap;
+  gap: 3px;
+  overflow: hidden;
+  font-size: var(--mfl-player-attribute-font-size);
+  line-height: 1.1;
+}
+
+.playerAttributeCard .attributeValueText {
+  line-height: inherit;
+}
+
+.playerAttributeCard.featured strong {
+  font-size: var(--mfl-player-featured-font-size);
+}
+
+.playerAttributeCard .progressionValue,
+.playerAttributeCard .nextOverallValue,
+.playerAttributeCard .trainingDelta,
+.playerAttributeCard.featured .progressionValue,
+.playerAttributeCard.featured .nextOverallValue {
+  flex: 0 0 auto;
+  font-size: clamp(9px, 2.3vw, 11px);
+}
+
+.playerAttributeCard.fullWidth {
+  grid-column: 1 / -1;
+}
+
+
+.trainingStatControls {
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--mfl-player-training-control-gap);
+}
+
+.trainingStatControls button {
+  width: var(--mfl-player-training-control-size);
+  min-width: var(--mfl-player-training-control-size);
+  max-width: var(--mfl-player-training-control-size);
+  height: var(--mfl-player-training-control-size);
+  min-height: var(--mfl-player-training-control-size);
+  max-height: var(--mfl-player-training-control-size);
+  border-radius: var(--mfl-player-training-control-radius);
+  font-size: var(--mfl-player-training-control-font-size);
+  line-height: var(--mfl-player-training-control-size);
+}
+
+.trainingStatControls .trainingResetButton {
+  width: var(--mfl-player-training-reset-width);
+  min-width: var(--mfl-player-training-reset-width);
+  max-width: var(--mfl-player-training-reset-width);
+  padding-inline: 0;
+  font-size: var(--mfl-player-training-reset-font-size);
+}
+
+.playerNotesInput {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: clamp(56px, 15vw, 72px);
+  padding: clamp(6px, 1.5vw, 8px) 34px clamp(6px, 1.5vw, 8px) var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  font-size: clamp(11px, 2.8vw, 13px);
+}
+
+.playerNotesCount {
+  right: var(--mfl-player-box-padding-inline);
+  bottom: clamp(5px, 1.2vw, 8px);
+  font-size: clamp(9px, 2.2vw, 10px);
+}
+
+.pitch {
+  width: min(100%, clamp(240px, 70vw, 320px));
+  height: auto;
+  aspect-ratio: 360 / 498;
+  gap: clamp(3px, 0.8vw, 5px);
+  margin-top: var(--mfl-player-panel-gap);
+  padding: clamp(6px, 1.6vw, 9px) clamp(5px, 1.4vw, 8px);
+  border-width: 1px;
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.pitchRow {
+  gap: clamp(3px, 1vw, 6px);
+}
+
+.pitchPositionSlot {
+  min-width: clamp(38px, 10vw, 54px);
+}
+
+.pitchPositionCircle,
+.pitchPositionBlank {
+  width: clamp(33.333px, 9.722vw, 44.444px);
+  height: clamp(33.333px, 9.722vw, 44.444px);
+}
+
+.pitchPositionCircle {
+  gap: 2px;
+}
+
+.pitchPositionCircle strong {
+  font-size: clamp(12px, 3.5vw, 16px);
+}
+
+.pitchPositionCircle small {
+  font-size: clamp(7.333px, 2.139vw, 9.778px);
+}
+
+  .evaluationTitleRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .advancedSettingsButton {
+    width: 100%;
+  }
+
+  .evaluationSearchGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .evaluationSearch {
+    width: 100%;
+    max-width: none;
+  }
+
+  .evaluationActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .evaluationButtons,
+  .evaluationMetrics {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .evaluationButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .evaluationPlayerPageButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .evaluationMetrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .evaluationMetric,
+  .evaluationMflUsdGroup {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .evaluationMetric {
+    text-align: left;
+  }
+
+  .evaluationMetricLabel {
+    justify-content: flex-start;
+  }
+
+  .evaluationFooterActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .evaluationFooterSavedActions {
+    justify-content: stretch;
+  }
+
+  .evaluationFooterButton,
+  .evaluationFooterSavedActions > * {
+    flex: 1 1 auto;
+  }
+
+  .evaluationSummaryShell,
+  .evaluationTableShell {
+    max-width: 100%;
+  }
+
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 32px;
+    --mfl-evaluation-summary-row-height: 32px;
+    --mfl-evaluation-season-row-height: 27px;
+  }
+
+  #evaluationPage .evaluationHeaderFull { display: none; }
+  #evaluationPage .evaluationHeaderCompact { display: inline; }
+
+  .evaluationSummaryTable thead tr,
+  .evaluationTableShell .evaluationTable thead tr,
+  .evaluationSummaryTable th,
+  .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+  }
+
+  .evaluationSummaryTable tbody tr,
+  .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+  }
+
+  .evaluationTableShell .evaluationTable tbody tr,
+  .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+  }
+
+  .evaluationSummaryTable th,
+  .evaluationTableShell .evaluationTable th {
+    font-size: 10px;
+  }
+
+  .evaluationSummaryTable td,
+  .evaluationTableShell .evaluationTable td {
+    font-size: 12px;
+  }
+
+  .evaluationSummaryTable th,
+  .evaluationSummaryTable td {
+    padding-inline: 3px;
+  }
+
+  #evaluationPage .evaluationSearchResults {
+    gap: 5px;
+    padding: 7px;
+  }
+
+  #evaluationPage .evaluationSearchResult {
+    min-height: 54px;
+    padding: 7px 10px;
+    border-radius: 7px;
+  }
+
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 5px;
+    height: 342px;
+    max-height: 342px;
+    grid-auto-rows: 60px;
+    padding: 10px 12px 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    gap: 8px;
+    min-height: 60px;
+    padding: 8px 10px;
+    border-radius: 7px;
+  }
+
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 82px;
+    font-size: 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 5px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mflStatsFilterButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mflStatsDistributionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mflStatsDistributionModeButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mflStatsDistributionModeButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mflStatsAgeDistribution {
+    min-height: 280px;
+    height: min(52dvh, 420px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollRight:not(.mflStatsCanScrollLeft) {
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent 100%);
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollLeft:not(.mflStatsCanScrollRight) {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 100%);
+  }
+
+  .mflStatsAgeDistribution.mflStatsCanScrollLeft.mflStatsCanScrollRight {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+  }
+
+  .mflStatsHistogram {
+    min-width: 620px;
+  }
+
+  .settingsPanel {
+    max-width: 100%;
+  }
+
+  .settingsIdentity {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsDateFormatOptions,
+  .settingsEmailAddressRow:not([data-settings-page-actions]) {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settingsEmailAddressRow[data-settings-page-actions] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .settingsToggleButton,
+  .settingsEmailAddressInput,
+  .settingsEmailActionButton {
+    width: 100%;
+    max-width: none;
+  }
+
+  .settingsEmailAddressRow[data-settings-page-actions] .settingsEmailActionButton {
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .changelogPage {
+    margin-top: 10px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 4px;
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 14px;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .changelogList {
+    gap: 8px;
+  }
+
+  .changelogMinorSection {
+    border-radius: 5px;
+  }
+
+  .changelogMinorToggle {
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 14px;
+  }
+
+  .changelogMinorMeta {
+    font-size: 11px;
+  }
+
+  .changelogMinorChevron {
+    font-size: 16px;
+  }
+
+  .changelogPatchList {
+    padding: 2px 8px;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 7px;
+    min-height: 31px;
+    padding: 4px 6px;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 22px;
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .siteFooter {
+    padding-inline: 12px;
+  }
+}
+
+/* Mobile parity contract.
+ * Viewport-specific behavior belongs here so desktop changes cannot silently
+ * gain a second, competing mobile implementation in a runtime or base style.
+ */
+@media (max-width: 900px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  body > .topbar {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  .menuRail {
+    max-width: calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+
+  body > #appShell > main {
+    min-width: 0;
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(calc(var(--mobile-nav-height) + 18px), env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  #progressionPage,
+  #progressionPage .tableShell,
+  #progressionPage .tableScroller,
+  .tableShell,
+  .tableScroller {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #progressionPage .tableShell,
+  .tableShell {
+    overflow: hidden;
+  }
+
+  #progressionPage .tableScroller,
+  .tableShell > .tableScroller,
+  .tableScroller {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .advancedPlayerTableSection,
+  .sidebar,
+  .playerAttributeViews,
+  .evaluationLoadList,
+  .searchBody,
+  .filterBuilder,
+  .advancedSettingsBody {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .views,
+  .quickFilters,
+  .playerAttributeViews {
+    scroll-padding-inline: 10px;
+  }
+
+  .selectionBar {
+    width: min(520px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    bottom: calc(var(--mobile-nav-overlay-clearance) + env(safe-area-inset-bottom));
+  }
+
+  .toastMessage {
+    bottom: calc(var(--mobile-nav-overlay-clearance) + env(safe-area-inset-bottom));
+  }
+
+  .modalBackdrop {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-left: max(8px, env(safe-area-inset-left));
+  }
+
+  .searchDialog {
+    width: min(680px, 100%);
+    max-width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .filtersDialog {
+    --mfl-filter-box-font-size: 13px;
+    --mfl-filter-box-line-height: 16px;
+    --mfl-popup-close-size: 30px;
+    width: min(640px, 100%);
+    max-width: 100%;
+    height: auto;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+
+  .advancedSettingsDialog,
+  .evaluationLoadDialog,
+  .watchlistChoiceDialog,
+  .addWatchlistDialog,
+  .deleteWatchlistDialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"])),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+
+  #databaseStatsPage .databaseStatsCustomFilter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
+  body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
+  body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+    width: 100%;
+    max-width: none;
+  }
+
+  .siteFooter {
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 520px) {
+  body > .topbar {
+    column-gap: 8px;
+    padding-right: max(10px, env(safe-area-inset-right));
+    padding-left: max(10px, env(safe-area-inset-left));
+  }
+
+  body > #appShell > main {
+    --mfl-footer-page-floor: max(500px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-left: max(8px, env(safe-area-inset-left));
+  }
+
+  .topbar h1 {
+    font-size: 20px;
+  }
+
+  .topbar .searchButton {
+    height: 38px;
+  }
+
+  #progressionPage .views {
+    --mfl-views-gap: 4px;
+    margin-bottom: 5px;
+  }
+
+  #progressionPage > .quickFilters {
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+  }
+
+  #progressionPage .quickFiltersScrollerShell {
+    height: 42px;
+    min-height: 42px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell > .quickFilters {
+    height: 26px;
+    min-height: 26px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell:has(> .quickFilters.mflViewsOverflowing) > .viewsScrollButton {
+    top: 13px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton {
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    min-height: 20px;
+    padding: 4px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton::before {
+    top: -3px;
+    bottom: -3px;
+    width: 50px;
+  }
+
+  .quickFiltersScrollerShell .viewsScrollButton svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  #progressionPage .quickFilters::before {
+    width: 50px;
+    height: 26px;
+  }
+
+  #progressionPage .quickFilters::after {
+    right: 4px;
+    width: 12px;
+    height: 12px;
+  }
+
+  .navButton {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .viewButton {
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    max-width: 74px;
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 4px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  #progressionPage .views > #openFiltersButton {
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    max-width: 74px;
+    height: 32px;
+    min-height: 32px;
+    gap: 4px;
+    padding: 0 5px;
+    border-radius: 5px;
+    font-size: 10px;
+  }
+
+  #progressionPage .filtersViewIcon {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage #filterSummary {
+    display: inline-grid;
+    flex: 0 0 13px;
+    place-items: center;
+    align-self: stretch;
+    width: 13px;
+    min-width: 13px;
+    max-width: 13px;
+    min-height: 0;
+    height: auto;
+    font-size: 9px;
+    line-height: 1;
+    transform: none;
+  }
+
+  #progressionPage .viewControlsSeparator {
+    height: 18px;
+    margin-inline: 1px;
+  }
+
+  .tablePageTitle {
+    font-size: 18px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"]::after {
+    font-size: 10px;
+  }
+
+  .homeStats {
+    grid-template-columns: 1fr;
+  }
+
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .playerHeroActions,
+  .mflStatsFilterButtons,
+  .mflStatsDistributionModeButtons {
+    grid-template-columns: 1fr;
+  }
+
+  #databaseStatsPage .databaseStatsCustomFilter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #databaseStatsPage .databaseStatsCustomFilter > button {
+    grid-column: 1 / -1;
+  }
+
+  .mflStatsFilterButtons {
+    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  }
+
+  .mflStatsDistributionModeButtons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickFilters {
+    gap: 6px;
+    padding: 0;
+  }
+
+  .quickFilters label {
+    min-height: 26px;
+    gap: 4px;
+    padding: 0;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .quickFilters input[type="checkbox"] {
+    flex-basis: 16px;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+  }
+
+  #progressionPage .watchlistPlayerCount:not([hidden]) {
+    height: 14px;
+    min-height: 14px;
+    font-size: 10px;
+  }
+
+  #progressionPage .quickFiltersScrollerShell + .watchlistPlayerCount:not([hidden]) {
+    margin-top: -16px;
+  }
+
+  #progressionPage > .quickFilters > .watchlistPlayerCount:not([hidden]) {
+    top: 28px;
+  }
+
+  .filtersDialog {
+    --mfl-filter-box-font-size: 12px;
+    --mfl-filter-box-line-height: 15px;
+    --mfl-popup-close-size: 28px;
+    width: min(100%, 420px);
+    height: auto;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .filtersHeader,
+  .filtersFooter {
+    gap: 5px;
+    padding: 5px 7px;
+  }
+
+  .filtersHeader h2 {
+    font-size: 15px;
+  }
+
+  .filterBuilder {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .addFilterRow {
+    gap: 4px;
+  }
+
+  .addFilterRow select {
+    flex: 0 1 200px;
+    width: min(200px, 100%);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+
+
+  .filterRules {
+    gap: 4px;
+  }
+
+  .filterRule {
+    --mfl-filter-builder-inline-padding: 6px;
+    --mfl-filter-remove-size: 14px;
+    width: calc(100% - var(--mfl-filter-remove-strip));
+    max-width: calc(100% - var(--mfl-filter-remove-strip));
+    margin-left: 0;
+    margin-right: var(--mfl-filter-remove-strip);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-rows: 36px 36px;
+    gap: 3px;
+    min-height: 75px;
+  }
+
+  .filterRule > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .filterRule > :nth-child(5) {
+    position: absolute;
+    top: 18px;
+    right: calc(var(--mfl-filter-edge-gap) - var(--mfl-filter-builder-inline-padding) - var(--mfl-filter-remove-strip));
+    width: var(--mfl-filter-remove-size);
+    min-width: var(--mfl-filter-remove-size);
+    max-width: var(--mfl-filter-remove-size);
+    height: var(--mfl-filter-remove-size);
+    min-height: var(--mfl-filter-remove-size);
+    transform: translateY(-50%);
+  }
+
+  .filterRule > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .filterRule > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+
+  .filterRule:first-child > :nth-child(1) {
+    display: none;
+  }
+
+  .filterRule:first-child > :nth-child(2) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule > :nth-child(3)[hidden] + :nth-child(4) {
+    grid-column: 1 / 3;
+  }
+
+  .filterRule > select,
+  .filterRule [data-filter-value] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filterRule select[hidden] {
+    display: none;
+  }
+
+  .betweenValue,
+  .dateRangeValue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .filtersFooter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtersFooter button {
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .searchDialog {
+    height: auto;
+  }
+
+  .searchBody {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .globalSearchControl #playerSearchInput {
+    height: 36px;
+    min-height: 36px;
+    padding-left: 9px;
+    padding-right: 36px;
+    font-size: 16px;
+  }
+
+  .playerSearchClearButton {
+    right: 2px;
+    width: 27px;
+    height: 27px;
+  }
+
+  .searchResults {
+    gap: 4px;
+    height: 256px;
+    max-height: 256px;
+    grid-auto-rows: 48px;
+  }
+
+  .searchResults.filledSearchResults {
+    grid-template-rows: repeat(5, 48px);
+    padding-bottom: 0;
+  }
+
+  .searchResult {
+    min-height: 48px;
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+
+  .searchResult strong {
+    font-size: 12px;
+  }
+
+  .searchResult span {
+    font-size: 9px;
+  }
+
+  .searchHint {
+    font-size: 9px;
+  }
+
+  #progressionPage .playerTableScroller table {
+    min-width: 600px;
+  }
+
+  /* Every resolved or active mobile table view uses the same readable 760px floor. */
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-view] #progressionPage .playerTableScroller table,
+  #progressionPage:has(.viewButton.active) .playerTableScroller table {
+    min-width: 760px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 9px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 11px;
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: 14px;
+    height: 14px;
+  }
+
+  #progressionPage .playerTableScroller .listingCellContent {
+    gap: 2px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+
+  #progressionPage .playerTableScroller .listingCellIcon {
+    width: 11px;
+    height: 11px;
+    flex-basis: 11px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 500px;
+    font-size: 10px;
+  }
+
+  .advancedPlayerTable thead th { height: 24px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 22px; }
+  .advancedPlayerTable :is(th, td) { padding-inline: 1px; }
+
+  .advancedPlayerTable thead th {
+    font-size: 8px;
+  }
+
+  #evaluationPage {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    column-gap: 6px;
+    row-gap: 6px;
+  }
+
+  /* Route-ready Evaluation has a higher-specificity base visibility rule that uses block flow. */
+  html body[data-page="evaluation"] #evaluationPage {
+    display: grid;
+  }
+
+  #advancedSettingsModal,
+  #evaluationLoadModal {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  #advancedSettingsModal .advancedSettingsDialog,
+  #evaluationLoadModal .evaluationLoadDialog {
+    width: min(100%, 420px);
+    max-width: 420px;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadDialog {
+    height: auto;
+  }
+
+  #advancedSettingsModal .filtersHeader,
+  #evaluationLoadModal .filtersHeader {
+    min-height: 42px;
+    padding: 7px 9px;
+  }
+
+  #advancedSettingsModal .filtersHeader h2,
+  #evaluationLoadModal .filtersHeader h2 {
+    font-size: 15px;
+  }
+
+  #advancedSettingsModal .advancedSettingsBody {
+    gap: 8px;
+    padding: 8px 10px 10px;
+  }
+
+  #advancedSettingsModal .advancedSettingsSection {
+    gap: 6px;
+  }
+
+  #advancedSettingsModal .advancedSettingsSection h3 {
+    font-size: 13px;
+  }
+
+  #advancedSettingsModal .advancedSettingHeader,
+  #advancedSettingsModal .advancedLateSeasonRewardSetting {
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  #advancedSettingsModal .advancedSettingHeader {
+    min-height: 36px;
+  }
+
+  #advancedSettingsModal .advancedSettingHeaderControl,
+  #advancedSettingsModal .advancedRewardRateControlGroup {
+    justify-content: flex-end;
+    width: auto;
+    margin-left: auto;
+    gap: 6px;
+  }
+
+  #advancedSettingsModal .advancedMflUsdResetButton,
+  #advancedSettingsModal .advancedRewardRateResetButton {
+    height: 32px;
+    min-height: 32px;
+  }
+
+  #advancedSettingsModal .advancedMflUsdControl {
+    grid-template-columns: 20px 92px;
+    gap: 4px;
+  }
+
+  #advancedSettingsModal .advancedMflUsdInput {
+    height: 36px;
+    padding: 3px 8px;
+  }
+
+  #advancedSettingsModal .advancedMflUsdStepper button,
+  #advancedSettingsModal .advancedRewardRateStepper button {
+    width: 20px;
+    height: 17px;
+    min-height: 17px;
+  }
+
+  #advancedSettingsModal .advancedSettingValue {
+    width: 92px;
+    min-width: 92px;
+    padding: 3px 8px;
+    font-size: 13px;
+  }
+
+  #advancedSettingsModal .advancedLateSeasonRewardsGrid {
+    gap: 4px;
+  }
+
+  #advancedSettingsModal .advancedLateSeasonRewardSetting {
+    min-height: 36px;
+  }
+
+  #advancedSettingsModal .advancedPercentControl {
+    grid-template-columns: 20px 74px auto;
+    gap: 4px;
+  }
+
+  #advancedSettingsModal .advancedRewardRateInput {
+    height: 36px;
+    padding: 3px 7px;
+  }
+
+  #advancedSettingsModal .advancedSettingsFooter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  #advancedSettingsModal .advancedSettingsFooter button {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 4px;
+    height: 269px;
+    max-height: 269px;
+    grid-auto-rows: 48px;
+    padding: 5px 6px 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    gap: 4px;
+    min-height: 48px;
+    padding: 5px 8px;
+    border-radius: 6px;
+  }
+
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 12px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 9px;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 64px;
+    font-size: 10px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 4px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+    padding: 0;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 12px;
+    height: 12px;
+  }
+  #evaluationPage .evaluationTitleRow,
+  #evaluationPage .evaluationTopBar,
+  #evaluationPage .evaluationSearchGroup,
+  #evaluationPage .evaluationActions {
+    display: contents;
+  }
+
+  #evaluationPage .evaluationTitleRow > .tablePageTitle {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 2px;
+  }
+
+  #evaluationPage .advancedSettingsButton {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 5px;
+    font-size: 11px;
+    line-height: 1;
+    text-align: center;
+  }
+
+  #evaluationPage .advancedSettingsButton span {
+    font-size: 13px;
+  }
+
+  #evaluationPage .evaluationMetrics {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    justify-self: stretch;
+  }
+
+  #evaluationPage .evaluationSearch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    gap: 6px;
+  }
+
+  #evaluationPage .evaluationSearch input {
+    height: 40px;
+  }
+
+  #evaluationPage .evaluationSearchResults {
+    top: 66px;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  #evaluationPage .evaluationSearchResult {
+    min-height: 48px;
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 12px;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 9px;
+  }
+
+  #evaluationPage .evaluationButtons {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  #evaluationPage .evaluationButtons .evaluationPlayerPageButton {
+    width: 100%;
+  }
+
+  #evaluationPage .evaluationMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #evaluationPage .evaluationSearchGroup:has(#evaluationLoadButton:not([hidden])) .evaluationSearch,
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationSearch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: calc(100% - 82px);
+  }
+
+  #evaluationPage .evaluationButtons:has(#evaluationLoadButton:not([hidden])),
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationPage .evaluationButtons {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: 1fr;
+    width: 76px;
+    justify-self: end;
+    align-self: end;
+  }
+
+  #evaluationPage #evaluationLoadButton {
+    height: 40px;
+    min-height: 40px;
+  }
+
+  #evaluationPage .evaluationOptionFilters {
+    grid-column: 1 / -1;
+    grid-row: 5;
+  }
+
+  #evaluationPage .evaluationPlayerPageButton {
+    height: 42px;
+    min-height: 42px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationMetric {
+    grid-template-rows: 15px 1fr;
+    gap: 1px;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    justify-items: end;
+    padding: 3px 5px;
+    border-radius: 6px;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetric span {
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  #evaluationPage .evaluationMetric strong {
+    font-size: 15px;
+    line-height: 1;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetricLabel {
+    width: 100%;
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMetricIconButton {
+    flex-basis: 15px;
+    width: 15px;
+    height: 15px;
+    min-height: 15px;
+    padding: 0;
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationMflUsdGroup {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    gap: 2px;
+  }
+
+  #evaluationPage .evaluationMflUsdEditor {
+    grid-template-columns: minmax(0, 1fr) 12px;
+    gap: 2px;
+  }
+
+  #evaluationPage .evaluationMflUsdInput {
+    height: 20px;
+    min-height: 20px;
+    padding: 0 2px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: right;
+  }
+
+  #evaluationPage .evaluationMflUsdStepper {
+    gap: 1px;
+  }
+
+  #evaluationPage .evaluationMflUsdStepper button {
+    width: 12px;
+    height: 8px;
+    min-height: 8px;
+    padding: 0;
+    font-size: 6px;
+    line-height: 1;
+  }
+
+  #evaluationPage .evaluationOptionFilters {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  #evaluationPage > .evaluationPanel {
+    grid-column: 1 / -1;
+  }
+
+  #evaluationPage .evaluationPanel h3 {
+    margin-bottom: 6px;
+    font-size: 16px;
+  }
+
+  #evaluationPage .evaluationSummaryShell {
+    margin-bottom: 10px;
+  }
+
+  #evaluationPage .evaluationSummaryShell .tableScroller {
+    overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  #evaluationPage .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 27px;
+  }
+
+  #evaluationPage .evaluationTableShell .tableScroller {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  #evaluationPage .evaluationTableShell::before,
+  #evaluationPage .evaluationTableShell::after {
+    width: 46px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationPage .evaluationTableShell::after {
+    opacity: 0.94;
+    visibility: visible;
+    transition: none;
+  }
+
+  #evaluationPage .evaluationSummaryTable {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    table-layout: fixed;
+    line-height: 1.05;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable {
+    width: 100%;
+    min-width: 500px;
+    max-width: none;
+    table-layout: fixed;
+    line-height: 1.05;
+  }
+
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 27px;
+    --mfl-evaluation-summary-row-height: 27px;
+    --mfl-evaluation-season-row-height: 23px;
+  }
+
+  #evaluationPage .evaluationHeaderFull {
+    display: none;
+  }
+
+  #evaluationPage .evaluationHeaderCompact {
+    display: inline;
+  }
+
+  #evaluationPage .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationSummaryTable :is(th, td),
+  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td) {
+    min-width: 0;
+    padding-inline: 1px;
+    overflow-wrap: anywhere;
+  }
+
+  #evaluationPage .evaluationSummaryTable :is(th, td):first-child,
+  #evaluationPage .evaluationTableShell .evaluationTable :is(th, td):first-child {
+    padding-left: 6px;
+  }
+
+  #evaluationPage .evaluationSummaryTable th,
+  #evaluationPage .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+    font-size: 9px;
+    line-height: 1.05;
+  }
+
+  #evaluationPage .evaluationSummaryPositionSelect {
+    width: max-content;
+    max-width: 100%;
+    min-height: 28px;
+    padding: 0;
+    font-size: inherit;
+  }
+
+
+
+  #evaluationPage .evaluationOverallControl {
+    grid-template-columns: 16px 18px 16px;
+    gap: 0;
+    width: 100%;
+    height: 16px;
+    justify-content: start;
+  }
+
+  #evaluationPage .evaluationOverallControl strong {
+    min-width: 18px;
+  }
+
+  #evaluationPage .evaluationOverallControl button,
+  #evaluationPage .evaluationOverallControlSpacer {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    min-height: 16px;
+  }
+
+  #evaluationPage .evaluationOverallControl button {
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationOverallControl strong {
+    min-width: 0;
+    font-size: inherit;
+    line-height: 16px;
+  }
+
+  #evaluationPage .evaluationFooterActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  #evaluationPage .evaluationFooterSavedActions {
+    display: contents;
+  }
+
+  #evaluationPage #evaluationShareButton {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  #evaluationPage #evaluationSaveButton {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  #evaluationPage #evaluationDeleteButton {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  /* Small-screen Stats controls scale down, while the chart remains readable through local horizontal panning. */
+  .mflStatsPage {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .mflStatsPage .tablePageTitle {
+    font-size: 18px;
+  }
+
+  .mflStatsViews {
+    margin-bottom: 5px;
+  }
+
+  .mflStatsFilters {
+    gap: 4px;
+    margin-bottom: 5px;
+    padding: 5px 6px;
+  }
+
+  .mflStatsFilters > span {
+    font-size: 10px;
+  }
+
+  .mflStatsFilterButtons {
+    gap: 4px;
+  }
+
+  .mflStatsFilterButton {
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  .mflStatsCards {
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .mflStatsCards article {
+    min-height: 56px;
+    padding: 6px 7px;
+  }
+
+  .mflStatsCards span,
+  .mflStatsCards small {
+    font-size: 9px;
+  }
+
+  .mflStatsCards strong {
+    margin-top: 2px;
+    font-size: 18px;
+  }
+
+  .mflStatsDistribution {
+    padding: 6px 7px;
+  }
+
+  .mflStatsDistributionHeader {
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .mflStatsDistributionHeader h3 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .mflStatsDistributionModeButtons {
+    gap: 4px;
+  }
+
+  .mflStatsDistributionModeButton {
+    width: 100%;
+    min-width: 0;
+    height: 26px;
+    min-height: 26px;
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
+  .mflStatsAgeDistribution {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 200px;
+    height: clamp(200px, 42dvh, 300px);
+  }
+
+  .mflStatsHistogram {
+    width: 100%;
+    min-width: 520px;
+    gap: clamp(1px, 0.4vw, 3px);
+    padding-top: 24px;
+  }
+
+  .mflStatsHistogramItem {
+    gap: 2px;
+  }
+
+  .mflStatsHistogramBar {
+    min-height: 90px;
+  }
+
+  .mflStatsHistogramLabel {
+    min-height: 12px;
+    font-size: clamp(6px, 2vw, 9px);
+  }
+
+  .evaluationOptionFilters {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #advancedSettingsModal,
+  #evaluationLoadModal {
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+
+  #advancedSettingsModal .advancedSettingsDialog,
+  #evaluationLoadModal .evaluationLoadDialog {
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  #evaluationLoadModal .evaluationLoadDialog {
+    height: auto;
+  }
+
+  #advancedSettingsModal .filtersHeader,
+  #evaluationLoadModal .filtersHeader {
+    min-height: 40px;
+    padding: 6px 8px;
+  }
+
+  #advancedSettingsModal .filtersHeader h2,
+  #evaluationLoadModal .filtersHeader h2 {
+    font-size: 14px;
+  }
+
+  #advancedSettingsModal .advancedSettingsBody {
+    gap: 6px;
+    padding: 6px 8px 8px;
+  }
+
+  #advancedSettingsModal .advancedSettingsSection {
+    gap: 5px;
+  }
+
+  #advancedSettingsModal .advancedSettingsSection h3 {
+    font-size: 12px;
+  }
+
+  #advancedSettingsModal .advancedSettingHeader,
+  #advancedSettingsModal .advancedLateSeasonRewardSetting {
+    gap: 6px;
+  }
+
+  #advancedSettingsModal .advancedMflUsdControl {
+    grid-template-columns: 20px 82px;
+    gap: 3px;
+  }
+
+  #advancedSettingsModal .advancedSettingValue {
+    width: 82px;
+    min-width: 82px;
+    font-size: 12px;
+  }
+
+  #advancedSettingsModal .advancedPercentControl {
+    grid-template-columns: 20px 66px auto;
+    gap: 3px;
+  }
+
+  #advancedSettingsModal .advancedSettingsFooter {
+    gap: 4px;
+    padding: 5px 6px;
+  }
+
+
+  .advancedSettingsFooter {
+    grid-template-columns: 1fr;
+  }
+
+  .changelogPage {
+    margin-top: 8px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 3px;
+    font-size: 19px;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .changelogList {
+    gap: 6px;
+  }
+
+  .changelogMinorToggle {
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 8px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 13px;
+  }
+
+  .changelogMinorMeta {
+    font-size: 10px;
+  }
+
+  .changelogMinorChevron {
+    font-size: 14px;
+  }
+
+  .changelogPatchList {
+    padding: 1px 6px;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 5px;
+    min-height: 27px;
+    padding: 3px 4px;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 20px;
+    font-size: 11px;
+  }
+
+  .filtersFooter,
+  .advancedSettingsFooter,
+  .addWatchlistFooter,
+  .deleteWatchlistFooter {
+    gap: 8px;
+  }
+
+  .filtersFooter button,
+  .advancedSettingsFooter button,
+  .addWatchlistFooter button,
+  .deleteWatchlistFooter button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .selectionBar {
+    width: min(400px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 7px 8px;
+    border-radius: 7px;
+  }
+
+  .selectionSummary {
+    grid-template-rows: repeat(2, 16px);
+    min-width: 74px;
+  }
+
+  .selectionBar span {
+    font-size: 12px;
+    line-height: 15px;
+  }
+
+  .selectionBar .textButton {
+    height: 24px;
+    min-height: 24px;
+    padding-inline: 0;
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .selectionActions {
+    display: inline-flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    width: auto;
+    gap: 6px;
+  }
+
+  .selectionBar button:not(.textButton) {
+    width: auto;
+    min-width: 0;
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .siteFooter {
+    text-align: center;
+  }
+}
+
+@media (max-width: 380px) {
+  body > #appShell > main {
+    --mfl-footer-page-floor: max(460px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
+  }
+
+  .selectionBar {
+    width: min(360px, calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    gap: 4px;
+    padding: 6px 7px;
+    border-radius: 6px;
+  }
+
+  .selectionSummary {
+    grid-template-rows: repeat(2, 15px);
+    min-width: 68px;
+  }
+
+  .selectionBar span {
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .selectionBar .textButton {
+    height: 22px;
+    min-height: 22px;
+    font-size: 10px;
+    line-height: 13px;
+  }
+
+  .selectionActions {
+    gap: 4px;
+  }
+
+  .selectionBar button:not(.textButton) {
+    height: 30px;
+    min-height: 30px;
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
+  .topbar h1 {
+    font-size: 18px;
+  }
+
+  .navButton {
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .viewButton {
+    flex-basis: 68px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    padding-inline: 3px;
+    font-size: 9px;
+  }
+
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"]::after {
+    font-size: 9px;
+  }
+
+  #progressionPage .views > #openFiltersButton {
+    flex-basis: 68px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    padding-inline: 4px;
+    font-size: 9px;
+  }
+
+  .tablePageTitle {
+    font-size: 17px;
+  }
+
+  .filtersDialog {
+    --mfl-filter-box-font-size: 11px;
+    --mfl-filter-box-line-height: 14px;
+    --mfl-popup-close-size: 26px;
+  }
+
+
+  .addFilterRow select {
+    flex-basis: 180px;
+    width: min(180px, 100%);
+    max-width: 100%;
+  }
+
+
+  .filterRule {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-rows: 36px 36px;
+    gap: 3px;
+    min-height: 75px;
+  }
+
+  .filterRule > :nth-child(5) {
+    width: 10px;
+    min-width: 10px;
+    max-width: 10px;
+    height: 10px;
+    min-height: 10px;
+  }
+
+
+  .betweenValue,
+  .dateRangeValue {
+    grid-template-columns: 1fr;
+  }
+
+  .filterRule:has(> :nth-child(4) > :is(.betweenValue, .dateRangeValue)),
+  .filterRule:has(> :nth-child(4).betweenValue),
+  .filterRule:has(> :nth-child(4).dateRangeValue) {
+    grid-template-rows: 36px auto;
+    min-height: auto;
+  }
+
+  .searchDialog {
+    height: min(382px, calc(100dvh - 12px));
+  }
+
+  .searchResults {
+    gap: 3px;
+    height: 232px;
+    max-height: 232px;
+    grid-auto-rows: 44px;
+  }
+
+  .searchResults.filledSearchResults {
+    grid-template-rows: repeat(5, 44px);
+    padding-bottom: 0;
+  }
+
+  .searchResult {
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  .searchResult strong {
+    font-size: 11px;
+  }
+
+  .searchResult span {
+    font-size: 8px;
+  }
+
+  .searchHint {
+    font-size: 8px;
+  }
+
+  #progressionPage .playerTableScroller table {
+    min-width: 540px;
+  }
+
+  #progressionPage .playerTableScroller th {
+    font-size: 8px;
+  }
+
+  #progressionPage .playerTableScroller td {
+    font-size: 10px;
+  }
+
+  .advancedPlayerTable {
+    min-width: 460px;
+  }
+
+  .advancedPlayerTable thead th { height: 22px; }
+  .advancedPlayerTable tbody :is(th, td) { height: 20px; }
+
+  #evaluationPage .evaluationTableShell {
+    --mfl-evaluation-table-header-height: 25px;
+  }
+
+  #evaluationPage .evaluationTableShell::before,
+  #evaluationPage .evaluationTableShell::after {
+    width: 40px;
+  }
+
+  #evaluationPage .evaluationSummaryTable {
+    min-width: 0;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable {
+    min-width: 460px;
+  }
+
+  #evaluationPage {
+    --mfl-evaluation-header-row-height: 25px;
+    --mfl-evaluation-summary-row-height: 25px;
+    --mfl-evaluation-season-row-height: 21px;
+  }
+
+  #evaluationPage .evaluationSummaryTable th,
+  #evaluationPage .evaluationTableShell .evaluationTable th {
+    height: var(--mfl-evaluation-header-row-height);
+    font-size: 8px;
+  }
+
+  #evaluationPage .evaluationSummaryTable td {
+    height: var(--mfl-evaluation-summary-row-height);
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationTableShell .evaluationTable td {
+    height: var(--mfl-evaluation-season-row-height);
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationButtons,
+  #evaluationPage .evaluationMetrics {
+    gap: 4px;
+  }
+
+  #evaluationPage .evaluationPlayerPageButton {
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  #evaluationPage .evaluationMetric {
+    padding-inline: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResults {
+    gap: 3px;
+    padding: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResult {
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  #evaluationPage .evaluationSearchResult strong {
+    font-size: 11px;
+  }
+
+  #evaluationPage .evaluationSearchResult span {
+    font-size: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadList {
+    gap: 3px;
+    height: 242px;
+    max-height: 242px;
+    grid-auto-rows: 44px;
+    padding: 4px 5px 6px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResult {
+    gap: 3px;
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain strong {
+    font-size: 11px;
+  }
+
+  #evaluationLoadModal .evaluationLoadResultMain span {
+    font-size: 8px;
+  }
+
+  #evaluationLoadModal .evaluationLoadPresentValue {
+    min-width: 56px;
+    font-size: 9px;
+  }
+
+  #evaluationLoadModal .evaluationLoadActions {
+    gap: 3px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+  }
+
+  #evaluationLoadModal .evaluationLoadIconButton svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .mflStatsFilters {
+    padding-inline: 5px;
+  }
+
+  .mflStatsFilterButtons {
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+    gap: 3px;
+  }
+
+  .mflStatsFilterButton {
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .mflStatsCards article {
+    min-height: 52px;
+    padding: 5px 6px;
+  }
+
+  .mflStatsCards strong {
+    font-size: 17px;
+  }
+
+  .mflStatsDistribution {
+    padding: 5px 6px;
+  }
+
+  .mflStatsDistributionHeader h3 {
+    font-size: 13px;
+  }
+
+  .mflStatsDistributionModeButton {
+    height: 24px;
+    min-height: 24px;
+    font-size: 9px;
+  }
+
+  .mflStatsAgeDistribution {
+    min-height: 185px;
+    height: clamp(185px, 40dvh, 260px);
+  }
+
+  .mflStatsHistogram {
+    width: 100%;
+    min-width: 460px;
+    gap: 1px;
+    padding-top: 20px;
+  }
+
+  .mflStatsHistogramBar {
+    min-height: 78px;
+  }
+
+  .mflStatsHistogramLabel {
+    min-height: 10px;
+    font-size: 6px;
+  }
+
+  .changelogPage {
+    margin-top: 6px;
+  }
+
+  .changelogPage h2 {
+    margin-bottom: 2px;
+    font-size: 17px;
+  }
+
+  .changelogPage > p {
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
+  .changelogList {
+    gap: 5px;
+  }
+
+  .changelogMinorSection {
+    border-radius: 4px;
+  }
+
+  .changelogMinorToggle {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+    min-height: 34px;
+    padding: 5px 6px;
+  }
+
+  .changelogMinorVersion {
+    font-size: 12px;
+  }
+
+  .changelogMinorMeta {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 9px;
+  }
+
+  .changelogMinorChevron {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    font-size: 12px;
+  }
+
+  .changelogPatchList {
+    padding: 1px 4px;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 1fr;
+    gap: 1px;
+    min-height: 0;
+    padding: 4px 3px;
+    align-items: start;
+  }
+
+  .changelogPatchList span,
+  .changelogPatchList p {
+    min-height: 0;
+    font-size: 10px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  input,
+  select,
+  .navButton,
+  .viewButton {
+    touch-action: manipulation;
+  }
+
+  .themeButton,
+  #accountButton,
+  .navButton,
+  .pager button {
+    min-height: 44px;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after,
+  [data-note-tooltip]::before,
+  [data-note-tooltip]::after {
+    pointer-events: none;
+  }
+}
+
+
+/* Issue #603: intentional responsive footer presentation. */
+@media (max-width: 900px) {
+  .siteFooterDetails {
+    margin-top: 18px;
+    padding: 16px 0 12px;
+  }
+
+  .siteFooterDetailsInner {
+    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 1.1fr);
+    gap: 18px;
+  }
+
+  .siteFooterDetailsNavigation {
+    gap: 12px;
+  }
+
+  .siteFooterDetailsIdentity p,
+  .siteFooterDetailsCreatorDiscord,
+  .siteFooterDetailsGroup a {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .siteFooterDetails {
+    margin-top: 14px;
+    padding: 14px 0 10px;
+  }
+
+  .siteFooterDetailsInner {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .siteFooterDetailsNavigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .siteFooterDetailsTitle {
+    font-size: 12px;
+  }
+
+  .siteFooterDetailsIdentity p {
+    max-width: none;
+    font-size: 9px;
+  }
+
+  .siteFooterDetailsGroup > span {
+    font-size: 8px;
+  }
+
+  .siteFooterDetailsGroup a {
+    font-size: 9px;
+  }
+
+  .siteFooterDetails a[href="/changelog"],
+  .siteFooterDetails a[data-page="changelog"] {
+    font-size: 10px;
+  }
+
+  .siteFooterDetailsMeta {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 10px;
+    font-size: 8px;
+  }
+
+  .siteFooterDetailsDisclaimer {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
+  }
+}
+
+@media (max-width: 380px) {
+  .siteFooterDetails {
+    margin-top: 12px;
+    padding: 12px 0 9px;
+  }
+
+  .siteFooterDetailsInner {
+    gap: 8px;
+  }
+
+  .siteFooterDetailsNavigation {
+    gap: 7px;
+  }
+
+  .siteFooterDetailsTitle {
+    font-size: 11px;
+  }
+
+  .siteFooterDetailsIdentity p,
+  .siteFooterDetailsCreatorDiscord,
+  .siteFooterDetailsGroup a {
+    font-size: 8px;
+  }
+
+  .siteFooterDetails a[href="/changelog"],
+  .siteFooterDetails a[data-page="changelog"] {
+    font-size: 9px;
+  }
+
+  .siteFooterDetailsGroup > span {
+    font-size: 7px;
+  }
+
+  .siteFooterDetailsMeta {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    font-size: 8px;
+  }
+
+  .siteFooterDetailsDisclaimer {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}

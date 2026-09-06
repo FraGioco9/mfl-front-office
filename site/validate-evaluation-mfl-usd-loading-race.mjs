@@ -1,10 +1,8 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const source = await Promise.all([

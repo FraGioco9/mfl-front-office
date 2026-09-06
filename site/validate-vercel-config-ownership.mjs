@@ -1,10 +1,8 @@
+import { invariant } from "./validation/assertions.mjs";
 import { serializeVercelConfig } from "./vercel-config-source.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [development, production, packageJson, vercelIgnore, siteUpdateWorkflow] = await Promise.all([
   read("./vercel.json"),
@@ -34,7 +32,7 @@ invariant(
 invariant(
   packageJson.includes('"build:config": "node build-vercel-config.mjs"')
     && packageJson.includes("vercel.json vercel.production.json")
-    && packageJson.includes('"build": "npm run build:config && npm run build:core && npm run build:styles"'),
+    && packageJson.includes('"build": "npm run build:html && npm run build:responsive && npm run build:config && npm run build:core && npm run build:styles"'),
   "Package scripts must generate and verify both Vercel configs from the canonical owner.",
 );
 invariant(

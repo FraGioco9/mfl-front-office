@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,9 +11,6 @@ import {
   readValidationTextSync,
 } from "./validation-text.mjs";
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 invariant(normalizeValidationText("first\r\nsecond\rthird\n") === "first\nsecond\nthird\n", "Validation text normalization must normalize CRLF and CR to LF.");
 

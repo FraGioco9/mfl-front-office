@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { invariant } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+const read = (path) => readValidationText(path, import.meta.url);
 
 const source = await Promise.all([
     read("./modules/core-sources/shared.js"),

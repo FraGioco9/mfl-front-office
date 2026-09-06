@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { readValidationText } from "./validation-text.mjs";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 const [searchRuntime, layoutRuntime, appEntry, walletPreferences, loadingStyles, appCoreSource] = await Promise.all([
   read("./evaluation-search-state-runtime.js"),

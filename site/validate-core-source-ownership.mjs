@@ -1,12 +1,10 @@
+import { invariant } from "./validation/assertions.mjs";
 import { access } from "node:fs/promises";
 
 import { coreSourceManifest } from "./modules/core-source-manifest.js";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const build = await read("./build-app-core.mjs");
 invariant(build.includes('import { coreSourceManifest } from "./modules/core-source-manifest.js";'), "Application-core build must consume the canonical core source manifest.");

@@ -1,6 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { invariant } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const exists = async (path) => {
   try {
     await read(path);
@@ -9,9 +10,6 @@ const exists = async (path) => {
     if (error?.code === "ENOENT") return false;
     throw error;
   }
-};
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
 };
 
 const [

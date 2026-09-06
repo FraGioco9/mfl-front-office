@@ -1,0 +1,153 @@
+    <div id="filtersModal" class="modalBackdrop" hidden>
+      <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
+        <header class="filtersHeader">
+          <h2 id="filtersTitle">Filters</h2>
+          <button id="closeFiltersButton" class="iconButton popupCloseButton" type="button" aria-label="Close filters"></button>
+        </header>
+
+        <section class="filterBuilder">
+          <div class="addFilterRow">
+            <button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter" hidden aria-hidden="true" tabindex="-1"></button>
+            <select id="addFilterSelect">
+              <option value="" disabled selected hidden>Add filter...</option>
+            </select>
+          </div>
+
+          <div id="filterRules" class="filterRules"></div>
+        </section>
+
+        <footer class="filtersFooter">
+          <button id="clearFiltersButton" type="button">Clear</button>
+          <button id="applyFiltersButton" type="button">Apply</button>
+        </footer>
+      </section>
+    </div>
+
+    <div id="evaluationLoadModal" class="modalBackdrop" hidden>
+      <section class="evaluationLoadDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationLoadTitle">
+        <header class="filtersHeader">
+          <h2 id="evaluationLoadTitle">Load saved evaluation</h2>
+          <button id="closeEvaluationLoadButton" class="iconButton popupCloseButton" type="button" aria-label="Close saved evaluations"></button>
+        </header>
+        <div id="evaluationLoadList" class="evaluationLoadList"></div>
+      </section>
+    </div>
+
+    <div id="watchlistChoiceModal" class="modalBackdrop" hidden>
+      <section class="watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
+        <header class="filtersHeader">
+          <h2 id="watchlistChoiceTitle">Add to watchlist</h2>
+          <button id="closeWatchlistChoiceButton" class="iconButton popupCloseButton" type="button" aria-label="Close watchlist chooser"></button>
+        </header>
+        <section id="watchlistChoiceList" class="watchlistChoiceList" aria-label="Choose watchlist"></section>
+      </section>
+    </div>
+
+    <div id="addWatchlistModal" class="modalBackdrop" hidden>
+      <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="addWatchlistTitle">Add a watchlist</h2>
+          <button id="closeAddWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close add watchlist"></button>
+        </header>
+        <section class="addWatchlistBody">
+          <label class="field">
+            <span>Name</span>
+            <input id="addWatchlistNameInput" type="text" maxlength="20" autocomplete="off" placeholder="Watchlist name" aria-describedby="addWatchlistError">
+          </label>
+          <p id="addWatchlistError" class="addWatchlistError" hidden></p>
+        </section>
+        <footer class="filtersFooter addWatchlistFooter">
+          <button id="discardAddWatchlistButton" type="button">Discard</button>
+          <button id="confirmAddWatchlistButton" type="button">Confirm</button>
+        </footer>
+      </section>
+    </div>
+
+    <div id="deleteWatchlistModal" class="modalBackdrop" hidden>
+      <section class="deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="deleteWatchlistTitle">Delete watchlist</h2>
+          <button id="closeDeleteWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete watchlist"></button>
+        </header>
+        <section class="deleteWatchlistBody">
+          <p>Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
+        </section>
+        <footer class="filtersFooter deleteWatchlistFooter">
+          <button id="cancelDeleteWatchlistButton" type="button">Cancel</button>
+          <button id="confirmDeleteWatchlistButton" class="deleteWatchlistConfirmButton" type="button">Delete</button>
+        </footer>
+      </section>
+    </div>
+    <div id="advancedSettingsModal" class="modalBackdrop" hidden>
+      <section class="advancedSettingsDialog" role="dialog" aria-modal="true" aria-labelledby="advancedSettingsTitle">
+        <header class="filtersHeader">
+          <h2 id="advancedSettingsTitle">Advanced Settings</h2>
+          <button id="closeAdvancedSettingsButton" class="iconButton popupCloseButton" type="button" aria-label="Close advanced settings"></button>
+        </header>
+
+        <section class="advancedSettingsBody">
+          <section class="advancedSettingsSection" aria-labelledby="advancedMflUsdTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedMflUsdTitle">MFL/USD</h3>
+              <div class="advancedSettingHeaderControl">
+                <button id="advancedMflUsdResetButton" class="advancedMflUsdResetButton" type="button">Reset</button>
+                <div class="advancedMflUsdControl">
+                  <span class="advancedMflUsdStepper" aria-label="Adjust MFL per USD"><button id="advancedMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="advancedMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span>
+                  <input id="advancedMflUsdInput" class="advancedMflUsdInput" type="text" inputmode="decimal" autocomplete="off" aria-label="MFL per USD">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection" aria-labelledby="advancedDiscountRateTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedDiscountRateTitle">Discount Rate</h3>
+              <div class="advancedSettingValue" id="advancedDiscountRateValue">-</div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection advancedLateSeasonRewardsSection is-expanded" aria-labelledby="advancedLateSeasonRewardsTitle">
+            <button id="advancedLateSeasonRewardsToggle" class="advancedSettingHeader advancedSettingSummary" type="button" aria-expanded="true" aria-controls="advancedLateSeasonRewardsContent">
+              <h3 id="advancedLateSeasonRewardsTitle">Late-Career Reward Rates</h3>
+              <span class="advancedSettingChevron" aria-hidden="true">&#8964;</span>
+            </button>
+            <div id="advancedLateSeasonRewardsContent" class="advancedLateSeasonRewardsContent">
+              <div class="advancedLateSeasonRewardsGrid">
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">3rd-last season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedThirdLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust third-to-last season earnings"><button id="advancedThirdLastRewardIncreaseButton" type="button" aria-label="Increase third-to-last season earnings rate">&#9650;</button><button id="advancedThirdLastRewardDecreaseButton" type="button" aria-label="Decrease third-to-last season earnings rate">&#9660;</button></span><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Third-to-last season earnings rate"><span>%</span></span></span>
+                </div>
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">2nd-last season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedSecondLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust second-to-last season earnings"><button id="advancedSecondLastRewardIncreaseButton" type="button" aria-label="Increase second-to-last season earnings rate">&#9650;</button><button id="advancedSecondLastRewardDecreaseButton" type="button" aria-label="Decrease second-to-last season earnings rate">&#9660;</button></span><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Second-to-last season earnings rate"><span>%</span></span></span>
+                </div>
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">Final season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedFinalRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection advancedPlayerTableSection" aria-labelledby="advancedPlayerTableTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedPlayerTableTitle">Contracts Table</h3>
+            </div>
+            <table class="advancedPlayerTable">
+              <thead id="advancedPlayerTableHead"></thead>
+              <tbody id="advancedPlayerTableBody"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <footer class="filtersFooter advancedSettingsFooter">
+          <button id="resetAdvancedSettingsButton" type="button">Reset</button>
+          <button id="discardAdvancedSettingsButton" type="button">Discard</button>
+          <button id="applyAdvancedSettingsButton" type="button">Apply</button>
+        </footer>
+      </section>
+    </div>
+    <script src="/table-width-runtime.js"></script>
+    <script src="/bootstrap.js"></script>
+  </body>
+</html>

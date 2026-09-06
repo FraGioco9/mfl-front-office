@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>MFL Front Office</title>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+
+        // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG
+        const TABLE_VIEW_CONFIG = Object.freeze({
+          database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
+          mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
+          progression: Object.freeze({ order: ["current", "all"], fallback: "current" }),
+          agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
+          watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
+          myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
+          club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
+        });
+        const VIEW_BY_SLUG = Object.freeze({
+          attributes: "attributes",
+          squad: "attributes",
+          stats: "stats",
+          "next-overall": "next",
+          contracts: "contracts",
+          "current-season": "current",
+          "all-time": "all",
+        });
+        const mobileTableFirstPaintStyle = document.createElement("style");
+        mobileTableFirstPaintStyle.id = "mflInitialMobileTableStyle";
+        mobileTableFirstPaintStyle.textContent = `
+@media (max-width: 900px) {
+  #progressionPage { --mfl-table-header-height: 30px; --mfl-table-row-height: 26px; --mfl-table-row-outer-height: 30px; --mfl-table-col-listing: 4%; --mfl-table-col-positions: 9.89924379593141%; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #openFiltersButton { order: -2; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .views > #viewControlsSeparator { order: -1; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell { position: relative; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { content: ""; position: absolute; top: var(--mfl-table-header-height); bottom: 0; z-index: 2; width: 54px; opacity: 0; visibility: hidden; pointer-events: none; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before { left: 0; background: linear-gradient(90deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%); }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { right: 0; background: linear-gradient(270deg, var(--page-bg) 0%, color-mix(in srgb, var(--page-bg) 92%, transparent) 34%, color-mix(in srgb, var(--page-bg) 55%, transparent) 68%, transparent 100%); }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollLeft::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell.mflPlayerTableCanScrollRight::after { opacity: 0.94; visibility: visible; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller { display: block; width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: auto; -webkit-mask-image: none; mask-image: none; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 760px; max-width: none; }
+  #progressionPage .playerTableScroller th { font-size: 10px; }
+  #progressionPage #tableHead th > span:first-child { font-size: 10px; }
+  #progressionPage #tableHead .selectionCell input:disabled { opacity: 0.45; }
+  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { box-sizing: border-box; flex: 0 0 13px; width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; aspect-ratio: 1 / 1; background-size: 8px 6px; border-radius: 3px; }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) { align-items: center; }
+  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * { align-self: center; }
+  #progressionPage .playerTableScroller td.col-age .tableControlCellContent { gap: 3px; }
+  #progressionPage .playerTableScroller td.col-age .playerAgeValue { flex: 0 0 auto; min-width: 0; }
+  #progressionPage .playerTableScroller .playerTableActionsButton { width: 18px; min-width: 18px; max-width: 18px; height: 18px; min-height: 18px; max-height: 18px; padding: 0; }
+  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 12px; height: 12px; }
+  #progressionPage .playerTableScroller .flagImage { width: 14px; height: 14px; }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex: 0 0 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; margin: 0; transform: none; }
+  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 11px; height: 11px; }
+  #progressionPage .playerTableScroller .playerNoteIcon { font-size: 9px; line-height: 1; }
+  #progressionPage .playerTableScroller .listingCellContent { width: 18px; min-width: 18px; max-width: 18px; height: 18px; min-height: 18px; max-height: 18px; }
+  #progressionPage .playerTableScroller .listingCellIcon { flex: 0 0 9px; width: 9px; height: 9px; }
+  #progressionPage #tableBody .tableOverallRarityCircle { flex: 0 0 5px; width: 5px; height: 5px; margin-right: 1px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.75); transform-origin: center; }
+}
+@media (min-width: 521px) and (max-width: 900px) {
+  #progressionPage #tableHead th > span:first-child { font-size: 10px; }
+  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }
+}
+@media (max-width: 700px) {
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; }
+  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 10px; height: 10px; }
+}
+@media (max-width: 520px) {
+  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.5%; --mfl-table-col-positions: 10.39924379593141%; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 760px; }
+  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 11px; width: 11px; min-width: 11px; max-width: 11px; height: 11px; min-height: 11px; max-height: 11px; background-size: 7px 5px; }
+  #progressionPage .playerTableScroller th { font-size: 9px; }
+  #progressionPage #tableHead th > span:first-child { font-size: 9px; }
+  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }
+  #progressionPage .playerTableScroller .playerTableActionsButton { width: 15px; min-width: 15px; max-width: 15px; height: 15px; min-height: 15px; max-height: 15px; }
+  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 9px; height: 9px; }
+  #progressionPage .playerTableScroller .flagImage { width: 11px; height: 11px; }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 9px; width: 9px; min-width: 9px; max-width: 9px; height: 9px; min-height: 9px; max-height: 9px; }
+  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 9px; height: 9px; }
+  #progressionPage .playerTableScroller .playerNoteIcon { font-size: 7px; }
+  #progressionPage .playerTableScroller .listingCellContent { width: 15px; min-width: 15px; max-width: 15px; height: 15px; min-height: 15px; max-height: 15px; }
+  #progressionPage .playerTableScroller .listingCellIcon { flex-basis: 7px; width: 7px; height: 7px; }
+  #progressionPage #tableBody .tableOverallRarityCircle { margin-right: 3px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }
+}
+@media (max-width: 380px) {
+  #progressionPage { --mfl-table-header-height: 24px; --mfl-table-row-height: 20px; --mfl-table-row-outer-height: 24px; --mfl-table-col-listing: 3%; --mfl-table-col-positions: 10.89924379593141%; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 40px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller table { min-width: 760px; }
+  #appShell #progressionPage .playerTableScroller :is(th, td).selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { flex-basis: 10px; width: 10px; min-width: 10px; max-width: 10px; height: 10px; min-height: 10px; max-height: 10px; background-size: 6px 4px; }
+  #progressionPage .playerTableScroller th { font-size: 8px; }
+  #progressionPage #tableHead th > span:first-child { font-size: 8px; }
+  #progressionPage .playerTableScroller .playerTableActionsButton { width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; }
+  #progressionPage .playerTableScroller .playerTableActionsButton svg { width: 8px; height: 8px; }
+  #progressionPage .playerTableScroller .flagImage { width: 10px; height: 10px; }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex-basis: 8px; width: 8px; min-width: 8px; max-width: 8px; height: 8px; min-height: 8px; max-height: 8px; }
+  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: 8px; height: 8px; }
+  #progressionPage .playerTableScroller .listingCellContent { width: 13px; min-width: 13px; max-width: 13px; height: 13px; min-height: 13px; max-height: 13px; }
+  #progressionPage .playerTableScroller .listingCellIcon { flex-basis: 6px; width: 6px; height: 6px; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.54); }
+}
+`;
+        document.head.appendChild(mobileTableFirstPaintStyle);
+        // END GENERATED FIRST-PAINT ROUTE CONFIG
+        window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
+
+        const INITIAL_TABLE_FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+        const INITIAL_TABLE_FILTER_STAT_COLUMNS = new Set(["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"]);
+        const INITIAL_TABLE_FILTER_BASE_COLUMNS = new Set([
+          "player_id", "wallet_name", "name", "listing_price", "positions", "age", "player_seasons", "nationality",
+          ...INITIAL_TABLE_FILTER_STAT_COLUMNS,
+          "contract_status", "owned_since",
+        ]);
+
+        function storedInitialTablePageState(pageName) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(INITIAL_TABLE_FILTER_STORAGE_KEY) || "null");
+            const pages = saved?.pages && typeof saved.pages === "object" && !Array.isArray(saved.pages)
+              ? saved.pages
+              : null;
+            const pageState = pages?.[pageName];
+            return pageState && typeof pageState === "object" && !Array.isArray(pageState) ? pageState : null;
+          } catch {
+            return null;
+          }
+        }
+
+        function initialTableFilterColumnAllowed(pageName, viewName, column) {
+          const normalizedColumn = String(column || "");
+          if (!normalizedColumn) return false;
+          if (normalizedColumn.endsWith("_prog_current_season")) {
+            return viewName === "current" && INITIAL_TABLE_FILTER_STAT_COLUMNS.has(normalizedColumn.replace("_prog_current_season", ""));
+          }
+          if (normalizedColumn.endsWith("_prog_all")) {
+            return viewName === "all" && INITIAL_TABLE_FILTER_STAT_COLUMNS.has(normalizedColumn.replace("_prog_all", ""));
+          }
+          if (!INITIAL_TABLE_FILTER_BASE_COLUMNS.has(normalizedColumn)) return false;
+          if ((pageName === "mfl" || pageName === "agents") && normalizedColumn === "wallet_name") return false;
+          if (pageName === "mfl" && normalizedColumn === "contract_status") return false;
+          return true;
+        }
+
+        function initialTableActiveRuleCount(pageName, viewName, rules = []) {
+          if (pageName === "club" || !Array.isArray(rules)) return 0;
+          return rules.filter((rule) => {
+            if (!initialTableFilterColumnAllowed(pageName, viewName, rule?.column)) return false;
+            const operator = String(rule?.operator || "");
+            const value = String(rule?.value || "").trim();
+            const valueTo = String(rule?.valueTo || "").trim();
+            return operator === "between" || operator === "during"
+              ? Boolean(value && valueTo)
+              : Boolean(value);
+          }).length;
+        }
+
+        function normalizeInitialTableControlState(pageName, viewName, savedState = {}) {
+          const clubPage = pageName === "club";
+          const newMints = clubPage ? false : Boolean(savedState.newMints);
+          const mflPackable = pageName === "mfl"
+            ? (newMints ? false : (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true))
+            : false;
+          const rules = Array.isArray(savedState.rules) ? savedState.rules : [];
+          return Object.freeze({
+            pageName,
+            viewName,
+            hideRetired: clubPage ? false : savedState.hideRetired !== false,
+            hideRetiring: clubPage ? false : Boolean(savedState.hideRetiring),
+            hideMflPlayers: pageName === "database"
+              ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+              : false,
+            mflPackable,
+            newMints,
+            activeRuleCount: initialTableActiveRuleCount(pageName, viewName, rules),
+          });
+        }
+
+        window.__mflNormalizeInitialTableControlState = normalizeInitialTableControlState;
+
+        const pathParts = String(window.location.pathname || "/").split("/").filter(Boolean);
+        const firstPart = String(pathParts[0] || "").toLowerCase();
+        const tablePage = firstPart === "my-players"
+          ? "myplayers"
+          : firstPart === "clubs" || firstPart === "club"
+            ? "club"
+            : ["database", "mfl", "progression", "watchlist", "agents"].includes(firstPart)
+              ? firstPart
+              : "";
+        const initialEntityRoute = tablePage === "club"
+          ? "club"
+          : firstPart === "players"
+            ? "player"
+            : "";
+        if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+          ? tablePage
+          : firstPart === "settings"
+            ? "settings"
+            : "";
+        if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;
+        const tableConfig = TABLE_VIEW_CONFIG[tablePage];
+        if (tableConfig) {
+          const lastPart = String(pathParts.at(-1) || "").toLowerCase();
+          const requestedView = VIEW_BY_SLUG[lastPart] || "";
+          const activeView = tableConfig.order.includes(requestedView) ? requestedView : tableConfig.fallback;
+          root.dataset.initialTablePage = tablePage;
+          root.dataset.initialTableView = activeView;
+          window.__mflInitialTableControlState = normalizeInitialTableControlState(
+            tablePage,
+            activeView,
+            storedInitialTablePageState(tablePage) || {},
+          );
+
+          const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="${tablePage}"]`;
+          const buttonSelector = (viewName) => `${routeSelector} #progressionPage .views > .viewButton[data-view="${viewName}"]`;
+          const firstPaintStyle = document.createElement("style");
+          const rules = [
+            `${routeSelector} #progressionPage .views > .viewButton { display: none; }`,
+            `${routeSelector} #progressionPage .views > .viewButton:not(:hover) { border-color: var(--border-strong); background: var(--surface); color: var(--text); }`,
+            `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex; }`,
+            ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
+            `${buttonSelector(activeView)} { border-color: var(--primary); background: var(--primary); color: #ffffff; }`,
+          ];
+          if (tablePage === "club") {
+            rules.push(
+              `${buttonSelector("attributes")} { font-size: 0; }`,
+              `${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`,
+            );
+          }
+          firstPaintStyle.id = "mflInitialTableViewFirstPaint";
+          firstPaintStyle.textContent = rules.join("\n");
+          document.head.appendChild(firstPaintStyle);
+        }
+
+        const evaluationParams = new URLSearchParams(window.location.search);
+        root.dataset.initialEvaluationSelection = evaluationParams.get("player") || evaluationParams.get("saved") || evaluationParams.get("share") ? "true" : "false";
+        try {
+          root.dataset.theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          const normalize = (value) => {
+            const address = String(value || "").trim().toLowerCase();
+            return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+          };
+          const linkedWallet = normalize(localStorage.getItem("mfl-linked-wallet-v1"));
+          const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+          const proofWallet = normalize(proof?.address);
+          const optedIn = Boolean(
+            linkedWallet
+            && proofWallet === linkedWallet
+            && proof?.message
+            && Array.isArray(proof?.signatures)
+            && proof.signatures.length
+          );
+          const permission = linkedWallet
+            ? JSON.parse(localStorage.getItem(`mfl-wallet-permission-cache-v1:${linkedWallet}`) || "null")
+            : null;
+          root.dataset.storedWalletOptIn = optedIn ? "true" : "false";
+          root.dataset.storedProgressionAccess = optedIn && permission?.allowed === true ? "true" : "false";
+        } catch {
+          root.dataset.theme = "light";
+          root.dataset.storedWalletOptIn = "false";
+          root.dataset.storedProgressionAccess = "false";
+        }
+      })();
+    </script>
+    <style>
+      html {
+        font-size-adjust: 0.500;
+      }
+      #themeButton .themeMoonSymbol {
+        display: none;
+      }
+      html[data-theme="dark"] #themeButton .themeSunSymbol {
+        display: none;
+      }
+      html[data-theme="dark"] #themeButton .themeMoonSymbol {
+        display: inline;
+      }
+      html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,
+      body[data-page="notfound"] main > .pageView:not(#notFoundPage) {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
+        visibility: hidden;
+        pointer-events: none;
+      }
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
+      html[data-stored-wallet-opt-in="true"] :is(#homeOptInButton, #myPlayersOptInButton) {
+        display: none;
+      }
+      html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
+        display: inline-flex;
+      }
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+        [data-initial-page^="my-players"],
+        [data-initial-page^="watchlist"],
+        [data-initial-page="settings"]
+      ) #homePage {
+        display: none;
+      }
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+        [data-initial-page^="my-players"],
+        [data-initial-page^="watchlist"],
+        [data-initial-page="settings"]
+      ) #myPlayersLockedPage {
+        display: grid;
+        place-items: center;
+      }
+      html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage {
+        display: none;
+      }
+      html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+        visibility: visible;
+        opacity: 1;
+      }
+      @media (min-width: 521px) {
+        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+          display: flex;
+        }
+      }
+      @media (max-width: 520px) {
+        html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+          display: grid;
+        }
+      }
+      html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationLoadButton {
+        display: inline-flex;
+        visibility: visible;
+        opacity: 1;
+      }
+      html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
+        display: none;
+      }
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage {
+        display: none;
+      }
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #databaseStatsPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #mflStatsPage {
+        display: block;
+      }
+      #homePage .homeStats span {
+        line-height: 44px;
+      }
+      #homePage .homeStats label,
+      #databaseStatsPage .databaseStatsFilters > span,
+      #mflStatsPage .mflStatsFilters > span {
+        line-height: 18px;
+      }
+      #databaseStatsPage .databaseStatsCards {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      #mflStatsPage .mflStatsHistogram {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPecZTIAOhVxoMyOr9n_E7fdMPmDQ.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffBzCGItzYw.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffHjDGItzYw.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=block" rel="stylesheet">
+    <link rel="modulepreload" href="/modules/app-entry.js">
+    <link rel="stylesheet" href="/styles-runtime.css" data-mfl-responsive-layout="true">
+    <!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->
+    <script>
+      (() => {
+        const style = document.getElementById("mflInitialMobileTableStyle");
+        if (style instanceof HTMLStyleElement) document.head.appendChild(style);
+      })();
+    </script>
+    <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->
+  </head>

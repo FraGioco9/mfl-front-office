@@ -289,53 +289,13 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p previous-database
-
-          PREVIOUS_RUN_ID=""
-          PREVIOUS_ARTIFACT_ID=""
-          PREVIOUS_CREATED_AT=""
-
-          while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
-            [ -n "$ARTIFACT_ID" ] || continue
-            [ -n "$RUN_ID" ] || continue
-
-            rm -rf previous-database/*
-            echo "Checking mfl_database artifact $ARTIFACT_ID from run $RUN_ID ($CREATED_AT)."
-
-            if ! gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir previous-database; then
-              echo "Artifact $ARTIFACT_ID could not be downloaded; trying the next candidate."
-              continue
-            fi
-
-            if python prepare_runtime_database.py previous-database/mfl_database.db --validate-only; then
-              PREVIOUS_RUN_ID="$RUN_ID"
-              PREVIOUS_ARTIFACT_ID="$ARTIFACT_ID"
-              PREVIOUS_CREATED_AT="$CREATED_AT"
-              break
-            fi
-
-            echo "Artifact $ARTIFACT_ID does not contain a valid prepared mfl_database.db; trying the next candidate."
-          done < <(
-            gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
-              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.id | tostring), (.workflow_run.id | tostring)] | @tsv' \
-              | sort -r
-          )
-
-          if [ -n "$PREVIOUS_RUN_ID" ]; then
-            echo "Using previous database artifact $PREVIOUS_ARTIFACT_ID from run $PREVIOUS_RUN_ID ($PREVIOUS_CREATED_AT)."
-          else
-            rm -rf previous-database/*
-            echo "No valid previous database artifact found; progression emails will be skipped."
-          fi
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-restore-previous-database-for-email-comparison.sh"
 
       - name: Rebuild database
         working-directory: builder
         env:
           MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
-        run: python rebuild_database_runner.py
+        run: python -m scripts.database.rebuild_database_runner
 
       - name: Send progression emails
         if: hashFiles('builder/previous-database/mfl_database.db') != ''
@@ -350,11 +310,11 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
-        run: python send_progression_emails.py --previous-db previous-database/mfl_database.db --current-db mfl_database.db
+        run: python -m scripts.email.send_progression_emails --previous-db previous-database/mfl_database.db --current-db mfl_database.db
 
       - name: Prepare runtime SQLite database
         working-directory: builder
-        run: python prepare_runtime_database.py mfl_database.db
+        run: python -m scripts.database.prepare_runtime_database mfl_database.db
 
       - name: Upload database
         uses: actions/upload-artifact@v7
@@ -369,25 +329,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          SITE_SHA="$(
-            gh run list \
-              --workflow vercel-site-update.yml \
-              --status success \
-              --limit 50 \
-              --json headSha,createdAt \
-              --jq 'sort_by(.createdAt) | reverse | map(select(.headSha != null and .headSha != "")) | .[0].headSha // ""'
-          )"
-
-          if [ -z "$SITE_SHA" ]; then
-            echo "No successful Vercel site update run was found." >&2
-            echo "Publish the site once with the Vercel site update workflow before running database-only production refreshes." >&2
-            exit 1
-          fi
-          echo "Using last published site source commit $SITE_SHA."
-          echo "sha=$SITE_SHA" >> "$GITHUB_OUTPUT"
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"
 
       - name: Download last published site source
         uses: actions/checkout@v7
@@ -397,32 +339,7 @@ jobs:
 
       - name: Install fresh database in published site source
         shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ ! -f production-site/site/api/_database.js ]; then
-            echo "The last published site source does not support the SQLite runtime." >&2
-            echo "Publish a SQLite-capable site version once before using database-only production refreshes." >&2
-            exit 1
-          fi
-
-          PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
-
-          rm -rf production-site/site/api/data-files
-          mkdir -p production-site/site/api/data-files
-          cp builder/mfl_database.db production-site/site/api/data-files/mfl_database.db
-          test -s production-site/site/api/data-files/mfl_database.db
-
-          CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"
-          if [ "$CURRENT_ADAPTER_BLOB" != "$PUBLISHED_ADAPTER_BLOB" ]; then
-            echo "Database-only refresh changed the published SQLite adapter; refusing to deploy mixed site versions." >&2
-            exit 1
-          fi
-
-          if find production-site/site/api/data-files -maxdepth 1 -type f -name '*.json' | grep -q .; then
-            echo "Generated JSON data files are not allowed." >&2
-            exit 1
-          fi
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"
 
       - name: Build published application core
         shell: bash
@@ -433,69 +350,11 @@ jobs:
 
       - name: Validate database with published site adapter
         shell: bash
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const path = require("node:path");
-
-          const publishedDatabase = require(path.resolve("production-site/site/api/_database.js"));
-          const database = publishedDatabase.getDatabase();
-          const playerCount = Number(database.prepare("SELECT count(*) AS count FROM players").get()?.count ?? -1);
-          const walletCount = Number(database.prepare("SELECT count(*) AS count FROM wallets").get()?.count ?? -1);
-          const generatedAt = String(
-            database.prepare("SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1").get()?.value || "",
-          ).trim();
-
-          if (!Number.isFinite(playerCount) || playerCount <= 0) {
-            throw new Error(`Published adapter could not read a valid player count: ${playerCount}`);
-          }
-          if (!Number.isFinite(walletCount) || walletCount <= 0) {
-            throw new Error(`Published adapter could not read a valid wallet count: ${walletCount}`);
-          }
-          if (!generatedAt || Number.isNaN(Date.parse(generatedAt))) {
-            throw new Error(`Published adapter could not read a valid generated_at value: ${generatedAt}`);
-          }
-
-          console.log(
-            `Published site adapter accepted fresh database: ${playerCount} players, ${walletCount} wallets, generatedAt ${generatedAt}.`,
-          );
-          NODE
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-validate-database-with-published-site-adapter.sh"
 
       - name: Record expected database summary
         shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          import sqlite3
-          from pathlib import Path
-
-          database_path = Path("production-site/site/api/data-files/mfl_database.db")
-          with sqlite3.connect(database_path) as connection:
-              player_count = int(connection.execute("SELECT count(*) FROM players").fetchone()[0])
-              wallet_count = int(connection.execute("SELECT count(*) FROM wallets").fetchone()[0])
-              generated_at_row = connection.execute(
-                  "SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1"
-              ).fetchone()
-
-          if not generated_at_row or not str(generated_at_row[0]).strip():
-              raise SystemExit("Runtime database is missing runtime_metadata generated_at.")
-
-          generated_at = str(generated_at_row[0]).strip()
-          expected = {
-              "playerCount": player_count,
-              "walletCount": wallet_count,
-              "generatedAt": generated_at,
-          }
-          output_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
-          output_path.write_text(json.dumps(expected), encoding="utf-8")
-          print(
-              "Expected live database: "
-              f"{player_count} players, {wallet_count} wallets, "
-              f"generatedAt {generated_at}."
-          )
-          PY
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-expected-database-summary.sh"
 
       - name: Verify published site version is unchanged
         shell: bash
@@ -580,66 +439,7 @@ jobs:
         shell: bash
         env:
           PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          import time
-          import urllib.parse
-          import urllib.request
-          from pathlib import Path
-
-          expected_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
-          expected = json.loads(expected_path.read_text(encoding="utf-8"))
-          base_url = os.environ["PRODUCTION_DATABASE_URL"]
-          run_id = os.environ.get("GITHUB_RUN_ID", "run")
-          last_error = "No response received."
-
-          for attempt in range(1, 13):
-              separator = "&" if "?" in base_url else "?"
-              verify_token = urllib.parse.quote(f"{run_id}-{attempt}-{time.time_ns()}")
-              request = urllib.request.Request(
-                  f"{base_url}{separator}verify={verify_token}",
-                  headers={
-                      "Accept": "application/json",
-                      "Cache-Control": "no-cache, no-store",
-                      "Pragma": "no-cache",
-                  },
-              )
-              try:
-                  with urllib.request.urlopen(request, timeout=30) as response:
-                      live = json.loads(response.read().decode("utf-8"))
-
-                  matches = (
-                      int(live.get("playerCount", -1)) == int(expected["playerCount"])
-                      and int(live.get("walletCount", -1)) == int(expected["walletCount"])
-                      and str(live.get("generatedAt", "")).strip() == str(expected["generatedAt"])
-                  )
-                  if matches:
-                      print(
-                          "Live production database verified: "
-                          f"{live['playerCount']} players, {live['walletCount']} wallets, "
-                          f"generatedAt {live['generatedAt']}."
-                      )
-                      raise SystemExit(0)
-
-                  last_error = (
-                      f"attempt {attempt}: expected {expected['playerCount']} players, "
-                      f"{expected['walletCount']} wallets, generatedAt {expected['generatedAt']}; "
-                      f"received {live!r}"
-                  )
-              except Exception as error:
-                  last_error = f"attempt {attempt}: {error}"
-
-              print(f"Live database verification not ready ({last_error}); retrying.")
-              time.sleep(5)
-
-          raise SystemExit(
-              "Production deployment completed, but the live SQLite database could not be verified. "
-              + last_error
-          )
-          PY
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-verify-live-production-database.sh"
 
       - name: Record completed refresh occurrence
         if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
@@ -648,21 +448,7 @@ jobs:
           OCCURRENCE_KEY: ${{ needs.resolve-refresh-trigger.outputs.occurrence_key }}
           INTENDED_AT: ${{ needs.resolve-refresh-trigger.outputs.intended_at }}
           TRIGGER_SOURCE: ${{ needs.resolve-refresh-trigger.outputs.trigger_source }}
-        run: |
-          set -euo pipefail
-          jq -n \
-            --arg occurrenceKey "$OCCURRENCE_KEY" \
-            --arg intendedAt "$INTENDED_AT" \
-            --arg triggerSource "$TRIGGER_SOURCE" \
-            --arg completedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-            --arg runId "$GITHUB_RUN_ID" \
-            '{
-              occurrenceKey: $occurrenceKey,
-              intendedAt: $intendedAt,
-              triggerSource: $triggerSource,
-              completedAt: $completedAt,
-              runId: $runId
-            }' > "$RUNNER_TEMP/full-database-refresh-occurrence.json"
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-completed-refresh-occurrence.sh"
 
       - name: Upload completed refresh occurrence
         if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
