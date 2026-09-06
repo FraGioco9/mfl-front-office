@@ -26,6 +26,17 @@ for (const token of [
   includes(indexHtml, token, `Creator footer markup contract is missing: ${token}`);
 }
 
+includes(
+  footer,
+  ".siteFooterDetailsGroup > :is(a, .siteFooterDetailsSupportButton) {",
+  "Support/Information geometry must be scoped to direct group actions so nested Creator rows keep their own layout.",
+);
+excludes(
+  footer,
+  ".siteFooterDetailsGroup :is(a, .siteFooterDetailsSupportButton) {",
+  "A descendant footer-action geometry selector would override the Creator row display contract.",
+);
+
 const creatorStart = footer.indexOf(".siteFooterDetailsCreatorLink {");
 const creatorEnd = footer.indexOf("\n}", creatorStart);
 const creatorBlock = creatorStart >= 0 && creatorEnd > creatorStart
@@ -74,4 +85,4 @@ for (const breakpoint of ["@media (max-width: 900px)", "@media (max-width: 520px
 excludes(responsive, ".siteFooterDetailsCreatorLink {", "Responsive CSS must not duplicate the canonical Creator row alignment owner.");
 excludes(responsive, ".siteFooterDetailsCreatorIcon {", "Responsive CSS must not duplicate the canonical Creator icon alignment owner.");
 
-console.log("Footer Creator values and icons share one centered 16px icon track across desktop and mobile.");
+console.log("Footer Creator rows own their grid and center values with icons across desktop and mobile.");
