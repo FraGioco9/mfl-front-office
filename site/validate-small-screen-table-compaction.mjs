@@ -54,9 +54,11 @@ assert.doesNotMatch(
   /if \(!MOBILE_TABLE_MEDIA\.matches \|\| views\.getClientRects\(\)\.length === 0\) \{[\s\S]*?removeViewScrollShell\(views\);/,
   "Temporary Views/Quick Filters invisibility must not destroy the fade/chevron shell.",
 );
+const emptyRenderedViewsGuard = shared.includes('if (!renderedViewItems(views).length) return;')
+  || shared.includes('if (!renderedViewItems(views).length) {\n      syncPlayerViewEndSpacer(views, false);\n      return;\n    }');
 assert.ok(
-  shared.includes('if (!renderedViewItems(views).length) return;'),
-  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful visible-content measurement.",
+  emptyRenderedViewsGuard,
+  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful visible-content measurement; Player-only terminal geometry may be removed without clearing the cue shell.",
 );
 assert.ok(
   shared.includes('const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;'),
