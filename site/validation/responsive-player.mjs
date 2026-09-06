@@ -30,7 +30,7 @@ export function validateResponsivePlayer(context) {
 
   includes(responsive, ".playerTitle .playerListingBadge .listingCellPrice {\n  display: none;\n}", "Mobile Player titles must show the listing icon without persistent price text.");
   includes(responsive, ".playerHero h2 .playerNoteIcon {\n  font-size: clamp(14px, 3.6vw, 17px);\n}", "The Player Note icon must scale proportionally on small screens.");
-  includes(responsive, ".detailGrid strong {\n  flex-wrap: nowrap;\n  overflow: hidden;\n  font-size: var(--mfl-player-value-font-size);\n  line-height: 1.2;", "Mobile Profile values must reserve descender-safe line height.");
+  includes(responsive, ".detailGrid strong {\n    flex-wrap: nowrap;\n    overflow: hidden;\n    font-size: var(--mfl-player-value-font-size);\n    line-height: 1.2;", "Mobile Profile values must reserve descender-safe line height.");
 
   const notesCountStart = responsive.indexOf(".playerNotesCount {");
   const notesCountEnd = notesCountStart >= 0 ? responsive.indexOf("}", notesCountStart) : -1;
