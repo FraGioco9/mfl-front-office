@@ -40,7 +40,8 @@ const clubFirstPaintGuard = `      html:not(.mflInitialRouteResolved)[data-initi
 const hiddenPlayerFirstPaintGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
         display: none;
       }`;
-const invisiblePlayerFirstPaintGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+const invisiblePlayerFirstPaintGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
         visibility: hidden;
         pointer-events: none;
       }`;
@@ -58,15 +59,17 @@ assert.ok(indexHtml.includes(clubFirstPaintGuard), "Direct Club refreshes must r
 assert.ok(!indexHtml.includes(hiddenPlayerFirstPaintGuard), "Direct Player first paint must not remove the Player page from layout.");
 assert.ok(
   indexHtml.includes(invisiblePlayerFirstPaintGuard),
-  "Direct Player first paint must stay visually hidden until identity verification while remaining layout-measurable.",
+  "Direct Player first paint must stay visually hidden until identity verification and first-paint cue priming while remaining layout-measurable.",
 );
 
 const playerShellIndex = indexHtml.indexOf('data-mfl-static-player-shell="true"');
-const playerPrimeScriptIndex = indexHtml.indexOf('if (document.documentElement.dataset.initialEntityRoute !== "player") return;', playerShellIndex);
+const playerPrimeScriptIndex = indexHtml.indexOf('if (root.dataset.initialEntityRoute !== "player") return;', playerShellIndex);
+const playerCueReadyIndex = indexHtml.indexOf('root.dataset.playerFirstPaintCuesReady = "true";', playerPrimeScriptIndex);
 const footerIndex = indexHtml.indexOf('<footer class="siteFooterDetails"');
 assert.ok(playerShellIndex >= 0, "Player first paint must have a static HTML loading shell before bootstrap executes.");
 assert.ok(playerPrimeScriptIndex > playerShellIndex, "The direct Player route must synchronously remove the shell's hidden layout state during HTML parsing.");
-assert.ok(footerIndex > playerPrimeScriptIndex, "The Player shell and its layout-priming script must both be parsed before the footer can paint.");
+assert.ok(playerCueReadyIndex > playerPrimeScriptIndex, "The parser-owned Player shell must prime its horizontal cues before releasing first-paint visibility.");
+assert.ok(footerIndex > playerCueReadyIndex, "The Player shell and its cue-priming script must both be parsed before the footer can paint.");
 for (const token of [
   'class="playerHero playerHeroPending"',
   'class="playerPanel playerInfoPanel"',
@@ -74,11 +77,13 @@ for (const token of [
   'data-mfl-static-player-notes="true"',
   'class="playerPanel pitchPanel"',
   'class="pitch"',
+  'shell.className = "viewsScrollerShell";',
+  'viewsScrollButton viewsScrollButtonRight',
 ]) {
   assert.ok(indexHtml.includes(token), `Static Player first-paint geometry is missing ${token}.`);
 }
 assert.ok(
-  indexHtml.includes('notesPanel.hidden = document.documentElement.dataset.storedWalletOptIn !== "true";'),
+  indexHtml.includes('notesPanel.hidden = root.dataset.storedWalletOptIn !== "true";'),
   "Static Player first paint must include Notes only when the stored opt-in state requires that box.",
 );
 assert.ok(
@@ -106,4 +111,4 @@ assert.equal((footer.match(/--mfl-footer-page-floor:/g) || []).length, 1, "Deskt
 assert.equal((responsive.match(/--mfl-footer-page-floor:/g) || []).length, 3, "Responsive footer floor must be defined exactly once at each mobile breakpoint.");
 assert.ok(!responsive.includes("#homePage {\n    --mfl-footer-page-floor") && !responsive.includes("#progressionPage {\n    --mfl-footer-page-floor"), "Mobile footer floor must not be route-specific.");
 assert.ok(!footer.includes("!important") && !responsive.includes("--mfl-footer-page-floor: 800px !important"), "Footer floor must not use overrides or !important.");
-console.log("Shared responsive footer validation passed with direct Player loading using the real normal-flow shell bottom edge.");
+console.log("Shared responsive footer validation passed with direct Player loading using the real normal-flow shell bottom edge and cue-gated first paint.");

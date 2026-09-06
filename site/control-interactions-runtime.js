@@ -17,6 +17,7 @@
   ].join(", ");
   const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
+  const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");
 
   let pointerFocusedControl = null;
   let gestureStartControl = null;
@@ -28,6 +29,11 @@
   let suppressClickTimer = 0;
   let navigationIntentToken = "";
   let escapeHandlerSequence = 0;
+  let playerAttributeViewScrollPathname = "";
+  let playerAttributeViewScrollLeft = 0;
+  let playerAttributeViewRestoreFrame = 0;
+  let playerAttributeViewRestoring = false;
+  let playerAttributeViewMutationObserver = null;
   const escapeHandlers = new Map();
 
   function motionDurationMs(propertyName, fallbackMs) {
@@ -280,7 +286,150 @@
       && bugReportModal.contains(target);
   }
 
+  function currentPlayerPathname() {
+    const pathname = String(window.location.pathname || "").replace(/\/+$/, "") || "/";
+    return /^\/players\/\d{1,20}$/i.test(pathname) ? pathname : "";
+  }
+
+  function currentPlayerAttributeViews() {
+    const views = document.querySelector("#playerDetail .playerAttributeViews");
+    return views instanceof HTMLElement ? views : null;
+  }
+
+  function syncPlayerAttributeViewScrollPath() {
+    const pathname = currentPlayerPathname();
+    if (pathname === playerAttributeViewScrollPathname) return pathname;
+    playerAttributeViewScrollPathname = pathname;
+    playerAttributeViewScrollLeft = 0;
+    playerAttributeViewRestoring = false;
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    playerAttributeViewRestoreFrame = 0;
+    return pathname;
+  }
+
+  function rememberPlayerAttributeViewScroll(views = currentPlayerAttributeViews()) {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !(views instanceof HTMLElement)) return;
+    const pathname = syncPlayerAttributeViewScrollPath();
+    if (!pathname || playerAttributeViewRestoring) return;
+    playerAttributeViewScrollLeft = views.scrollLeft;
+  }
+
+  function applyPlayerAttributeViewScroll() {
+    const pathname = syncPlayerAttributeViewScrollPath();
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !pathname) return false;
+    const views = currentPlayerAttributeViews();
+    if (!(views instanceof HTMLElement)) return false;
+    const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
+    const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));
+    if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;
+    return true;
+  }
+
+  function schedulePlayerAttributeViewScrollRestore() {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !syncPlayerAttributeViewScrollPath()) return;
+    playerAttributeViewRestoring = true;
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    playerAttributeViewRestoreFrame = requestAnimationFrame(() => {
+      playerAttributeViewRestoreFrame = 0;
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      applyPlayerAttributeViewScroll();
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      playerAttributeViewRestoring = false;
+    });
+  }
+
+  function capturePlayerAttributeViewScroll(target) {
+    if (!(target instanceof Element)) return;
+    const button = target.closest("#playerDetail [data-player-attribute-view]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const views = button.closest(".playerAttributeViews");
+    if (!(views instanceof HTMLElement)) return;
+    rememberPlayerAttributeViewScroll(views);
+    queueMicrotask(schedulePlayerAttributeViewScrollRestore);
+  }
+
+  function onPlayerAttributeViewScroll(event) {
+    const views = event.target;
+    if (!(views instanceof HTMLElement) || !views.matches("#playerDetail .playerAttributeViews")) return;
+    rememberPlayerAttributeViewScroll(views);
+  }
+
+  function playerAttributeViewControlsChanged(record) {
+    if (record?.type !== "childList" || !(record.target instanceof HTMLElement)) return false;
+
+    if (record.target.matches("#playerDetail .playerAttributeViews")) {
+      return [...record.addedNodes, ...record.removedNodes].some((node) => {
+        if (!(node instanceof HTMLElement) || node.hasAttribute("data-mfl-view-scroll-end-spacer")) return false;
+        return node.matches(".playerAttributeViewButton, [data-player-attribute-view]")
+          || Boolean(node.querySelector(".playerAttributeViewButton, [data-player-attribute-view]"));
+      });
+    }
+
+    if (!record.target.matches("#playerDetail")) return false;
+    return Array.from(record.addedNodes).some((node) => (
+      node instanceof HTMLElement
+      && node.matches(".playerGrid")
+      && Boolean(node.querySelector(".playerAttributeViews"))
+    ));
+  }
+
+  function initialPlayerViewCuePending() {
+    const root = document.documentElement;
+    return root.dataset.initialEntityRoute === "player"
+      && !root.classList.contains("mflInitialRouteResolved")
+      && !root.classList.contains("mflInitialRouteSuperseded");
+  }
+
+  function currentPlayerViewCueReady() {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches) return true;
+    const views = currentPlayerAttributeViews();
+    if (!(views instanceof HTMLElement) || views.getClientRects().length === 0) return false;
+    const nativeOverflow = views.scrollWidth - views.clientWidth > 2;
+    if (!nativeOverflow) return true;
+    if (!views.classList.contains("mflViewsOverflowing")) return false;
+    const shell = views.parentElement;
+    if (!(shell instanceof HTMLElement) || !shell.classList.contains("viewsScrollerShell")) return false;
+    const button = shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight");
+    return button instanceof HTMLButtonElement
+      && button.classList.contains("mflViewsScrollButtonVisible")
+      && button.getAttribute("aria-hidden") === "false"
+      && Boolean(String(views.style.boxShadow || "").trim());
+  }
+
+  function syncInitialPlayerViewCue() {
+    if (!initialPlayerViewCuePending()) return true;
+    const root = document.documentElement;
+    root.dataset.playerFirstPaintCuesReady = "false";
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    const ready = currentPlayerViewCueReady();
+    root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";
+    return ready;
+  }
+
+  function observePlayerAttributeViewRenders() {
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement) || typeof MutationObserver !== "function") return;
+    playerAttributeViewMutationObserver?.disconnect();
+    playerAttributeViewMutationObserver = new MutationObserver((records) => {
+      if (!records.some(playerAttributeViewControlsChanged)) return;
+      if (!syncInitialPlayerViewCue()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      else if (!initialPlayerViewCuePending()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      schedulePlayerAttributeViewScrollRestore();
+    });
+    playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
+  }
+
+  function onPlayerViewScrollMediaChange(event) {
+    if (event.matches) {
+      syncPlayerAttributeViewScrollPath();
+      return;
+    }
+    playerAttributeViewScrollLeft = 0;
+    playerAttributeViewRestoring = false;
+  }
+
   function onClick(event) {
+    capturePlayerAttributeViewScroll(event.target);
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
       scheduleAddFilterNormalization();
@@ -404,8 +553,11 @@
 
   disableSearchSpellcheck();
   initializeAddFilterControl();
+  syncPlayerAttributeViewScrollPath();
+  observePlayerAttributeViewRenders();
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
+  document.addEventListener("scroll", onPlayerAttributeViewScroll, true);
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointermove", onPointerMove, true);
   document.addEventListener("pointerup", onPointerUp, true);
@@ -414,6 +566,7 @@
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("keydown", onEnterBubble);
   document.addEventListener("focusin", onFocusIn, true);
+  PLAYER_VIEW_SCROLL_MEDIA.addEventListener("change", onPlayerViewScrollMediaChange);
 
   function destroy() {
     pointerFocusedControl = null;
@@ -421,8 +574,14 @@
     clearClickSuppression();
     endNavigationIntent();
     escapeHandlers.clear();
+    playerAttributeViewMutationObserver?.disconnect();
+    playerAttributeViewMutationObserver = null;
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    playerAttributeViewRestoreFrame = 0;
+    playerAttributeViewRestoring = false;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
+    document.removeEventListener("scroll", onPlayerAttributeViewScroll, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointermove", onPointerMove, true);
     document.removeEventListener("pointerup", onPointerUp, true);
@@ -431,6 +590,7 @@
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("keydown", onEnterBubble);
     document.removeEventListener("focusin", onFocusIn, true);
+    PLAYER_VIEW_SCROLL_MEDIA.removeEventListener("change", onPlayerViewScrollMediaChange);
   }
 
   window.__mflControlInteractionsRuntime = Object.freeze({

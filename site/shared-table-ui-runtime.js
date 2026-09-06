@@ -1014,7 +1014,6 @@
       observeViewScroller(candidate);
       if (!boundViewScrollers.has(candidate)) {
         const onViewScroll = () => {
-          clampViewScroll(candidate);
           scheduleViewScrollerSync(candidate);
         };
         candidate.addEventListener("scroll", onViewScroll, { passive: true });

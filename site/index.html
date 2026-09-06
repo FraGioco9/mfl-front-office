@@ -289,7 +289,8 @@
       html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
         display: none;
       }
-      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
         visibility: hidden;
         pointer-events: none;
       }
@@ -906,12 +907,12 @@
                 <div class="playerPanel attributesPanel">
                   <div class="playerPanelHeader">
                     <h3>Attributes</h3>
-                    <div class="playerAttributeViews" style="visibility:hidden">
-                      <button class="playerAttributeViewButton active" type="button" disabled>Attributes</button>
-                      <button class="playerAttributeViewButton" type="button" disabled>Training</button>
-                      <button class="playerAttributeViewButton" type="button" disabled>Next Overall</button>
-                      <button class="playerAttributeViewButton" type="button" disabled>Current Season</button>
-                      <button class="playerAttributeViewButton" type="button" disabled>All Time</button>
+                    <div class="playerAttributeViews">
+                      <button class="playerAttributeViewButton active" type="button" data-view="attributes" disabled>Attributes</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="training" disabled>Training</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="next" disabled>Next Overall</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="current" disabled>Current Season</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="all" disabled>All Time</button>
                     </div>
                   </div>
                   <div class="attributeGrid">
@@ -938,11 +939,58 @@
         </section>
         <script>
           (() => {
-            if (document.documentElement.dataset.initialEntityRoute !== "player") return;
+            const root = document.documentElement;
+            if (root.dataset.initialEntityRoute !== "player") return;
             const playerPage = document.getElementById("playerPage");
             const notesPanel = document.querySelector("#playerPage [data-mfl-static-player-notes]");
+            const views = document.querySelector("#playerPage .playerAttributeViews");
             if (playerPage instanceof HTMLElement) playerPage.hidden = false;
-            if (notesPanel instanceof HTMLElement) notesPanel.hidden = document.documentElement.dataset.storedWalletOptIn !== "true";
+            if (notesPanel instanceof HTMLElement) notesPanel.hidden = root.dataset.storedWalletOptIn !== "true";
+            if (views instanceof HTMLElement) {
+              const progressionAccess = root.dataset.storedProgressionAccess === "true";
+              views.querySelectorAll(":scope > .playerAttributeViewButton[data-view]").forEach((button) => {
+                if (!(button instanceof HTMLButtonElement)) return;
+                const view = String(button.dataset.view || "");
+                if (view === "current" || view === "all") button.hidden = !progressionAccess;
+              });
+
+              let shell = views.parentElement instanceof HTMLElement && views.parentElement.classList.contains("viewsScrollerShell")
+                ? views.parentElement
+                : null;
+              if (!(shell instanceof HTMLElement)) {
+                shell = document.createElement("div");
+                shell.className = "viewsScrollerShell";
+                views.insertAdjacentElement("beforebegin", shell);
+                shell.appendChild(views);
+              }
+
+              const overflowing = window.matchMedia("(max-width: 900px)").matches
+                && views.getClientRects().length > 0
+                && views.scrollWidth - views.clientWidth > 2;
+              views.classList.toggle("mflViewsOverflowing", overflowing);
+              let arrow = shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight");
+              if (overflowing && !(arrow instanceof HTMLButtonElement)) {
+                arrow = document.createElement("button");
+                arrow.type = "button";
+                arrow.className = "viewsScrollButton viewsScrollButtonRight";
+                arrow.dataset.mflFirstPaintScrollButton = "true";
+                arrow.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+                arrow.addEventListener("click", () => {
+                  const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
+                  const distance = Math.max(96, Math.floor(views.clientWidth * 0.72));
+                  views.scrollTo({ left: Math.min(maxScroll, views.scrollLeft + distance), behavior: "smooth" });
+                });
+                shell.appendChild(arrow);
+              }
+              if (arrow instanceof HTMLButtonElement) {
+                arrow.setAttribute("aria-label", "Scroll attribute views right");
+                arrow.setAttribute("aria-hidden", overflowing ? "false" : "true");
+                arrow.tabIndex = overflowing ? 0 : -1;
+                arrow.classList.toggle("mflViewsScrollButtonVisible", overflowing);
+                if (!overflowing && arrow.dataset.mflFirstPaintScrollButton === "true") arrow.remove();
+              }
+            }
+            root.dataset.playerFirstPaintCuesReady = "true";
           })();
         </script>
 

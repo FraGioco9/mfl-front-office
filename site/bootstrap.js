@@ -559,7 +559,11 @@
       shell.appendChild(button);
     }
 
-    const label = scroller.matches("#progressionPage .quickFilters") ? "quick filters" : "views";
+    const label = scroller.matches("#progressionPage .quickFilters")
+      ? "quick filters"
+      : scroller.matches("#playerDetail .playerAttributeViews")
+        ? "attribute views"
+        : "views";
     button.setAttribute("aria-label", `Scroll ${label} right`);
     button.setAttribute("aria-hidden", "false");
     button.tabIndex = 0;
@@ -954,13 +958,20 @@
   }
 
   function playerLoadingViewButtons() {
-    return [
-      ["attributes", "Attributes"],
-      ["training", "Training"],
-      ["next", "Next Overall"],
-      ["current", "Current Season"],
-      ["all", "All Time"],
-    ].map(([view, label], index) => (
+    const views = root.dataset.storedProgressionAccess === "true"
+      ? [
+        ["attributes", "Attributes"],
+        ["training", "Training"],
+        ["next", "Next Overall"],
+        ["current", "Current Season"],
+        ["all", "All Time"],
+      ]
+      : [
+        ["attributes", "Attributes"],
+        ["training", "Training"],
+        ["next", "Next Overall"],
+      ];
+    return views.map(([view, label], index) => (
       `<button class="playerAttributeViewButton${index === 0 ? " active" : ""}" type="button" data-view="${view}" disabled>${label}</button>`
     )).join("");
   }
@@ -1011,7 +1022,7 @@
       <section class="playerGrid" aria-hidden="true">
         <div class="playerStack">
           <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
-          <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews" style="visibility:hidden">${playerLoadingViewButtons()}</div></div><div class="attributeGrid">${attributeCards}</div></div>
+          <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${playerLoadingViewButtons()}</div></div><div class="attributeGrid">${attributeCards}</div></div>
           ${notesPanel}
         </div>
         <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"></div></div>
@@ -1074,6 +1085,7 @@
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
     if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
+    if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();
     if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
     if (target.id === "evaluationPage") primeFirstPaintEvaluationTableFade();
 
