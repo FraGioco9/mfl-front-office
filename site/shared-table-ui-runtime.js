@@ -799,7 +799,7 @@
       return total + item.getBoundingClientRect().width
         + (Number.parseFloat(style.marginLeft) || 0)
         + (Number.parseFloat(style.marginRight) || 0);
-    }, 0;
+    }, 0);
     return itemWidth + gap * Math.max(0, items.length - 1);
   }
 
