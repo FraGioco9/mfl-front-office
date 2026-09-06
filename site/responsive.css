@@ -51,6 +51,62 @@ html:not(.mflInitialRouteResolved):is(
     --pinned-sidebar-width: 0px;
     --mobile-nav-height: 58px;
     --mobile-nav-overlay-clearance: 126px;
+    --mfl-player-panel-gap: clamp(4px, 1vw, 8px);
+    --mfl-player-panel-padding: clamp(6px, 1.5vw, 10px);
+    --mfl-player-panel-radius: clamp(5px, 1.2vw, 8px);
+    --mfl-player-box-gap: clamp(3px, 0.8vw, 4px);
+    --mfl-player-box-height: clamp(38px, 8.4vw, 43px);
+    --mfl-player-box-padding-inline: clamp(6px, 1.8vw, 10px);
+    --mfl-player-contract-division-font-size: clamp(7.5px, 2vw, 10px);
+    --mfl-player-profile-flag-size: calc(var(--mfl-player-value-font-size) * 1.25);
+    --mfl-player-profile-icon-size: calc(var(--mfl-player-value-font-size) * 0.72);
+    --mfl-player-age-icon-gap: clamp(1px, 0.35vw, 2px);
+    --mfl-player-nationality-gap: calc(var(--mfl-player-age-icon-gap) + 2px);
+    --mfl-player-box-radius: clamp(5px, 1.2vw, 8px);
+    --mfl-player-label-font-size: clamp(9px, 2.1vw, 10px);
+    --mfl-player-value-font-size: clamp(12px, 3vw, 15px);
+    --mfl-player-attribute-font-size: clamp(16px, 4vw, 20px);
+    --mfl-player-featured-font-size: clamp(19px, 4.8vw, 24px);
+    --mfl-player-control-height: clamp(30px, 6.5vw, 34px);
+    --mfl-player-attribute-view-height: clamp(24px, 5vw, 26px);
+    --mfl-player-control-radius: clamp(5px, 1.2vw, 6px);
+    --mfl-player-training-control-size: clamp(16px, 4vw, 20px);
+    --mfl-player-training-control-gap: calc(var(--mfl-player-training-control-size) * 0.2);
+    --mfl-player-training-control-radius: calc(var(--mfl-player-training-control-size) * 0.3);
+    --mfl-player-training-control-font-size: calc(var(--mfl-player-training-control-size) * 0.7);
+    --mfl-player-training-reset-width: calc(var(--mfl-player-training-control-size) * 2.5);
+    --mfl-player-training-reset-font-size: calc(var(--mfl-player-training-control-size) * 0.55);
+    --mfl-player-hero-overall-size: clamp(58px, 15vw, 84px);
+    --mfl-player-portrait-height: clamp(66px, 17vw, 96px);
+    --mfl-player-portrait-width: clamp(120px, 31vw, 175px);
+    --mfl-player-portrait-radius: clamp(4px, 1vw, 6px);
+    --mfl-player-card-radius: var(--mfl-player-panel-radius);
+    --mfl-player-hero-media-gap: clamp(4px, 1vw, 6px);
+    --mfl-player-hero-media-width: clamp(182px, 47vw, 265px);
+    --mfl-player-hero-identity-width: 100%;
+    --mfl-player-hero-identity-action-gap: 0px;
+    --mfl-player-hero-identity-align-self: center;
+    --mfl-player-hero-actions-align-self: stretch;
+    --mfl-player-hero-actions-margin-left: 0px;
+    --mfl-player-hero-section-gap: var(--mfl-player-panel-gap);
+    --mfl-player-hero-overall-font-size: clamp(28px, 7.5vw, 42px);
+    --mfl-player-hero-eyebrow-font-size: clamp(10px, 2.4vw, 12px);
+    --mfl-player-hero-title-font-size: clamp(19px, 5vw, 25px);
+    --mfl-player-hero-positions-font-size: clamp(11px, 2.8vw, 14px);
+    --mfl-player-hero-action-menu-width: 100%;
+    --mfl-player-hero-primary-action-width: calc(100% - 38px);
+    --mfl-player-hero-action-chevron-width: 34px;
+    --mfl-player-hero-action-height: clamp(32px, 7vw, 36px);
+    --mfl-player-hero-action-font-size: clamp(12px, 3vw, 14px);
+    --mfl-player-hero-action-gap: 4px;
+    --mfl-player-hero-chevron-icon-size: clamp(13px, 3vw, 15px);
+    --mfl-player-hero-menu-item-height: 40px;
+    --mfl-player-hero-menu-item-font-size: clamp(11px, 2.8vw, 13px);
+    --mfl-player-hero-menu-icon-size: clamp(14px, 3.2vw, 16px);
+    --mfl-player-hero-menu-item-gap: clamp(5px, 1.2vw, 7px);
+    --mfl-player-hero-menu-item-padding-inline: clamp(7px, 1.8vw, 10px);
+    --mfl-player-hero-menu-padding: 4px;
+    --mfl-player-hero-menu-offset: 5px;
   }
 
   html,
@@ -1197,48 +1253,365 @@ html:not(.mflInitialRouteResolved):is(
     overscroll-behavior-x: contain;
   }
 
-  .playerHero {
-    align-items: stretch;
-    flex-direction: column;
+  .playerPage,
+.playerDetail,
+.playerGrid,
+.playerStack,
+.playerPanel,
+.detailGrid,
+.attributeGrid {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.playerDetail {
+  gap: var(--mfl-player-panel-gap);
+  margin-top: var(--mfl-player-panel-gap);
+}
+
+.playerHero {
+  display: grid;
+  grid-template-columns: var(--mfl-player-hero-media-width) minmax(0, 1fr);
+  grid-template-areas:
+    "media identity"
+    "actions actions";
+  align-items: center;
+  column-gap: clamp(8px, 2vw, 14px);
+  row-gap: var(--mfl-player-panel-gap);
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: var(--mfl-player-panel-padding);
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.playerHeroMedia {
+  grid-area: media;
+  max-width: 100%;
+}
+
+.playerHeroIdentity {
+  grid-area: identity;
+  min-width: 0;
+  margin-right: 0;
+}
+
+.playerHeroIdentity .playerTitle,
+.playerHeroIdentity > p {
+  overflow-wrap: anywhere;
+}
+
+.playerHeroActions {
+  grid-area: actions;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.playerHeroActionMenu {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.playerGrid {
+  grid-template-columns: 1fr;
+  gap: var(--mfl-player-panel-gap);
+}
+
+.playerStack {
+  gap: var(--mfl-player-panel-gap);
+  grid-template-rows: none;
+}
+
+.playerPanel {
+  padding: var(--mfl-player-panel-padding);
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.playerPanel h3 {
+  font-size: clamp(13px, 3.2vw, 16px);
+  line-height: 1.1;
+}
+
+.playerPanelHeader {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--mfl-player-box-gap);
+}
+
+.playerAttributeViews {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: var(--mfl-player-box-gap);
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: auto;
+  touch-action: pan-y;
+}
+
+.playerAttributeViews.mflViewsOverflowing {
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.playerAttributeViewButton {
+  flex: 1 0 clamp(68px, 18vw, 98px);
+  width: auto;
+  min-width: clamp(68px, 18vw, 98px);
+  height: var(--mfl-player-attribute-view-height);
+  min-height: var(--mfl-player-attribute-view-height);
+  max-height: var(--mfl-player-attribute-view-height);
+  padding-inline: 4px;
+  border-radius: var(--mfl-player-control-radius);
+  font-size: clamp(9px, 2.4vw, 11px);
+}
+
+.detailGrid,
+.attributeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mfl-player-box-gap);
+  margin-top: var(--mfl-player-box-gap);
+}
+
+.playerInfoPanel .detailGrid {
+  min-height: 0;
+  grid-template-rows: repeat(5, var(--mfl-player-box-height));
+}
+
+.playerInfoPanel .detailGrid > .playerInfoFullWidthCard {
+  grid-column: 1 / -1;
+}
+
+.attributeGrid {
+  grid-auto-rows: var(--mfl-player-box-height);
+}
+
+.detailGrid > div {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--mfl-player-box-height);
+  min-height: var(--mfl-player-box-height);
+  max-height: var(--mfl-player-box-height);
+  padding: 3px var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  overflow: hidden;
+}
+
+.playerAttributeCard,
+.playerAttributeCard.featured {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--mfl-player-box-height);
+  min-height: var(--mfl-player-box-height);
+  max-height: var(--mfl-player-box-height);
+  padding: 3px var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  overflow: hidden;
+}
+
+.detailGrid > div,
+.detailGrid strong,
+.detailGrid strong > *,
+.playerContractLine,
+.playerContractTeam,
+.playerAttributeCard strong,
+.playerAttributeCard .attributeValueText {
+  min-width: 0;
+}
+  .detailGrid strong {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    font-size: var(--mfl-player-value-font-size);
+    white-space: nowrap;
   }
 
-  .playerHeroActions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
+.detailGrid .contractDetailCard strong .playerContractTeam {
+  font-size: var(--mfl-player-value-font-size);
+}
+
+.detailGrid .contractDetailCard strong .playerContractDivision {
+  font-size: var(--mfl-player-contract-division-font-size);
+}
+  .playerInfoPanel .detailGrid .nationalityDetailCard strong {
+    gap: var(--mfl-player-nationality-gap);
   }
 
-  .playerEvaluateButton,
-  .playerWatchlistButton,
-  .playerExternalButton {
-    width: 100%;
-    min-width: 0;
+  .playerInfoPanel .detailGrid .nationalityDetailCard .flagImage {
+    width: var(--mfl-player-profile-flag-size);
+    height: var(--mfl-player-profile-flag-size);
   }
 
-  .playerGrid,
-  .attributeGrid {
-    grid-template-columns: 1fr;
-  }
+.playerInfoPanel .detailGrid strong .playerDetailAgeLine {
+  gap: var(--mfl-player-age-icon-gap);
+  overflow: visible;
+}
 
-  .playerPanelHeader {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+.playerInfoPanel .detailGrid .playerAgeMarker {
+  flex: 0 0 var(--mfl-player-profile-icon-size);
+  width: var(--mfl-player-profile-icon-size);
+  min-width: var(--mfl-player-profile-icon-size);
+  max-width: var(--mfl-player-profile-icon-size);
+  height: var(--mfl-player-profile-icon-size);
+  min-height: var(--mfl-player-profile-icon-size);
+  max-height: var(--mfl-player-profile-icon-size);
+  overflow: visible;
+  font-size: inherit;
+}
 
-  .playerAttributeViews {
-    width: 100%;
-    overflow-x: auto;
-  }
+.playerInfoPanel .detailGrid .playerAgeMarker::before,
+.playerInfoPanel .detailGrid .playerAgeMarker > img {
+  width: var(--mfl-player-profile-icon-size);
+  height: var(--mfl-player-profile-icon-size);
+}
 
-  .playerAttributeViewButton {
-    flex: 0 0 auto;
-  }
+.playerInfoPanel .detailGrid .playerAgeMarker::before {
+  -webkit-mask-size: var(--mfl-player-profile-icon-size) var(--mfl-player-profile-icon-size);
+  mask-size: var(--mfl-player-profile-icon-size) var(--mfl-player-profile-icon-size);
+  background: var(--retirement-marker-color);
+}
 
-  .pitch {
-    width: min(360px, 100%);
-    height: auto;
-    aspect-ratio: 360 / 498;
-  }
+.playerInfoPanel .detailGrid .playerAgeMarker > img {
+  display: block;
+  flex: 0 0 var(--mfl-player-profile-icon-size);
+  object-fit: contain;
+}
+
+.detailGrid strong > a,
+.playerContractLine,
+.playerContractTeam {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailGrid > div > span,
+.playerAttributeCard > span {
+  font-size: var(--mfl-player-label-font-size);
+  line-height: 1.1;
+}
+
+.playerAttributeCard strong {
+  flex-wrap: nowrap;
+  gap: 3px;
+  overflow: hidden;
+  font-size: var(--mfl-player-attribute-font-size);
+  line-height: 1.1;
+}
+
+.playerAttributeCard .attributeValueText {
+  line-height: inherit;
+}
+
+.playerAttributeCard.featured strong {
+  font-size: var(--mfl-player-featured-font-size);
+}
+
+.playerAttributeCard .progressionValue,
+.playerAttributeCard .nextOverallValue,
+.playerAttributeCard .trainingDelta,
+.playerAttributeCard.featured .progressionValue,
+.playerAttributeCard.featured .nextOverallValue {
+  flex: 0 0 auto;
+  font-size: clamp(9px, 2.3vw, 11px);
+}
+
+.playerAttributeCard.fullWidth {
+  grid-column: 1 / -1;
+}
+
+
+.trainingStatControls {
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--mfl-player-training-control-gap);
+}
+
+.trainingStatControls button {
+  width: var(--mfl-player-training-control-size);
+  min-width: var(--mfl-player-training-control-size);
+  max-width: var(--mfl-player-training-control-size);
+  height: var(--mfl-player-training-control-size);
+  min-height: var(--mfl-player-training-control-size);
+  max-height: var(--mfl-player-training-control-size);
+  border-radius: var(--mfl-player-training-control-radius);
+  font-size: var(--mfl-player-training-control-font-size);
+  line-height: var(--mfl-player-training-control-size);
+}
+
+.trainingStatControls .trainingResetButton {
+  width: var(--mfl-player-training-reset-width);
+  min-width: var(--mfl-player-training-reset-width);
+  max-width: var(--mfl-player-training-reset-width);
+  padding-inline: 0;
+  font-size: var(--mfl-player-training-reset-font-size);
+}
+
+.playerNotesInput {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: clamp(56px, 15vw, 72px);
+  padding: clamp(6px, 1.5vw, 8px) 34px clamp(6px, 1.5vw, 8px) var(--mfl-player-box-padding-inline);
+  border-radius: var(--mfl-player-box-radius);
+  font-size: clamp(11px, 2.8vw, 13px);
+}
+
+.playerNotesCount {
+  right: var(--mfl-player-box-padding-inline);
+  bottom: clamp(5px, 1.2vw, 8px);
+  font-size: clamp(9px, 2.2vw, 10px);
+}
+
+.pitch {
+  width: min(100%, clamp(240px, 70vw, 320px));
+  height: auto;
+  aspect-ratio: 360 / 498;
+  gap: clamp(3px, 0.8vw, 5px);
+  margin-top: var(--mfl-player-panel-gap);
+  padding: clamp(6px, 1.6vw, 9px) clamp(5px, 1.4vw, 8px);
+  border-width: 1px;
+  border-radius: var(--mfl-player-panel-radius);
+}
+
+.pitchRow {
+  gap: clamp(3px, 1vw, 6px);
+}
+
+.pitchPositionSlot {
+  min-width: clamp(38px, 10vw, 54px);
+}
+
+.pitchPositionCircle,
+.pitchPositionBlank {
+  width: clamp(32px, 9vw, 44px);
+  height: clamp(32px, 9vw, 44px);
+}
+
+.pitchPositionCircle {
+  gap: 2px;
+}
+
+.pitchPositionCircle strong {
+  font-size: clamp(13px, 3.5vw, 17px);
+}
+
+.pitchPositionCircle small {
+  font-size: clamp(8px, 2.3vw, 10px);
+}
 
   .evaluationTitleRow {
     align-items: stretch;
@@ -2844,10 +3217,6 @@ html:not(.mflInitialRouteResolved):is(
     font-size: clamp(6px, 2vw, 9px);
   }
 
-  .detailGrid {
-    grid-template-columns: 1fr;
-  }
-
   .evaluationOptionFilters {
     align-items: flex-start;
     flex-direction: column;
@@ -3467,7 +3836,6 @@ html:not(.mflInitialRouteResolved):is(
   .themeButton,
   #accountButton,
   .navButton,
-  .playerAttributeViewButton,
   .pager button {
     min-height: 44px;
   }

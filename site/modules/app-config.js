@@ -93,6 +93,9 @@ export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
     "/shared-table-ui-runtime.js",
     "/stats-mobile-ui-runtime.js",
   ]),
+  playerPre: Object.freeze([
+    "/shared-table-ui-runtime.js",
+  ]),
   watchlistMyPlayersPost: Object.freeze([
     "/watchlist-myplayers-route-runtime.js",
   ]),
@@ -500,6 +503,7 @@ export function browserConfigRuntimeSource(release) {
       postCore.push(...data.routes.runtimeScripts.tablePost);
     }
     if (stats) preCore.push(...data.routes.runtimeScripts.statsPre);
+    if (page === "player") preCore.push(...data.routes.runtimeScripts.playerPre);
     if (databaseStats) preCore.push(...data.routes.runtimeScripts.databaseStats);
     if (watchlist) postCore.push(...data.routes.runtimeScripts.watchlistMyPlayersPost);
     if (page === "evaluation") {

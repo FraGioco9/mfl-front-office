@@ -210,9 +210,9 @@ includes(responsive, ".quickFilters input[type=\"checkbox\"] {\n    flex: 0 0 16
 excludes(responsive, "::-webkit-scrollbar", "Responsive layout must leave scrollbar visuals to scrollbars.css.");
 excludes(responsive, "scrollbar-width:", "Responsive layout must leave standards scrollbar visuals to scrollbars.css.");
 includes(scrollbars, "/* Mobile control strips and the compact Filters body keep native scrolling without visible scrollbar chrome. */", "The canonical scrollbar owner must document hidden scrollbar chrome for mobile Filters.");
-includes(scrollbars, ".views,\n    .quickFilters,\n    .filtersDialog .filterBuilder {\n      scrollbar-width: none;", "Mobile views, Quick Filters, and Filters body must hide standards scrollbar chrome.");
-includes(scrollbars, ".views,\n  .quickFilters,\n  .filtersDialog .filterBuilder {\n    -ms-overflow-style: none;", "Mobile views, Quick Filters, and Filters body must hide legacy scrollbar chrome.");
-includes(scrollbars, ".views::-webkit-scrollbar,\n  .quickFilters::-webkit-scrollbar,\n  .filtersDialog .filterBuilder::-webkit-scrollbar {\n    display: none;", "The Filters popup must not show a WebKit scrollbar on mobile.");
+includes(scrollbars, ".views,\n    .quickFilters,\n    .playerAttributeViews,\n    .filtersDialog .filterBuilder {\n      scrollbar-width: none;", "Mobile table views, Player Attribute views, Quick Filters, and Filters body must hide standards scrollbar chrome.");
+includes(scrollbars, ".views,\n  .quickFilters,\n  .playerAttributeViews,\n  .filtersDialog .filterBuilder {\n    -ms-overflow-style: none;", "Mobile table views, Player Attribute views, Quick Filters, and Filters body must hide legacy scrollbar chrome.");
+includes(scrollbars, ".views::-webkit-scrollbar,\n  .quickFilters::-webkit-scrollbar,\n  .playerAttributeViews::-webkit-scrollbar,\n  .filtersDialog .filterBuilder::-webkit-scrollbar {\n    display: none;", "Mobile horizontal control strips and the Filters popup must not show a WebKit scrollbar.");
 excludes(responsive, 'content: "\\2192";', "First paint must not use a text arrow that differs from the final SVG cue.");
 includes(responsive, "#progressionPage .views::before,\n  #progressionPage .views::after,\n  #progressionPage .quickFilters::before,\n  #progressionPage .quickFilters::after {\n    content: \"\";\n    position: absolute;\n    top: 50%;\n    opacity: 0;\n    visibility: hidden;\n    pointer-events: none;", "Both first-paint strips must use dedicated non-interactive fade and SVG-shape layers.");
 includes(responsive, "#progressionPage .views::before {\n    right: -2px;\n    z-index: 3;\n    width: 86px;\n    height: 48px;\n    background: linear-gradient(", "The view first-paint fade must already use the final right-edge gradient geometry.");
@@ -249,12 +249,14 @@ includes(responsive, "#openFiltersButton {\n    flex: 0 0 100px;\n    width: 100
 
 includes(sharedTableUi, 'const VIEW_SCROLL_BUTTON_CLASS = "viewsScrollButton";', "Shared table UI must own the conditional horizontal-scroll cue behavior.");
 includes(sharedTableUi, 'const QUICK_FILTERS_SHELL_CLASS = "quickFiltersScrollerShell";', "Quick filters must reuse the shared shell lifecycle instead of introducing a second arrow implementation.");
-includes(sharedTableUi, "function tableHorizontalScrollers() {", "The shared runtime must enumerate both mobile horizontal control strips.");
-includes(sharedTableUi, "return [tableViews(), tableQuickFilters()].filter", "View buttons and quick filters must share the same scroller implementation.");
+includes(sharedTableUi, "function tableHorizontalScrollers() {", "The shared runtime must enumerate every mobile horizontal control strip.");
+includes(sharedTableUi, "return [tableViews(), tableQuickFilters(), playerAttributeViews()].filter", "Table views, quick filters, and Player Attribute views must share the same scroller implementation.");
 includes(sharedTableUi, 'if (views.matches("#progressionPage .quickFilters")) shell.classList.add(QUICK_FILTERS_SHELL_CLASS);', "The shared shell must expose a quick-filter role without creating a second arrow implementation.");
 includes(sharedTableUi, 'if (count?.parentElement === views) shell.insertAdjacentElement("afterend", count);', "The player count must be moved outside the mobile quick-filter strip.");
 includes(sharedTableUi, 'if (count instanceof HTMLElement && count.parentElement !== views) views.appendChild(count);', "Leaving mobile must restore the player count to its canonical quick-filter container.");
-includes(sharedTableUi, 'return views.matches("#progressionPage .quickFilters") ? "quick filters" : "views";', "Shared arrows must expose contextual accessible labels for quick filters and views.");
+includes(sharedTableUi, 'if (views.matches("#progressionPage .quickFilters")) return "quick filters";', "Shared arrows must retain the quick-filter accessible label.");
+includes(sharedTableUi, 'if (views.matches("#playerDetail .playerAttributeViews")) return "attribute views";', "Shared arrows must expose a contextual accessible label for Player Attribute views.");
+includes(sharedTableUi, 'return "views";', "Shared arrows must retain the default table-view accessible label.");
 includes(sharedTableUi, "function setViewScrollButtonVisible(button, visible) {", "Cue visibility must be changed without display:none or the hidden attribute.");
 includes(sharedTableUi, "button.classList.toggle(VIEW_SCROLL_VISIBLE_CLASS, visible);", "Cue transition state must be controlled through the canonical visible class.");
 excludes(sharedTableUi, "button.hidden =", "Cue visibility must not bypass transitions with the hidden attribute.");
@@ -273,7 +275,7 @@ includes(sharedTableUi, "const scrollLeft = clampViewScroll(views, maxScroll);",
 includes(sharedTableUi, "const target = Math.min(maxScroll, views.scrollLeft + distance);\n      views.scrollTo({ left: target, behavior: \"smooth\" });", "Right-arrow clicks must stop at the browser's exact right boundary rather than scrolling into empty space.");
 includes(sharedTableUi, "const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;\n    const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;", "Each edge cue must appear only when additional content exists in its direction.");
 includes(sharedTableUi, "setViewScrollButtonVisible(leftButton, canScrollLeft);\n    setViewScrollButtonVisible(button, canScrollRight);", "Left and right cue transitions must track the actual scroll position independently.");
-includes(sharedTableUi, 'target.matches("#progressionPage .views, #progressionPage .quickFilters")', "Resize observation must cover both shared horizontal strips.");
+includes(sharedTableUi, 'target.matches("#progressionPage .views, #progressionPage .quickFilters, #playerDetail .playerAttributeViews")', "Resize observation must cover table views, Quick Filters, and dynamic Player Attribute views.");
 includes(sharedTableUi, "viewResizeObserver = new ResizeObserver", "Horizontal overflow must stay correct when responsive widths or visible controls change.");
 excludes(sharedTableUi, "MutationObserver", "Horizontal scrolling and mobile page-size ownership must remain event/resize-driven rather than DOM-repair driven.");
 includes(sharedTableUi, "(shell || views).insertAdjacentElement(\"afterend\", switcher);", "Mobile Watchlist must keep its selector outside both the clipped strip and its overlay shell.");
@@ -361,7 +363,8 @@ excludes(responsive, "grid-template-columns: 64px minmax(0, 1fr) 10px", "Very na
 includes(responsive, ".filterRule:has(> :nth-child(4) > :is(.betweenValue, .dateRangeValue)),", "Very narrow range/date filters must be allowed to grow vertically instead of forcing their input boxes laterally outside the screen.");
 includes(responsive, "grid-template-rows: 36px auto;\n    min-height: auto;", "Very narrow range/date filter cards must keep a 36px first row while allowing the value row to grow.");
 includes(responsive, "#progressionPage .playerTableScroller table {\n    min-width: 540px;\n  }", "Very narrow phones must use the tightest readable compact player-table floor.");
-includes(responsive, ".playerAttributeViewButton,\n  .pager button {\n    min-height: 44px;", "Touch navigation outside compact table chrome and pager controls must remain finger-sized.");
+includes(responsive, ".themeButton,\n  #accountButton,\n  .navButton,\n  .pager button {\n    min-height: 44px;", "Coarse-pointer navigation keeps large touch targets while compact Player Attribute view boxes retain their dedicated responsive height.");
+excludes(responsive, ".navButton,\n  .playerAttributeViewButton,\n  .pager button {\n    min-height: 44px;", "Compact Player Attribute view boxes must not be forced back to the generic 44px coarse-pointer minimum.");
 excludes(responsive, ".searchButton,\n  .navButton,\n  .playerAttributeViewButton", "The deliberately compact mobile search bar must not be forced back to a 44px minimum by the coarse-pointer contract.");
 excludes(responsive, ".navButton,\n  .viewButton,\n  .playerAttributeViewButton", "Compact phone view buttons must not be forced back to a 44px minimum by the coarse-pointer contract.");
 excludes(responsive, "#accountButton::before", "Mobile account rendering must use the canonical SVG instead of a replacement pseudo-element.");

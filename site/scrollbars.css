@@ -206,6 +206,7 @@ html body > #appShell > main {
   @supports not selector(::-webkit-scrollbar) {
     .views,
     .quickFilters,
+    .playerAttributeViews,
     .filtersDialog .filterBuilder {
       scrollbar-width: none;
     }
@@ -213,12 +214,14 @@ html body > #appShell > main {
 
   .views,
   .quickFilters,
+  .playerAttributeViews,
   .filtersDialog .filterBuilder {
     -ms-overflow-style: none;
   }
 
   .views::-webkit-scrollbar,
   .quickFilters::-webkit-scrollbar,
+  .playerAttributeViews::-webkit-scrollbar,
   .filtersDialog .filterBuilder::-webkit-scrollbar {
     display: none;
     width: 0;

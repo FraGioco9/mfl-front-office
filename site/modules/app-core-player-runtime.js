@@ -95,6 +95,43 @@
     return entry ? entry.raw : "";
   }
 
+  function retirementMarkerFromKnownValue(value) {
+    const text = value === null || value === undefined ? "" : String(value).trim();
+    if (!text) return null;
+    const retirementYears = Number(text);
+    if (!Number.isFinite(retirementYears)) return null;
+    if (retirementYears === 0) {
+      return { icon: "calendar-x-2", label: "Retired", status: "retired" };
+    }
+    if ([1, 2, 3].includes(retirementYears)) {
+      return {
+        icon: "calendar-clock",
+        label: retirementYears + " year" + (retirementYears === 1 ? "" : "s") + " left",
+        status: "retiring-" + retirementYears,
+      };
+    }
+    return null;
+  }
+
+  function playerAgeMarkerHtml(ageMarker) {
+    if (!ageMarker) return "";
+    const status = escapeHtml(ageMarker.status || "default");
+    const label = escapeHtml(ageMarker.label || "");
+    if (ageMarker.status === "retired") {
+      return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" data-tooltip="${label}" aria-label="${label}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></i>`;
+    }
+    return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" data-tooltip="${label}" aria-label="${label}"></i>`;
+  }
+
+  function playerNationalityFlagHtml(rawNationality) {
+    return countryFlagHtml(rawNationality).replace(/\sdata-tooltip="[^"]*"/, "");
+  }
+
+  function playerNationalityHtml(rawNationality, nationality) {
+    const normalizedNationality = String(nationality || "");
+    return `${playerNationalityFlagHtml(rawNationality)}<span class="playerNationalityText">${escapeHtml(normalizedNationality)}</span>`;
+  }
+
   function normalizeContext(value) {
     const source = value && typeof value === "object" ? value : {};
     const playerId = normalizePlayerId(source.playerId);
@@ -284,20 +321,43 @@ function applyOverallBoxAppearance(box, overall) {
     return normalizePlayerId(row[playerIdIndex]) === playerId;
   }
 
+  function playerCssValue(customProperty, fallback) {
+    return "var(" + customProperty + ", " + fallback + ")";
+  }
+
+  function playerCssLength(customProperty, fallbackPx) {
+    return playerCssValue(customProperty, fallbackPx + "px");
+  }
+
+  function playerCssPixels(customProperty, fallbackPx) {
+    const probe = document.createElement("div");
+    probe.style.position = "fixed";
+    probe.style.left = "-10000px";
+    probe.style.top = "0";
+    probe.style.width = playerCssLength(customProperty, fallbackPx);
+    probe.style.height = "1px";
+    probe.style.visibility = "hidden";
+    probe.style.pointerEvents = "none";
+    document.documentElement.appendChild(probe);
+    const value = Number.parseFloat(window.getComputedStyle(probe).width);
+    probe.remove();
+    return Number.isFinite(value) && value > 0 ? value : fallbackPx;
+  }
+
   function portraitDisplayHeight() {
-    return PLAYER_PORTRAIT_DISPLAY_HEIGHT_PX;
+    return playerCssPixels("--mfl-player-portrait-height", PLAYER_PORTRAIT_DISPLAY_HEIGHT_PX);
   }
 
   function sizeHeroOverall(overall) {
     if (!(overall instanceof HTMLElement)) return false;
-    const size = PLAYER_HERO_OVERALL_SIZE_PX;
-    overall.style.flex = "0 0 " + size + "px";
-    overall.style.width = size + "px";
-    overall.style.minWidth = size + "px";
-    overall.style.maxWidth = size + "px";
-    overall.style.height = size + "px";
-    overall.style.minHeight = size + "px";
-    overall.style.maxHeight = size + "px";
+    const size = playerCssLength("--mfl-player-hero-overall-size", PLAYER_HERO_OVERALL_SIZE_PX);
+    overall.style.flex = "0 0 " + size;
+    overall.style.width = size;
+    overall.style.minWidth = size;
+    overall.style.maxWidth = size;
+    overall.style.height = size;
+    overall.style.minHeight = size;
+    overall.style.maxHeight = size;
     return true;
   }
 
@@ -323,7 +383,8 @@ function applyOverallBoxAppearance(box, overall) {
     frame.style.alignSelf = "flex-end";
     frame.style.marginBottom = "0";
     frame.style.overflow = "hidden";
-    frame.style.borderRadius = "6px 6px 0 0";
+    const portraitRadius = playerCssLength("--mfl-player-portrait-radius", 6);
+    frame.style.borderRadius = portraitRadius + " " + portraitRadius + " 0 0";
     frame.style.background = "transparent";
 
     canvas.style.display = "block";
@@ -411,7 +472,7 @@ function applyOverallBoxAppearance(box, overall) {
     media.style.flex = "0 0 auto";
     media.style.alignItems = "flex-end";
     media.style.alignSelf = "stretch";
-    media.style.gap = "8px";
+    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 8);
     media.style.minWidth = "0";
 
     const overall = document.createElement("div");
@@ -421,12 +482,12 @@ function applyOverallBoxAppearance(box, overall) {
     overall.style.alignContent = "center";
     overall.style.justifyItems = "center";
     overall.style.border = "1px solid var(--border)";
-    overall.style.borderRadius = "8px";
+    overall.style.borderRadius = playerCssLength("--mfl-player-card-radius", 8);
     overall.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
     sizeHeroOverall(overall);
     const overallValue = document.createElement("strong");
     overallValue.style.color = "var(--text)";
-    overallValue.style.fontSize = "48px";
+    overallValue.style.fontSize = playerCssLength("--mfl-player-hero-overall-font-size", 48);
     overallValue.style.fontWeight = "800";
     overallValue.style.lineHeight = "1";
     overall.appendChild(overallValue);
@@ -492,18 +553,19 @@ function applyOverallBoxAppearance(box, overall) {
     item.style.display = "flex";
     item.style.alignItems = "center";
     item.style.justifyContent = "flex-start";
-    item.style.gap = "8px";
+    item.style.gap = playerCssLength("--mfl-player-hero-menu-item-gap", 8);
     item.style.width = "100%";
     item.style.minWidth = "0";
-    item.style.height = "36px";
-    item.style.minHeight = "36px";
-    item.style.maxHeight = "36px";
-    item.style.padding = "0 10px";
+    const itemHeight = playerCssLength("--mfl-player-hero-menu-item-height", 36);
+    item.style.height = itemHeight;
+    item.style.minHeight = itemHeight;
+    item.style.maxHeight = itemHeight;
+    item.style.padding = "0 " + playerCssLength("--mfl-player-hero-menu-item-padding-inline", 10);
     item.style.border = "1px solid transparent";
-    item.style.borderRadius = "6px";
+    item.style.borderRadius = playerCssLength("--mfl-player-control-radius", 6);
     item.style.background = "transparent";
     item.style.color = "var(--text)";
-    item.style.fontSize = "14px";
+    item.style.fontSize = playerCssLength("--mfl-player-hero-menu-item-font-size", 14);
     item.style.lineHeight = "1";
     item.style.textAlign = "left";
     item.style.whiteSpace = "nowrap";
@@ -520,9 +582,10 @@ function applyOverallBoxAppearance(box, overall) {
     }
     const icon = item.querySelector(".playerHeroMenuIcon");
     if (icon instanceof SVGElement) {
-      icon.style.width = "18px";
-      icon.style.height = "18px";
-      icon.style.flex = "0 0 18px";
+      const iconSize = playerCssLength("--mfl-player-hero-menu-icon-size", 18);
+      icon.style.width = iconSize;
+      icon.style.height = iconSize;
+      icon.style.flex = "0 0 " + iconSize;
       icon.style.fill = "none";
       icon.style.stroke = "currentColor";
       icon.style.strokeWidth = "2";
@@ -534,10 +597,11 @@ function applyOverallBoxAppearance(box, overall) {
       star.style.display = "inline-flex";
       star.style.alignItems = "center";
       star.style.justifyContent = "center";
-      star.style.width = "18px";
-      star.style.height = "18px";
-      star.style.flex = "0 0 18px";
-      star.style.fontSize = "18px";
+      const starSize = playerCssLength("--mfl-player-hero-menu-icon-size", 18);
+      star.style.width = starSize;
+      star.style.height = starSize;
+      star.style.flex = "0 0 " + starSize;
+      star.style.fontSize = starSize;
       star.style.lineHeight = "1";
     }
     return true;
@@ -577,15 +641,16 @@ function applyOverallBoxAppearance(box, overall) {
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-flex";
     wrapper.style.alignItems = "stretch";
-    wrapper.style.gap = "4px";
-    wrapper.style.flex = "0 0 " + PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
-    wrapper.style.width = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
-    wrapper.style.minWidth = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
-    wrapper.style.maxWidth = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
+    wrapper.style.gap = playerCssLength("--mfl-player-hero-action-gap", 4);
+    const menuWidth = playerCssLength("--mfl-player-hero-action-menu-width", PLAYER_HERO_ACTION_MENU_WIDTH_PX);
+    wrapper.style.flex = "0 0 " + menuWidth;
+    wrapper.style.width = menuWidth;
+    wrapper.style.minWidth = menuWidth;
+    wrapper.style.maxWidth = menuWidth;
 
     if (primary instanceof HTMLElement) {
-      const width = PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX + "px";
-      const height = PLAYER_HERO_ACTION_HEIGHT_PX + "px";
+      const width = playerCssLength("--mfl-player-hero-primary-action-width", PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX);
+      const height = playerCssLength("--mfl-player-hero-action-height", PLAYER_HERO_ACTION_HEIGHT_PX);
       const unavailable = primary.getAttribute("aria-disabled") === "true";
       primary.style.boxSizing = "border-box";
       primary.style.display = "inline-flex";
@@ -599,7 +664,7 @@ function applyOverallBoxAppearance(box, overall) {
       primary.style.minHeight = height;
       primary.style.maxHeight = height;
       primary.style.padding = "0 10px";
-      primary.style.fontSize = "16px";
+      primary.style.fontSize = playerCssLength("--mfl-player-hero-action-font-size", 16);
       primary.style.lineHeight = "1";
       primary.style.whiteSpace = "nowrap";
       primary.style.textDecoration = "none";
@@ -611,8 +676,8 @@ function applyOverallBoxAppearance(box, overall) {
     }
 
     if (toggle instanceof HTMLElement) {
-      const width = PLAYER_HERO_ACTION_CHEVRON_WIDTH_PX + "px";
-      const height = PLAYER_HERO_ACTION_HEIGHT_PX + "px";
+      const width = playerCssLength("--mfl-player-hero-action-chevron-width", PLAYER_HERO_ACTION_CHEVRON_WIDTH_PX);
+      const height = playerCssLength("--mfl-player-hero-action-height", PLAYER_HERO_ACTION_HEIGHT_PX);
       const unavailable = toggle.getAttribute("aria-disabled") === "true";
       toggle.style.boxSizing = "border-box";
       toggle.style.display = "grid";
@@ -631,8 +696,9 @@ function applyOverallBoxAppearance(box, overall) {
       toggle.style.transition = PLAYER_READY_TRANSITION;
       const icon = toggle.querySelector(".playerHeroChevronIcon");
       if (icon instanceof SVGElement) {
-        icon.style.width = "16px";
-        icon.style.height = "16px";
+        const iconSize = playerCssLength("--mfl-player-hero-chevron-icon-size", 16);
+        icon.style.width = iconSize;
+        icon.style.height = iconSize;
         icon.style.fill = "none";
         icon.style.stroke = "currentColor";
         icon.style.strokeWidth = "2";
@@ -643,14 +709,14 @@ function applyOverallBoxAppearance(box, overall) {
 
     if (menu instanceof HTMLElement) {
       menu.style.position = "absolute";
-      menu.style.top = "calc(100% + 6px)";
+      menu.style.top = "calc(100% + " + playerCssLength("--mfl-player-hero-menu-offset", 6) + ")";
       menu.style.right = "0";
       menu.style.zIndex = "var(--mfl-z-dropdown)";
       menu.style.boxSizing = "border-box";
-      menu.style.width = PLAYER_HERO_ACTION_MENU_WIDTH_PX + "px";
-      menu.style.padding = "4px";
+      menu.style.width = playerCssLength("--mfl-player-hero-action-menu-width", PLAYER_HERO_ACTION_MENU_WIDTH_PX);
+      menu.style.padding = playerCssLength("--mfl-player-hero-menu-padding", 4);
       menu.style.border = "1px solid var(--border-strong)";
-      menu.style.borderRadius = "8px";
+      menu.style.borderRadius = playerCssLength("--mfl-player-card-radius", 8);
       menu.style.background = "var(--surface)";
       menu.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.16)";
       menu.style.transformOrigin = "top right";
@@ -769,10 +835,10 @@ function animateReadyControls(container = document) {
     const media = hero.querySelector(":scope > .playerHeroMedia");
     const actions = hero.querySelector(":scope > .playerHeroActions");
 
-    hero.style.gap = "0";
+    hero.style.gap = playerCssLength("--mfl-player-hero-section-gap", 0);
     if (media instanceof HTMLElement) {
-      const identityOffset = PLAYER_HERO_OVERALL_SIZE_PX + PLAYER_HERO_IDENTITY_OVERALL_GAP_PX;
-      const width = identityOffset + "px";
+      const desktopMediaWidth = PLAYER_HERO_OVERALL_SIZE_PX + PLAYER_HERO_IDENTITY_OVERALL_GAP_PX;
+      const width = playerCssLength("--mfl-player-hero-media-width", desktopMediaWidth);
       media.style.order = "1";
       media.style.alignSelf = "stretch";
       media.style.flex = "0 0 " + width;
@@ -782,26 +848,26 @@ function animateReadyControls(container = document) {
       media.style.marginRight = "0";
     }
     if (identity instanceof HTMLElement) {
-      const width = PLAYER_HERO_IDENTITY_WIDTH_PX + "px";
+      const width = playerCssLength("--mfl-player-hero-identity-width", PLAYER_HERO_IDENTITY_WIDTH_PX);
       identity.style.order = "2";
       identity.style.flex = "0 1 " + width;
       identity.style.width = width;
       identity.style.maxWidth = width;
       identity.style.minWidth = "0";
       identity.style.marginLeft = "0";
-      identity.style.marginRight = PLAYER_HERO_IDENTITY_ACTION_GAP_PX + "px";
-      identity.style.alignSelf = "center";
+      identity.style.marginRight = playerCssLength("--mfl-player-hero-identity-action-gap", PLAYER_HERO_IDENTITY_ACTION_GAP_PX);
+      identity.style.alignSelf = playerCssValue("--mfl-player-hero-identity-align-self", "center");
       const eyebrow = identity.querySelector(".playerEyebrow");
       const title = identity.querySelector(".playerTitle");
       const positions = identity.querySelector("p");
-      if (eyebrow instanceof HTMLElement) eyebrow.style.fontSize = "14px";
-      if (title instanceof HTMLElement) title.style.fontSize = "28px";
-      if (positions instanceof HTMLElement) positions.style.fontSize = "16px";
+      if (eyebrow instanceof HTMLElement) eyebrow.style.fontSize = playerCssLength("--mfl-player-hero-eyebrow-font-size", 14);
+      if (title instanceof HTMLElement) title.style.fontSize = playerCssLength("--mfl-player-hero-title-font-size", 28);
+      if (positions instanceof HTMLElement) positions.style.fontSize = playerCssLength("--mfl-player-hero-positions-font-size", 16);
     }
     if (actions instanceof HTMLElement) {
       actions.style.order = "3";
-      actions.style.alignSelf = "center";
-      actions.style.marginLeft = "auto";
+      actions.style.alignSelf = playerCssValue("--mfl-player-hero-actions-align-self", "center");
+      actions.style.marginLeft = playerCssValue("--mfl-player-hero-actions-margin-left", "auto");
       applyHeroActionMenuLayout(actions);
     }
 
@@ -961,7 +1027,9 @@ function animateReadyControls(container = document) {
     grid.className = "detailGrid";
     ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"].forEach((label) => {
       const card = document.createElement("div");
-      if (label === "Contract") card.className = "contractDetailCard";
+      if (label === "Nationality") card.className = "nationalityDetailCard";
+      if (label === "Contract") card.className = "contractDetailCard playerInfoFullWidthCard";
+      if (label === "Rev Share") card.className = "revShareDetailCard playerInfoFullWidthCard";
       const name = document.createElement("span");
       name.textContent = label;
       const value = document.createElement("strong");
@@ -972,10 +1040,14 @@ function animateReadyControls(container = document) {
       } else if (label === "Nationality") {
         const knownNationality = knownDisplayValue(context, "nationality");
         if (knownNationality) {
-          value.innerHTML = countryFlagHtml(knownRawValue(context, "nationality")) + " " + escapeHtml(knownNationality);
+          value.innerHTML = playerNationalityHtml(knownRawValue(context, "nationality"), knownNationality);
         } else {
           value.textContent = loadingBlank();
         }
+      } else if (label === "Age") {
+        const ageText = pendingProfileText(context, label) || loadingBlank();
+        const ageMarker = retirementMarkerFromKnownValue(knownRawValue(context, "retirement_years"));
+        value.innerHTML = `<span class="playerDetailAgeLine">${escapeHtml(ageText)}${playerAgeMarkerHtml(ageMarker)}</span>`;
       } else {
         value.textContent = pendingProfileText(context, label) || loadingBlank();
       }
@@ -1349,6 +1421,8 @@ function stableAttributePanelHtml(row) {
     animateReadyControls,
     stableAttributePanelHtml,
     attributeViewForRender,
+    playerAgeMarkerHtml,
+    playerNationalityHtml,
     beginDetailNavigation,
     markDetailPayloadReady,
     detailDataReady,
@@ -1675,7 +1749,7 @@ function nextOverallDetailHtml(row, column) {
   }
 
   if (!weight) {
-    return `<span class="nextOverallValue neutral">No OVR impact</span>`;
+    return `<span class="nextOverallValue neutral">NO OVR IMPACT</span>`;
   }
 
   if (maxOverall || Number(getValue(row, column) || 0) >= 99) {
@@ -1855,9 +1929,8 @@ function renderPlayerPageOwner(playerId) {
   const height = formatCellValue(row, "height");
   const heightLabel = height === "NULL" ? height : `${height} cm`;
   const ageMarker = retirementMarker(row);
-  const ageMarkerHtml = ageMarker
-    ? ` <i class="retirementMarker playerAgeMarker retirementMarker--${escapeHtml(ageMarker.status || "default")}" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></i>`
-    : "";
+  const playerRuntime = window.__mflPlayerFirstPaintRuntime;
+  const ageMarkerHtml = playerRuntime?.playerAgeMarkerHtml?.(ageMarker) || "";
   const agentWalletAddress = getValue(row, "wallet_address");
   const agentTooltip = joinedAgencyTooltip(row);
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
@@ -1872,8 +1945,8 @@ function renderPlayerPageOwner(playerId) {
   const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;
   const revenueShare = rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) : "";
   const infoCardsData = [
-    ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
-    ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
+    ["Nationality", playerRuntime?.playerNationalityHtml?.(rawNationality, nationality) || `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
+    ["Age", `<span class="playerDetailAgeLine">${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}</span>`],
     ["Height", escapeHtml(heightLabel)],
     ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
@@ -1881,12 +1954,25 @@ function renderPlayerPageOwner(playerId) {
     ["Contract", contractLabel],
   ];
   infoCardsData.push(["Rev Share", escapeHtml(revenueShare || "–")]);
-  const infoCards = infoCardsData.map(([label, value]) => `<div${label === "Contract" ? " class=\"contractDetailCard\"" : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
+  const infoCards = infoCardsData.map(([label, value]) => {
+    const cardClass = label === "Nationality"
+      ? "nationalityDetailCard"
+      : (label === "Contract"
+        ? "contractDetailCard playerInfoFullWidthCard"
+        : (label === "Rev Share" ? "revShareDetailCard playerInfoFullWidthCard" : ""));
+    return `<div${cardClass ? ` class="${cardClass}"` : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`;
+  }).join("");
   state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
     .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
     .join("");
+  const existingAttributeViews = playerDetail.querySelector(".playerAttributeViews");
+  const existingAttributeViewsShell = existingAttributeViews?.closest(".viewsScrollerShell");
+  const preservedAttributeViewsHost = existingAttributeViewsShell instanceof HTMLElement
+    ? existingAttributeViewsShell
+    : (existingAttributeViews instanceof HTMLElement ? existingAttributeViews : null);
+  if (preservedAttributeViewsHost instanceof HTMLElement) preservedAttributeViewsHost.remove();
 
   playerDetail.innerHTML = `
     <section class="playerHero">
@@ -1915,6 +2001,14 @@ function renderPlayerPageOwner(playerId) {
       <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(displayRow)}</div></div>
     </section>`;
 
+  const renderedAttributeViews = playerDetail.querySelector(".playerAttributeViews");
+  if (existingAttributeViews instanceof HTMLElement
+      && preservedAttributeViewsHost instanceof HTMLElement
+      && renderedAttributeViews instanceof HTMLElement) {
+    existingAttributeViews.innerHTML = viewButtons;
+    renderedAttributeViews.replaceWith(preservedAttributeViewsHost);
+  }
+
   state.playerAttributeView = selectedAttributeView;
   window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
@@ -1936,6 +2030,7 @@ function renderPlayerPageOwner(playerId) {
   }
   window.__mflPlayerFirstPaintRuntime?.bindHeroActionMenu?.(playerDetail);
   window.__mflPlayerFirstPaintRuntime?.animateReadyControls?.(playerDetail);
+  window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });

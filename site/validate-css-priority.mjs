@@ -50,6 +50,7 @@ const horizontalOverflowHiddenStandardsFallback = `.playerTableScroller,
   }`;
 const mobileHiddenStandardsFallback = `.views,
     .quickFilters,
+    .playerAttributeViews,
     .filtersDialog .filterBuilder {
       scrollbar-width: none;
     }`;
@@ -129,6 +130,7 @@ if (!scrollbarSource.includes(horizontalOverflowHiddenWebkitScrollbar)
 }
 const mobileHiddenWebkitScrollbar = `.views::-webkit-scrollbar,
   .quickFilters::-webkit-scrollbar,
+  .playerAttributeViews::-webkit-scrollbar,
   .filtersDialog .filterBuilder::-webkit-scrollbar {
     display: none;
     width: 0;
@@ -138,6 +140,7 @@ if (!scrollbarSource.includes("@media (max-width: 900px)")
   || !scrollbarSource.includes(mobileHiddenWebkitScrollbar)
   || !scrollbarSource.includes(`.views,
   .quickFilters,
+  .playerAttributeViews,
   .filtersDialog .filterBuilder {
     -ms-overflow-style: none;
   }`)) {

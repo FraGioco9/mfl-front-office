@@ -496,7 +496,9 @@
   function firstPaintHorizontalItems(scroller) {
     const selector = scroller.matches("#progressionPage .views")
       ? ":scope > #openFiltersButton, :scope > .viewControlsSeparator, :scope > .viewButton"
-      : ":scope > label";
+      : scroller.matches("#playerDetail .playerAttributeViews")
+        ? ":scope > .playerAttributeViewButton"
+        : ":scope > label";
     return Array.from(scroller.querySelectorAll(selector)).filter((candidate) => {
       if (!(candidate instanceof HTMLElement) || candidate.hidden) return false;
       const style = getComputedStyle(candidate);
@@ -568,6 +570,7 @@
     const scrollers = [
       document.querySelector("#progressionPage .views"),
       document.querySelector("#progressionPage .quickFilters"),
+      document.querySelector("#playerDetail .playerAttributeViews"),
     ];
     scrollers.forEach((scroller) => {
       if (!(scroller instanceof HTMLElement)) return;
@@ -903,6 +906,53 @@
     }
   }
 
+  function firstPaintPlayerContext() {
+    const match = String(window.location.pathname || "").match(/^\/players\/(\d{1,20})\/?$/i);
+    const playerId = match ? String(match[1] || "") : "";
+    if (!playerId) return null;
+    try {
+      const value = JSON.parse(sessionStorage.getItem("mfl-player-first-paint-v1:" + playerId) || "null");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function firstPaintPlayerKnownEntry(context, column) {
+    const entry = context?.knownValues?.[column];
+    if (entry && typeof entry === "object" && !Array.isArray(entry)) return entry;
+    return null;
+  }
+
+  function firstPaintPlayerKnownDisplay(context, column) {
+    const entry = firstPaintPlayerKnownEntry(context, column);
+    return String(entry?.display ?? entry?.raw ?? "").trim();
+  }
+
+  function escapeFirstPaintPlayerHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character]);
+  }
+
+  function firstPaintPlayerRetirementMarkerHtml(context) {
+    const entry = firstPaintPlayerKnownEntry(context, "retirement_years");
+    const raw = entry?.raw;
+    if (raw === null || raw === undefined || raw === "") return "";
+    const retirementYears = Number(raw);
+    if (!Number.isFinite(retirementYears)) return "";
+    if (retirementYears === 0) {
+      return '<i class="retirementMarker playerAgeMarker retirementMarker--retired" data-tooltip="Retired" aria-label="Retired"><img src="/retirement-calendar-x-2.svg" width="16" height="16" alt="" aria-hidden="true"></i>';
+    }
+    if (![1, 2, 3].includes(retirementYears)) return "";
+    const label = retirementYears + " year" + (retirementYears === 1 ? "" : "s") + " left";
+    return `<i class="retirementMarker playerAgeMarker retirementMarker--retiring-${retirementYears}" data-tooltip="${label}" aria-label="${label}"></i>`;
+  }
+
   function playerLoadingViewButtons() {
     return [
       ["attributes", "Attributes"],
@@ -919,29 +969,43 @@
     const playerDetail = document.getElementById("playerDetail");
     if (!(playerDetail instanceof HTMLElement)) return;
     const optedIn = root.dataset.storedWalletOptIn === "true";
-    const watchlistAction = optedIn
-      ? '<button class="playerWatchlistButton" type="button" disabled>Watchlist</button>'
-      : "";
     const notesPanel = optedIn
       ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/100</span></div></div>`
       : "";
-    const infoCards = Array.from({ length: 8 }, () => `<div><span>&nbsp;</span><strong>${LOADING_VALUE_TEXT}</strong></div>`).join("");
+    const firstPaintContext = firstPaintPlayerContext();
+    const infoCards = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"].map((label) => {
+      const cardClass = label === "Contract"
+        ? "contractDetailCard playerInfoFullWidthCard"
+        : (label === "Rev Share" ? "revShareDetailCard playerInfoFullWidthCard" : "");
+      let valueHtml = LOADING_VALUE_TEXT;
+      if (label === "Age") {
+        const cachedAge = firstPaintPlayerKnownDisplay(firstPaintContext, "age");
+        valueHtml = `<span class="playerDetailAgeLine">${cachedAge ? escapeFirstPaintPlayerHtml(cachedAge) : LOADING_VALUE_TEXT}${firstPaintPlayerRetirementMarkerHtml(firstPaintContext)}</span>`;
+      }
+      return `<div${cardClass ? ` class="${cardClass}"` : ""}><span>${label}</span><strong>${valueHtml}</strong></div>`;
+    }).join("");
     const attributeCards = Array.from({ length: 7 }, (_, index) => (
       `<div class="playerAttributeCard${index === 0 ? " featured fullWidth" : ""}"><span>&nbsp;</span><strong>${LOADING_VALUE_TEXT}</strong></div>`
     )).join("");
 
     playerDetail.dataset.loadingShell = "true";
     playerDetail.innerHTML = `
-      <section class="playerHero" aria-hidden="true">
-        <div>
+      <section class="playerHero playerHeroPending" aria-hidden="true">
+        <div class="playerHeroMedia">
+          <div class="playerHeroOverall isPending"><strong>&nbsp;</strong></div>
+          <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
+        </div>
+        <div class="playerHeroIdentity">
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
           <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
           <p>&nbsp;</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">
-          <button class="playerEvaluateButton" type="button" disabled>Evaluate</button>
-          ${watchlistAction}
-          <a class="playerExternalButton" tabindex="-1" aria-hidden="true">Open link</a>
+          <div class="playerHeroActionMenu">
+            <a class="playerExternalButton playerHeroPrimaryAction" tabindex="-1" aria-hidden="true">Open link</a>
+            <button class="playerHeroActionMenuButton" type="button" disabled aria-hidden="true"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></button>
+            <div class="playerHeroActionMenuDropdown" hidden></div>
+          </div>
         </div>
       </section>
       <section class="playerGrid" aria-hidden="true">
