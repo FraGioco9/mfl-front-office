@@ -17,6 +17,7 @@
   ].join(", ");
   const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
+  const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");
 
   let pointerFocusedControl = null;
   let gestureStartControl = null;
@@ -28,6 +29,12 @@
   let suppressClickTimer = 0;
   let navigationIntentToken = "";
   let escapeHandlerSequence = 0;
+  let playerAttributeViewScrollPathname = "";
+  let playerAttributeViewScrollLeft = 0;
+  let playerAttributeViewRestoreFrame = 0;
+  let playerAttributeViewRestoreReleaseFrame = 0;
+  let playerAttributeViewRestoring = false;
+  let playerAttributeViewMutationObserver = null;
   const escapeHandlers = new Map();
 
   function motionDurationMs(propertyName, fallbackMs) {
@@ -280,27 +287,102 @@
       && bugReportModal.contains(target);
   }
 
-  function preservePlayerAttributeViewScroll(target) {
+  function currentPlayerPathname() {
+    const pathname = String(window.location.pathname || "").replace(/\/+$/, "") || "/";
+    return /^\/players\/\d{1,20}$/i.test(pathname) ? pathname : "";
+  }
+
+  function currentPlayerAttributeViews() {
+    const views = document.querySelector("#playerDetail .playerAttributeViews");
+    return views instanceof HTMLElement ? views : null;
+  }
+
+  function syncPlayerAttributeViewScrollPath() {
+    const pathname = currentPlayerPathname();
+    if (pathname === playerAttributeViewScrollPathname) return pathname;
+    playerAttributeViewScrollPathname = pathname;
+    playerAttributeViewScrollLeft = 0;
+    playerAttributeViewRestoring = false;
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
+    playerAttributeViewRestoreFrame = 0;
+    playerAttributeViewRestoreReleaseFrame = 0;
+    return pathname;
+  }
+
+  function rememberPlayerAttributeViewScroll(views = currentPlayerAttributeViews()) {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !(views instanceof HTMLElement)) return;
+    const pathname = syncPlayerAttributeViewScrollPath();
+    if (!pathname || playerAttributeViewRestoring) return;
+    playerAttributeViewScrollLeft = views.scrollLeft;
+  }
+
+  function applyPlayerAttributeViewScroll() {
+    const pathname = syncPlayerAttributeViewScrollPath();
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !pathname) return false;
+    const views = currentPlayerAttributeViews();
+    if (!(views instanceof HTMLElement)) return false;
+    const maxScroll = Math.max(0, views.scrollWidth - views.clientWidth);
+    const target = Math.min(maxScroll, Math.max(0, playerAttributeViewScrollLeft));
+    if (Math.abs(views.scrollLeft - target) > 1) views.scrollLeft = target;
+    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    return true;
+  }
+
+  function schedulePlayerAttributeViewScrollRestore() {
+    if (!PLAYER_VIEW_SCROLL_MEDIA.matches || !syncPlayerAttributeViewScrollPath()) return;
+    playerAttributeViewRestoring = true;
+    applyPlayerAttributeViewScroll();
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
+    playerAttributeViewRestoreFrame = requestAnimationFrame(() => {
+      playerAttributeViewRestoreFrame = 0;
+      applyPlayerAttributeViewScroll();
+      playerAttributeViewRestoreReleaseFrame = requestAnimationFrame(() => {
+        playerAttributeViewRestoreReleaseFrame = 0;
+        playerAttributeViewRestoring = false;
+      });
+    });
+  }
+
+  function capturePlayerAttributeViewScroll(target) {
     if (!(target instanceof Element)) return;
     const button = target.closest("#playerDetail [data-player-attribute-view]");
     if (!(button instanceof HTMLButtonElement) || button.disabled) return;
     const views = button.closest(".playerAttributeViews");
     if (!(views instanceof HTMLElement)) return;
+    rememberPlayerAttributeViewScroll(views);
+    queueMicrotask(schedulePlayerAttributeViewScrollRestore);
+  }
 
-    const pathname = String(window.location.pathname || "");
-    const scrollLeft = views.scrollLeft;
-    queueMicrotask(() => {
-      if (String(window.location.pathname || "") !== pathname) return;
-      const currentViews = document.querySelector("#playerDetail .playerAttributeViews");
-      if (!(currentViews instanceof HTMLElement)) return;
-      const maxScroll = Math.max(0, currentViews.scrollWidth - currentViews.clientWidth);
-      currentViews.scrollLeft = Math.min(maxScroll, Math.max(0, scrollLeft));
-      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+  function onPlayerAttributeViewScroll(event) {
+    const views = event.target;
+    if (!(views instanceof HTMLElement) || !views.matches("#playerDetail .playerAttributeViews")) return;
+    rememberPlayerAttributeViewScroll(views);
+  }
+
+  function observePlayerAttributeViewRenders() {
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement) || typeof MutationObserver !== "function") return;
+    playerAttributeViewMutationObserver?.disconnect();
+    playerAttributeViewMutationObserver = new MutationObserver((records) => {
+      if (!records.some((record) => record.type === "childList")) return;
+      schedulePlayerAttributeViewScrollRestore();
     });
+    playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
+  }
+
+  function onPlayerViewScrollMediaChange(event) {
+    if (event.matches) {
+      syncPlayerAttributeViewScrollPath();
+      return;
+    }
+    playerAttributeViewScrollLeft = 0;
+    playerAttributeViewRestoring = false;
   }
 
   function onClick(event) {
-    preservePlayerAttributeViewScroll(event.target);
+    capturePlayerAttributeViewScroll(event.target);
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
       scheduleAddFilterNormalization();
@@ -424,8 +506,11 @@
 
   disableSearchSpellcheck();
   initializeAddFilterControl();
+  syncPlayerAttributeViewScrollPath();
+  observePlayerAttributeViewRenders();
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
+  document.addEventListener("scroll", onPlayerAttributeViewScroll, true);
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointermove", onPointerMove, true);
   document.addEventListener("pointerup", onPointerUp, true);
@@ -434,6 +519,7 @@
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("keydown", onEnterBubble);
   document.addEventListener("focusin", onFocusIn, true);
+  PLAYER_VIEW_SCROLL_MEDIA.addEventListener("change", onPlayerViewScrollMediaChange);
 
   function destroy() {
     pointerFocusedControl = null;
@@ -441,8 +527,16 @@
     clearClickSuppression();
     endNavigationIntent();
     escapeHandlers.clear();
+    playerAttributeViewMutationObserver?.disconnect();
+    playerAttributeViewMutationObserver = null;
+    if (playerAttributeViewRestoreFrame) cancelAnimationFrame(playerAttributeViewRestoreFrame);
+    if (playerAttributeViewRestoreReleaseFrame) cancelAnimationFrame(playerAttributeViewRestoreReleaseFrame);
+    playerAttributeViewRestoreFrame = 0;
+    playerAttributeViewRestoreReleaseFrame = 0;
+    playerAttributeViewRestoring = false;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
+    document.removeEventListener("scroll", onPlayerAttributeViewScroll, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointermove", onPointerMove, true);
     document.removeEventListener("pointerup", onPointerUp, true);
@@ -451,6 +545,7 @@
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("keydown", onEnterBubble);
     document.removeEventListener("focusin", onFocusIn, true);
+    PLAYER_VIEW_SCROLL_MEDIA.removeEventListener("change", onPlayerViewScrollMediaChange);
   }
 
   window.__mflControlInteractionsRuntime = Object.freeze({
