@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { readWorkflowSource } from "./validation/workflow-source.mjs";
 
 const workflowUrl = new URL("../.github/workflows/full-database-refresh.yml", import.meta.url);
-const workflow = String(await readFile(workflowUrl, "utf8")).replace(/\r\n?/g, "\n");
+const workflow = await readWorkflowSource(workflowUrl);
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 const includes = (value, message) => invariant(workflow.includes(value), message);
 const excludes = (value, message) => invariant(!workflow.includes(value), message);

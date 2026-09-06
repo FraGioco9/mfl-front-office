@@ -1,3 +1,4 @@
+import { readWorkflowSource } from "./validation/workflow-source.mjs";
 import { readFile, readdir } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
@@ -27,7 +28,7 @@ const [canonicalSources, generatedSources, walletPreferencesApi, vercelSiteUpdat
   readNamedSources("./modules/", (name) => /^app-core(?:-[a-z0-9-]+)?-runtime\.js$/.test(name)),
   read("./api/wallet-preferences.js"),
   read("../.github/workflows/vercel-site-update.yml"),
-  read("../.github/workflows/full-database-refresh.yml"),
+  readWorkflowSource(new URL("../.github/workflows/full-database-refresh.yml", import.meta.url)),
 ]);
 
 const applicationSources = [...canonicalSources, ...generatedSources];

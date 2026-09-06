@@ -1,13 +1,9 @@
+import { includes, excludes } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
-const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [bootstrap, entry, appConfig, routeCoreLoader, filterControls, coreSource] = await Promise.all([
   read("./bootstrap.js"),

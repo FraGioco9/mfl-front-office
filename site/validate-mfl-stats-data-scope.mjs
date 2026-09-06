@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
@@ -16,9 +17,6 @@ const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns,
   read("./filter-controls-runtime.js"),
 ]);
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 invariant(
   dataQuery.includes('const TABLE_SCOPES = new Set([\n  "database", "progression", "mfl", "agent", "myplayers", "watchlist",\n]);'),

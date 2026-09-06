@@ -28,3 +28,13 @@ site/modules/core-source-manifest.js
 site/modules/pre-bootstrap-route-state.js
 site/modules/package.json
 site/modules/core-sources
+
+site/html-sources
+site/responsive-sources
+site/build-fragments.mjs
+site/build-html.mjs
+site/build-responsive.mjs
+site/validation
+scripts
+tests
+docs

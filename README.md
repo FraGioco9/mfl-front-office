@@ -42,7 +42,7 @@ site/api/data-files/mfl_database.db
 Prepare it and start Vercel development mode:
 
 ```powershell
-python prepare_runtime_database.py site\api\data-files\mfl_database.db
+python -m scripts.database.prepare_runtime_database site\api\data-files\mfl_database.db
 vercel.cmd dev --listen 4000
 ```
 
@@ -73,3 +73,7 @@ The repository currently contains seven workflows:
 Generated artifacts have one writer: **Site quality**. Release projection logic is
 part of the canonical application-core build, so there is no second projection
 workflow racing the generated commit.
+
+## Development ownership
+
+See [source ownership and operational commands](docs/ownership.md) before editing generated assets or running database/email tools.

@@ -1,14 +1,10 @@
-import { readFile } from "node:fs/promises";
+import { invariant, includes, excludes } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
-const excludes = (source, value, message) => invariant(!source.includes(value), message);
+const read = (path) => readValidationText(path, import.meta.url);
 
 const [coreSource, appConfig, routeLoader, buildCore, generatedWallet] = await Promise.all([
   Promise.all([

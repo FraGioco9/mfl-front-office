@@ -64,6 +64,7 @@ export default [
       "vercel-config-source.mjs",
       "ci-quality-scope.mjs",
       "validate*.mjs",
+      "validation/*.mjs",
     ],
     languageOptions: {
       ecmaVersion: "latest",

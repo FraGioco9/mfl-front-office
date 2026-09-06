@@ -91,8 +91,8 @@ assert.ok(
   "Bootstrap must keep hydrating the same Player skeleton after the HTML-owned first paint.",
 );
 assert.ok(
-  buildCore.includes("function normalizePlayerFirstPaintShell(source)")
-    && buildCore.includes("normalizePlayerFirstPaintShell(indexSource)"),
+  buildCore.includes('import "./build-html.mjs";')
+    && read("./html-sources/player.html").includes('data-mfl-static-player-shell="true"'),
   "The build must own regeneration of the pre-footer static Player first-paint shell.",
 );
 assert.ok(

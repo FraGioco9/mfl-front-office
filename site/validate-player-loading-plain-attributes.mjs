@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = (path) => readValidationText(path, import.meta.url);
 const [source, generated] = await Promise.all([
   read("./modules/core-sources/player.js"),
   read("./modules/app-core-player-runtime.js"),

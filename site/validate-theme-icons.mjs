@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { access, readFile } from "node:fs/promises";
 
 const [markup, motion, appCore, controlInteractions, controls, stylesBase] = await Promise.all([
@@ -18,9 +19,6 @@ const [markup, motion, appCore, controlInteractions, controls, stylesBase] = awa
   readFile(new URL("./controls.css", import.meta.url), "utf8"),
   readFile(new URL("./styles-base.css", import.meta.url), "utf8"),
 ].map((promise) => promise.then((value) => String(value).replace(/\r\n?/g, "\n"))));
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 invariant(!markup.includes("&#127769;") && !markup.includes("&#9728;") && !markup.includes("🌙") && !markup.includes("☀️"), "Legacy emoji theme icons must be removed from canonical markup.");
 invariant(!markup.includes('<span class="themeMoonSymbol"') && !markup.includes('<span class="themeSunSymbol"'), "Legacy span-based theme icon nodes must be removed from canonical markup.");

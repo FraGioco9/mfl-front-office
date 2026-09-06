@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
-const buildAppCore = read("./build-app-core.mjs");
+const buildAppCore = read("./html-sources/first-paint.html") + read("./html-sources/player.html");
 const bootstrap = read("./bootstrap.js");
 const interactions = read("./control-interactions-runtime.js");
 const shared = read("./shared-table-ui-runtime.js");
@@ -89,7 +89,6 @@ assert.ok(
 
 for (const token of [
   'html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage',
-  'const staticPlayerRevealScript = `',
   'const views = document.querySelector("#playerPage .playerAttributeViews");',
   'const progressionAccess = root.dataset.storedProgressionAccess === "true";',
   'shell.className = "viewsScrollerShell";',
@@ -102,8 +101,8 @@ for (const token of [
 ]) {
   assert.ok(buildAppCore.includes(token), `Player parser-first-paint cue projection is missing: ${token}`);
 }
-const staticRevealStart = buildAppCore.indexOf('const staticPlayerRevealScript = `');
-const staticRevealEnd = buildAppCore.indexOf('`;\n  const staticPlayerShell', staticRevealStart);
+const staticRevealStart = buildAppCore.indexOf('const root = document.documentElement;', buildAppCore.indexOf('data-mfl-static-player-shell'));
+const staticRevealEnd = buildAppCore.indexOf('</script>', staticRevealStart);
 const staticReveal = buildAppCore.slice(staticRevealStart, staticRevealEnd);
 const staticPageLayoutIndex = staticReveal.indexOf("playerPage.hidden = false;");
 const staticOverflowIndex = staticReveal.indexOf("views.scrollWidth - views.clientWidth > 2;");

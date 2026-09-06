@@ -1,10 +1,8 @@
+import { invariant } from "./validation/assertions.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), "utf8"));
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [developmentConfig, productionConfig] = await Promise.all([
   readJson("./vercel.json"),

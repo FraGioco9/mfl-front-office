@@ -1,16 +1,14 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [stylesBase, styles, dropdowns, runtime, shared] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./dropdowns.css"),
   read("./dropdowns-runtime.js"),
-  read("./modules/core-sources/shared.js"),
+  Promise.all([read("./modules/core-sources/shared.js"), read("./modules/core-sources/evaluation.js")]).then((parts) => parts.join("\n")),
 ]);
 
 for (const required of [

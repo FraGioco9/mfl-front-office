@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { invariant } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+const read = (path) => readValidationText(path, import.meta.url);
 
 const [indexSource, projectionSource, sharedTableUiSource] = await Promise.all([
   read("./index.html"),
@@ -11,7 +9,7 @@ const [indexSource, projectionSource, sharedTableUiSource] = await Promise.all([
   read("./shared-table-ui-runtime.js"),
 ]);
 
-const responsiveLink = '<link rel="stylesheet" href="/responsive.css" data-mfl-responsive-layout="true">';
+const responsiveLink = '<link rel="stylesheet" href="/styles-runtime.css" data-mfl-responsive-layout="true">';
 const cascadeStart = "<!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->";
 const cascadeEnd = "<!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->";
 const responsiveIndex = indexSource.indexOf(responsiveLink);
@@ -32,7 +30,7 @@ invariant(
 invariant(
   projectionSource.includes("function mobileTableFirstPaintCascadeProjectionSource()")
     && projectionSource.includes("normalizeIndexMobileTableFirstPaintCascadeProjection")
-    && projectionSource.includes('href="\\/responsive\\.css" data-mfl-responsive-layout="true"'),
+    && projectionSource.includes('href="\\/styles-runtime\\.css" data-mfl-responsive-layout="true"'),
   "Release projection generation must own the pre-body mobile cascade handoff after responsive.css.",
 );
 

@@ -274,7 +274,7 @@ export function normalizeIndexMobileTableFirstPaintCascadeProjection(source) {
 
   return replaceExactlyOnce(
     input,
-    /^    <link rel="stylesheet" href="\/responsive\.css" data-mfl-responsive-layout="true">$/m,
+    /^    <link rel="stylesheet" href="\/styles-runtime\.css" data-mfl-responsive-layout="true">$/m,
     (match) => `${match}\n${mobileTableFirstPaintCascadeProjectionSource()}`,
     "index mobile table first-paint cascade insertion point",
   );
@@ -334,6 +334,20 @@ async function writeIfChanged(path, content) {
   return true;
 }
 
+export function normalizeIndexDocument(source, version) {
+  return normalizeIndexPagerLoadingProjection(
+    normalizeIndexTableConfigRuntimeProjection(
+      normalizeIndexMobileTableFirstPaintCascadeProjection(
+        normalizeIndexMflStatsFiltersProjection(
+          normalizeIndexMobileWatchlistFirstPaintProjection(
+            normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT) {
   const release = JSON.parse(await readFile(resolve(siteRoot, "release.json"), "utf8"));
   const version = semanticVersion(release?.version);
@@ -342,17 +356,7 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
       normalizeBootstrapReleaseProjection(source, version, "bootstrap.js"),
     )],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
-    ["index.html", (source) => normalizeIndexPagerLoadingProjection(
-      normalizeIndexTableConfigRuntimeProjection(
-        normalizeIndexMobileTableFirstPaintCascadeProjection(
-          normalizeIndexMflStatsFiltersProjection(
-            normalizeIndexMobileWatchlistFirstPaintProjection(
-              normalizeIndexFirstPaintConfigProjection(normalizeIndexReleaseProjection(source, version)),
-            ),
-          ),
-        ),
-      ),
-    )],
+    ["index.html", (source) => normalizeIndexDocument(source, version)],
   ];
 
   const results = [];

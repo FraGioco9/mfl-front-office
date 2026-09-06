@@ -1,10 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { invariant, includes } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-const includes = (source, value, message) => invariant(source.includes(value), message);
+const read = (path) => readValidationText(path, import.meta.url);
 
 const [core, evaluation] = await Promise.all([
   read("./modules/app-core-runtime.js"),
@@ -32,12 +29,12 @@ includes(
   "Editing a saved/shared Evaluation must clear snapshot identity, replace the URL with the base player route, and refresh footer actions.",
 );
 includes(
-  core,
+  evaluation,
   'detachEvaluationSnapshotForEdit();\n  const expectedSeasons = expectedEvaluationSeasons(row);',
   "Changing a projected overall must detach saved/shared route identity before mutating the Evaluation.",
 );
 includes(
-  core,
+  evaluation,
   'select.addEventListener("change", () => {\n      detachEvaluationSnapshotForEdit();\n      state.evaluationSummaryPositions',
   "Changing the Evaluation summary position must detach saved/shared route identity.",
 );

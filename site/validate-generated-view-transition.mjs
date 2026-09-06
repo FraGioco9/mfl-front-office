@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
@@ -20,9 +21,6 @@ const generatedSources = new Map([
   ...Object.entries(artifacts.routeChunks || {}).map(([name, value]) => [name, String(value || "")]),
 ]);
 
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const sourceContaining = (marker, label) => {
   const match = Array.from(generatedSources.entries()).find(([, text]) => text.includes(marker));

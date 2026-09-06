@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { invariant } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 import vm from "node:vm";
 
 import {
@@ -24,10 +25,7 @@ import {
   normalizeIndexTableConfigRuntimeProjection,
 } from "./sync-release-projections.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+const read = (path) => readValidationText(path, import.meta.url);
 
 function initializer(source, name) {
   const normalizedSource = String(source || "").replace(/\r\n?/g, "\n");

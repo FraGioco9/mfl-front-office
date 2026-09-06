@@ -48,13 +48,13 @@ jobs:
           IFS=$'\t' read -r CREATED_AT RUN_ID <<< "$CANDIDATE"
           echo "Using database artifact from run $RUN_ID ($CREATED_AT)."
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
-          python prepare_runtime_database.py mfl_database.db --validate-only
+          python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only
 
       - name: Render email preview
         env:
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
         run: >-
-          python progression_email_preview.py
+          python -m scripts.email.progression_email_preview
           --current-db mfl_database.db
           --preview-player-ids "${{ inputs.player_ids }}"
           --preview-output progression-email-preview.html

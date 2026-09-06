@@ -1,0 +1,125 @@
+
+        <section id="evaluationPage" class="pageView evaluationPage" hidden>
+          <div class="evaluationTitleRow">
+            <h2 class="tablePageTitle">Evaluation</h2>
+            <button class="advancedSettingsButton" type="button" aria-label="Advanced Settings"><svg class="settingsIcon advancedSettingsIcon" viewBox="0 0 24 24" aria-hidden="true"><use href="#settingsIconGlyph"></use></svg> Advanced Settings</button>
+          </div>
+          <section class="evaluationTopBar" aria-label="Evaluation controls">
+            <section class="evaluationSearchGroup" aria-label="Evaluation player search">
+              <section class="evaluationSearch">
+                <label class="field">
+                  <span>Player</span>
+                  <div class="evaluationSearchControl">
+                    <input id="evaluationSearchInput" type="text" placeholder="Search ID or player name" autocomplete="off">
+                    <button id="evaluationSearchClearButton" class="iconButton popupCloseButton evaluationSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                  </div>
+                </label>
+                <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
+              </section>
+              <section class="evaluationActions" aria-label="Evaluation actions">
+                <section id="evaluationButtons" class="evaluationButtons" aria-label="Evaluation page actions" hidden>
+                  <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
+                  <button id="evaluationLoadButton" class="evaluationPlayerPageButton" type="button" hidden>Load</button>
+                  <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
+                </section>
+                <section class="evaluationMetrics" aria-label="Evaluation metrics">
+                  <section class="evaluationMflUsdGroup" aria-label="MFL per USD controls">
+                    <section class="evaluationMetric evaluationMflUsdMetric" aria-label="MFL per USD">
+                      <span class="evaluationMetricLabel">MFL/USD <button id="evaluationMflUsdEditButton" class="evaluationMetricIconButton" type="button" aria-label="Edit MFL per USD">&#9998;</button></span>
+                      <strong id="evaluationMflUsd">400</strong>
+                      <span id="evaluationMflUsdEditor" class="evaluationMflUsdEditor" hidden><input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="text" inputmode="decimal" autocomplete="off"><span class="evaluationMflUsdStepper" aria-label="Adjust MFL per USD"><button id="evaluationMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="evaluationMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span></span>
+                    </section>
+                    <button id="evaluationMflUsdResetButton" class="evaluationMetricResetButton" type="button" hidden>Reset</button>
+                  </section>
+                  <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0">
+                    <span>Discount Rate</span>
+                    <strong id="evaluationDiscountRate">-</strong>
+                  </section>
+                </section>
+              </section>
+              <section id="evaluationOptionFilters" class="evaluationOptionFilters" aria-label="Evaluation options" hidden>
+                <label><input id="ignoreDiscountRateInput" type="checkbox"> <span>Ignore discount rate</span></label>
+                <label><input id="ignoreFirstSeasonInput" type="checkbox"> <span>Ignore first season</span></label>
+              </section>
+            </section>
+          </section>
+
+          <!-- Evaluation first paint: expose the route only after top controls are fully parsed. -->
+          <script>
+            (() => {
+              const root = document.documentElement;
+              const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
+              if (initialPage !== "evaluation") return;
+
+              const page = document.getElementById("evaluationPage");
+              const buttons = document.getElementById("evaluationButtons");
+              const resetButton = document.getElementById("evaluationResetButton");
+              const loadButton = document.getElementById("evaluationLoadButton");
+              const playerPageButton = document.getElementById("evaluationPlayerPageButton");
+              if (!(page instanceof HTMLElement)
+                || !(buttons instanceof HTMLElement)
+                || !(resetButton instanceof HTMLButtonElement)
+                || !(loadButton instanceof HTMLButtonElement)
+                || !(playerPageButton instanceof HTMLButtonElement)) return;
+
+              const selected = root.dataset.initialEvaluationSelection === "true";
+              const optedIn = root.dataset.storedWalletOptIn === "true";
+              buttons.hidden = false;
+              resetButton.hidden = !selected;
+              loadButton.hidden = selected || !optedIn;
+              playerPageButton.hidden = !selected;
+
+              document.body.dataset.page = "evaluation";
+              page.hidden = false;
+            })();
+          </script>
+
+          <section id="evaluationPanel" class="evaluationPanel" hidden>
+            <h3>Summary</h3>
+            <div class="tableShell evaluationSummaryShell" aria-label="Player evaluation summary">
+              <div class="tableScroller">
+                <table class="evaluationTable evaluationSummaryTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th aria-label="Position"><span class="evaluationHeaderFull">Position</span><span class="evaluationHeaderCompact" aria-hidden="true">POS</span></th>
+                      <th>Age</th>
+                      <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
+                      <th aria-label="Expected Seasons"><span class="evaluationHeaderFull">Expected Seasons</span><span class="evaluationHeaderCompact" aria-hidden="true">SZN</span></th>
+                      <th aria-label="$MFL Return"><span class="evaluationHeaderFull">$MFL Return</span><span class="evaluationHeaderCompact" aria-hidden="true">$MFL</span></th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationSummaryBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <h3>Season by season</h3>
+            <div class="tableShell evaluationTableShell" aria-label="Player evaluation table">
+              <div class="tableScroller">
+                <table class="evaluationTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th aria-label="Season"><span class="evaluationHeaderFull">Season</span><span class="evaluationHeaderCompact" aria-hidden="true">SZN</span></th>
+                      <th>Age</th>
+                      <th aria-label="Overall"><span class="evaluationHeaderFull">Overall</span><span class="evaluationHeaderCompact" aria-hidden="true">OVR</span></th>
+                      <th>$MFL</th>
+                      <th>USD</th>
+                      <th aria-label="Discount Factor"><span class="evaluationHeaderFull">Discount Factor</span><span class="evaluationHeaderCompact" aria-hidden="true">DISC</span></th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="evaluationFooterActions" aria-label="Evaluation save and share actions">
+              <button id="evaluationShareButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button"><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg><span>Share</span></button>
+              <span class="evaluationFooterSavedActions">
+                <button id="evaluationDeleteButton" class="evaluationPlayerPageButton evaluationFooterButton evaluationLoadDeleteButton evaluationFooterDeleteButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg><span>Delete</span></button>
+                <button id="evaluationSaveButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg><span>Save</span></button>
+              </span>
+            </div>
+          </section>
+        </section>

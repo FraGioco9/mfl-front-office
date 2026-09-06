@@ -1,12 +1,10 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const [runtime, styles] = await Promise.all([
   readFile(new URL("./shared-table-ui-runtime.js", import.meta.url), "utf8"),
   readFile(new URL("./styles-base.css", import.meta.url), "utf8"),
 ]);
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 invariant(
   runtime.includes('function clearTableHoverState()')

@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { invariant } from "./validation/assertions.mjs";
+import { readValidationText } from "./validation-text.mjs";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+const read = (path) => readValidationText(path, import.meta.url);
 const hasFunction = (source, name) => new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).test(source);
 
 const shared = await read("./modules/core-sources/shared.js");
@@ -17,7 +15,7 @@ const chunks = Object.freeze({
 });
 
 const routeOnlyFunctions = {
-  evaluation: ["recoverInvalidEvaluationLink"],
+  evaluation: ["recoverInvalidEvaluationLink", "evaluationOverallKey", "evaluationOverallValues", "evaluationSummaryPosition", "evaluationRenderTableOwner", "evaluationRenderPageOwner"],
   settings: ["setSettingsEmailAddressDraft", "discardSettingsEmailAddressDraft", "saveSettingsEmailAddressDraft", "updateSettingsEmailOption", "validSettingsEmailAddress"],
   player: ["showPlayerNoteTooltip", "setPlayerNote", "normalizePlayerAttributeView", "formatFootedness", "shortStatLabel", "playerNoteIconHtml", "measureTooltipAnchorWidth", "queueWalletNotesSave", "allowedPlayerAttributeViews", "createWatchlistStar"],
   table: ["currentViewColumns", "tableColumnClass", "agentTitleForWallet", "selectedPlayerIdsArray", "trackWatchlistChange", "isNumericColumn", "uniqueNationalityValues", "uniquePositions", "availableFilterColumns", "contractStatusValue", "precomputedValue", "cachedRowSortValue", "newMintMarker", "rowIsOwnedByLinkedWallet", "displayColumnForPage", "filterLabel", "uniqueColumnValues"],

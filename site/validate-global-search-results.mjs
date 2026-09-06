@@ -1,9 +1,7 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [runtime, styles, responsive, controls, core, appEntry, walletPreferencesApi, dataViews] = await Promise.all([
   read("./global-search-runtime.js"),

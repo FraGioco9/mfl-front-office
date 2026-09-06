@@ -1,10 +1,8 @@
+import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 // MFL/USD drafts are discarded unless Enter or the checkmark explicitly confirms them.
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [source, generated] = await Promise.all([
   Promise.all([

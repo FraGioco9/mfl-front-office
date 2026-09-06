@@ -1,3 +1,4 @@
+import { invariant } from "./validation/assertions.mjs";
 import { access } from "node:fs/promises";
 
 import {
@@ -7,9 +8,6 @@ import {
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const invariant = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, releaseProjectionWorkflowExists] = await Promise.all([
   read("./release.json"),

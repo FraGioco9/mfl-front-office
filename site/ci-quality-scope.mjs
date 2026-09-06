@@ -30,7 +30,7 @@ export function classifyChangedFiles(files, workflowDiffForFile = () => "") {
   for (const file of files) {
     if (file.startsWith("site/") || file === ".gitattributes") site = true;
     if (/^(?:.*\/)?[^/]+\.py$/.test(file) || /(?:^|\/)requirements[^/]*\.txt$/.test(file) || /(?:^|\/)pyproject\.toml$/.test(file)) builder = true;
-    if (file === ".vercelignore") workflow = true;
+    if (file === ".vercelignore" || file.startsWith("scripts/workflows/") || file.startsWith("tests/")) workflow = true;
     if (/^\.github\/workflows\/.*\.ya?ml$/.test(file) && workflowDiffHasSubstantiveChanges(workflowDiffForFile(file))) workflow = true;
   }
 
