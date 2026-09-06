@@ -30,10 +30,18 @@ function normalizePlayerFirstPaintShell(source) {
       html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
         display: none;
       }`;
-  const layoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+  const previousLayoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
         display: none;
       }
       html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+        visibility: hidden;
+        pointer-events: none;
+      }`;
+  const layoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
         visibility: hidden;
         pointer-events: none;
       }`;
@@ -121,6 +129,8 @@ function normalizePlayerFirstPaintShell(source) {
   let normalized = String(source || "");
   if (normalized.includes(hiddenEntityGuard)) {
     normalized = normalized.replace(hiddenEntityGuard, layoutAwareEntityGuard);
+  } else if (normalized.includes(previousLayoutAwareEntityGuard)) {
+    normalized = normalized.replace(previousLayoutAwareEntityGuard, layoutAwareEntityGuard);
   } else if (!normalized.includes(layoutAwareEntityGuard)) {
     throw new Error("Player first-paint route guard owner is missing.");
   }
