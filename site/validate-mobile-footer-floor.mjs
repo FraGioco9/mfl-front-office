@@ -77,7 +77,7 @@ for (const token of [
   'data-mfl-static-player-notes="true"',
   'class="playerPanel pitchPanel"',
   'class="pitch"',
-  'class="viewsScrollerShell"',
+  'shell.className = "viewsScrollerShell";',
   'viewsScrollButton viewsScrollButtonRight',
 ]) {
   assert.ok(indexHtml.includes(token), `Static Player first-paint geometry is missing ${token}.`);
