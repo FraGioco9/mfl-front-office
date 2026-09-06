@@ -30,9 +30,12 @@ for (const token of [
   'function playerAttributeViewControlsChanged(record) {',
   'record.target.matches("#playerDetail .playerAttributeViews")',
   'node.matches(".playerAttributeViewButton, [data-player-attribute-view]")',
+  'node.matches(".playerAttributeViews")',
+  'node.querySelector(".playerAttributeViews")',
   'function observePlayerAttributeViewRenders() {',
   'playerAttributeViewMutationObserver = new MutationObserver((records) => {',
   'if (!records.some(playerAttributeViewControlsChanged)) return;',
+  'window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();',
   'schedulePlayerAttributeViewScrollRestore();',
   'playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });',
   'capturePlayerAttributeViewScroll(event.target);',
@@ -128,6 +131,11 @@ assert.ok(
   "The regression must also remain tied to the synchronous Player view-selection rerender.",
 );
 assert.ok(
+  player.includes("detail.replaceChildren(hero, createPendingPlayerGrid(context));")
+    && player.includes('document.documentElement.dataset.initialEntityVerified = "player";'),
+  "The regression must cover the hard-refresh pending-grid replacement that destroys parser-owned cue DOM before Player verification.",
+);
+assert.ok(
   interactions.includes("if (pathname === playerAttributeViewScrollPathname) return pathname;")
     && interactions.includes("playerAttributeViewScrollLeft = 0;"),
   "Changing to a different Player pathname must reset the transient scroll state instead of carrying it across players.",
@@ -160,8 +168,16 @@ const observerEnd = interactions.indexOf("\n  function onPlayerViewScrollMediaCh
 const observer = interactions.slice(observerStart, observerEnd);
 assert.ok(
   observer.includes('record.target.matches("#playerDetail .playerAttributeViews")')
-    && observer.includes('node.matches(".playerAttributeViewButton, [data-player-attribute-view]")'),
-  "Only actual Player view-control rebuilds may schedule a scroll restoration; shared shell/arrow bookkeeping must not do so.",
+    && observer.includes('node.matches(".playerAttributeViewButton, [data-player-attribute-view]")')
+    && observer.includes('node.matches(".playerAttributeViews")')
+    && observer.includes('node.querySelector(".playerAttributeViews")'),
+  "The Player observer must detect both direct control rebuilds and whole pending-grid replacements while ignoring cue-only DOM bookkeeping.",
+);
+const observerCueSyncIndex = observer.indexOf("window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();");
+const observerRestoreIndex = observer.indexOf("schedulePlayerAttributeViewScrollRestore();");
+assert.ok(
+  observerCueSyncIndex >= 0 && observerRestoreIndex > observerCueSyncIndex,
+  "A newly replaced Player grid must synchronously regain its arrow/fade in the MutationObserver microtask before any frame-bound scroll restoration.",
 );
 
 const ensureViewScrollersStart = shared.indexOf("function ensureViewScrollers() {");
@@ -209,4 +225,4 @@ assert.ok(
   "Player first-paint horizontal cues must be measured after the visible Player content row is in its initial shell and before hydration begins.",
 );
 
-console.log("Player refresh paints its right arrow with page content, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
+console.log("Player refresh re-primes cues after the real pending-grid replacement before paint, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
