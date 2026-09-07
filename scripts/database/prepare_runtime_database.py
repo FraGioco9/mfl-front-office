@@ -105,6 +105,81 @@ def validate_runtime_database(database_path: Path) -> str:
         connection.close()
 
 
+def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
+    """Build the search lookup from canonical leaderboard clubs when available."""
+    connection.executescript(
+        """
+        DROP TABLE IF EXISTS runtime_clubs;
+        CREATE TABLE runtime_clubs (
+          club_id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          normalized_name TEXT NOT NULL,
+          division INTEGER,
+          owner_wallet_address TEXT NOT NULL DEFAULT '',
+          owner_name TEXT NOT NULL DEFAULT '',
+          logo_version TEXT NOT NULL DEFAULT '',
+          leaderboard_rank INTEGER,
+          mfl_points REAL
+        ) WITHOUT ROWID;
+        """
+    )
+
+    if "clubs" in table_names(connection):
+        connection.execute(
+            """
+            INSERT INTO runtime_clubs (
+              club_id,
+              name,
+              normalized_name,
+              division,
+              owner_wallet_address,
+              owner_name,
+              logo_version,
+              leaderboard_rank,
+              mfl_points
+            )
+            SELECT
+              club_id,
+              name,
+              normalize_search(name),
+              CAST(NULLIF(division, '') AS INTEGER),
+              lower(coalesce(owner_wallet_address, '')),
+              coalesce(owner_name, ''),
+              coalesce(logo_version, ''),
+              leaderboard_rank,
+              mfl_points
+            FROM clubs
+            WHERE coalesce(club_id, '') <> ''
+              AND normalize_search(name) <> 'development center'
+            ORDER BY leaderboard_rank, club_id
+            """
+        )
+    else:
+        connection.execute(
+            """
+            INSERT INTO runtime_clubs (club_id, name, normalized_name, division)
+            SELECT
+              active_contract_club_id,
+              max(active_contract_club_name),
+              normalize_search(max(active_contract_club_name)),
+              min(CAST(active_contract_club_division AS INTEGER))
+            FROM players
+            WHERE coalesce(active_contract_club_id, '') <> ''
+              AND coalesce(active_contract_club_name, '') <> ''
+              AND normalize_search(active_contract_club_name) <> 'development center'
+            GROUP BY active_contract_club_id
+            """
+        )
+
+    connection.execute(
+        "CREATE INDEX runtime_clubs_name_index ON runtime_clubs(normalized_name)"
+    )
+    connection.execute(
+        "CREATE INDEX runtime_clubs_owner_index "
+        "ON runtime_clubs(owner_wallet_address, leaderboard_rank, club_id)"
+    )
+
+
 def prepare_runtime_database(database_path: Path) -> None:
     if not database_path.is_file():
         raise FileNotFoundError(f"Database not found: {database_path}")
@@ -177,29 +252,6 @@ def prepare_runtime_database(database_path: Path) -> None:
             CREATE INDEX runtime_agents_name_index
               ON runtime_agents(normalized_name);
 
-            DROP TABLE IF EXISTS runtime_clubs;
-            CREATE TABLE runtime_clubs (
-              club_id TEXT PRIMARY KEY,
-              name TEXT NOT NULL,
-              normalized_name TEXT NOT NULL,
-              division INTEGER
-            ) WITHOUT ROWID;
-
-            INSERT INTO runtime_clubs (club_id, name, normalized_name, division)
-            SELECT
-              active_contract_club_id,
-              max(active_contract_club_name),
-              normalize_search(max(active_contract_club_name)),
-              min(CAST(active_contract_club_division AS INTEGER))
-            FROM players
-            WHERE coalesce(active_contract_club_id, '') <> ''
-              AND coalesce(active_contract_club_name, '') <> ''
-              AND normalize_search(active_contract_club_name) <> 'development center'
-            GROUP BY active_contract_club_id;
-
-            CREATE INDEX runtime_clubs_name_index
-              ON runtime_clubs(normalized_name);
-
             DROP TABLE IF EXISTS runtime_database_stats;
             CREATE TABLE runtime_database_stats (
               overall INTEGER,
@@ -209,6 +261,7 @@ def prepare_runtime_database(database_path: Path) -> None:
             );
             """
         )
+        prepare_runtime_clubs(connection)
 
         overall_sql = """
           CASE

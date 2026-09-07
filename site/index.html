@@ -444,6 +444,7 @@
           <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span class="navText">Evaluation</span></a>
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
           <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
+          <a class="navButton" href="/my-clubs" data-page="myclubs"><svg class="navEmoji" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 4.6-2.7 8-7 10-4.3-2-7-5.4-7-10V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg><span class="navText">My Clubs</span></a>
           </div>
           <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon settingsIcon" viewBox="0 0 24 24" aria-hidden="true"><use href="#settingsIconGlyph"></use></svg><span class="navText">Settings</span></a>
           <div id="settingsNavParking" hidden></div>
@@ -738,6 +739,313 @@
             <div id="mflStatsAgeDistribution" class="mflStatsAgeDistribution"></div>
           </section>
         </section>
+        <section id="myClubsPage" class="pageView myClubsPage" hidden>
+          <header class="myClubsHeader">
+            <div>
+              <h2>My Clubs</h2>
+              <p>Clubs owned by your connected wallet.</p>
+            </div>
+          </header>
+          <div id="myClubsGrid" class="myClubsGrid" aria-live="polite"></div>
+          <div class="myClubsStatusWrap">
+            <p id="myClubsStatus" class="myClubsStatus">Loading...</p>
+            <button id="myClubsRetryButton" class="compactButton myClubsRetryButton" type="button" hidden>Retry</button>
+          </div>
+        </section>
+
+        <style>
+          .myClubsPage {
+            width: min(1180px, 100%);
+            margin: 0 auto;
+            padding-bottom: 32px;
+          }
+
+          .myClubsHeader {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+          }
+
+          .myClubsHeader h2,
+          .myClubsHeader p {
+            margin: 0;
+          }
+
+          .myClubsHeader p {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 13px;
+          }
+
+          .myClubsGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+            gap: 14px;
+          }
+
+          .myClubCard {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--surface);
+            color: var(--text);
+            text-decoration: none;
+            transition: border-color var(--mfl-motion-fast, 120ms) ease, transform var(--mfl-motion-fast, 120ms) ease;
+          }
+
+          .myClubCard:hover,
+          .myClubCard:focus-visible {
+            border-color: var(--border-strong);
+          }
+
+          .myClubCard:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+          }
+
+          .myClubLogoFrame {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            min-height: 178px;
+            padding: 22px;
+            border-bottom: 1px solid var(--border);
+            background: var(--page-bg);
+          }
+
+          .myClubLogo {
+            display: block;
+            width: min(150px, 72%);
+            max-height: 138px;
+            object-fit: contain;
+          }
+
+          .myClubLogoPlaceholder {
+            display: grid;
+            place-items: center;
+            width: 104px;
+            height: 104px;
+            border: 1px solid var(--border-strong);
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+          }
+
+          .myClubCardBody {
+            padding: 14px 15px 15px;
+          }
+
+          .myClubName {
+            margin: 0;
+            overflow: hidden;
+            font-size: 16px;
+            line-height: 1.25;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .myClubMeta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            min-height: 18px;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 11px;
+          }
+
+          .myClubFacts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+          }
+
+          .myClubFacts > div {
+            min-width: 0;
+          }
+
+          .myClubFacts strong,
+          .myClubFacts span {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .myClubFacts strong {
+            font-size: 13px;
+            font-weight: 650;
+          }
+
+          .myClubFacts span {
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 10px;
+          }
+
+          .myClubsStatusWrap {
+            display: grid;
+            justify-items: center;
+            gap: 10px;
+            margin-top: 24px;
+          }
+
+          .myClubsStatus {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+          }
+
+          .myClubsStatus.error {
+            color: var(--text);
+          }
+
+          .myClubsRetryButton {
+            min-width: 84px;
+          }
+
+          body[data-page="myclubs"] #homePage {
+            display: none;
+          }
+
+          @media (max-width: 900px) {
+            .myClubsPage {
+              width: 100%;
+            }
+
+            .myClubsGrid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 12px;
+            }
+
+            .myClubLogoFrame {
+              min-height: 156px;
+              padding: 18px;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .myClubsHeader {
+              margin-bottom: 14px;
+            }
+
+            .myClubsHeader p {
+              font-size: 11px;
+            }
+
+            .myClubsGrid {
+              grid-template-columns: minmax(0, 1fr);
+              gap: 10px;
+            }
+
+            .myClubCard {
+              display: grid;
+              grid-template-columns: 112px minmax(0, 1fr);
+              min-height: 122px;
+            }
+
+            .myClubLogoFrame {
+              min-height: 122px;
+              padding: 14px;
+              border-right: 1px solid var(--border);
+              border-bottom: 0;
+            }
+
+            .myClubLogo {
+              width: min(88px, 100%);
+              max-height: 92px;
+            }
+
+            .myClubLogoPlaceholder {
+              width: 74px;
+              height: 74px;
+              font-size: 18px;
+            }
+
+            .myClubCardBody {
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              padding: 12px;
+            }
+
+            .myClubName {
+              font-size: 14px;
+            }
+
+            .myClubMeta {
+              font-size: 10px;
+            }
+
+            .myClubFacts {
+              gap: 8px;
+              margin-top: 10px;
+              padding-top: 9px;
+            }
+
+            .myClubFacts strong {
+              font-size: 11px;
+            }
+
+            .myClubFacts span {
+              font-size: 9px;
+            }
+          }
+
+          html[data-stored-wallet-opt-in="true"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="my-clubs"] #myClubsPage {
+            display: block;
+          }
+
+          html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="my-clubs"] #myPlayersLockedPage {
+            display: grid;
+            place-items: center;
+          }
+        </style>
+
+        <script>
+          (() => {
+            const root = document.documentElement;
+            const body = document.body;
+            const page = document.getElementById("myClubsPage");
+            const initialMyClubs = root.dataset.initialPage === "my-clubs" || root.dataset.initialPage === "myclubs";
+            if (initialMyClubs) {
+              root.dataset.initialLockedPage = "myclubs";
+              body.dataset.page = "myclubs";
+              const home = document.getElementById("homePage");
+              if (home instanceof HTMLElement) home.hidden = true;
+              if (root.dataset.storedWalletOptIn === "true" && page instanceof HTMLElement) page.hidden = false;
+            }
+
+            const syncShell = () => {
+              if (body.dataset.page !== "myclubs") return;
+              const locked = root.dataset.storedWalletOptIn !== "true";
+              const lockedPage = document.getElementById("myPlayersLockedPage");
+              document.querySelectorAll("main > .pageView").forEach((candidate) => {
+                if (!(candidate instanceof HTMLElement)) return;
+                if (locked) candidate.hidden = candidate !== lockedPage;
+                else candidate.hidden = candidate !== page;
+              });
+              const title = document.getElementById("optInLockedTitle");
+              const message = document.getElementById("optInLockedMessage");
+              if (locked && title) title.textContent = "My Clubs";
+              if (locked && message) message.textContent = "In order to see your clubs, you need to opt in.";
+            };
+
+            const bodyObserver = new MutationObserver(syncShell);
+            bodyObserver.observe(body, { attributes: true, attributeFilter: ["data-page"] });
+            const rootObserver = new MutationObserver(syncShell);
+            rootObserver.observe(root, { attributes: true, attributeFilter: ["data-stored-wallet-opt-in"] });
+            queueMicrotask(syncShell);
+          })();
+        </script>
 
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
           <div class="myPlayersLockedContent">
@@ -750,6 +1058,7 @@
           (() => {
             const copy = {
               myplayers: ["My Players", "In order to see your players, you need to opt in."],
+              myclubs: ["My Clubs", "In order to see your clubs, you need to opt in."],
               watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
               settings: ["Settings", "In order to view settings, you need to opt in."],
             }[document.documentElement.dataset.initialLockedPage || ""];

@@ -11,7 +11,7 @@ const responsive = read("responsive.css");
 const generated = read("styles-runtime.css");
 const staticUi = read("static-ui-runtime.js");
 
-const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
+const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myClubsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
 for (const id of ids) assert.match(html, new RegExp(`<section id="${id}" class="[^"]*\\bpageView\\b[^"]*"`), `${id} must remain a pageView.`);
 
 const mainIndex = html.indexOf("<main>");

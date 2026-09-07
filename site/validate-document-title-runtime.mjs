@@ -22,6 +22,7 @@ includes(runtime, 'database: "Database"', "Database must expose a route-aware br
 includes(runtime, 'mfl: "MFL"', "MFL must expose a route-aware browser title.");
 includes(runtime, 'progression: "Progression"', "Progression must expose a route-aware browser title.");
 includes(runtime, 'myplayers: "My Players"', "My Players must expose a route-aware browser title.");
+includes(runtime, 'myclubs: "My Clubs"', "My Clubs must expose a route-aware browser title.");
 includes(runtime, 'settings: "Settings"', "Settings must expose a route-aware browser title.");
 includes(runtime, 'changelog: "Changelog"', "Changelog must expose a route-aware browser title.");
 includes(runtime, 'privacy: "Privacy"', "Privacy must expose a route-aware browser title.");

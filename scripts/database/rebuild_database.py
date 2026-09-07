@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
+from scripts.database import clubs
 from scripts.database import populate_seasons_from_flow
 from scripts.database import run_flow_rebuild
 from scripts.database import run_flow_rebuild_paged
@@ -188,6 +189,13 @@ def rebuild_directly() -> int:
             "Leaderboard wallets",
             run_flow_rebuild.refresh_wallets,
             connection,
+            limiter,
+        )
+        run_flow_rebuild.timed(
+            "Club leaderboard",
+            clubs.refresh_clubs,
+            connection,
+            run_flow_rebuild.request_json,
             limiter,
         )
         source_results, _ = run_flow_rebuild.timed(
