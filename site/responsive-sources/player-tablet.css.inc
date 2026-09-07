@@ -50,8 +50,28 @@
 }
 
 .playerTitle .playerListingBadge {
+  flex: 0 0 14px;
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  margin-left: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   gap: 0;
-  cursor: pointer;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+  transition: none;
+  animation: none;
+}
+
+.playerTitle .playerListingBadge .listingCellIcon {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
 }
 
 .playerTitle .playerListingBadge .listingCellPrice {
@@ -199,10 +219,12 @@
 
 .detailGrid .contractDetailCard strong .playerContractTeam {
   font-size: var(--mfl-player-value-font-size);
+  line-height: 1.2;
 }
 
 .detailGrid .contractDetailCard strong .playerContractDivision {
   font-size: var(--mfl-player-contract-division-font-size);
+  line-height: 1.2;
 }
   .playerInfoPanel .detailGrid .nationalityDetailCard strong {
     gap: var(--mfl-player-nationality-gap);
@@ -216,6 +238,7 @@
 .playerInfoPanel .detailGrid strong .playerDetailAgeLine {
   gap: var(--mfl-player-age-icon-gap);
   overflow: visible;
+  line-height: 1;
 }
 
 .playerInfoPanel .detailGrid .playerAgeMarker {
@@ -255,6 +278,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.playerContractLine {
+  line-height: 1.2;
 }
 
 .detailGrid > div > span,
