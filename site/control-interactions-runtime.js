@@ -291,6 +291,57 @@
     return /^\/players\/\d{1,20}$/i.test(pathname) ? pathname : "";
   }
 
+  function compactPlayerPageName(value) {
+    const fullName = String(value || "").trim().replace(/\s+/g, " ");
+    if (!fullName) return "";
+    return fullName.replace(/^(\S)[^\s]*\s+(?:.*\s)?(\S+)$/, "$1. $2");
+  }
+
+  function syncPlayerPageDetails() {
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return false;
+    const mobile = PLAYER_VIEW_SCROLL_MEDIA.matches;
+
+    detail.querySelectorAll(".playerTitleName").forEach((target) => {
+      if (!(target instanceof HTMLElement)) return;
+      const rendered = String(target.textContent || "").trim();
+      const stored = String(target.dataset.playerFullName || "").trim();
+      let fullName = stored;
+      if (!fullName || (rendered && rendered !== fullName && rendered !== compactPlayerPageName(fullName))) {
+        fullName = rendered;
+        target.dataset.playerFullName = fullName;
+      }
+      if (!fullName) return;
+      const displayName = mobile ? compactPlayerPageName(fullName) : fullName;
+      if (target.textContent !== displayName) target.textContent = displayName;
+      if (target.getAttribute("aria-label") !== fullName) target.setAttribute("aria-label", fullName);
+    });
+
+    const playerId = detail.querySelector("#copyPlayerIdButton");
+    if (playerId instanceof HTMLElement) {
+      if (mobile) playerId.removeAttribute("data-tooltip");
+      else playerId.dataset.tooltip = "Click to copy";
+    }
+
+    const listing = detail.querySelector(".playerTitle .listingCellContent");
+    if (listing instanceof HTMLElement) {
+      listing.classList.add("playerListingBadge");
+      const price = String(listing.querySelector(".listingCellPrice")?.textContent || "").trim();
+      if (mobile && price) {
+        listing.dataset.tooltip = price;
+        listing.setAttribute("role", "button");
+        listing.tabIndex = 0;
+        listing.setAttribute("aria-label", `Listing price ${price}`);
+      } else {
+        listing.removeAttribute("data-tooltip");
+        listing.removeAttribute("role");
+        listing.removeAttribute("tabindex");
+        if (price) listing.setAttribute("aria-label", `For Sale at ${price}`);
+      }
+    }
+    return true;
+  }
+
   function currentPlayerAttributeViews() {
     const views = document.querySelector("#playerDetail .playerAttributeViews");
     return views instanceof HTMLElement ? views : null;
@@ -411,15 +462,17 @@
     if (!(detail instanceof HTMLElement) || typeof MutationObserver !== "function") return;
     playerAttributeViewMutationObserver?.disconnect();
     playerAttributeViewMutationObserver = new MutationObserver((records) => {
+      syncPlayerPageDetails();
       if (!records.some(playerAttributeViewControlsChanged)) return;
       if (!syncInitialPlayerViewCue()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       else if (!initialPlayerViewCuePending()) window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
       schedulePlayerAttributeViewScrollRestore();
     });
-    playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });
+    playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true, characterData: true });
   }
 
   function onPlayerViewScrollMediaChange(event) {
+    syncPlayerPageDetails();
     if (event.matches) {
       syncPlayerAttributeViewScrollPath();
       return;
@@ -517,7 +570,6 @@
     event.stopPropagation();
     scheduleClickSuppressionClear();
   }
-
   function onPointerCancel(event) {
     if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
     clearGesture();
@@ -554,6 +606,7 @@
   disableSearchSpellcheck();
   initializeAddFilterControl();
   syncPlayerAttributeViewScrollPath();
+  syncPlayerPageDetails();
   observePlayerAttributeViewRenders();
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
@@ -596,6 +649,7 @@
   window.__mflControlInteractionsRuntime = Object.freeze({
     registerEscapeHandler,
     motionDurationMs,
+    syncPlayerPageDetails,
     destroy,
   });
 })();

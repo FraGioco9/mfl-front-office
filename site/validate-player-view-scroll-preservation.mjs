@@ -46,7 +46,7 @@ for (const token of [
   'if (!records.some(playerAttributeViewControlsChanged)) return;',
   'syncInitialPlayerViewCue()',
   'schedulePlayerAttributeViewScrollRestore();',
-  'playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true });',
+  'playerAttributeViewMutationObserver.observe(detail, { childList: true, subtree: true, characterData: true });',
   'capturePlayerAttributeViewScroll(event.target);',
   'document.addEventListener("scroll", onPlayerAttributeViewScroll, true);',
   'observePlayerAttributeViewRenders();',

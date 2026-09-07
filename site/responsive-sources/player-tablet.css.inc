@@ -49,6 +49,39 @@
   overflow-wrap: anywhere;
 }
 
+.playerTitle .playerListingBadge {
+  flex: 0 0 14px;
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  margin-left: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 0;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+  transition: none;
+  animation: none;
+}
+
+.playerTitle .playerListingBadge .listingCellIcon {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.playerTitle .playerListingBadge .listingCellPrice {
+  display: none;
+}
+
+.playerHero h2 .playerNoteIcon {
+  font-size: clamp(14px, 3.6vw, 17px);
+}
+
 .playerHeroActions {
   grid-area: actions;
   display: block;
@@ -180,15 +213,18 @@
     flex-wrap: nowrap;
     overflow: hidden;
     font-size: var(--mfl-player-value-font-size);
+    line-height: 1.2;
     white-space: nowrap;
   }
 
 .detailGrid .contractDetailCard strong .playerContractTeam {
   font-size: var(--mfl-player-value-font-size);
+  line-height: 1.2;
 }
 
 .detailGrid .contractDetailCard strong .playerContractDivision {
   font-size: var(--mfl-player-contract-division-font-size);
+  line-height: 1.2;
 }
   .playerInfoPanel .detailGrid .nationalityDetailCard strong {
     gap: var(--mfl-player-nationality-gap);
@@ -202,6 +238,7 @@
 .playerInfoPanel .detailGrid strong .playerDetailAgeLine {
   gap: var(--mfl-player-age-icon-gap);
   overflow: visible;
+  line-height: 1;
 }
 
 .playerInfoPanel .detailGrid .playerAgeMarker {
@@ -241,6 +278,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.playerContractLine {
+  line-height: 1.2;
 }
 
 .detailGrid > div > span,
@@ -317,8 +358,6 @@
 }
 
 .playerNotesCount {
-  right: var(--mfl-player-box-padding-inline);
-  bottom: clamp(5px, 1.2vw, 8px);
   font-size: clamp(9px, 2.2vw, 10px);
 }
 
