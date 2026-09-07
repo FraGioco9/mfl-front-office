@@ -289,9 +289,7 @@
       html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
         display: none;
       }
-      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
-      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
-        visibility: hidden;
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"] #playerPage {
         pointer-events: none;
       }
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
@@ -893,25 +891,25 @@
                 <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
               </div>
               <div class="playerHeroIdentity">
-                <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
-                <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
+                <button class="playerEyebrow playerIdText" type="button" disabled>ID #000000</button>
+                <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span><span class="playerTitleNoteIcon" data-player-note-title-icon></span></h2>
                 <p>&nbsp;</p>
               </div>
-              <div class="playerHeroActions" style="visibility:hidden">
+              <div class="playerHeroActions">
                 <div class="playerHeroActionMenu">
-                  <a class="playerExternalButton playerHeroPrimaryAction" tabindex="-1" aria-hidden="true">Open link</a>
-                  <button class="playerHeroActionMenuButton" type="button" disabled aria-hidden="true"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></button>
+                  <a class="playerExternalButton playerHeroPrimaryAction" tabindex="-1" aria-hidden="true" aria-disabled="true">Open link</a>
+                  <button class="playerHeroActionMenuButton" type="button" disabled aria-hidden="true" aria-disabled="true"><svg class="playerHeroChevronIcon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></button>
                   <div class="playerHeroActionMenuDropdown" hidden></div>
                 </div>
               </div>
             </section>
-            <section class="playerGrid" aria-hidden="true">
+            <section class="playerGrid playerGridPending" aria-hidden="true">
               <div class="playerStack">
                 <div class="playerPanel playerInfoPanel">
                   <h3>Profile</h3>
                   <div class="detailGrid">
                     <div><span>Nationality</span><strong>-</strong></div>
-                    <div><span>Age</span><strong>-</strong></div>
+                    <div><span>Age</span><strong data-mfl-static-player-age><span class="playerDetailAgeLine">-</span></strong></div>
                     <div><span>Height</span><strong>-</strong></div>
                     <div><span>Foot</span><strong>-</strong></div>
                     <div><span>Seasons</span><strong>-</strong></div>
@@ -958,10 +956,62 @@
             const root = document.documentElement;
             if (root.dataset.initialEntityRoute !== "player") return;
             const playerPage = document.getElementById("playerPage");
+            const playerDetail = document.getElementById("playerDetail");
+            const hero = playerDetail?.querySelector(":scope > .playerHero.playerHeroPending");
             const notesPanel = document.querySelector("#playerPage [data-mfl-static-player-notes]");
             const views = document.querySelector("#playerPage .playerAttributeViews");
+            const routeMatch = String(window.location.pathname || "").match(/^\/players\/(\d{1,20})\/?$/i);
+            const playerId = routeMatch ? String(routeMatch[1] || "") : "";
             if (playerPage instanceof HTMLElement) playerPage.hidden = false;
+            if (hero instanceof HTMLElement && playerId) {
+              hero.dataset.playerShellId = playerId;
+              const idButton = hero.querySelector(".playerIdText");
+              if (idButton instanceof HTMLElement) idButton.textContent = "ID #" + playerId;
+            }
             if (notesPanel instanceof HTMLElement) notesPanel.hidden = root.dataset.storedWalletOptIn !== "true";
+
+            const staticAge = document.querySelector("#playerPage [data-mfl-static-player-age]");
+            if (staticAge instanceof HTMLElement && playerId) {
+              let context = null;
+              try {
+                const value = JSON.parse(sessionStorage.getItem("mfl-player-first-paint-v1:" + playerId) || "null");
+                context = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+              } catch {}
+              const known = context?.knownValues && typeof context.knownValues === "object" ? context.knownValues : null;
+              const ageEntry = known?.age;
+              const retirementEntry = known?.retirement_years;
+              const ageText = String(ageEntry?.display ?? ageEntry?.raw ?? "-").trim() || "-";
+              const line = document.createElement("span");
+              line.className = "playerDetailAgeLine";
+              line.appendChild(document.createTextNode(ageText));
+              const retirementYears = retirementEntry?.raw === null || retirementEntry?.raw === undefined || retirementEntry?.raw === ""
+                ? Number.NaN
+                : Number(retirementEntry.raw);
+              if (Number.isFinite(retirementYears) && [0, 1, 2, 3].includes(retirementYears)) {
+                const marker = document.createElement("i");
+                marker.classList.add("retirementMarker", "playerAgeMarker");
+                if (retirementYears === 0) {
+                  marker.classList.add("retirementMarker--retired");
+                  marker.dataset.tooltip = "Retired";
+                  marker.setAttribute("aria-label", "Retired");
+                  const image = document.createElement("img");
+                  image.src = "/retirement-calendar-x-2.svg";
+                  image.width = 16;
+                  image.height = 16;
+                  image.alt = "";
+                  image.setAttribute("aria-hidden", "true");
+                  marker.appendChild(image);
+                } else {
+                  const label = retirementYears + " year" + (retirementYears === 1 ? "" : "s") + " left";
+                  marker.classList.add("retirementMarker--retiring-" + retirementYears);
+                  marker.dataset.tooltip = label;
+                  marker.setAttribute("aria-label", label);
+                }
+                line.appendChild(marker);
+              }
+              staticAge.replaceChildren(line);
+            }
+
             if (views instanceof HTMLElement) {
               const progressionAccess = root.dataset.storedProgressionAccess === "true";
               views.querySelectorAll(":scope > .playerAttributeViewButton[data-view]").forEach((button) => {
@@ -980,9 +1030,22 @@
                 shell.appendChild(views);
               }
 
+              const renderedItems = Array.from(views.children).filter((child) => {
+                if (!(child instanceof HTMLElement) || child.hidden) return false;
+                const style = getComputedStyle(child);
+                return style.display !== "none" && style.position !== "absolute" && child.getClientRects().length > 0;
+              });
+              const viewStyle = getComputedStyle(views);
+              const gap = Number.parseFloat(viewStyle.columnGap || viewStyle.gap) || 0;
+              const contentWidth = renderedItems.reduce((total, item) => {
+                const style = getComputedStyle(item);
+                return total + item.getBoundingClientRect().width
+                  + (Number.parseFloat(style.marginLeft) || 0)
+                  + (Number.parseFloat(style.marginRight) || 0);
+              }, 0) + gap * Math.max(0, renderedItems.length - 1);
               const overflowing = window.matchMedia("(max-width: 900px)").matches
                 && views.getClientRects().length > 0
-                && views.scrollWidth - views.clientWidth > 2;
+                && contentWidth - views.clientWidth > 2;
               views.classList.toggle("mflViewsOverflowing", overflowing);
               let arrow = shell.querySelector(":scope > .viewsScrollButton.viewsScrollButtonRight");
               if (overflowing && !(arrow instanceof HTMLButtonElement)) {
@@ -1006,10 +1069,9 @@
                 if (!overflowing && arrow.dataset.mflFirstPaintScrollButton === "true") arrow.remove();
               }
             }
-            root.dataset.playerFirstPaintCuesReady = "true";
+            root.dataset.playerFirstPaintCuesReady = "false";
           })();
         </script>
-
         <section id="settingsPage" class="pageView settingsPage" hidden>
           <h2 class="tablePageTitle">Settings</h2>
           <section class="settingsPanel" aria-label="Settings">

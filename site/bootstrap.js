@@ -979,6 +979,13 @@
   function primePlayerSkeleton() {
     const playerDetail = document.getElementById("playerDetail");
     if (!(playerDetail instanceof HTMLElement)) return;
+    const staticHero = playerDetail.dataset.mflStaticPlayerShell === "true"
+      ? playerDetail.querySelector(":scope > .playerHero.playerHeroPending[data-player-shell-id]")
+      : null;
+    if (staticHero instanceof HTMLElement) {
+      playerDetail.dataset.loadingShell = "true";
+      return;
+    }
     const optedIn = root.dataset.storedWalletOptIn === "true";
     const notesPanel = optedIn
       ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/100</span></div></div>`

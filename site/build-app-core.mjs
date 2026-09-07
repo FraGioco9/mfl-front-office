@@ -1,4 +1,3 @@
-import "./build-html.mjs";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -11,7 +10,9 @@ import { synchronizeReleaseProjections } from "./sync-release-projections.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const releasePath = resolve(siteRoot, "release.json");
+const indexPath = resolve(siteRoot, "index.html");
 const tableWidthRuntimePath = resolve(siteRoot, "table-width-runtime.js");
+const playerHtmlSourcePath = resolve(siteRoot, "html-sources", "player.html");
 
 async function writeFileIfChanged(path, content) {
   let current = null;
@@ -25,7 +26,85 @@ async function writeFileIfChanged(path, content) {
   return true;
 }
 
+function normalizePlayerFirstPaintShell(source, canonicalPlayerShell) {
+  const hiddenEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+        display: none;
+      }`;
+  const previousLayoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage {
+        visibility: hidden;
+        pointer-events: none;
+      }`;
+  const cueGatedLayoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage,
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage {
+        visibility: hidden;
+        pointer-events: none;
+      }`;
+  const layoutAwareEntityGuard = `      html:not(.mflInitialRouteResolved)[data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"] #playerPage {
+        pointer-events: none;
+      }`;
+  const emptyPlayerShell = `        <section id="playerPage" class="pageView playerPage" hidden>
+          <div id="playerDetail" class="playerDetail"></div>
+        </section>`;
+  const staticPlayerShell = String(canonicalPlayerShell || "")
+  .replace(/\r\n?/g, "\n")
+  .replace(/\s*$/, "");
+if (!staticPlayerShell.includes('data-mfl-static-player-shell="true"')
+    || !staticPlayerShell.includes('data-mfl-static-player-age')
+    || !staticPlayerShell.includes('root.dataset.playerFirstPaintCuesReady = "false";')) {
+  throw new Error("Canonical Player first-paint HTML fragment is incomplete.");
+}
+
+  let normalized = String(source || "");
+  if (normalized.includes(hiddenEntityGuard)) {
+    normalized = normalized.replace(hiddenEntityGuard, layoutAwareEntityGuard);
+  } else if (normalized.includes(previousLayoutAwareEntityGuard)) {
+    normalized = normalized.replace(previousLayoutAwareEntityGuard, layoutAwareEntityGuard);
+  } else if (normalized.includes(cueGatedLayoutAwareEntityGuard)) {
+    normalized = normalized.replace(cueGatedLayoutAwareEntityGuard, layoutAwareEntityGuard);
+  } else if (!normalized.includes(layoutAwareEntityGuard)) {
+    throw new Error("Player first-paint route guard owner is missing.");
+  }
+
+  if (normalized.includes(staticPlayerShell)) return normalized;
+if (normalized.includes('data-mfl-static-player-shell="true"')) {
+  const shellStart = normalized.indexOf('        <section id="playerPage" class="pageView playerPage" hidden>');
+  const scriptStart = normalized.indexOf('        <script>', shellStart);
+  const scriptEndMarker = '        </script>';
+  const scriptEndStart = scriptStart >= 0 ? normalized.indexOf(scriptEndMarker, scriptStart) : -1;
+  if (shellStart < 0 || scriptStart < 0 || scriptEndStart < 0) {
+    throw new Error("Existing Player first-paint shell cannot be migrated from the canonical fragment boundary.");
+  }
+  const scriptEnd = scriptEndStart + scriptEndMarker.length;
+  normalized = normalized.slice(0, shellStart) + staticPlayerShell + normalized.slice(scriptEnd);
+  if (!normalized.includes(staticPlayerShell)) {
+    throw new Error("Player first-paint static shell migration did not produce the canonical projection.");
+  }
+  return normalized;
+}
+
+  const shellMatches = normalized.split(emptyPlayerShell).length - 1;
+  if (shellMatches !== 1) {
+    throw new Error(`Player first-paint static shell expected exactly one owned projection, found ${shellMatches}.`);
+  }
+  return normalized.replace(emptyPlayerShell, staticPlayerShell);
+}
+
 await synchronizeReleaseProjections(siteRoot);
+const playerHtmlSource = String(await readFile(playerHtmlSourcePath, "utf8"))
+  .replace(/\r\n?/g, "\n")
+  .replace(/\s*$/, "");
+const indexSource = String(await readFile(indexPath, "utf8")).replace(/\r\n?/g, "\n");
+await writeFileIfChanged(indexPath, normalizePlayerFirstPaintShell(indexSource, playerHtmlSource));
 
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release)).replace(/\s*$/, "");

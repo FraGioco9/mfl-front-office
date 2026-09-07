@@ -1,12 +1,15 @@
-import { invariant, includes } from "./validation/assertions.mjs";
-import { readValidationText } from "./validation-text.mjs";
+import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { readCanonicalCoreArtifacts } from "./validate-core-sources.mjs";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
-const read = (path) => readValidationText(path, import.meta.url);
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const invariant = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+const includes = (source, value, message) => invariant(source.includes(value), message);
 const occurrences = (source, value) => source.split(value).length - 1;
 
 const [indexHtml, stylesBase, bootstrapRuntime, staticUiRuntime, coreSource, releaseJson] = await Promise.all([
@@ -74,7 +77,7 @@ includes(indexHtml, 'html:not(.mflInitialRouteResolved):not([data-initial-page="
 includes(indexHtml, 'body[data-page="notfound"] main > .pageView:not(#notFoundPage)', "A typed not-found route must suppress every previously primed application page.");
 includes(indexHtml, 'root.dataset.initialEntityRoute = initialEntityRoute;', "Direct entity URLs must publish an early first-paint identity guard.");
 includes(indexHtml, 'data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage', "A direct Club URL must not reveal the table shell before the Club identity is confirmed.");
-includes(indexHtml, 'data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage', "A direct Player URL must not reveal the Player shell before the Player identity is confirmed.");
+includes(indexHtml, 'html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"] #playerPage {\n        pointer-events: none;\n      }', "A direct Player URL must expose its structural shell immediately while keeping it non-interactive until initial route release.");
 
 includes(bootstrapRuntime, 'setLoadingValue("homePlayers");', "Home route priming must retain the Players tracked loading placeholder.");
 includes(bootstrapRuntime, 'setLoadingValue("homeWallets");', "Home route priming must retain the Wallets tracked loading placeholder.");
@@ -142,4 +145,4 @@ await context.__loadSummary();
 invariant(fetchCount === 1, "Returning Home after a successful summary load must not fetch again.");
 invariant(updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87, "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.");
 
-console.log("Source-owned Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, and cached Home counts repaint without refetching.");
+console.log("Source-owned Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, Club waits for verification, Player paints its structural shell immediately, and cached Home counts repaint without refetching.");
