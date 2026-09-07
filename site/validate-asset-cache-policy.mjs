@@ -14,6 +14,7 @@ const coreRuntimePaths = [
   "./modules/app-core-evaluation-runtime.js",
   "./modules/app-core-mfl-stats-runtime.js",
   "./modules/app-core-club-runtime.js",
+  "./modules/app-core-my-clubs-runtime.js",
   "./modules/app-core-settings-runtime.js",
   "./modules/app-core-player-runtime.js",
   "./modules/app-core-table-runtime.js",

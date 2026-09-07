@@ -70,6 +70,7 @@ export const ROUTE_CORE_PATHS = Object.freeze({
   evaluation: "/modules/app-core-evaluation-runtime.js",
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
   club: "/modules/app-core-club-runtime.js",
+  myclubs: "/modules/app-core-my-clubs-runtime.js",
   settings: "/modules/app-core-settings-runtime.js",
   player: "/modules/app-core-player-runtime.js",
   table: "/modules/app-core-table-runtime.js",
@@ -269,6 +270,7 @@ export function browserConfigRuntimeSource(release) {
   function normalizePageName(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
     if (page === "my-players") return "myplayers";
+    if (page === "my-clubs") return "myclubs";
     if (page === "databasestats") return "database";
     if (page === "clubs") return "club";
     return page || "home";
@@ -449,6 +451,7 @@ export function browserConfigRuntimeSource(release) {
 
     if (pageSegment === "home" && segments.length === 1) return homeRequest(path);
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
+    if ((pageSegment === "my-clubs" || pageSegment === "myclubs") && segments.length === 1) return requestResult(path, "myclubs", {}, "/my-clubs");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
     if (pageSegment === "privacy" && segments.length === 1) return requestResult(path, "privacy", {}, "/privacy");

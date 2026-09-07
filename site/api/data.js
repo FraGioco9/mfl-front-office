@@ -11,6 +11,7 @@ const {
   summaryData,
   mflStatsData,
 } = require("./_data-views");
+const { myClubsData } = require("./_clubs");
 const { filterOptionsData } = require("./_filter-options");
 const { databaseStatsData } = require("./_database-stats");
 const { mflStatsSummaryData } = require("./_mfl-stats-summary");
@@ -50,6 +51,7 @@ module.exports = async function handler(request, response) {
     else if (mode === "page") data = await pagedData(pageRequest, signedWallet, fullAccess, ownedProgression);
     else if (mode === "search") data = searchData(request);
     else if (mode === "summary") data = summaryData();
+    else if (mode === "my-clubs") data = myClubsData(signedWallet);
     else if (mode === "filter-options") data = filterOptionsData();
     else if (mode === "database-stats") data = databaseStatsData();
     else if (mode === "mfl-stats-summary") data = mflStatsSummaryData();
