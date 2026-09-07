@@ -28,9 +28,19 @@ export function validateResponsivePlayer(context) {
   excludes(appCore, "function compactPlayerPageName(value) {", "Responsive Player presentation must not regrow the canonical Player core.");
   excludes(appCore, "function syncPlayerPageDetails() {", "Responsive Player presentation must remain outside the canonical Player core ownership budget.");
 
+  includes(responsive, ".playerTitle .playerListingBadge {\n  flex: 0 0 14px;", "Mobile Player titles must reduce the Listing badge to the Listing icon box immediately after the name.");
+  includes(responsive, "margin-left: 4px;", "The mobile Listing icon must sit directly to the right of the compact Player name.");
+  includes(responsive, "background: transparent;", "The mobile Listing control must render the Listing icon only without the desktop price badge background.");
+  includes(responsive, "-webkit-tap-highlight-color: transparent;", "Tapping the mobile Listing icon must not show browser press feedback before its tooltip.");
+  includes(responsive, "transition: none;\n  animation: none;", "The mobile Listing icon must not animate when tapped; only its tooltip may appear.");
+  includes(responsive, ".playerTitle .playerListingBadge .listingCellIcon {\n  flex: 0 0 14px;\n  width: 14px;\n  height: 14px;\n}", "Mobile Player titles must preserve the Listing glyph itself at a compact readable size.");
   includes(responsive, ".playerTitle .playerListingBadge .listingCellPrice {\n  display: none;\n}", "Mobile Player titles must show the listing icon without persistent price text.");
-  includes(responsive, ".playerHero h2 .playerNoteIcon {\n  font-size: clamp(14px, 3.6vw, 17px);\n}", "The Player Note icon must scale proportionally on small screens.");
+  includes(responsive, ".playerHero h2 .playerNoteIcon {\n  font-size: clamp(14px, 3.6vw, 17px);\n}", "The Player Note icon must scale proportionally on small screens until its dedicated redesign is implemented.");
   includes(responsive, ".detailGrid strong {\n    flex-wrap: nowrap;\n    overflow: hidden;\n    font-size: var(--mfl-player-value-font-size);\n    line-height: 1.2;", "Mobile Profile values must reserve descender-safe line height.");
+  includes(responsive, ".detailGrid .contractDetailCard strong .playerContractTeam {\n  font-size: var(--mfl-player-value-font-size);\n  line-height: 1.2;\n}", "Mobile Contract club names must reserve enough line height for descenders.");
+  includes(responsive, ".detailGrid .contractDetailCard strong .playerContractDivision {\n  font-size: var(--mfl-player-contract-division-font-size);\n  line-height: 1.2;\n}", "Mobile Contract division text must reserve enough line height for descenders.");
+  includes(responsive, ".playerContractLine {\n  line-height: 1.2;\n}", "The mobile Contract baseline container must not clip descenders.");
+  includes(responsive, ".playerInfoPanel .detailGrid strong .playerDetailAgeLine {\n  gap: var(--mfl-player-age-icon-gap);\n  overflow: visible;\n  line-height: 1;\n}", "Age must keep its original line box so the retirement marker remains vertically aligned while other Profile values use descender-safe line height.");
 
   const notesCountStart = responsive.indexOf(".playerNotesCount {");
   const notesCountEnd = notesCountStart >= 0 ? responsive.indexOf("}", notesCountStart) : -1;
