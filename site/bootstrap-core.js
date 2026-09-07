@@ -366,6 +366,7 @@
   const initialRouteToken = window.__mflInteractionBusy.begin(INITIAL_ROUTE_BOOTSTRAP_REASON);
   let initialRouteFinished = false;
   let initialRouteFinishFrame = 0;
+  let initialPlayerViewCueReadyFrames = 0;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;
 
@@ -400,17 +401,45 @@
       && Boolean(views.style.boxShadow);
   }
 
+  function scheduleInitialRouteFinishFrame() {
+    if (initialRouteFinishFrame) return;
+    initialRouteFinishFrame = requestAnimationFrame(() => {
+      initialRouteFinishFrame = 0;
+      finishInitialRoute();
+    });
+  }
+
   const finishInitialRoute = () => {
     if (initialRouteFinished) return;
-    if (!initialPlayerViewCueReady()) {
-      if (!initialRouteFinishFrame) {
-        initialRouteFinishFrame = requestAnimationFrame(() => {
-          initialRouteFinishFrame = 0;
-          finishInitialRoute();
-        });
+    const root = document.documentElement;
+    const mobilePlayerRoute = root.dataset.initialEntityRoute === "player"
+      && window.matchMedia("(max-width: 900px)").matches;
+
+    if (mobilePlayerRoute) {
+      root.dataset.playerFirstPaintCuesReady = "false";
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      if (!initialPlayerViewCueReady()) {
+        initialPlayerViewCueReadyFrames = 0;
+        scheduleInitialRouteFinishFrame();
+        return;
       }
+      if (initialPlayerViewCueReadyFrames < 1) {
+        initialPlayerViewCueReadyFrames += 1;
+        scheduleInitialRouteFinishFrame();
+        return;
+      }
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+      if (!initialPlayerViewCueReady()) {
+        initialPlayerViewCueReadyFrames = 0;
+        scheduleInitialRouteFinishFrame();
+        return;
+      }
+      root.dataset.playerFirstPaintCuesReady = "true";
+    } else if (!initialPlayerViewCueReady()) {
+      scheduleInitialRouteFinishFrame();
       return;
     }
+
     initialRouteFinished = true;
     if (initialRouteFinishFrame) cancelAnimationFrame(initialRouteFinishFrame);
     initialRouteFinishFrame = 0;

@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
-const buildAppCore = read("./html-sources/first-paint.html") + read("./html-sources/player.html");
+const buildAppCore = read("./build-app-core.mjs");
 const bootstrap = read("./bootstrap.js");
+const bootstrapCore = read("./bootstrap-core.js");
 const interactions = read("./control-interactions-runtime.js");
 const shared = read("./shared-table-ui-runtime.js");
 const player = read("./modules/core-sources/player.js");
 const appEntry = read("./modules/app-entry.js");
+const playerHtml = read("./html-sources/player.html");
 
 for (const token of [
   'const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");',
@@ -40,7 +42,7 @@ for (const token of [
   'button.getAttribute("aria-hidden") === "false"',
   'function syncInitialPlayerViewCue() {',
   'root.dataset.playerFirstPaintCuesReady = "false";',
-  'root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";',
+  'return currentPlayerViewCueReady();',
   'function observePlayerAttributeViewRenders() {',
   'playerAttributeViewMutationObserver = new MutationObserver((records) => {',
   'if (!records.some(playerAttributeViewControlsChanged)) return;',
@@ -87,39 +89,64 @@ assert.ok(
   "Bootstrap and canonical Player loading must use the same stored progression-access decision for the visible first-paint view row.",
 );
 
+const canonicalGuardStart = buildAppCore.indexOf('const layoutAwareEntityGuard = `');
+const canonicalGuardEnd = buildAppCore.indexOf('`;\n  const emptyPlayerShell', canonicalGuardStart);
+const canonicalGuard = buildAppCore.slice(canonicalGuardStart, canonicalGuardEnd);
+assert.ok(
+  canonicalGuardStart >= 0
+    && canonicalGuard.includes('html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"] #playerPage')
+    && canonicalGuard.includes('pointer-events: none;')
+    && !canonicalGuard.includes('visibility: hidden;')
+    && !canonicalGuard.includes('data-player-first-paint-cues-ready'),
+  "The canonical Player route guard must keep the structural page visible; legacy migration strings may not define active first-paint visibility.",
+);
+assert.ok(
+  buildAppCore.includes('const playerHtmlSourcePath = resolve(siteRoot, "html-sources", "player.html");')
+    && buildAppCore.includes("normalizePlayerFirstPaintShell(indexSource, playerHtmlSource)"),
+  "The Player parser-first-paint projection must come from the canonical Player HTML fragment.",
+);
 for (const token of [
-  'html:not(.mflInitialRouteResolved)[data-initial-entity-route="player"]:not([data-player-first-paint-cues-ready="true"]) #playerPage',
   'const views = document.querySelector("#playerPage .playerAttributeViews");',
   'const progressionAccess = root.dataset.storedProgressionAccess === "true";',
   'shell.className = "viewsScrollerShell";',
-  'views.scrollWidth - views.clientWidth > 2;',
+  'const renderedItems = Array.from(views.children).filter((child) => {',
+  'const contentWidth = renderedItems.reduce((total, item) => {',
+  'contentWidth - views.clientWidth > 2;',
   'views.classList.toggle("mflViewsOverflowing", overflowing);',
   'arrow.className = "viewsScrollButton viewsScrollButtonRight";',
   'arrow.classList.toggle("mflViewsScrollButtonVisible", overflowing);',
   'arrow.dataset.mflFirstPaintScrollButton = "true";',
-  'root.dataset.playerFirstPaintCuesReady = "true";',
+  'root.dataset.playerFirstPaintCuesReady = "false";',
 ]) {
-  assert.ok(buildAppCore.includes(token), `Player parser-first-paint cue projection is missing: ${token}`);
+  assert.ok(playerHtml.includes(token), `Player parser-first-paint cue fragment is missing: ${token}`);
 }
-const staticRevealStart = buildAppCore.indexOf('const root = document.documentElement;', buildAppCore.indexOf('data-mfl-static-player-shell'));
-const staticRevealEnd = buildAppCore.indexOf('</script>', staticRevealStart);
-const staticReveal = buildAppCore.slice(staticRevealStart, staticRevealEnd);
+const staticRevealStart = playerHtml.indexOf("<script>");
+const staticRevealEnd = playerHtml.indexOf("</script>", staticRevealStart);
+const staticReveal = playerHtml.slice(staticRevealStart, staticRevealEnd);
 const staticPageLayoutIndex = staticReveal.indexOf("playerPage.hidden = false;");
-const staticOverflowIndex = staticReveal.indexOf("views.scrollWidth - views.clientWidth > 2;");
+const staticOverflowIndex = staticReveal.indexOf("contentWidth - views.clientWidth > 2;");
 const staticArrowIndex = staticReveal.indexOf('arrow.className = "viewsScrollButton viewsScrollButtonRight";');
 const staticVisibleIndex = staticReveal.indexOf('arrow.classList.toggle("mflViewsScrollButtonVisible", overflowing);');
-const staticReadyIndex = staticReveal.indexOf('root.dataset.playerFirstPaintCuesReady = "true";');
+const staticGateIndex = staticReveal.indexOf('root.dataset.playerFirstPaintCuesReady = "false";');
 assert.ok(
   staticPageLayoutIndex >= 0
     && staticOverflowIndex > staticPageLayoutIndex
     && staticArrowIndex > staticOverflowIndex
     && staticVisibleIndex > staticArrowIndex
-    && staticReadyIndex > staticVisibleIndex,
-  "Player refresh must establish layout, measure overflow, create and mark the right arrow visible, and only then release the parser first-paint cue gate.",
+    && staticGateIndex > staticVisibleIndex,
+  "Player refresh must establish visible shell layout, measure overflow, and prepare the right arrow while the parser only marks cue readiness pending.",
 );
 assert.ok(
   staticReveal.includes('button.hidden = !progressionAccess;'),
   "The parser-first-paint Player strip must hide progression-only controls before measuring overflow.",
+);
+assert.ok(
+  staticReveal.includes('const renderedItems = Array.from(views.children).filter((child) => {')
+    && staticReveal.includes('style.position !== "absolute"')
+    && staticReveal.includes('const gap = Number.parseFloat(viewStyle.columnGap || viewStyle.gap) || 0;')
+    && staticReveal.includes('item.getBoundingClientRect().width')
+    && staticReveal.includes('contentWidth - views.clientWidth > 2;'),
+  "Parser-first-paint Player overflow must use the same rendered-item width contract as shared runtime so the fade class cannot flip during hydration.",
 );
 
 const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
@@ -142,9 +169,11 @@ assert.ok(
   "The regression must also remain tied to the synchronous Player view-selection rerender.",
 );
 assert.ok(
-  player.includes("detail.replaceChildren(hero, createPendingPlayerGrid(context));")
+  player.includes("existingHero.dataset.playerShellId === playerId")
+    && player.includes("updatePendingHero(existingHero, context);")
+    && player.includes("existingGrid.replaceWith(nextGrid)")
     && player.includes('document.documentElement.dataset.initialEntityVerified = "player";'),
-  "The regression must cover the hard-refresh pending-grid replacement that destroys parser-owned cue DOM before Player verification.",
+  "The hard-refresh Player runtime must adopt the parser-owned hero in place while allowing only its pending grid to upgrade.",
 );
 assert.ok(
   appEntry.includes("await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();")
@@ -195,14 +224,37 @@ const cueSyncEnd = interactions.indexOf("\n  function observePlayerAttributeView
 const cueSync = interactions.slice(cueSyncStart, cueSyncEnd);
 const readinessFalseIndex = cueSync.indexOf('root.dataset.playerFirstPaintCuesReady = "false";');
 const cueSyncIndex = cueSync.indexOf("window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();");
-const cueVerifyIndex = cueSync.indexOf("const ready = currentPlayerViewCueReady();");
-const readinessTrueIndex = cueSync.indexOf('root.dataset.playerFirstPaintCuesReady = ready ? "true" : "false";');
+const cueVerifyIndex = cueSync.indexOf("return currentPlayerViewCueReady();");
 assert.ok(
   readinessFalseIndex >= 0
     && cueSyncIndex > readinessFalseIndex
     && cueVerifyIndex > cueSyncIndex
-    && readinessTrueIndex > cueVerifyIndex,
-  "The real Player strip must invalidate stale parser readiness, synchronously build its shared cue, verify the exact visible right-arrow state, and only then release first-paint readiness.",
+    && !cueSync.includes('playerFirstPaintCuesReady = ready ? "true" : "false"'),
+  "The real Player strip may invalidate and prepare the cue synchronously, but it must not release canonical initial-route cue readiness itself.",
+);
+
+const bootstrapFinishStart = bootstrapCore.indexOf("function scheduleInitialRouteFinishFrame() {");
+const bootstrapFinishEnd = bootstrapCore.indexOf("\n  const recoverCompletedApplicationStartup", bootstrapFinishStart);
+const bootstrapFinish = bootstrapCore.slice(bootstrapFinishStart, bootstrapFinishEnd);
+const bootstrapGateFalseIndex = bootstrapFinish.indexOf('root.dataset.playerFirstPaintCuesReady = "false";');
+const bootstrapCueSyncIndex = bootstrapFinish.indexOf("window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();");
+const bootstrapFrameGateIndex = bootstrapFinish.indexOf("if (initialPlayerViewCueReadyFrames < 1) {");
+const bootstrapGateTrueIndex = bootstrapFinish.indexOf('root.dataset.playerFirstPaintCuesReady = "true";');
+const bootstrapResolvedIndex = bootstrapFinish.indexOf('document.documentElement.classList.add("mflInitialRouteResolved");');
+assert.ok(
+  bootstrapFinishStart >= 0
+    && bootstrapGateFalseIndex >= 0
+    && bootstrapCueSyncIndex > bootstrapGateFalseIndex
+    && bootstrapFrameGateIndex > bootstrapCueSyncIndex
+    && bootstrapGateTrueIndex > bootstrapFrameGateIndex
+    && bootstrapResolvedIndex > bootstrapGateTrueIndex,
+  "The canonical initial-route owner must keep the visible Player shell unresolved, synchronize the current cue, cross a real animation-frame boundary, reverify it, and only then release cue readiness and route completion.",
+);
+assert.ok(
+  bootstrapCore.includes("let initialPlayerViewCueReadyFrames = 0;")
+    && bootstrapFinish.includes("scheduleInitialRouteFinishFrame();")
+    && (bootstrapFinish.match(/syncRouteHorizontalCuesNow/g) || []).length >= 2,
+  "Player refresh release must be tied to a browser render boundary and a second shared-cue synchronization, not a static readiness flag or timeout.",
 );
 
 const observerStart = interactions.indexOf("function playerAttributeViewControlsChanged(record) {");
@@ -268,4 +320,4 @@ assert.ok(
   "Player first-paint horizontal cues must be measured after the visible Player content row is in its initial shell and before hydration begins.",
 );
 
-console.log("Player refresh keeps the real right cue visible before first paint, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");
+console.log("Player refresh shows the complete static shell with the real right cue before first paint, native scrolling stops with All Time flush to the panel edge, and same-player rerenders preserve position.");

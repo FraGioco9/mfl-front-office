@@ -14,7 +14,7 @@
 
 .playerDetail {
   gap: var(--mfl-player-panel-gap);
-  margin-top: var(--mfl-player-panel-gap);
+  margin-top: 0;
 }
 
 .playerHero {
@@ -24,8 +24,8 @@
     "media identity"
     "actions actions";
   align-items: center;
-  column-gap: clamp(8px, 2vw, 14px);
-  row-gap: var(--mfl-player-panel-gap);
+  column-gap: var(--mfl-player-hero-section-gap);
+  row-gap: var(--mfl-player-hero-section-gap);
   height: auto;
   min-height: 0;
   max-height: none;
@@ -106,6 +106,7 @@
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
+  box-shadow: inset -96px 0 96px -69px var(--page-bg);
 }
 
 .playerAttributeViewButton {
