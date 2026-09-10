@@ -45,12 +45,14 @@ invariant(
   syncStart >= 0
     && syncEnd > syncStart
     && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
+    && syncSource.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
     && syncSource.includes("neutralizeSelectionHeader();")
-    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
+    && syncSource.includes("if (renderedEmptyStatePresent) hidePager();")
     && syncSource.includes("hidePager();")
-    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("if (renderedRowsPresent)")
-    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("shouldPreserveRenderedRows()"),
-  "Controller-driven table loading must keep header selection neutral while stopping the loading surface immediately when real rows render.",
+    && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)")
+    && syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)") < syncSource.indexOf("shouldPreserveRenderedRows()"),
+  "Controller-driven table loading must keep header selection neutral while stopping the loading surface immediately when rows or an authoritative empty state render.",
 );
 
 const restoreStart = loadingRuntime.indexOf("function restoreSelectionHeader() {");
@@ -141,4 +143,4 @@ invariant(
   "Generated Table runtime must exactly match canonical table.js.",
 );
 
-console.log("Source-owned header selection loading lifecycle validation passed with pager visibility tied to real rendered rows.");
+console.log("Source-owned header selection loading lifecycle validation passed with table readiness tied to authoritative row or empty-state renders.");
