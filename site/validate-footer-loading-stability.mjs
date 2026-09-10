@@ -40,20 +40,25 @@ for (const token of [
   'const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);',
 ]) includes(tableLoading, token, `Runtime ten-row footer loading contract is missing: ${token}`);
 
+const unresolvedFallbackOwner = 'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page])';
 for (const token of [
   "--mfl-footer-page-floor: 800px;",
   "display: flex;",
   "flex-direction: column;",
   "row-gap: 22px;",
   "main > .pageView {\n  flex: 0 0 auto;\n  min-height: var(--mfl-footer-page-floor);",
-  "html:not(.mflInitialRouteResolved):not([data-initial-entity-route=\"player\"]) body > #appShell > main {",
+  `${unresolvedFallbackOwner} body > #appShell > main {`,
   "grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;",
-  "html:not(.mflInitialRouteResolved):not([data-initial-entity-route=\"player\"]) body > #appShell > main > .siteFooterDetails {",
+  `${unresolvedFallbackOwner} body > #appShell > main > .siteFooterDetails {`,
 ]) includes(footer, token, `Footer follow-content layout is missing: ${token}`);
 
 invariant(
   !footer.includes('html:not(.mflInitialRouteResolved) body > #appShell > main {'),
   "Direct Player loading must not be captured by the unresolved grid fallback; its real shell must remain in normal flex flow.",
+);
+invariant(
+  footer.includes(':not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {'),
+  "Opted-out protected loading must stay in canonical flex flow instead of entering the unresolved grid fallback.",
 );
 invariant(!footer.includes('main:not(:has(> .pageView:not([hidden])))'), "Refresh first paint must not use hidden-attribute inference for footer placement.");
 invariant(!footer.includes("grid-template-rows: minmax(calc(100% - 22px), auto) auto;"), "Footer must not reserve a viewport-sized first grid row on settled table pages.");
@@ -68,4 +73,4 @@ for (const source of [footer, loading, stylesBase]) {
 }
 
 invariant(!footer.includes("!important"), "Footer loading stability must not add !important.");
-console.log("Footer follows actual page content with Player loading kept in normal flow, one responsive floor, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");
+console.log("Footer follows actual page content with Player and opted-out protected loading kept in normal flow, one responsive floor, a 22px gap, and exactly ten table-loading rows independent of the Rows setting.");
