@@ -228,17 +228,14 @@ def _competition_list(payload: Any) -> list[dict[str, Any]]:
 
 
 def current_season_id_from_index(payload: Any) -> int | None:
-    """Resolve the newest raw MFL season ID without persisting index entries."""
+    """Resolve the active raw MFL season ID from LIVE current-index entries."""
     season_ids = [
         season_id
         for competition in _competition_list(payload)
+        if str(competition.get("status") or "").strip().upper() == "LIVE"
         for season_id in [_season_id(competition)]
         if season_id is not None
     ]
-    if isinstance(payload, dict):
-        payload_season = _season_id(payload)
-        if payload_season is not None:
-            season_ids.append(payload_season)
     return max(season_ids) if season_ids else None
 
 
@@ -405,58 +402,66 @@ def refresh_competitions(
         if current_season_id is None or current_season_id < storage.FIRST_SEASON_ID:
             raise RuntimeError("Could not determine the current MFL season for competition backfill")
 
+        historical_end_season_id = current_season_id - 1
         already_stored = storage.stored_competition_ids(connection)
-        total_seasons = current_season_id - storage.FIRST_SEASON_ID + 1
-        log(
-            "Competition historical backfill: "
-            f"{total_seasons} seasons from {season_label(storage.FIRST_SEASON_ID)} "
-            f"to {season_label(current_season_id)}; "
-            f"already stored {len(already_stored)} competitions"
-        )
-        for season_index, season_id in enumerate(
-            range(storage.FIRST_SEASON_ID, current_season_id + 1),
-            start=1,
-        ):
-            display_season = season_number_from_id(season_id)
-            progress_prefix = (
-                f"Competition historical Season {display_season}/{total_seasons} "
-                f"(seasonId {season_id})"
-            )
-            log(f"{progress_prefix}: requesting history")
-            payload = _season_history(season_id, request_json, limiter)
-            candidates = discover_season_candidates(payload, season_id)
-            historical_discovered += len(candidates)
-            missing = [
-                candidate
-                for candidate in candidates
-                if candidate["id"] not in already_stored
-            ]
+        if historical_end_season_id < storage.FIRST_SEASON_ID:
             log(
-                f"{progress_prefix}: discovered {len(candidates)}, "
-                f"missing {len(missing)}"
+                "Competition historical backfill: no completed seasons before "
+                f"{season_label(current_season_id)}; already stored {len(already_stored)} competitions"
             )
-            if not missing:
-                continue
-            historical_requested += len(missing)
-            details = _fetch_details(
-                missing,
-                request_json,
-                limiter,
-                log=log,
-                progress_label=f"Competition Season {display_season} detail (seasonId {season_id})",
-                skip_not_found=True,
-            )
-            saved, _ = _persist_details(connection, details, log)
-            historical_saved += saved
-            already_stored.update(
-                candidate["id"]
-                for candidate, detail in details
-                if storage.is_eligible_detail(detail)
-            )
+        else:
+            total_seasons = historical_end_season_id - storage.FIRST_SEASON_ID + 1
             log(
-                f"{progress_prefix} complete: requested {len(missing)}, saved {saved}; "
-                f"cumulative saved {historical_saved}/{historical_requested}"
+                "Competition historical backfill: "
+                f"{total_seasons} completed seasons from {season_label(storage.FIRST_SEASON_ID)} "
+                f"to {season_label(historical_end_season_id)}; "
+                f"current {season_label(current_season_id)}; "
+                f"already stored {len(already_stored)} competitions"
             )
+            for season_index, season_id in enumerate(
+                range(storage.FIRST_SEASON_ID, historical_end_season_id + 1),
+                start=1,
+            ):
+                display_season = season_number_from_id(season_id)
+                progress_prefix = (
+                    f"Competition historical Season {display_season}/{total_seasons} "
+                    f"(seasonId {season_id})"
+                )
+                log(f"{progress_prefix}: requesting history")
+                payload = _season_history(season_id, request_json, limiter)
+                candidates = discover_season_candidates(payload, season_id)
+                historical_discovered += len(candidates)
+                missing = [
+                    candidate
+                    for candidate in candidates
+                    if candidate["id"] not in already_stored
+                ]
+                log(
+                    f"{progress_prefix}: discovered {len(candidates)}, "
+                    f"missing {len(missing)}"
+                )
+                if not missing:
+                    continue
+                historical_requested += len(missing)
+                details = _fetch_details(
+                    missing,
+                    request_json,
+                    limiter,
+                    log=log,
+                    progress_label=f"Competition Season {display_season} detail (seasonId {season_id})",
+                    skip_not_found=True,
+                )
+                saved, _ = _persist_details(connection, details, log)
+                historical_saved += saved
+                already_stored.update(
+                    candidate["id"]
+                    for candidate, detail in details
+                    if storage.is_eligible_detail(detail)
+                )
+                log(
+                    f"{progress_prefix} complete: requested {len(missing)}, saved {saved}; "
+                    f"cumulative saved {historical_saved}/{historical_requested}"
+                )
     else:
         log("Competition historical backfill disabled")
 
