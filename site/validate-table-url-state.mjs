@@ -37,13 +37,13 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
       && source.includes('const booleanIsValid = booleanValue === "true" || booleanValue === "false";'),
     `${label} must parse boolean URL values case-insensitively and canonicalize them to lowercase true/false.`,
   );
-  invariant(source.includes('key.startsWith("filter.")'), `${label} must use canonical advanced-filter keys rather than display labels.`);
   invariant(
-    source.includes('const key = `filter.${index + 1}${connectorSegment}.${rule.column}.${operatorToken}`;')
+    source.includes('const key = `${connectorPrefix}${rule.column}.${operatorToken}`;')
+      && source.includes('const connectorPrefix = connector === "or" ? "or." : "";')
       && source.includes('params.append(`${key}.from`, String(rule.value));')
       && source.includes('params.append(`${key}.to`, String(rule.valueTo));')
-      && source.includes('const match = String(key || "").match(/^filter\\.(\\d+)(\\.or)?\\.([^.]+)\\.([a-z]+)(?:\\.(from|to))?$/);'),
-    `${label} must serialize advanced rules as readable structured keys with indexed AND/OR ownership and explicit range bounds.`,
+      && source.includes('const match = String(key || "").match(/^(or\\.)?([^.]+)\\.([a-z]+)(?:\\.(from|to))?$/);'),
+    `${label} must serialize advanced rules as compact readable keys such as overall.gte=80, with optional or. prefixes and explicit range bounds.`,
   );
   invariant(
     !source.includes('~${rule.value}')
