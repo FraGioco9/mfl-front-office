@@ -1707,10 +1707,10 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
   const params = new URLSearchParams();
 
   if (source.hideRetired === false) params.set("hideRetired", "0");
-  if (Boolean(source.hideRetiring)) params.set("hideRetiring", "1");
+  if (source.hideRetiring) params.set("hideRetiring", "1");
   if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "0");
   if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "0");
-  if (Boolean(source.newMints)) params.set("newMintsOnly", "1");
+  if (source.newMints) params.set("newMintsOnly", "1");
 
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
   const rules = Array.isArray(source.rules) ? source.rules : [];
