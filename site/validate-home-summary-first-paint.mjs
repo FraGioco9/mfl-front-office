@@ -57,7 +57,9 @@ includes(indexHtml, '<span id="homePlayers">-</span>', "Home Players tracked mus
 includes(indexHtml, '<span id="homeWallets">-</span>', "Home Wallets tracked must exist statically with '-' before summary data loads.");
 includes(stylesBase, 'body[data-page="home"] .topbar .stats', "The canonical header summary visibility rule must remain Home-owned.");
 includes(preBootstrap, "const initialRoute = routes.initialRequest(location.pathname);", "Pre-bootstrap runtime must resolve the real initial route before hydration.");
-includes(preBootstrap, 'if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;', "Pre-bootstrap runtime must commit the real initial route to body[data-page] when a DOM is available.");
+includes(preBootstrap, "const initialRouteShell = routes.requestShellId(initialRoute, {", "Pre-bootstrap runtime must resolve the canonical initial route shell before hydration.");
+includes(preBootstrap, "document.documentElement.dataset.initialRoutePage = initialRoute.pageName;", "Pre-bootstrap runtime must publish canonical initial route identity.");
+includes(preBootstrap, "if (document.body) document.body.dataset.page = initialRoute.pageName;", "Pre-bootstrap runtime must commit the real initial route to body[data-page] when a DOM is available.");
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
     < preBootstrap.indexOf('const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";'),
