@@ -2335,7 +2335,9 @@ function tableApplyFiltersOwner(options = {}) {
     sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   }
 
-  state.tableSourceRowsCount = sourceRows.length;
+  if (!state.incrementalMode) {
+    state.tableSourceRowsCount = sourceRows.length;
+  }
 
   state.filteredRows = sourceRows.filter((row) => {
     if (rowIsHiddenFromTableAsMflPlayer(row)) {
