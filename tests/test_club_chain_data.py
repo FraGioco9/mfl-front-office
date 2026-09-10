@@ -383,7 +383,7 @@ class ClubChainDataTests(unittest.TestCase):
                 """
                 SELECT name, city, country, primary_color, secondary_color, status, division,
                        owner_wallet_address, signed_player_ids, current_competition_ids,
-                       logo_version, leaderboard_rank, mfl_points
+                       logo_version
                 FROM runtime_clubs WHERE club_id = '42'
                 """
             ).fetchone()
@@ -391,7 +391,7 @@ class ClubChainDataTests(unittest.TestCase):
                 row,
                 (
                     "Canonical Club", "Bologna", "Italy", "#123456", "#abcdef",
-                    "FOUNDED", 2, "0xabc", "[3,9]", "[1,11]", "2", None, None,
+                    "FOUNDED", 2, "0xabc", "[3,9]", "[1,11]", "2",
                 ),
             )
             columns = {
@@ -443,7 +443,7 @@ class ClubChainDataTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_runtime_clubs_accepts_old_leaderboard_schema(self) -> None:
+    def test_runtime_clubs_accepts_old_canonical_schema(self) -> None:
         connection = sqlite3.connect(":memory:")
         try:
             connection.create_function(
@@ -466,28 +466,26 @@ class ClubChainDataTests(unittest.TestCase):
                     division TEXT NOT NULL,
                     owner_wallet_address TEXT NOT NULL,
                     owner_name TEXT NOT NULL,
-                    logo_version TEXT NOT NULL,
-                    leaderboard_rank INTEGER NOT NULL,
-                    mfl_points REAL
+                    logo_version TEXT NOT NULL
                 )
                 """
             )
             connection.execute(
-                "INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("42", "Old Club", "1", "0xabc", "Owner", "4", 1, 100.0),
+                "INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?)",
+                ("42", "Old Club", "1", "0xabc", "Owner", "4"),
             )
 
             runtime_db.prepare_runtime_clubs(connection)
             row = connection.execute(
                 """
                 SELECT city, country, primary_color, secondary_color, status, signed_player_ids,
-                       current_competition_ids, logo_version, leaderboard_rank, mfl_points
+                       current_competition_ids, logo_version
                 FROM runtime_clubs WHERE club_id = '42'
                 """
             ).fetchone()
             self.assertEqual(
                 row,
-                ("", "", None, None, "", "[]", "[]", "4", 1, 100.0),
+                ("", "", None, None, "", "[]", "[]", "4"),
             )
         finally:
             connection.close()
