@@ -30,9 +30,10 @@
       ? tableStateWithoutPageFilters(pageName, storedPageState)
       : storedPageState;
     if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
-    if (savedPageState) {
-      restoreSavedTableState(pageName, { view: options.view, deferRules: true });
-    } else if (clubTarget) {
+    const restoredPageState = savedPageState
+      ? restoreSavedTableState(pageName, { view: options.view, deferRules: true })
+      : null;
+    if (!savedPageState && clubTarget) {
       state.view = clubTarget.view;
       state.page = 1;
     }
@@ -52,8 +53,15 @@
     }
 
     const route = incrementalRouteTarget(pageName, options);
-    if (route && savedPageState) {
-      route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);
+    if (route && restoredPageState) {
+      route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);
+      route.tableFilters = {
+        hideRetired: restoredPageState.hideRetired !== false,
+        hideRetiring: Boolean(restoredPageState.hideRetiring),
+        hideMflPlayers: pageName === "database" ? restoredPageState.hideMflPlayers !== false : false,
+        mflPackable: pageName === "mfl" ? restoredPageState.mflPackable !== false : false,
+        newMints: Boolean(restoredPageState.newMints),
+      };
     }
     return route;
   }
