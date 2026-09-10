@@ -648,10 +648,17 @@ def development_center_club_ids(connection: sqlite3.Connection) -> set[str]:
         return set()
     rows = connection.execute(
         """
-        SELECT DISTINCT active_contract_club_id
+        SELECT active_contract_club_id
         FROM players
         WHERE coalesce(active_contract_club_id, '') <> ''
-          AND lower(trim(coalesce(active_contract_club_name, ''))) = 'development center'
+        GROUP BY active_contract_club_id
+        HAVING SUM(
+            CASE
+                WHEN lower(trim(coalesce(active_contract_club_name, ''))) <> 'development center'
+                THEN 1
+                ELSE 0
+            END
+        ) = 0
         """
     ).fetchall()
     return {str(row[0]) for row in rows}
