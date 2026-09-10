@@ -38,6 +38,12 @@ export const CLUB_VIEW_SLUGS = Object.freeze({
 
 export const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
 
+export const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
+  myplayers: "/my-players/opted-out",
+  watchlist: "/watchlist/opted-out",
+  settings: "/settings/opted-out",
+});
+
 export const MFL_STATS_OVERALL_FILTERS = Object.freeze([
   Object.freeze({ id: "all", label: "All", min: null, max: null }),
   Object.freeze({ id: "90-94", label: "90-94", min: 90, max: 94 }),
@@ -216,6 +222,7 @@ const BROWSER_DATA = Object.freeze({
     viewSlugs: VIEW_SLUGS,
     clubViewSlugs: CLUB_VIEW_SLUGS,
     mflWalletAddress: MFL_WALLET_ADDRESS,
+    protectedOptedOutPaths: PROTECTED_OPTED_OUT_PATHS,
     corePaths: ROUTE_CORE_PATHS,
     runtimeScripts: ROUTE_RUNTIME_SCRIPTS,
     tableInfrastructurePages: TABLE_INFRASTRUCTURE_PAGES,
@@ -442,6 +449,12 @@ export function browserConfigRuntimeSource(release) {
   function canonicalRequest(pathname = location.pathname) {
     const path = cleanPath(pathname);
     if (path === "/") return requestResult(path, "home", {}, "/");
+
+    const optedOutEntry = Object.entries(data.routes.protectedOptedOutPaths)
+      .find(([, optedOutPath]) => path === optedOutPath);
+    if (optedOutEntry) {
+      return requestResult(path, optedOutEntry[0], { optedOut: true }, optedOutEntry[1]);
+    }
 
     const segments = path.slice(1).split("/");
     if (segments.some((segment) => segment === "")) return notFoundRequest(path);

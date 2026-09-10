@@ -990,7 +990,8 @@ function updateAccountState() {
 
 function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
-  const routeAtOptOut = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
+  const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
   const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
@@ -1004,7 +1005,7 @@ function optOutWallet() {
     localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY);
-    clearWalletPermissionCache();
+    clearWalletPermissionCache(previousWalletAddress);
   } catch {
     // The page state is still cleared even if storage is blocked.
   }
@@ -1017,6 +1018,15 @@ function optOutWallet() {
     const lockedOptions = protectedRouteAtOptOut.options && typeof protectedRouteAtOptOut.options === "object"
       ? protectedRouteAtOptOut.options
       : {};
+    const optedOutPath = optedOutPathForPage(lockedPage);
+    const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+      ? window.history.state
+      : {};
+    window.history.replaceState(
+      { ...historyState, mflProtectedReturnPath: protectedReturnPath },
+      "",
+      optedOutPath,
+    );
     setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
     saveTableState();
     showToast("Dapper opt-in removed.");
@@ -1263,11 +1273,45 @@ function normalizedPageName(pageName) {
   return pageName === "my-players" ? "myplayers" : pageName;
 }
 
+const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
+  myplayers: "/my-players/opted-out",
+  watchlist: "/watchlist/opted-out",
+  settings: "/settings/opted-out",
+});
+
+function optedOutPathForPage(pageName) {
+  return PROTECTED_OPTED_OUT_PATHS[normalizedPageName(pageName)] || "";
+}
+
+function optedOutPageFromPath(pathName = window.location.pathname) {
+  const cleanPath = String(pathName || "").split("?")[0];
+  return Object.entries(PROTECTED_OPTED_OUT_PATHS)
+    .find(([, optedOutPath]) => cleanPath === optedOutPath)?.[0] || "";
+}
+
+function defaultProtectedRoutePath(pageName) {
+  const normalizedPage = normalizedPageName(pageName);
+  if (normalizedPage === "settings") return "/settings";
+  if (normalizedPage === "watchlist") {
+    const viewName = normalizeViewForPage("", "watchlist");
+    return `/watchlist/${viewSlug(viewName)}`;
+  }
+  if (normalizedPage === "myplayers") {
+    const viewName = normalizeViewForPage("", "myplayers");
+    return `/my-players/${viewSlug(viewName)}`;
+  }
+  return "";
+}
+
 function pageFromUrl() {
   return pageTargetFromPath(`${window.location.pathname}${window.location.search}`).pageName;
 }
 
 function watchlistTargetFromUrl(pathName = window.location.pathname) {
+  if (optedOutPageFromPath(pathName) === "watchlist") {
+    return { watchlistId: "", view: "" };
+  }
+
   const match = String(pathName || "").match(/^\/watchlist(?:\/([^/]+))?(?:\/([^/]+))?$/);
 
   if (!match) {
@@ -1332,6 +1376,23 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 function pageTargetFromPath(path) {
   const requestedPath = String(path || "");
   const cleanPath = requestedPath.split("?")[0];
+  const optedOutPage = optedOutPageFromPath(cleanPath);
+
+  if (optedOutPage) {
+    if (!hasWalletOptIn()) {
+      return { pageName: optedOutPage, options: {} };
+    }
+
+    const defaultPath = defaultProtectedRoutePath(optedOutPage);
+    const signedInTarget = pageTargetFromPath(defaultPath);
+    return {
+      pageName: signedInTarget.pageName,
+      options: {
+        ...(signedInTarget.options || {}),
+        replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
+      },
+    };
+  }
 
   if (cleanPath === "/evaluation") {
     const queryIndex = requestedPath.indexOf("?");
@@ -1367,15 +1428,23 @@ function pageTargetFromPath(path) {
 
   if (!hasWalletOptIn()) {
     if (/^\/my-players(?:\/[^/]+)?$/.test(cleanPath)) {
-      const myPlayersTarget = tablePageTarget("myplayers", cleanPath, "/my-players");
-      if (myPlayersTarget) return myPlayersTarget;
-      return { pageName: "myplayers", options: {} };
+      return {
+        pageName: "myplayers",
+        options: { replaceUrl: optedOutPathForPage("myplayers") },
+      };
     }
 
     if (/^\/watchlist(?:\/[^/]+)?(?:\/[^/]+)?$/.test(cleanPath)) {
       return {
         pageName: "watchlist",
-        options: cleanPath === "/watchlist" ? {} : { replaceUrl: "/watchlist" },
+        options: { replaceUrl: optedOutPathForPage("watchlist") },
+      };
+    }
+
+    if (cleanPath === "/settings") {
+      return {
+        pageName: "settings",
+        options: { replaceUrl: optedOutPathForPage("settings") },
       };
     }
   }
@@ -1503,8 +1572,8 @@ function pagePath(pageName, options = {}) {
   }
 
   if (!hasWalletOptIn()) {
-    if (pageName === "watchlist") return "/watchlist";
-    if (pageName === "myplayers") return "/my-players";
+    const optedOutPath = optedOutPathForPage(pageName);
+    if (optedOutPath) return optedOutPath;
   }
 
   if (tablePages.has(pageName)) {
@@ -2077,13 +2146,14 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   const agentTitleReady = pageName === "agents"
     ? ensureAgentPageTitleName(state.currentAgentWalletAddress, options.agentName)
     : Promise.resolve("");
-  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
-    window.history.replaceState({}, "", options.replaceUrl);
+  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+    const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+      ? window.history.state
+      : {};
+    window.history.replaceState(historyState, "", options.replaceUrl);
   }
   document.body.dataset.page = pageName;
-  if (!lockedOptOutRoute) {
-    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
-  }
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
@@ -7880,7 +7950,13 @@ const setIncrementalView = async function setIncrementalView(viewName) {
 window.mflLoadIncrementalRoutePage = loadIncrementalRoutePage;
 
 async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
-    const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+    const suppliedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+    const optedOutUpgradePage = hasWalletOptIn() ? optedOutPageFromPath(window.location.pathname) : "";
+    const incomingOptions = optedOutUpgradePage === String(pageName || "")
+      && !Reflect.get(suppliedOptions, "replaceUrl")
+      && !Reflect.get(suppliedOptions, "path")
+      ? { ...suppliedOptions, replaceUrl: pagePath(pageName, suppliedOptions) }
+      : suppliedOptions;
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
     const crossPageNavigation = !runtimeReady
       && String(pageName || "") !== String(state.currentPage || "");

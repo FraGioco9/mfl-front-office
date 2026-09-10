@@ -47,6 +47,8 @@ const normalizedPageName = (page) => page;
 const mflWalletAddress = "0xff8d2bbed8164db0";
 const normalizeWalletAddress = (value) => String(value || "");
 const watchlistTargetFromUrl = () => ({ watchlistId: "", view: "" });
+const optedOutPageFromPath = () => "";
+const defaultProtectedRoutePath = () => "";
 
 const pageTargetFromPath = new Function(
   "window",
@@ -57,6 +59,8 @@ const pageTargetFromPath = new Function(
   "mflWalletAddress",
   "normalizeWalletAddress",
   "watchlistTargetFromUrl",
+  "optedOutPageFromPath",
+  "defaultProtectedRoutePath",
   `${parserSource}; return pageTargetFromPath;`,
 )(
   window,
@@ -67,6 +71,8 @@ const pageTargetFromPath = new Function(
   mflWalletAddress,
   normalizeWalletAddress,
   watchlistTargetFromUrl,
+  optedOutPageFromPath,
+  defaultProtectedRoutePath,
 );
 
 const squad = pageTargetFromPath("/clubs/12345/squad");
