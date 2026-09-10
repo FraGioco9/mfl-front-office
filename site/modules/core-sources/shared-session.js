@@ -196,7 +196,7 @@ function writeWalletPermissionCache({ allowed, version, updatedAt }) {
       checkedAt: Date.now(),
     }));
   } catch {
-    // Access still works for this page even if storage is blocked.
+    // Access still works for this page even if the browser blocks storage.
   }
 }
 
@@ -301,7 +301,7 @@ async function loadWalletPermissions(options = {}) {
       writeWalletPermissionCache({
         allowed: state.walletPermissionAllowed,
         version: metadata?.version || data.version || "",
-        updatedAt: metadata?.updated_at || data.updated_at || "",
+        updatedAt: metadata?.updatedAt || data.updated_at || "",
       });
     } else if (cached && cacheIsFresh) {
       return applyCachedWalletPermission(cached, previousAllowed);
