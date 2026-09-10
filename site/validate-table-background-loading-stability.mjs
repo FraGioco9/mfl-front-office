@@ -50,8 +50,10 @@ invariant(
     && syncEnd > syncStart
     && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
     && syncSource.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
-    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
-    && syncSource.includes("if (renderedEmptyStatePresent) hidePager();")
+    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {")
+    && syncSource.includes("const page = pager();")
+    && syncSource.includes("if (page) page.hidden = true;")
+    && !syncSource.includes("hidePlayerCount();\n        if (renderedEmptyStatePresent)")
     && syncSource.includes("hidePager();")
     && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)")
     && syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)") < syncSource.indexOf("show({ replaceExisting: true })"),

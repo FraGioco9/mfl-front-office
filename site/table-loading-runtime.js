@@ -300,8 +300,10 @@
       const renderedEmptyStatePresent = hasRenderedEmptyState();
       neutralizeSelectionHeader();
       if (renderedRowsPresent || renderedEmptyStatePresent) {
-        hidePlayerCount();
-        if (renderedEmptyStatePresent) hidePager();
+        if (renderedEmptyStatePresent) {
+          const page = pager();
+          if (page) page.hidden = true;
+        }
         return;
       }
       hidePager();

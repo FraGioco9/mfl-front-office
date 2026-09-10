@@ -84,10 +84,11 @@ invariant(
 
 for (const source of [appCore, generatedCore]) {
   invariant(
-    source.includes('const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.());')
-      && source.includes('const visible = tablePages.has(state.currentPage) && !tableLoadingActive;')
+    source.includes('const authoritativeRender = options.authoritative === true;')
+      && source.includes('const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.());')
+      && source.includes('const visible = tablePages.has(state.currentPage) && (authoritativeRender || !tableLoadingActive);')
       && !source.includes('const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.())\n    || document.documentElement.classList.contains("mflDataLoading");'),
-    "Player-count metadata must stay hidden only while the table-loading owner has an active request, then appear with rendered data.",
+    "Player-count metadata must stay hidden during unresolved requests but become visible at the authoritative render commit before request cleanup.",
   );
   invariant(
     source.includes('const cachedPayloadSupersedesActiveRequest = Boolean(cachedPayload && window.__mflTableLoadingRuntime?.requestActive?.());')
@@ -99,7 +100,7 @@ for (const source of [appCore, generatedCore]) {
 invariant(
   tableLoading.includes('const count = document.getElementById("watchlistPlayerCount");')
     && tableLoading.includes('if (count instanceof HTMLElement) count.hidden = true;'),
-  "The canonical table-loading owner must hide both pager navigation and the Showing x/y players summary.",
+  "The canonical table-loading owner must hide the Showing x/y players summary while a request is unresolved.",
 );
 
 console.log("Quick Filter loading keeps exactly ten equal blank rows on canonical row geometry, with horizontal scrollbar chrome removed from the loading surface.");

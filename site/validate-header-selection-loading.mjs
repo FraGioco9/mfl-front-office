@@ -47,8 +47,10 @@ invariant(
     && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
     && syncSource.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
     && syncSource.includes("neutralizeSelectionHeader();")
-    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
-    && syncSource.includes("if (renderedEmptyStatePresent) hidePager();")
+    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {")
+    && syncSource.includes("const page = pager();")
+    && syncSource.includes("if (page) page.hidden = true;")
+    && !syncSource.includes("hidePlayerCount();\n        if (renderedEmptyStatePresent)")
     && syncSource.includes("hidePager();")
     && syncSource.indexOf("neutralizeSelectionHeader();") < syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)")
     && syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)") < syncSource.indexOf("shouldPreserveRenderedRows()"),
