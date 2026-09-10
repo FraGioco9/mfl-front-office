@@ -486,7 +486,6 @@ function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
   accountEmail.disabled = !walletLinked;
-  accountEmail.title = walletLinked ? "Open My Players" : "";
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);

@@ -38,6 +38,7 @@ includes(sharedCore, "function optOutWallet() {", "Opt-out must remain immediate
 includes(sharedCore, "let __mflWalletLinkOwner = null;", "Shared core must retain stable Wallet facade state.");
 includes(sharedCore, "async function linkWallet() {", "Shared core must retain the linkWallet facade for existing controls.");
 includes(sharedCore, 'await window.__mflEnsureRouteCore("wallet");', "linkWallet must lazy-load Wallet ownership on demand.");
+excludes(sharedCore, 'accountEmail.title = walletLinked ? "Open My Players" : "";', "The account dropdown name must not expose a native Open My Players tooltip.");
 
 for (const forbidden of [
   "function walletAccessNonce() {",
