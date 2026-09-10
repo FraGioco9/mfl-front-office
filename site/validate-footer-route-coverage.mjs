@@ -6,10 +6,12 @@ import { fileURLToPath } from "node:url";
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (name) => readFileSync(resolve(root, name), "utf8").replace(/\r\n?/g, "\n");
 const html = read("index.html");
+const stylesBase = read("styles-base.css");
 const footer = read("footer.css");
 const responsive = read("responsive.css");
 const generated = read("styles-runtime.css");
 const staticUi = read("static-ui-runtime.js");
+const pageLifecycle = read("modules/core-sources/shared-page-lifecycle.js");
 
 const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
 for (const id of ids) assert.match(html, new RegExp(`<section id="${id}" class="[^"]*\\bpageView\\b[^"]*"`), `${id} must remain a pageView.`);
@@ -55,6 +57,24 @@ assert.ok(!footer.includes('main:not(:has(> .pageView:not([hidden])))'), "First-
 assert.ok(!generated.includes('body[data-page="evaluation"] #evaluationPage {\n  min-height:'), "Evaluation must not own a separate footer height workaround.");
 assert.ok(!generated.includes('html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {\n  min-height: 0;'), "Empty Evaluation must not collapse the footer floor.");
 
+const lockedPageRule = stylesBase.match(/\.myPlayersLockedPage\s*\{([^}]*)\}/s)?.[1] || "";
+assert.ok(lockedPageRule, "Opted-out protected routes must retain the shared locked page shell styling.");
+assert.match(lockedPageRule, /\bdisplay:\s*grid;/, "Opted-out protected content must stay centered by the existing grid shell.");
+assert.match(lockedPageRule, /\bplace-items:\s*center;/, "Opted-out protected content must retain its centered presentation.");
+assert.doesNotMatch(lockedPageRule, /\bposition:\s*(?:fixed|absolute);/, "Opted-out protected routes must participate in main normal flow so the page floor can position the footer.");
+for (const property of ["top", "right", "bottom", "left"]) {
+  assert.doesNotMatch(lockedPageRule, new RegExp(`\\b${property}:`), `Opted-out protected routes must not retain obsolete ${property} viewport geometry.`);
+}
+assert.ok(!responsive.includes("body.pinnedSidebarVisible .myPlayersLockedPage"), "Responsive CSS must not reintroduce viewport geometry for the normal-flow opted-out shell.");
+assert.ok(!responsive.includes("body:not(.pinnedSidebarVisible) .myPlayersLockedPage"), "Responsive CSS must not reintroduce viewport geometry for the normal-flow opted-out shell.");
+assert.ok(generated.includes(".myPlayersLockedPage {"), "Generated production CSS must include the canonical opted-out shell.");
+assert.ok(!generated.includes(".myPlayersLockedPage {\n  position: fixed;"), "Generated production CSS must keep opted-out routes in normal footer flow.");
+
+for (const protectedPage of ["myplayers", "watchlist", "settings"]) {
+  assert.ok(pageLifecycle.includes(`pageName === "${protectedPage}"`), `${protectedPage} must remain part of the opted-out route guard.`);
+}
+assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");
+
 for (const floor of [
   "max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)))",
   "max(500px, calc(100dvh - var(--mobile-nav-overlay-clearance)))",
@@ -66,4 +86,4 @@ assert.ok(html.includes('if (playerPage instanceof HTMLElement) playerPage.hidde
 assert.ok(html.includes('html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage'), "Direct non-Home refreshes must retain their CSS-hidden Home first-paint guard.");
 assert.ok(staticUi.includes('page.id = "notFoundPage";') && staticUi.includes('page.className = "pageView homePage";'), "Not Found must use the universal pageView contract.");
 assert.ok(staticUi.includes('main.insertBefore(page, footer instanceof HTMLElement ? footer : null);'), "Dynamic Not Found must be inserted before the normal-flow footer.");
-console.log(`Universal footer coverage passed for ${ids.length} static shells plus dynamic Not Found, with direct Player loading kept in real normal flow.`);
+console.log(`Universal footer coverage passed for ${ids.length} static shells plus dynamic Not Found, including opted-out protected routes in normal flow and direct Player loading after its real content.`);
