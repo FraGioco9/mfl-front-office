@@ -489,6 +489,10 @@ async function walletLinkOwner() {
     return;
   }
 
+  const protectedRoutePath = ["myplayers", "watchlist", "settings"].includes(state.currentPage)
+    ? `${window.location.pathname}${window.location.search}`
+    : "";
+
   state.walletOptInInProgress = true;
   showToast("Opting in...", { sticky: true });
   linkWalletButton.disabled = true;
@@ -535,6 +539,7 @@ async function walletLinkOwner() {
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = linkedWalletProof;
     state.walletSettingsLoaded = false;
+    hideToast();
     try {
       localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
       localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
@@ -549,27 +554,14 @@ async function walletLinkOwner() {
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
     let upgradedCurrentPage = false;
-    if ((state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") && !myPlayersLockedPage.hidden) {
-      const lockedPage = state.currentPage;
-      const lockedMyPlayersTarget = lockedPage === "myplayers"
-        ? tablePageTarget("myplayers", window.location.pathname, "/my-players")
-        : null;
-      const lockedView = lockedMyPlayersTarget?.options?.view || "attributes";
-      await setPage(lockedPage, false, { view: lockedView });
-      if (lockedPage === "myplayers") {
-        const targetPath = "/my-players/" + viewSlug(lockedView);
-        if (window.location.pathname !== targetPath) {
-          window.history.replaceState({}, "", targetPath);
-        }
-      } else if (lockedPage === "watchlist") {
-        const watchlistId = state.currentWatchlistId || activeWatchlist()?.id || "";
-        const targetPath = watchlistId
-          ? `/watchlist/${encodeURIComponent(watchlistId)}/attributes`
-          : "/watchlist/attributes";
-        window.history.replaceState({}, "", targetPath);
+    if (protectedRoutePath) {
+      const protectedTarget = pageTargetFromPath(protectedRoutePath);
+      if (["myplayers", "watchlist", "settings"].includes(protectedTarget?.pageName)) {
+        await setPage(protectedTarget.pageName, false, protectedTarget.options || {});
+        upgradedCurrentPage = true;
       }
-      upgradedCurrentPage = true;
-    } else {
+    }
+    if (!upgradedCurrentPage) {
       upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
     }
     if (!upgradedCurrentPage) {

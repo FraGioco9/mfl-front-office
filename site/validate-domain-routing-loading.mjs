@@ -7,6 +7,7 @@ const validators = [
   "validate-route-core-startup-routing.mjs",
   "validate-route-page-normalization.mjs",
   "validate-static-route-ui.mjs",
+  "validate-wallet-opt-in-transition.mjs",
   "validate-page-scroll-reset.mjs",
   "validate-view-button-refresh-handoff.mjs",
   "validate-generated-view-transition.mjs",
