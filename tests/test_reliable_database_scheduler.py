@@ -9,6 +9,9 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.workflow = read_workflow(".github/workflows/full-database-refresh.yml")
+        cls.telemetry = Path(
+            "scripts/workflows/full-database-refresh-record-trigger-timing.sh"
+        ).read_text(encoding="utf-8")
         cls.function = Path(
             "supabase/functions/mfl-database-refresh-dispatch/index.ts"
         ).read_text(encoding="utf-8")
@@ -61,6 +64,10 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
         self.assertIn("retention-days: 90", self.workflow)
 
     def test_trigger_telemetry_records_supabase_and_queue_delay_components(self) -> None:
+        self.assertIn(
+            "full-database-refresh-record-trigger-timing.sh",
+            self.workflow,
+        )
         for field in (
             "triggerSource",
             "intendedAt",
@@ -72,9 +79,9 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
             "queueOrConcurrencyDelaySeconds",
             "totalStartDelaySeconds",
         ):
-            self.assertIn(field, self.workflow)
-        self.assertNotIn("githubSchedulerDelaySeconds", self.workflow)
-        self.assertNotIn("fallbackOffsetSeconds", self.workflow)
+            self.assertIn(field, self.telemetry)
+        self.assertNotIn("githubSchedulerDelaySeconds", self.telemetry)
+        self.assertNotIn("fallbackOffsetSeconds", self.telemetry)
 
     def test_edge_function_uses_custom_secret_and_narrow_github_dispatch(self) -> None:
         self.assertIn('request.headers.get("x-scheduler-secret")', self.function)
