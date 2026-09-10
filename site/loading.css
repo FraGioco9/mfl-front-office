@@ -112,10 +112,6 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   display: none;
 }
 
-html.mflDataLoading #progressionPage #watchlistPlayerCount {
-  display: none;
-}
-
 html.mflTableScrolling #progressionPage .tableScroller tbody {
   pointer-events: none;
 }
