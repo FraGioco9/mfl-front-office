@@ -44,6 +44,30 @@ export const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   settings: "/settings/opted-out",
 });
 
+export const ROUTE_SHELL_IDS = Object.freeze({
+  home: "homePage",
+  database: "progressionPage",
+  mfl: "progressionPage",
+  progression: "progressionPage",
+  agents: "progressionPage",
+  watchlist: "progressionPage",
+  myplayers: "progressionPage",
+  club: "progressionPage",
+  evaluation: "evaluationPage",
+  player: "playerPage",
+  settings: "settingsPage",
+  changelog: "changelogPage",
+  privacy: "privacyPage",
+});
+
+export const ROUTE_VIEW_SHELL_IDS = Object.freeze({
+  "database:stats": "databaseStatsPage",
+  "mfl:stats": "mflStatsPage",
+});
+
+export const PROTECTED_ROUTE_SHELL_ID = "myPlayersLockedPage";
+export const NOT_FOUND_ROUTE_SHELL_ID = "notFoundPage";
+
 export const MFL_STATS_OVERALL_FILTERS = Object.freeze([
   Object.freeze({ id: "all", label: "All", min: null, max: null }),
   Object.freeze({ id: "90-94", label: "90-94", min: 90, max: 94 }),
@@ -223,6 +247,10 @@ const BROWSER_DATA = Object.freeze({
     clubViewSlugs: CLUB_VIEW_SLUGS,
     mflWalletAddress: MFL_WALLET_ADDRESS,
     protectedOptedOutPaths: PROTECTED_OPTED_OUT_PATHS,
+    shellIds: ROUTE_SHELL_IDS,
+    viewShellIds: ROUTE_VIEW_SHELL_IDS,
+    protectedShellId: PROTECTED_ROUTE_SHELL_ID,
+    notFoundShellId: NOT_FOUND_ROUTE_SHELL_ID,
     corePaths: ROUTE_CORE_PATHS,
     runtimeScripts: ROUTE_RUNTIME_SCRIPTS,
     tableInfrastructurePages: TABLE_INFRASTRUCTURE_PAGES,
@@ -542,6 +570,24 @@ export function browserConfigRuntimeSource(release) {
     });
   }
 
+  function routeShellId(pageName, options = {}) {
+    const page = normalizePageName(pageName);
+    if (page === "notfound") return String(data.routes.notFoundShellId || "");
+    const view = normalizeView(options);
+    const protectedRoute = Object.prototype.hasOwnProperty.call(data.routes.protectedOptedOutPaths, page);
+    const walletOptedIn = options.walletOptedIn !== false && options.optedOut !== true;
+    if (protectedRoute && !walletOptedIn) return String(data.routes.protectedShellId || "");
+    const viewShellId = String(data.routes.viewShellIds[`${page}:${view}`] || "");
+    return viewShellId || String(data.routes.shellIds[page] || "");
+  }
+
+  function requestShellId(request, options = {}) {
+    const requestOptions = request?.options && typeof request.options === "object" && !Array.isArray(request.options)
+      ? request.options
+      : {};
+    return routeShellId(request?.pageName, { ...requestOptions, ...options });
+  }
+
   function initialRequest(pathname = location.pathname) {
     return canonicalRequest(pathname);
   }
@@ -574,6 +620,8 @@ export function browserConfigRuntimeSource(release) {
     canonicalTablePath,
     canonicalRequest,
     initialRequest,
+    routeShellId,
+    requestShellId,
     routeDependencyPlan,
     usesTableInfrastructure,
     notFoundKindForPath,
