@@ -10,6 +10,7 @@ const validators = [
   "validate-table-header-typography.mjs",
   "validate-mobile-sticky-name-column.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
+  "validate-table-url-state.mjs",
   "validate-listing-column.mjs",
   "validate-marketplace-state-freshness.mjs",
   "validate-table-count-fast-path.mjs",
