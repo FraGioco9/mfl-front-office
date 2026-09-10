@@ -680,7 +680,7 @@ function writeWalletPermissionCache({ allowed, version, updatedAt }) {
       checkedAt: Date.now(),
     }));
   } catch {
-    // Access still works for this page even if storage is blocked.
+    // Access still works for this page even if the browser blocks storage.
   }
 }
 
@@ -970,7 +970,6 @@ function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
   accountEmail.disabled = !walletLinked;
-  accountEmail.title = walletLinked ? "Open My Players" : "";
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
