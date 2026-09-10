@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "${1:-}" != "--workflow" ] || [ -z "${2:-}" ]; then
+  echo "Usage: $0 --workflow <workflow-file>" >&2
+  exit 1
+fi
+SITE_WORKFLOW="$2"
+
 SITE_SHA="$(
   gh run list \
-    --workflow vercel-site-update.yml \
+    --workflow "$SITE_WORKFLOW" \
     --status success \
     --limit 50 \
     --json headSha,createdAt \
