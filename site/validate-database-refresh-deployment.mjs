@@ -67,4 +67,18 @@ excludes(
   "Database-only deployment logs must not claim that the API runtime adapter is being updated.",
 );
 
-console.log("Staged database checkpoints preserve the published site runtime while safely replacing validated SQLite snapshots.");
+const materializeFinalIndex = workflow.indexOf("- name: Materialize final checkpoint");
+const uploadFinalIndex = workflow.indexOf("- name: Upload final database");
+const publishFinalIndex = workflow.indexOf("- name: Publish final checkpoint");
+invariant(
+  materializeFinalIndex >= 0
+    && uploadFinalIndex > materializeFinalIndex
+    && publishFinalIndex > uploadFinalIndex,
+  "The completed final database must be preserved before production publication can fail.",
+);
+invariant(
+  workflow.includes("name: mfl_database\n          path: builder/checkpoints/final/mfl_database.db\n          overwrite: true\n          if-no-files-found: error"),
+  "Final database preservation must replace the canonical retry artifact and fail closed if the checkpoint is missing.",
+);
+
+console.log("Staged database checkpoints preserve the published site runtime, retain the completed final database before deployment, and safely replace validated SQLite snapshots.");
