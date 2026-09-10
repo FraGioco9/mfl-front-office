@@ -475,9 +475,11 @@
         visibility: visible;
         opacity: 1;
       }
+      /* Pager starts hidden through its native `hidden` attribute; table data readiness owns release.
       html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
         display: none;
       }
+      */
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
@@ -521,8 +523,7 @@
       })();
     </script>
     <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->
-  </head>
-  <body data-page="home" class="pinnedSidebarVisible">
+  </head>  <body data-page="home" class="pinnedSidebarVisible">
     <svg class="iconSprite" aria-hidden="true" focusable="false">
       <symbol id="settingsIconGlyph" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="6"></circle>
@@ -738,7 +739,7 @@
             <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
           </section>
 
-          <nav class="pager" aria-label="Pagination">
+          <nav class="pager" aria-label="Pagination" hidden>
             <button id="prevButton" type="button"><span class="pagerButtonLabel">Previous</span></button>
             <span id="pageText">Page 1</span>
             <button id="nextButton" type="button"><span class="pagerButtonLabel">Next</span></button>
@@ -756,7 +757,6 @@
             </div>
           </div>
         </section>
-
         <section id="databaseStatsPage" class="pageView mflStatsPage databaseStatsPage" data-static-database-stats="true" hidden>
           <h2 class="tablePageTitle">Database</h2>
           <section class="views mflStatsViews" aria-label="Database views">

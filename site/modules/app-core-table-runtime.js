@@ -2714,6 +2714,8 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
+  const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
+  if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
   if (preservedPlayerTableActionRenderSignature) {
     restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
   }
