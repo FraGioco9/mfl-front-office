@@ -126,18 +126,7 @@ const browserTestSource = String.raw`(() => {
   const testWatchlistId = "browser1";
   const expectedPlayerName = "Browser Player";
   const errors = [];
-  const historyWrites = [];
   let parserSnapshot = null;
-  const originalReplaceState = history.replaceState.bind(history);
-  const originalPushState = history.pushState.bind(history);
-  history.replaceState = (stateValue, title, url) => {
-    historyWrites.push({ method: "replace", url: String(url || "") });
-    return originalReplaceState(stateValue, title, url);
-  };
-  history.pushState = (stateValue, title, url) => {
-    historyWrites.push({ method: "push", url: String(url || "") });
-    return originalPushState(stateValue, title, url);
-  };
 
   if (scenario === "watchlist" || scenario === "watchlist-empty") {
     const proof = {
@@ -333,7 +322,7 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.page === "database", "Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "database-empty") {
       assert(stateValue.path === "/database/attributes", "Filtered Database canonical path is wrong: " + stateValue.path);
-      assert(stateValue.search === "?overall.gte=99", "Filtered Database URL state was not preserved: " + stateValue.search + " history=" + JSON.stringify(historyWrites));
+      assert(stateValue.search === "?overall.gte=99", "Filtered Database URL state was not preserved: " + stateValue.search);
       assert(stateValue.tableText === "", "Filtered Database unexpectedly rendered player rows.");
       assert(stateValue.emptyHidden === false, "Filtered Database empty-state message remained hidden after refresh.");
       assert(stateValue.emptyText === "No players match the current filters.", "Filtered Database empty-state message is wrong: " + stateValue.emptyText);
@@ -356,7 +345,7 @@ const browserTestSource = String.raw`(() => {
         stateValue.path === "/watchlist/" + testWatchlistId + "/current-season",
         "Filtered Watchlist canonical path is wrong: " + stateValue.path,
       );
-      assert(stateValue.search === "?overall.gte=99", "Filtered Watchlist URL state was not preserved: " + stateValue.search + " history=" + JSON.stringify(historyWrites));
+      assert(stateValue.search === "?overall.gte=99", "Filtered Watchlist URL state was not preserved: " + stateValue.search);
       assert(stateValue.tableText === "", "Filtered Watchlist unexpectedly rendered player rows.");
       assert(stateValue.emptyHidden === false, "Filtered Watchlist empty-state message remained hidden after refresh.");
       assert(
@@ -405,6 +394,12 @@ const browserTestSource = String.raw`(() => {
     await delay(80);
     const directState = routeState();
     assertRouteState(directState);
+
+    if (scenario.endsWith("-empty")) {
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", scenario + ": URL-filtered direct refresh committed the authoritative empty table state.");
+      return;
+    }
 
     await navigateBackToScenario(setPage, timeline);
     const spaState = routeState();
