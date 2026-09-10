@@ -1,15 +1,6 @@
 (() => {
   "use strict";
 
-  const VIEW_BY_SLUG = Object.freeze({
-    attributes: "attributes",
-    squad: "attributes",
-    stats: "stats",
-    "next-overall": "next",
-    contracts: "contracts",
-    "current-season": "current",
-    "all-time": "all",
-  });
   const TOOLTIP_HEIGHT = 6;
   const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");
 
@@ -62,35 +53,19 @@
       url = new URL(window.location.href);
     }
 
-    const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
-    if (typeof canonicalRequest === "function") {
-      const request = canonicalRequest(url.pathname);
-      const options = request?.options && typeof request.options === "object" ? request.options : {};
-      return {
-        page: String(request?.pageName || "home"),
-        view: String(options.view || ""),
-        notFoundKind: String(options.notFoundKind || ""),
-        url: url.href,
-      };
+    const routes = window.__mflAppConfig?.routes;
+    if (typeof routes?.canonicalRequest !== "function" || typeof routes?.requestShellId !== "function") {
+      throw new Error("Static route chrome requires canonical route and shell configuration.");
     }
-
-    const parts = url.pathname.split("/").filter(Boolean);
-    const first = String(parts[0] || "").toLowerCase();
-    const page = first === "my-players"
-      ? "myplayers"
-      : first === "clubs" || first === "club"
-        ? "club"
-        : ["database", "mfl", "progression", "watchlist", "agents"].includes(first)
-          ? first
-          : first === "players"
-            ? "player"
-            : first || "home";
-    const requestedView = VIEW_BY_SLUG[String(parts.at(-1) || "").toLowerCase()] || "";
-    const config = tableViewConfig()[page];
-    const view = config && Array.isArray(config.order) && config.order.includes(requestedView)
-      ? requestedView
-      : String(config?.fallback || requestedView || "");
-    return { page, view, notFoundKind: "", url: url.href };
+    const request = routes.canonicalRequest(url.pathname);
+    const options = request?.options && typeof request.options === "object" ? request.options : {};
+    return {
+      page: String(request?.pageName || "notfound"),
+      view: String(options.view || ""),
+      notFoundKind: String(options.notFoundKind || ""),
+      url: url.href,
+      request,
+    };
   }
 
   function syncFooter() {
@@ -228,23 +203,18 @@
     return page;
   }
 
-  function routeNeedsLockedShell(page) {
-    return document.documentElement.dataset.storedWalletOptIn !== "true"
-      && ["watchlist", "myplayers", "settings"].includes(page);
-  }
-
   function shellForRoute(state) {
     if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");
-    if (routeNeedsLockedShell(state.page)) return document.getElementById("myPlayersLockedPage");
-    if (state.page === "database" && state.view === "stats") return document.getElementById("databaseStatsPage");
-    if (state.page === "mfl" && state.view === "stats") return document.getElementById("mflStatsPage");
-    if (tableViewConfig()[state.page]) return document.getElementById("progressionPage");
-    if (state.page === "evaluation") return document.getElementById("evaluationPage");
-    if (state.page === "player") return document.getElementById("playerPage");
-    if (state.page === "settings") return document.getElementById("settingsPage");
-    if (state.page === "changelog") return document.getElementById("changelogPage");
-    if (state.page === "privacy") return document.getElementById("privacyPage");
-    return document.getElementById("homePage");
+    const requestShellId = window.__mflAppConfig?.routes?.requestShellId;
+    if (typeof requestShellId !== "function") return null;
+    const request = state.request || {
+      pageName: state.page,
+      options: { view: state.view },
+    };
+    const shellId = String(requestShellId(request, {
+      walletOptedIn: document.documentElement.dataset.storedWalletOptIn === "true",
+    }) || "");
+    return shellId ? document.getElementById(shellId) : null;
   }
 
   function syncDestinationTableHeader(state) {
@@ -326,7 +296,12 @@
 
   function showRouteShell(state, options = {}) {
     const target = shellForRoute(state);
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof HTMLElement)) {
+      document.querySelectorAll("main > .pageView").forEach((page) => {
+        if (page instanceof HTMLElement) page.hidden = true;
+      });
+      return;
+    }
     if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
     if (target.id !== "notFoundPage") primeDestinationRouteShell(state, target);
 
