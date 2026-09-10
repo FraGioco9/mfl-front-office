@@ -98,6 +98,11 @@ def _run_core(
                 paged.PREVIOUS_DATABASE_PATH,
                 pipeline.log,
             )
+
+        # Next Overall depends only on the freshly loaded player attributes, not on
+        # progression or competition data. Calculate it before the first publish so
+        # a core checkpoint never combines current attributes with stale derived data.
+        pipeline.timed("Next Overall", pipeline.calculate_next_overall, connection)
         connection.commit()
     finally:
         connection.close()
@@ -141,7 +146,6 @@ def _run_player_data() -> None:
             connection,
             limiter,
         )
-        pipeline.timed("Next Overall", pipeline.calculate_next_overall, connection)
         connection.commit()
     finally:
         connection.close()
