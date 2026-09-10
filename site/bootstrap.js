@@ -226,24 +226,18 @@
 
   Reflect.set(window, "__mflSyncEvaluationRecentLoadingShell", syncFirstPaintEvaluationRecentLoadingShell);
 
-  function initialShellTarget() {
-    const initialPage = String(root.dataset.initialPage || "home").toLowerCase();
-    const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
-    const tableView = String(root.dataset.initialTableView || "").toLowerCase();
-    const storedOptIn = root.dataset.storedWalletOptIn === "true";
+  function initialRouteState() {
+    const request = canonicalBootstrapRequest();
+    const pageName = String(request?.pageName || "");
+    const view = String(request?.options?.view || "");
+    const shellId = String(APP_CONFIG.routes.requestShellId(request, {
+      walletOptedIn: root.dataset.storedWalletOptIn === "true",
+    }) || "");
+    return Object.freeze({ request, pageName, view, shellId });
+  }
 
-    if (!storedOptIn && (["watchlist", "myplayers"].includes(tablePage) || initialPage === "settings")) {
-      return document.getElementById("myPlayersLockedPage");
-    }
-    if (tablePage === "database" && tableView === "stats") return document.getElementById("databaseStatsPage");
-    if (tablePage === "mfl" && tableView === "stats") return document.getElementById("mflStatsPage");
-    if (tablePage) return document.getElementById("progressionPage");
-    if (initialPage === "evaluation") return document.getElementById("evaluationPage");
-    if (initialPage.startsWith("players/")) return document.getElementById("playerPage");
-    if (initialPage === "settings") return document.getElementById("settingsPage");
-    if (initialPage === "changelog") return document.getElementById("changelogPage");
-    if (initialPage === "privacy") return document.getElementById("privacyPage");
-    return document.getElementById("homePage");
+  function initialShellTarget(routeState = initialRouteState()) {
+    return routeState.shellId ? document.getElementById(routeState.shellId) : null;
   }
 
   function storedTablePageState(page) {
@@ -1076,9 +1070,18 @@
     setLoadingValue("totalPlayers");
     setLoadingValue("totalWallets");
 
-    const target = initialShellTarget();
-    if (!(target instanceof HTMLElement)) return;
-    const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
+    const routeState = initialRouteState();
+    const target = initialShellTarget(routeState);
+    if (!(target instanceof HTMLElement)) {
+      document.querySelectorAll("main > .pageView").forEach((page) => {
+        if (page instanceof HTMLElement) page.hidden = true;
+      });
+      return;
+    }
+
+    const tablePage = APP_CONFIG.routes.usesTableInfrastructure(routeState.pageName)
+      ? routeState.pageName
+      : "";
     if (target.id === "progressionPage" && tablePage) {
       const view = primeTableChrome(tablePage, window.location.href);
       primeInitialTableStructure(tablePage, view);
@@ -1095,10 +1098,9 @@
     if (target.id === "progressionPage") primeFirstPaintPlayerTableFade();
     if (target.id === "evaluationPage") primeFirstPaintEvaluationTableFade();
 
-    const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((candidate) => {
       if (!(candidate instanceof HTMLElement)) return;
-      candidate.classList.toggle("active", String(candidate.dataset.page || "") === initialPage);
+      candidate.classList.toggle("active", String(candidate.dataset.page || "") === routeState.pageName);
     });
   }
 
