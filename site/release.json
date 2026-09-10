@@ -1,4 +1,4 @@
 {
-  "version": "1.127.14",
-  "description": "Optimize loading, backend data paths, caching, and database rebuilds"
+  "version": "1.127.15",
+  "description": "Stage database refreshes, refine competition data, and stabilize protected routes"
 }
