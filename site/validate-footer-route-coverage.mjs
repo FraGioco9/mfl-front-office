@@ -25,6 +25,13 @@ for (const id of ids) {
   assert.ok(index > mainIndex && index < footerIndex, `${id} must precede the footer.`);
 }
 
+const pageShells = [...html.slice(mainIndex, footerIndex).matchAll(/<section id="([^"]+)" class="([^"]*\bpageView\b[^"]*)"/g)].map((match) => ({
+  id: match[1],
+  classes: match[2].trim().split(/\s+/).filter(Boolean),
+}));
+assert.ok(pageShells.length >= ids.length, "Every static top-level route shell must be discoverable as a pageView before the footer.");
+for (const id of ids) assert.ok(pageShells.some((shell) => shell.id === id), `${id} must be included in universal page-shell validation.`);
+
 const mainFlow = `main {
   --mfl-footer-page-floor: 800px;
   display: flex;
@@ -57,6 +64,94 @@ assert.ok(!footer.includes('main:not(:has(> .pageView:not([hidden])))'), "First-
 assert.ok(!generated.includes('body[data-page="evaluation"] #evaluationPage {\n  min-height:'), "Evaluation must not own a separate footer height workaround.");
 assert.ok(!generated.includes('html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {\n  min-height: 0;'), "Empty Evaluation must not collapse the footer floor.");
 
+const regexEscape = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const shellTokens = [...new Set(pageShells.flatMap((shell) => [
+  `#${shell.id}`,
+  ...shell.classes.map((className) => `.${className}`),
+]))];
+
+function splitSelectorList(selectorText) {
+  const selectors = [];
+  let start = 0;
+  let roundDepth = 0;
+  let squareDepth = 0;
+  let quote = "";
+  for (let index = 0; index < selectorText.length; index += 1) {
+    const char = selectorText[index];
+    if (quote) {
+      if (char === "\\") index += 1;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") roundDepth += 1;
+    else if (char === ")") roundDepth = Math.max(0, roundDepth - 1);
+    else if (char === "[") squareDepth += 1;
+    else if (char === "]") squareDepth = Math.max(0, squareDepth - 1);
+    else if (char === "," && roundDepth === 0 && squareDepth === 0) {
+      selectors.push(selectorText.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  selectors.push(selectorText.slice(start).trim());
+  return selectors.filter(Boolean);
+}
+
+function rightmostSelectorCompound(selector) {
+  let start = 0;
+  let roundDepth = 0;
+  let squareDepth = 0;
+  let quote = "";
+  for (let index = 0; index < selector.length; index += 1) {
+    const char = selector[index];
+    if (quote) {
+      if (char === "\\") index += 1;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") roundDepth += 1;
+    else if (char === ")") roundDepth = Math.max(0, roundDepth - 1);
+    else if (char === "[") squareDepth += 1;
+    else if (char === "]") squareDepth = Math.max(0, squareDepth - 1);
+    else if (roundDepth === 0 && squareDepth === 0 && (char === ">" || char === "+" || char === "~" || /\s/.test(char))) {
+      start = index + 1;
+    }
+  }
+  return selector.slice(start).trim();
+}
+
+function selectorTargetsPageShell(selector) {
+  const compound = rightmostSelectorCompound(selector);
+  if (!compound || /::[a-z-]+/i.test(compound) || /:(?:before|after|first-letter|first-line)\b/i.test(compound)) return false;
+  return shellTokens.some((token) => {
+    const prefix = token[0] === "#" ? "#" : "\\.";
+    const value = regexEscape(token.slice(1));
+    return new RegExp(`${prefix}${value}(?![\\w-])`).test(compound);
+  });
+}
+
+const flowViolations = [];
+const generatedWithoutComments = generated.replace(/\/\*[\s\S]*?\*\//g, "");
+for (const match of generatedWithoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+  const position = match[2].match(/\bposition\s*:\s*(fixed|absolute)\b/i)?.[1];
+  if (!position) continue;
+  for (const selector of splitSelectorList(match[1].trim())) {
+    if (selectorTargetsPageShell(selector)) flowViolations.push(`${selector} -> position: ${position.toLowerCase()}`);
+  }
+}
+assert.deepEqual(
+  flowViolations,
+  [],
+  `Top-level pageView shells must remain in normal footer flow; fixed/absolute positioning found:\n${flowViolations.join("\n")}`,
+);
+
 const lockedPageRule = stylesBase.match(/\.myPlayersLockedPage\s*\{([^}]*)\}/s)?.[1] || "";
 assert.ok(lockedPageRule, "Opted-out protected routes must retain the shared locked page shell styling.");
 assert.match(lockedPageRule, /\bdisplay:\s*grid;/, "Opted-out protected content must stay centered by the existing grid shell.");
@@ -86,4 +181,4 @@ assert.ok(html.includes('if (playerPage instanceof HTMLElement) playerPage.hidde
 assert.ok(html.includes('html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage'), "Direct non-Home refreshes must retain their CSS-hidden Home first-paint guard.");
 assert.ok(staticUi.includes('page.id = "notFoundPage";') && staticUi.includes('page.className = "pageView homePage";'), "Not Found must use the universal pageView contract.");
 assert.ok(staticUi.includes('main.insertBefore(page, footer instanceof HTMLElement ? footer : null);'), "Dynamic Not Found must be inserted before the normal-flow footer.");
-console.log(`Universal footer coverage passed for ${ids.length} static shells plus dynamic Not Found, including opted-out protected routes in normal flow and direct Player loading after its real content.`);
+console.log(`Universal footer coverage passed for ${pageShells.length} static shells plus dynamic Not Found, with every top-level pageView protected from fixed/absolute positioning.`);
