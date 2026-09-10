@@ -19,6 +19,24 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
   invariant(source.includes('const TABLE_URL_QUICK_FILTER_KEYS = Object.freeze(new Set(['), `${label} must keep stable quick-filter URL keys.`);
   invariant(source.includes('"hideRetired"') && source.includes('"hideRetiring"') && source.includes('"hideMfl"')
     && source.includes('"packableOnly"') && source.includes('"newMintsOnly"'), `${label} must cover every shared quick filter.`);
+  const urlSerializerStart = source.indexOf("function tableUrlSearchForState(pageName, viewName, tableState) {");
+  const urlParserStart = source.indexOf("function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {", urlSerializerStart);
+  const urlSerializer = source.slice(urlSerializerStart, urlParserStart);
+  invariant(
+    urlSerializer.includes('params.set("hideRetired", "false")')
+      && urlSerializer.includes('params.set("hideRetiring", "true")')
+      && urlSerializer.includes('params.set("hideMfl", "false")')
+      && urlSerializer.includes('params.set("packableOnly", "false")')
+      && urlSerializer.includes('params.set("newMintsOnly", "true")')
+      && !urlSerializer.includes('params.set("hideRetired", "0")')
+      && !urlSerializer.includes('params.set("hideRetiring", "1")'),
+    `${label} must serialize public URL booleans as lowercase true/false rather than 1/0.`,
+  );
+  invariant(
+    source.includes('const booleanValue = String(value || "").toLowerCase();')
+      && source.includes('const booleanIsValid = booleanValue === "true" || booleanValue === "false";'),
+    `${label} must parse boolean URL values case-insensitively and canonicalize them to lowercase true/false.`,
+  );
   invariant(source.includes('key.startsWith("filter.")'), `${label} must use canonical advanced-filter keys rather than display labels.`);
   invariant(source.includes('const key = `filter.${rule.column}${connector === "or" ? ".or" : ""}`;'), `${label} must serialize deterministic AND/OR advanced-filter keys.`);
   invariant(source.includes('const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);')
