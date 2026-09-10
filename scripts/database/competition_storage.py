@@ -382,12 +382,13 @@ def _reward_fields(value: Any) -> tuple[int | None, int | None, str, float | Non
         placement_from = _int(_first(value, "from", "minRank", "startRank"))
         placement_to = _int(_first(value, "to", "maxRank", "endRank")) or placement_from
 
+    legacy_reward = _first(value, "reward", "prize", "value", "amount", "label")
     lines = value.get("lines")
     if isinstance(lines, list):
         line_values = [_text(line) for line in lines if _text(line)]
-        reward: Any = " · ".join(line_values)
+        reward: Any = " · ".join(line_values) if line_values else legacy_reward
     else:
-        reward = _first(value, "reward", "prize", "value", "amount", "label")
+        reward = legacy_reward
 
     if isinstance(reward, dict):
         label = _text(_first(reward, "label", "name", "value", "amount"))
@@ -661,50 +662,42 @@ def _reconcile_missing_matches(
     return removed, preserved
 
 
-def _first_unresolved_match_keys(stages: list[dict[str, Any]]) -> list[str]:
+def _validate_match_participants(
+    competition_id: int,
+    stages: list[dict[str, Any]],
+    log: Log,
+) -> None:
+    total = 0
+    complete = 0
+    missing_home = 0
+    missing_away = 0
+    unresolved_keys: list[str] = []
+
     for stage in stages:
         groups = [item for item in _items(stage.get("groups")) if isinstance(item, dict)]
-        owners = groups or [stage]
-        for owner in owners:
-            for round_data in _rounds(stage, owner if owner is not stage else None):
+        round_owners: list[dict[str, Any] | None] = groups if groups else [None]
+        for group in round_owners:
+            for round_data in _rounds(stage, group):
                 for match in _items(round_data.get("matches")):
                     if not isinstance(match, dict):
                         continue
                     status = _text(match.get("status")).upper()
                     if status not in PARTICIPANT_REQUIRED_MATCH_STATUSES:
                         continue
-                    if _match_club_id(match, "home") is None or _match_club_id(match, "away") is None:
-                        return sorted(str(key) for key in match)
-    return []
+                    total += 1
+                    home_club_id = _match_club_id(match, "home")
+                    away_club_id = _match_club_id(match, "away")
+                    if home_club_id is None:
+                        missing_home += 1
+                    if away_club_id is None:
+                        missing_away += 1
+                    if home_club_id is not None and away_club_id is not None:
+                        complete += 1
+                    elif not unresolved_keys:
+                        unresolved_keys = sorted(str(key) for key in match)
 
-
-def _validate_match_participants(
-    connection: sqlite3.Connection,
-    competition_id: int,
-    stages: list[dict[str, Any]],
-    log: Log,
-) -> None:
-    placeholders = ", ".join("?" for _ in PARTICIPANT_REQUIRED_MATCH_STATUSES)
-    statuses = tuple(sorted(PARTICIPANT_REQUIRED_MATCH_STATUSES))
-    total, complete, missing_home, missing_away = connection.execute(
-        f"""
-        SELECT
-          count(*),
-          sum(CASE WHEN home_club_id IS NOT NULL AND away_club_id IS NOT NULL THEN 1 ELSE 0 END),
-          sum(CASE WHEN home_club_id IS NULL THEN 1 ELSE 0 END),
-          sum(CASE WHEN away_club_id IS NULL THEN 1 ELSE 0 END)
-        FROM competition_matches
-        WHERE competition_id = ? AND status IN ({placeholders})
-        """,
-        (competition_id, *statuses),
-    ).fetchone()
-    total = int(total or 0)
-    complete = int(complete or 0)
-    missing_home = int(missing_home or 0)
-    missing_away = int(missing_away or 0)
     if total and complete == 0:
-        keys = _first_unresolved_match_keys(stages)
-        signature = ", ".join(keys) if keys else "<unavailable>"
+        signature = ", ".join(unresolved_keys) if unresolved_keys else "<unavailable>"
         raise RuntimeError(
             f"Competition {competition_id} normalized 0/{total} ended/forfeited matches "
             f"with both club IDs; match payload keys: {signature}"
@@ -781,9 +774,9 @@ def persist_competition_detail(
         )
         _replace_rewards(connection, competition_id, detail)
         if has_schedule:
+            _validate_match_participants(competition_id, stages, log)
             seen_matches = _replace_structure(connection, competition_id, stages)
             _reconcile_missing_matches(connection, competition_id, seen_matches, log)
-            _validate_match_participants(connection, competition_id, stages, log)
         else:
             log(
                 f"Competition {competition_id}: detail had no schedule.stages array; "
