@@ -246,7 +246,7 @@ jobs:
         run: python -m scripts.database.rebuild_database_runner
 
       - name: Materialize core checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_players && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         working-directory: builder
         run: |
           python -m scripts.database.checkpoint_database \
@@ -257,7 +257,7 @@ jobs:
           python -m scripts.database.prepare_runtime_database checkpoints/core/mfl_database.db
 
       - name: Publish core checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_players && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         env:
           PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -267,7 +267,7 @@ jobs:
         run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh core builder/checkpoints/core/mfl_database.db
 
       - name: Save core checkpoint for retries
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_players && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
@@ -290,7 +290,7 @@ jobs:
         run: python -m scripts.database.rebuild_database_runner
 
       - name: Materialize player-seasons checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_player_seasons && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         working-directory: builder
         run: |
           python -m scripts.database.checkpoint_database \
@@ -301,7 +301,7 @@ jobs:
           python -m scripts.database.prepare_runtime_database checkpoints/player-seasons/mfl_database.db
 
       - name: Publish player-seasons checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_player_seasons && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         env:
           PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -311,7 +311,7 @@ jobs:
         run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh player-seasons builder/checkpoints/player-seasons/mfl_database.db
 
       - name: Save player-seasons checkpoint for retries
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_player_seasons && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
@@ -334,7 +334,7 @@ jobs:
         run: python -m scripts.database.rebuild_database_runner
 
       - name: Materialize player-data checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_progressions && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         working-directory: builder
         run: |
           python -m scripts.database.checkpoint_database \
@@ -345,7 +345,7 @@ jobs:
           python -m scripts.database.prepare_runtime_database checkpoints/player-data/mfl_database.db
 
       - name: Publish player-data checkpoint
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_progressions && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         env:
           PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -355,7 +355,7 @@ jobs:
         run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh player-data builder/checkpoints/player-data/mfl_database.db
 
       - name: Save player-data checkpoint for retries
-        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        if: ${{ inputs.fetch_progressions && hashFiles('builder/previous-database/mfl_database.db') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
@@ -379,6 +379,7 @@ jobs:
         run: python -m scripts.email.send_progression_emails --previous-db previous-database/mfl_database.db --current-db mfl_database.db
 
       - name: Rebuild database — competitions
+        id: rebuild_competitions
         working-directory: builder
         env:
           MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
@@ -391,6 +392,15 @@ jobs:
           MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
           MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
         run: python -m scripts.database.rebuild_database_runner
+
+      - name: Upload failed competition recovery database
+        if: ${{ failure() && steps.rebuild_competitions.outcome == 'failure' && hashFiles('builder/mfl_database.db') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mfl_database-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: builder/mfl_database.db
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Materialize final checkpoint
         working-directory: builder
