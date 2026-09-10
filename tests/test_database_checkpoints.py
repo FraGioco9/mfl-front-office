@@ -37,7 +37,7 @@ class DatabaseCheckpointTests(unittest.TestCase):
                 INSERT INTO players (
                     player_id, wallet_address, overall, player_seasons,
                     overall_prog_all, next_overall
-                ) VALUES (1, '0xnew', 80, NULL, NULL, NULL)
+                ) VALUES (1, '0xnew', 80, NULL, NULL, 81)
                 """
             )
             source.commit()
@@ -67,7 +67,7 @@ class DatabaseCheckpointTests(unittest.TestCase):
                     "SELECT wallet_address, overall, player_seasons, overall_prog_all, next_overall "
                     "FROM players WHERE player_id = 1"
                 ).fetchone()
-                self.assertEqual(row, ("0xnew", 80, 3, 7, 80.0))
+                self.assertEqual(row, ("0xnew", 80, 3, 7, 81.0))
                 self.assertEqual(
                     checkpoint.execute("SELECT count(*) FROM competitions").fetchone()[0],
                     1,
@@ -77,7 +77,7 @@ class DatabaseCheckpointTests(unittest.TestCase):
                 row = working.execute(
                     "SELECT player_seasons, overall_prog_all, next_overall FROM players WHERE player_id = 1"
                 ).fetchone()
-                self.assertEqual(row, (None, None, None))
+                self.assertEqual(row, (None, None, 81.0))
                 self.assertEqual(
                     working.execute("SELECT count(*) FROM competitions").fetchone()[0],
                     0,
