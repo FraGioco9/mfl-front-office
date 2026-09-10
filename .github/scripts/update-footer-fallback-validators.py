@@ -10,6 +10,6 @@ for filename in ["site/validate-footer-redesign.mjs", "site/validate-mobile-foot
     if count < 3:
         raise SystemExit(f"Expected at least 3 legacy fallback references in {filename}; found {count}")
     text = text.replace(old, new)
-    if old in text:
-        raise SystemExit(f"Legacy fallback selector remains in {filename}")
+    if text.count(new) < count:
+        raise SystemExit(f"Not every footer fallback reference was upgraded in {filename}")
     path.write_text(text, encoding="utf-8")
