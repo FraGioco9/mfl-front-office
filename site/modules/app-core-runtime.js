@@ -1353,7 +1353,7 @@ function agentWalletAddressFromUrl() {
   return agentTargetFromUrl().walletAddress;
 }
 
-function tablePageTarget(pageName, cleanPath, basePath) {
+function tablePageTarget(pageName, cleanPath, basePath, requestedSearch = "") {
   const match = cleanPath.match(new RegExp(`^${basePath}(?:/([^/]+))?$`));
 
   if (!match) {
@@ -1364,18 +1364,25 @@ function tablePageTarget(pageName, cleanPath, basePath) {
   const normalizedView = normalizeViewForPage(view, pageName);
   const canonicalPath = `${basePath}/${viewSlug(normalizedView)}`;
 
+  const canonicalTarget = `${canonicalPath}${requestedSearch}`;
   return {
     pageName,
     options: {
       view: normalizedView,
-      ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      ...(cleanPath !== canonicalPath
+        ? { replaceUrl: canonicalTarget }
+        : requestedSearch
+          ? { path: canonicalTarget }
+          : {}),
     },
   };
 }
 
 function pageTargetFromPath(path) {
   const requestedPath = String(path || "");
-  const cleanPath = requestedPath.split("?")[0];
+  const routeQueryIndex = requestedPath.indexOf("?");
+  const requestedSearch = routeQueryIndex >= 0 ? requestedPath.slice(routeQueryIndex) : "";
+  const cleanPath = routeQueryIndex >= 0 ? requestedPath.slice(0, routeQueryIndex) : requestedPath;
   const optedOutPage = optedOutPageFromPath(cleanPath);
 
   if (optedOutPage) {
@@ -1484,7 +1491,7 @@ function pageTargetFromPath(path) {
   }
 
   for (const [pageName, basePath] of [["database", "/database"], ["mfl", "/mfl"], ["progression", "/progression"], ["myplayers", "/my-players"]]) {
-    const target = tablePageTarget(pageName, cleanPath, basePath);
+    const target = tablePageTarget(pageName, cleanPath, basePath, requestedSearch);
     if (target) {
       return target;
     }
@@ -1503,7 +1510,11 @@ function pageTargetFromPath(path) {
       options: {
         watchlistId: target.watchlistId,
         view: normalizedView,
-        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        ...(cleanPath !== canonicalPath
+          ? { replaceUrl: `${canonicalPath}${requestedSearch}` }
+          : requestedSearch
+            ? { path: `${canonicalPath}${requestedSearch}` }
+            : {}),
       },
     };
   }
@@ -1517,7 +1528,7 @@ function pageTargetFromPath(path) {
       const canonicalPath = `/mfl/${viewSlug(normalizeViewForPage(normalizedView, "mfl"))}`;
       return {
         pageName: "mfl",
-        options: { view: normalizeViewForPage(normalizedView, "mfl"), replaceUrl: canonicalPath },
+        options: { view: normalizeViewForPage(normalizedView, "mfl"), replaceUrl: `${canonicalPath}${requestedSearch}` },
       };
     }
 
@@ -1527,7 +1538,11 @@ function pageTargetFromPath(path) {
       options: {
         walletAddress,
         view: normalizedView,
-        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        ...(cleanPath !== canonicalPath
+          ? { replaceUrl: `${canonicalPath}${requestedSearch}` }
+          : requestedSearch
+            ? { path: `${canonicalPath}${requestedSearch}` }
+            : {}),
       },
     };
   }
@@ -1650,6 +1665,13 @@ function commitViewTransition(pageName, viewName, options = {}) {
           walletAddress: options.walletAddress || state.currentAgentWalletAddress,
           watchlistId: options.watchlistId || state.currentWatchlistId,
         });
+
+    const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+    const compatibleSearch = tablePages.has(statePageName)
+      && typeof tableUrlState?.searchForCurrentControls === "function"
+      ? tableUrlState.searchForCurrentControls(pageName, nextView)
+      : "";
+    if (compatibleSearch) targetPath += compatibleSearch;
   }
 
   if (targetPath && currentNavigationPath() !== targetPath) {
@@ -2045,6 +2067,12 @@ function restoreSavedTableState() {
 }
 
 function applyFilters(options = {}) {
+  if (options.save !== false) {
+    const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+    if (tableUrlState && typeof tableUrlState.syncFromControls === "function") {
+      tableUrlState.syncFromControls();
+    }
+  }
   if (state.incrementalMode && !state.incrementalApplying && !options.localOnly) {
     state.page = 1;
     void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });
@@ -6704,11 +6732,14 @@ function incrementalDataQuery(route, page = 1) {
 
   const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers"].includes(route.scope);
   if (tableRoute) {
-    if (hideRetiredInput.checked) query.set("hideRetired", "1");
-    if (hideRetiringInput.checked) query.set("hideRetiring", "1");
-    if (hideMflPlayersInput?.checked) query.set("hideMfl", "1");
-    if (packablePlayersInput?.checked) query.set("packableOnly", "1");
-    if (newMintsInput.checked) query.set("newMintsOnly", "1");
+    const tableFilters = route.tableFilters && typeof route.tableFilters === "object"
+      ? route.tableFilters
+      : null;
+    if (tableFilters ? tableFilters.hideRetired : hideRetiredInput.checked) query.set("hideRetired", "1");
+    if (tableFilters ? tableFilters.hideRetiring : hideRetiringInput.checked) query.set("hideRetiring", "1");
+    if (tableFilters ? tableFilters.hideMflPlayers : hideMflPlayersInput?.checked) query.set("hideMfl", "1");
+    if (tableFilters ? tableFilters.mflPackable : packablePlayersInput?.checked) query.set("packableOnly", "1");
+    if (tableFilters ? tableFilters.newMints : newMintsInput.checked) query.set("newMintsOnly", "1");
     const rules = Array.isArray(route.filterRules) ? route.filterRules : readFilterRules();
     if (rules.length) query.set("filters", JSON.stringify(serializeFilterRulesForRequest(rules)));
   }
@@ -7519,9 +7550,10 @@ function syncLayoutCenter() {
       ? tableStateWithoutPageFilters(pageName, storedPageState)
       : storedPageState;
     if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
-    if (savedPageState) {
-      restoreSavedTableState(pageName, { view: options.view, deferRules: true });
-    } else if (clubTarget) {
+    const restoredPageState = savedPageState
+      ? restoreSavedTableState(pageName, { view: options.view, deferRules: true })
+      : null;
+    if (!savedPageState && clubTarget) {
       state.view = clubTarget.view;
       state.page = 1;
     }
@@ -7541,8 +7573,15 @@ function syncLayoutCenter() {
     }
 
     const route = incrementalRouteTarget(pageName, options);
-    if (route && savedPageState) {
-      route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);
+    if (route && restoredPageState) {
+      route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);
+      Reflect.set(route, "tableFilters", {
+        hideRetired: restoredPageState.hideRetired !== false,
+        hideRetiring: Boolean(restoredPageState.hideRetiring),
+        hideMflPlayers: pageName === "database" ? restoredPageState.hideMflPlayers !== false : false,
+        mflPackable: pageName === "mfl" ? restoredPageState.mflPackable !== false : false,
+        newMints: Boolean(restoredPageState.newMints),
+      });
     }
     return route;
   }

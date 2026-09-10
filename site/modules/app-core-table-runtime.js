@@ -1141,42 +1141,45 @@ function populateAddFilterSelect(pageName = tablePageKey() || state.currentPage 
   addFilterSelect.replaceChildren(fragment);
 }
 
-function tableBuildOperatorSelectOwner(column) {
-  const select = document.createElement("select");
-  select.dataset.filterOperator = "true";
-  let operators;
-
+function filterOperatorsForColumn(column) {
   if (column === "positions") {
-    operators = [
+    return [
       ["primary_is", "primary is"],
       ["can_play", "can play"],
     ];
-  } else if (column === joinedAgencyColumn) {
-    operators = [
+  }
+  if (column === joinedAgencyColumn) {
+    return [
       ["after", "after"],
       ["before", "before"],
       ["during", "during"],
     ];
-  } else if (column === contractStatusFilterColumn || column === "listing_price") {
-    operators = [["=", "is"]];
-    select.hidden = true;
-  } else if (column === "nationality") {
-    operators = [["=", "is"]];
-    select.hidden = true;
-  } else if (column === "name" || column === "wallet_name") {
-    operators = [["contains", "contains"]];
-    select.hidden = true;
-  } else if (isNumericColumn(column)) {
-    operators = [
+  }
+  if (column === contractStatusFilterColumn || column === "listing_price") {
+    return [["=", "is"]];
+  }
+  if (column === "nationality") {
+    return [["=", "is"]];
+  }
+  if (column === "name" || column === "wallet_name") {
+    return [["contains", "contains"]];
+  }
+  if (isNumericColumn(column)) {
+    return [
       [">=", "at least"],
       ["<=", "at most"],
       ["between", "is between"],
       ["=", "is"],
     ];
-  } else {
-    operators = [["contains", "contains"]];
-    select.hidden = true;
   }
+  return [["contains", "contains"]];
+}
+
+function tableBuildOperatorSelectOwner(column) {
+  const select = document.createElement("select");
+  select.dataset.filterOperator = "true";
+  const operators = filterOperatorsForColumn(column);
+  select.hidden = operators.length === 1;
 
   operators.forEach(([value, label]) => {
     const option = document.createElement("option");
@@ -1625,6 +1628,181 @@ function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage
   }
 }
 
+const TABLE_URL_QUICK_FILTER_KEYS = Object.freeze(new Set([
+  "hideRetired",
+  "hideRetiring",
+  "hideMfl",
+  "packableOnly",
+  "newMintsOnly",
+]));
+
+function tableUrlRuleIsValid(column, operator, value, valueTo = "") {
+  const allowedOperators = new Set(filterOperatorsForColumn(column).map(([candidate]) => candidate));
+  if (!allowedOperators.has(operator) || !String(value || "").trim()) return false;
+  if ((operator === "between" || operator === "during") && !String(valueTo || "").trim()) return false;
+
+  if (column === "positions") {
+    return POSITION_ORDER.includes(String(value));
+  }
+  if (column === contractStatusFilterColumn) {
+    return contractStatusOptions.some((option) => option.value === value);
+  }
+  if (column === "listing_price") {
+    return ["for_sale", "not_for_sale"].includes(String(value));
+  }
+  if (column === joinedAgencyColumn) {
+    const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+    return isoDate.test(String(value))
+      && (operator !== "during" || isoDate.test(String(valueTo)));
+  }
+  if (isNumericColumn(column)) {
+    return Number.isFinite(Number(value))
+      && (operator !== "between" || Number.isFinite(Number(valueTo)));
+  }
+  return true;
+}
+
+function tableUrlRuleFromEntry(pageName, viewName, key, rawValue) {
+  if (!key.startsWith("filter.")) return null;
+  const suffix = key.slice("filter.".length);
+  const orConnector = suffix.endsWith(".or");
+  const column = orConnector ? suffix.slice(0, -3) : suffix;
+  const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
+  if (!allowedColumns.has(column)) return { known: true, rule: null };
+
+  const serialized = String(rawValue || "");
+  const separator = serialized.indexOf("~");
+  if (separator <= 0) return { known: true, rule: null };
+  const operator = serialized.slice(0, separator);
+  const remainder = serialized.slice(separator + 1);
+  let value = remainder;
+  let valueTo = "";
+
+  if (operator === "between" || operator === "during") {
+    const rangeSeparator = remainder.indexOf("~");
+    if (rangeSeparator <= 0) return { known: true, rule: null };
+    value = remainder.slice(0, rangeSeparator);
+    valueTo = remainder.slice(rangeSeparator + 1);
+  }
+
+  if (!tableUrlRuleIsValid(column, operator, value, valueTo)) {
+    return { known: true, rule: null };
+  }
+
+  return {
+    known: true,
+    rule: {
+      column,
+      connector: orConnector ? "or" : "and",
+      operator,
+      value,
+      valueTo,
+    },
+  };
+}
+
+function tableUrlSearchForState(pageName, viewName, tableState) {
+  if (!tablePages.has(pageName) || viewName === "stats") return "";
+  const defaults = defaultTablePageState(pageName);
+  const source = tableState && typeof tableState === "object" ? tableState : defaults;
+  const params = new URLSearchParams();
+
+  if (source.hideRetired === false) params.set("hideRetired", "0");
+  if (source.hideRetiring) params.set("hideRetiring", "1");
+  if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "0");
+  if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "0");
+  if (source.newMints) params.set("newMintsOnly", "1");
+
+  const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
+  const rules = Array.isArray(source.rules) ? source.rules : [];
+  rules.forEach((rule, index) => {
+    if (!allowedColumns.has(rule?.column)) return;
+    const connector = index === 0 ? "and" : (rule.connector === "or" ? "or" : "and");
+    if (!tableUrlRuleIsValid(rule.column, rule.operator, rule.value, rule.valueTo)) return;
+    const key = `filter.${rule.column}${connector === "or" ? ".or" : ""}`;
+    const rangeSuffix = (rule.operator === "between" || rule.operator === "during")
+      ? `~${rule.valueTo}`
+      : "";
+    params.append(key, `${rule.operator}~${rule.value}${rangeSuffix}`);
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
+  const defaults = defaultTablePageState(pageName);
+  const fallback = {
+    ...defaults,
+    ...(fallbackState && typeof fallbackState === "object" ? fallbackState : {}),
+  };
+  const params = new URLSearchParams(String(search || "").replace(/^\?/, ""));
+  let explicit = false;
+  const parsedQuick = {};
+  const parsedRules = [];
+
+  for (const [key, value] of params.entries()) {
+    if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) {
+      explicit = true;
+      if (key === "hideRetired" && (value === "0" || value === "1")) parsedQuick.hideRetired = value === "1";
+      else if (key === "hideRetiring" && (value === "0" || value === "1")) parsedQuick.hideRetiring = value === "1";
+      else if (key === "hideMfl" && pageName === "database" && (value === "0" || value === "1")) parsedQuick.hideMflPlayers = value === "1";
+      else if (key === "packableOnly" && pageName === "mfl" && (value === "0" || value === "1")) parsedQuick.mflPackable = value === "1";
+      else if (key === "newMintsOnly" && (value === "0" || value === "1")) parsedQuick.newMints = value === "1";
+      continue;
+    }
+
+    const parsedRule = tableUrlRuleFromEntry(pageName, viewName, key, value);
+    if (parsedRule?.known) {
+      explicit = true;
+      if (parsedRule.rule) parsedRules.push(parsedRule.rule);
+    }
+  }
+
+  const resolved = explicit
+    ? {
+        ...tableStateWithoutPageFilters(pageName, fallback),
+        ...parsedQuick,
+        rules: parsedRules,
+        selectedPlayerIds: [],
+      }
+    : fallback;
+  resolved.view = normalizeViewForPage(viewName || resolved.view, pageName);
+  if (pageName === "mfl" && resolved.newMints) resolved.mflPackable = false;
+
+  return {
+    explicit,
+    state: resolved,
+    canonicalSearch: tableUrlSearchForState(pageName, resolved.view, resolved),
+  };
+}
+
+function replaceTableUrlForState(pageName, viewName, tableState) {
+  if (!tablePages.has(pageName)) return false;
+  const basePath = pagePath(pageName, { view: viewName });
+  const search = tableUrlSearchForState(pageName, viewName, tableState);
+  const target = `${basePath}${search}${window.location.hash || ""}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash || ""}`;
+  if (target === current) return false;
+  const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+    ? window.history.state
+    : {};
+  window.history.replaceState(historyState, "", target);
+  return true;
+}
+
+function syncTableUrlFromControls(pageName = tablePageKey(), viewName = state.view) {
+  if (!pageName || !tablePages.has(pageName)) return false;
+  return replaceTableUrlForState(pageName, viewName, currentTablePageState());
+}
+
+Reflect.set(window, "__mflTableUrlState", Object.freeze({
+  resolve: tableUrlStateFromSearch,
+  searchForState: tableUrlSearchForState,
+  searchForCurrentControls: (pageName, viewName) => tableUrlSearchForState(pageName, viewName, currentTablePageState()),
+  syncFromControls: syncTableUrlFromControls,
+}));
+
 function normalizedSavedTableControlState(pageName, savedState) {
   const newMints = Boolean(savedState.newMints);
   const mflPackable = pageName === "mfl"
@@ -1672,10 +1850,14 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
   const storedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
   const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
-  const savedState = resetFilters ? tableStateWithoutPageFilters(pageName, storedState) : storedState;
-  if (resetFilters) state.tablePageStates[pageName] = savedState;
+  const fallbackState = resetFilters ? tableStateWithoutPageFilters(pageName, storedState) : storedState;
+  if (resetFilters) state.tablePageStates[pageName] = fallbackState;
 
-  state.view = normalizeViewForPage(options.view || savedState.view, pageName);
+  const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);
+  const urlState = tableUrlStateFromSearch(pageName, requestedView, window.location.search, fallbackState);
+  const savedState = urlState.state;
+  state.view = savedState.view;
+  replaceTableUrlForState(pageName, state.view, savedState);
 
   if (Number(savedState.pageSize)) {
     state.pageSize = Number(savedState.pageSize);
@@ -1690,6 +1872,7 @@ state.sortKey = viewSortState.sortKey;
 state.sortDirection = viewSortState.sortDirection;
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
+  return savedState;
 }
 
 function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
