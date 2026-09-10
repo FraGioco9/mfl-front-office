@@ -364,16 +364,6 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     buildHeader();
   }
   globalThis.syncQuickFilterLabels?.();
-  emptyState.textContent = pageName === "watchlist"
-    ? "No players in your watchlist yet."
-    : pageName === "myplayers"
-      ? "No owned players match the current filters."
-      : pageName === "mfl"
-        ? "No MFL players match the current filters."
-        : pageName === "agents"
-          ? "No agent players match the current filters."
-          : "No players match the current filters.";
-
 
   if (mflStatsActive) {
     state.view = "stats";
@@ -478,7 +468,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
 
     return;
   }
-  if (tablePage && state.rows.length) {
+  if (tablePage) {
     state.page = 1;
     applyFilters({ save: false });
   }
