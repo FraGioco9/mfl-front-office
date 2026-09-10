@@ -232,12 +232,13 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
+  emptyState.textContent = tableEmptyStateMessage();
+  emptyState.hidden = pageRows.length > 0;
   const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
   if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
   if (preservedPlayerTableActionRenderSignature) {
     restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
   }
-  emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount();
   syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
