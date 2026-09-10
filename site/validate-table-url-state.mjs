@@ -53,9 +53,12 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
       && source.includes('"=": "is"'),
     `${label} must keep symbolic operators out of public URL values.`,
   );
-  invariant(source.includes('const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);')
-    && source.includes("const urlState = tableUrlStateFromSearch(pageName, requestedView, window.location.search, fallbackState);")
-    && source.includes("const savedState = urlState.state;"), `${label} must give explicit URL state precedence over persisted table filters.`);
+  invariant(source.includes("function tableRestoreUrlSearch(options = {}) {")
+    && source.includes('const routePath = String(options.path || options.replaceUrl || "");')
+    && source.includes("return queryIndex >= 0 ? routePath.slice(queryIndex) : \"\";")
+    && source.includes('const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);')
+    && source.includes("const urlState = tableUrlStateFromSearch(pageName, requestedView, tableRestoreUrlSearch(options), fallbackState);")
+    && source.includes("const savedState = urlState.state;"), `${label} must keep the original route query authoritative through direct-refresh hydration instead of relying only on the mutable current URL.`);
   invariant(source.includes("replaceTableUrlForState(pageName, state.view, savedState);"), `${label} must canonicalize invalid/default URL state without a second navigation owner.`);
   invariant(source.includes("return savedState;"), `${label} restore must return the resolved state for first-request ownership.`);
 }
@@ -65,9 +68,12 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
     && source.includes('typeof tableUrlState.syncFromControls === "function"')
     && source.includes("tableUrlState.syncFromControls();"), `${label} must replace the URL when committed filters change.`);
   invariant(source.includes("const restoredPageState = savedPageState")
-    && source.includes("restoreSavedTableState(pageName, { view: options.view, deferRules: true })")
+    && source.includes("restoreSavedTableState(pageName, {")
+    && source.includes("path: options.path,")
+    && source.includes("replaceUrl: options.replaceUrl,")
+    && source.includes("deferRules: true,")
     && source.includes("route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);")
-    && source.includes('Reflect.set(route, "tableFilters", {'), `${label} must resolve URL state before constructing the first incremental request.`);
+    && source.includes('Reflect.set(route, "tableFilters", {'), `${label} must carry the original route query into URL-state resolution before constructing the first incremental request.`);
   invariant(source.includes('const tableFilters = route.tableFilters && typeof route.tableFilters === "object"')
     && source.includes("tableFilters ? tableFilters.hideRetired : hideRetiredInput.checked")
     && source.includes("tableFilters ? tableFilters.newMints : newMintsInput.checked"), `${label} first request must consume resolved quick filters rather than stale controls.`);
