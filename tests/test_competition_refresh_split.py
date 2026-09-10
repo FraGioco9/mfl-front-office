@@ -66,6 +66,26 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
 
         self.assertEqual([candidate["id"] for candidate in candidates], [1])
 
+    def test_current_season_boundary_ignores_upcoming_next_season(self) -> None:
+        payload = {
+            "competitions": [
+                {
+                    "id": 1600,
+                    "season": {"id": 26},
+                    "status": "LIVE",
+                    "withXp": True,
+                },
+                {
+                    "id": 1700,
+                    "season": {"id": 27},
+                    "status": "PLANNED",
+                    "withXp": True,
+                },
+            ]
+        }
+
+        self.assertEqual(competitions.current_season_id_from_index(payload), 26)
+
     def test_both_fetch_modes_off_restore_history_without_api_calls(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             previous_path = Path(directory) / "previous.db"
@@ -153,7 +173,7 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_historical_only_uses_index_for_boundary_without_persisting_planned_current(self) -> None:
+    def test_historical_only_uses_live_index_boundary_without_persisting_current(self) -> None:
         calls: list[str] = []
 
         def request_json(url: str, _label: str, _limiter):
@@ -163,11 +183,18 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
                     "competitions": [
                         {
                             "id": 200,
-                            "season": {"id": 11},
+                            "season": {"id": 12},
                             "code": "DMND",
+                            "status": "LIVE",
+                            "withXp": True,
+                        },
+                        {
+                            "id": 201,
+                            "season": {"id": 13},
+                            "code": "PLAT",
                             "status": "PLANNED",
                             "withXp": True,
-                        }
+                        },
                     ]
                 }
             if url == f"{competitions.SEASON_HISTORY_URL}?seasonId=11":
@@ -199,6 +226,62 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
             self.assertEqual(stats["historical_saved"], 1)
             self.assertEqual(storage.stored_competition_ids(connection), {300})
             self.assertFalse(any(url.endswith("/200") for url in calls))
+            self.assertFalse(any(url.endswith("/201") for url in calls))
+        finally:
+            connection.close()
+
+    def test_historical_backfill_stops_before_live_current_season(self) -> None:
+        calls: list[str] = []
+
+        def request_json(url: str, _label: str, _limiter):
+            calls.append(url)
+            if url == competitions.CURRENT_COMPETITIONS_URL:
+                return {
+                    "competitions": [
+                        {
+                            "id": 1600,
+                            "season": {"id": 26},
+                            "status": "LIVE",
+                            "withXp": True,
+                        },
+                        {
+                            "id": 1700,
+                            "season": {"id": 27},
+                            "status": "PLANNED",
+                            "withXp": True,
+                        },
+                    ]
+                }
+            if url.startswith(f"{competitions.SEASON_HISTORY_URL}?seasonId="):
+                season_id = int(url.rsplit("=", 1)[1])
+                if 11 <= season_id <= 25:
+                    return {"seasonId": season_id, "rootCompetitions": []}
+            raise AssertionError(f"unexpected request: {url}")
+
+        connection = sqlite3.connect(":memory:")
+        try:
+            stats = competitions.refresh_competitions(
+                connection,
+                None,
+                request_json,
+                object(),
+                log=lambda _message: None,
+                fetch_live=False,
+                backfill_historical=True,
+            )
+
+            history_calls = [url for url in calls if "seasonHistory" in url]
+            self.assertEqual(
+                history_calls,
+                [
+                    f"{competitions.SEASON_HISTORY_URL}?seasonId={season_id}"
+                    for season_id in range(11, 26)
+                ],
+            )
+            self.assertEqual(stats["historical_discovered"], 0)
+            self.assertEqual(stats["historical_requested"], 0)
+            self.assertFalse(any("seasonId=26" in url for url in history_calls))
+            self.assertFalse(any("seasonId=27" in url for url in history_calls))
         finally:
             connection.close()
 
@@ -211,8 +294,8 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
                     "competitions": [
                         {
                             "id": 9000,
-                            "season": {"id": 11},
-                            "status": "PLANNED",
+                            "season": {"id": 12},
+                            "status": "LIVE",
                             "withXp": True,
                         }
                     ]
@@ -291,8 +374,8 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
                     "competitions": [
                         {
                             "id": 9000,
-                            "season": {"id": 11},
-                            "status": "PLANNED",
+                            "season": {"id": 12},
+                            "status": "LIVE",
                             "withXp": True,
                         }
                     ]
