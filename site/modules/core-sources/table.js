@@ -1890,6 +1890,13 @@ function tableStateWithoutPageFilters(pageName, savedState) {
   };
 }
 
+function tableRestoreUrlSearch(options = {}) {
+  const routePath = String(options.path || options.replaceUrl || "");
+  if (!routePath) return window.location.search;
+  const queryIndex = routePath.indexOf("?");
+  return queryIndex >= 0 ? routePath.slice(queryIndex) : "";
+}
+
 function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
   if (pageName === "club") {
     state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
@@ -1906,7 +1913,7 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
   if (resetFilters) state.tablePageStates[pageName] = fallbackState;
 
   const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);
-  const urlState = tableUrlStateFromSearch(pageName, requestedView, window.location.search, fallbackState);
+  const urlState = tableUrlStateFromSearch(pageName, requestedView, tableRestoreUrlSearch(options), fallbackState);
   const savedState = urlState.state;
   state.view = savedState.view;
   replaceTableUrlForState(pageName, state.view, savedState);
