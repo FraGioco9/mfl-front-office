@@ -577,7 +577,7 @@ export function browserConfigRuntimeSource(release) {
     const protectedRoute = Object.prototype.hasOwnProperty.call(data.routes.protectedOptedOutPaths, page);
     const walletOptedIn = options.walletOptedIn !== false && options.optedOut !== true;
     if (protectedRoute && !walletOptedIn) return String(data.routes.protectedShellId || "");
-    const viewShellId = String(data.routes.viewShellIds[`${page}:${view}`] || "");
+    const viewShellId = String(data.routes.viewShellIds[page + ":" + view] || "");
     return viewShellId || String(data.routes.shellIds[page] || "");
   }
 
