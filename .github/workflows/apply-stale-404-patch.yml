@@ -1,0 +1,46 @@
+name: Apply stale 404 patch
+
+on:
+  push:
+    branches: [fix/stale-historical-competition-404]
+    paths: [.github/workflows/apply-stale-404-patch.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/stale-historical-competition-404
+      - name: Apply targeted request retry change
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/database/run_flow_rebuild.py")
+          source = path.read_text(encoding="utf-8")
+          old = '''        except HTTPError as error:
+              body = error.read().decode("utf-8", errors="replace")
+              last_error = RuntimeError(f"HTTP {error.code}: {body[:500]}")
+          except (URLError, TimeoutError, json.JSONDecodeError) as error:
+          '''
+          new = '''        except HTTPError as error:
+              body = error.read().decode("utf-8", errors="replace")
+              last_error = RuntimeError(f"HTTP {error.code}: {body[:500]}")
+              if error.code == 404:
+                  raise RuntimeError(f"{request_name} failed: {last_error}") from error
+          except (URLError, TimeoutError, json.JSONDecodeError) as error:
+          '''
+          if old not in source:
+              raise SystemExit("Expected request_json HTTPError block was not found")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/database/run_flow_rebuild.py
+          git commit -m "Do not retry permanent HTTP 404s"
+          git push origin HEAD:fix/stale-historical-competition-404
