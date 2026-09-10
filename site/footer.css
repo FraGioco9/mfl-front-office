@@ -35,22 +35,22 @@ main > .pageView {
 /*
  * Refresh route guards can hide shells with CSS while their hidden attributes still
  * look visible. Reserve the first content row explicitly until route resolution.
- * Player is deliberately excluded: its pre-footer static shell is measurable from
- * parser time, so normal flex flow must place the footer after its real bottom edge.
+ * Player and opted-out protected routes are deliberately excluded: their pre-footer
+ * static shells are measurable from parser time, so normal flex flow must own first paint too.
  */
-html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {
+html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
   align-content: start;
 }
 
-html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .pageView {
+html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .pageView {
   grid-column: 1;
   grid-row: 1;
 }
 
-html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {
+html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .siteFooterDetails {
   grid-column: 1;
   grid-row: 2;
 }

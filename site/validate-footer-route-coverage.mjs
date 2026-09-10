@@ -43,13 +43,14 @@ const pageFlow = `main > .pageView {
   flex: 0 0 auto;
   min-height: var(--mfl-footer-page-floor);
 }`;
-const firstPaintFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {
+const firstPaintFallbackOwner = 'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page])';
+const firstPaintFlow = `${firstPaintFallbackOwner} body > #appShell > main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
   align-content: start;
 }`;
-const firstPaintFooterFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {
+const firstPaintFooterFlow = `${firstPaintFallbackOwner} body > #appShell > main > .siteFooterDetails {
   grid-column: 1;
   grid-row: 2;
 }`;
@@ -169,6 +170,16 @@ for (const protectedPage of ["myplayers", "watchlist", "settings"]) {
   assert.ok(pageLifecycle.includes(`pageName === "${protectedPage}"`), `${protectedPage} must remain part of the opted-out route guard.`);
 }
 assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");
+
+
+const optedOutFirstPaintScope = 'html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(';
+assert.ok(html.includes(optedOutFirstPaintScope), "Opted-out protected routes must own an explicit parser-time first-paint scope.");
+assert.ok(html.includes(') main > .pageView:not(#myPlayersLockedPage) {\n        display: none;'), "Opted-out refresh must exclude every competing route shell before first paint.");
+assert.ok(html.includes(') #myPlayersLockedPage {\n        display: grid;\n        place-items: center;'), "The locked shell must be visible and centered before bootstrap.");
+assert.ok(footer.includes(':not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {'), "Opted-out protected refreshes must bypass the unresolved grid fallback and retain canonical flex flow from first paint.");
+const lockedCopyIndex = html.indexOf('const copy = {');
+const bootstrapScriptIndex = html.indexOf('<script src="/bootstrap.js"></script>');
+assert.ok(lockedCopyIndex >= 0 && bootstrapScriptIndex > lockedCopyIndex, "Route-specific opted-out copy must be projected synchronously before bootstrap can settle the route.");
 
 for (const floor of [
   "max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)))",

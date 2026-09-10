@@ -10,133 +10,6 @@
         root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
 
         // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG
-        const FIRST_PAINT_APP_NAME = "MFL Front Office";
-        const cleanFirstPaintTitleText = (value) => String(value || "").replace(/\s+/g, " ").trim();
-        const firstPaintTitleWithAppName = (label) => {
-          const text = cleanFirstPaintTitleText(label);
-          return text ? `${text} - ${FIRST_PAINT_APP_NAME}` : FIRST_PAINT_APP_NAME;
-        };
-        const decodeFirstPaintRoutePart = (value) => {
-          try {
-            return decodeURIComponent(String(value || ""));
-          } catch {
-            return String(value || "");
-          }
-        };
-        const firstPaintRouteParts = String(window.location.pathname || "/").split("/").filter(Boolean);
-        const firstPaintRouteRoot = String(firstPaintRouteParts[0] || "").toLowerCase();
-        const firstPaintPlayerTitle = () => {
-          const playerId = cleanFirstPaintTitleText(firstPaintRouteParts[1]);
-          if (!playerId) return firstPaintTitleWithAppName("Player");
-          try {
-            const cached = JSON.parse(sessionStorage.getItem(`mfl-player-first-paint-v1:${playerId}`) || "null");
-            const name = cleanFirstPaintTitleText(cached?.name || cached?.knownValues?.name?.display || cached?.knownValues?.name?.raw);
-            return firstPaintTitleWithAppName(name || "Player");
-          } catch {
-            return firstPaintTitleWithAppName("Player");
-          }
-        };
-        const firstPaintClubTitle = () => {
-          const clubId = cleanFirstPaintTitleText(decodeFirstPaintRoutePart(firstPaintRouteParts[1]));
-          if (!clubId) return firstPaintTitleWithAppName("Club");
-          try {
-            const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
-            const identity = stored && typeof stored === "object" && !Array.isArray(stored) ? stored[clubId] : null;
-            const name = cleanFirstPaintTitleText(identity?.name);
-            const division = cleanFirstPaintTitleText(identity?.divisionName);
-            return firstPaintTitleWithAppName(name ? (division ? `${name} - ${division}` : name) : "Club");
-          } catch {
-            return firstPaintTitleWithAppName("Club");
-          }
-        };
-        const firstPaintAgentTitle = () => {
-          const address = cleanFirstPaintTitleText(decodeFirstPaintRoutePart(firstPaintRouteParts[1])).toLowerCase();
-          if (!address) return firstPaintTitleWithAppName("Agent");
-          try {
-            const normalized = address.startsWith("0x") ? address : `0x${address}`;
-            const linkedWalletRaw = cleanFirstPaintTitleText(localStorage.getItem("mfl-linked-wallet-v1")).toLowerCase();
-            const linkedWallet = linkedWalletRaw ? (linkedWalletRaw.startsWith("0x") ? linkedWalletRaw : `0x${linkedWalletRaw}`) : "";
-            const linkedDisplay = JSON.parse(localStorage.getItem("mfl-linked-wallet-display-name-v1") || "null");
-            const linkedDisplayAddressRaw = cleanFirstPaintTitleText(linkedDisplay?.address).toLowerCase();
-            const linkedDisplayAddress = linkedDisplayAddressRaw
-              ? (linkedDisplayAddressRaw.startsWith("0x") ? linkedDisplayAddressRaw : `0x${linkedDisplayAddressRaw}`)
-              : "";
-            const names = JSON.parse(localStorage.getItem("mfl-agent-display-names-v1") || "{}");
-            const name = linkedWallet === normalized && linkedDisplayAddress === normalized
-              ? cleanFirstPaintTitleText(linkedDisplay?.name)
-              : cleanFirstPaintTitleText(names && typeof names === "object" ? names[normalized] : "");
-            if (!name) return firstPaintTitleWithAppName("Agent");
-            return firstPaintTitleWithAppName(name.toLowerCase() === normalized ? normalized : `${name} - ${normalized}`);
-          } catch {
-            return firstPaintTitleWithAppName("Agent");
-          }
-        };
-        const firstPaintWatchlistTitle = () => {
-          try {
-            const candidateId = cleanFirstPaintTitleText(decodeFirstPaintRoutePart(firstPaintRouteParts[1]));
-            const viewSlugs = new Set(["attributes", "next-overall", "contracts", "current-season", "all-time"]);
-            const watchlistId = candidateId && !viewSlugs.has(candidateId.toLowerCase()) ? candidateId : "";
-            const linkedWalletRaw = cleanFirstPaintTitleText(localStorage.getItem("mfl-linked-wallet-v1")).toLowerCase();
-            const linkedWallet = linkedWalletRaw ? (linkedWalletRaw.startsWith("0x") ? linkedWalletRaw : `0x${linkedWalletRaw}`) : "";
-            const stored = linkedWallet
-              ? JSON.parse(localStorage.getItem(`mfl-wallet-watchlist-v1:${linkedWallet}`) || "[]")
-              : [];
-            const watchlists = Array.isArray(stored) ? stored : [];
-            const selected = (watchlistId
-              ? watchlists.find((watchlist) => cleanFirstPaintTitleText(watchlist?.id) === watchlistId)
-              : null) || watchlists[0] || null;
-            const name = cleanFirstPaintTitleText(selected?.name);
-            return firstPaintTitleWithAppName(name ? `Watchlist - ${name}` : "Watchlist");
-          } catch {
-            return firstPaintTitleWithAppName("Watchlist");
-          }
-        };
-        const firstPaintEvaluationTitle = () => {
-          const params = new URLSearchParams(window.location.search);
-          const identities = [
-            ["saved", cleanFirstPaintTitleText(params.get("saved"))],
-            ["share", cleanFirstPaintTitleText(params.get("share"))],
-            ["player", cleanFirstPaintTitleText(params.get("player"))],
-          ];
-          let playerName = "";
-          try {
-            for (const [kind, id] of identities) {
-              if (!id) continue;
-              playerName = cleanFirstPaintTitleText(sessionStorage.getItem(`mfl-evaluation-first-paint-name-v2:${kind}:${id}`));
-              if (playerName) break;
-            }
-          } catch {}
-          if (!playerName) {
-            const currentTitle = cleanFirstPaintTitleText(document.title);
-            const prefix = "Evaluation - ";
-            const suffix = ` - ${FIRST_PAINT_APP_NAME}`;
-            if (currentTitle.startsWith(prefix) && currentTitle.endsWith(suffix) && currentTitle !== firstPaintTitleWithAppName("Evaluation")) {
-              playerName = cleanFirstPaintTitleText(currentTitle.slice(prefix.length, -suffix.length));
-            }
-          }
-          if (playerName) root.dataset.initialEvaluationPlayerName = playerName;
-          return firstPaintTitleWithAppName(playerName ? `Evaluation - ${playerName}` : "Evaluation");
-        };
-        const FIRST_PAINT_GENERIC_TITLES = Object.freeze({
-          database: "Database",
-          mfl: "MFL",
-          progression: "Progression",
-          "my-players": "My Players",
-          myplayers: "My Players",
-          settings: "Settings",
-          changelog: "Changelog",
-          privacy: "Privacy",
-        });
-        let firstPaintDocumentTitle = FIRST_PAINT_APP_NAME;
-        if (!firstPaintRouteRoot || firstPaintRouteRoot === "home") firstPaintDocumentTitle = FIRST_PAINT_APP_NAME;
-        else if (firstPaintRouteRoot === "players") firstPaintDocumentTitle = firstPaintPlayerTitle();
-        else if (firstPaintRouteRoot === "club" || firstPaintRouteRoot === "clubs") firstPaintDocumentTitle = firstPaintClubTitle();
-        else if (firstPaintRouteRoot === "agents") firstPaintDocumentTitle = firstPaintAgentTitle();
-        else if (firstPaintRouteRoot === "watchlist") firstPaintDocumentTitle = firstPaintWatchlistTitle();
-        else if (firstPaintRouteRoot === "evaluation") firstPaintDocumentTitle = firstPaintEvaluationTitle();
-        else if (FIRST_PAINT_GENERIC_TITLES[firstPaintRouteRoot]) firstPaintDocumentTitle = firstPaintTitleWithAppName(FIRST_PAINT_GENERIC_TITLES[firstPaintRouteRoot]);
-        else firstPaintDocumentTitle = firstPaintTitleWithAppName("Page not found");
-        if (document.title !== firstPaintDocumentTitle) document.title = firstPaintDocumentTitle;
         const TABLE_VIEW_CONFIG = Object.freeze({
           database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
           mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
@@ -438,14 +311,14 @@
       html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: inline-flex;
       }
-      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
-      ) #homePage {
+      ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
       }
-      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
@@ -1824,7 +1697,7 @@
         <footer class="siteFooterDetails" aria-labelledby="siteFooterDetailsTitle">
           <div class="siteFooterDetailsInner">
             <div class="siteFooterDetailsIdentity">
-              <a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v1.127.14</a>
+              <a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v1.127.10</a>
               <p>Management, scouting, progression, and evaluation tools for MFL.</p>
             </div>
 
