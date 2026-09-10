@@ -6,6 +6,7 @@ const validators = [
   "validate-prebuilt-core-loading.mjs",
   "validate-route-core-startup-routing.mjs",
   "validate-route-page-normalization.mjs",
+  "validate-route-shell-ownership.mjs",
   "validate-static-route-ui.mjs",
   "validate-wallet-opt-in-transition.mjs",
   "validate-protected-opted-out-routes.mjs",
