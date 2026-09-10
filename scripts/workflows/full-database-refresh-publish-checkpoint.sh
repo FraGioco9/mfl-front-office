@@ -60,13 +60,13 @@ bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-verify-l
 COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 case "$CHECKPOINT_NAME" in
   core)
-    DOMAIN_STATUS='{"wallets":"current-stage","players":"current-stage","clubs":"current-stage","playerSeasons":"previous-production-fallback","progressions":"previous-production-fallback","derivedPlayerData":"previous-production-fallback","competitions":"previous-production-fallback"}'
+    DOMAIN_STATUS='{"wallets":"current-stage","players":"current-stage","clubs":"current-stage","playerSeasons":"previous-production-fallback","progressions":"previous-production-fallback","derivedPlayerData":"current-stage","competitions":"previous-production-fallback"}'
     ;;
   player-seasons)
-    DOMAIN_STATUS='{"wallets":"current-run","players":"current-run","clubs":"current-run","playerSeasons":"current-stage","progressions":"previous-production-fallback","derivedPlayerData":"previous-production-fallback","competitions":"previous-production-fallback"}'
+    DOMAIN_STATUS='{"wallets":"current-run","players":"current-run","clubs":"current-run","playerSeasons":"current-stage","progressions":"previous-production-fallback","derivedPlayerData":"current-run","competitions":"previous-production-fallback"}'
     ;;
   player-data)
-    DOMAIN_STATUS='{"wallets":"current-run","players":"current-run","clubs":"current-run","playerSeasons":"current-run","progressions":"current-stage","derivedPlayerData":"current-stage","competitions":"previous-production-fallback"}'
+    DOMAIN_STATUS='{"wallets":"current-run","players":"current-run","clubs":"current-run","playerSeasons":"current-run","progressions":"current-stage","derivedPlayerData":"current-run","competitions":"previous-production-fallback"}'
     ;;
   final)
     DOMAIN_STATUS='{"wallets":"current-run","players":"current-run","clubs":"current-run","playerSeasons":"current-run","progressions":"current-run","derivedPlayerData":"current-run","competitions":"current-stage"}'
