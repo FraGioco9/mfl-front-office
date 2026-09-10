@@ -47,16 +47,17 @@ jobs:
 
           responsive_path = Path("site/responsive-sources/chrome-tablet.css.inc")
           responsive = responsive_path.read_text(encoding="utf-8")
-          obsolete = '''  body.pinnedSidebarVisible .myPlayersLockedPage,
-          body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
-            left: 0;
-            width: auto;
-          }
-
-          '''
-          if obsolete not in responsive:
-              raise SystemExit("Obsolete locked-page responsive geometry not found")
-          responsive_path.write_text(responsive.replace(obsolete, "", 1), encoding="utf-8")
+          obsolete_pattern = re.compile(
+              r"  body\.pinnedSidebarVisible \.myPlayersLockedPage,\n"
+              r"  body:not\(\.pinnedSidebarVisible\) \.myPlayersLockedPage \{\n"
+              r"    left: 0;\n"
+              r"    width: auto;\n"
+              r"  \}\n\n"
+          )
+          responsive, count = obsolete_pattern.subn("", responsive, count=1)
+          if count != 1:
+              raise SystemExit(f"Expected exactly one obsolete locked-page responsive block; found {count}")
+          responsive_path.write_text(responsive, encoding="utf-8")
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
