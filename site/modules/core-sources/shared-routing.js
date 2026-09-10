@@ -260,9 +260,9 @@ function tablePageTarget(pageName, cleanPath, basePath, requestedSearch = "") {
 
 function pageTargetFromPath(path) {
   const requestedPath = String(path || "");
-  const queryIndex = requestedPath.indexOf("?");
-  const requestedSearch = queryIndex >= 0 ? requestedPath.slice(queryIndex) : "";
-  const cleanPath = queryIndex >= 0 ? requestedPath.slice(0, queryIndex) : requestedPath;
+  const routeQueryIndex = requestedPath.indexOf("?");
+  const requestedSearch = routeQueryIndex >= 0 ? requestedPath.slice(routeQueryIndex) : "";
+  const cleanPath = routeQueryIndex >= 0 ? requestedPath.slice(0, routeQueryIndex) : requestedPath;
   const optedOutPage = optedOutPageFromPath(cleanPath);
 
   if (optedOutPage) {
@@ -282,7 +282,8 @@ function pageTargetFromPath(path) {
   }
 
   if (cleanPath === "/evaluation") {
-    const search = requestedSearch.replace(/^\?/, "");
+    const queryIndex = requestedPath.indexOf("?");
+    const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";
     const params = new URLSearchParams(search);
     const playerId = String(params.get("player") || "").trim();
     const savedId = String(params.get("saved") || "").trim();
