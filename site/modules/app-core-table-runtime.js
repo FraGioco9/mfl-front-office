@@ -1680,82 +1680,73 @@ const TABLE_URL_OPERATORS_BY_TOKEN = Object.freeze(Object.fromEntries(
 ));
 
 function tableUrlRuleKeyParts(key) {
-  const match = String(key || "").match(/^filter\.(\d+)(\.or)?\.([^.]+)\.([a-z]+)(?:\.(from|to))?$/);
+  const match = String(key || "").match(/^(or\.)?([^.]+)\.([a-z]+)(?:\.(from|to))?$/);
   if (!match) return null;
+  const operator = TABLE_URL_OPERATORS_BY_TOKEN[match[3]] || "";
+  if (!operator) return null;
   return {
-    index: Number(match[1]),
-    connector: match[2] ? "or" : "and",
-    column: match[3],
-    operator: TABLE_URL_OPERATORS_BY_TOKEN[match[4]] || "",
-    rangeSide: match[5] || "",
+    connector: match[1] ? "or" : "and",
+    column: match[2],
+    operator,
+    rangeSide: match[4] || "",
   };
 }
 
 function tableUrlRulesFromParams(pageName, viewName, params) {
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
-  const entries = new Map();
+  const entries = [];
 
   for (const [key, rawValue] of params.entries()) {
-    if (!key.startsWith("filter.")) continue;
+    if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) continue;
     const parts = tableUrlRuleKeyParts(key);
-    if (!parts || !parts.operator || !allowedColumns.has(parts.column) || parts.index < 1) continue;
+    if (!parts || !allowedColumns.has(parts.column)) continue;
 
     const rangeOperator = parts.operator === "between" || parts.operator === "during";
     if (rangeOperator !== Boolean(parts.rangeSide)) continue;
 
-    const existing = entries.get(parts.index);
-    const entry = existing || {
-      column: parts.column,
-      connector: parts.connector,
-      operator: parts.operator,
-      value: "",
-      valueTo: "",
-      invalid: false,
-    };
+    const value = String(rawValue || "");
+    if (rangeOperator) {
+      if (parts.rangeSide === "from") {
+        entries.push({
+          column: parts.column,
+          connector: parts.connector,
+          operator: parts.operator,
+          value,
+          valueTo: "",
+        });
+        continue;
+      }
 
-    if (
-      entry.column !== parts.column
-      || entry.connector !== parts.connector
-      || entry.operator !== parts.operator
-    ) {
-      entry.invalid = true;
-      entries.set(parts.index, entry);
+      const openRange = [...entries].reverse().find((entry) => (
+        entry.column === parts.column
+        && entry.connector === parts.connector
+        && entry.operator === parts.operator
+        && !entry.valueTo
+      ));
+      if (openRange) openRange.valueTo = value;
       continue;
     }
 
-    const value = String(rawValue || "");
-    if (parts.rangeSide === "from") {
-      if (entry.value) entry.invalid = true;
-      entry.value = value;
-    } else if (parts.rangeSide === "to") {
-      if (entry.valueTo) entry.invalid = true;
-      entry.valueTo = value;
-    } else {
-      if (entry.value) entry.invalid = true;
-      entry.value = value;
-    }
-    entries.set(parts.index, entry);
+    entries.push({
+      column: parts.column,
+      connector: parts.connector,
+      operator: parts.operator,
+      value,
+      valueTo: "",
+    });
   }
 
-  return Array.from(entries.entries())
-    .sort(([left], [right]) => left - right)
-    .map(([, entry], index) => ({
+  return entries
+    .map((entry, index) => ({
       ...entry,
       connector: index === 0 ? "and" : entry.connector,
     }))
-    .filter((entry) => !entry.invalid && tableUrlRuleIsValid(
+    .filter((entry) => tableUrlRuleIsValid(
       entry.column,
       entry.operator,
       entry.value,
       entry.valueTo,
-    ))
-    .map((entry) => ({
-      column: entry.column,
-      connector: entry.connector,
-      operator: entry.operator,
-      value: entry.value,
-      valueTo: entry.valueTo,
-    }));
+    ));
 }
 
 function tableUrlSearchForState(pageName, viewName, tableState) {
@@ -1778,8 +1769,8 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
     if (!tableUrlRuleIsValid(rule.column, rule.operator, rule.value, rule.valueTo)) return;
     const operatorToken = TABLE_URL_OPERATOR_TOKENS[rule.operator];
     if (!operatorToken) return;
-    const connectorSegment = connector === "or" ? ".or" : "";
-    const key = `filter.${index + 1}${connectorSegment}.${rule.column}.${operatorToken}`;
+    const connectorPrefix = connector === "or" ? "or." : "";
+    const key = `${connectorPrefix}${rule.column}.${operatorToken}`;
     if (rule.operator === "between" || rule.operator === "during") {
       params.append(`${key}.from`, String(rule.value));
       params.append(`${key}.to`, String(rule.valueTo));
@@ -1816,9 +1807,7 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
       continue;
     }
 
-    if (key.startsWith("filter.")) {
-      explicit = true;
-    }
+    explicit = true;
   }
 
   parsedRules.push(...tableUrlRulesFromParams(pageName, viewName, params));
