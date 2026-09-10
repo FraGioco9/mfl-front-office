@@ -489,9 +489,17 @@ async function walletLinkOwner() {
     return;
   }
 
-  const protectedRoutePath = ["myplayers", "watchlist", "settings"].includes(state.currentPage)
-    ? `${window.location.pathname}${window.location.search}`
+  const protectedPages = ["myplayers", "watchlist", "settings"];
+  const optedOutPage = optedOutPageFromPath(window.location.pathname);
+  const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+    ? window.history.state
+    : {};
+  const rememberedProtectedRoutePath = optedOutPage
+    ? String(historyState.mflProtectedReturnPath || "")
     : "";
+  const protectedPage = optedOutPage || (protectedPages.includes(state.currentPage) ? state.currentPage : "");
+  const protectedRoutePath = rememberedProtectedRoutePath
+    || (protectedPage && !optedOutPage ? `${window.location.pathname}${window.location.search}` : "");
 
   state.walletOptInInProgress = true;
   showToast("Opting in...", { sticky: true });
@@ -539,7 +547,6 @@ async function walletLinkOwner() {
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = linkedWalletProof;
     state.walletSettingsLoaded = false;
-    hideToast();
     try {
       localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
       localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
@@ -554,10 +561,23 @@ async function walletLinkOwner() {
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
     let upgradedCurrentPage = false;
-    if (protectedRoutePath) {
-      const protectedTarget = pageTargetFromPath(protectedRoutePath);
-      if (["myplayers", "watchlist", "settings"].includes(protectedTarget?.pageName)) {
-        await setPage(protectedTarget.pageName, false, protectedTarget.options || {});
+    if (protectedPage) {
+      let targetPath = protectedRoutePath || defaultProtectedRoutePath(protectedPage);
+      let protectedTarget = pageTargetFromPath(targetPath);
+
+      if (protectedTarget?.pageName !== protectedPage) {
+        targetPath = defaultProtectedRoutePath(protectedPage);
+        protectedTarget = pageTargetFromPath(targetPath);
+      }
+
+      if (protectedTarget?.pageName === protectedPage) {
+        const targetOptions = { ...(protectedTarget.options || {}) };
+        const restoredPath = String(targetOptions.replaceUrl || targetPath);
+        delete targetOptions.replaceUrl;
+        await setPage(protectedPage, false, targetOptions);
+        if (`${window.location.pathname}${window.location.search}` !== restoredPath) {
+          window.history.replaceState({}, "", restoredPath);
+        }
         upgradedCurrentPage = true;
       }
     }
