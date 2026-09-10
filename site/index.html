@@ -438,14 +438,14 @@
       html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: inline-flex;
       }
-      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
-      ) #homePage {
+      ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
       }
-      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]

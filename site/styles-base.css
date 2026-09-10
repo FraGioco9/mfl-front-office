@@ -3679,11 +3679,6 @@ button.playerIdText:active {
 }
 
 .myPlayersLockedPage {
-  position: fixed;
-  top: 102px;
-  right: 0;
-  bottom: 52px;
-  left: 0;
   z-index: 5;
   display: grid;
   place-items: center;

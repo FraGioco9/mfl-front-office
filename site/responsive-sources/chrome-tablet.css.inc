@@ -380,12 +380,6 @@ html:not(.mflInitialRouteResolved):is(
     overflow-x: hidden;
   }
 
-  body.pinnedSidebarVisible .myPlayersLockedPage,
-  body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
-    left: 0;
-    width: auto;
-  }
-
   .homePage,
   .changelogPage,
   .playerPage,
