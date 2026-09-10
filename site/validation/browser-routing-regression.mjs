@@ -110,14 +110,15 @@ function rowForColumns(columns) {
 const browserTestSource = String.raw`(() => {
   "use strict";
 
+  const filteredEmpty = window.location.search === "?overall.gte=99";
   const scenario = window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
-      ? "database"
+      ? (filteredEmpty ? "database-empty" : "database")
       : window.location.pathname.startsWith("/players/")
         ? "player"
         : window.location.pathname.startsWith("/watchlist/")
-          ? "watchlist"
+          ? (filteredEmpty ? "watchlist-empty" : "watchlist")
           : window.location.pathname === "/mfl/stats"
             ? "mflstats"
             : "unknown";
@@ -127,7 +128,7 @@ const browserTestSource = String.raw`(() => {
   const errors = [];
   let parserSnapshot = null;
 
-  if (scenario === "watchlist") {
+  if (scenario === "watchlist" || scenario === "watchlist-empty") {
     const proof = {
       type: "user-signature",
       address: testWallet,
@@ -222,7 +223,7 @@ const browserTestSource = String.raw`(() => {
 
   function assertInitialFirstPaint() {
     assert(parserSnapshot, "Parser-time first-paint snapshot was not captured.");
-    if (scenario === "database") {
+    if (scenario === "database" || scenario === "database-empty") {
       assert(parserSnapshot.initialPage === "database/attributes", "Database first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "database", "Database first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");
@@ -230,7 +231,7 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "players/1", "Player first paint has the wrong initial path.");
       assert(parserSnapshot.initialEntityRoute === "player", "Player first paint has the wrong entity owner.");
       assert(parserSnapshot.title === expectedPlayerName + " - MFL Front Office", "Player parser-time title did not use the cached full name.");
-    } else if (scenario === "watchlist") {
+    } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       assert(
         parserSnapshot.initialPage === "watchlist/" + testWatchlistId + "/current-season",
         "Watchlist first paint has the wrong initial path.",
@@ -272,11 +273,14 @@ const browserTestSource = String.raw`(() => {
   }
 
   function routeState() {
-    if (scenario === "database") {
+    if (scenario === "database" || scenario === "database-empty") {
       return {
         path: window.location.pathname,
+        search: window.location.search,
         title: document.title,
         tableText: text("#tableBody"),
+        emptyText: text("#emptyState"),
+        emptyHidden: hidden("#emptyState"),
         page: String(document.body.dataset.page || ""),
       };
     }
@@ -288,11 +292,14 @@ const browserTestSource = String.raw`(() => {
         pageHidden: hidden("#playerPage"),
       };
     }
-    if (scenario === "watchlist") {
+    if (scenario === "watchlist" || scenario === "watchlist-empty") {
       return {
         path: window.location.pathname,
+        search: window.location.search,
         title: document.title,
         tableText: text("#tableBody"),
+        emptyText: text("#emptyState"),
+        emptyHidden: hidden("#emptyState"),
         watchlistName: text("#watchlistButtonText"),
         lockedHidden: hidden("#myPlayersLockedPage"),
       };
@@ -313,6 +320,13 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.path === "/database/attributes", "Database canonical path is wrong: " + stateValue.path);
       assert(stateValue.tableText.includes(expectedPlayerName), "Database did not render the fixture player.");
       assert(stateValue.page === "database", "Database body page owner is wrong: " + stateValue.page);
+    } else if (scenario === "database-empty") {
+      assert(stateValue.path === "/database/attributes", "Filtered Database canonical path is wrong: " + stateValue.path);
+      assert(stateValue.search === "?overall.gte=99", "Filtered Database URL state was not preserved: " + stateValue.search);
+      assert(stateValue.tableText === "", "Filtered Database unexpectedly rendered player rows.");
+      assert(stateValue.emptyHidden === false, "Filtered Database empty-state message remained hidden after refresh.");
+      assert(stateValue.emptyText === "No players match the current filters.", "Filtered Database empty-state message is wrong: " + stateValue.emptyText);
+      assert(stateValue.page === "database", "Filtered Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "player") {
       assert(stateValue.path === "/players/1", "Player canonical path is wrong: " + stateValue.path);
       assert(stateValue.hasPlayerName, "Player detail did not render the fixture identity.");
@@ -326,6 +340,20 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.tableText.includes(expectedPlayerName), "Watchlist did not render the stored fixture player.");
       assert(stateValue.watchlistName === "Browser List", "Watchlist selector did not retain the selected list name.");
       assert(stateValue.lockedHidden === true, "Watchlist incorrectly rendered the guest lock screen.");
+    } else if (scenario === "watchlist-empty") {
+      assert(
+        stateValue.path === "/watchlist/" + testWatchlistId + "/current-season",
+        "Filtered Watchlist canonical path is wrong: " + stateValue.path,
+      );
+      assert(stateValue.search === "?overall.gte=99", "Filtered Watchlist URL state was not preserved: " + stateValue.search);
+      assert(stateValue.tableText === "", "Filtered Watchlist unexpectedly rendered player rows.");
+      assert(stateValue.emptyHidden === false, "Filtered Watchlist empty-state message remained hidden after refresh.");
+      assert(
+        stateValue.emptyText === "No watchlist players match the current filters.",
+        "Filtered Watchlist must distinguish zero matches from an empty watchlist: " + stateValue.emptyText,
+      );
+      assert(stateValue.watchlistName === "Browser List", "Filtered Watchlist selector did not retain the selected list name.");
+      assert(stateValue.lockedHidden === true, "Filtered Watchlist incorrectly rendered the guest lock screen.");
     } else if (scenario === "mflstats") {
       assert(stateValue.path === "/mfl/stats", "MFL Stats canonical path is wrong: " + stateValue.path);
       assert(stateValue.total === "1", "MFL Stats total count did not render the fixture player.");
@@ -339,11 +367,11 @@ const browserTestSource = String.raw`(() => {
     await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
 
-    if (scenario === "database") {
+    if (scenario === "database" || scenario === "database-empty") {
       await setPage("database", true, { view: "attributes" });
     } else if (scenario === "player") {
       await setPage("player", true, { playerId: "1" });
-    } else if (scenario === "watchlist") {
+    } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       await setPage("watchlist", true, { watchlistId: testWatchlistId, view: "current" });
     } else if (scenario === "mflstats") {
       await setPage("mfl", true, { view: "stats" });
@@ -366,6 +394,12 @@ const browserTestSource = String.raw`(() => {
     await delay(80);
     const directState = routeState();
     assertRouteState(directState);
+
+    if (scenario.endsWith("-empty")) {
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", scenario + ": URL-filtered direct refresh committed the authoritative empty table state.");
+      return;
+    }
 
     await navigateBackToScenario(setPage, timeline);
     const spaState = routeState();
@@ -476,7 +510,19 @@ function writeJson(response, data) {
 
 function pageDataStub(url) {
   const scope = String(url.searchParams.get("scope") || "database").toLowerCase();
-  const rows = [rowForColumns(pageColumns)];
+  let rules = [];
+  try {
+    const parsed = JSON.parse(String(url.searchParams.get("filters") || "[]"));
+    if (Array.isArray(parsed)) rules = parsed;
+  } catch {
+    rules = [];
+  }
+  const filteredEmpty = rules.some((rule) => (
+    rule?.column === "overall"
+    && rule?.operator === ">="
+    && Number(rule?.value) === 99
+  ));
+  const rows = filteredEmpty ? [] : [rowForColumns(pageColumns)];
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -487,7 +533,7 @@ function pageDataStub(url) {
     page: 1,
     pageSize,
     totalRows: rows.length,
-    sourceRows: rows.length,
+    sourceRows: filteredEmpty ? 1 : rows.length,
     totalPages: 1,
     generatedAt,
     marketplaceEmbedded: false,
@@ -745,8 +791,10 @@ async function runChromeRegression(executable, url) {
 const regressionScenarios = Object.freeze([
   ["stale", "/privacy"],
   ["database", "/database/attributes"],
+  ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
+  ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
   ["mflstats", "/mfl/stats"],
 ]);
 

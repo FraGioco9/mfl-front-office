@@ -360,6 +360,42 @@ invariant(
 );
 
 invariant(
+  tableRuntime.includes("function tableEmptyStateMessage(pageName = state.currentPage, sourceRowsCount = state.tableSourceRowsCount) {")
+    && tableRuntime.includes('return hasSourceRows ? "No players match the current filters." : "No players found.";'),
+  "Table empty-state wording must have one shared owner that distinguishes filtered-empty from genuinely empty data.",
+);
+
+const emptyMessageIndex = tableRuntime.indexOf("emptyState.textContent = tableEmptyStateMessage();");
+const emptyVisibilityIndex = tableRuntime.indexOf("emptyState.hidden = pageRows.length > 0;", emptyMessageIndex);
+const loadingSyncIndex = tableRuntime.indexOf('tableLoadingRuntime.sync();', emptyVisibilityIndex);
+invariant(
+  emptyMessageIndex >= 0
+    && emptyVisibilityIndex > emptyMessageIndex
+    && loadingSyncIndex > emptyVisibilityIndex,
+  "An authoritative empty table render must commit its message and visibility before the loading runtime observes the DOM.",
+);
+
+invariant(
+  runtime.includes("function hasRenderedEmptyState() {")
+    && runtime.includes("&& !empty.hidden")
+    && runtime.includes('Boolean(String(empty.textContent || "").trim())')
+    && runtime.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
+    && runtime.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {"),
+  "The loading runtime must treat a visible non-empty empty-state message as an authoritative completed table render instead of repainting loading rows.",
+);
+
+invariant(
+  appCoreSource.includes('if (tablePage) {\n    state.page = 1;\n    applyFilters({ save: false });\n  }')
+    && !appCoreSource.includes("if (tablePage && state.rows.length)"),
+  "Completed table routes must run the authoritative filter/render commit even when the first request returns zero rows.",
+);
+
+invariant(
+  tableRuntime.includes("if (!state.incrementalMode) {\n    state.tableSourceRowsCount = sourceRows.length;\n  }"),
+  "Incremental filtered payloads must retain the API sourceRows count so empty-state wording can distinguish an empty collection from zero filter matches.",
+);
+
+invariant(
   tableRuntime.includes("requestActive?.() && !state.incrementalApplying"),
   "Only the authoritative incremental apply transaction may replace loading rows while a request token remains active.",
 );

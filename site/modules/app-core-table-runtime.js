@@ -1891,6 +1891,13 @@ function tableStateWithoutPageFilters(pageName, savedState) {
   };
 }
 
+function tableRestoreUrlSearch(options = {}) {
+  const routePath = String(options.path || options.replaceUrl || "");
+  if (!routePath) return window.location.search;
+  const queryIndex = routePath.indexOf("?");
+  return queryIndex >= 0 ? routePath.slice(queryIndex) : "";
+}
+
 function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
   if (pageName === "club") {
     state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
@@ -1907,7 +1914,7 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
   if (resetFilters) state.tablePageStates[pageName] = fallbackState;
 
   const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);
-  const urlState = tableUrlStateFromSearch(pageName, requestedView, window.location.search, fallbackState);
+  const urlState = tableUrlStateFromSearch(pageName, requestedView, tableRestoreUrlSearch(options), fallbackState);
   const savedState = urlState.state;
   state.view = savedState.view;
   replaceTableUrlForState(pageName, state.view, savedState);
@@ -2262,6 +2269,25 @@ function syncQuickFilterLabels() {
 
 let lastAppliedTableFilterSignature = "";
 
+function tableEmptyStateMessage(pageName = state.currentPage, sourceRowsCount = state.tableSourceRowsCount) {
+  const hasSourceRows = Number(sourceRowsCount || 0) > 0;
+
+  if (pageName === "club") return "No players found for this club.";
+  if (pageName === "watchlist") {
+    return hasSourceRows ? "No watchlist players match the current filters." : "No players in your watchlist yet.";
+  }
+  if (pageName === "myplayers") {
+    return hasSourceRows ? "No owned players match the current filters." : "No players found for this wallet.";
+  }
+  if (pageName === "mfl") {
+    return hasSourceRows ? "No MFL players match the current filters." : "No MFL players found.";
+  }
+  if (pageName === "agents") {
+    return hasSourceRows ? "No agent players match the current filters." : "No players found for this agent.";
+  }
+  return hasSourceRows ? "No players match the current filters." : "No players found.";
+}
+
 function appliedTableFilterSignature(rules) {
   return JSON.stringify([
     state.currentPage,
@@ -2287,7 +2313,6 @@ function tableApplyFiltersOwner(options = {}) {
     if (packablePlayersInput) packablePlayersInput.checked = false;
     newMintsInput.checked = false;
     if (filterSummary) filterSummary.textContent = "0";
-    emptyState.textContent = "No players found for this club.";
     syncActiveWatchlistFromSet();
     renderTable();
     return;
@@ -2318,17 +2343,9 @@ function tableApplyFiltersOwner(options = {}) {
     sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   }
 
-  state.tableSourceRowsCount = sourceRows.length;
-
-  emptyState.textContent = state.currentPage === "watchlist"
-    ? (sourceRows.length ? "No watchlist players match the current filters." : "No players in your watchlist yet.")
-    : state.currentPage === "myplayers"
-      ? (sourceRows.length ? "No owned players match the current filters." : "No players found for this wallet.")
-      : state.currentPage === "mfl"
-        ? (sourceRows.length ? "No MFL players match the current filters." : "No MFL players found.")
-        : state.currentPage === "agents"
-          ? (sourceRows.length ? "No agent players match the current filters." : "No players found for this agent.")
-          : "No players match the current filters.";
+  if (!state.incrementalMode) {
+    state.tableSourceRowsCount = sourceRows.length;
+  }
 
   state.filteredRows = sourceRows.filter((row) => {
     if (rowIsHiddenFromTableAsMflPlayer(row)) {
@@ -2950,12 +2967,13 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
+  emptyState.textContent = tableEmptyStateMessage();
+  emptyState.hidden = pageRows.length > 0;
   const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
   if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
   if (preservedPlayerTableActionRenderSignature) {
     restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
   }
-  emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount();
   syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;

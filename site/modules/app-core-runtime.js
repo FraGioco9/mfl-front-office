@@ -2287,22 +2287,16 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   }
   renderWatchlistSwitcher();
   if (tablePage) {
-    restoreSavedTableState(pageName, { view: options.view });
+    restoreSavedTableState(pageName, {
+      view: options.view,
+      path: options.path,
+      replaceUrl: options.replaceUrl,
+    });
     syncRestoredTableControls(pageName);
     updateViewButtons();
     buildHeader();
   }
   globalThis.syncQuickFilterLabels?.();
-  emptyState.textContent = pageName === "watchlist"
-    ? "No players in your watchlist yet."
-    : pageName === "myplayers"
-      ? "No owned players match the current filters."
-      : pageName === "mfl"
-        ? "No MFL players match the current filters."
-        : pageName === "agents"
-          ? "No agent players match the current filters."
-          : "No players match the current filters.";
-
 
   if (mflStatsActive) {
     state.view = "stats";
@@ -2407,7 +2401,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
 
     return;
   }
-  if (tablePage && state.rows.length) {
+  if (tablePage) {
     state.page = 1;
     applyFilters({ save: false });
   }
@@ -3447,11 +3441,12 @@ function updateWatchlistUrl(replace = false, force = false, view = "") {
     watchlistId: state.currentWatchlistId,
     ...(view ? { view } : {}),
   });
-  if (`${window.location.pathname}${window.location.search}` === targetPath) {
+  const targetUrl = `${targetPath}${window.location.search}`;
+  if (`${window.location.pathname}${window.location.search}` === targetUrl) {
     return;
   }
 
-  window.history[replace ? "replaceState" : "pushState"]({}, "", targetPath);
+  window.history[replace ? "replaceState" : "pushState"]({}, "", targetUrl);
 }
 
 async function ensureWatchlistRoute(options = {}) {
@@ -7551,7 +7546,12 @@ function syncLayoutCenter() {
       : storedPageState;
     if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     const restoredPageState = savedPageState
-      ? restoreSavedTableState(pageName, { view: options.view, deferRules: true })
+      ? restoreSavedTableState(pageName, {
+          view: options.view,
+          path: options.path,
+          replaceUrl: options.replaceUrl,
+          deferRules: true,
+        })
       : null;
     if (!savedPageState && clubTarget) {
       state.view = clubTarget.view;
@@ -7699,7 +7699,11 @@ function syncLayoutCenter() {
     });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
     if (tablePages.has(pageName)) {
-      restoreSavedTableState(pageName, { view: route.view || options.view });
+      restoreSavedTableState(pageName, {
+        view: route.view || options.view,
+        path: options.path,
+        replaceUrl: options.replaceUrl,
+      });
     }
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;

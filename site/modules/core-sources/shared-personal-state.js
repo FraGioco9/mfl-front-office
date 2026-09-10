@@ -670,11 +670,12 @@ function updateWatchlistUrl(replace = false, force = false, view = "") {
     watchlistId: state.currentWatchlistId,
     ...(view ? { view } : {}),
   });
-  if (`${window.location.pathname}${window.location.search}` === targetPath) {
+  const targetUrl = `${targetPath}${window.location.search}`;
+  if (`${window.location.pathname}${window.location.search}` === targetUrl) {
     return;
   }
 
-  window.history[replace ? "replaceState" : "pushState"]({}, "", targetPath);
+  window.history[replace ? "replaceState" : "pushState"]({}, "", targetUrl);
 }
 
 async function ensureWatchlistRoute(options = {}) {

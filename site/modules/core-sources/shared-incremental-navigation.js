@@ -31,7 +31,12 @@
       : storedPageState;
     if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     const restoredPageState = savedPageState
-      ? restoreSavedTableState(pageName, { view: options.view, deferRules: true })
+      ? restoreSavedTableState(pageName, {
+          view: options.view,
+          path: options.path,
+          replaceUrl: options.replaceUrl,
+          deferRules: true,
+        })
       : null;
     if (!savedPageState && clubTarget) {
       state.view = clubTarget.view;
@@ -179,7 +184,11 @@
     });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
     if (tablePages.has(pageName)) {
-      restoreSavedTableState(pageName, { view: route.view || options.view });
+      restoreSavedTableState(pageName, {
+        view: route.view || options.view,
+        path: options.path,
+        replaceUrl: options.replaceUrl,
+      });
     }
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;

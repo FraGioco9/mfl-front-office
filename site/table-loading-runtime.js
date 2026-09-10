@@ -79,6 +79,15 @@
     return true;
   }
 
+  function hasRenderedEmptyState() {
+    const { body, empty } = elements();
+    return body instanceof HTMLTableSectionElement
+      && !hasRealRows(body)
+      && empty instanceof HTMLElement
+      && !empty.hidden
+      && Boolean(String(empty.textContent || "").trim());
+  }
+
   function loadingRowCount() {
     const owner = Reflect.get(window, "__mflTableLoadingRowCount");
     const count = typeof owner === "function" ? Number(owner()) : 10;
@@ -288,9 +297,11 @@
     }
     if (snapshot.dataLoading || requestActive()) {
       const renderedRowsPresent = syncRenderedRows();
+      const renderedEmptyStatePresent = hasRenderedEmptyState();
       neutralizeSelectionHeader();
-      if (renderedRowsPresent) {
+      if (renderedRowsPresent || renderedEmptyStatePresent) {
         hidePlayerCount();
+        if (renderedEmptyStatePresent) hidePager();
         return;
       }
       hidePager();
