@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import os
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 from scripts.database import rebuild_database_runner as runner
@@ -35,6 +37,25 @@ class RebuildRequestAuthenticationTests(unittest.TestCase):
         pipeline.configure_mfl_api_token("secret-token")
         headers = pipeline.request_headers("https://example.com/prod/players")
         self.assertNotIn(pipeline.MFL_API_TOKEN_HEADER, headers)
+
+    def test_http_404_is_not_retried(self) -> None:
+        error = HTTPError(
+            "https://api.playmfl.com/prod/missing",
+            404,
+            "Not Found",
+            hdrs=None,
+            fp=io.BytesIO(b'{"key":"competitions.notFound"}'),
+        )
+        with patch.object(pipeline, "urlopen", side_effect=error) as urlopen:
+            with patch.object(pipeline.time, "sleep") as sleep:
+                with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
+                    pipeline.request_json(
+                        "https://api.playmfl.com/prod/missing",
+                        "Missing resource",
+                    )
+
+        self.assertEqual(urlopen.call_count, 1)
+        sleep.assert_not_called()
 
     def test_runner_requires_production_token(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
