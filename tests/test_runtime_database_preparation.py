@@ -224,12 +224,23 @@ class RuntimeDatabasePreparationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "missing runtime table"):
                 runtime_db.validate_runtime_database(database_path)
 
-    def test_workflows_have_one_runtime_preparation_owner(self) -> None:
+    def test_full_refresh_prepares_only_publishable_snapshots(self) -> None:
         full_refresh = FULL_REFRESH_WORKFLOW.read_text(encoding="utf-8")
         site_update = SITE_UPDATE_WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "python -m scripts.database.prepare_runtime_database mfl_database.db",
+        checkpoint_paths = (
+            "checkpoints/core/mfl_database.db",
+            "checkpoints/player-seasons/mfl_database.db",
+            "checkpoints/player-data/mfl_database.db",
+            "checkpoints/final/mfl_database.db",
+        )
+        for path in checkpoint_paths:
+            self.assertIn(
+                f"python -m scripts.database.prepare_runtime_database {path}",
+                full_refresh,
+            )
+        self.assertNotIn(
+            "python -m scripts.database.prepare_runtime_database mfl_database.db\n",
             full_refresh,
         )
         self.assertIn(
