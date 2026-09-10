@@ -38,7 +38,21 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
     `${label} must parse boolean URL values case-insensitively and canonicalize them to lowercase true/false.`,
   );
   invariant(source.includes('key.startsWith("filter.")'), `${label} must use canonical advanced-filter keys rather than display labels.`);
-  invariant(source.includes('const key = `filter.${rule.column}${connector === "or" ? ".or" : ""}`;'), `${label} must serialize deterministic AND/OR advanced-filter keys.`);
+  invariant(
+    source.includes('const key = `filter.${index + 1}${connectorSegment}.${rule.column}.${operatorToken}`;')
+      && source.includes('params.append(`${key}.from`, String(rule.value));')
+      && source.includes('params.append(`${key}.to`, String(rule.valueTo));')
+      && source.includes('const match = String(key || "").match(/^filter\\.(\\d+)(\\.or)?\\.([^.]+)\\.([a-z]+)(?:\\.(from|to))?$/);'),
+    `${label} must serialize advanced rules as readable structured keys with indexed AND/OR ownership and explicit range bounds.`,
+  );
+  invariant(
+    !source.includes('~${rule.value}')
+      && !source.includes('`${rule.operator}~')
+      && source.includes('">=": "gte"')
+      && source.includes('"<=": "lte"')
+      && source.includes('"=": "is"'),
+    `${label} must keep symbolic operators out of public URL values.`,
+  );
   invariant(source.includes('const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);')
     && source.includes("const urlState = tableUrlStateFromSearch(pageName, requestedView, window.location.search, fallbackState);")
     && source.includes("const savedState = urlState.state;"), `${label} must give explicit URL state precedence over persisted table filters.`);
