@@ -5,6 +5,10 @@ import vm from "node:vm";
 
 import {
   MFL_STATS_OVERALL_FILTERS,
+  NOT_FOUND_ROUTE_SHELL_ID,
+  PROTECTED_ROUTE_SHELL_ID,
+  ROUTE_SHELL_IDS,
+  ROUTE_VIEW_SHELL_IDS,
   SETTINGS_DATE_FORMAT_OPTIONS,
   SETTINGS_TIME_FORMAT_OPTIONS,
   TABLE_BASE_COLUMNS,
@@ -98,6 +102,10 @@ invariant(/^[a-f0-9]{16}$/.test(String(runtimeSandbox.window.__mflCoreBuildId ||
 same(runtimeConfig.release, release, "pre-bootstrap release config");
 same(runtimeConfig.routes.tableViews, TABLE_VIEW_CONFIG, "pre-bootstrap route views");
 same(runtimeConfig.routes.viewBySlug, VIEW_BY_SLUG, "pre-bootstrap view slug map");
+same(runtimeConfig.routes.shellIds, ROUTE_SHELL_IDS, "pre-bootstrap route shell registry");
+same(runtimeConfig.routes.viewShellIds, ROUTE_VIEW_SHELL_IDS, "pre-bootstrap route view shell registry");
+invariant(runtimeConfig.routes.protectedShellId === PROTECTED_ROUTE_SHELL_ID, "Pre-bootstrap protected-route shell must match canonical config.");
+invariant(runtimeConfig.routes.notFoundShellId === NOT_FOUND_ROUTE_SHELL_ID, "Pre-bootstrap not-found shell must match canonical config.");
 same(runtimeConfig.table.baseColumns, TABLE_BASE_COLUMNS, "pre-bootstrap base columns");
 same(runtimeConfig.table.statColumns, TABLE_STAT_COLUMNS, "pre-bootstrap stat columns");
 same(runtimeConfig.table.contractColumns, TABLE_CONTRACT_COLUMNS, "pre-bootstrap contract columns");
@@ -184,6 +192,8 @@ for (const canonicalAlias of [
   "APP_CONFIG.ui.settingsDateFormats.map(({ value, label }) => Object.freeze([value, label]))",
   "APP_CONFIG.ui.settingsTimeFormats.map(({ value, label }) => Object.freeze([value, label]))",
   "return APP_CONFIG.routes.initialRequest(route.pathname);",
+  "APP_CONFIG.routes.requestShellId(request, {",
+  "APP_CONFIG.routes.usesTableInfrastructure(routeState.pageName)",
 ]) {
   invariant(bootstrapSource.includes(canonicalAlias), `Bootstrap must consume canonical config through: ${canonicalAlias}`);
 }
@@ -259,11 +269,17 @@ for (const retiredRuntimeOwner of [
   invariant(!appCoreSource.includes(retiredRuntimeOwner), `Application core must not restore duplicate UI metadata owner: ${retiredRuntimeOwner}`);
 }
 
-same(evaluateInitializer(staticUiSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "static UI view slug projection");
 invariant(
   staticUiSource.includes("const configured = window.__mflTableViewConfig;"),
   "Static UI must consume the canonical table-view configuration facade.",
 );
+invariant(
+  staticUiSource.includes("const routes = window.__mflAppConfig?.routes;")
+    && staticUiSource.includes("routes.canonicalRequest(url.pathname)")
+    && staticUiSource.includes("const requestShellId = window.__mflAppConfig?.routes?.requestShellId;"),
+  "Static UI route and shell selection must consume the canonical app configuration.",
+);
+invariant(!staticUiSource.includes("const VIEW_BY_SLUG = Object.freeze("), "Static UI must not retain a duplicate route parser.");
 [
   "STATIC_TABLE_BASE_COLUMNS",
   "STATIC_TABLE_STAT_COLUMNS",

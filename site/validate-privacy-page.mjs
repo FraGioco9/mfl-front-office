@@ -35,8 +35,9 @@ includes(appConfig, 'requestResult(path, "privacy", {}, "/privacy")', "Canonical
 includes(shared, 'const privacyPage = document.querySelector("#privacyPage");', "Application core must own the Privacy page element.");
 includes(shared, 'privacyPage.hidden = pageName !== "privacy";', "Application core must show Privacy only on the Privacy route.");
 includes(club, 'privacyPage.hidden = true;', "Club navigation must hide Privacy when leaving the static route.");
-includes(bootstrap, 'initialPage === "privacy"', "Bootstrap must resolve Privacy on direct first paint.");
-includes(staticUi, 'state.page === "privacy"', "Static UI must resolve Privacy before app-core hydration.");
+includes(appConfig, 'privacy: "privacyPage"', "Canonical route-shell registry must map Privacy to its destination shell.");
+includes(bootstrap, 'APP_CONFIG.routes.requestShellId(request, {', "Bootstrap must resolve Privacy through canonical route-shell ownership on direct first paint.");
+includes(staticUi, 'const requestShellId = window.__mflAppConfig?.routes?.requestShellId;', "Static UI must resolve Privacy through canonical route-shell ownership before app-core hydration.");
 includes(titles, 'privacy: "Privacy"', "Document-title runtime must name Privacy.");
 includes(styles, '/* Privacy static page. */', "Privacy must have one canonical static-page style owner.");
 includes(styles, 'data-initial-page="privacy"', "Privacy direct refresh must have a first-paint CSS contract.");

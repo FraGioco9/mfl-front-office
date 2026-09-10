@@ -17,7 +17,16 @@ const APP_CONFIG_EXPORTS_WITH_INITIAL_ROUTE = `  window.__mflAppConfig = appConf
   window.__mflTableViewConfig = data.routes.tableViews;
 
   const initialRoute = routes.initialRequest(location.pathname);
-  if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
+  const initialRouteShell = routes.requestShellId(initialRoute, {
+    walletOptedIn: typeof document !== "undefined"
+      && document.documentElement?.dataset?.storedWalletOptIn === "true",
+  });
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.initialRoutePage = initialRoute.pageName;
+    if (initialRouteShell) document.documentElement.dataset.initialRouteShell = initialRouteShell;
+    else delete document.documentElement.dataset.initialRouteShell;
+    if (document.body) document.body.dataset.page = initialRoute.pageName;
+  }
 
   const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";`;
 
