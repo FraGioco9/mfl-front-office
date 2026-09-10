@@ -12,10 +12,12 @@ from scripts.database import competitions
 from scripts.database import rebuild_database as rebuild
 from scripts.database import run_flow_rebuild as pipeline
 from scripts.database import run_flow_rebuild_paged as paged
+from scripts.database import staged_rebuild
 
 PLAYER_REQUESTS_PER_MINUTE = 60
 PROGRESSION_REQUESTS_PER_MINUTE = 60
 MFL_API_TOKEN_ENVIRONMENT_VARIABLE = "MFL_API_TOKEN"
+REBUILD_STAGE_ENVIRONMENT_VARIABLE = "MFL_REBUILD_STAGE"
 FETCH_WALLETS_ENVIRONMENT_VARIABLE = "MFL_FETCH_WALLETS"
 FETCH_PLAYERS_ENVIRONMENT_VARIABLE = "MFL_FETCH_PLAYERS"
 FETCH_CLUBS_ENVIRONMENT_VARIABLE = "MFL_FETCH_CLUBS"
@@ -166,16 +168,12 @@ def configure_rebuild() -> dict[str, bool]:
     configured_player_fetcher = rebuild.fetch_active_and_retired_player_sources
 
     def fetch_players_with_logging(limiter: paged.RollingRateLimiter) -> Any:
-        if fetch_progressions:
-            operation = lambda: paged.fetch_player_sources_and_prepare_progressions(
-                configured_player_fetcher,
-                limiter,
-            )
-        else:
-            operation = lambda: configured_player_fetcher(limiter)
-        return run_with_error_logging("/players", operation)
+        return run_with_error_logging(
+            "/players",
+            lambda: configured_player_fetcher(limiter),
+        )
 
-    def prepare_progression_batches_from_reused_players(
+    def prepare_progression_batches_from_database(
         connection: sqlite3.Connection,
     ) -> None:
         rows = connection.execute(
@@ -211,17 +209,15 @@ def configure_rebuild() -> dict[str, bool]:
             "ALL",
         )
         pipeline.log(
-            "Progression batches prepared from reused player rows: "
+            "Progression batches prepared from database rows: "
             f"active {len(active_players)}, retired {len(retired_players)}"
         )
-
 
     def refresh_progressions_with_own_limiter(
         connection: object,
         _player_limiter: paged.RollingRateLimiter,
     ) -> dict[str, int]:
-        if not fetch_players:
-            prepare_progression_batches_from_reused_players(connection)
+        prepare_progression_batches_from_database(connection)
         progression_limiter = paged.RollingRateLimiter(
             PROGRESSION_REQUESTS_PER_MINUTE
         )
@@ -300,7 +296,8 @@ def main() -> int:
     install_thread_error_logging()
     try:
         rebuild_options = configure_rebuild()
-        return rebuild.rebuild_directly(**rebuild_options)
+        rebuild_stage = os.environ.get(REBUILD_STAGE_ENVIRONMENT_VARIABLE, "all")
+        return staged_rebuild.run_stage(rebuild_stage, **rebuild_options)
     except Exception as error:
         print_failure("Database rebuild", error)
         return 1
