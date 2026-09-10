@@ -55,13 +55,13 @@
     const route = incrementalRouteTarget(pageName, options);
     if (route && restoredPageState) {
       route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);
-      route.tableFilters = {
+      Reflect.set(route, "tableFilters", {
         hideRetired: restoredPageState.hideRetired !== false,
         hideRetiring: Boolean(restoredPageState.hideRetiring),
         hideMflPlayers: pageName === "database" ? restoredPageState.hideMflPlayers !== false : false,
         mflPackable: pageName === "mfl" ? restoredPageState.mflPackable !== false : false,
         newMints: Boolean(restoredPageState.newMints),
-      };
+      });
     }
     return route;
   }
