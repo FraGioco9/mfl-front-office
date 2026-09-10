@@ -5,6 +5,8 @@ import os
 from typing import Any
 from urllib.request import Request, urlopen
 
+from scripts.database import competition_storage
+
 BASE_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod"
 TOKEN_HEADER = "X-MFL-Api-Token"
 
@@ -92,6 +94,21 @@ def main() -> None:
     rounds_owner = group if group else stage
     round_data = first_mapping(rounds_owner.get("rounds"))
     match = first_mapping(round_data.get("matches"))
+    if not match:
+        raise RuntimeError("Live competition probe found no match")
+
+    home_club_id = competition_storage._match_club_id(match, "home")
+    away_club_id = competition_storage._match_club_id(match, "away")
+    if home_club_id is None or away_club_id is None:
+        raise RuntimeError(
+            "Competition normalizer still cannot resolve live home/away club IDs"
+        )
+
+    reward = first_mapping(detail.get("rewards"))
+    if reward:
+        _, _, reward_label, _ = competition_storage._reward_fields(reward)
+        if "lines" in reward and not reward_label:
+            raise RuntimeError("Competition normalizer still cannot resolve live reward lines")
 
     print("COMPETITION_SCHEMA_PROBE_BEGIN")
     print("competitionId", competition_id)
@@ -102,7 +119,8 @@ def main() -> None:
     print("round", json.dumps(shape(round_data), sort_keys=True))
     print("match", json.dumps(shape(match), sort_keys=True))
     print("matchSides", json.dumps(compact_side_shape(match), sort_keys=True))
-    print("reward", json.dumps(shape(first_mapping(detail.get("rewards"))), sort_keys=True))
+    print("normalizedMatchClubIds", home_club_id, away_club_id)
+    print("reward", json.dumps(shape(reward), sort_keys=True))
     for key in ("standings", "ranking", "rankings", "table", "participants"):
         if key in group:
             value = group[key]
