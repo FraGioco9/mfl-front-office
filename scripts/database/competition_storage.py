@@ -3,6 +3,7 @@ from __future__ import annotations
 """Normalized permanent storage for official MFL competition history."""
 
 import json
+import re
 import sqlite3
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -12,6 +13,12 @@ from typing import Any
 FIRST_SEASON_ID = 11
 PLAYOFF_CODE_PREFIX = "P:"
 FINAL_MATCH_STATUSES = frozenset({"ENDED", "FORFEITED", "CANCELED", "CANCELLED"})
+PARTICIPANT_REQUIRED_MATCH_STATUSES = frozenset({"ENDED", "FORFEITED"})
+RANK_RANGE_PATTERN = re.compile(r"^\s*(\d+)\s*(?:[-–—]\s*(\d+))?\s*$")
+REWARD_AMOUNT_PATTERN = re.compile(
+    r"^\s*([+-]?\d+(?:[.,]\d+)?)\s*(?:\$?MFL)?\s*$",
+    re.IGNORECASE,
+)
 COMPETITION_TABLES = (
     "competitions",
     "competition_stages",
@@ -76,14 +83,31 @@ def _api_id(value: Any) -> str:
 
 
 def _club_id(value: Any) -> int | None:
+    direct = _int(value)
+    if direct is not None:
+        return direct
     node = _mapping(value)
+    if not node:
+        return None
+    for key in ("clubId", "club_id"):
+        resolved = _int(node.get(key))
+        if resolved is not None:
+            return resolved
     if "club" in node:
-        node = _mapping(node.get("club"))
+        resolved = _club_id(node.get("club"))
+        if resolved is not None:
+            return resolved
     return _int(node.get("id"))
 
 
 def _match_club_id(match: dict[str, Any], side: str) -> int | None:
-    direct = _first(match, f"{side}Club", f"{side}_club")
+    direct = _first(
+        match,
+        f"{side}ClubId",
+        f"{side}_club_id",
+        f"{side}Club",
+        f"{side}_club",
+    )
     club_id = _club_id(direct)
     if club_id is not None:
         return club_id
@@ -308,7 +332,7 @@ def max_stored_season_id(connection: sqlite3.Connection) -> int | None:
 
 
 def _standing_rows(group: dict[str, Any]) -> list[dict[str, Any]]:
-    for key in ("standings", "ranking", "table"):
+    for key in ("standings", "ranking", "rankings", "table"):
         rows = group.get(key)
         if isinstance(rows, list):
             return [row for row in rows if isinstance(row, dict)]
@@ -320,23 +344,57 @@ def _standing_club_id(row: dict[str, Any]) -> int | None:
         club_id = _club_id(row.get(key))
         if club_id is not None:
             return club_id
-    return _int(_first(row, "clubId", "club_id"))
+    return _club_id(_first(row, "clubId", "club_id"))
+
+
+def _placement_range(value: Any) -> tuple[int | None, int | None]:
+    text = _text(value)
+    if not text:
+        return None, None
+    match = RANK_RANGE_PATTERN.fullmatch(text)
+    if match is None:
+        return None, None
+    placement_from = int(match.group(1))
+    placement_to = int(match.group(2) or match.group(1))
+    return placement_from, placement_to
+
+
+def _reward_amount(value: Any) -> float | None:
+    direct = _float(value)
+    if direct is not None:
+        return direct
+    text = _text(value)
+    match = REWARD_AMOUNT_PATTERN.fullmatch(text)
+    if match is None:
+        return None
+    return _float(match.group(1).replace(",", "."))
 
 
 def _reward_fields(value: Any) -> tuple[int | None, int | None, str, float | None]:
     if not isinstance(value, dict):
         text = _text(value)
-        return None, None, text, _float(value)
+        return None, None, text, _reward_amount(value)
 
-    placement_from = _int(_first(value, "rank", "position", "from", "minRank", "startRank"))
-    placement_to = _int(_first(value, "to", "maxRank", "endRank")) or placement_from
-    reward = _first(value, "reward", "prize", "value", "amount", "label")
+    placement_from, placement_to = _placement_range(
+        _first(value, "ranks", "rank", "position")
+    )
+    if placement_from is None:
+        placement_from = _int(_first(value, "from", "minRank", "startRank"))
+        placement_to = _int(_first(value, "to", "maxRank", "endRank")) or placement_from
+
+    lines = value.get("lines")
+    if isinstance(lines, list):
+        line_values = [_text(line) for line in lines if _text(line)]
+        reward: Any = " · ".join(line_values)
+    else:
+        reward = _first(value, "reward", "prize", "value", "amount", "label")
+
     if isinstance(reward, dict):
         label = _text(_first(reward, "label", "name", "value", "amount"))
-        amount = _float(_first(reward, "amount", "value"))
+        amount = _reward_amount(_first(reward, "amount", "value"))
     else:
         label = _text(reward)
-        amount = _float(reward)
+        amount = _reward_amount(reward)
     return placement_from, placement_to, label, amount
 
 
@@ -603,6 +661,62 @@ def _reconcile_missing_matches(
     return removed, preserved
 
 
+def _first_unresolved_match_keys(stages: list[dict[str, Any]]) -> list[str]:
+    for stage in stages:
+        groups = [item for item in _items(stage.get("groups")) if isinstance(item, dict)]
+        owners = groups or [stage]
+        for owner in owners:
+            for round_data in _rounds(stage, owner if owner is not stage else None):
+                for match in _items(round_data.get("matches")):
+                    if not isinstance(match, dict):
+                        continue
+                    status = _text(match.get("status")).upper()
+                    if status not in PARTICIPANT_REQUIRED_MATCH_STATUSES:
+                        continue
+                    if _match_club_id(match, "home") is None or _match_club_id(match, "away") is None:
+                        return sorted(str(key) for key in match)
+    return []
+
+
+def _validate_match_participants(
+    connection: sqlite3.Connection,
+    competition_id: int,
+    stages: list[dict[str, Any]],
+    log: Log,
+) -> None:
+    placeholders = ", ".join("?" for _ in PARTICIPANT_REQUIRED_MATCH_STATUSES)
+    statuses = tuple(sorted(PARTICIPANT_REQUIRED_MATCH_STATUSES))
+    total, complete, missing_home, missing_away = connection.execute(
+        f"""
+        SELECT
+          count(*),
+          sum(CASE WHEN home_club_id IS NOT NULL AND away_club_id IS NOT NULL THEN 1 ELSE 0 END),
+          sum(CASE WHEN home_club_id IS NULL THEN 1 ELSE 0 END),
+          sum(CASE WHEN away_club_id IS NULL THEN 1 ELSE 0 END)
+        FROM competition_matches
+        WHERE competition_id = ? AND status IN ({placeholders})
+        """,
+        (competition_id, *statuses),
+    ).fetchone()
+    total = int(total or 0)
+    complete = int(complete or 0)
+    missing_home = int(missing_home or 0)
+    missing_away = int(missing_away or 0)
+    if total and complete == 0:
+        keys = _first_unresolved_match_keys(stages)
+        signature = ", ".join(keys) if keys else "<unavailable>"
+        raise RuntimeError(
+            f"Competition {competition_id} normalized 0/{total} ended/forfeited matches "
+            f"with both club IDs; match payload keys: {signature}"
+        )
+    if total and (missing_home or missing_away):
+        log(
+            f"Competition {competition_id}: participant coverage {complete}/{total} "
+            f"ended/forfeited matches complete; missing home {missing_home}, "
+            f"missing away {missing_away}."
+        )
+
+
 def persist_competition_detail(
     connection: sqlite3.Connection,
     detail: Any,
@@ -669,6 +783,7 @@ def persist_competition_detail(
         if has_schedule:
             seen_matches = _replace_structure(connection, competition_id, stages)
             _reconcile_missing_matches(connection, competition_id, seen_matches, log)
+            _validate_match_participants(connection, competition_id, stages, log)
         else:
             log(
                 f"Competition {competition_id}: detail had no schedule.stages array; "
