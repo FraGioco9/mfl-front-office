@@ -138,6 +138,12 @@ function restoreSavedTableState() {
 }
 
 function applyFilters(options = {}) {
+  if (options.save !== false) {
+    const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+    if (tableUrlState && typeof tableUrlState.syncFromControls === "function") {
+      tableUrlState.syncFromControls();
+    }
+  }
   if (state.incrementalMode && !state.incrementalApplying && !options.localOnly) {
     state.page = 1;
     void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });

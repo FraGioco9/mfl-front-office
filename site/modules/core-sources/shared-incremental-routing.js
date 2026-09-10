@@ -100,11 +100,14 @@ function incrementalDataQuery(route, page = 1) {
 
   const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers"].includes(route.scope);
   if (tableRoute) {
-    if (hideRetiredInput.checked) query.set("hideRetired", "1");
-    if (hideRetiringInput.checked) query.set("hideRetiring", "1");
-    if (hideMflPlayersInput?.checked) query.set("hideMfl", "1");
-    if (packablePlayersInput?.checked) query.set("packableOnly", "1");
-    if (newMintsInput.checked) query.set("newMintsOnly", "1");
+    const tableFilters = route.tableFilters && typeof route.tableFilters === "object"
+      ? route.tableFilters
+      : null;
+    if (tableFilters ? tableFilters.hideRetired : hideRetiredInput.checked) query.set("hideRetired", "1");
+    if (tableFilters ? tableFilters.hideRetiring : hideRetiringInput.checked) query.set("hideRetiring", "1");
+    if (tableFilters ? tableFilters.hideMflPlayers : hideMflPlayersInput?.checked) query.set("hideMfl", "1");
+    if (tableFilters ? tableFilters.mflPackable : packablePlayersInput?.checked) query.set("packableOnly", "1");
+    if (tableFilters ? tableFilters.newMints : newMintsInput.checked) query.set("newMintsOnly", "1");
     const rules = Array.isArray(route.filterRules) ? route.filterRules : readFilterRules();
     if (rules.length) query.set("filters", JSON.stringify(serializeFilterRulesForRequest(rules)));
   }

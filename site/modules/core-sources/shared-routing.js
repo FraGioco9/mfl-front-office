@@ -233,7 +233,7 @@ function agentWalletAddressFromUrl() {
   return agentTargetFromUrl().walletAddress;
 }
 
-function tablePageTarget(pageName, cleanPath, basePath) {
+function tablePageTarget(pageName, cleanPath, basePath, requestedSearch = "") {
   const match = cleanPath.match(new RegExp(`^${basePath}(?:/([^/]+))?$`));
 
   if (!match) {
@@ -244,18 +244,25 @@ function tablePageTarget(pageName, cleanPath, basePath) {
   const normalizedView = normalizeViewForPage(view, pageName);
   const canonicalPath = `${basePath}/${viewSlug(normalizedView)}`;
 
+  const canonicalTarget = `${canonicalPath}${requestedSearch}`;
   return {
     pageName,
     options: {
       view: normalizedView,
-      ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      ...(cleanPath !== canonicalPath
+        ? { replaceUrl: canonicalTarget }
+        : requestedSearch
+          ? { path: canonicalTarget }
+          : {}),
     },
   };
 }
 
 function pageTargetFromPath(path) {
   const requestedPath = String(path || "");
-  const cleanPath = requestedPath.split("?")[0];
+  const routeQueryIndex = requestedPath.indexOf("?");
+  const requestedSearch = routeQueryIndex >= 0 ? requestedPath.slice(routeQueryIndex) : "";
+  const cleanPath = routeQueryIndex >= 0 ? requestedPath.slice(0, routeQueryIndex) : requestedPath;
   const optedOutPage = optedOutPageFromPath(cleanPath);
 
   if (optedOutPage) {
@@ -364,7 +371,7 @@ function pageTargetFromPath(path) {
   }
 
   for (const [pageName, basePath] of [["database", "/database"], ["mfl", "/mfl"], ["progression", "/progression"], ["myplayers", "/my-players"]]) {
-    const target = tablePageTarget(pageName, cleanPath, basePath);
+    const target = tablePageTarget(pageName, cleanPath, basePath, requestedSearch);
     if (target) {
       return target;
     }
@@ -383,7 +390,11 @@ function pageTargetFromPath(path) {
       options: {
         watchlistId: target.watchlistId,
         view: normalizedView,
-        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        ...(cleanPath !== canonicalPath
+          ? { replaceUrl: `${canonicalPath}${requestedSearch}` }
+          : requestedSearch
+            ? { path: `${canonicalPath}${requestedSearch}` }
+            : {}),
       },
     };
   }
@@ -397,7 +408,7 @@ function pageTargetFromPath(path) {
       const canonicalPath = `/mfl/${viewSlug(normalizeViewForPage(normalizedView, "mfl"))}`;
       return {
         pageName: "mfl",
-        options: { view: normalizeViewForPage(normalizedView, "mfl"), replaceUrl: canonicalPath },
+        options: { view: normalizeViewForPage(normalizedView, "mfl"), replaceUrl: `${canonicalPath}${requestedSearch}` },
       };
     }
 
@@ -407,7 +418,11 @@ function pageTargetFromPath(path) {
       options: {
         walletAddress,
         view: normalizedView,
-        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        ...(cleanPath !== canonicalPath
+          ? { replaceUrl: `${canonicalPath}${requestedSearch}` }
+          : requestedSearch
+            ? { path: `${canonicalPath}${requestedSearch}` }
+            : {}),
       },
     };
   }

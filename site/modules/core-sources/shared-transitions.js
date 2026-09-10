@@ -29,6 +29,13 @@ function commitViewTransition(pageName, viewName, options = {}) {
           walletAddress: options.walletAddress || state.currentAgentWalletAddress,
           watchlistId: options.watchlistId || state.currentWatchlistId,
         });
+
+    const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+    const compatibleSearch = tablePages.has(statePageName)
+      && typeof tableUrlState?.searchForCurrentControls === "function"
+      ? tableUrlState.searchForCurrentControls(pageName, nextView)
+      : "";
+    if (compatibleSearch) targetPath += compatibleSearch;
   }
 
   if (targetPath && currentNavigationPath() !== targetPath) {
