@@ -142,6 +142,80 @@ class DatabaseRefreshControlTests(unittest.TestCase):
             finally:
                 current.close()
 
+    def test_club_reuse_allows_development_center_pseudo_club_without_club_row(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous_path = Path(directory) / "previous.db"
+            previous = sqlite3.connect(previous_path)
+            clubs.ensure_club_schema(previous)
+            previous.execute(
+                "INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                ("42", "Club", "", "", None, None, "FOUNDED", 2, "", "", "[]", "[]"),
+            )
+            previous.commit()
+            previous.close()
+
+            current = sqlite3.connect(":memory:")
+            try:
+                current.executescript(
+                    """
+                    CREATE TABLE wallets (wallet_address TEXT PRIMARY KEY, name TEXT);
+                    CREATE TABLE players (
+                        player_id INTEGER PRIMARY KEY,
+                        wallet_address TEXT,
+                        wallet_name TEXT,
+                        active_contract_club_id TEXT,
+                        active_contract_club_name TEXT
+                    );
+                    INSERT INTO players VALUES (1, '0xp', 'P', '42', 'Club');
+                    INSERT INTO players VALUES (2, '0xp', 'P', '100000', 'Development Center');
+                    """
+                )
+                count = clubs.restore_previous_clubs(current, previous_path)
+                self.assertEqual(count, 1)
+                signed = current.execute(
+                    "SELECT signed_player_ids FROM clubs WHERE club_id = '42'"
+                ).fetchone()[0]
+                self.assertEqual(json.loads(signed), [1])
+                self.assertEqual(
+                    clubs.development_center_club_ids(current),
+                    {"100000"},
+                )
+            finally:
+                current.close()
+
+    def test_club_reuse_does_not_ignore_mixed_development_center_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous_path = Path(directory) / "previous.db"
+            previous = sqlite3.connect(previous_path)
+            clubs.ensure_club_schema(previous)
+            previous.execute(
+                "INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                ("42", "Club", "", "", None, None, "FOUNDED", 2, "", "", "[]", "[]"),
+            )
+            previous.commit()
+            previous.close()
+
+            current = sqlite3.connect(":memory:")
+            try:
+                current.executescript(
+                    """
+                    CREATE TABLE wallets (wallet_address TEXT PRIMARY KEY, name TEXT);
+                    CREATE TABLE players (
+                        player_id INTEGER PRIMARY KEY,
+                        wallet_address TEXT,
+                        wallet_name TEXT,
+                        active_contract_club_id TEXT,
+                        active_contract_club_name TEXT
+                    );
+                    INSERT INTO players VALUES (1, '0xp', 'P', '100000', 'Development Center');
+                    INSERT INTO players VALUES (2, '0xp', 'P', '100000', 'Unexpected Club');
+                    """
+                )
+                with self.assertRaisesRegex(RuntimeError, "100000"):
+                    clubs.restore_previous_clubs(current, previous_path)
+            finally:
+                current.close()
+
     def test_club_reuse_fails_if_current_players_reference_unknown_club(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             previous_path = Path(directory) / "previous.db"

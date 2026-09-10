@@ -638,6 +638,32 @@ def signed_players_by_club(connection: sqlite3.Connection) -> dict[str, list[int
     return dict(grouped)
 
 
+def development_center_club_ids(connection: sqlite3.Connection) -> set[str]:
+    """Return pseudo-club IDs used only to mark Development Center contracts."""
+    player_columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(players)").fetchall()
+    }
+    if "active_contract_club_name" not in player_columns:
+        return set()
+    rows = connection.execute(
+        """
+        SELECT active_contract_club_id
+        FROM players
+        WHERE coalesce(active_contract_club_id, '') <> ''
+        GROUP BY active_contract_club_id
+        HAVING SUM(
+            CASE
+                WHEN lower(trim(coalesce(active_contract_club_name, ''))) <> 'development center'
+                THEN 1
+                ELSE 0
+            END
+        ) = 0
+        """
+    ).fetchall()
+    return {str(row[0]) for row in rows}
+
+
 def build_club_record(
     snapshot: dict[str, Any],
     owner_wallet_address: str,
@@ -749,8 +775,9 @@ def restore_previous_clubs(
         str(row[0])
         for row in connection.execute("SELECT club_id FROM clubs").fetchall()
     }
+    non_persisted_club_ids = development_center_club_ids(connection)
     missing_referenced_clubs = sorted(
-        set(signed_players) - existing_club_ids,
+        set(signed_players) - existing_club_ids - non_persisted_club_ids,
         key=lambda value: (0, int(value)) if value.isdigit() else (1, value),
     )
     if missing_referenced_clubs:
