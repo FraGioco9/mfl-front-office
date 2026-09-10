@@ -31,6 +31,26 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
             "schedule": {"stages": []},
         }
 
+    @staticmethod
+    def history_payload(competition_id: int, *, season_id: int = 11) -> dict:
+        return {
+            "seasonId": season_id,
+            "rootCompetitions": [
+                {
+                    "id": 494,
+                    "name": "IMFF Titans Cup",
+                    "competitions": [
+                        {
+                            "id": competition_id,
+                            "type": "CUP",
+                            "code": "TITAN",
+                            "winner": {"club": {"id": 42}},
+                        }
+                    ],
+                }
+            ],
+        }
+
     def test_current_candidates_only_include_live_competitions(self) -> None:
         payload = {
             "competitions": [
@@ -151,23 +171,7 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
                     ]
                 }
             if url == f"{competitions.SEASON_HISTORY_URL}?seasonId=11":
-                return {
-                    "seasonId": 11,
-                    "rootCompetitions": [
-                        {
-                            "id": 494,
-                            "name": "IMFF Titans Cup",
-                            "competitions": [
-                                {
-                                    "id": 300,
-                                    "type": "CUP",
-                                    "code": "TITAN",
-                                    "winner": {"club": {"id": 42}},
-                                }
-                            ],
-                        }
-                    ],
-                }
+                return self.history_payload(300)
             if url == competitions.COMPETITION_DETAIL_URL.format(competition_id=300):
                 return self.detail(
                     300,
@@ -195,6 +199,122 @@ class CompetitionRefreshSplitContractTests(unittest.TestCase):
             self.assertEqual(stats["historical_saved"], 1)
             self.assertEqual(storage.stored_competition_ids(connection), {300})
             self.assertFalse(any(url.endswith("/200") for url in calls))
+        finally:
+            connection.close()
+
+    def test_historical_backfill_skips_stale_not_found_detail(self) -> None:
+        logs: list[str] = []
+
+        def request_json(url: str, _label: str, _limiter):
+            if url == competitions.CURRENT_COMPETITIONS_URL:
+                return {
+                    "competitions": [
+                        {
+                            "id": 9000,
+                            "season": {"id": 11},
+                            "status": "PLANNED",
+                            "withXp": True,
+                        }
+                    ]
+                }
+            if url == f"{competitions.SEASON_HISTORY_URL}?seasonId=11":
+                return self.history_payload(8178)
+            if url == competitions.COMPETITION_DETAIL_URL.format(competition_id=8178):
+                raise RuntimeError(
+                    'Competition 8178 failed: HTTP 404: {"key":"competitions.notFound"}'
+                )
+            raise AssertionError(f"unexpected request: {url}")
+
+        connection = sqlite3.connect(":memory:")
+        try:
+            stats = competitions.refresh_competitions(
+                connection,
+                None,
+                request_json,
+                object(),
+                log=logs.append,
+                fetch_live=False,
+                backfill_historical=True,
+            )
+
+            self.assertEqual(stats["historical_discovered"], 1)
+            self.assertEqual(stats["historical_requested"], 1)
+            self.assertEqual(stats["historical_saved"], 0)
+            self.assertEqual(storage.stored_competition_ids(connection), set())
+            self.assertTrue(
+                any(
+                    "Competition 8178" in message and "skipping stale index entry" in message
+                    for message in logs
+                )
+            )
+        finally:
+            connection.close()
+
+    def test_live_not_found_detail_remains_fatal(self) -> None:
+        def request_json(url: str, _label: str, _limiter):
+            if url == competitions.CURRENT_COMPETITIONS_URL:
+                return {
+                    "competitions": [
+                        {
+                            "id": 8178,
+                            "season": {"id": 25},
+                            "status": "LIVE",
+                            "withXp": True,
+                        }
+                    ]
+                }
+            if url == competitions.COMPETITION_DETAIL_URL.format(competition_id=8178):
+                raise RuntimeError(
+                    'Competition 8178 failed: HTTP 404: {"key":"competitions.notFound"}'
+                )
+            raise AssertionError(f"unexpected request: {url}")
+
+        connection = sqlite3.connect(":memory:")
+        try:
+            with self.assertRaisesRegex(RuntimeError, "competitions.notFound"):
+                competitions.refresh_competitions(
+                    connection,
+                    None,
+                    request_json,
+                    object(),
+                    log=lambda _message: None,
+                    fetch_live=True,
+                    backfill_historical=False,
+                )
+        finally:
+            connection.close()
+
+    def test_historical_different_404_remains_fatal(self) -> None:
+        def request_json(url: str, _label: str, _limiter):
+            if url == competitions.CURRENT_COMPETITIONS_URL:
+                return {
+                    "competitions": [
+                        {
+                            "id": 9000,
+                            "season": {"id": 11},
+                            "status": "PLANNED",
+                            "withXp": True,
+                        }
+                    ]
+                }
+            if url == f"{competitions.SEASON_HISTORY_URL}?seasonId=11":
+                return self.history_payload(8178)
+            if url == competitions.COMPETITION_DETAIL_URL.format(competition_id=8178):
+                raise RuntimeError('Competition 8178 failed: HTTP 404: {"key":"other.notFound"}')
+            raise AssertionError(f"unexpected request: {url}")
+
+        connection = sqlite3.connect(":memory:")
+        try:
+            with self.assertRaisesRegex(RuntimeError, "other.notFound"):
+                competitions.refresh_competitions(
+                    connection,
+                    None,
+                    request_json,
+                    object(),
+                    log=lambda _message: None,
+                    fetch_live=False,
+                    backfill_historical=True,
+                )
         finally:
             connection.close()
 
