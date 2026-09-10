@@ -90,8 +90,9 @@ invariant(
     && appCore.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
     && appCore.includes('if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;')
     && generated.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
-    && generated.includes('route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);'),
-  "Canonical source must build destination incremental requests from reset filter state before the generated route request runs.",
+    && generated.includes('route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);')
+    && generated.includes('route.tableFilters = {'),
+  "Canonical source must build destination incremental requests from the resolved filter state before the generated route request runs.",
 );
 invariant(
   appCore.includes('if (pageName === activePageName && tablePages.has(pageName)) {\n    saveTableStateLocally(currentTableState());\n  }')
