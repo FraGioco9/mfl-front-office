@@ -680,7 +680,7 @@ function writeWalletPermissionCache({ allowed, version, updatedAt }) {
       checkedAt: Date.now(),
     }));
   } catch {
-    // Access still works for this page even if the browser blocks storage.
+    // Access still works for this page even if storage is blocked.
   }
 }
 
