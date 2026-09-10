@@ -45,6 +45,8 @@ includes(sharedCore, "function renderWatchlistSwitcher() {", "Shared core must r
 includes(sharedCore, "function closeWatchlistDropdown() {", "Shared core must retain a safe dropdown-close facade for global Escape/pointer handling.");
 includes(sharedCore, "async function ensureWatchlistRoute(", "Watchlist route selection must remain shared for setPage orchestration.");
 includes(sharedCore, "function switchWatchlist(", "Watchlist switching must retain its shared API.");
+includes(sharedCore, 'const targetUrl = `${targetPath}${window.location.search}`;', "Watchlist route canonicalization must preserve active table URL filters.");
+includes(sharedCore, 'window.history[replace ? "replaceState" : "pushState"]({}, "", targetUrl);', "Watchlist route writes must use the query-preserving canonical target.");
 includes(sharedCore, "const watchlistMatch = cleanPath.match(/^\\/watchlist(?:\\/[^/]+)?(?:\\/[^/]+)?$/);", "Canonical route parsing must recognize Watchlist id/view URLs directly.");
 includes(sharedCore, "const target = watchlistTargetFromUrl(cleanPath);", "Canonical route parsing must resolve Watchlist URL identity once.");
 includes(sharedCore, "const normalizedView = normalizeViewForPage(target.view, \"watchlist\");", "Canonical route parsing must normalize the Watchlist view before setPage receives it.");
