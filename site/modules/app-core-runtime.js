@@ -3375,13 +3375,14 @@ function updateWatchlistTitle() {
   }
 }
 
-function updateTablePlayerCount() {
+function updateTablePlayerCount(options = {}) {
   if (!watchlistPlayerCount) {
     return;
   }
 
+  const authoritativeRender = options.authoritative === true;
   const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.());
-  const visible = tablePages.has(state.currentPage) && !tableLoadingActive;
+  const visible = tablePages.has(state.currentPage) && (authoritativeRender || !tableLoadingActive);
   watchlistPlayerCount.hidden = !visible;
   if (!visible) {
     return;

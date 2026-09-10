@@ -2969,12 +2969,12 @@ function tableRenderTableOwner() {
   tableBody.replaceChildren(fragment);
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
+  updateTablePlayerCount({ authoritative: true });
   const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
   if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
   if (preservedPlayerTableActionRenderSignature) {
     restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
   }
-  updateTablePlayerCount();
   syncPagerCurrentPage(state.page, totalPages);
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
