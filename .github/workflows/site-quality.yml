@@ -46,13 +46,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Probe live competition payload shape
-        if: github.head_ref == 'fix/competition-normalization-live-payloads'
-        working-directory: .
-        env:
-          MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
-        run: python -m scripts.database._temporary_competition_payload_probe
-
       - name: Database builder syntax check
         if: steps.changes.outputs.builder == 'true'
         working-directory: .
