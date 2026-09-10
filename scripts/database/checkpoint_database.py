@@ -13,12 +13,6 @@ CHECKPOINT_STAGES = ("core", "player_seasons", "player_data", "final")
 PROGRESSION_COLUMNS = tuple(
     column for column in pipeline.PLAYER_COLUMNS if "_prog_" in column
 )
-DERIVED_PLAYER_COLUMNS = tuple(
-    column
-    for column in pipeline.PLAYER_COLUMNS
-    if column in {"next_overall", "next_overall_gap"}
-    or column.endswith("_to_next_overall")
-)
 
 
 def _table_columns(connection: sqlite3.Connection, table: str) -> set[str]:
@@ -131,10 +125,13 @@ def materialize_checkpoint(
                 only_if_missing=True,
             )
         if normalized in {"core", "player_seasons"}:
+            # Progressions are their own later fetch domain. Derived player values such as
+            # Next Overall are already recomputed from the current attributes in the core
+            # stage and must never be replaced with values from the previous database.
             _copy_previous_player_columns(
                 connection,
                 previous,
-                PROGRESSION_COLUMNS + DERIVED_PLAYER_COLUMNS,
+                PROGRESSION_COLUMNS,
             )
         if normalized in {"core", "player_seasons", "player_data"}:
             competition_storage.restore_previous_history(
