@@ -1,18 +1,38 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { readWorkflowSource } from "./validation/workflow-source.mjs";
 
-const workflowUrl = new URL("../.github/workflows/full-database-refresh.yml", import.meta.url);
-const workflow = await readWorkflowSource(workflowUrl);
+const siteRoot = fileURLToPath(new URL(".", import.meta.url));
+const repositoryRoot = resolve(siteRoot, "..");
+const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8");
+
+const workflow = await readWorkflowSource(
+  new URL("../.github/workflows/full-database-refresh.yml", import.meta.url),
+);
+const [resolver, installer, publisher, adapterValidator] = await Promise.all([
+  readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
+  readRepository("scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"),
+  readRepository("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
+  readRepository("scripts/workflows/full-database-refresh-validate-database-with-published-site-adapter.sh"),
+]);
+const deploymentSource = [workflow, resolver, installer, publisher, adapterValidator].join("\n");
+
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
-const includes = (value, message) => invariant(workflow.includes(value), message);
-const excludes = (value, message) => invariant(!workflow.includes(value), message);
+const includes = (value, message) => invariant(deploymentSource.includes(value), message);
+const excludes = (value, message) => invariant(!deploymentSource.includes(value), message);
 
 includes(
-  "--workflow vercel-site-update.yml",
+  "vercel-site-update.yml",
   "Database-only refreshes must resolve the last explicitly published site source.",
 );
 includes(
-  "cp builder/mfl_database.db production-site/site/api/data-files/mfl_database.db",
-  "Database-only refreshes must replace the SQLite database in the published site workspace.",
+  'DATABASE_SOURCE_PATH="${DATABASE_SOURCE_PATH:-builder/mfl_database.db}"',
+  "Database-only refreshes must support an explicit immutable checkpoint database source.",
+);
+includes(
+  'cp "$DATABASE_SOURCE_PATH" production-site/site/api/data-files/mfl_database.db',
+  "Database-only refreshes must replace SQLite data from the selected checkpoint snapshot.",
 );
 excludes(
   "cp builder/site/api/_database.js production-site/site/api/_database.js",
@@ -32,15 +52,19 @@ includes(
 );
 includes(
   'require(path.resolve("production-site/site/api/_database.js"))',
-  "The fresh database must be smoke-tested through the published site's own SQLite adapter before deployment.",
+  "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
 );
 includes(
   "--local-config site/vercel.production.json",
   "Database-only refreshes must use the same production Vercel configuration as explicit site releases.",
+);
+includes(
+  "full-database-refresh-verify-live-production-database.sh",
+  "Every checkpoint deployment must verify the live production database before the next stage can continue.",
 );
 excludes(
   "fresh SQLite data/runtime adapter",
   "Database-only deployment logs must not claim that the API runtime adapter is being updated.",
 );
 
-console.log("Database-only deployment preserves the published site runtime while safely replacing compatible SQLite data.");
+console.log("Staged database checkpoints preserve the published site runtime while safely replacing validated SQLite snapshots.");

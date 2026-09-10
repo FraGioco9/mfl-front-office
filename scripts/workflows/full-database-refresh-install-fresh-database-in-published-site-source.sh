@@ -7,11 +7,17 @@ if [ ! -f production-site/site/api/_database.js ]; then
   exit 1
 fi
 
+DATABASE_SOURCE_PATH="${DATABASE_SOURCE_PATH:-builder/mfl_database.db}"
+if [ ! -s "$DATABASE_SOURCE_PATH" ]; then
+  echo "Database source does not exist or is empty: $DATABASE_SOURCE_PATH" >&2
+  exit 1
+fi
+
 PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
 
 rm -rf production-site/site/api/data-files
 mkdir -p production-site/site/api/data-files
-cp builder/mfl_database.db production-site/site/api/data-files/mfl_database.db
+cp "$DATABASE_SOURCE_PATH" production-site/site/api/data-files/mfl_database.db
 test -s production-site/site/api/data-files/mfl_database.db
 
 CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"

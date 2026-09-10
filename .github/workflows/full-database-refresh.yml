@@ -62,7 +62,7 @@ on:
         default: true
         type: boolean
       send_progression_emails:
-        description: Send progression notification emails after the rebuild.
+        description: Send progression notification emails after the player-data checkpoint.
         required: false
         default: true
         type: boolean
@@ -182,6 +182,11 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      - name: Download current database builder
+        uses: actions/checkout@v7
+        with:
+          path: builder
+
       - name: Record refresh trigger timing
         if: needs.resolve-refresh-trigger.outputs.intended_at != ''
         shell: bash
@@ -190,129 +195,7 @@ jobs:
           TRIGGER_SOURCE: ${{ needs.resolve-refresh-trigger.outputs.trigger_source }}
           TRIGGERED_AT: ${{ needs.resolve-refresh-trigger.outputs.triggered_at }}
           INTENDED_AT: ${{ needs.resolve-refresh-trigger.outputs.intended_at }}
-        run: |
-          set -euo pipefail
-
-          MEASURED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
-          CREATED_AT="$(jq -r '.created_at // empty' <<< "$RUN_JSON")"
-          if [ -z "$CREATED_AT" ]; then
-            CREATED_AT="$MEASURED_AT"
-          fi
-
-          JOBS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100")"
-          JOB_STARTED_AT="$(
-            jq -r '.jobs[] | select(.name == "update-database-and-production-data") | .started_at // empty' \
-              <<< "$JOBS_JSON" | head -n 1
-          )"
-          if [ -z "$JOB_STARTED_AT" ]; then
-            JOB_STARTED_AT="$MEASURED_AT"
-          fi
-
-          INTENDED_EPOCH="$(date -d "$INTENDED_AT" +%s)"
-          TRIGGERED_EPOCH="$(date -d "$TRIGGERED_AT" +%s)"
-          CREATED_EPOCH="$(date -d "$CREATED_AT" +%s)"
-          JOB_STARTED_EPOCH="$(date -d "$JOB_STARTED_AT" +%s)"
-          TRIGGER_DELAY_SECONDS="$((TRIGGERED_EPOCH - INTENDED_EPOCH))"
-          TRIGGER_TO_WORKFLOW_SECONDS="$((CREATED_EPOCH - TRIGGERED_EPOCH))"
-          QUEUE_DELAY_SECONDS="$((JOB_STARTED_EPOCH - CREATED_EPOCH))"
-          TOTAL_DELAY_SECONDS="$((JOB_STARTED_EPOCH - INTENDED_EPOCH))"
-
-          SITE_RUNS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/vercel-site-update.yml/runs?per_page=30")"
-          DATABASE_RUNS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full-database-refresh.yml/runs?per_page=30")"
-
-          OVERLAPPING_SITE_RUNS="$(
-            jq --arg start "$CREATED_AT" --arg end "$JOB_STARTED_AT" \
-              '[.workflow_runs[] | select(.created_at <= $end and .updated_at >= $start)] | length' \
-              <<< "$SITE_RUNS_JSON"
-          )"
-          OVERLAPPING_DATABASE_RUNS="$(
-            jq --arg start "$CREATED_AT" --arg end "$JOB_STARTED_AT" --arg run_id "$GITHUB_RUN_ID" \
-              '[.workflow_runs[] | select((.id | tostring) != $run_id and .created_at <= $end and .updated_at >= $start)] | length' \
-              <<< "$DATABASE_RUNS_JSON"
-          )"
-
-          if [ "$TRIGGER_SOURCE" = "supabase-cron" ]; then
-            if [ "$TRIGGER_DELAY_SECONDS" -gt 60 ]; then
-              DELAY_SOURCE_HINT="Supabase scheduler arrived late"
-            elif [ "$TRIGGER_DELAY_SECONDS" -lt -60 ]; then
-              DELAY_SOURCE_HINT="Supabase scheduler arrived early"
-            else
-              DELAY_SOURCE_HINT="Supabase scheduler within 60 seconds of intended time"
-            fi
-          else
-            DELAY_SOURCE_HINT="Manual dispatch"
-          fi
-
-          if [ "$QUEUE_DELAY_SECONDS" -gt 60 ]; then
-            if [ "$((OVERLAPPING_SITE_RUNS + OVERLAPPING_DATABASE_RUNS))" -gt 0 ]; then
-              DELAY_SOURCE_HINT="$DELAY_SOURCE_HINT + shared concurrency wait"
-            else
-              DELAY_SOURCE_HINT="$DELAY_SOURCE_HINT + runner/job queue wait"
-            fi
-          fi
-
-          TELEMETRY_FILE="$RUNNER_TEMP/full-database-refresh-trigger-telemetry.json"
-          jq -n \
-            --arg timezone "Europe/Rome" \
-            --arg triggerSource "$TRIGGER_SOURCE" \
-            --arg intendedAt "$INTENDED_AT" \
-            --arg triggeredAt "$TRIGGERED_AT" \
-            --arg workflowCreatedAt "$CREATED_AT" \
-            --arg jobStartedAt "$JOB_STARTED_AT" \
-            --arg measuredAt "$MEASURED_AT" \
-            --arg delaySourceHint "$DELAY_SOURCE_HINT" \
-            --argjson triggerDelaySeconds "$TRIGGER_DELAY_SECONDS" \
-            --argjson triggerToWorkflowSeconds "$TRIGGER_TO_WORKFLOW_SECONDS" \
-            --argjson queueOrConcurrencyDelaySeconds "$QUEUE_DELAY_SECONDS" \
-            --argjson totalStartDelaySeconds "$TOTAL_DELAY_SECONDS" \
-            --argjson overlappingSiteUpdateRuns "$OVERLAPPING_SITE_RUNS" \
-            --argjson overlappingDatabaseRefreshRuns "$OVERLAPPING_DATABASE_RUNS" \
-            --arg runId "$GITHUB_RUN_ID" \
-            --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{
-              timezone: $timezone,
-              triggerSource: $triggerSource,
-              intendedAt: $intendedAt,
-              triggeredAt: $triggeredAt,
-              workflowCreatedAt: $workflowCreatedAt,
-              jobStartedAt: $jobStartedAt,
-              measuredAt: $measuredAt,
-              triggerDelaySeconds: $triggerDelaySeconds,
-              triggerToWorkflowSeconds: $triggerToWorkflowSeconds,
-              queueOrConcurrencyDelaySeconds: $queueOrConcurrencyDelaySeconds,
-              totalStartDelaySeconds: $totalStartDelaySeconds,
-              overlappingSiteUpdateRuns: $overlappingSiteUpdateRuns,
-              overlappingDatabaseRefreshRuns: $overlappingDatabaseRefreshRuns,
-              delaySourceHint: $delaySourceHint,
-              runId: $runId,
-              runAttempt: $runAttempt
-            }' > "$TELEMETRY_FILE"
-
-          cat "$TELEMETRY_FILE"
-          {
-            echo "### Full database refresh trigger timing"
-            echo
-            echo "| Metric | Value |"
-            echo "| --- | --- |"
-            echo "| Trigger source | \`$TRIGGER_SOURCE\` |"
-            echo "| Intended Rome time | \`$INTENDED_AT\` |"
-            echo "| Triggered | \`$TRIGGERED_AT\` |"
-            echo "| Workflow created | \`$CREATED_AT\` |"
-            echo "| Database job started | \`$JOB_STARTED_AT\` |"
-            echo "| Trigger delay from intended time | ${TRIGGER_DELAY_SECONDS}s |"
-            echo "| Trigger → workflow creation | ${TRIGGER_TO_WORKFLOW_SECONDS}s |"
-            echo "| Queue/concurrency delay | ${QUEUE_DELAY_SECONDS}s |"
-            echo "| Total start delay | ${TOTAL_DELAY_SECONDS}s |"
-            echo "| Overlapping site-update runs | $OVERLAPPING_SITE_RUNS |"
-            echo "| Overlapping database-refresh runs | $OVERLAPPING_DATABASE_RUNS |"
-            echo "| Delay source hint | $DELAY_SOURCE_HINT |"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Download current database builder
-        uses: actions/checkout@v7
-        with:
-          path: builder
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-trigger-timing.sh"
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -331,18 +214,154 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-restore-previous-database-for-email-comparison.sh"
 
-      - name: Rebuild database
+      - name: Resolve last published site source
+        id: production_site
+        working-directory: builder
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"
+
+      - name: Download last published site source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.production_site.outputs.sha }}
+          path: production-site
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Rebuild database — core
         working-directory: builder
         env:
           MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
+          MFL_REBUILD_STAGE: core
           MFL_FETCH_WALLETS: ${{ inputs.fetch_wallets }}
           MFL_FETCH_PLAYERS: ${{ inputs.fetch_players }}
           MFL_FETCH_CLUBS: ${{ inputs.fetch_clubs }}
-          MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
-          MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
           MFL_FETCH_PLAYER_SEASONS: ${{ inputs.fetch_player_seasons }}
           MFL_FETCH_PROGRESSIONS: ${{ inputs.fetch_progressions }}
+          MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
+          MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
         run: python -m scripts.database.rebuild_database_runner
+
+      - name: Materialize core checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        working-directory: builder
+        run: |
+          python -m scripts.database.checkpoint_database \
+            --stage core \
+            --source mfl_database.db \
+            --previous previous-database/mfl_database.db \
+            --output checkpoints/core/mfl_database.db
+          python -m scripts.database.prepare_runtime_database checkpoints/core/mfl_database.db
+
+      - name: Publish core checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        env:
+          PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh core builder/checkpoints/core/mfl_database.db
+
+      - name: Save core checkpoint for retries
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mfl_database
+          path: builder/checkpoints/core/mfl_database.db
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Rebuild database — player seasons
+        working-directory: builder
+        env:
+          MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
+          MFL_REBUILD_STAGE: player_seasons
+          MFL_FETCH_WALLETS: ${{ inputs.fetch_wallets }}
+          MFL_FETCH_PLAYERS: ${{ inputs.fetch_players }}
+          MFL_FETCH_CLUBS: ${{ inputs.fetch_clubs }}
+          MFL_FETCH_PLAYER_SEASONS: ${{ inputs.fetch_player_seasons }}
+          MFL_FETCH_PROGRESSIONS: ${{ inputs.fetch_progressions }}
+          MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
+          MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
+        run: python -m scripts.database.rebuild_database_runner
+
+      - name: Materialize player-seasons checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        working-directory: builder
+        run: |
+          python -m scripts.database.checkpoint_database \
+            --stage player_seasons \
+            --source mfl_database.db \
+            --previous previous-database/mfl_database.db \
+            --output checkpoints/player-seasons/mfl_database.db
+          python -m scripts.database.prepare_runtime_database checkpoints/player-seasons/mfl_database.db
+
+      - name: Publish player-seasons checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        env:
+          PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh player-seasons builder/checkpoints/player-seasons/mfl_database.db
+
+      - name: Save player-seasons checkpoint for retries
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mfl_database
+          path: builder/checkpoints/player-seasons/mfl_database.db
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Rebuild database — player data
+        working-directory: builder
+        env:
+          MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
+          MFL_REBUILD_STAGE: player_data
+          MFL_FETCH_WALLETS: ${{ inputs.fetch_wallets }}
+          MFL_FETCH_PLAYERS: ${{ inputs.fetch_players }}
+          MFL_FETCH_CLUBS: ${{ inputs.fetch_clubs }}
+          MFL_FETCH_PLAYER_SEASONS: ${{ inputs.fetch_player_seasons }}
+          MFL_FETCH_PROGRESSIONS: ${{ inputs.fetch_progressions }}
+          MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
+          MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
+        run: python -m scripts.database.rebuild_database_runner
+
+      - name: Materialize player-data checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        working-directory: builder
+        run: |
+          python -m scripts.database.checkpoint_database \
+            --stage player_data \
+            --source mfl_database.db \
+            --previous previous-database/mfl_database.db \
+            --output checkpoints/player-data/mfl_database.db
+          python -m scripts.database.prepare_runtime_database checkpoints/player-data/mfl_database.db
+
+      - name: Publish player-data checkpoint
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        env:
+          PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh player-data builder/checkpoints/player-data/mfl_database.db
+
+      - name: Save player-data checkpoint for retries
+        if: ${{ hashFiles('builder/previous-database/mfl_database.db') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mfl_database
+          path: builder/checkpoints/player-data/mfl_database.db
+          overwrite: true
+          if-no-files-found: error
 
       - name: Send progression emails
         if: ${{ inputs.send_progression_emails && inputs.fetch_progressions && hashFiles('builder/previous-database/mfl_database.db') != '' }}
@@ -359,134 +378,45 @@ jobs:
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
         run: python -m scripts.email.send_progression_emails --previous-db previous-database/mfl_database.db --current-db mfl_database.db
 
-      - name: Prepare runtime SQLite database
+      - name: Rebuild database — competitions
         working-directory: builder
-        run: python -m scripts.database.prepare_runtime_database mfl_database.db
+        env:
+          MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
+          MFL_REBUILD_STAGE: competitions
+          MFL_FETCH_WALLETS: ${{ inputs.fetch_wallets }}
+          MFL_FETCH_PLAYERS: ${{ inputs.fetch_players }}
+          MFL_FETCH_CLUBS: ${{ inputs.fetch_clubs }}
+          MFL_FETCH_PLAYER_SEASONS: ${{ inputs.fetch_player_seasons }}
+          MFL_FETCH_PROGRESSIONS: ${{ inputs.fetch_progressions }}
+          MFL_FETCH_LIVE_COMPETITIONS: ${{ inputs.fetch_live_competitions }}
+          MFL_BACKFILL_HISTORICAL_COMPETITIONS: ${{ inputs.backfill_historical_competitions }}
+        run: python -m scripts.database.rebuild_database_runner
 
-      - name: Upload database
+      - name: Materialize final checkpoint
+        working-directory: builder
+        run: |
+          python -m scripts.database.checkpoint_database \
+            --stage final \
+            --source mfl_database.db \
+            --output checkpoints/final/mfl_database.db
+          python -m scripts.database.prepare_runtime_database checkpoints/final/mfl_database.db
+
+      - name: Publish final checkpoint
+        env:
+          PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh final builder/checkpoints/final/mfl_database.db
+
+      - name: Upload final database
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
-          path: builder/mfl_database.db
+          path: builder/checkpoints/final/mfl_database.db
+          overwrite: true
           if-no-files-found: error
-
-      - name: Resolve last published site source
-        id: production_site
-        working-directory: builder
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"
-
-      - name: Download last published site source
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ steps.production_site.outputs.sha }}
-          path: production-site
-
-      - name: Install fresh database in published site source
-        shell: bash
-        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"
-
-      - name: Build published application core
-        shell: bash
-        run: |
-          set -euo pipefail
-          node production-site/site/build-app-core.mjs
-          test -s production-site/site/modules/app-core-runtime.js
-
-      - name: Validate database with published site adapter
-        shell: bash
-        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-validate-database-with-published-site-adapter.sh"
-
-      - name: Record expected database summary
-        shell: bash
-        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-expected-database-summary.sh"
-
-      - name: Verify published site version is unchanged
-        shell: bash
-        run: |
-          set -euo pipefail
-          ACTUAL_SHA="$(git -C production-site rev-parse HEAD)"
-          EXPECTED_SHA="${{ steps.production_site.outputs.sha }}"
-          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
-
-          PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
-          CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"
-          test "$CURRENT_ADAPTER_BLOB" = "$PUBLISHED_ADAPTER_BLOB"
-
-          UNEXPECTED_TRACKED_CHANGES="$(
-            git -C production-site diff --name-only -- . \
-              ':(exclude)site/api/data-files/**' \
-              ':(exclude)site/modules/app-core-runtime.js' \
-              ':(exclude)site/modules/app-core-*-runtime.js'
-          )"
-          if [ -n "$UNEXPECTED_TRACKED_CHANGES" ]; then
-            echo "Database-only refresh changed published site source files:" >&2
-            printf '%s\n' "$UNEXPECTED_TRACKED_CHANGES" >&2
-            exit 1
-          fi
-
-          python - <<'PY'
-          import json
-          import re
-          from pathlib import Path
-
-          release_path = Path("production-site/site/release.json")
-          app_path = Path("production-site/site/bootstrap.js")
-          version = ""
-
-          if release_path.exists():
-              release = json.loads(release_path.read_text(encoding="utf-8"))
-              candidate = str(release.get("version", "")).strip()
-              if re.fullmatch(r"\d+\.\d+\.\d+", candidate):
-                  version = candidate
-          elif app_path.exists():
-              source = app_path.read_text(encoding="utf-8")
-              match = re.search(
-                  r'const\s+(?:STATIC_RELEASE_VERSION|RELEASE_VERSION|VERSION)\s*=\s*["\'](\d+\.\d+\.\d+)["\']',
-                  source,
-              )
-              if match:
-                  version = match.group(1)
-
-          if version:
-              print(
-                  f"Deploying fresh SQLite data with the exact published MFL Front Office "
-                  f"v{version} site runtime."
-              )
-          else:
-              print(
-                  "Deploying fresh SQLite data with the exact site runtime from the last "
-                  "successful Vercel site update."
-              )
-          PY
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Connect Vercel project
-        working-directory: production-site
-        shell: bash
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-          mkdir -p .vercel
-          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
-
-      - name: Deploy database with unchanged published site
-        working-directory: production-site
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel deploy --prod --yes --force --local-config site/vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
-
-      - name: Verify live production database
-        shell: bash
-        env:
-          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
-        run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-verify-live-production-database.sh"
 
       - name: Record completed refresh occurrence
         if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
@@ -504,6 +434,15 @@ jobs:
           name: full-database-refresh-occurrence-${{ needs.resolve-refresh-trigger.outputs.occurrence_key }}
           path: ${{ runner.temp }}/full-database-refresh-occurrence.json
           if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload checkpoint telemetry
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-database-refresh-checkpoints-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/full-database-refresh-checkpoint-*.json
+          if-no-files-found: warn
           retention-days: 90
 
       - name: Upload refresh trigger timing telemetry
