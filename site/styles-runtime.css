@@ -3849,11 +3849,6 @@ button.playerIdText:active {
 }
 
 .myPlayersLockedPage {
-  position: fixed;
-  top: 102px;
-  right: 0;
-  bottom: 52px;
-  left: 0;
   z-index: 5;
   display: grid;
   place-items: center;
@@ -8878,12 +8873,6 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
     padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
     overflow-x: hidden;
-  }
-
-  body.pinnedSidebarVisible .myPlayersLockedPage,
-  body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
-    left: 0;
-    width: auto;
   }
 
   .homePage,
