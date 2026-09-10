@@ -1748,7 +1748,13 @@ function tableUrlRulesFromParams(pageName, viewName, params) {
       entry.value,
       entry.valueTo,
     ))
-    .map(({ invalid: _invalid, ...entry }) => entry);
+    .map((entry) => ({
+      column: entry.column,
+      connector: entry.connector,
+      operator: entry.operator,
+      value: entry.value,
+      valueTo: entry.valueTo,
+    }));
 }
 
 function tableUrlSearchForState(pageName, viewName, tableState) {
