@@ -260,6 +260,11 @@ def current_candidates(payload: Any) -> list[dict[str, Any]]:
     return list(by_id.values())
 
 
+def _is_competition_not_found_error(error: BaseException) -> bool:
+    message = str(error)
+    return "HTTP 404" in message and "competitions.notFound" in message
+
+
 def _fetch_details(
     candidates: list[dict[str, Any]],
     request_json: RequestJson,
@@ -267,17 +272,28 @@ def _fetch_details(
     *,
     log: Log | None = None,
     progress_label: str = "Competition detail",
+    skip_not_found: bool = False,
 ) -> list[tuple[dict[str, Any], Any]]:
     if not candidates:
         return []
 
     def fetch(candidate: dict[str, Any]) -> tuple[dict[str, Any], Any]:
         competition_id = candidate["id"]
-        detail = request_json(
-            COMPETITION_DETAIL_URL.format(competition_id=competition_id),
-            f"Competition {competition_id}",
-            limiter,
-        )
+        try:
+            detail = request_json(
+                COMPETITION_DETAIL_URL.format(competition_id=competition_id),
+                f"Competition {competition_id}",
+                limiter,
+            )
+        except RuntimeError as error:
+            if not skip_not_found or not _is_competition_not_found_error(error):
+                raise
+            if log is not None:
+                log(
+                    f"Competition {competition_id}: season-history entry has no detail endpoint; "
+                    "skipping stale index entry."
+                )
+            detail = None
         return candidate, detail
 
     total = len(candidates)
@@ -428,6 +444,7 @@ def refresh_competitions(
                 limiter,
                 log=log,
                 progress_label=f"Competition Season {display_season} detail (seasonId {season_id})",
+                skip_not_found=True,
             )
             saved, _ = _persist_details(connection, details, log)
             historical_saved += saved

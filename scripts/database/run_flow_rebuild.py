@@ -139,6 +139,8 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
         except HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
             last_error = RuntimeError(f"HTTP {error.code}: {body[:500]}")
+            if error.code == 404:
+                raise RuntimeError(f"{request_name} failed: {last_error}") from error
         except (URLError, TimeoutError, json.JSONDecodeError) as error:
             last_error = error
         if attempt < MAX_RETRIES:
