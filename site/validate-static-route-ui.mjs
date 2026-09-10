@@ -99,8 +99,12 @@ includes(staticUi, "container.insertBefore(button, insertionPoint);", "View orde
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy })", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
-includes(staticUi, 'const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;', "Static route chrome must consume the canonical route classifier for not-found state.");
+includes(staticUi, 'const routes = window.__mflAppConfig?.routes;', "Static route chrome must consume the canonical route configuration.");
+includes(staticUi, 'routes.canonicalRequest(url.pathname)', "Static route chrome must consume the canonical route classifier.");
+includes(staticUi, 'const requestShellId = window.__mflAppConfig?.routes?.requestShellId;', "Static route chrome must consume canonical route-shell ownership.");
 includes(staticUi, 'if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");', "Typed not-found routes must resolve to the shared not-found shell.");
+excludes(staticUi, "function routeNeedsLockedShell(", "Static route chrome must not maintain a second protected-route shell list.");
+excludes(staticUi, 'return document.getElementById("homePage");', "Static route chrome must never use Home as an unknown-route shell fallback.");
 includes(staticUi, 'page.id = "notFoundPage";', "Static route chrome must own one reusable not-found page shell.");
 includes(staticUi, 'page.className = "pageView homePage";', "The not-found page must reuse the canonical centered Home page layout.");
 includes(staticUi, '<h1 id="notFoundTitle">Page not found</h1>', "The not-found title must reuse the larger centered site heading instead of table-title alignment.");
@@ -113,6 +117,8 @@ excludes(staticUi, "not-found.css", "The not-found page must not load a standalo
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
+includes(staticUi, 'if (!(target instanceof HTMLElement)) {', "Missing route-shell integration must fail closed.");
+includes(staticUi, 'page.hidden = true;', "Missing route-shell integration must hide every stale page rather than reveal Home.");
 includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");
 includes(staticUi, "contracts.ensureCanonicalTableHeader", "Static table chrome must request canonical headers through the core contract.");
 includes(staticUi, 'Reflect.get(window, "__mflPrimeTableHeaderSignature")', "Static table chrome must reuse the bootstrap header signature owner.");
@@ -147,6 +153,9 @@ includes(styles, "z-index: var(--mfl-z-topmost);", "Global tooltip portals must 
 
 includes(bootstrap, "function canonicalBootstrapRequest(urlLike = window.location.href) {", "Bootstrap route identity must delegate to canonical app configuration.");
 includes(bootstrap, "return APP_CONFIG.routes.initialRequest(route.pathname);", "Bootstrap route identity must use the canonical route classifier.");
+includes(bootstrap, "function initialRouteState() {", "Bootstrap must materialize one canonical initial route state.");
+includes(bootstrap, "APP_CONFIG.routes.requestShellId(request, {", "Bootstrap first paint must resolve its shell from canonical route configuration.");
+excludes(bootstrap, 'return document.getElementById("homePage");', "Bootstrap must not fall back to Home when a route shell is missing.");
 includes(bootstrap, "function tableViewFromUrl(page, urlLike = window.location.href) {", "Bootstrap table chrome must resolve its view from the destination URL.");
 includes(bootstrap, "return request?.pageName === normalizedPage ? String(request.options?.view || \"\") : \"\";", "Bootstrap table chrome must consume the canonical request view instead of parsing route slugs again.");
 excludes(bootstrap, "TABLE_VIEW_BY_SLUG", "Bootstrap must not retain a second route-view parser.");
