@@ -126,9 +126,7 @@ def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
           owner_name TEXT NOT NULL DEFAULT '',
           signed_player_ids TEXT NOT NULL DEFAULT '[]',
           current_competition_ids TEXT NOT NULL DEFAULT '[]',
-          logo_version TEXT NOT NULL DEFAULT '',
-          leaderboard_rank INTEGER,
-          mfl_points REAL
+          logo_version TEXT NOT NULL DEFAULT ''
         ) WITHOUT ROWID;
         """
     )
@@ -160,10 +158,6 @@ def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
             if "logo_version" in club_columns
             else "coalesce(CAST(division AS TEXT), '')"
         )
-        leaderboard_rank_expression = (
-            "leaderboard_rank" if "leaderboard_rank" in club_columns else "NULL"
-        )
-        mfl_points_expression = "mfl_points" if "mfl_points" in club_columns else "NULL"
         connection.execute(
             f"""
             INSERT INTO runtime_clubs (
@@ -180,9 +174,7 @@ def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
               owner_name,
               signed_player_ids,
               current_competition_ids,
-              logo_version,
-              leaderboard_rank,
-              mfl_points
+              logo_version
             )
             SELECT
               club_id,
@@ -198,9 +190,7 @@ def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
               coalesce(owner_name, ''),
               {signed_players_expression},
               {current_competition_ids_expression},
-              {logo_version_expression},
-              {leaderboard_rank_expression},
-              {mfl_points_expression}
+              {logo_version_expression}
             FROM clubs
             WHERE coalesce(club_id, '') <> ''
               AND normalize_search(name) <> 'development center'
