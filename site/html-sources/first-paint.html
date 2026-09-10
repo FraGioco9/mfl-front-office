@@ -348,9 +348,11 @@
         visibility: visible;
         opacity: 1;
       }
+      /* Pager starts hidden through its native `hidden` attribute; table data readiness owns release.
       html:not([data-mfl-ready="true"]) #progressionPage nav.pager {
         display: none;
       }
+      */
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #progressionPage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded) #homePage,

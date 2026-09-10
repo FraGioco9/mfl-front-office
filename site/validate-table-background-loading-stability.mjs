@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 
 const runtime = String(await readFile(new URL("./table-loading-runtime.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const index = String(await readFile(new URL("./index.html", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const projection = String(await readFile(new URL("./sync-release-projections.mjs", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const buildCore = String(await readFile(new URL("./build-app-core.mjs", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const firstPaint = String(await readFile(new URL("./html-sources/first-paint.html", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const tablesSource = String(await readFile(new URL("./html-sources/tables.html", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
 for (const required of [
   "function shouldPreserveRenderedRows(body = elements().body) {",
@@ -64,16 +66,22 @@ invariant(
   "Pager chrome must be hidden for blank loading rows and released from the same runtime as soon as real rows are rendered.",
 );
 
+const globalPagerReadyRule = 'html:not([data-mfl-ready="true"]) #progressionPage nav.pager';
+const firstPaintWithoutComments = firstPaint.replace(/\/\*[\s\S]*?\*\//g, "");
+const indexWithoutComments = index.replace(/\/\*[\s\S]*?\*\//g, "");
 invariant(
-  index.includes('html:not([data-mfl-ready="true"]) #progressionPage nav.pager {\n        display: none;\n      }')
-    && !index.includes('html.mflDataLoading #progressionPage nav.pager'),
-  "First-paint CSS must not keep nav.pager hidden after real data renders merely because the broader data-loading class is still active.",
+  !firstPaintWithoutComments.includes(globalPagerReadyRule)
+    && !indexWithoutComments.includes(globalPagerReadyRule)
+    && !index.includes('html.mflDataLoading #progressionPage nav.pager')
+    && tablesSource.includes('<nav class="pager" aria-label="Pagination" hidden>'),
+  "Pager first paint must start natively hidden without any active global application-readiness or broad data-loading CSS gate.",
 );
 invariant(
-  projection.includes("export function normalizeIndexPagerLoadingProjection(source) {")
-    && projection.includes('html\\.mflDataLoading #progressionPage nav\\.pager')
-    && projection.includes("normalizeIndexPagerLoadingProjection("),
-  "Release projection generation must canonically preserve the data-render pager visibility rule in index.html.",
+  firstPaint.includes("Pager starts hidden through its native `hidden` attribute; table data readiness owns release.")
+    && firstPaint.includes(globalPagerReadyRule)
+    && index.includes(globalPagerReadyRule)
+    && !buildCore.includes("removeGlobalPagerReadyGate"),
+  "The retired global-ready pager projection may remain only as documented inactive source history; build-app-core must not patch generated HTML.",
 );
 
-console.log("Settled rows remain stable during background loading, blank loads hide pager chrome, and nav.pager appears with real data even before route-ready settles.");
+console.log("Settled rows remain stable during background loading, blank loads hide pager chrome, and nav.pager appears with real data independently of global app readiness.");
