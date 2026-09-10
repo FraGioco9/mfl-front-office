@@ -32,3 +32,5 @@ jobs:
           git add site/validate-footer-redesign.mjs site/validate-mobile-footer-floor.mjs
           git commit -m "Align footer fallback validators"
           git push origin HEAD:fix/opted-out-footer-distance
+
+# Temporary workflow; removed after the guarded validator update succeeds.
