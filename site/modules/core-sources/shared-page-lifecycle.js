@@ -358,7 +358,11 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   }
   renderWatchlistSwitcher();
   if (tablePage) {
-    restoreSavedTableState(pageName, { view: options.view });
+    restoreSavedTableState(pageName, {
+      view: options.view,
+      path: options.path,
+      replaceUrl: options.replaceUrl,
+    });
     syncRestoredTableControls(pageName);
     updateViewButtons();
     buildHeader();
