@@ -182,6 +182,11 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      - name: Download current database builder
+        uses: actions/checkout@v7
+        with:
+          path: builder
+
       - name: Record refresh trigger timing
         if: needs.resolve-refresh-trigger.outputs.intended_at != ''
         shell: bash
@@ -191,11 +196,6 @@ jobs:
           TRIGGERED_AT: ${{ needs.resolve-refresh-trigger.outputs.triggered_at }}
           INTENDED_AT: ${{ needs.resolve-refresh-trigger.outputs.intended_at }}
         run: bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-trigger-timing.sh"
-
-      - name: Download current database builder
-        uses: actions/checkout@v7
-        with:
-          path: builder
 
       - name: Set up Python
         uses: actions/setup-python@v7
