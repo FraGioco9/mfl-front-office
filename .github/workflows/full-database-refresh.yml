@@ -411,6 +411,14 @@ jobs:
             --output checkpoints/final/mfl_database.db
           python -m scripts.database.prepare_runtime_database checkpoints/final/mfl_database.db
 
+      - name: Upload final database
+        uses: actions/upload-artifact@v7
+        with:
+          name: mfl_database
+          path: builder/checkpoints/final/mfl_database.db
+          overwrite: true
+          if-no-files-found: error
+
       - name: Publish final checkpoint
         env:
           PUBLISHED_SITE_SHA: ${{ steps.production_site.outputs.sha }}
@@ -419,14 +427,6 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
         run: bash builder/scripts/workflows/full-database-refresh-publish-checkpoint.sh final builder/checkpoints/final/mfl_database.db
-
-      - name: Upload final database
-        uses: actions/upload-artifact@v7
-        with:
-          name: mfl_database
-          path: builder/checkpoints/final/mfl_database.db
-          overwrite: true
-          if-no-files-found: error
 
       - name: Record completed refresh occurrence
         if: success() && needs.resolve-refresh-trigger.outputs.occurrence_key != ''
