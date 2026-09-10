@@ -508,7 +508,9 @@ function pageDataStub(url) {
   try {
     const parsed = JSON.parse(String(url.searchParams.get("filters") || "[]"));
     if (Array.isArray(parsed)) rules = parsed;
-  } catch {}
+  } catch {
+    rules = [];
+  }
   const filteredEmpty = rules.some((rule) => (
     rule?.column === "overall"
     && rule?.operator === ">="
