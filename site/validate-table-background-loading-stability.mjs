@@ -49,12 +49,13 @@ invariant(
   syncStart >= 0
     && syncEnd > syncStart
     && syncSource.includes("const renderedRowsPresent = syncRenderedRows();")
-    && syncSource.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && syncSource.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
+    && syncSource.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
+    && syncSource.includes("if (renderedEmptyStatePresent) hidePager();")
     && syncSource.includes("hidePager();")
-    && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("if (renderedRowsPresent)")
-    && syncSource.indexOf("if (renderedRowsPresent)") < syncSource.indexOf("hidePager();")
-    && syncSource.indexOf("hidePager();") < syncSource.indexOf("show({ replaceExisting: true })"),
-  "Global loading-state updates must stop the loading-surface path as soon as real rows exist, before route-ready or broader loading flags finish.",
+    && syncSource.indexOf("syncRenderedRows()") < syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)")
+    && syncSource.indexOf("if (renderedRowsPresent || renderedEmptyStatePresent)") < syncSource.indexOf("show({ replaceExisting: true })"),
+  "Global loading-state updates must stop the loading-surface path as soon as authoritative rows or an empty-state render exists, before route-ready or broader loading flags finish.",
 );
 
 invariant(
@@ -63,7 +64,7 @@ invariant(
     && runtime.includes("function syncRenderedRows() {")
     && runtime.includes("if (page) page.hidden = !pagerRouteActive();")
     && !runtime.includes("preservePager"),
-  "Pager chrome must be hidden for blank loading rows and released from the same runtime as soon as real rows are rendered.",
+  "Pager chrome must be hidden for unresolved or authoritative-empty table states and released from the same runtime as soon as real rows are rendered.",
 );
 
 const globalPagerReadyRule = 'html:not([data-mfl-ready="true"]) #progressionPage nav.pager';
@@ -84,4 +85,4 @@ invariant(
   "The retired global-ready pager projection may remain only as documented inactive source history; build-app-core must not patch generated HTML.",
 );
 
-console.log("Settled rows remain stable during background loading, blank loads hide pager chrome, and nav.pager appears with real data independently of global app readiness.");
+console.log("Settled rows and authoritative empty states remain stable during background loading, while nav.pager appears with real rows independently of global app readiness.");
