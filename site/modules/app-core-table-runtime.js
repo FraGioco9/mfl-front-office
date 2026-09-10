@@ -1662,43 +1662,100 @@ function tableUrlRuleIsValid(column, operator, value, valueTo = "") {
   return true;
 }
 
-function tableUrlRuleFromEntry(pageName, viewName, key, rawValue) {
-  if (!key.startsWith("filter.")) return null;
-  const suffix = key.slice("filter.".length);
-  const orConnector = suffix.endsWith(".or");
-  const column = orConnector ? suffix.slice(0, -3) : suffix;
-  const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
-  if (!allowedColumns.has(column)) return { known: true, rule: null };
+const TABLE_URL_OPERATOR_TOKENS = Object.freeze({
+  primary_is: "primary",
+  can_play: "canplay",
+  after: "after",
+  before: "before",
+  during: "during",
+  "=": "is",
+  contains: "contains",
+  ">=": "gte",
+  "<=": "lte",
+  between: "between",
+});
 
-  const serialized = String(rawValue || "");
-  const separator = serialized.indexOf("~");
-  if (separator <= 0) return { known: true, rule: null };
-  const operator = serialized.slice(0, separator);
-  const remainder = serialized.slice(separator + 1);
-  let value = remainder;
-  let valueTo = "";
+const TABLE_URL_OPERATORS_BY_TOKEN = Object.freeze(Object.fromEntries(
+  Object.entries(TABLE_URL_OPERATOR_TOKENS).map(([operator, token]) => [token, operator]),
+));
 
-  if (operator === "between" || operator === "during") {
-    const rangeSeparator = remainder.indexOf("~");
-    if (rangeSeparator <= 0) return { known: true, rule: null };
-    value = remainder.slice(0, rangeSeparator);
-    valueTo = remainder.slice(rangeSeparator + 1);
-  }
-
-  if (!tableUrlRuleIsValid(column, operator, value, valueTo)) {
-    return { known: true, rule: null };
-  }
-
+function tableUrlRuleKeyParts(key) {
+  const match = String(key || "").match(/^filter\.(\d+)(\.or)?\.([^.]+)\.([a-z]+)(?:\.(from|to))?$/);
+  if (!match) return null;
   return {
-    known: true,
-    rule: {
-      column,
-      connector: orConnector ? "or" : "and",
-      operator,
-      value,
-      valueTo,
-    },
+    index: Number(match[1]),
+    connector: match[2] ? "or" : "and",
+    column: match[3],
+    operator: TABLE_URL_OPERATORS_BY_TOKEN[match[4]] || "",
+    rangeSide: match[5] || "",
   };
+}
+
+function tableUrlRulesFromParams(pageName, viewName, params) {
+  const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
+  const entries = new Map();
+
+  for (const [key, rawValue] of params.entries()) {
+    if (!key.startsWith("filter.")) continue;
+    const parts = tableUrlRuleKeyParts(key);
+    if (!parts || !parts.operator || !allowedColumns.has(parts.column) || parts.index < 1) continue;
+
+    const rangeOperator = parts.operator === "between" || parts.operator === "during";
+    if (rangeOperator !== Boolean(parts.rangeSide)) continue;
+
+    const existing = entries.get(parts.index);
+    const entry = existing || {
+      column: parts.column,
+      connector: parts.connector,
+      operator: parts.operator,
+      value: "",
+      valueTo: "",
+      invalid: false,
+    };
+
+    if (
+      entry.column !== parts.column
+      || entry.connector !== parts.connector
+      || entry.operator !== parts.operator
+    ) {
+      entry.invalid = true;
+      entries.set(parts.index, entry);
+      continue;
+    }
+
+    const value = String(rawValue || "");
+    if (parts.rangeSide === "from") {
+      if (entry.value) entry.invalid = true;
+      entry.value = value;
+    } else if (parts.rangeSide === "to") {
+      if (entry.valueTo) entry.invalid = true;
+      entry.valueTo = value;
+    } else {
+      if (entry.value) entry.invalid = true;
+      entry.value = value;
+    }
+    entries.set(parts.index, entry);
+  }
+
+  return Array.from(entries.entries())
+    .sort(([left], [right]) => left - right)
+    .map(([, entry], index) => ({
+      ...entry,
+      connector: index === 0 ? "and" : entry.connector,
+    }))
+    .filter((entry) => !entry.invalid && tableUrlRuleIsValid(
+      entry.column,
+      entry.operator,
+      entry.value,
+      entry.valueTo,
+    ))
+    .map((entry) => ({
+      column: entry.column,
+      connector: entry.connector,
+      operator: entry.operator,
+      value: entry.value,
+      valueTo: entry.valueTo,
+    }));
 }
 
 function tableUrlSearchForState(pageName, viewName, tableState) {
@@ -1707,11 +1764,11 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
   const source = tableState && typeof tableState === "object" ? tableState : defaults;
   const params = new URLSearchParams();
 
-  if (source.hideRetired === false) params.set("hideRetired", "0");
-  if (source.hideRetiring) params.set("hideRetiring", "1");
-  if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "0");
-  if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "0");
-  if (source.newMints) params.set("newMintsOnly", "1");
+  if (source.hideRetired === false) params.set("hideRetired", "false");
+  if (source.hideRetiring) params.set("hideRetiring", "true");
+  if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "false");
+  if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "false");
+  if (source.newMints) params.set("newMintsOnly", "true");
 
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
   const rules = Array.isArray(source.rules) ? source.rules : [];
@@ -1719,11 +1776,16 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
     if (!allowedColumns.has(rule?.column)) return;
     const connector = index === 0 ? "and" : (rule.connector === "or" ? "or" : "and");
     if (!tableUrlRuleIsValid(rule.column, rule.operator, rule.value, rule.valueTo)) return;
-    const key = `filter.${rule.column}${connector === "or" ? ".or" : ""}`;
-    const rangeSuffix = (rule.operator === "between" || rule.operator === "during")
-      ? `~${rule.valueTo}`
-      : "";
-    params.append(key, `${rule.operator}~${rule.value}${rangeSuffix}`);
+    const operatorToken = TABLE_URL_OPERATOR_TOKENS[rule.operator];
+    if (!operatorToken) return;
+    const connectorSegment = connector === "or" ? ".or" : "";
+    const key = `filter.${index + 1}${connectorSegment}.${rule.column}.${operatorToken}`;
+    if (rule.operator === "between" || rule.operator === "during") {
+      params.append(`${key}.from`, String(rule.value));
+      params.append(`${key}.to`, String(rule.valueTo));
+    } else {
+      params.append(key, String(rule.value));
+    }
   });
 
   const query = params.toString();
@@ -1744,20 +1806,22 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
   for (const [key, value] of params.entries()) {
     if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) {
       explicit = true;
-      if (key === "hideRetired" && (value === "0" || value === "1")) parsedQuick.hideRetired = value === "1";
-      else if (key === "hideRetiring" && (value === "0" || value === "1")) parsedQuick.hideRetiring = value === "1";
-      else if (key === "hideMfl" && pageName === "database" && (value === "0" || value === "1")) parsedQuick.hideMflPlayers = value === "1";
-      else if (key === "packableOnly" && pageName === "mfl" && (value === "0" || value === "1")) parsedQuick.mflPackable = value === "1";
-      else if (key === "newMintsOnly" && (value === "0" || value === "1")) parsedQuick.newMints = value === "1";
+      const booleanValue = String(value || "").toLowerCase();
+      const booleanIsValid = booleanValue === "true" || booleanValue === "false";
+      if (key === "hideRetired" && booleanIsValid) parsedQuick.hideRetired = booleanValue === "true";
+      else if (key === "hideRetiring" && booleanIsValid) parsedQuick.hideRetiring = booleanValue === "true";
+      else if (key === "hideMfl" && pageName === "database" && booleanIsValid) parsedQuick.hideMflPlayers = booleanValue === "true";
+      else if (key === "packableOnly" && pageName === "mfl" && booleanIsValid) parsedQuick.mflPackable = booleanValue === "true";
+      else if (key === "newMintsOnly" && booleanIsValid) parsedQuick.newMints = booleanValue === "true";
       continue;
     }
 
-    const parsedRule = tableUrlRuleFromEntry(pageName, viewName, key, value);
-    if (parsedRule?.known) {
+    if (key.startsWith("filter.")) {
       explicit = true;
-      if (parsedRule.rule) parsedRules.push(parsedRule.rule);
     }
   }
+
+  parsedRules.push(...tableUrlRulesFromParams(pageName, viewName, params));
 
   const resolved = explicit
     ? {
