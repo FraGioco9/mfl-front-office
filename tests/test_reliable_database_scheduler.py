@@ -64,10 +64,7 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
         self.assertIn("retention-days: 90", self.workflow)
 
     def test_trigger_telemetry_records_supabase_and_queue_delay_components(self) -> None:
-        self.assertIn(
-            "full-database-refresh-record-trigger-timing.sh",
-            self.workflow,
-        )
+        self.assertIn("- name: Record refresh trigger timing", self.workflow)
         for field in (
             "triggerSource",
             "intendedAt",
