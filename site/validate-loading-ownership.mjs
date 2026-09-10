@@ -37,7 +37,6 @@ invariant(
 );
 
 for (const required of [
-  "html.mflDataLoading #progressionPage #watchlistPlayerCount",
   "html.mflTableScrolling #progressionPage .tableScroller tbody",
 ]) {
   invariant(loadingStyles.includes(required), `loading.css is missing canonical loading rule: ${required}`);
@@ -223,12 +222,14 @@ invariant(
     && tableLoading.includes("function syncRenderedRows() {")
     && tableLoading.includes("const renderedRowsPresent = syncRenderedRows();")
     && tableLoading.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
-    && tableLoading.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
-    && tableLoading.includes("if (renderedEmptyStatePresent) hidePager();")
+    && tableLoading.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {")
+    && tableLoading.includes("const page = pager();")
+    && tableLoading.includes("if (page) page.hidden = true;")
     && tableLoading.includes("hidePager();")
+    && !loadingStyles.includes("html.mflDataLoading #progressionPage #watchlistPlayerCount")
     && !index.includes('html.mflDataLoading #progressionPage nav.pager')
     && !tableLoading.includes("preservePager"),
-  "Table loading must hide nav.pager only while the loading surface is unresolved, expose it as soon as real rows render, and preserve authoritative empty states instead of repainting loading rows."
+  "Table loading must hide pager/player-count chrome only while unresolved, then preserve the rendered player count as soon as authoritative rows or an empty state commit."
 );
 invariant(
   tableLoading.includes("controller.subscribe(sync)")
