@@ -42,7 +42,7 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
   invariant(source.includes('typeof tableUrlState?.searchForCurrentControls === "function"')
     && source.includes("tableUrlState.searchForCurrentControls(pageName, nextView)")
     && source.includes("if (compatibleSearch) targetPath += compatibleSearch;"), `${label} must preserve only destination-compatible filters during view changes.`);
-  invariant(source.includes('const requestedSearch = queryIndex >= 0 ? requestedPath.slice(queryIndex) : "";')
+  invariant(source.includes('const requestedSearch = routeQueryIndex >= 0 ? requestedPath.slice(routeQueryIndex) : "";')
     && source.includes("tablePageTarget(pageName, cleanPath, basePath, requestedSearch)"), `${label} route parser must preserve table query state until canonical Table ownership resolves it.`);
   invariant(source.includes('window.addEventListener("popstate", () => {')
     && source.includes('pageTargetFromPath(`${window.location.pathname}${window.location.search}`)')
