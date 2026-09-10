@@ -79,15 +79,24 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         positions = [self.workflow.index(name) for name in names]
         self.assertEqual(positions, sorted(positions))
 
-    def test_intermediate_checkpoints_require_previous_database_fallback(self) -> None:
+    def test_intermediate_checkpoints_require_corresponding_fetch(self) -> None:
+        core_condition = (
+            "if: ${{ inputs.fetch_players && "
+            "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
+        )
+        season_condition = (
+            "if: ${{ inputs.fetch_player_seasons && "
+            "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
+        )
+        progression_condition = (
+            "if: ${{ inputs.fetch_progressions && "
+            "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
+        )
+        self.assertEqual(self.workflow.count(core_condition), 3)
+        self.assertEqual(self.workflow.count(season_condition), 3)
+        self.assertEqual(self.workflow.count(progression_condition), 3)
         for stage in ("core", "player_seasons", "player_data"):
             self.assertIn(f"--stage {stage}", self.workflow)
-        self.assertGreaterEqual(
-            self.workflow.count(
-                "hashFiles('builder/previous-database/mfl_database.db') != ''"
-            ),
-            10,
-        )
         self.assertIn("--previous previous-database/mfl_database.db", self.workflow)
 
     def test_every_checkpoint_uses_reusable_atomic_publisher(self) -> None:
@@ -97,11 +106,30 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
             self.assertIn(f"{publisher} {checkpoint} ", self.workflow)
 
     def test_successful_checkpoints_replace_retry_baseline_artifact(self) -> None:
-        self.assertEqual(self.workflow.count("name: mfl_database"), 4)
+        self.assertEqual(self.workflow.count("\n          name: mfl_database\n"), 4)
         self.assertEqual(self.workflow.count("overwrite: true"), 4)
         self.assertLess(
             self.workflow.index("- name: Save player-data checkpoint for retries"),
             self.workflow.index("- name: Send progression emails"),
+        )
+
+    def test_failed_competition_stage_uploads_distinct_recovery_database(self) -> None:
+        self.assertIn("id: rebuild_competitions", self.workflow)
+        self.assertIn("- name: Upload failed competition recovery database", self.workflow)
+        self.assertIn(
+            "failure() && steps.rebuild_competitions.outcome == 'failure' && "
+            "hashFiles('builder/mfl_database.db') != ''",
+            self.workflow,
+        )
+        self.assertIn(
+            "name: mfl_database-recovery-${{ github.run_id }}-${{ github.run_attempt }}",
+            self.workflow,
+        )
+        self.assertIn("path: builder/mfl_database.db", self.workflow)
+        self.assertNotIn("overwrite: true\n          retention-days: 90", self.workflow)
+        self.assertLess(
+            self.workflow.index("- name: Upload failed competition recovery database"),
+            self.workflow.index("- name: Materialize final checkpoint"),
         )
 
     def test_progression_email_is_not_blocked_by_competitions(self) -> None:
