@@ -153,11 +153,45 @@ function normalizedPageName(pageName) {
   return pageName === "my-players" ? "myplayers" : pageName;
 }
 
+const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
+  myplayers: "/my-players/opted-out",
+  watchlist: "/watchlist/opted-out",
+  settings: "/settings/opted-out",
+});
+
+function optedOutPathForPage(pageName) {
+  return PROTECTED_OPTED_OUT_PATHS[normalizedPageName(pageName)] || "";
+}
+
+function optedOutPageFromPath(pathName = window.location.pathname) {
+  const cleanPath = String(pathName || "").split("?")[0];
+  return Object.entries(PROTECTED_OPTED_OUT_PATHS)
+    .find(([, optedOutPath]) => cleanPath === optedOutPath)?.[0] || "";
+}
+
+function defaultProtectedRoutePath(pageName) {
+  const normalizedPage = normalizedPageName(pageName);
+  if (normalizedPage === "settings") return "/settings";
+  if (normalizedPage === "watchlist") {
+    const viewName = normalizeViewForPage("", "watchlist");
+    return `/watchlist/${viewSlug(viewName)}`;
+  }
+  if (normalizedPage === "myplayers") {
+    const viewName = normalizeViewForPage("", "myplayers");
+    return `/my-players/${viewSlug(viewName)}`;
+  }
+  return "";
+}
+
 function pageFromUrl() {
   return pageTargetFromPath(`${window.location.pathname}${window.location.search}`).pageName;
 }
 
 function watchlistTargetFromUrl(pathName = window.location.pathname) {
+  if (optedOutPageFromPath(pathName) === "watchlist") {
+    return { watchlistId: "", view: "" };
+  }
+
   const match = String(pathName || "").match(/^\/watchlist(?:\/([^/]+))?(?:\/([^/]+))?$/);
 
   if (!match) {
@@ -222,6 +256,23 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 function pageTargetFromPath(path) {
   const requestedPath = String(path || "");
   const cleanPath = requestedPath.split("?")[0];
+  const optedOutPage = optedOutPageFromPath(cleanPath);
+
+  if (optedOutPage) {
+    if (!hasWalletOptIn()) {
+      return { pageName: optedOutPage, options: {} };
+    }
+
+    const defaultPath = defaultProtectedRoutePath(optedOutPage);
+    const signedInTarget = pageTargetFromPath(defaultPath);
+    return {
+      pageName: signedInTarget.pageName,
+      options: {
+        ...(signedInTarget.options || {}),
+        replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
+      },
+    };
+  }
 
   if (cleanPath === "/evaluation") {
     const queryIndex = requestedPath.indexOf("?");
@@ -257,15 +308,23 @@ function pageTargetFromPath(path) {
 
   if (!hasWalletOptIn()) {
     if (/^\/my-players(?:\/[^/]+)?$/.test(cleanPath)) {
-      const myPlayersTarget = tablePageTarget("myplayers", cleanPath, "/my-players");
-      if (myPlayersTarget) return myPlayersTarget;
-      return { pageName: "myplayers", options: {} };
+      return {
+        pageName: "myplayers",
+        options: { replaceUrl: optedOutPathForPage("myplayers") },
+      };
     }
 
     if (/^\/watchlist(?:\/[^/]+)?(?:\/[^/]+)?$/.test(cleanPath)) {
       return {
         pageName: "watchlist",
-        options: cleanPath === "/watchlist" ? {} : { replaceUrl: "/watchlist" },
+        options: { replaceUrl: optedOutPathForPage("watchlist") },
+      };
+    }
+
+    if (cleanPath === "/settings") {
+      return {
+        pageName: "settings",
+        options: { replaceUrl: optedOutPathForPage("settings") },
       };
     }
   }
@@ -393,8 +452,8 @@ function pagePath(pageName, options = {}) {
   }
 
   if (!hasWalletOptIn()) {
-    if (pageName === "watchlist") return "/watchlist";
-    if (pageName === "myplayers") return "/my-players";
+    const optedOutPath = optedOutPathForPage(pageName);
+    if (optedOutPath) return optedOutPath;
   }
 
   if (tablePages.has(pageName)) {

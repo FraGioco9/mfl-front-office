@@ -506,7 +506,8 @@ function updateAccountState() {
 
 function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
-  const routeAtOptOut = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
+  const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
   const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
@@ -520,7 +521,7 @@ function optOutWallet() {
     localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY);
-    clearWalletPermissionCache();
+    clearWalletPermissionCache(previousWalletAddress);
   } catch {
     // The page state is still cleared even if storage is blocked.
   }
@@ -533,6 +534,15 @@ function optOutWallet() {
     const lockedOptions = protectedRouteAtOptOut.options && typeof protectedRouteAtOptOut.options === "object"
       ? protectedRouteAtOptOut.options
       : {};
+    const optedOutPath = optedOutPathForPage(lockedPage);
+    const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+      ? window.history.state
+      : {};
+    window.history.replaceState(
+      { ...historyState, mflProtectedReturnPath: protectedReturnPath },
+      "",
+      optedOutPath,
+    );
     setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
     saveTableState();
     showToast("Dapper opt-in removed.");

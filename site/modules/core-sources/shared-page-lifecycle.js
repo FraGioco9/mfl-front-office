@@ -239,13 +239,14 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   const agentTitleReady = pageName === "agents"
     ? ensureAgentPageTitleName(state.currentAgentWalletAddress, options.agentName)
     : Promise.resolve("");
-  if (!lockedOptOutRoute && options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
-    window.history.replaceState({}, "", options.replaceUrl);
+  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+    const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
+      ? window.history.state
+      : {};
+    window.history.replaceState(historyState, "", options.replaceUrl);
   }
   document.body.dataset.page = pageName;
-  if (!lockedOptOutRoute) {
-    updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
-  }
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();

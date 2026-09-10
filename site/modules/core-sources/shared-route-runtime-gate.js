@@ -1,5 +1,11 @@
 async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
-    const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+    const suppliedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+    const optedOutUpgradePage = hasWalletOptIn() ? optedOutPageFromPath(window.location.pathname) : "";
+    const incomingOptions = optedOutUpgradePage === String(pageName || "")
+      && !Reflect.get(suppliedOptions, "replaceUrl")
+      && !Reflect.get(suppliedOptions, "path")
+      ? { ...suppliedOptions, replaceUrl: pagePath(pageName, suppliedOptions) }
+      : suppliedOptions;
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
     const crossPageNavigation = !runtimeReady
       && String(pageName || "") !== String(state.currentPage || "");
