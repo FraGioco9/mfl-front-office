@@ -1706,11 +1706,11 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
   const source = tableState && typeof tableState === "object" ? tableState : defaults;
   const params = new URLSearchParams();
 
-  if (source.hideRetired === false) params.set("hideRetired", "0");
-  if (source.hideRetiring) params.set("hideRetiring", "1");
-  if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "0");
-  if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "0");
-  if (source.newMints) params.set("newMintsOnly", "1");
+  if (source.hideRetired === false) params.set("hideRetired", "false");
+  if (source.hideRetiring) params.set("hideRetiring", "true");
+  if (pageName === "database" && source.hideMflPlayers === false) params.set("hideMfl", "false");
+  if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "false");
+  if (source.newMints) params.set("newMintsOnly", "true");
 
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
   const rules = Array.isArray(source.rules) ? source.rules : [];
@@ -1743,11 +1743,13 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
   for (const [key, value] of params.entries()) {
     if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) {
       explicit = true;
-      if (key === "hideRetired" && (value === "0" || value === "1")) parsedQuick.hideRetired = value === "1";
-      else if (key === "hideRetiring" && (value === "0" || value === "1")) parsedQuick.hideRetiring = value === "1";
-      else if (key === "hideMfl" && pageName === "database" && (value === "0" || value === "1")) parsedQuick.hideMflPlayers = value === "1";
-      else if (key === "packableOnly" && pageName === "mfl" && (value === "0" || value === "1")) parsedQuick.mflPackable = value === "1";
-      else if (key === "newMintsOnly" && (value === "0" || value === "1")) parsedQuick.newMints = value === "1";
+      const booleanValue = String(value || "").toLowerCase();
+      const booleanIsValid = booleanValue === "true" || booleanValue === "false";
+      if (key === "hideRetired" && booleanIsValid) parsedQuick.hideRetired = booleanValue === "true";
+      else if (key === "hideRetiring" && booleanIsValid) parsedQuick.hideRetiring = booleanValue === "true";
+      else if (key === "hideMfl" && pageName === "database" && booleanIsValid) parsedQuick.hideMflPlayers = booleanValue === "true";
+      else if (key === "packableOnly" && pageName === "mfl" && booleanIsValid) parsedQuick.mflPackable = booleanValue === "true";
+      else if (key === "newMintsOnly" && booleanIsValid) parsedQuick.newMints = booleanValue === "true";
       continue;
     }
 
