@@ -367,12 +367,32 @@ invariant(
 
 const emptyMessageIndex = tableRuntime.indexOf("emptyState.textContent = tableEmptyStateMessage();");
 const emptyVisibilityIndex = tableRuntime.indexOf("emptyState.hidden = pageRows.length > 0;", emptyMessageIndex);
-const loadingSyncIndex = tableRuntime.indexOf('tableLoadingRuntime.sync();', emptyVisibilityIndex);
+const playerCountCommitIndex = tableRuntime.indexOf("updateTablePlayerCount({ authoritative: true });", emptyVisibilityIndex);
+const loadingSyncIndex = tableRuntime.indexOf('tableLoadingRuntime.sync();', playerCountCommitIndex);
 invariant(
   emptyMessageIndex >= 0
     && emptyVisibilityIndex > emptyMessageIndex
-    && loadingSyncIndex > emptyVisibilityIndex,
-  "An authoritative empty table render must commit its message and visibility before the loading runtime observes the DOM.",
+    && playerCountCommitIndex > emptyVisibilityIndex
+    && loadingSyncIndex > playerCountCommitIndex,
+  "An authoritative table render must commit empty-state visibility and Showing x/y players before the loading runtime observes the DOM.",
+);
+
+invariant(
+  appCoreSource.includes("function updateTablePlayerCount(options = {}) {")
+    && appCoreSource.includes("const authoritativeRender = options.authoritative === true;")
+    && appCoreSource.includes("const visible = tablePages.has(state.currentPage) && (authoritativeRender || !tableLoadingActive);"),
+  "Player-count metadata must allow the authoritative table render to reveal Showing x/y players before request-token cleanup.",
+);
+
+const loadingSyncStart = runtime.indexOf("function sync(snapshot = loadingSnapshot()) {");
+const loadingSyncEnd = runtime.indexOf("function installCoreBridge()", loadingSyncStart);
+const loadingSyncSection = runtime.slice(loadingSyncStart, loadingSyncEnd);
+invariant(
+  loadingSyncSection.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {")
+    && !loadingSyncSection.includes("hidePlayerCount();\n        if (renderedEmptyStatePresent)")
+    && loadingSyncSection.includes("const page = pager();")
+    && loadingSyncSection.includes("if (page) page.hidden = true;"),
+  "Once authoritative rows or an empty state render, broader loading must not hide Showing x/y players again.",
 );
 
 invariant(
