@@ -301,7 +301,7 @@ async function loadWalletPermissions(options = {}) {
       writeWalletPermissionCache({
         allowed: state.walletPermissionAllowed,
         version: metadata?.version || data.version || "",
-        updatedAt: metadata?.updatedAt || data.updated_at || "",
+        updatedAt: metadata?.updated_at || data.updated_at || "",
       });
     } else if (cached && cacheIsFresh) {
       return applyCachedWalletPermission(cached, previousAllowed);
@@ -486,7 +486,6 @@ function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
   accountEmail.disabled = !walletLinked;
-  accountEmail.title = walletLinked ? "Open My Players" : "";
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
