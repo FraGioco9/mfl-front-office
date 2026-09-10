@@ -385,6 +385,17 @@ invariant(
 );
 
 invariant(
+  appCoreSource.includes('if (tablePage) {\n    state.page = 1;\n    applyFilters({ save: false });\n  }')
+    && !appCoreSource.includes("if (tablePage && state.rows.length)"),
+  "Completed table routes must run the authoritative filter/render commit even when the first request returns zero rows.",
+);
+
+invariant(
+  tableRuntime.includes("if (!state.incrementalMode) {\n    state.tableSourceRowsCount = sourceRows.length;\n  }"),
+  "Incremental filtered payloads must retain the API sourceRows count so empty-state wording can distinguish an empty collection from zero filter matches.",
+);
+
+invariant(
   tableRuntime.includes("requestActive?.() && !state.incrementalApplying"),
   "Only the authoritative incremental apply transaction may replace loading rows while a request token remains active.",
 );
