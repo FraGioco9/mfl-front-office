@@ -54,7 +54,7 @@ const reloadIndex = sharedCore.indexOf('void reloadIncrementalPage(1, { save: op
 invariant(syncIndex >= 0 && reloadIndex > syncIndex, "Filter URL replacement must happen before the incremental request begins.");
 
 const resolveIndex = sharedCore.indexOf("const restoredPageState = savedPageState");
-const requestStateIndex = sharedCore.indexOf("Reflect.set(route, "tableFilters", {", resolveIndex);
+const requestStateIndex = sharedCore.indexOf('Reflect.set(route, "tableFilters", {', resolveIndex);
 const routeReturnIndex = sharedCore.indexOf("return route;", requestStateIndex);
 invariant(resolveIndex >= 0 && requestStateIndex > resolveIndex && routeReturnIndex > requestStateIndex,
   "Direct refresh must carry resolved URL state into the first route request with no correction fetch.");
