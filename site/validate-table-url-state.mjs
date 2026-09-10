@@ -35,7 +35,7 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
   invariant(source.includes("const restoredPageState = savedPageState")
     && source.includes("restoreSavedTableState(pageName, { view: options.view, deferRules: true })")
     && source.includes("route.filterRules = filterRulesForLoading(pageName, restoredPageState, route.view);")
-    && source.includes("Reflect.set(route, "tableFilters", {"), `${label} must resolve URL state before constructing the first incremental request.`);
+    && source.includes('Reflect.set(route, "tableFilters", {'), `${label} must resolve URL state before constructing the first incremental request.`);
   invariant(source.includes('const tableFilters = route.tableFilters && typeof route.tableFilters === "object"')
     && source.includes("tableFilters ? tableFilters.hideRetired : hideRetiredInput.checked")
     && source.includes("tableFilters ? tableFilters.newMints : newMintsInput.checked"), `${label} first request must consume resolved quick filters rather than stale controls.`);
