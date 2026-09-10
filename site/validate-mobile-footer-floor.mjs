@@ -20,17 +20,17 @@ const pageFlow = `main > .pageView {
   flex: 0 0 auto;
   min-height: var(--mfl-footer-page-floor);
 }`;
-const firstPaintFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {
+const firstPaintFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
   align-content: start;
 }`;
-const firstPaintPageFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .pageView {
+const firstPaintPageFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .pageView {
   grid-column: 1;
   grid-row: 1;
 }`;
-const firstPaintFooterFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {
+const firstPaintFooterFlow = `html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .siteFooterDetails {
   grid-column: 1;
   grid-row: 2;
 }`;

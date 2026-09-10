@@ -72,9 +72,9 @@ for (const token of [
   'min-height: var(--mfl-footer-page-floor);',
   '.siteFooterDetails {',
   'margin-top: 0;',
-  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {',
+  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {',
   'grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;',
-  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {',
+  'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .siteFooterDetails {',
   '.siteFooterDetailsInner {',
   '.siteFooterDetailsNavigation {',
   'grid-template-columns: repeat(3, minmax(0, 1fr));',
@@ -160,7 +160,7 @@ invariant(
   "Every application page must contribute its natural height while retaining the shared floor.",
 );
 invariant(
-  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main {
+  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;
@@ -169,11 +169,11 @@ invariant(
   "Unresolved non-Player first paint must own an explicit minimum content track before route resolution.",
 );
 invariant(
-  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .pageView {
+  footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .pageView {
   grid-column: 1;
   grid-row: 1;
 }`)
-    && footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]) body > #appShell > main > .siteFooterDetails {
+    && footer.includes(`html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .siteFooterDetails {
   grid-column: 1;
   grid-row: 2;
 }`),
