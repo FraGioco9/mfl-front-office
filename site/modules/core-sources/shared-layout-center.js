@@ -4,7 +4,7 @@ function syncLayoutCenter() {
   if (!pageLayout) return;
   const bounds = pageLayout.getBoundingClientRect();
   const center = `${bounds.left + (bounds.width / 2)}px`;
-  window.__mflToastPosition?.sync?.();
+  document.documentElement.style.setProperty("--toast-center-x", center);
   selection?.style.setProperty("--selection-center-x", center);
 }
 
