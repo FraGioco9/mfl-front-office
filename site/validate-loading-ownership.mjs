@@ -222,11 +222,13 @@ invariant(
   tableLoading.includes("function hidePager() {")
     && tableLoading.includes("function syncRenderedRows() {")
     && tableLoading.includes("const renderedRowsPresent = syncRenderedRows();")
-    && tableLoading.includes("if (renderedRowsPresent) {\n        hidePlayerCount();\n        return;\n      }")
+    && tableLoading.includes("const renderedEmptyStatePresent = hasRenderedEmptyState();")
+    && tableLoading.includes("if (renderedRowsPresent || renderedEmptyStatePresent) {\n        hidePlayerCount();")
+    && tableLoading.includes("if (renderedEmptyStatePresent) hidePager();")
     && tableLoading.includes("hidePager();")
     && !index.includes('html.mflDataLoading #progressionPage nav.pager')
     && !tableLoading.includes("preservePager"),
-  "Table loading must hide nav.pager only while the loading surface is blank and expose it as soon as real rows render, even if broader loading remains active."
+  "Table loading must hide nav.pager only while the loading surface is unresolved, expose it as soon as real rows render, and preserve authoritative empty states instead of repainting loading rows."
 );
 invariant(
   tableLoading.includes("controller.subscribe(sync)")
