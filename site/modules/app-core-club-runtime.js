@@ -16,7 +16,7 @@
 
   let activeClubId = "";
   let activeClubTitle = null;
-  let openingClub = false;
+  let clubOpenSequence = 0;
   const clubTitleIdentityPromises = new Map();
 
   function clubDivisionInfo(value) {
@@ -483,10 +483,10 @@
   window.__mflOpenClubPageRoute = openClubImmediately;
 
   async function openClubPage(clubId, view = "attributes", updateHistory = true) {
-    if (!clubId || openingClub) return;
-    openingClub = true;
+    if (!clubId) return;
+    const openSequence = ++clubOpenSequence;
+    const nextClubId = String(clubId);
     try {
-      const nextClubId = String(clubId);
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
@@ -512,10 +512,11 @@
           path: route,
           replace: !updateHistory,
         });
-        if (!transition) return;
+        if (!transition || openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId) return;
       }
+      if (openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
       void clubTitleReady.then((resolvedTitle) => {
-        if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
+        if (!resolvedTitle || openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId) return;
         document.documentElement.dataset.initialEntityVerified = "club";
         if (state.currentPage !== CLUB_PAGE) return;
         activeClubTitle = resolvedTitle;
@@ -533,7 +534,7 @@
             ignoreCurrentClubRoute: true,
           })
         : false;
-      if (!dataLoaded) return;
+      if (!dataLoaded || openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
       const loadedClubTitle = clubProfileFromState(activeClubId) || clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
@@ -541,6 +542,7 @@
       }
       if (!loadedClubTitle && (!Array.isArray(state.rows) || state.rows.length === 0)) {
         const resolvedClubTitle = await ensureClubTitleIdentity(activeClubId, true);
+        if (openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
         if (!resolvedClubTitle) {
           window.__mflStaticUiRuntime?.showNotFound?.("Club");
           return;
@@ -573,7 +575,6 @@
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
     } finally {
-      openingClub = false;
       await finishClubSwitch();
     }
   }
