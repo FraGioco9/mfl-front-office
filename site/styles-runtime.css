@@ -7663,7 +7663,7 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
 }
 
-.mflTableCheckboxSkeleton {
+input.mflTableCheckboxSkeleton:disabled {
   opacity: 1;
   border-color: var(--mfl-loading-placeholder-border);
   background-color: var(--mfl-loading-placeholder-surface);
