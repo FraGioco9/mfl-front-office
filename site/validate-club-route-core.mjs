@@ -19,6 +19,7 @@ const [
   dataHandler,
   dataPage,
   dataQuery,
+  clubsApi,
   appConfig,
 ] = await Promise.all([
   Promise.resolve(readCanonicalCoreSource("shared")),
@@ -33,6 +34,7 @@ const [
   read("./api/data.js"),
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
+  read("./api/_clubs.js"),
   read("./modules/app-config.js"),
 ]);
 
@@ -92,7 +94,7 @@ excludes(sharedCore, 'const CLUB_PAGE = "club";', "Club route implementation mus
 excludes(sharedCore, "async function openClubPage(clubId", "Club route hydration must remain Club-owned.");
 excludes(sharedCore, "function applyClubPresentation()", "Club presentation must remain Club-owned.");
 includes(sharedCore, "function clubSearchResult(entry) {", "Universal Club search must be owned directly by the canonical Global Search core.");
-includes(sharedCore, 'void window.mflOpenClubPage(entry.clubId, "attributes")', "Universal Club search must navigate through the stable lazy Club gate.");
+includes(sharedCore, 'void window.mflOpenClubPage(entry.clubId, "info")', "Universal Club search must navigate to the canonical Club Info profile through the stable lazy Club gate.");
 excludes(sharedCore, "renderSearchResultsNowWithUniversalClubs", "Retired wrapper-based Club search ownership must stay removed.");
 excludes(sharedCore, "renderSearchResultsNowV1500", "Retired release-era Global Search wrapper must stay removed.");
 excludes(sharedCore, "renderSearchResultsFromBootstrap", "Retired bootstrap Club-result wrapper must stay removed.");
@@ -107,6 +109,9 @@ includes(tableCore, 'else if (pageName !== "club") {', "Table rendering must pre
 includes(clubCore, 'const CLUB_PAGE = "club";', "Canonical Club source must own Club route state.");
 includes(clubCore, "async function openClubPage(clubId", "Canonical Club source must own Club hydration.");
 includes(clubCore, "function applyClubPresentation()", "Canonical Club source must own Club presentation.");
+includes(clubCore, "function renderClubIdentity()", "Club presentation must own the persistent branded identity header.");
+includes(clubCore, "function renderClubInfo()", "Club presentation must own the Info profile content.");
+includes(clubCore, "window.__mflApplyClubPresentation = applyClubPresentation;", "Shared view switching must reuse the Club presentation owner.");
 includes(clubCore, "let activeClubTitle = null;", "Canonical Club source must preserve loaded title identity across views.");
 includes(clubCore, 'window.__mflStaticUiRuntime?.showNotFound?.("Club");', "Missing Clubs must use the shared typed not-found surface.");
 includes(clubCore, "window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Initial Club hydration must use the canonical incremental loader.");
@@ -119,6 +124,8 @@ excludes(clubCore, "setClubSwitching", "Retired private Club loading ownership m
 excludes(clubCore, "clubViewSwitching", "Retired private Club switching state must stay removed.");
 
 includes(appConfig, "export const CLUB_VIEW_SLUGS", "Canonical app config must own Club view slugs.");
+includes(appConfig, 'info: "info"', "Info must map to the canonical Club profile URL.");
+includes(appConfig, 'club: Object.freeze({ order: Object.freeze(["info", "attributes", "contracts", "current", "all"]), fallback: "info" })', "Club view order and default must be Info, Squad, Contracts, Current Season, All Time.");
 includes(appConfig, 'attributes: "squad"', "Attributes must map to the Squad Club URL.");
 includes(appConfig, 'current: "current-season"', "Current Season must map canonically.");
 includes(appConfig, 'all: "all-time"', "All Time must map canonically.");
@@ -134,6 +141,12 @@ includes(appEntry, 'return runTransition("club", true, {', "Club gate must enter
 includes(dataHandler, '["agent", "club"].includes(scope)', "Club progression must remain public entity data.");
 includes(dataHandler, '["current", "all"].includes(view)', "Club API must support both progression views.");
 includes(dataPage, "active_contract_club_id = ?", "Club API rows must be selected by active Club contract ID.");
+includes(dataPage, 'const club = scope === "club" ? clubProfileData(query.clubId) : null;', "Club roster payload must embed the canonical Club profile without a second browser request.");
+includes(clubsApi, 'function clubProfileRow(tableName, clubId) {', "Club profile lookup must support both runtime and canonical Club tables.");
+includes(clubsApi, 'const canonical = needsCanonicalSupplement ? clubProfileRow("clubs", id) : null;', "Incomplete runtime Club metadata must be supplemented server-side without another browser request.");
+includes(clubsApi, "logoUrl: clubLogoUrl(id, logoVersion)", "Club Info and My Clubs must share the canonical logo URL owner.");
+includes(dataPage, '...(scope === "club" ? { club } : {})', "Club profile metadata must ship beside roster rows.");
+includes(dataPage, 'TABLE_CONTRACT_RESPONSE_COLUMNS.forEach((column) => selectedColumns.add(column));\n    STAT_COLUMNS.forEach((column) => selectedColumns.add(column));', "Club base payloads must include both Squad stats and Contracts fields for local Info/Squad/Contracts switching.");
 includes(dataPage, '["player", "players", "evaluation", "club", "mflstats"].includes(scope)', "Club requests must return the complete roster.");
 excludes(dataQuery, '"database", "progression", "mfl", "agent", "myplayers", "watchlist", "club"', "Club rosters must stay outside generic hidden-MFL table filtering.");
 
