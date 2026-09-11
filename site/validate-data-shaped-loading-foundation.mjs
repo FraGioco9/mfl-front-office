@@ -404,9 +404,8 @@ assert.match(
   /\.clubIdentityLogo,\n\.clubIdentityLogoSkeleton\s*\{[\s\S]*max-width: var\(--mfl-club-identity-logo-width\);[\s\S]*height: 100%;[\s\S]*max-height: var\(--mfl-club-identity-logo-height\);/u,
   "Club identity loaded logo and loading placeholder must consume one shared geometry owner.",
 );
-assert.doesNotMatch(
-  stylesBase,
-  /(?:^|\n)\.clubIdentityLogoSkeleton\s*\{/u,
+assert.ok(
+  !stylesBase.includes("\n\n.clubIdentityLogoSkeleton {\n"),
   "Club identity loading-only logo selectors must not own an independent rule.",
 );
 assert.match(
