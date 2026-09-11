@@ -4749,8 +4749,7 @@ body.clubViewSwitching .navButton.active {
   color: var(--text);
 }
 
-.clubIdentity,
-.clubInfoPanel {
+.clubIdentity {
   display: none;
 }
 
@@ -4805,17 +4804,60 @@ body[data-page="club"] #clubIdentity {
   height: 100%;
 }
 
-.clubInfoColorSwatch.mflDataPlaceholder {
-  border-color: transparent;
-}
-
 .clubIdentityMain {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
+  align-items: center;
+  gap: 24px;
   min-width: 0;
   padding: 24px 28px;
   background-color: var(--mfl-panel-background);
+}
+
+.clubIdentityPrimary {
+  min-width: 0;
+}
+
+.clubIdentityOwner {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  min-width: 0;
+  max-width: 320px;
+  text-align: right;
+}
+
+.clubIdentityOwnerLabel {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.clubIdentityOwnerName {
+  max-width: 100%;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clubIdentityOwnerWallet {
+  display: block;
+  min-height: 1.2em;
+  max-width: 100%;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clubIdentityId {
@@ -4865,132 +4907,6 @@ body[data-page="club"] #clubIdentity {
   align-self: center;
   width: 18px;
   height: 18px;
-}
-
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage .tableShell,
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage #selectionBar,
-body[data-page="club"] #progressionPage[data-club-view="info"] .tableShell,
-body[data-page="club"] #progressionPage[data-club-view="info"] #selectionBar {
-  display: none;
-}
-
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #clubInfoPanel,
-body[data-page="club"] #progressionPage[data-club-view="info"] #clubInfoPanel {
-  display: block;
-}
-
-.clubInfoPanel {
-  margin-top: 0;
-}
-
-.clubInfoGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.clubInfoCard {
-  min-width: 0;
-  min-height: 82px;
-  padding: 10px 12px;
-  border: var(--mfl-panel-border-strong);
-  border-radius: var(--mfl-radius-panel);
-  background: var(--mfl-panel-background);
-}
-
-.clubInfoLabel {
-  display: block;
-  color: var(--text-soft);
-  font-size: var(--mfl-metadata-compact-font-size);
-  font-weight: var(--mfl-metadata-strong-font-weight);
-  line-height: var(--mfl-metadata-line-height);
-  text-transform: uppercase;
-}
-
-.clubInfoValue {
-  display: block;
-  margin-top: 5px;
-  overflow-wrap: anywhere;
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
-.clubInfoDetail {
-  display: block;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
-  color: var(--text-soft);
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-.clubInfoColorRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  margin-top: 6px;
-}
-
-.clubInfoColor {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.clubInfoColorSwatch {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  border-radius: 5px;
-}
-
-.clubInfoColor strong {
-  overflow-wrap: anywhere;
-  font-size: 13px;
-}
-
-.clubInfoCompetitionsCard {
-  grid-column: 1 / -1;
-  min-height: 0;
-}
-
-.clubInfoCompetitionList {
-  display: grid;
-  gap: 0;
-  margin-top: 5px;
-}
-
-.clubInfoCompetition {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 12px;
-  min-height: 30px;
-  padding: 5px 0;
-  border-top: 1px solid var(--border);
-}
-
-.clubInfoCompetition:first-child {
-  border-top: 0;
-}
-
-.clubInfoCompetition strong {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.clubInfoCompetition span {
-  color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 700;
-  text-align: right;
 }
 
 body[data-page="club"] #progressionPage .quickFilters,
@@ -7874,21 +7790,6 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   background: var(--mfl-loading-placeholder-surface);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-/* Club Info loading uses the real card/row DOM and responsive geometry.
- * Loading-only styling changes appearance, never dimensions. */
-.clubInfoCardLoading {
-  border-color: transparent;
-  background: var(--mfl-loading-placeholder-surface);
-}
-
-.clubInfoCardLoading .clubInfoCompetition {
-  border-top-color: transparent;
-}
-
-.clubInfoCardLoading .clubInfoColorSwatch {
-  border-color: transparent;
 }
 
 input.mflTableCheckboxSkeleton:disabled {
