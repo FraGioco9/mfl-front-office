@@ -67,11 +67,11 @@ invariant(
   "Table checkbox skeletons must use the real checkbox element so canonical size and radius rules stay shared.",
 );
 invariant(
-  loadingStyles.includes(".mflTableCheckboxSkeleton {")
+  loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {")
     && loadingStyles.includes("border-color: var(--mfl-loading-placeholder-border);")
     && loadingStyles.includes("background-color: var(--mfl-loading-placeholder-surface);")
     && loadingStyles.includes("background-image: none;")
-    && !loadingStyles.includes(".mflTableCheckboxSkeleton {\n  border-radius:"),
+    && !loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {\n  border-radius:"),
   "Table checkbox skeleton styling may change only loading appearance, leaving shape and dimensions to the real checkbox foundation.",
 );
 invariant(
