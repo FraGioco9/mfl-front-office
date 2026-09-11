@@ -4595,30 +4595,38 @@ body[data-page="club"] #clubIdentity {
 }
 
 .clubIdentity {
-  grid-template-columns: 104px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  min-height: 116px;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  min-height: 184px;
   margin-bottom: 10px;
-  padding: 10px 14px;
+  padding: 0;
+  overflow: hidden;
   border: var(--mfl-panel-border-strong);
-  border-inline-start: 4px solid var(--club-primary, var(--border-strong));
   border-radius: var(--mfl-radius-panel);
-  background: var(--mfl-panel-background);
+  background-color: var(--mfl-panel-background);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.18) 14%, rgba(0, 0, 0, 0) 100%),
+    linear-gradient(
+      var(--club-primary, var(--surface-muted)) 0%,
+      var(--club-secondary, var(--surface-muted)) 100%
+    );
 }
 
 .clubIdentityLogoFrame {
   display: grid;
   place-items: center;
-  width: 88px;
-  height: 88px;
   min-width: 0;
+  padding: 16px;
+  border-right: 1px solid var(--border);
+  background: transparent;
 }
 
 .clubIdentityLogo {
   display: block;
-  max-width: 88px;
-  max-height: 88px;
+  width: 100%;
+  max-width: 132px;
+  max-height: 144px;
   object-fit: contain;
 }
 
@@ -4627,37 +4635,35 @@ body[data-page="club"] #clubIdentity {
   height: 100%;
 }
 
-.clubIdentityColorSwatch.mflDataPlaceholder,
 .clubInfoColorSwatch.mflDataPlaceholder {
   border-color: transparent;
 }
 
-
-.clubIdentityReady {
-  box-shadow: inset 0 2px 0 var(--club-secondary, var(--border-strong));
-}
-
-
 .clubIdentityMain {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   min-width: 0;
+  padding: 24px 28px;
+  background-color: var(--mfl-panel-background);
 }
 
 .clubIdentityId {
   display: block;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
 }
 
 .clubIdentityName {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   overflow: hidden;
   color: var(--text);
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4665,29 +4671,16 @@ body[data-page="club"] #clubIdentity {
 .clubIdentityMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-top: 7px;
+  gap: 5px 14px;
+  margin-top: 10px;
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .clubIdentityDivision {
   font-weight: 800;
-}
-
-.clubIdentityColors {
-  display: flex;
-  align-self: start;
-  gap: 6px;
-}
-
-.clubIdentityColorSwatch {
-  display: block;
-  width: 22px;
-  height: 22px;
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  border-radius: 6px;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage .tableShell,
