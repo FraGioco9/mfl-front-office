@@ -72,6 +72,7 @@ const validRouteCases = [
   ["/my-players/attributes", true],
   ["/watchlist/current-season", true],
   ["/agents/0xabc/attributes", true],
+  ["/clubs/123/info", true],
   ["/clubs/123/squad", true],
   ["/players/42", true],
   ["/settings", true],
