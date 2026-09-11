@@ -83,6 +83,59 @@ class RebuildOptionTests(unittest.TestCase):
             "MFL_FETCH_PLAYERS",
         )
 
+    def test_current_player_fetch_discovers_fresh_batches_without_wallet_fetch(self) -> None:
+        limiter = mock.Mock()
+        previous_anchors = paged.PLAYER_BATCH_ANCHORS
+        try:
+            paged.PLAYER_BATCH_ANCHORS = None
+            with (
+                mock.patch.object(
+                    paged,
+                    "discover_player_batch_anchors",
+                    return_value=[1501, 1],
+                ) as discover,
+                mock.patch.object(
+                    paged,
+                    "fetch_predetermined_player_source",
+                    return_value=[],
+                ),
+            ):
+                sources = runner.rebuild.fetch_active_and_retired_player_sources(limiter)
+
+            discover.assert_called_once_with(limiter)
+            self.assertEqual(paged.PLAYER_BATCH_ANCHORS, [1501, 1])
+            self.assertEqual(
+                set(sources),
+                {"general", "retired", "mfl", "mfl_trade"},
+            )
+        finally:
+            paged.PLAYER_BATCH_ANCHORS = previous_anchors
+
+    def test_wallet_fetch_does_not_prepare_player_batches(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        previous_anchors = paged.PLAYER_BATCH_ANCHORS
+        try:
+            runner.pipeline.create_schema(connection)
+            paged.PLAYER_BATCH_ANCHORS = [777]
+            with (
+                mock.patch.object(
+                    paged.pipeline,
+                    "request_json",
+                    return_value={"users": []},
+                ),
+                mock.patch.object(paged, "discover_player_batch_anchors") as discover,
+            ):
+                paged.refresh_wallets_without_playmfl_limiter(
+                    connection,
+                    mock.Mock(),
+                )
+
+            discover.assert_not_called()
+            self.assertEqual(paged.PLAYER_BATCH_ANCHORS, [777])
+        finally:
+            paged.PLAYER_BATCH_ANCHORS = previous_anchors
+            connection.close()
+
     def test_disabled_player_fetch_reuses_complete_previous_rows(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             previous_path = Path(directory) / "previous.db"

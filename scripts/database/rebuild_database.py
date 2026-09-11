@@ -65,10 +65,8 @@ def install_database_filename() -> None:
 def fetch_active_and_retired_player_sources(
     limiter: run_flow_rebuild_paged.RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Fetch active and retired PlayMFL sources using the prepared API batches."""
-    if run_flow_rebuild_paged.PLAYER_BATCH_ANCHORS is None:
-        raise RuntimeError("Player ID batches were not prepared before player loading")
-    anchors = list(run_flow_rebuild_paged.PLAYER_BATCH_ANCHORS)
+    """Fetch current PlayMFL sources after discovering fresh API page boundaries."""
+    anchors = run_flow_rebuild_paged.prepare_player_batch_anchors(limiter)
 
     run_flow_rebuild.log(
         "API-derived PlayMFL batches: "
