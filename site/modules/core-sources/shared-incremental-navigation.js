@@ -140,12 +140,7 @@
         tablePageTitle.textContent = tableTitleForPage(pageName);
       }
       updateViewButtons();
-      if (route.scope === "club" && String(route.view || "info") === "info") {
-        const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
-        if (typeof primeClubProfileLoading === "function") primeClubProfileLoading("info");
-      } else {
-        showTableBusyState();
-      }
+      showTableBusyState();
     } else if (mflStatsActive) {
       state.view = "stats";
       updateViewButtons();
@@ -277,14 +272,8 @@ const setIncrementalView = async function setIncrementalView(viewName) {
       if (!transition) return;
     }
 
-    if (pageName === "club" && state.clubProfile && ["info", "attributes", "contracts"].includes(nextView)) {
+    if (pageName === "club" && state.clubProfile && ["attributes", "contracts"].includes(nextView)) {
       state.page = 1;
-      if (nextView === "info") {
-        state.view = "info";
-        updateViewButtons();
-        applyClubPresentationFromSharedView();
-        return true;
-      }
       state.incrementalApplying = true;
       try {
         const result = await applyTableViewOwner.call(this, nextView);
@@ -306,13 +295,6 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         if (!payload) return;
         state.incrementalApplying = true;
         try {
-          if (pageName === "club" && nextView === "info") {
-            state.view = "info";
-            state.page = 1;
-            updateViewButtons();
-            applyClubPresentationFromSharedView();
-            return true;
-          }
           const result = await applyTableViewOwner.call(this, nextView);
           if (pageName === "club") applyClubPresentationFromSharedView();
           return result;
