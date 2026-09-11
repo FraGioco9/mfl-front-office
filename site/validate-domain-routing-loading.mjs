@@ -2,6 +2,7 @@ const validators = [
   "validate-loading-ownership.mjs",
   "validate-data-shaped-loading-foundation.mjs",
   "validate-home-summary-first-paint.mjs",
+  "validate-player-hero-club-branding.mjs",
   "validate-route-runtime.mjs",
   "validate-bootstrap-ownership.mjs",
   "validate-prebuilt-core-loading.mjs",
