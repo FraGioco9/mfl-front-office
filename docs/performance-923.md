@@ -48,6 +48,24 @@ Deterministic compile-count effect for a repeated SQL shape:
 This records compile-work removal only; production wall-clock improvement remains part of the
 separate runtime baseline.
 
+## Precomputed bootstrap manifest counts
+
+Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
+`site/api/_database.js` / `site/api/_data-query.js` for reads.
+
+Before this change, each uncached bootstrap manifest built `row_count` and `wallet_count`
+with live `COUNT(*)` queries against `players` and `wallets`.
+
+New runtime snapshots store both totals in `runtime_metadata`. The SQLite owner loads that
+small metadata table once when opening the process-local database, so manifest construction
+performs **zero count queries** on rebuilt snapshots. The former live counts remain only as a
+compatibility fallback when either metadata key is absent in an older snapshot.
+
+Deterministic request-work effect on a rebuilt snapshot:
+
+- before: 2 request-time `COUNT(*)` queries per uncached manifest build;
+- after: 0 request-time `COUNT(*)` queries for those totals.
+
 ## Precomputed MFL Stats summary
 
 Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
