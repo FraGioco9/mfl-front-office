@@ -7628,6 +7628,19 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   user-select: none;
 }
 
+.mflTableFlagPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mflTableFlagPlaceholderShape {
+  display: block;
+  inline-size: 100%;
+  block-size: 72.222222%;
+  border-radius: 11.111111% / 15.384615%;
+}
+
 .mflSkeletonText {
   display: inline-grid;
   min-width: 0;
