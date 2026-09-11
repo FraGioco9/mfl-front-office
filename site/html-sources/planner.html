@@ -1,0 +1,57 @@
+
+        <section id="plannerPage" class="pageView plannerPage" hidden>
+          <header class="plannerPageHeader">
+            <div>
+              <h2 class="tablePageTitle">Planner</h2>
+              <p class="plannerPageIntro">Build a lineup for any Club and keep the workspace ready for saved, shareable plans.</p>
+            </div>
+            <div class="plannerPlanActions" aria-label="Plan actions">
+              <button id="plannerNewPlanButton" class="compactButton" type="button">New Plan</button>
+              <button id="plannerSavePlanButton" class="compactButton primary" type="button" disabled>Save Plan</button>
+              <button id="plannerSharePlanButton" class="compactButton" type="button" disabled>Share Plan</button>
+            </div>
+          </header>
+
+          <section class="plannerClubPicker" aria-label="Select Club">
+            <label class="plannerFieldLabel" for="plannerClubSearchInput">Club</label>
+            <div class="plannerClubSearchWrap">
+              <input id="plannerClubSearchInput" class="plannerClubSearchInput" type="search" autocomplete="off" placeholder="Search Clubs" aria-autocomplete="list" aria-controls="plannerClubSearchResults">
+              <div id="plannerClubSearchResults" class="plannerClubSearchResults" role="listbox" hidden></div>
+            </div>
+          </section>
+
+          <section id="plannerWorkspace" class="plannerWorkspace" hidden>
+            <section class="plannerPitchPanel" aria-label="Lineup">
+              <div class="plannerWorkspaceHeader">
+                <div id="plannerClubIdentity" class="plannerClubIdentity">
+                  <div class="plannerClubLogoFrame">
+                    <img id="plannerClubLogo" class="plannerClubLogo" alt="" hidden>
+                  </div>
+                  <div class="plannerClubIdentityText">
+                    <span class="plannerClubEyebrow">Club</span>
+                    <strong id="plannerClubName" class="plannerClubName">Select a Club</strong>
+                  </div>
+                </div>
+                <label class="plannerFormationField" for="plannerFormationSelect">
+                  <span>Formation</span>
+                  <select id="plannerFormationSelect" class="plannerFormationSelect"></select>
+                </label>
+              </div>
+              <div id="plannerPitch" class="plannerPitch" aria-label="Formation pitch"></div>
+            </section>
+
+            <aside class="plannerRosterPanel" aria-label="Available players">
+              <div class="plannerRosterHeader">
+                <div>
+                  <span class="plannerRosterEyebrow">Squad</span>
+                  <h3>Available players</h3>
+                </div>
+                <span id="plannerRosterCount" class="plannerRosterCount">0</span>
+              </div>
+              <p class="plannerRosterHint">Select a player, then select a position on the pitch.</p>
+              <div id="plannerRoster" class="plannerRoster"></div>
+            </aside>
+          </section>
+
+          <p id="plannerStatus" class="plannerStatus" role="status">Choose a Club to start planning.</p>
+        </section>
