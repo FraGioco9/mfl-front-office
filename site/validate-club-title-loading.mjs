@@ -60,12 +60,13 @@ includes(clubCore, 'ownerName.replaceChildren(createTextSkeleton("Agent Name"));
 includes(clubCore, 'ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));', "Unresolved Owner must replace any previous Club wallet with the canonical wallet skeleton.");
 includes(clubCore, 'ownerName.textContent = ownerLabel;', "Hydrated Club identity must render Owner in the same permanent Owner name element used by loading.");
 includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";', "Hydrated Club identity must render the Owner wallet in the permanent wallet element.");
-includes(clubCore, 'owner.setAttribute(\n            "href",', "A resolved Club Owner must become a real link without replacing the Owner geometry.");
+includes(clubCore, 'ownerName.setAttribute(\n            "href",', "A resolved Club Owner name must become a real link without making the surrounding Owner section interactive.");
+includes(clubCore, 'const clubIdentityOwnerLink = document.getElementById("clubIdentityOwnerName");', "Club Owner navigation must bind only to the agent-name text link.");
 includes(clubCore, 'openAgentPage(walletAddress, String(clubIdentityOwnerLink.dataset.agentName || "").trim());', "Club Owner clicks must reuse the canonical SPA Agent navigation.");
-includes(stylesBase, ".clubIdentityOwner[href] {\n  cursor: pointer;", "Only resolved clickable Club Owners must expose the pointer cursor.");
+includes(stylesBase, ".clubIdentityOwnerName[href] {\n  cursor: pointer;", "Only the resolved Owner name text must expose the pointer cursor.");
 includes(stylesBase, ".agentTableLink:hover,\n.agentTableLink.tableInteractiveHovered {\n  color: var(--primary);\n  text-decoration: none;", "Table Agent links must retain the canonical hover treatment.");
-includes(stylesBase, ".clubIdentityOwner[href]:hover .clubIdentityOwnerName,\n.clubIdentityOwner[href]:focus-visible .clubIdentityOwnerName {\n  color: var(--primary);\n  text-decoration: none;", "Club Owner hover must match table Agent links: primary text colour with no underline.");
-includes(stylesBase, ".clubIdentityOwner[href]:focus-visible {", "Clickable Club Owner must keep a visible keyboard focus state.");
+includes(stylesBase, ".clubIdentityOwnerName[href]:hover,\n.clubIdentityOwnerName[href]:focus-visible {\n  color: var(--primary);\n  text-decoration: none;", "Club Owner name hover must match table Agent links without activating the surrounding Owner section.");
+excludes(stylesBase, ".clubIdentityOwner[href]:hover", "The Owner section itself must never trigger the Agent hover treatment.");
 excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
 
 
@@ -93,6 +94,15 @@ includes(appEntry, "function installClubRouteRuntimeGate()", "Club links and ref
 includes(appEntry, 'runtimeWindow.__mflEnsureRouteCore("club", { view })', "The public Club gate must ensure Club core readiness.");
 includes(appEntry, 'const routeRuntimePromise = ensureRouteRuntime("club", { view });', "The public Club gate must ensure Club runtime readiness.");
 includes(appEntry, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club core and runtime ownership must settle together before rendering.");
+includes(bootstrap, "function primeClubDestinationIdentity(clubId, view = \"attributes\") {", "Bootstrap must expose a destination Club identity primer for in-site navigation.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubDestinationIdentity", primeClubDestinationIdentity);', "The destination Club primer must be available before lazy Club runtime loading.");
+const gateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
+const primeDestinationIndex = appEntry.indexOf("runtimeWindow.__mflPrimeClubDestinationIdentity?.(normalizedClubId, view);", gateStart);
+const gateTransitionIndex = appEntry.indexOf('return runTransition("club", true, {', primeDestinationIndex);
+invariant(
+  gateStart >= 0 && primeDestinationIndex > gateStart && gateTransitionIndex > primeDestinationIndex,
+  "The lazy Club gate must prime the destination identity before its outer page transition can reveal the shared Club shell.",
+);
 includes(eagerCore, "result = await navigateClub(clubId, view);", "Direct Club refresh must enter the same public navigation gate as an in-site click from the shared shell.");
 excludes(clubCore, "showHomeShellWithInitialClub", "The Club route core must not retain a startup-only shell interceptor.");
 excludes(clubCore, 'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', "Direct Club refresh must not bypass the public gate.");
