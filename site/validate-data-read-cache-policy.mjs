@@ -2,12 +2,13 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [dataApi, dataAuth, dataPage, dataCachePolicy, httpCache] = await Promise.all([
+const [dataApi, dataAuth, dataPage, dataCachePolicy, httpCache, database] = await Promise.all([
   read("./api/data.js"),
   read("./api/_data-auth.js"),
   read("./api/_data-page.js"),
   read("./api/_data-cache-policy.js"),
   read("./api/_http-cache.js"),
+  read("./api/_database.js"),
 ]);
 
 for (const mode of [
@@ -122,6 +123,26 @@ invariant(
 invariant(
   !dataAuth.includes("response.status(status).json(data);"),
   "Measured JSON responses must not serialize the same payload a second time through response.json().",
+);
+invariant(
+  database.includes("const STATEMENT_CACHE_MAX_ENTRIES = 128;")
+    && database.includes("const STATEMENT_CACHE = new Map();")
+    && database.includes("function preparedStatement(sql) {")
+    && database.includes("const cached = STATEMENT_CACHE.get(statementSql);")
+    && database.includes("STATEMENT_CACHE.delete(statementSql);")
+    && database.includes("STATEMENT_CACHE.set(statementSql, cached);")
+    && database.includes("while (STATEMENT_CACHE.size > STATEMENT_CACHE_MAX_ENTRIES) {"),
+  "SQLite prepared-statement reuse must stay centrally owned, LRU-style, and bounded.",
+);
+invariant(
+  database.includes("return preparedStatement(sql).all(...parameters);")
+    && database.includes("return preparedStatement(sql).get(...parameters) || null;"),
+  "queryRows/queryOne must reuse compiled SQL while binding fresh parameters for each execution.",
+);
+invariant(
+  !database.includes("return getDatabase().prepare(sql).all(...parameters);")
+    && !database.includes("return getDatabase().prepare(sql).get(...parameters) || null;"),
+  "Repeated API reads must not bypass the canonical prepared-statement cache.",
 );
 
 console.log("Public data read cache, safe page revalidation, wallet-proof fast path, and backend phase timing validation passed.");
