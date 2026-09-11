@@ -1033,9 +1033,7 @@
     const previousLabels = Array.from(element.querySelectorAll(":scope > .mflStatsHistogram .mflStatsHistogramLabel"))
       .map((label) => String(label.textContent || "").trim())
       .filter(Boolean);
-    const labels = previousLabels.length
-      ? previousLabels
-      : Array.from({ length: 12 }, (_, index) => String(50 + index * 4));
+    const labels = previousLabels.length ? previousLabels : ["00"];
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram mflStatsHistogramSkeleton";
     histogram.style.setProperty("--mfl-stats-bars", String(labels.length));
