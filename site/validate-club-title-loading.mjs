@@ -55,7 +55,9 @@ includes(stylesBase, "flex: 0 0 auto;\n  align-self: center;\n  width: 18px;\n  
 includes(stylesBase, ".clubIdentityOwner {", "Owner must be part of the persistent Club identity geometry.");
 includes(stylesBase, "grid-template-columns: minmax(0, 1fr) minmax(180px, auto);", "Desktop Club identity must reserve a right-side Owner column.");
 includes(clubCore, "const ownerResolved = Boolean(loadedProfile || identity.ownerName || identity.ownerWalletAddress);", "Cached title-only Club identity must keep Owner unresolved until profile data arrives.");
-includes(clubCore, "if (ownerResolved && owner instanceof HTMLElement", "Owner must not replace its skeleton with a fallback value before profile data resolves.");
+includes(clubCore, 'const createTextSkeleton = Reflect.get(window, "__mflCreateTextSkeleton");', "Unresolved Owner must use the shared text-skeleton renderer immediately during Club-to-Club navigation.");
+includes(clubCore, 'ownerName.replaceChildren(createTextSkeleton("Agent Name"));', "Unresolved Owner must replace any previous Club owner with the canonical name skeleton.");
+includes(clubCore, 'ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));', "Unresolved Owner must replace any previous Club wallet with the canonical wallet skeleton.");
 includes(clubCore, 'ownerName.textContent = ownerLabel;', "Hydrated Club identity must render Owner in the same permanent Owner name element used by loading.");
 includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";', "Hydrated Club identity must render the Owner wallet in the permanent wallet element.");
 excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
