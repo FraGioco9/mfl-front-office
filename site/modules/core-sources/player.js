@@ -1566,6 +1566,7 @@ function stableAttributePanelHtml(row) {
     animateReadyControls,
     stableAttributePanelHtml,
     attributeViewForRender,
+    attributeViewLoadingActive: playerAttributeLoadingActive,
     playerAgeMarkerHtml,
     playerNationalityHtml,
     beginDetailNavigation,
@@ -2061,7 +2062,7 @@ function renderPlayerPageOwner(playerId) {
     return;
   }
   const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
-  const attributeViewLoading = playerAttributeLoadingActive(playerId);
+  const attributeViewLoading = Boolean(window.__mflPlayerFirstPaintRuntime?.attributeViewLoadingActive?.(playerId));
   const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;
   const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);
   if (playerDetailRenderReuse.matches(
