@@ -99,6 +99,7 @@ input.mflTableCheckboxSkeleton:disabled {
   inline-size: 100%;
   block-size: 0.68em;
   min-inline-size: 1ch;
+  background: var(--mfl-loading-text-placeholder-surface);
 }
 
 .mflSkeletonElement {
