@@ -141,11 +141,14 @@
     const profileIdentity = clubProfileFromState(normalizedClubId);
     if (profileIdentity) return saveClubTitleIdentity(profileIdentity);
 
-    const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);
-    if (rowIdentity) return saveClubTitleIdentity(rowIdentity);
-
+    // Preserve the richest already-known Club identity during navigation.
+    // My Clubs can provide logo, colours and location before the Club payload
+    // arrives; row/search identities are intentionally poorer fallbacks.
     const cached = cachedClubTitleIdentity(normalizedClubId);
     if (cached) return cached;
+
+    const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);
+    if (rowIdentity) return saveClubTitleIdentity(rowIdentity);
 
     const indexed = clubTitleIdentityFromSearchIndex(normalizedClubId);
     if (indexed) return saveClubTitleIdentity(indexed);
@@ -236,8 +239,8 @@
       return activeClubTitle;
     }
     if (!activeClubTitle || activeClubTitle.clubId !== String(activeClubId)) {
-      const resolvedTitle = clubTitleIdentityFromRows(activeClubId)
-        || cachedClubTitleIdentity(activeClubId)
+      const resolvedTitle = cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromRows(activeClubId)
         || clubTitleIdentityFromSearchIndex(activeClubId);
       activeClubTitle = resolvedTitle || {
         clubId: String(activeClubId),
@@ -534,7 +537,9 @@
           })
         : false;
       if (!dataLoaded || openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
-      const loadedClubTitle = clubProfileFromState(activeClubId) || clubTitleIdentityFromRows(activeClubId);
+      const loadedClubTitle = clubProfileFromState(activeClubId)
+        || cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
         document.documentElement.dataset.initialEntityVerified = "club";
