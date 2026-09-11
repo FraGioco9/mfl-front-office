@@ -132,8 +132,10 @@
     if (location) {
       const locationLine = document.createElement("span");
       locationLine.className = "myClubLocation";
-      const flag = countryFlagElement(club?.nation, "clubLocationFlag");
-      if (flag) locationLine.appendChild(flag);
+      const flag = document.createElement("span");
+      flag.className = "clubLocationFlag mflDataPlaceholder";
+      flag.setAttribute("aria-hidden", "true");
+      locationLine.appendChild(flag);
       const locationText = document.createElement("span");
       locationText.className = "clubLocationText";
       appendLoadingText(locationText, location);
