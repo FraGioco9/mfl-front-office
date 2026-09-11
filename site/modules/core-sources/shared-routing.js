@@ -317,6 +317,27 @@ function pageTargetFromPath(path) {
     };
   }
 
+  const plannerMatch = cleanPath.match(/^\/planner(?:\/([^/]+))?$/);
+  if (plannerMatch) {
+    const planId = String(plannerMatch[1] ? decodeURIComponent(plannerMatch[1]) : "").trim();
+    const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const clubId = planId ? "" : String(params.get("club") || "").trim();
+    const canonicalPath = planId
+      ? `/planner/${encodeURIComponent(planId)}`
+      : clubId
+        ? `/planner?club=${encodeURIComponent(clubId)}`
+        : "/planner";
+    return {
+      pageName: "planner",
+      options: {
+        ...(planId ? { planId } : {}),
+        ...(clubId ? { clubId } : {}),
+        path: canonicalPath,
+        ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
+    };
+  }
+
   if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
     if (!hasWalletOptIn()) {
       return {
@@ -459,6 +480,15 @@ function pagePath(pageName, options = {}) {
     const clubView = String(options.view || currentClubRoute?.view || state.view || "attributes").trim().toLowerCase();
     const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
     return clubPath || window.location.pathname;
+  }
+  if (pageName === "planner") {
+    const planId = String(options.planId || "").trim();
+    if (planId) return `/planner/${encodeURIComponent(planId)}`;
+    const clubId = String(options.clubId || "").trim();
+    if (clubId) return `/planner?club=${encodeURIComponent(clubId)}`;
+    const explicitPath = String(options.path || "").trim();
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
+    return "/planner";
   }
   if (pageName === "player") {
     const playerId = options.playerId || playerIdFromUrl();
