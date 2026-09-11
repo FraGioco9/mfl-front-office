@@ -153,10 +153,20 @@ for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", m
 }
 
 
-for (const histogramClass of ["mflStatsHistogram", "mflStatsHistogramItem", "mflStatsHistogramBar", "mflStatsHistogramFill", "mflStatsHistogramLabel"]) {
+for (const histogramClass of ["mflStatsHistogram", "mflStatsHistogramItem", "mflStatsHistogramBar", "mflStatsHistogramLabel"]) {
   assert.match(bootstrap, new RegExp(histogramClass, "u"), `Stats skeleton must consume the loaded histogram class ${histogramClass}.`);
   assert.match(stylesBase, new RegExp(`\\.${histogramClass}`, "u"), `Loaded Stats CSS must own ${histogramClass} geometry.`);
 }
+assert.match(
+  stylesBase,
+  /\.mflStatsHistogramFill\s*\{/u,
+  "Loaded Stats CSS must retain the real histogram fill geometry and animation.",
+);
+assert.doesNotMatch(
+  bootstrap,
+  /mflStatsHistogramSkeletonFill/u,
+  "Stats loading must not create a fake fill with independently owned bar-height geometry.",
+);
 assert.match(
   responsive,
   /\.mflStatsHistogram\s*\{[\s\S]*min-width:/u,
