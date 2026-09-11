@@ -102,7 +102,7 @@ includes(staticUi, "container.insertBefore(button, insertionPoint);", "View orde
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 excludes(indexHtml, 'data-view="info">Info</button>', "Club first paint must not ship the retired Info view button.");
 includes(indexHtml, 'id="clubIdentity"', "Club first paint must ship the persistent identity shell.");
-includes(indexHtml, 'id="clubIdentityOwner"', "Club first paint must ship Owner inside the persistent identity shell.");
+includes(indexHtml, '<a id="clubIdentityOwner" class="clubIdentityOwner">', "Club first paint must ship Owner as a semantic link inside the persistent identity shell.");
 excludes(indexHtml, 'id="clubInfoPanel"', "Club first paint must not ship the retired Info content shell.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy })", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
