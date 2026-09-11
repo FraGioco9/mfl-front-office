@@ -2,11 +2,12 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [dataApi, dataAuth, dataPage, dataQuery, dataCachePolicy, httpCache, database] = await Promise.all([
+const [dataApi, dataAuth, dataPage, dataQuery, dataViews, dataCachePolicy, httpCache, database] = await Promise.all([
   read("./api/data.js"),
   read("./api/_data-auth.js"),
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
+  read("./api/_data-views.js"),
   read("./api/_data-cache-policy.js"),
   read("./api/_http-cache.js"),
   read("./api/_database.js"),
@@ -154,6 +155,22 @@ invariant(
     && dataQuery.includes('cachedPlayerCount ?? Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0)')
     && dataQuery.includes('cachedWalletCount ?? Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0)'),
   "Manifest counts must prefer valid snapshot metadata and fall back to live COUNT queries when older snapshots omit those keys.",
+);
+invariant(
+  dataViews.includes("function summaryData() {\n  const manifest = manifestPayload();")
+    && dataViews.includes("playerCount: manifest.row_count,")
+    && dataViews.includes("walletCount: manifest.wallet_count,")
+    && dataViews.includes("generatedAt: manifest.generated_at,"),
+  "The public summary endpoint must reuse manifestPayload() instead of owning duplicate snapshot counts.",
+);
+const summaryStart = dataViews.indexOf("function summaryData() {");
+const summaryEnd = dataViews.indexOf("\n}\n\nfunction mflStatsData", summaryStart);
+const summarySource = summaryStart >= 0 && summaryEnd > summaryStart
+  ? dataViews.slice(summaryStart, summaryEnd)
+  : "";
+invariant(
+  !summarySource.includes("SELECT count(*)"),
+  "summaryData must not restore request-time player/wallet COUNT(*) queries.",
 );
 invariant(
   !database.includes("return getDatabase().prepare(sql).all(...parameters);")
