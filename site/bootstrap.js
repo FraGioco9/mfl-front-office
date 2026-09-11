@@ -861,7 +861,7 @@
       flagSkeleton.setAttribute("aria-hidden", "true");
       const flagSample = document.createElement("img");
       flagSample.className = "flagImage mflTableFlagSkeletonSample";
-      flagSample.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg";
+      flagSample.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E";
       flagSample.alt = "";
       const flagFill = document.createElement("span");
       flagFill.className = "mflTableFlagSkeletonFill";
