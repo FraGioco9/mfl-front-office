@@ -146,10 +146,9 @@
           agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
           watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
           myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
-          club: Object.freeze({ order: ["info", "attributes", "contracts", "current", "all"], fallback: "info" }),
+          club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
         });
         const VIEW_BY_SLUG = Object.freeze({
-          info: "info",
           attributes: "attributes",
           squad: "attributes",
           stats: "stats",
