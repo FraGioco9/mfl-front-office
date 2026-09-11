@@ -193,20 +193,22 @@
 
   function ensurePlayerHeroBrandMark(media) {
     if (!(media instanceof HTMLElement)) return null;
-    let mark = media.querySelector(":scope > .playerHeroBrandMark");
-    if (!(mark instanceof HTMLAnchorElement)) {
-      mark = createPlayerHeroBrandMark();
+    const existingMark = media.querySelector(":scope > .playerHeroBrandMark");
+    const mark = existingMark instanceof HTMLAnchorElement ? existingMark : createPlayerHeroBrandMark();
+    if (!(existingMark instanceof HTMLAnchorElement)) {
       const portrait = media.querySelector(":scope > .playerHeroPortraitFrame");
       media.insertBefore(mark, portrait instanceof HTMLElement ? portrait : null);
     }
     if (mark.dataset.playerHeroBrandBound !== "true") {
       mark.dataset.playerHeroBrandBound = "true";
       mark.addEventListener("click", (event) => {
+        if (!(event instanceof MouseEvent)) return;
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         const clubId = String(mark.dataset.clubId || "").trim();
-        if (!clubId || typeof window.mflOpenClubPage !== "function") return;
+        const openClubPage = Reflect.get(window, "mflOpenClubPage");
+        if (!clubId || typeof openClubPage !== "function") return;
         event.preventDefault();
-        window.mflOpenClubPage(clubId, "attributes");
+        openClubPage(clubId, "attributes");
       });
     }
     return mark;
@@ -496,9 +498,9 @@ function applyOverallBoxAppearance(box, overall) {
         club: clubId ? normalizePlayerClubBrand(payload.playerClub, clubId) : null,
       };
       rememberContext(clubContext);
-      const pending = window.__mflPlayerFirstPaintPendingContext;
+      const pending = Reflect.get(window, "__mflPlayerFirstPaintPendingContext");
       if (normalizePlayerId(pending?.playerId) === routePlayerId) {
-        window.__mflPlayerFirstPaintPendingContext = mergeContext(pending, clubContext);
+        Reflect.set(window, "__mflPlayerFirstPaintPendingContext", mergeContext(pending, clubContext));
       }
     }
     readyDetailPlayerId = routePlayerId;
@@ -2053,7 +2055,7 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
     state.settingsDateFormat,
     state.settingsTimeFormat,
     state.trainingAdjustments[key] || null,
-    window.__mflPlayerFirstPaintRuntime?.heroBrandingSignature?.(key) || "",
+    Reflect.get(window, "__mflPlayerFirstPaintRuntime")?.heroBrandingSignature?.(key) || "",
   ]);
 }
 
