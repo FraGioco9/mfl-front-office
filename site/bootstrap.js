@@ -99,17 +99,12 @@
 
   function createFlagSkeleton(hostClass = "") {
     const flagSkeleton = document.createElement("span");
-    flagSkeleton.className = `mflTableFlagSkeleton${hostClass ? ` ${hostClass}` : ""}`;
+    flagSkeleton.className = `flagImage mflTableFlagSkeleton${hostClass ? ` ${hostClass}` : ""}`;
     flagSkeleton.setAttribute("aria-hidden", "true");
-
-    const flagSample = document.createElement("img");
-    flagSample.className = "flagImage mflTableFlagSkeletonSample";
-    flagSample.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E";
-    flagSample.alt = "";
 
     const flagFill = document.createElement("span");
     flagFill.className = "mflTableFlagSkeletonFill";
-    flagSkeleton.append(flagSample, flagFill);
+    flagSkeleton.appendChild(flagFill);
     return flagSkeleton;
   }
 
