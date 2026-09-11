@@ -9,7 +9,7 @@ const styles = read("styles.css");
 const base = read("styles-base.css");
 const docs = read("../docs/ui-foundations.md");
 
-// Table visual semantics stay Table-owned; this gate protects that boundary without taking over geometry.
+// Table visual semantics and standard desktop geometry stay Table-owned; responsive/specialist geometry remains independent.
 for (const token of [
   "--mfl-table-surface: var(--surface);",
   "--mfl-table-border-color: var(--border);",
@@ -20,13 +20,17 @@ for (const token of [
   "--mfl-table-row-hover-background: var(--row-hover);",
   "--mfl-table-header-font-size: 12px;",
   "--mfl-table-row-font-size: 14px;",
+  "--mfl-table-cell-padding-inline: 6px;",
+  "--mfl-table-header-height: 38px;",
+  "--mfl-table-row-height: 34px;",
+  "--mfl-table-row-outer-height: 39px;",
 ]) {
   assert.ok(styles.includes(token), `Missing canonical Table-domain foundation: ${token}`);
 }
 
 for (const expected of [
   ".tableShell {\n  position: relative;\n  background: var(--mfl-table-surface);\n  border: 1px solid var(--mfl-table-border-color);\n  border-radius: var(--mfl-table-radius);",
-  "th,\ntd {\n  cursor: default;\n  user-select: none;\n  height: 38px;\n  border-bottom: 1px solid var(--mfl-table-border-color);",
+  "th,\ntd {\n  cursor: default;\n  user-select: none;\n  height: var(--mfl-table-header-height);\n  border-bottom: 1px solid var(--mfl-table-border-color);\n  padding: 0 var(--mfl-table-cell-padding-inline);",
   "td {\n  font-size: var(--mfl-table-row-font-size);\n}",
   "th {\n  background: var(--mfl-table-header-background);\n  color: var(--mfl-table-header-text-color);\n  font-size: var(--mfl-table-header-font-size);",
   "th.sortable:hover {\n  background: var(--mfl-table-sort-hover-background);\n}",
@@ -34,6 +38,16 @@ for (const expected of [
 ]) {
   assert.ok(base.includes(expected), `Shared table styling must consume its Table-domain foundation: ${expected}`);
 }
+
+assert.ok(
+  base.includes("#tableBody .playerNameCell {\n  min-height: var(--mfl-table-header-height);\n  align-items: center;")
+    && styles.includes("#progressionPage .playerTableScroller th {\n  height: var(--mfl-table-header-height);\n  min-height: var(--mfl-table-header-height);\n  line-height: var(--mfl-table-header-height);")
+    && styles.includes("#progressionPage .playerTableScroller tbody > tr {\n  height: var(--mfl-table-row-outer-height);\n}")
+    && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);\n  min-height: var(--mfl-table-row-height);\n  line-height: var(--mfl-table-row-height);")
+    && styles.includes("#tableBody > .mflTableLoadingRow > td {\n  padding-top: 0;\n  padding-bottom: 0;")
+    && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
+  "Base, populated, and loading player-table cells must inherit the canonical Table-domain geometry instead of owning duplicate measurements.",
+);
 
 assert.ok(
   base.includes(".advancedPlayerTable {\n  position: relative;\n  z-index: 1;\n  overflow: visible;\n  border: 1px solid var(--mfl-table-border-color);\n  border-radius: var(--mfl-table-radius);")
@@ -83,4 +97,4 @@ for (const phrase of [
   assert.ok(docs.includes(phrase), `UI foundation documentation is missing the Table-domain boundary: ${phrase}`);
 }
 
-console.log("Shared table surfaces, headers, dividers, hover states, and standard desktop typography use canonical Table-domain foundations while specialist geometry remains independent.");
+console.log("Shared table surfaces, standard desktop cell geometry, headers, dividers, hover states, typography, and loading inheritance use canonical Table-domain foundations while responsive/specialist geometry remains independent.");

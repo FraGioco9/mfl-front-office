@@ -317,7 +317,7 @@ invariant(
 );
 
 invariant(
-  stylesBase.includes("#tableBody .playerNameCell {\n  min-height: 38px;\n  align-items: center;\n}"),
+  stylesBase.includes("#tableBody .playerNameCell {\n  min-height: var(--mfl-table-header-height);\n  align-items: center;\n}"),
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
