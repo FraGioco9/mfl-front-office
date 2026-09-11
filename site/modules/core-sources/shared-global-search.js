@@ -218,7 +218,7 @@ function renderSearchResultsNow() {
       button.addEventListener("click", () => {
         closeSearch();
         if (typeof window.mflOpenClubPage === "function") {
-          void window.mflOpenClubPage(entry.clubId, "attributes");
+          void window.mflOpenClubPage(entry.clubId, "info");
         }
       });
       fragment.appendChild(button);
