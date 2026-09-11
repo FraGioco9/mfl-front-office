@@ -4749,6 +4749,227 @@ body.clubViewSwitching .navButton.active {
   color: var(--text);
 }
 
+.clubIdentity,
+.clubInfoPanel {
+  display: none;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage > .tablePageTitle,
+body[data-page="club"] #progressionPage > .tablePageTitle {
+  display: none;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #clubIdentity,
+body[data-page="club"] #clubIdentity {
+  display: grid;
+}
+
+.clubIdentity {
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 116px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border: var(--mfl-panel-border-strong);
+  border-inline-start: 4px solid var(--club-primary, var(--border-strong));
+  border-radius: var(--mfl-radius-panel);
+  background: var(--mfl-panel-background);
+}
+
+.clubIdentityLogoFrame {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  min-width: 0;
+}
+
+.clubIdentityLogo {
+  display: block;
+  max-width: 88px;
+  max-height: 88px;
+  object-fit: contain;
+}
+
+.clubIdentityMain {
+  min-width: 0;
+}
+
+.clubIdentityId {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.clubIdentityName {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clubIdentityMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 7px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.clubIdentityDivision {
+  font-weight: 800;
+}
+
+.clubIdentityColors {
+  display: flex;
+  align-self: start;
+  gap: 6px;
+}
+
+.clubIdentityColorSwatch {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 6px;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage .tableShell,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage #selectionBar,
+body[data-page="club"] #progressionPage[data-club-view="info"] .tableShell,
+body[data-page="club"] #progressionPage[data-club-view="info"] #selectionBar {
+  display: none;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #clubInfoPanel,
+body[data-page="club"] #progressionPage[data-club-view="info"] #clubInfoPanel {
+  display: block;
+}
+
+.clubInfoPanel {
+  margin-top: 0;
+}
+
+.clubInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.clubInfoCard {
+  min-width: 0;
+  min-height: 82px;
+  padding: 10px 12px;
+  border: var(--mfl-panel-border-strong);
+  border-radius: var(--mfl-radius-panel);
+  background: var(--mfl-panel-background);
+}
+
+.clubInfoLabel {
+  display: block;
+  color: var(--text-soft);
+  font-size: var(--mfl-metadata-compact-font-size);
+  font-weight: var(--mfl-metadata-strong-font-weight);
+  line-height: var(--mfl-metadata-line-height);
+  text-transform: uppercase;
+}
+
+.clubInfoValue {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.clubInfoDetail {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.clubInfoColorRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 6px;
+}
+
+.clubInfoColor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clubInfoColorSwatch {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 5px;
+}
+
+.clubInfoColor strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.clubInfoCompetitionsCard {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.clubInfoCompetitionList {
+  display: grid;
+  gap: 0;
+  margin-top: 5px;
+}
+
+.clubInfoCompetition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 30px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+}
+
+.clubInfoCompetition:first-child {
+  border-top: 0;
+}
+
+.clubInfoCompetition strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clubInfoCompetition span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
 body[data-page="club"] #progressionPage .quickFilters,
 body[data-page="club"] #progressionPage .controlsBar,
 body[data-page="club"] #progressionPage .pager,
@@ -8992,6 +9213,32 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 24px;
   }
 
+  .clubIdentity {
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 96px;
+    padding: 8px 10px;
+  }
+
+  .clubIdentityLogoFrame {
+    width: 72px;
+    height: 72px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 72px;
+    max-height: 72px;
+  }
+
+  .clubIdentityName {
+    font-size: 24px;
+  }
+
+  .clubInfoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+
   .tablePageTitle,
   .evaluationTitleRow {
     margin-top: 2px;
@@ -11279,6 +11526,71 @@ html:not(.mflInitialRouteResolved):is(
     width: 11px;
     height: 11px;
     flex-basis: 11px;
+  }
+
+  .clubIdentity {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 9px;
+    min-height: 78px;
+    margin-bottom: 6px;
+    padding: 7px 8px;
+  }
+
+  .clubIdentityLogoFrame {
+    width: 56px;
+    height: 56px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 56px;
+    max-height: 56px;
+  }
+
+  .clubIdentityId {
+    font-size: 10px;
+  }
+
+  .clubIdentityName {
+    font-size: 20px;
+  }
+
+  .clubIdentityMeta {
+    gap: 3px 8px;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .clubIdentityColors {
+    grid-column: 1 / -1;
+    gap: 5px;
+  }
+
+  .clubIdentityColorSwatch {
+    width: 18px;
+    height: 18px;
+  }
+
+  .clubInfoGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .clubInfoCard {
+    min-height: 68px;
+    padding: 8px 9px;
+  }
+
+  .clubInfoValue {
+    font-size: 16px;
+  }
+
+  .clubInfoCompetition {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .clubInfoCompetition span {
+    text-align: left;
   }
 
   .advancedPlayerTable {
