@@ -13376,6 +13376,8 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 .myClubLocation .clubLocationFlag {
+  flex: 0 0 auto;
+  align-self: center;
   width: 16px;
   height: 16px;
 }
