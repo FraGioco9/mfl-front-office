@@ -2298,17 +2298,17 @@ td a {
 
 .playerHeroBrandMark {
   position: absolute;
-  left: calc(var(--mfl-player-hero-overall-size, 100px) + 16px);
-  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 108px)) / 2);
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 28px);
+  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 92px)) / 2);
   z-index: 1;
   display: grid;
   place-items: center;
-  width: var(--mfl-player-hero-brand-size, 108px);
-  min-width: var(--mfl-player-hero-brand-size, 108px);
-  max-width: var(--mfl-player-hero-brand-size, 108px);
-  height: var(--mfl-player-hero-brand-size, 108px);
-  min-height: var(--mfl-player-hero-brand-size, 108px);
-  max-height: var(--mfl-player-hero-brand-size, 108px);
+  width: var(--mfl-player-hero-brand-size, 92px);
+  min-width: var(--mfl-player-hero-brand-size, 92px);
+  max-width: var(--mfl-player-hero-brand-size, 92px);
+  height: var(--mfl-player-hero-brand-size, 92px);
+  min-height: var(--mfl-player-hero-brand-size, 92px);
+  max-height: var(--mfl-player-hero-brand-size, 92px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
