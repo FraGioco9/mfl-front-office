@@ -69,6 +69,15 @@ for (const value of renderRequired) {
   if (!generated.includes(value)) throw new Error(`Generated Player runtime: missing ${value}`);
 }
 
+const pendingClearIndex = source.indexOf('if (pendingDetailPlayerId === context.playerId) pendingDetailPlayerId = "";');
+const postPendingSyncIndex = source.indexOf("syncPlayerAttributeViewActiveState(container, context.playerId);", pendingClearIndex);
+if (pendingClearIndex < 0 || postPendingSyncIndex < 0 || postPendingSyncIndex < pendingClearIndex) {
+  throw new Error("Selected Player view must be activated only after Player-specific pending state clears.");
+}
+if (source.includes('const syncAttributeViewActiveState = Reflect.get(Reflect.get(window, "__mflPlayerFirstPaintRuntime") || {}, "syncAttributeViewActiveState");')) {
+  throw new Error("Player renderer must not try to activate the selected view before hydrateHero clears pending state.");
+}
+
 const selectedIndex = generated.indexOf('const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);');
 const renderViewIndex = generated.indexOf('const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;', selectedIndex);
 const normalizedStateIndex = generated.indexOf("state.playerAttributeView = normalizedAttributeView;", renderViewIndex);
