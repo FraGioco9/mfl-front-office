@@ -2261,13 +2261,13 @@ td a {
   position: relative;
   isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 372px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 352px);
   align-items: flex-end;
   align-self: stretch;
-  gap: var(--mfl-player-hero-media-gap, 68px);
-  width: var(--mfl-player-hero-media-width, 372px);
-  min-width: var(--mfl-player-hero-media-width, 372px);
-  max-width: var(--mfl-player-hero-media-width, 372px);
+  gap: var(--mfl-player-hero-media-gap, 48px);
+  width: var(--mfl-player-hero-media-width, 352px);
+  min-width: var(--mfl-player-hero-media-width, 352px);
+  max-width: var(--mfl-player-hero-media-width, 352px);
 }
 
 .playerHeroOverall {
@@ -2325,11 +2325,28 @@ td a {
   pointer-events: none;
 }
 
-.playerHeroBrandLogo {
+.playerHeroBrandLogo,
+.playerHeroDevelopmentCenterIcon {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.playerHeroBrandLogo {
   object-fit: contain;
+}
+
+.playerHeroDevelopmentCenterIcon {
+  display: none;
+  color: #111820;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroBrandLogo {
+  display: none;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {
+  display: block;
 }
 
 .playerHeroPortraitFrame {
