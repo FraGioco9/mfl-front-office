@@ -172,6 +172,14 @@
     }
   }
 
+  function firstPaintClubNationLabel(value) {
+    const nation = String(value || "").trim();
+    if (!nation) return "";
+    return nation === nation.toUpperCase() || nation === nation.toLowerCase()
+      ? nation.toLocaleLowerCase().replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toLocaleUpperCase())
+      : nation;
+  }
+
   function firstPaintClubIdentity(urlLike = window.location.href) {
     const request = canonicalBootstrapRequest(urlLike);
     const clubId = request?.pageName === "club" ? String(request.options?.clubId || "").trim() : "";
@@ -233,7 +241,7 @@
       else division.style.removeProperty("color");
     }
     if (location instanceof HTMLElement) {
-      const locationLabel = [identity.city, identity.nation].filter(Boolean).join(", ");
+      const locationLabel = [identity.city, firstPaintClubNationLabel(identity.nation)].filter(Boolean).join(", ");
       location.replaceChildren();
       if (locationLabel) {
         const flagPlaceholder = createFlagSkeleton("clubLocationFlag clubLocationFlagSkeleton");
