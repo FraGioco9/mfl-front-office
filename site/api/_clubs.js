@@ -1,4 +1,4 @@
-const { getGeneratedAt, queryRows, tableExists } = require("./_database");
+const { getGeneratedAt, queryRows, tableExists, tableColumnNames } = require("./_database");
 const { normalizeWalletAddress } = require("./_data-auth");
 
 const CLUB_LOGO_BASE_URL = "https://d13e14gtps4iwl.cloudfront.net/u/clubs";
@@ -263,8 +263,8 @@ function currentCompetitions(clubId) {
 function ownedClubRows(wallet, requestedClubIds = null) {
   if (!wallet || !tableExists("runtime_clubs")) return [];
 
-  const columns = new Set(queryRows("PRAGMA table_info(runtime_clubs)").map((row) => String(row.name || "")));
-  const select = (column, fallback, alias = column) => columns.has(column) ? `${column} AS ${alias}` : `${fallback} AS ${alias}`;
+  const columns = tableColumnNames("runtime_clubs");
+  const select = (column, fallback, alias = column) => columns.includes(column) ? `${column} AS ${alias}` : `${fallback} AS ${alias}`;
   const ids = Array.isArray(requestedClubIds)
     ? Array.from(new Set(requestedClubIds.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))).slice(0, 100)
     : [];
@@ -290,9 +290,9 @@ function clubProfileRow(tableName, clubId) {
   if (!["runtime_clubs", "clubs"].includes(tableName) || !tableExists(tableName)) return null;
   const id = String(clubId || "").trim();
   if (!id) return null;
-  const columns = new Set(queryRows(`PRAGMA table_info(${tableName})`).map((row) => String(row.name || "")));
-  if (!columns.has("club_id") || !columns.has("name")) return null;
-  const select = (column, fallback, alias = column) => columns.has(column) ? `${column} AS ${alias}` : `${fallback} AS ${alias}`;
+  const columns = tableColumnNames(tableName);
+  if (!columns.includes("club_id") || !columns.includes("name")) return null;
+  const select = (column, fallback, alias = column) => columns.includes(column) ? `${column} AS ${alias}` : `${fallback} AS ${alias}`;
   const rows = queryRows(
     `SELECT club_id AS clubId, name,
             ${select("city", "''")},
