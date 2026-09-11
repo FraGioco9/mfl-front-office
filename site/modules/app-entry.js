@@ -459,7 +459,7 @@ function clubRoutePath(clubId, view) {
 function installClubRouteRuntimeGate() {
   if (runtimeWindow.mflOpenClubPage?.__mflRouteRuntimeGate) return false;
 
-  const gated = async function mflOpenClubPageWithRouteRuntime(clubId, view = "info") {
+  const gated = async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return;
 
