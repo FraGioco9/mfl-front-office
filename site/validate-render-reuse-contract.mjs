@@ -50,7 +50,10 @@ for (const input of [
   "state.settingsTimeFormat,", "state.trainingAdjustments[key] || null,",
 ]) includes(playerCore, input, `Player render signature must include ${input}`);
 includes(playerCore, "playerDetailRenderReuse.invalidate();\n    window.__mflStaticUiRuntime?.showNotFound?.(\"Player\");", "Player not-found rendering must invalidate reusable DOM first.");
-includes(playerCore, "playerDetail.firstElementChild?.classList.contains(\"playerHero\")", "Player reuse must require the canonical Player hero structure.");
+includes(playerCore, 'const existingPlayerHero = playerDetail.firstElementChild;', "Player reuse must inspect the existing Player hero.");
+includes(playerCore, '&& existingPlayerHero.classList.contains("playerHero")', "Player reuse must require the canonical Player hero structure.");
+includes(playerCore, '&& !existingPlayerHero.classList.contains("playerHeroPending")', "Player reuse must reject a pending Player hero.");
+includes(playerCore, '&& !playerDetail.querySelector(".playerAttributeViewButton:disabled");', "Player reuse must reject pending disabled Player view controls.");
 includes(playerCore, "playerDetailRenderReuse.commit(renderSignature);", "Player must commit its signature only after a completed rebuild.");
 
 const playerRendererStart = playerCore.indexOf("function renderPlayerPageOwner(playerId) {");
