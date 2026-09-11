@@ -1,4 +1,5 @@
 [
+  ["v1.128.1", "Redesign Club pages with branded identity and filter-free views"],
   ["v1.128.0", "Add My Clubs, URL-synced tables, and unified loading foundations"],
   ["v1.127.15", "Stage database refreshes, refine competition data, and stabilize protected routes"],
   ["v1.127.14", "Optimize loading, backend data paths, caching, and database rebuilds"],
