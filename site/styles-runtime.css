@@ -7628,6 +7628,50 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   user-select: none;
 }
 
+.mflTableFlagSkeleton {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mflTableFlagSkeleton > :is(.mflTableFlagSkeletonSample, .mflTableFlagSkeletonFill) {
+  grid-area: 1 / 1;
+}
+
+.mflTableFlagSkeletonSample {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mflTableFlagSkeletonFill {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  background: var(--mfl-loading-placeholder-border);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.mflTableFlagSkeletonFill::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  background: var(--mfl-loading-placeholder-surface);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+input.mflTableCheckboxSkeleton:disabled {
+  opacity: 1;
+  border-color: var(--mfl-loading-placeholder-border);
+  background-color: var(--mfl-loading-placeholder-surface);
+  background-image: none;
+  cursor: default;
+  pointer-events: none;
+}
+
 .mflSkeletonText {
   display: inline-grid;
   min-width: 0;

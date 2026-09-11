@@ -4,10 +4,11 @@ import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource, index] = await Promise.all([
+const [styles, stylesBase, loadingStyles, bootstrap, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource, index] = await Promise.all([
   read("./styles.css"),
   read("./styles-base.css"),
   read("./loading.css"),
+  read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./modules/app-entry.js"),
   read("./route-core-loader-runtime.js"),
@@ -42,6 +43,37 @@ for (const required of [
   invariant(loadingStyles.includes(required), `loading.css is missing canonical loading rule: ${required}`);
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
+invariant(
+  bootstrap.includes('flagSkeleton.className = "mflTableFlagSkeleton";')
+    && bootstrap.includes('flagSample.className = "flagImage mflTableFlagSkeletonSample";')
+    && bootstrap.includes('flagSkeleton.append(flagSample, flagFill);'),
+  "Table flag skeletons must measure themselves with a real .flagImage sample so loaded and loading dimensions/alignment stay identical.",
+);
+invariant(
+  loadingStyles.includes(".mflTableFlagSkeletonFill {")
+    && loadingStyles.includes("background: var(--mfl-loading-placeholder-border);")
+    && loadingStyles.includes(".mflTableFlagSkeletonFill::after {")
+    && loadingStyles.includes("inset: 1px;")
+    && loadingStyles.includes('-webkit-mask: url("data:image/svg+xml,%3Csvg')
+    && loadingStyles.includes('mask: url("data:image/svg+xml,%3Csvg')
+    && !loadingStyles.includes("72.222222%")
+    && !loadingStyles.includes("15.384615%"),
+  "Table flag skeleton shape and border must use one neutral outer flag silhouette without internal country-specific stripes.",
+);
+invariant(
+  bootstrap.includes('input.className = "mflTableCheckboxSkeleton";')
+    && bootstrap.includes("content.appendChild(input);")
+    && !bootstrap.includes("content.appendChild(createElementSkeleton(input));"),
+  "Table checkbox skeletons must use the real checkbox element so canonical size and radius rules stay shared.",
+);
+invariant(
+  loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {")
+    && loadingStyles.includes("border-color: var(--mfl-loading-placeholder-border);")
+    && loadingStyles.includes("background-color: var(--mfl-loading-placeholder-surface);")
+    && loadingStyles.includes("background-image: none;")
+    && !loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {\n  border-radius:"),
+  "Table checkbox skeleton styling may change only loading appearance, leaving shape and dimensions to the real checkbox foundation.",
+);
 invariant(
   !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
     && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),

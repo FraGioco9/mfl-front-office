@@ -830,8 +830,10 @@
       const input = document.createElement("input");
       input.type = "checkbox";
       input.disabled = true;
+      input.className = "mflTableCheckboxSkeleton";
       input.setAttribute("aria-hidden", "true");
-      content.appendChild(createElementSkeleton(input));
+      input.tabIndex = -1;
+      content.appendChild(input);
       cell.appendChild(content);
       return;
     }
@@ -854,8 +856,17 @@
       cell.classList.add("flagCell");
       const content = document.createElement("span");
       content.className = "tableControlCellContent tableControlCellContentCentered";
-      const flag = createDataPlaceholder("flagImage mflTableFlagPlaceholder");
-      content.appendChild(flag);
+      const flagSkeleton = document.createElement("span");
+      flagSkeleton.className = "mflTableFlagSkeleton";
+      flagSkeleton.setAttribute("aria-hidden", "true");
+      const flagSample = document.createElement("img");
+      flagSample.className = "flagImage mflTableFlagSkeletonSample";
+      flagSample.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E";
+      flagSample.alt = "";
+      const flagFill = document.createElement("span");
+      flagFill.className = "mflTableFlagSkeletonFill";
+      flagSkeleton.append(flagSample, flagFill);
+      content.appendChild(flagSkeleton);
       cell.appendChild(content);
       return;
     }
