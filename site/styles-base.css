@@ -2299,7 +2299,7 @@ td a {
 .playerHeroBrandMark {
   position: absolute;
   left: calc(var(--mfl-player-hero-overall-size, 100px) + 4px);
-  bottom: 30px;
+  bottom: var(--mfl-player-hero-brand-bottom, 30px);
   z-index: 1;
   display: grid;
   place-items: center;
