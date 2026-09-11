@@ -1134,7 +1134,10 @@ function animateReadyControls(container = document) {
     if (label === "Agent") return knownDisplayValue(context, "wallet_name");
     if (label === "Rev Share") {
       const rawRevenueShare = knownRawValue(context, "active_contract_revenue_share");
-      return rawRevenueShare !== "" ? formatContractRevenueShare(rawRevenueShare) : knownDisplayValue(context, "active_contract_revenue_share");
+      const rawRevenueSharePenalty = knownRawValue(context, "active_contract_revenue_share_penalty");
+      return rawRevenueShare !== ""
+        ? formatContractRevenueShare(rawRevenueShare, rawRevenueSharePenalty)
+        : knownDisplayValue(context, "active_contract_revenue_share");
     }
     return "";
   }
@@ -2144,7 +2147,12 @@ function renderPlayerPageOwner(playerId) {
     ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/info" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
     : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;
   const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;
-  const revenueShare = rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) : "";
+  const revenueShare = rowHasActiveContract(row)
+    ? formatContractRevenueShare(
+      getValue(row, "active_contract_revenue_share"),
+      getValue(row, "active_contract_revenue_share_penalty"),
+    )
+    : "";
   const infoCardsData = [
     ["Nationality", playerRuntime?.playerNationalityHtml?.(rawNationality, nationality) || `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", `<span class="playerDetailAgeLine">${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}</span>`],
