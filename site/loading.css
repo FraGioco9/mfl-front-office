@@ -50,8 +50,8 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   inline-size: 100%;
   block-size: 100%;
   background: var(--mfl-loading-placeholder-border);
-  -webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
-  mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .mflTableFlagSkeletonFill::after {
@@ -59,8 +59,8 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   position: absolute;
   inset: 1px;
   background: var(--mfl-loading-placeholder-surface);
-  -webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
-  mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 input.mflTableCheckboxSkeleton:disabled {
