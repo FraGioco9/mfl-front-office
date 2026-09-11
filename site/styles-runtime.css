@@ -4826,23 +4826,22 @@ body[data-page="club"] #clubIdentity {
   max-width: 320px;
   color: inherit;
   text-align: right;
-  text-decoration: none;
 }
 
-.clubIdentityOwner[href] {
+.clubIdentityOwnerName[href] {
   cursor: pointer;
 }
 
-.clubIdentityOwner[href]:hover .clubIdentityOwnerName,
-.clubIdentityOwner[href]:focus-visible .clubIdentityOwnerName {
+.clubIdentityOwnerName[href]:hover,
+.clubIdentityOwnerName[href]:focus-visible {
   color: var(--primary);
   text-decoration: none;
 }
 
-.clubIdentityOwner[href]:focus-visible {
+.clubIdentityOwnerName[href]:focus-visible {
   outline: 2px solid var(--primary);
-  outline-offset: 4px;
-  border-radius: 4px;
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
 .clubIdentityOwnerLabel {
