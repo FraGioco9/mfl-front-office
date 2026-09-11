@@ -84,6 +84,8 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-player-hero-media-gap: clamp(4px, 1vw, 6px);
     --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
     --mfl-player-hero-identity-width: 100%;
+    --mfl-player-club-logo-size: clamp(26px, 7vw, 32px);
+    --mfl-player-club-logo-gap: clamp(4px, 1vw, 6px);
     --mfl-player-hero-identity-action-gap: 0px;
     --mfl-player-hero-identity-align-self: center;
     --mfl-player-hero-actions-align-self: stretch;
