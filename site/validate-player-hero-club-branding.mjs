@@ -22,7 +22,10 @@ for (const token of [
   'function playerHeroBranding(contextValue) {',
   'if (contextIsRetired(context)) return null;',
   'if (contextIsDevelopmentCenter(context)) {',
-  'logoUrl: PLAYER_DEVELOPMENT_CENTER_LOGO_URL,',
+  '|| contextClubId(context?.knownValues) === "100000";',
+  'logoUrl: "",',
+  'developmentCenterIcon.classList.add("playerHeroDevelopmentCenterIcon");',
+  '"M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z",',
   'club: clubId ? normalizePlayerClubBrand(payload.playerClub, clubId) : null,',
   'syncPlayerHeroBranding(hero, context);',
 ]) includes(player, token, `Player hero branding is missing: ${token}`);
@@ -33,7 +36,9 @@ for (const token of [
   '<a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo"',
   'return "linear-gradient(transparent 22%, rgba(" + red + ", " + green + ", " + blue + ", 0.65))";',
   'gradient: "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))"',
-  'logoUrl: "/development-center-traffic-cone.svg"',
+  'clubName.toLowerCase() === "development center" || clubId === "100000"',
+  'logoUrl: ""',
+  'class="playerHeroDevelopmentCenterIcon"',
   'if (retirementRaw !== "" && Number(retirementRaw) === 0) return null;',
 ]) includes(playerHtml, token, `Static Player first paint is missing: ${token}`);
 
@@ -47,12 +52,12 @@ for (const token of [
   ".playerHeroPortraitFrame {\n  position: relative;\n  z-index: 2;",
 ]) includes(styles, token, `Player affiliation layering is missing: ${token}`);
 
-includes(player, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 272;", "Desktop media geometry must move the Player portrait left while preserving Club-mark overlap.");
-includes(player, 'media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 68);', "Runtime Player media gap must match render-blocking portrait overlap.");
+includes(player, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 252;", "Desktop media geometry must move the Player portrait further left while preserving Club-mark overlap.");
+includes(player, 'media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 48);', "Runtime Player media gap must match the stronger portrait overlap.");
 includes(responsive, "--mfl-player-hero-brand-size: var(--mfl-player-portrait-height);", "Responsive affiliation mark must scale with the Player portrait.");
-includes(responsive, "--mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(32px, 7vw, 40px));", "Responsive Player portrait must overlap the Club mark while staying in front.");
+includes(responsive, "--mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(40px, 9vw, 48px));", "Responsive Player portrait must overlap the Club mark more strongly while staying in front.");
 
-includes(devCenterSvg, 'stroke="#111820"', "Development Center traffic-cone asset must use an explicit stroke when rendered through an external image.");
+includes(styles, ".playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {\n  display: block;", "Development Center cone must render inline from the Player hero mark.");
 
 for (const token of [
   'class="lucide lucide-traffic-cone"',
