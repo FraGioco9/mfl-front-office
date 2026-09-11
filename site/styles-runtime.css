@@ -2489,25 +2489,79 @@ td a {
 }
 
 .playerHeroIdentity {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--mfl-player-club-logo-size, 36px);
+  grid-template-areas:
+    "eyebrow club"
+    "title club"
+    "positions club";
+  align-items: center;
+  column-gap: var(--mfl-player-club-logo-gap, 10px);
   flex: 0 1 var(--mfl-player-hero-identity-width, 360px);
   align-self: var(--mfl-player-hero-identity-align-self, center);
   width: var(--mfl-player-hero-identity-width, 360px);
   min-width: 0;
   max-width: var(--mfl-player-hero-identity-width, 360px);
   margin-right: var(--mfl-player-hero-identity-action-gap, 16px);
+  border-radius: 6px;
+}
+
+.playerHeroIdentity.playerHeroIdentityBranded {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--player-club-primary) 10%, transparent),
+    color-mix(in srgb, var(--player-club-secondary) 5%, transparent)
+  );
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--player-club-primary) 78%, transparent);
 }
 
 .playerHeroIdentity .playerEyebrow {
+  grid-area: eyebrow;
+  min-width: 0;
   font-size: var(--mfl-player-hero-eyebrow-font-size, 14px);
 }
 
 .playerHeroIdentity .playerTitle {
+  grid-area: title;
+  min-width: 0;
   font-size: var(--mfl-player-hero-title-font-size, 28px);
   line-height: 1.05;
 }
 
 .playerHeroIdentity > p {
+  grid-area: positions;
+  min-width: 0;
   font-size: var(--mfl-player-hero-positions-font-size, 16px);
+}
+
+.playerClubBrand {
+  grid-area: club;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: var(--mfl-player-club-logo-size, 36px);
+  min-width: var(--mfl-player-club-logo-size, 36px);
+  max-width: var(--mfl-player-club-logo-size, 36px);
+  height: var(--mfl-player-club-logo-size, 36px);
+  min-height: var(--mfl-player-club-logo-size, 36px);
+  max-height: var(--mfl-player-club-logo-size, 36px);
+  visibility: hidden;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.playerClubBrand.playerClubBrandVisible {
+  visibility: visible;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.playerClubLogo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .playerHero h2,
