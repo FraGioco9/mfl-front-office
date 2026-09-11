@@ -46,7 +46,7 @@ includes(bootstrap, '<a class="playerHeroBrandMark" tabindex="-1" aria-hidden="t
 
 for (const token of [
   "position: relative;",
-  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 8px);",
+  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 16px);",
   "width: var(--mfl-player-hero-brand-size, 108px);",
   "opacity: 0.42;",
   ".playerHeroPortraitFrame {\n  position: relative;\n  z-index: 2;",
@@ -58,6 +58,7 @@ includes(responsive, "--mfl-player-hero-brand-size: var(--mfl-player-portrait-he
 includes(responsive, "--mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(40px, 9vw, 48px));", "Responsive Player portrait must overlap the Club mark more strongly while staying in front.");
 
 includes(styles, ".playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {\n  display: block;", "Development Center cone must render inline from the Player hero mark.");
+includes(styles, ".playerHeroDevelopmentCenterIcon {\n  display: none;\n  color: #ffffff;", "Development Center cone must be white.");
 
 for (const token of [
   'class="lucide lucide-traffic-cone"',
