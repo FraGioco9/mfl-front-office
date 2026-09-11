@@ -2261,13 +2261,13 @@ td a {
   position: relative;
   isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 332px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 312px);
   align-items: flex-end;
   align-self: stretch;
-  gap: var(--mfl-player-hero-media-gap, 28px);
-  width: var(--mfl-player-hero-media-width, 332px);
-  min-width: var(--mfl-player-hero-media-width, 332px);
-  max-width: var(--mfl-player-hero-media-width, 332px);
+  gap: var(--mfl-player-hero-media-gap, 8px);
+  width: var(--mfl-player-hero-media-width, 312px);
+  min-width: var(--mfl-player-hero-media-width, 312px);
+  max-width: var(--mfl-player-hero-media-width, 312px);
 }
 
 .playerHeroOverall {
@@ -2298,7 +2298,7 @@ td a {
 
 .playerHeroBrandMark {
   position: absolute;
-  left: calc(var(--mfl-player-hero-overall-size, 100px) + 28px);
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 18px);
   bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 92px)) / 2);
   z-index: 1;
   display: grid;
