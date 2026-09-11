@@ -8,7 +8,7 @@
     "current_club_id",
     "active_club_id",
   ];
-  const CLUB_VIEWS = new Set(["info", "attributes", "contracts", "current", "all"]);
+  const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const POSITION_ORDER = [
     "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
   ];
@@ -303,13 +303,16 @@
     const name = document.getElementById("clubIdentityName");
     const division = document.getElementById("clubIdentityDivision");
     const location = document.getElementById("clubIdentityLocation");
+    const owner = document.getElementById("clubIdentityOwner");
+    const ownerName = document.getElementById("clubIdentityOwnerName");
+    const ownerWallet = document.getElementById("clubIdentityOwnerWallet");
     if (!(host instanceof HTMLElement)) return;
 
     host.removeAttribute("aria-busy");
     host.querySelectorAll("[data-club-loading]").forEach((node) => {
-      if (node !== division && node !== location) node.remove();
+      if (node !== division && node !== location && node !== owner) node.remove();
     });
-    [division, location].forEach((node) => {
+    [division, location, owner].forEach((node) => {
       if (node instanceof HTMLElement) delete node.dataset.clubLoading;
     });
 
@@ -340,6 +343,11 @@
       }
       location.hidden = !locationLabel;
     }
+    if (owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
+      const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
+      ownerName.textContent = ownerLabel;
+      ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
+    }
 
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
       if (identity.logoUrl) {
@@ -366,152 +374,6 @@
       }
     }
 
-  }
-
-  function readableClubStatus(value) {
-    return String(value || "")
-      .trim()
-      .toLowerCase()
-      .split(/[ _-]+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-  }
-
-  function clubInfoCard(label, value, detail = "") {
-    const card = document.createElement("article");
-    card.className = "clubInfoCard";
-    const heading = document.createElement("span");
-    heading.className = "clubInfoLabel";
-    heading.textContent = label;
-    const main = document.createElement("strong");
-    main.className = "clubInfoValue";
-    main.textContent = String(value || "—");
-    card.append(heading, main);
-    if (detail) {
-      const secondary = document.createElement("small");
-      secondary.className = "clubInfoDetail";
-      secondary.textContent = detail;
-      card.appendChild(secondary);
-    }
-    return card;
-  }
-
-  function ordinalPosition(value) {
-    const number = Number(value);
-    if (!Number.isInteger(number) || number <= 0) return "";
-    const mod100 = number % 100;
-    const suffix = mod100 >= 11 && mod100 <= 13
-      ? "th"
-      : ({ 1: "st", 2: "nd", 3: "rd" }[number % 10] || "th");
-    return `${number}${suffix}`;
-  }
-
-  function competitionDetail(competition) {
-    const parts = [];
-    if (Number.isInteger(Number(competition?.seasonNumber))) parts.push(`Season ${Number(competition.seasonNumber)}`);
-    const standingPosition = ordinalPosition(competition?.standing?.position);
-    if (standingPosition) {
-      const points = Number(competition?.standing?.points);
-      parts.push(Number.isFinite(points) ? `${standingPosition} · ${points} pts` : standingPosition);
-    } else if (String(competition?.stage || "").trim()) {
-      parts.push(String(competition.stage).trim());
-    }
-    return parts.join(" · ");
-  }
-
-  function clubRosterSummary() {
-    const rows = Array.isArray(state.rows) ? state.rows : [];
-    const overalls = rows
-      .map((row) => Number(getValue(row, "overall")))
-      .filter((value) => Number.isFinite(value));
-    const average = overalls.length
-      ? (overalls.reduce((sum, value) => sum + value, 0) / overalls.length).toFixed(1)
-      : "";
-    return {
-      count: rows.length,
-      detail: average ? `Average overall ${average}` : "",
-    };
-  }
-
-  function renderClubInfo() {
-    const panel = document.getElementById("clubInfoPanel");
-    if (!(panel instanceof HTMLElement)) return;
-    panel.removeAttribute("aria-busy");
-    delete panel.dataset.loading;
-    const identity = activeClubIdentity();
-    const roster = clubRosterSummary();
-    const location = [identity.city, clubNationLabel(identity.nation)].filter(Boolean).join(", ");
-    const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
-    const ownerDetail = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
-    const colors = [validClubColor(identity.primaryColor), validClubColor(identity.secondaryColor)].filter(Boolean);
-
-    const grid = document.createElement("div");
-    grid.className = "clubInfoGrid";
-    grid.append(
-      clubInfoCard("Division", identity.division?.name || "—"),
-      clubInfoCard("Location", location || "—"),
-      clubInfoCard("Status", readableClubStatus(identity.status) || "—"),
-      clubInfoCard("Owner", ownerLabel, ownerDetail),
-      clubInfoCard("Roster", `${roster.count} player${roster.count === 1 ? "" : "s"}`, roster.detail),
-    );
-
-    const colorCard = document.createElement("article");
-    colorCard.className = "clubInfoCard clubInfoColorsCard";
-    const colorLabel = document.createElement("span");
-    colorLabel.className = "clubInfoLabel";
-    colorLabel.textContent = "Colours";
-    const colorRow = document.createElement("div");
-    colorRow.className = "clubInfoColorRow";
-    if (colors.length) {
-      colors.forEach((color, index) => {
-        const item = document.createElement("span");
-        item.className = "clubInfoColor";
-        const swatch = document.createElement("span");
-        swatch.className = "clubInfoColorSwatch";
-        swatch.style.backgroundColor = color;
-        const text = document.createElement("strong");
-        text.textContent = color;
-        item.append(swatch, text);
-        item.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
-        colorRow.appendChild(item);
-      });
-    } else {
-      colorRow.textContent = "—";
-    }
-    colorCard.append(colorLabel, colorRow);
-    grid.appendChild(colorCard);
-
-    const competitionsCard = document.createElement("article");
-    competitionsCard.className = "clubInfoCard clubInfoCompetitionsCard";
-    const competitionsLabel = document.createElement("span");
-    competitionsLabel.className = "clubInfoLabel";
-    competitionsLabel.textContent = "Current competitions";
-    competitionsCard.appendChild(competitionsLabel);
-    const competitions = Array.isArray(identity.currentCompetitions) ? identity.currentCompetitions : [];
-    if (!competitions.length) {
-      const empty = document.createElement("strong");
-      empty.className = "clubInfoValue";
-      empty.textContent = "No current competition data";
-      competitionsCard.appendChild(empty);
-    } else {
-      const list = document.createElement("div");
-      list.className = "clubInfoCompetitionList";
-      competitions.forEach((competition) => {
-        const row = document.createElement("div");
-        row.className = "clubInfoCompetition";
-        const competitionName = document.createElement("strong");
-        competitionName.textContent = String(competition?.name || "Competition");
-        const detail = document.createElement("span");
-        detail.textContent = competitionDetail(competition);
-        row.append(competitionName, detail);
-        list.appendChild(row);
-      });
-      competitionsCard.appendChild(list);
-    }
-    grid.appendChild(competitionsCard);
-
-    panel.replaceChildren(grid);
   }
 
   function primaryPosition(row) {
@@ -557,24 +419,23 @@
     if (state.currentPage !== CLUB_PAGE || !activeClubId) return;
     document.body.dataset.page = CLUB_PAGE;
     if (typeof progressionPage !== "undefined" && progressionPage instanceof HTMLElement) {
-      progressionPage.dataset.clubView = CLUB_VIEWS.has(state.view) ? state.view : "info";
+      progressionPage.dataset.clubView = CLUB_VIEWS.has(state.view) ? state.view : "attributes";
     }
     document.querySelectorAll(".navButton").forEach((link) => link.classList.remove("active"));
     renderClubTitle();
     renderClubIdentity();
-    renderClubInfo();
     hideClubPageControls();
     window.__mflDocumentTitleRuntime?.sync?.();
   }
 
   window.__mflApplyClubPresentation = applyClubPresentation;
 
-  function openClubImmediately(clubId, view = "info") {
+  function openClubImmediately(clubId, view = "attributes") {
     return openClubPage(clubId, view, true);
   }
   window.__mflOpenClubPageRoute = openClubImmediately;
 
-  async function openClubPage(clubId, view = "info", updateHistory = true) {
+  async function openClubPage(clubId, view = "attributes", updateHistory = true) {
     if (!clubId || openingClub) return;
     openingClub = true;
     try {
@@ -582,7 +443,7 @@
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
       const clubTitleReady = ensureClubTitleIdentity(activeClubId);
-      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "info";
+      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
       const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
       if (!routeAlreadyCommitted) {
@@ -657,10 +518,8 @@
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
 
       if (typeof updateViewButtons === "function") updateViewButtons();
-      if (nextView !== "info") {
-        if (typeof buildHeader === "function") buildHeader();
-        if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
-      }
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
     } finally {
       openingClub = false;
