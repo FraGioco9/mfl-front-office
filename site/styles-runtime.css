@@ -463,7 +463,7 @@ body[data-page="home"] .topbar .stats {
   background: var(--surface-muted);
 }
 
-.stats span {
+.stats > div > span {
   display: block;
   font-size: 20px;
   font-weight: 700;
@@ -4324,7 +4324,7 @@ button.playerIdText:active {
   padding: 8px 10px;
 }
 
-.mflStatsCards span {
+.mflStatsCards article > span {
   display: block;
   color: var(--text-soft);
   font-size: var(--mfl-metadata-compact-font-size);
