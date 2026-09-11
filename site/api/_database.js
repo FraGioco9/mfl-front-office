@@ -108,6 +108,8 @@ let generatedAt = "";
 let availablePlayerColumns = null;
 let marketplacePrices = Object.freeze({});
 const TABLE_EXISTS_CACHE = new Map();
+const STATEMENT_CACHE_MAX_ENTRIES = 128;
+const STATEMENT_CACHE = new Map();
 
 function normalizeSearchText(value) {
   return String(value ?? "")
@@ -241,12 +243,32 @@ function rowsAsArrays(rows, columns) {
   return rows.map((row) => columns.map((column) => row[column] ?? null));
 }
 
+function preparedStatement(sql) {
+  const statementSql = String(sql || "");
+  if (!statementSql) throw new Error("SQL statement is required.");
+  const cached = STATEMENT_CACHE.get(statementSql);
+  if (cached) {
+    STATEMENT_CACHE.delete(statementSql);
+    STATEMENT_CACHE.set(statementSql, cached);
+    return cached;
+  }
+
+  const statement = getDatabase().prepare(statementSql);
+  STATEMENT_CACHE.set(statementSql, statement);
+  while (STATEMENT_CACHE.size > STATEMENT_CACHE_MAX_ENTRIES) {
+    const oldestSql = STATEMENT_CACHE.keys().next().value;
+    if (oldestSql === undefined) break;
+    STATEMENT_CACHE.delete(oldestSql);
+  }
+  return statement;
+}
+
 function queryRows(sql, parameters = []) {
-  return getDatabase().prepare(sql).all(...parameters);
+  return preparedStatement(sql).all(...parameters);
 }
 
 function queryOne(sql, parameters = []) {
-  return getDatabase().prepare(sql).get(...parameters) || null;
+  return preparedStatement(sql).get(...parameters) || null;
 }
 
 module.exports = {
