@@ -854,7 +854,10 @@
       cell.classList.add("flagCell");
       const content = document.createElement("span");
       content.className = "tableControlCellContent tableControlCellContentCentered";
-      const flag = createDataPlaceholder("flagImage mflTableFlagPlaceholder");
+      const flag = document.createElement("span");
+      flag.className = "flagImage mflTableFlagPlaceholder";
+      flag.setAttribute("aria-hidden", "true");
+      flag.appendChild(createDataPlaceholder("mflTableFlagPlaceholderShape"));
       content.appendChild(flag);
       cell.appendChild(content);
       return;
