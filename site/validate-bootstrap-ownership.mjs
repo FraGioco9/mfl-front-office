@@ -217,6 +217,7 @@ excludes(
 includes(
   bootstrapCore,
   'document.documentElement.classList.remove("mflSingleRenderPending");',
+  'window.__mflInteractionBusy.refresh();',
   "bootstrap-core.js must release first-paint loading state when the visible route is ready.",
 );
 includes(
@@ -441,6 +442,7 @@ includes(
 includes(
   bootstrapCore,
   'window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));',
+  'refresh: applyState,',
   "Uniform Loading Workflow must expose one explicit loading-state event for decoupled consumers.",
 );
 includes(
@@ -512,7 +514,9 @@ includes(
 );
 includes(
   bootstrapCore,
-  'document.documentElement.classList.toggle(PENDING_CLASS, activeTokens.size > 0);',
+  'const pending = activeTokens.size > 0;',
+  'document.documentElement.classList.toggle(PENDING_CLASS, pending);',
+  'window.dispatchEvent(new CustomEvent("mfl:navigation-state", {',
   "Only the shared navigation owner may publish navigation-pending state.",
 );
 includes(

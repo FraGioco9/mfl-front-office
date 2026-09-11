@@ -2258,17 +2258,21 @@ td a {
 }
 
 .playerHeroMedia {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 320px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 312px);
   align-items: flex-end;
   align-self: stretch;
   gap: var(--mfl-player-hero-media-gap, 8px);
-  width: var(--mfl-player-hero-media-width, 320px);
-  min-width: var(--mfl-player-hero-media-width, 320px);
-  max-width: var(--mfl-player-hero-media-width, 320px);
+  width: var(--mfl-player-hero-media-width, 312px);
+  min-width: var(--mfl-player-hero-media-width, 312px);
+  max-width: var(--mfl-player-hero-media-width, 312px);
 }
 
 .playerHeroOverall {
+  position: relative;
+  z-index: 3;
   display: grid;
   flex: 0 0 var(--mfl-player-hero-overall-size, 100px);
   align-self: center;
@@ -2292,9 +2296,64 @@ td a {
   line-height: 1;
 }
 
+.playerHeroBrandMark {
+  position: absolute;
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 18px);
+  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 92px)) / 2);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--mfl-player-hero-brand-size, 92px);
+  min-width: var(--mfl-player-hero-brand-size, 92px);
+  max-width: var(--mfl-player-hero-brand-size, 92px);
+  height: var(--mfl-player-hero-brand-size, 92px);
+  min-height: var(--mfl-player-hero-brand-size, 92px);
+  max-height: var(--mfl-player-hero-brand-size, 92px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkVisible {
+  opacity: 0.42;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter {
+  pointer-events: none;
+}
+
+.playerHeroBrandLogo,
+.playerHeroDevelopmentCenterIcon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.playerHeroBrandLogo {
+  object-fit: contain;
+}
+
+.playerHeroDevelopmentCenterIcon {
+  display: none;
+  color: #ffffff;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroBrandLogo {
+  display: none;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {
+  display: block;
+}
+
 .playerHeroPortraitFrame {
   position: relative;
+  z-index: 2;
   flex: 0 0 var(--mfl-player-portrait-width, 204.288px);
+  pointer-events: none;
   align-self: flex-end;
   width: var(--mfl-player-portrait-width, 204.288px);
   min-width: var(--mfl-player-portrait-width, 204.288px);
@@ -2588,33 +2647,6 @@ button.playerIdText:active {
 :root[data-theme="dark"] .playerAttributeCard .attributeValueText {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-}
-#playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),
-#playerDetail:not(.playerOverallRarityPaintComplete) .playerAttributeCard.featured:not(.isPending) {
-  background: var(--surface);
-}
-
-@keyframes playerOverallRarityPaint {
-  from {
-    background-size: 100% 0%, 100% 0%;
-  }
-  to {
-    background-size: 100% 100%, 100% 100%;
-  }
-}
-
-.playerHeroOverall.rarityPaintOnce,
-.playerAttributeCard.featured.rarityPaintOnce {
-  background-position: center bottom, center;
-  background-repeat: no-repeat;
-  animation: playerOverallRarityPaint 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .playerHeroOverall.rarityPaintOnce,
-  .playerAttributeCard.featured.rarityPaintOnce {
-    animation: none;
-  }
 }
 .playerAttributeCard.featured {
   border-color: var(--border);

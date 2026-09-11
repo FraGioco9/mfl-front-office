@@ -13,11 +13,13 @@
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
-  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 220;
+  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 212;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
+  const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
+  const PLAYER_DEVELOPMENT_CENTER_GRADIENT = "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))";
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
   const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
@@ -26,7 +28,6 @@
   let pendingDetailPlayerId = "";
   let readyDetailPlayerId = "";
   let readyTransitionPlayerId = "";
-  let rarityPaintPlayerId = "";
 
   function loadingBlank() {
     return "\u00A0";
@@ -95,6 +96,189 @@
     return entry ? entry.raw : "";
   }
 
+  function normalizePlayerClubBrand(value, expectedClubId = "") {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    if (!source) return null;
+    const clubId = String(Reflect.get(source, "clubId") || expectedClubId || "").trim();
+    if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+    return {
+      clubId,
+      name: String(Reflect.get(source, "name") || "").trim(),
+      primaryColor: String(Reflect.get(source, "primaryColor") || "").trim(),
+      logoUrl: String(Reflect.get(source, "logoUrl") || "").trim(),
+      logoVersion: String(Reflect.get(source, "logoVersion") || "").trim(),
+    };
+  }
+
+  function cachedPlayerClubBrand(clubIdValue) {
+    const clubId = String(clubIdValue || "").trim();
+    if (!clubId) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      return normalizePlayerClubBrand(stored?.[clubId], clubId);
+    } catch {
+      return null;
+    }
+  }
+
+  function contextClubId(knownValues) {
+    return String(normalizeKnownValueEntry(knownValues?.active_contract_club_id)?.raw || "").trim();
+  }
+
+  function contextClubName(context) {
+    return knownDisplayValue(context, "active_contract_club_name");
+  }
+
+  function contextIsRetired(context) {
+    const value = knownRawValue(context, "retirement_years");
+    return value !== "" && Number(value) === 0;
+  }
+
+  function contextIsDevelopmentCenter(context) {
+    return String(contextClubName(context) || "").trim().toLowerCase() === "development center"
+      || contextClubId(context?.knownValues) === "100000";
+  }
+
+  function playerClubGradient(primaryColor) {
+    const color = String(primaryColor || "").trim();
+    const compact = color.replace(/^#/, "");
+    const normalized = /^[0-9a-f]{3}$/i.test(compact)
+      ? compact.split("").map((character) => character + character).join("")
+      : compact;
+    if (!/^[0-9a-f]{6}$/i.test(normalized)) return "";
+    const red = Number.parseInt(normalized.slice(0, 2), 16);
+    const green = Number.parseInt(normalized.slice(2, 4), 16);
+    const blue = Number.parseInt(normalized.slice(4, 6), 16);
+    return `linear-gradient(transparent 22%, rgba(${red}, ${green}, ${blue}, 0.65))`;
+  }
+
+  function playerHeroBranding(contextValue) {
+    const context = normalizeContext(contextValue);
+    if (contextIsRetired(context)) return null;
+    if (contextIsDevelopmentCenter(context)) {
+      return {
+        kind: "development-center",
+        gradient: PLAYER_DEVELOPMENT_CENTER_GRADIENT,
+        logoUrl: "",
+        clubId: "",
+        name: "Development Center",
+      };
+    }
+
+    const clubId = contextClubId(context.knownValues);
+    if (!clubId) return null;
+    const club = normalizePlayerClubBrand(context.club, clubId);
+    if (!club) return null;
+    return {
+      kind: "club",
+      gradient: playerClubGradient(club.primaryColor),
+      logoUrl: club.logoUrl,
+      clubId,
+      name: club.name || contextClubName(context),
+    };
+  }
+
+  function createPlayerHeroBrandMark() {
+    const mark = document.createElement("a");
+    mark.className = "playerHeroBrandMark";
+    mark.tabIndex = -1;
+    mark.setAttribute("aria-hidden", "true");
+    const logo = document.createElement("img");
+    logo.className = "playerHeroBrandLogo";
+    logo.alt = "";
+    logo.setAttribute("aria-hidden", "true");
+    const developmentCenterIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    developmentCenterIcon.classList.add("playerHeroDevelopmentCenterIcon");
+    developmentCenterIcon.setAttribute("viewBox", "0 0 24 24");
+    developmentCenterIcon.setAttribute("fill", "none");
+    developmentCenterIcon.setAttribute("stroke", "currentColor");
+    developmentCenterIcon.setAttribute("stroke-width", "2");
+    developmentCenterIcon.setAttribute("stroke-linecap", "round");
+    developmentCenterIcon.setAttribute("stroke-linejoin", "round");
+    developmentCenterIcon.setAttribute("aria-hidden", "true");
+    for (const pathData of [
+      "M16.05 10.966a5 2.5 0 0 1-8.1 0",
+      "m16.923 14.049 4.48 2.04a1 1 0 0 1 .001 1.831l-8.574 3.9a2 2 0 0 1-1.66 0l-8.574-3.91a1 1 0 0 1 0-1.83l4.484-2.04",
+      "M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z",
+      "M9.194 6.57a5 2.5 0 0 0 5.61 0",
+    ]) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      developmentCenterIcon.appendChild(path);
+    }
+    mark.append(logo, developmentCenterIcon);
+    return mark;
+  }
+
+  function ensurePlayerHeroBrandMark(media) {
+    if (!(media instanceof HTMLElement)) return null;
+    const existingMark = media.querySelector(":scope > .playerHeroBrandMark");
+    const mark = existingMark instanceof HTMLAnchorElement ? existingMark : createPlayerHeroBrandMark();
+    if (!(existingMark instanceof HTMLAnchorElement)) {
+      const portrait = media.querySelector(":scope > .playerHeroPortraitFrame");
+      media.insertBefore(mark, portrait instanceof HTMLElement ? portrait : null);
+    }
+    if (mark.dataset.playerHeroBrandBound !== "true") {
+      mark.dataset.playerHeroBrandBound = "true";
+      mark.addEventListener("click", (event) => {
+        if (!(event instanceof MouseEvent)) return;
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const clubId = String(mark.dataset.clubId || "").trim();
+        const openClubPage = Reflect.get(window, "mflOpenClubPage");
+        if (!clubId || typeof openClubPage !== "function") return;
+        event.preventDefault();
+        openClubPage(clubId, "attributes");
+      });
+    }
+    return mark;
+  }
+
+  function syncPlayerHeroBrandMark(media, contextValue) {
+    if (!(media instanceof HTMLElement)) return false;
+    const branding = playerHeroBranding(contextValue);
+    const mark = ensurePlayerHeroBrandMark(media);
+    if (!(mark instanceof HTMLAnchorElement)) return false;
+    const logo = mark.querySelector(":scope > .playerHeroBrandLogo");
+    const visible = branding?.kind === "development-center" || Boolean(branding?.logoUrl);
+
+    mark.classList.toggle("playerHeroBrandMarkVisible", visible);
+    mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
+    mark.tabIndex = visible && branding?.kind === "club" ? 0 : -1;
+    mark.setAttribute("aria-hidden", visible ? "false" : "true");
+    mark.removeAttribute("href");
+    mark.removeAttribute("data-club-id");
+    mark.removeAttribute("aria-label");
+
+    if (!visible) {
+      if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+      return false;
+    }
+
+    if (logo instanceof HTMLImageElement) {
+      if (branding.kind === "club" && branding.logoUrl && logo.getAttribute("src") !== branding.logoUrl) {
+        logo.src = branding.logoUrl;
+      } else if (branding.kind !== "club") {
+        logo.removeAttribute("src");
+      }
+    }
+    mark.setAttribute("aria-label", branding.name || "Player affiliation");
+    if (branding.kind === "club" && branding.clubId) {
+      mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
+      mark.dataset.clubId = branding.clubId;
+    }
+    return true;
+  }
+
+  function syncPlayerHeroBranding(hero, contextValue) {
+    if (!(hero instanceof HTMLElement)) return false;
+    const branding = playerHeroBranding(contextValue);
+    if (branding?.gradient) hero.style.background = branding.gradient;
+    else hero.style.removeProperty("background");
+    const media = hero.querySelector(":scope > .playerHeroMedia");
+    if (media instanceof HTMLElement) syncPlayerHeroBrandMark(media, contextValue);
+    return Boolean(branding);
+  }
+
   function retirementMarkerFromKnownValue(value) {
     const text = value === null || value === undefined ? "" : String(value).trim();
     if (!text) return null;
@@ -139,6 +323,10 @@
     const suppliedPositions = normalizePositions(source.positions);
     const cachedPositions = normalizePositions(knownValues.positions?.display || knownValues.positions?.raw || "");
     const suppliedOverall = source.overall === null || source.overall === undefined ? "" : String(source.overall).trim();
+    const clubKnown = Reflect.get(source, "clubKnown") === true;
+    const clubId = contextClubId(knownValues);
+    const explicitClub = normalizePlayerClubBrand(Reflect.get(source, "club"), clubId);
+    const club = clubKnown ? explicitClub : (explicitClub || cachedPlayerClubBrand(clubId));
     return {
       playerId,
       name: String(source.name || knownValues.name?.display || "").trim(),
@@ -146,12 +334,31 @@
       overall: suppliedOverall || String(knownValues.overall?.display || "").trim(),
       externalUrl: String(source.externalUrl || (playerId ? PLAYER_EXTERNAL_ORIGIN + "/players/" + playerId : "")).trim(),
       knownValues,
+      club,
+      clubKnown,
     };
   }
 
   function mergeContext(baseValue, nextValue) {
     const base = normalizeContext(baseValue);
     const next = normalizeContext(nextValue);
+    const nextClubId = contextClubId(next.knownValues);
+    const baseClubId = String(base.club?.clubId || "").trim();
+    let club = base.club;
+    let clubKnown = base.clubKnown;
+    if (next.clubKnown) {
+      club = next.club;
+      clubKnown = true;
+    } else if (base.clubKnown && (!nextClubId || nextClubId === baseClubId)) {
+      club = base.club;
+      clubKnown = true;
+    } else if (next.club) {
+      club = next.club;
+      clubKnown = false;
+    } else if (nextClubId && nextClubId !== baseClubId) {
+      club = null;
+      clubKnown = false;
+    }
     return {
       playerId: next.playerId || base.playerId,
       name: next.name || base.name,
@@ -159,6 +366,8 @@
       overall: next.overall || base.overall,
       externalUrl: next.externalUrl || base.externalUrl,
       knownValues: mergeKnownValues(base.knownValues, next.knownValues),
+      club,
+      clubKnown,
     };
   }
 
@@ -229,20 +438,14 @@
     return Number.isFinite(value) && value > 0;
   }
 
-function applyLoadedOverallBackground(box, complete = false) {
+function applyLoadedOverallBackground(box) {
   if (!(box instanceof HTMLElement)) return false;
   box.style.background = PLAYER_LOADED_OVERALL_BACKGROUND;
   box.style.backgroundColor = "var(--surface)";
   box.style.backgroundPosition = "center bottom, center";
   box.style.backgroundRepeat = "no-repeat";
-  box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 0%";
+  box.style.backgroundSize = "100% 100%, 100% 100%";
   return true;
-}
-
-function overallRarityPaintComplete(box) {
-  if (!(box instanceof HTMLElement)) return false;
-  const detail = box.closest("#playerDetail");
-  return detail instanceof HTMLElement && detail.classList.contains("playerOverallRarityPaintComplete");
 }
 
 function applyOverallBoxAppearance(box, overall) {
@@ -255,11 +458,7 @@ function applyOverallBoxAppearance(box, overall) {
     return false;
   }
   box.style.setProperty("--rarity-color", rarityColor(overall));
-  if (overallRarityPaintComplete(box)) {
-    applyLoadedOverallBackground(box, true);
-  } else {
-    box.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
-  }
+  applyLoadedOverallBackground(box);
   return true;
 }
 
@@ -276,12 +475,6 @@ function applyOverallBoxAppearance(box, overall) {
     if (!context.playerId) return false;
     pendingDetailPlayerId = context.playerId;
     readyDetailPlayerId = "";
-    rarityPaintPlayerId = "";
-    const detail = document.getElementById("playerDetail");
-    if (detail instanceof HTMLElement) {
-      detail.classList.remove("playerOverallRarityPaintComplete");
-      detail.removeAttribute("data-player-overall-rarity-painted");
-    }
     if (playerIdFromLocation() !== context.playerId) {
       const targetPlayerId = context.playerId;
       queueMicrotask(() => {
@@ -303,6 +496,20 @@ function applyOverallBoxAppearance(box, overall) {
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
     const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
     if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
+    const clubIdIndex = payload.columns.indexOf("active_contract_club_id");
+    if (clubIdIndex >= 0) {
+      const clubId = String(matchingRow[clubIdIndex] || "").trim();
+      const clubContext = {
+        playerId: routePlayerId,
+        clubKnown: true,
+        club: clubId ? normalizePlayerClubBrand(payload.playerClub, clubId) : null,
+      };
+      rememberContext(clubContext);
+      const pending = Reflect.get(window, "__mflPlayerFirstPaintPendingContext");
+      if (normalizePlayerId(pending?.playerId) === routePlayerId) {
+        Reflect.set(window, "__mflPlayerFirstPaintPendingContext", mergeContext(pending, clubContext));
+      }
+    }
     readyDetailPlayerId = routePlayerId;
     return true;
   }
@@ -310,7 +517,6 @@ function applyOverallBoxAppearance(box, overall) {
   function detailDataReady(row, playerIdValue) {
     const playerId = normalizePlayerId(playerIdValue);
     if (!playerId) return false;
-    if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;
     if (!Array.isArray(row)) return pendingDetailPlayerId !== playerId || readyDetailPlayerId === playerId;
     if (!Array.isArray(state.columns) || !state.columns.length) return false;
     const playerIdIndex = state.columns.indexOf("player_id");
@@ -492,6 +698,8 @@ function applyOverallBoxAppearance(box, overall) {
     overallValue.style.lineHeight = "1";
     overall.appendChild(overallValue);
 
+    const brandMark = createPlayerHeroBrandMark();
+
     const portraitFrame = document.createElement("div");
     portraitFrame.className = "playerHeroPortraitFrame";
     portraitFrame.style.alignSelf = "flex-end";
@@ -502,7 +710,7 @@ function applyOverallBoxAppearance(box, overall) {
     portrait.setAttribute("aria-label", "Player portrait");
     portraitFrame.appendChild(portrait);
 
-    media.append(overall, portraitFrame);
+    media.append(overall, brandMark, portraitFrame);
     updateHeroMedia(media, context);
     return media;
   }
@@ -520,6 +728,7 @@ function applyOverallBoxAppearance(box, overall) {
 
     const portrait = media.querySelector(".playerHeroPortrait");
     if (portrait instanceof HTMLCanvasElement) loadPortraitCrop(portrait, context.playerId);
+    syncPlayerHeroBrandMark(media, context);
     return true;
   }
 
@@ -760,35 +969,12 @@ function applyOverallBoxAppearance(box, overall) {
     return true;
   }
 
-function animateReadyOverallBoxes(container = document) {
-  const playerId = playerIdFromLocation();
-  const detail = container instanceof HTMLElement && container.id === "playerDetail"
-    ? container
-    : document.getElementById("playerDetail");
-  if (!playerId || !(detail instanceof HTMLElement)) return false;
-  if (rarityPaintPlayerId === playerId || detail.dataset.playerOverallRarityPainted === playerId) return false;
-  const boxes = Array.from(detail.querySelectorAll(".playerHeroOverall:not(.isPending), .playerAttributeCard.featured:not(.isPending)"))
-    .filter((box) => box instanceof HTMLElement);
-  if (!boxes.length) return false;
-  rarityPaintPlayerId = playerId;
-  detail.dataset.playerOverallRarityPainted = playerId;
-  const reduceMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-  boxes.forEach((box) => {
-    applyLoadedOverallBackground(box, reduceMotion);
-    if (reduceMotion) return;
-    box.classList.add("rarityPaintOnce");
-  });
-  detail.classList.add("playerOverallRarityPaintComplete");
-  return true;
-}
-
 function animateReadyControls(container = document) {
   const playerId = playerIdFromLocation();
   if (!playerId || readyTransitionPlayerId !== playerId) return false;
   const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
     .filter((control) => control instanceof HTMLElement);
   readyTransitionPlayerId = "";
-  const rarityPainted = animateReadyOverallBoxes(container);
   controls.forEach((control) => {
     control.style.opacity = "1";
     control.style.removeProperty("color");
@@ -796,7 +982,7 @@ function animateReadyControls(container = document) {
     control.style.removeProperty("border-color");
     control.style.transition = PLAYER_READY_TRANSITION;
   });
-  return Boolean(controls.length) || rarityPainted;
+  return Boolean(controls.length);
 }
 
 
@@ -808,6 +994,17 @@ function animateReadyControls(container = document) {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && activeHeroActionMenu instanceof HTMLElement) closeHeroActionMenu(activeHeroActionMenu);
+  });
+
+  window.addEventListener("mfl:loading-state", () => {
+    finalizePlayerAttributeViewAfterLoading();
+  });
+  window.addEventListener("mfl:ready", () => {
+    finalizePlayerAttributeViewAfterLoading();
+  });
+  window.addEventListener("mfl:navigation-state", (event) => {
+    if (event instanceof CustomEvent && event.detail?.pending === true) return;
+    finalizePlayerAttributeViewAfterLoading();
   });
 
   function applyHeroLayout(hero) {
@@ -1128,6 +1325,40 @@ function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocati
   return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;
 }
 
+function syncPlayerAttributeViewActiveState(containerValue, playerIdValue = playerIdFromLocation()) {
+  const container = containerValue instanceof HTMLElement
+    ? containerValue
+    : document.getElementById("playerDetail");
+  if (!(container instanceof HTMLElement)) return false;
+  const playerId = normalizePlayerId(playerIdValue);
+  const loading = playerAttributeLoadingActive(playerId);
+  const selectedView = String(state.playerAttributeView || "attributes");
+  const buttons = Array.from(container.querySelectorAll(".playerAttributeViewButton"));
+  buttons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const buttonView = String(button.dataset.playerAttributeView || button.dataset.view || "");
+    button.classList.toggle("active", !loading && buttonView === selectedView);
+  });
+  return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
+}
+
+function finalizePlayerAttributeViewAfterLoading() {
+  if (document.body?.dataset.page !== "player") return false;
+  const playerId = playerIdFromLocation();
+  if (!playerId || playerAttributeLoadingActive(playerId)) return false;
+  const detail = document.getElementById("playerDetail");
+  if (!(detail instanceof HTMLElement)) return false;
+
+  const pendingHero = detail.querySelector(":scope > .playerHero.playerHeroPending");
+  const disabledView = detail.querySelector(".playerAttributeViewButton:disabled");
+  if (pendingHero instanceof HTMLElement || disabledView instanceof HTMLButtonElement) {
+    const renderPlayer = Reflect.get(window, "__mflRenderPlayerPageOwner");
+    if (typeof renderPlayer === "function") renderPlayer(playerId);
+  }
+
+  return syncPlayerAttributeViewActiveState(detail, playerId);
+}
+
 function stableAttributePanelHtml(row) {
   return renderPlayerAttributePanel(row);
 }
@@ -1225,6 +1456,7 @@ function stableAttributePanelHtml(row) {
       external.removeAttribute("aria-disabled");
     }
     placeHeroMedia(hero, context);
+    syncPlayerHeroBranding(hero, context);
     return true;
   }
 
@@ -1304,6 +1536,7 @@ function stableAttributePanelHtml(row) {
     const actions = createPendingHeroActions(context);
     hero.append(createHeroMedia(context), identity, actions);
     applyHeroLayout(hero);
+    syncPlayerHeroBranding(hero, context);
     detail.replaceChildren(hero, createPendingPlayerGrid(context));
     showPlayerPage();
     if (playerIdFromLocation() === playerId) {
@@ -1314,7 +1547,8 @@ function stableAttributePanelHtml(row) {
   }
 
   function hydrateHero(value = {}) {
-    const context = normalizeContext(value);
+    const incoming = normalizeContext(value);
+    const context = mergeContext(readCachedContext(incoming.playerId), incoming);
     if (!context.playerId) return false;
     const routePlayerId = playerIdFromLocation();
     if (routePlayerId && routePlayerId !== context.playerId) return false;
@@ -1329,6 +1563,7 @@ function stableAttributePanelHtml(row) {
     hero.classList.remove("playerHeroPending");
     container.style.marginTop = "0";
     placeHeroMedia(hero, context);
+    syncPlayerHeroBranding(hero, context);
     const viewRow = container.querySelector(".playerAttributeViews");
     if (viewRow instanceof HTMLElement) viewRow.style.visibility = "visible";
     if (normalizePlayerId(window.__mflPlayerFirstPaintPendingContext?.playerId) === context.playerId) {
@@ -1336,6 +1571,7 @@ function stableAttributePanelHtml(row) {
     }
     if (pendingDetailPlayerId === context.playerId) pendingDetailPlayerId = "";
     if (readyDetailPlayerId === context.playerId) readyDetailPlayerId = "";
+    syncPlayerAttributeViewActiveState(container, context.playerId);
     rememberContext(context);
     return true;
   }
@@ -1376,11 +1612,17 @@ function stableAttributePanelHtml(row) {
     animateReadyControls,
     stableAttributePanelHtml,
     attributeViewForRender,
+    attributeViewLoadingActive: playerAttributeLoadingActive,
+    syncAttributeViewActiveState: syncPlayerAttributeViewActiveState,
     playerAgeMarkerHtml,
     playerNationalityHtml,
     beginDetailNavigation,
     markDetailPayloadReady,
     detailDataReady,
+    heroBrandingSignature(playerIdValue) {
+      const context = readCachedContext(normalizePlayerId(playerIdValue));
+      return JSON.stringify([context.clubKnown, context.club, playerHeroBranding(context)]);
+    },
   });
 })();
 
@@ -1829,13 +2071,14 @@ function bindContractTeamLink(playerId) {
 
 const playerDetailRenderReuse = createRenderReuseGuard();
 
-function playerDetailRenderSignature(row, playerId, attributeView) {
+function playerDetailRenderSignature(row, playerId, attributeView, attributeViewLoading) {
   const key = String(playerId || "").trim();
   return JSON.stringify([
     key,
     state.columns,
     row,
     attributeView,
+    Boolean(attributeViewLoading),
     Boolean(hasWalletOptIn()),
     normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),
     Boolean(state.walletPermissionAllowed),
@@ -1844,6 +2087,7 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
     state.settingsDateFormat,
     state.settingsTimeFormat,
     state.trainingAdjustments[key] || null,
+    Reflect.get(window, "__mflPlayerFirstPaintRuntime")?.heroBrandingSignature?.(key) || "",
   ]);
 }
 
@@ -1865,12 +2109,15 @@ function renderPlayerPageOwner(playerId) {
     return;
   }
   const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const attributeViewLoading = Boolean(window.__mflPlayerFirstPaintRuntime?.attributeViewLoadingActive?.(playerId));
   const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;
-  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);
-  if (playerDetailRenderReuse.matches(
-    renderSignature,
-    playerDetail.firstElementChild?.classList.contains("playerHero"),
-  )) {
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);
+  const existingPlayerHero = playerDetail.firstElementChild;
+  const reusablePlayerDetail = existingPlayerHero instanceof HTMLElement
+    && existingPlayerHero.classList.contains("playerHero")
+    && !existingPlayerHero.classList.contains("playerHeroPending")
+    && !playerDetail.querySelector(".playerAttributeViewButton:disabled");
+  if (playerDetailRenderReuse.matches(renderSignature, reusablePlayerDetail)) {
     document.documentElement.dataset.initialEntityVerified = "player";
     return;
   }
@@ -1920,7 +2167,7 @@ function renderPlayerPageOwner(playerId) {
   state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
-    .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
+    .map(([view, label]) => `<button class="playerAttributeViewButton ${!attributeViewLoading && state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
     .join("");
   const existingAttributeViews = playerDetail.querySelector(".playerAttributeViews");
   const existingAttributeViewsShell = existingAttributeViews?.closest(".viewsScrollerShell");

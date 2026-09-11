@@ -122,7 +122,11 @@
     }
 
     function applyState() {
-      document.documentElement.classList.toggle(PENDING_CLASS, activeTokens.size > 0);
+      const pending = activeTokens.size > 0;
+      document.documentElement.classList.toggle(PENDING_CLASS, pending);
+      window.dispatchEvent(new CustomEvent("mfl:navigation-state", {
+        detail: Object.freeze({ pending }),
+      }));
     }
 
     function isRouteTransitionReason(reason) {
@@ -418,6 +422,7 @@
       run,
       waitForRoutePaint,
       subscribe,
+      refresh: applyState,
       snapshot: () => currentSnapshot,
       routeReady: routeDestinationReady,
       isBusy: () => currentSnapshot.busy,
@@ -496,6 +501,7 @@
     document.documentElement.classList.remove("mflInitialRouteSuperseded");
     document.documentElement.classList.add("mflInitialRouteResolved");
     window.__mflInteractionBusy.end(initialRouteToken);
+    window.__mflInteractionBusy.refresh();
   };
 
   const recoverCompletedApplicationStartup = async () => {

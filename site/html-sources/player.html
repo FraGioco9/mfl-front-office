@@ -3,6 +3,7 @@
             <section class="playerHero playerHeroPending" aria-hidden="true">
               <div class="playerHeroMedia">
                 <div class="playerHeroOverall isPending"><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                <a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo" alt="" aria-hidden="true"><svg class="playerHeroDevelopmentCenterIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.05 10.966a5 2.5 0 0 1-8.1 0"></path><path d="m16.923 14.049 4.48 2.04a1 1 0 0 1 .001 1.831l-8.574 3.9a2 2 0 0 1-1.66 0l-8.574-3.91a1 1 0 0 1 0-1.83l4.484-2.04"></path><path d="M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z"></path><path d="M9.194 6.57a5 2.5 0 0 0 5.61 0"></path></svg></a>
                 <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
               </div>
               <div class="playerHeroIdentity">
@@ -37,7 +38,7 @@
                   <div class="playerPanelHeader">
                     <h3>Attributes</h3>
                     <div class="playerAttributeViews">
-                      <button class="playerAttributeViewButton active" type="button" data-view="attributes" disabled>Attributes</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="attributes" disabled>Attributes</button>
                       <button class="playerAttributeViewButton" type="button" data-view="training" disabled>Training</button>
                       <button class="playerAttributeViewButton" type="button" data-view="next" disabled>Next Overall</button>
                       <button class="playerAttributeViewButton" type="button" data-view="current" disabled>Current Season</button>
@@ -254,12 +255,100 @@
                 ? suppliedPositions.join(",")
                 : cachedPositionText,
             );
-            const cachedAttributeValue = (column) => {
-              if (column === "overall") {
-                const overall = knownDisplay("overall") || String(firstPaintContext?.overall || "").trim();
-                return overall.replace(/\s*\([+-]?\d+(?:\.\d+)?\)\s*$/, "").trim();
+            const normalizeCachedClubBrand = (value, expectedClubId = "") => {
+              const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+              if (!source) return null;
+              const clubId = String(source.clubId || expectedClubId || "").trim();
+              if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+              return {
+                clubId,
+                name: String(source.name || "").trim(),
+                primaryColor: String(source.primaryColor || "").trim(),
+                logoUrl: String(source.logoUrl || "").trim(),
+              };
+            };
+            const cachedClubBrand = (() => {
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (!clubId) return null;
+              if (firstPaintContext?.clubKnown === true) return normalizeCachedClubBrand(firstPaintContext.club, clubId);
+              const explicit = normalizeCachedClubBrand(firstPaintContext?.club, clubId);
+              if (explicit) return explicit;
+              try {
+                const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
+                return normalizeCachedClubBrand(stored?.[clubId], clubId);
+              } catch {
+                return null;
               }
-              return knownDisplay(column);
+            })();
+            const playerFirstPaintClubGradient = (primaryColor) => {
+              const compact = String(primaryColor || "").trim().replace(/^#/, "");
+              const normalized = /^[0-9a-f]{3}$/i.test(compact)
+                ? compact.split("").map((character) => character + character).join("")
+                : compact;
+              if (!/^[0-9a-f]{6}$/i.test(normalized)) return "";
+              const red = Number.parseInt(normalized.slice(0, 2), 16);
+              const green = Number.parseInt(normalized.slice(2, 4), 16);
+              const blue = Number.parseInt(normalized.slice(4, 6), 16);
+              return "linear-gradient(transparent 22%, rgba(" + red + ", " + green + ", " + blue + ", 0.65))";
+            };
+            const cachedHeroBranding = () => {
+              const retirementRaw = knownRaw("retirement_years");
+              if (retirementRaw !== "" && Number(retirementRaw) === 0) return null;
+              const clubName = String(knownDisplay("active_contract_club_name") || "").trim();
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (clubName.toLowerCase() === "development center" || clubId === "100000") {
+                return {
+                  kind: "development-center",
+                  gradient: "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))",
+                  logoUrl: "",
+                  clubId: "",
+                  name: "Development Center",
+                };
+              }
+              if (!clubId || !cachedClubBrand) return null;
+              return {
+                kind: "club",
+                gradient: playerFirstPaintClubGradient(cachedClubBrand.primaryColor),
+                logoUrl: cachedClubBrand.logoUrl,
+                clubId,
+                name: cachedClubBrand.name || clubName,
+              };
+            };
+            const syncCachedHeroBranding = () => {
+              if (!(hero instanceof HTMLElement)) return;
+              const branding = cachedHeroBranding();
+              if (branding?.gradient) hero.style.background = branding.gradient;
+              else hero.style.removeProperty("background");
+              const mark = hero.querySelector(".playerHeroBrandMark");
+              const logo = mark?.querySelector(".playerHeroBrandLogo");
+              if (!(mark instanceof HTMLAnchorElement)) return;
+              const visible = branding?.kind === "development-center" || Boolean(branding?.logoUrl);
+              mark.classList.toggle("playerHeroBrandMarkVisible", visible);
+              mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
+              mark.tabIndex = visible && branding?.kind === "club" ? 0 : -1;
+              mark.setAttribute("aria-hidden", visible ? "false" : "true");
+              mark.removeAttribute("href");
+              mark.removeAttribute("data-club-id");
+              mark.removeAttribute("aria-label");
+              if (!visible) {
+                if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+                return;
+              }
+              if (logo instanceof HTMLImageElement) {
+                if (branding.kind === "club" && branding.logoUrl) logo.src = branding.logoUrl;
+                else logo.removeAttribute("src");
+              }
+              mark.setAttribute("aria-label", branding.name || "Player affiliation");
+              if (branding.kind === "club" && branding.clubId) {
+                mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
+                mark.dataset.clubId = branding.clubId;
+              }
+            };
+            const cachedAttributeValue = (column) => {
+              const display = column === "overall"
+                ? (knownDisplay("overall") || String(firstPaintContext?.overall || "").trim())
+                : knownDisplay(column);
+              return String(display || "").replace(/\s*\([+-]?\d+(?:\.\d+)?\)\s*$/, "").trim();
             };
             const cachedNationalityFlagCodepoints = () => {
               const rawNationality = String(knownRaw("nationality") || knownDisplay("nationality") || "").trim();
@@ -401,10 +490,31 @@
               }
               setProfileText("Rev Share", formatCachedRevenueShare());
             };
+            const playerFirstPaintRarityColor = (overallValue) => {
+              const value = Number(overallValue || 0);
+              if (value >= 95) return "#00ffe9";
+              if (value >= 85) return "#fa53ff";
+              if (value >= 75) return "#0077ff";
+              if (value >= 65) return "#71ff30";
+              if (value >= 55) return "#ecd17f";
+              return "#bebebe";
+            };
+            const playerFirstPaintOverallBackground = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
+            const applyCachedOverallAppearance = (box, overallValue) => {
+              if (!(box instanceof HTMLElement) || !overallValue) return;
+              box.classList.remove("isPending");
+              box.style.setProperty("--rarity-color", playerFirstPaintRarityColor(overallValue));
+              box.style.background = playerFirstPaintOverallBackground;
+              box.style.backgroundColor = "var(--surface)";
+              box.style.backgroundPosition = "center bottom, center";
+              box.style.backgroundRepeat = "no-repeat";
+              box.style.backgroundSize = "100% 100%, 100% 100%";
+            };
             const syncCachedHeroValues = () => {
               const overallValue = cachedAttributeValue("overall");
               const overall = hero?.querySelector(".playerHeroOverall > strong");
               if (overall instanceof HTMLElement && overallValue && overall.textContent !== overallValue) overall.textContent = overallValue;
+              applyCachedOverallAppearance(overall?.closest(".playerHeroOverall"), overallValue);
 
               const listingRaw = knownRaw("listing_price");
               const listingValue = listingRaw === null || listingRaw === undefined || listingRaw === "" ? Number.NaN : Number(listingRaw);
@@ -461,6 +571,7 @@
                     overallStrong.replaceChildren(value);
                   }
                   if (value.textContent !== overallValue) value.textContent = overallValue;
+                  applyCachedOverallAppearance(overallCard, overallValue);
                 }
                 return;
               }
@@ -479,9 +590,11 @@
                   const strong = document.createElement("strong");
                   const value = document.createElement("span");
                   value.className = "attributeValueText";
-                  value.textContent = cachedAttributeValue(columns[index]) || "\u00a0";
+                  const cachedValue = cachedAttributeValue(columns[index]);
+                  value.textContent = cachedValue || "\u00a0";
                   strong.appendChild(value);
                   card.append(name, strong);
+                  if (index === 0) applyCachedOverallAppearance(card, cachedValue);
                   return card;
                 }));
                 return;
@@ -500,8 +613,10 @@
                   value.className = "attributeValueText";
                   strong.replaceChildren(value);
                 }
-                const nextValue = cachedAttributeValue(columns[index]) || "\u00a0";
+                const cachedValue = cachedAttributeValue(columns[index]);
+                const nextValue = cachedValue || "\u00a0";
                 if (value.textContent !== nextValue) value.textContent = nextValue;
+                if (index === 0) applyCachedOverallAppearance(card, cachedValue);
               });
             };
             const syncPendingPlayerShell = () => {
@@ -573,6 +688,7 @@
               }
             }
 
+            syncCachedHeroBranding();
             syncCachedHeroValues();
             syncCachedProfileValues();
             syncPendingPlayerShell();
@@ -592,6 +708,7 @@
               const progressionAccess = root.dataset.storedProgressionAccess === "true";
               views.querySelectorAll(":scope > .playerAttributeViewButton[data-view]").forEach((button) => {
                 if (!(button instanceof HTMLButtonElement)) return;
+                button.classList.remove("active");
                 const view = String(button.dataset.view || "");
                 if (view === "current" || view === "all") button.hidden = !progressionAccess;
               });
