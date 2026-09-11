@@ -42,9 +42,9 @@ const reuseOwnerCount = (coreSource.match(/= createRenderReuseGuard\(\);/g) || [
 invariant(reuseOwnerCount === 2, `Only the two measured heavy routes should own render guards; found ${reuseOwnerCount}.`);
 
 includes(playerCore, "const playerDetailRenderReuse = createRenderReuseGuard();", "Player must consume the shared render-reuse guard.");
-includes(playerCore, "function playerDetailRenderSignature(row, playerId, attributeView) {", "Player must derive a domain-owned render signature.");
+includes(playerCore, "function playerDetailRenderSignature(row, playerId, attributeView, attributeViewLoading) {", "Player must derive a domain-owned render signature.");
 for (const input of [
-  "state.columns,", "row,", "attributeView,", "Boolean(hasWalletOptIn()),",
+  "state.columns,", "row,", "attributeView,", "Boolean(attributeViewLoading),", "Boolean(hasWalletOptIn()),",
   "normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),", "Boolean(state.walletPermissionAllowed),",
   "Boolean(state.watchlistPlayerIds.has(key)),", "playerNote(key),", "state.settingsDateFormat,",
   "state.settingsTimeFormat,", "state.trainingAdjustments[key] || null,",
