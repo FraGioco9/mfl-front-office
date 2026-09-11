@@ -122,7 +122,11 @@
     }
 
     function applyState() {
-      document.documentElement.classList.toggle(PENDING_CLASS, activeTokens.size > 0);
+      const pending = activeTokens.size > 0;
+      document.documentElement.classList.toggle(PENDING_CLASS, pending);
+      window.dispatchEvent(new CustomEvent("mfl:navigation-state", {
+        detail: Object.freeze({ pending }),
+      }));
     }
 
     function isRouteTransitionReason(reason) {
