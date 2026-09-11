@@ -96,7 +96,7 @@ includes(playerCore, 'views.style.visibility = "visible";', "Player views must r
 
 includes(playerCore, "const PLAYER_HERO_OVERALL_SIZE_PX = 100;", "Player hero Overall geometry must remain canonical.");
 includes(playerCore, "const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;", "Player hero identity width must remain canonical.");
-includes(playerCore, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 252;", "Player hero media width must preserve the further-left portrait and Club-mark overlap.");
+includes(playerCore, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 232;", "Player hero media width must preserve the additional 20px portrait shift and Club-mark overlap.");
 includes(stylesBase, ".playerHero {\n  box-sizing: border-box;\n  display: flex;", "Render-blocking CSS must own Player hero geometry before route JavaScript runs.");
 excludes(playerCore, "!important", "Player route core must not use CSS priority overrides.");
 
