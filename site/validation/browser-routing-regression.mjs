@@ -562,6 +562,8 @@ const browserTestSource = String.raw`(() => {
 
       firstClubCard.click();
       trackDestinationLogo();
+      assert(text("#clubIdentityLocation") === "Bologna, Italy", "Club first paint did not normalize the already-loaded nation label.");
+      assert(!text("#clubIdentityLocation").includes("ITALY"), "Club first paint briefly exposed the raw uppercase nation value.");
       assert(destinationLogoPainted, "Club first paint did not reuse the logo already loaded by My Clubs.");
       await delay(120);
       trackDestinationLogo();
