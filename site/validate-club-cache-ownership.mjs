@@ -41,6 +41,7 @@ includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremen
 includes(sharedCore, "rememberClubViewPayload(route, payload);", "Applying an incremental Club payload must populate the canonical shared cache.");
 includes(sharedCore, "const clubPayload = cachedClubViewPayload(route);", "Cached Club re-entry must consult the canonical shared cache.");
 includes(sharedCore, 'if (route.scope === "club") {', "Cached incremental routing must keep an explicit Club cache path.");
+includes(sharedCore, 'pageName === "club" && state.clubProfile && ["info", "attributes", "contracts"].includes(nextView)', "Info, Squad, and Contracts must reuse the already-loaded Club profile/base roster instead of issuing redundant view requests.");
 
 const rememberStart = sharedCore.indexOf("function rememberClubViewPayload(route, payload) {");
 const rememberEnd = sharedCore.indexOf("\nfunction cachedClubViewPayload(route)", rememberStart);
