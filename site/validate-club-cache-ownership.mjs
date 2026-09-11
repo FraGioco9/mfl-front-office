@@ -30,35 +30,21 @@ for (const retiredOwner of [
   "cloneClubRows(",
   "captureClubView(",
   "restoreCachedClubView(",
+  "clubViewPayloadCache",
+  "clubViewPayloadCacheKey(",
+  "rememberClubViewPayload(",
+  "cachedClubViewPayload(",
 ]) {
   excludes(coreSource, retiredOwner, `Canonical source must not restore duplicate Club cache owner: ${retiredOwner}`);
   excludes(clubCore, retiredOwner, `Generated Club core must not restore duplicate Club cache owner: ${retiredOwner}`);
 }
 
-includes(sharedCore, "const clubViewPayloadCache = new Map();", "Shared incremental core must retain the canonical Club payload cache.");
-includes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Shared incremental core must own Club payload cache writes.");
-includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremental core must own Club payload cache reads.");
-includes(sharedCore, "rememberClubViewPayload(route, payload);", "Applying an incremental Club payload must populate the canonical shared cache.");
-includes(sharedCore, "const clubPayload = cachedClubViewPayload(route);", "Cached Club re-entry must consult the canonical shared cache.");
-includes(sharedCore, 'if (route.scope === "club") {', "Cached incremental routing must keep an explicit Club cache path.");
+includes(sharedCore, "const INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES = 64;", "Shared incremental core must own one bounded completed-result cache.");
+includes(sharedCore, "function readIncrementalPayloadCache(cacheKey) {", "Shared incremental core must own canonical cache reads.");
+includes(sharedCore, "function rememberIncrementalPayload(cacheKey, payload) {", "Shared incremental core must own canonical cache writes.");
+includes(sharedCore, "while (state.incrementalPayloadCache.size > INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES) {", "Canonical cache writes must enforce the bounded-entry policy.");
+includes(sharedCore, "return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);", "Cached Club re-entry must consult the canonical incremental cache.");
 includes(sharedCore, 'pageName === "club" && state.clubProfile && ["attributes", "contracts"].includes(nextView)', "Squad and Contracts must reuse the already-loaded Club profile/base roster instead of issuing redundant view requests.");
-
-const rememberStart = sharedCore.indexOf("function rememberClubViewPayload(route, payload) {");
-const rememberEnd = sharedCore.indexOf("\nfunction cachedClubViewPayload(route)", rememberStart);
-const rememberClubViewPayloadSource = rememberStart >= 0 && rememberEnd > rememberStart
-  ? sharedCore.slice(rememberStart, rememberEnd)
-  : "";
-invariant(rememberClubViewPayloadSource, "Could not isolate the canonical Club payload cache writer.");
-excludes(
-  rememberClubViewPayloadSource,
-  ".map(",
-  "The surviving Club payload cache must not perform a route-specific row-by-row clone pass.",
-);
-includes(
-  rememberClubViewPayloadSource,
-  "rows: [...payload.rows],",
-  "The surviving Club payload cache should retain only the shallow row-array snapshot required by shared incremental reuse.",
-);
 
 const previousRouteSpecificRowClonePasses = 1;
 const currentRouteSpecificRowClonePasses = (coreSource.match(/cloneClubRows\(/g) || []).length;
@@ -72,5 +58,5 @@ invariant(
 );
 
 console.log(
-  "Club cache ownership validation passed: shared incremental cache is the sole Club payload-reuse owner and route-specific row clone passes are 1 -> 0.",
+  "Club cache ownership validation passed: the bounded canonical incremental cache is the sole Club completed-result owner and route-specific row clone passes remain 1 -> 0.",
 );
