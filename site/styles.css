@@ -8,6 +8,11 @@
 :root {
   --mfl-pager-block-padding: 12px;
 
+  /* Shared data-shaped loading presentation. Component geometry remains specialist-owned. */
+  --mfl-loading-placeholder-surface: color-mix(in srgb, var(--surface-muted) 76%, var(--page-bg));
+  --mfl-loading-placeholder-border: var(--border);
+  --mfl-loading-placeholder-radius: 7px;
+
   /* Shared Table-domain visual language. Responsive geometry remains specialist-owned. */
   --mfl-table-surface: var(--surface);
   --mfl-table-border-color: var(--border);
@@ -162,8 +167,8 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   }
 
   #progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {
-    background: var(--surface-muted);
-    background-image: linear-gradient(var(--surface-muted), var(--surface-muted));
+    background: var(--mfl-table-surface);
+    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
   }
 }
 
@@ -431,7 +436,7 @@ body[data-page="club"] #progressionPage .rowsField {
 #tableBody > .mflTableLoadingRow > td {
   padding-top: 0;
   padding-bottom: 0;
-  background: var(--surface-muted);
+  background: var(--mfl-table-surface);
   color: transparent;
   user-select: none;
 }

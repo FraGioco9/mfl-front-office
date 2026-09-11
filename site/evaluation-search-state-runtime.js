@@ -72,25 +72,53 @@
     }
   }
 
-  function recentLoadingMessageVisible() {
-    const results = document.getElementById("evaluationSearchResults");
-    if (!(results instanceof HTMLElement) || results.hidden || results.children.length !== 1) return false;
-    const hint = results.firstElementChild;
-    return hint instanceof HTMLElement
-      && hint.classList.contains("searchHint")
-      && hint.textContent === "Loading…";
+  function createRecentTextSkeleton(sampleText) {
+    const shared = Reflect.get(window, "__mflCreateTextSkeleton");
+    if (typeof shared === "function") return shared(sampleText);
+
+    const host = document.createElement("span");
+    host.className = "mflSkeletonText";
+    host.setAttribute("aria-hidden", "true");
+    const sample = document.createElement("span");
+    sample.className = "mflSkeletonTextSample";
+    sample.textContent = sampleText;
+    const fill = document.createElement("span");
+    fill.className = "mflDataPlaceholder mflSkeletonTextFill";
+    fill.setAttribute("aria-hidden", "true");
+    host.append(sample, fill);
+    return host;
   }
 
-  function renderRecentLoadingMessage(field = input()) {
+  function createRecentLoadingSkeleton() {
+    const placeholder = document.createElement("div");
+    placeholder.className = "evaluationSearchResult mflEvaluationRecentPlaceholder";
+    placeholder.setAttribute("aria-hidden", "true");
+    const name = document.createElement("strong");
+    name.appendChild(createRecentTextSkeleton("Player Name"));
+    const metadata = document.createElement("span");
+    metadata.appendChild(createRecentTextSkeleton("CM · 24 · Overall 85"));
+    placeholder.append(name, metadata);
+    return placeholder;
+  }
+
+  function recentLoadingSkeletonVisible() {
+    const results = document.getElementById("evaluationSearchResults");
+    if (!(results instanceof HTMLElement) || results.hidden || results.children.length !== 3) return false;
+    return Array.from(results.children).every((placeholder) => (
+      placeholder instanceof HTMLElement
+      && placeholder.classList.contains("mflEvaluationRecentPlaceholder")
+      && placeholder.querySelector(":scope > strong > .mflSkeletonText")
+      && placeholder.querySelector(":scope > span > .mflSkeletonText")
+    ));
+  }
+
+  function renderRecentLoadingSkeleton(field = input()) {
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return false;
-    if (recentLoadingActive && recentLoadingMessageVisible()) return true;
+    if (recentLoadingActive && recentLoadingSkeletonVisible()) return true;
     const results = document.getElementById("evaluationSearchResults");
     if (!(results instanceof HTMLElement)) return false;
-    const hint = document.createElement("div");
-    hint.className = "searchHint";
-    hint.textContent = "Loading…";
     results.dataset.mflEvaluationRecentLoading = "true";
-    results.replaceChildren(hint);
+    results.replaceChildren(...Array.from({ length: 3 }, createRecentLoadingSkeleton));
     results.hidden = false;
     recentLoadingActive = true;
     return true;
@@ -326,7 +354,7 @@
       return false;
     }
     if (!recentStateSettled() || !recentEntriesMatch(expectedIds)) {
-      renderRecentLoadingMessage(field);
+      renderRecentLoadingSkeleton(field);
       return false;
     }
     committingRecentResults = true;
@@ -373,7 +401,7 @@
 
   function primeRecentSearchData({ force = false, showLoading = false, refreshSupabase = false } = {}) {
     if (recentPrimePromise) {
-      if (showLoading) renderRecentLoadingMessage(input());
+      if (showLoading) renderRecentLoadingSkeleton(input());
       if (!refreshSupabase) return recentPrimePromise;
       if (!recentSupabaseRefreshPromise) {
         recentSupabaseRefreshPromise = recentPrimePromise
@@ -400,13 +428,13 @@
       return Promise.resolve(renderEmptySearchFromCore(currentIds));
     }
 
-    if (showLoading || recentLoadingActive) renderRecentLoadingMessage(input());
+    if (showLoading || recentLoadingActive) renderRecentLoadingSkeleton(input());
     recentPrimePromise = waitForSupabaseRecentState(refreshSupabase)
       .then(() => {
         const ids = recentEvaluationPlayerIds();
         const signature = ids.join(",");
         if (!recentStateSettled()) {
-          renderRecentLoadingMessage(input());
+          renderRecentLoadingSkeleton(input());
           return false;
         }
         if (!force
@@ -423,13 +451,13 @@
           recentPayload = payload;
           publishRecentPayload(payload);
           const rendered = renderEmptySearchFromCore(ids);
-          if (!rendered && ids.length) renderRecentLoadingMessage(input());
+          if (!rendered && ids.length) renderRecentLoadingSkeleton(input());
           return rendered;
         });
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
-        renderRecentLoadingMessage(input());
+        renderRecentLoadingSkeleton(input());
         return false;
       })
       .finally(() => {

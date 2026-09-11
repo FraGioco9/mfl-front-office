@@ -47,9 +47,15 @@ invariant(
   "Loading presentation must not own separate row height or last-row border geometry; all ten placeholders must inherit the desktop row contract.",
 );
 invariant(
-  styles.includes("#tableBody > .mflTableLoadingRow > td {\n  padding-top: 0;\n  padding-bottom: 0;\n  background: var(--surface-muted);")
+  styles.includes("#tableBody > .mflTableLoadingRow > td {\n  padding-top: 0;\n  padding-bottom: 0;\n  background: var(--mfl-table-surface);")
+    && loading.includes(".mflSkeletonText {")
+    && loading.includes(".mflSkeletonElement {")
+    && loading.includes("background: var(--mfl-loading-placeholder-surface);")
+    && bootstrap.includes('content.className = "tableControlCellContent tableControlCellContentCentered";')
+    && bootstrap.includes('nameWrap.className = "playerNameCell";')
+    && bootstrap.includes('content.className = centered ? "tableOverallCellContent" : "tableControlCellContent";')
     && !styles.includes("#tableBody > .mflTableLoadingRow > td {\n  height:"),
-  "Loading rows may own appearance only, never a competing height declaration.",
+  "Loading rows must inherit canonical row/column/text alignment through the same populated table wrappers while the shared foundation only masks representative content.",
 );
 const horizontalStandardsRule = `.playerTableScroller,
   .tableScroller,

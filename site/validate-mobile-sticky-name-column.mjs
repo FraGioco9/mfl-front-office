@@ -48,7 +48,7 @@ for (const token of [
   "#progressionPage #tableBody tr.tableRowHovered > :is(",
   "background: var(--mfl-table-row-hover-background);\n    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
   "#progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {",
-  "background: var(--surface-muted);\n    background-image: linear-gradient(var(--surface-muted), var(--surface-muted));",
+  "background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));",
 ]) {
   invariant(stickyStyles.includes(token), `Small-screen sticky Name contract is missing: ${token}`);
 }
@@ -104,8 +104,10 @@ invariant(
 );
 invariant(
   bootstrap.includes('const className = firstPaintTableColumnClass(column);\n      if (className) header.classList.add(...className.split(" "));')
-    && bootstrap.includes('nameCell.className = "playerNameCell";'),
-  "First-paint headers and loading Name cells must expose stable selectors before hydration.",
+    && bootstrap.includes('cell.classList.add("nameCell");')
+    && bootstrap.includes('nameWrap.className = "playerNameCell";')
+    && bootstrap.includes('nameWrap.appendChild(createTextSkeleton("Name Surname", "playerNameLink"));'),
+  "First-paint headers and loading Name cells must expose the same semantic selectors and text layout as populated rows before hydration.",
 );
 
 invariant(

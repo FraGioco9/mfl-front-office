@@ -3,12 +3,13 @@ import { readCanonicalCoreArtifacts, readCombinedCanonicalCoreSource } from "./v
 
 const read = (path) => readValidationText(path, import.meta.url);
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
-const [searchRuntime, layoutRuntime, appEntry, walletPreferences, loadingStyles] = await Promise.all([
+const [searchRuntime, layoutRuntime, appEntry, walletPreferences, loadingStyles, evaluationHtml] = await Promise.all([
   read("./evaluation-search-state-runtime.js"),
   read("./evaluation-layout-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
   read("./loading.css"),
+  read("./html-sources/evaluation.html"),
 ]);
 const appCoreSource = readCombinedCanonicalCoreSource();
 const artifacts = readCanonicalCoreArtifacts();
@@ -34,14 +35,17 @@ invariant(searchRuntime.includes('const RECENT_ENTRIES_KEY = "__mflEvaluationSup
   && searchRuntime.includes(".filter(Boolean).slice(0, 5)"),
   "Evaluation recent five must remain capped and Supabase-owned.");
 invariant(searchRuntime.includes('let recentLoadingActive = document.getElementById("evaluationSearchResults")?.dataset.mflEvaluationRecentLoading === "true";')
-  && searchRuntime.includes("function renderRecentLoadingMessage(field = input())")
-  && searchRuntime.includes('hint.textContent = "Loading…";')
+  && searchRuntime.includes("function renderRecentLoadingSkeleton(field = input())")
+  && searchRuntime.includes('placeholder.className = "evaluationSearchResult mflEvaluationRecentPlaceholder";')
+  && searchRuntime.includes('name.appendChild(createRecentTextSkeleton("Player Name"));')
+  && searchRuntime.includes('metadata.appendChild(createRecentTextSkeleton("CM · 24 · Overall 85"));')
   && searchRuntime.includes("function ownsEmptyRecentResults()")
   && searchRuntime.includes("showLoading: Boolean(showLoading && !cachedReady && !matchingEntriesReady)")
-  && loadingStyles.includes('[data-initial-evaluation-selection="false"]\n  #evaluationSearchResults[hidden]:empty')
-  && loadingStyles.includes('#evaluationSearchResults[hidden]:empty::before')
-  && loadingStyles.includes('content: "Loading…";'),
-  "Plain Evaluation must expose Loading… at parser/first paint and keep one local loading surface while recent-five hydration is unresolved.");
+  && loadingStyles.includes('#evaluationSearchResults[data-mfl-evaluation-recent-loading="true"][hidden]')
+  && evaluationHtml.includes('evaluationSearchResult mflEvaluationRecentPlaceholder')
+  && evaluationHtml.includes('<strong><span class="mflSkeletonText"')
+  && evaluationHtml.includes('<span><span class="mflSkeletonText"'),
+  "Plain Evaluation must expose real result rows containing representative name/metadata typography at parser paint and preserve that skeleton structure until hydration resolves.");
 invariant(searchRuntime.includes('results.dataset.mflEvaluationRecentLoading = "true";')
   && searchRuntime.includes("function clearRecentLoadingOwnership()")
   && shared.includes('evaluationSearchResults.dataset.mflEvaluationRecentLoading === "true"'),
@@ -62,14 +66,14 @@ invariant(searchRuntime.includes("function recentStateSettled()")
   && searchRuntime.includes("matchingEntriesReady = recentEntriesMatch(currentIds);")
   && !searchRuntime.includes("matchingEntriesReady = currentIds.length === entryIds.length")
   && shared.includes('evaluationRecentStateHydrated: () => evaluationRecentStateHydrated,'),
-  "Loading… must not be released by empty-equals-empty or incomplete recent data; only authoritative state plus a complete expected-ID set may commit the result surface.");
+  "The loading skeleton must not be released by empty-equals-empty or incomplete recent data; only authoritative state plus a complete expected-ID set may commit the result surface.");
 invariant(searchRuntime.includes('const ensure = coreContracts()?.ensureEvaluationRecentStateHydrated;')
   && searchRuntime.includes('return Promise.resolve(ensure({ force })).catch((error) => {')
   && searchRuntime.includes('window.addEventListener("mfl:ready", () => {')
   && searchRuntime.includes('const lateEnsure = coreContracts()?.ensureEvaluationRecentStateHydrated;')
   && searchRuntime.includes('Promise.resolve(lateEnsure({ force }))')
   && !searchRuntime.includes('if (!pending || typeof pending.then !== "function") return Promise.resolve();'),
-  "Pre-core Evaluation recent hydration must preserve Loading… until application readiness exposes authoritative Supabase recent state instead of resolving an empty result early.");
+  "Pre-core Evaluation recent hydration must preserve the loading skeleton until application readiness exposes authoritative Supabase recent state instead of resolving an empty result early.");
 invariant(searchRuntime.includes("function shouldShowTypedResults(field = input())")
   && searchRuntime.includes("if (!field.value.trim()) return true;")
   && searchRuntime.includes("return document.activeElement === field || resultPointerDown;")
@@ -88,9 +92,9 @@ invariant(searchRuntime.includes("function primeRecentSearchData({ force = false
   && searchRuntime.includes("const primePromise = primeRecentSearchData({")
   && searchRuntime.includes("if (cachedReady || matchingEntriesReady) return Promise.resolve(true);")
   && searchRuntime.includes("return Promise.resolve(primePromise).then((rendered) => Boolean(rendered));")
-  && searchRuntime.includes("if (!rendered && ids.length) renderRecentLoadingMessage(input());")
-  && searchRuntime.includes('console.warn("Could not prime recent Evaluation searches.", error);\n        renderRecentLoadingMessage(input());\n        return false;'),
-  "Unresolved, incomplete, or failed recent-five hydration must keep Loading… owned while exposing the canonical in-flight promise to initial route readiness.");
+  && searchRuntime.includes("if (!rendered && ids.length) renderRecentLoadingSkeleton(input());")
+  && searchRuntime.includes('console.warn("Could not prime recent Evaluation searches.", error);\n        renderRecentLoadingSkeleton(input());\n        return false;'),
+  "Unresolved, incomplete, or failed recent-five hydration must keep the loading skeleton owned while exposing the canonical in-flight promise to initial route readiness.");
 
 const primeStart = appCoreSource.indexOf("function primeEmptyEvaluationSearch()");
 const primeEnd = appCoreSource.indexOf("function waitForEvaluationDiscountRate()", primeStart);
@@ -140,7 +144,7 @@ invariant(shared.includes('const evaluationRecentLoadingOwned = evaluationSearch
   && shared.includes('|| window.__mflEvaluationSearchStateRuntime?.ownsEmptyRecentResults?.();')
   && shared.includes("if (!query && evaluationRecentLoadingOwned && !releaseRecentLoading) {")
   && evaluation.includes('evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);'),
-  "Canonical core must preserve first-paint and runtime recent-results Loading… ownership until recent rows are ready.");
+  "Canonical core must preserve first-paint and runtime recent-results loading-skeleton ownership until recent rows are ready.");
 const searchRenderStart = shared.indexOf("function renderEvaluationSearchResults(options = {})");
 const searchRenderEnd = shared.indexOf("function primeEmptyEvaluationSearch()", searchRenderStart);
 const searchRender = shared.slice(searchRenderStart, searchRenderEnd);

@@ -294,11 +294,13 @@ invariant(
 
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
-    && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
-    && bootstrap.includes('if (columnIndex === nameColumnIndex) {')
-    && bootstrap.includes('nameCell.className = "playerNameCell";')
-    && bootstrap.includes('cell.appendChild(nameCell);'),
-  "The synchronous bootstrap must render all blank loading rows with final loaded-row player-name geometry before first paint.",
+    && bootstrap.includes("function appendTableLoadingCellContent(cell, renderedColumn) {")
+    && bootstrap.includes('if (classes.has("col-name")) {')
+    && bootstrap.includes('cell.classList.add("nameCell");')
+    && bootstrap.includes('nameWrap.className = "playerNameCell";')
+    && bootstrap.includes('nameWrap.appendChild(createTextSkeleton("Name Surname", "playerNameLink"));')
+    && bootstrap.includes('cell.appendChild(nameWrap);'),
+  "The synchronous bootstrap must render loading Name cells through the same populated name-cell, wrapper, and typography classes before first paint.",
 );
 
 invariant(

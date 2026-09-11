@@ -901,7 +901,20 @@
                     <button id="evaluationSearchClearButton" class="iconButton popupCloseButton evaluationSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
                   </div>
                 </label>
-                <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
+                <div id="evaluationSearchResults" class="evaluationSearchResults" data-mfl-evaluation-recent-loading="true" hidden>
+                  <div class="evaluationSearchResult mflEvaluationRecentPlaceholder" aria-hidden="true">
+                    <strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Player Name</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong>
+                    <span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">CM · 24 · Overall 85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span>
+                  </div>
+                  <div class="evaluationSearchResult mflEvaluationRecentPlaceholder" aria-hidden="true">
+                    <strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Player Name</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong>
+                    <span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">CM · 24 · Overall 85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span>
+                  </div>
+                  <div class="evaluationSearchResult mflEvaluationRecentPlaceholder" aria-hidden="true">
+                    <strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Player Name</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong>
+                    <span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">CM · 24 · Overall 85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span>
+                  </div>
+                </div>
               </section>
               <section class="evaluationActions" aria-label="Evaluation actions">
                 <section id="evaluationButtons" class="evaluationButtons" aria-label="Evaluation page actions" hidden>
@@ -1014,13 +1027,13 @@
           <div id="playerDetail" class="playerDetail" data-mfl-static-player-shell="true">
             <section class="playerHero playerHeroPending" aria-hidden="true">
               <div class="playerHeroMedia">
-                <div class="playerHeroOverall isPending"><strong>&nbsp;</strong></div>
+                <div class="playerHeroOverall isPending"><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
                 <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
               </div>
               <div class="playerHeroIdentity">
                 <button class="playerEyebrow playerIdText" type="button" disabled>ID #000000</button>
-                <h2 class="playerTitle"><span class="playerTitleName">&nbsp;</span><span class="playerTitleNoteIcon" data-player-note-title-icon></span></h2>
-                <p>&nbsp;</p>
+                <h2 class="playerTitle"><span class="playerTitleName"><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Name Surname</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><span class="playerTitleNoteIcon" data-player-note-title-icon></span></h2>
+                <p><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">CM, RW</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></p>
               </div>
               <div class="playerHeroActions">
                 <div class="playerHeroActionMenu">
@@ -1035,14 +1048,14 @@
                 <div class="playerPanel playerInfoPanel">
                   <h3>Profile</h3>
                   <div class="detailGrid">
-                    <div class="nationalityDetailCard"><span>Nationality</span><strong>&nbsp;</strong></div>
-                    <div><span>Age</span><strong data-mfl-static-player-age><span class="playerDetailAgeLine">&nbsp;</span></strong></div>
-                    <div><span>Height</span><strong>&nbsp;</strong></div>
-                    <div><span>Foot</span><strong>&nbsp;</strong></div>
-                    <div><span>Seasons</span><strong>&nbsp;</strong></div>
-                    <div><span>Agent</span><strong>&nbsp;</strong></div>
-                    <div class="contractDetailCard playerInfoFullWidthCard"><span>Contract</span><strong>&nbsp;</strong></div>
-                    <div class="revShareDetailCard playerInfoFullWidthCard"><span>Rev Share</span><strong>&nbsp;</strong></div>
+                    <div class="nationalityDetailCard"><span>Nationality</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Italy</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div><span>Age</span><strong data-mfl-static-player-age><span class="playerDetailAgeLine"><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">24</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span></strong></div>
+                    <div><span>Height</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">182 cm</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div><span>Foot</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Right</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div><span>Seasons</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">4</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div><span>Agent</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Agent Name</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="contractDetailCard playerInfoFullWidthCard"><span>Contract</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Club Name · Diamond</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="revShareDetailCard playerInfoFullWidthCard"><span>Rev Share</span><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">25%</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
                   </div>
                 </div>
                 <div class="playerPanel attributesPanel">
@@ -1057,13 +1070,13 @@
                     </div>
                   </div>
                   <div class="attributeGrid" data-mfl-static-player-attributes>
-                    <div class="playerAttributeCard featured fullWidth"><span>Overall</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
-                    <div class="playerAttributeCard"><span>&nbsp;</span><strong>&nbsp;</strong></div>
+                    <div class="playerAttributeCard featured fullWidth"><span>Overall</span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                    <div class="playerAttributeCard"><span><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Attribute</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><strong><span class="mflSkeletonText attributeValueText" aria-hidden="true"><span class="mflSkeletonTextSample">82</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
                   </div>
                 </div>
                 <div class="playerPanel playerNotesPanel" data-mfl-static-player-notes="true">
@@ -1446,7 +1459,8 @@
               const currentHero = playerDetail?.querySelector(":scope > .playerHero");
               const titleName = currentHero?.querySelector(".playerTitleName");
               if (!(titleName instanceof HTMLElement)) return;
-              const rendered = String(titleName.textContent || "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ");
+              const skeletonActive = Boolean(titleName.querySelector(":scope > .mflSkeletonText"));
+              const rendered = skeletonActive ? "" : String(titleName.textContent || "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ");
               let fullName = String(titleName.dataset.playerFullName || "").trim() || cachedName;
               if (rendered && rendered !== compactPlayerPageName(fullName)) fullName = rendered;
               if (!fullName) return;
@@ -1544,36 +1558,44 @@
             if (staticAge instanceof HTMLElement && playerId) {
               const ageEntry = knownEntry("age");
               const retirementEntry = knownEntry("retirement_years");
-              const ageText = String(ageEntry?.display ?? ageEntry?.raw ?? "").trim() || "\u00a0";
-              const line = document.createElement("span");
-              line.className = "playerDetailAgeLine";
-              line.appendChild(document.createTextNode(ageText));
+              const ageText = String(ageEntry?.display ?? ageEntry?.raw ?? "").trim();
               const retirementYears = retirementEntry?.raw === null || retirementEntry?.raw === undefined || retirementEntry?.raw === ""
                 ? Number.NaN
                 : Number(retirementEntry.raw);
-              if (Number.isFinite(retirementYears) && [0, 1, 2, 3].includes(retirementYears)) {
-                const marker = document.createElement("i");
-                marker.classList.add("retirementMarker", "playerAgeMarker");
-                if (retirementYears === 0) {
-                  marker.classList.add("retirementMarker--retired");
-                  marker.dataset.tooltip = "Retired";
-                  marker.setAttribute("aria-label", "Retired");
-                  const image = document.createElement("img");
-                  image.src = "/retirement-calendar-x-2.svg";
-                  image.width = 16;
-                  image.height = 16;
-                  image.alt = "";
-                  image.setAttribute("aria-hidden", "true");
-                  marker.appendChild(image);
+              const hasRetirementMarker = Number.isFinite(retirementYears) && [0, 1, 2, 3].includes(retirementYears);
+              if (ageText || hasRetirementMarker) {
+                const line = document.createElement("span");
+                line.className = "playerDetailAgeLine";
+                if (ageText) {
+                  line.appendChild(document.createTextNode(ageText));
                 } else {
-                  const label = retirementYears + " year" + (retirementYears === 1 ? "" : "s") + " left";
-                  marker.classList.add("retirementMarker--retiring-" + retirementYears);
-                  marker.dataset.tooltip = label;
-                  marker.setAttribute("aria-label", label);
+                  const skeleton = staticAge.querySelector(".mflSkeletonText");
+                  if (skeleton instanceof HTMLElement) line.appendChild(skeleton);
                 }
-                line.appendChild(marker);
+                if (hasRetirementMarker) {
+                  const marker = document.createElement("i");
+                  marker.classList.add("retirementMarker", "playerAgeMarker");
+                  if (retirementYears === 0) {
+                    marker.classList.add("retirementMarker--retired");
+                    marker.dataset.tooltip = "Retired";
+                    marker.setAttribute("aria-label", "Retired");
+                    const image = document.createElement("img");
+                    image.src = "/retirement-calendar-x-2.svg";
+                    image.width = 16;
+                    image.height = 16;
+                    image.alt = "";
+                    image.setAttribute("aria-hidden", "true");
+                    marker.appendChild(image);
+                  } else {
+                    const label = retirementYears + " year" + (retirementYears === 1 ? "" : "s") + " left";
+                    marker.classList.add("retirementMarker--retiring-" + retirementYears);
+                    marker.dataset.tooltip = label;
+                    marker.setAttribute("aria-label", label);
+                  }
+                  line.appendChild(marker);
+                }
+                staticAge.replaceChildren(line);
               }
-              staticAge.replaceChildren(line);
             }
 
             syncCachedHeroValues();
