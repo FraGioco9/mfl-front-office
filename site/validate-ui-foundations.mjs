@@ -60,11 +60,11 @@ for (const token of [
   "--mfl-icon-size-navigation: 18px;",
   "--mfl-icon-size-control: 17px;",
   "--mfl-page-gutter-inline: 28px;",
-  "--mfl-page-inset-block-start: 4px;",
+  "--mfl-page-inset-block-start: 10px;",
   "--mfl-page-inset-block-end: 6px;",
   "--mfl-page-title-font-size: 20px;",
   "--mfl-page-title-min-height: 32px;",
-  "--mfl-page-title-margin-block-start: 6px;",
+  "--mfl-page-title-margin-block-start: 0px;",
   "--mfl-page-title-margin-block-end: 8px;",
   "--mfl-page-title-line-height: 1.2;",
   "--mfl-page-section-gap: 6px;",
@@ -155,7 +155,7 @@ includes(dropdowns, ".accountButtonIcon {\n  flex: 0 0 auto;\n  width: 18px;\n  
 for (const duplicate of [
   "--mfl-page-title-font-size: 20px;",
   "--mfl-page-title-min-height: 32px;",
-  "--mfl-page-title-margin-block-start: 6px;",
+  "--mfl-page-title-margin-block-start: 0px;",
   "--mfl-page-title-margin-block-end: 8px;",
   "--mfl-page-title-line-height: 1.2;",
   "--mfl-page-section-gap: 6px;",
@@ -360,3 +360,14 @@ for (const source of [foundations, stacking, stylesBase, styles, controls, dropd
 }
 
 console.log("Global UI foundations validation passed with semantic icon sizing, control typography/state, page layout/title/rhythm, ordinary content-surface, section-title, keyboard-focus, metadata, helper/status feedback, destructive/error, and dialog ownership contracts.");
+
+// Shared inset must survive responsive rules and static-page wrappers.
+const responsive = await read("./responsive.css");
+includes(responsive, "padding: var(--mfl-page-inset-block-start) var(--mfl-page-gutter-inline) var(--mfl-page-inset-block-end);", "Mobile main must consume the canonical page insets.");
+excludes(responsive, "padding: 4px 12px calc(var(--mobile-nav-height) + 18px);", "Mobile main must not bypass the shared page-start token.");
+includes(stylesBase, "top: var(--pinned-topbar-height);", "Pinned navigation must use the header-height owner.");
+for (const page of ["privacyPage", "changelogPage"]) {
+  const baseRule = stylesBase.match(new RegExp("\\." + page + " \\{([^}]+)\\}"))?.[1] || "";
+  includes(baseRule, "margin: 0 auto;", `${page} must not add a separate page-start margin.`);
+  excludes(responsive, `.${page} {\n    margin-top:`, `${page} responsive rules must not reintroduce page-start margins.`);
+}
