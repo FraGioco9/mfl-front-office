@@ -12,7 +12,7 @@
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
-  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 272;
+  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 252;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
@@ -135,7 +135,8 @@
   }
 
   function contextIsDevelopmentCenter(context) {
-    return String(contextClubName(context) || "").trim().toLowerCase() === "development center";
+    return String(contextClubName(context) || "").trim().toLowerCase() === "development center"
+      || contextClubId(context?.knownValues) === "100000";
   }
 
   function playerClubGradient(primaryColor) {
@@ -158,7 +159,7 @@
       return {
         kind: "development-center",
         gradient: PLAYER_DEVELOPMENT_CENTER_GRADIENT,
-        logoUrl: PLAYER_DEVELOPMENT_CENTER_LOGO_URL,
+        logoUrl: "",
         clubId: "",
         name: "Development Center",
       };
@@ -186,7 +187,26 @@
     logo.className = "playerHeroBrandLogo";
     logo.alt = "";
     logo.setAttribute("aria-hidden", "true");
-    mark.appendChild(logo);
+    const developmentCenterIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    developmentCenterIcon.classList.add("playerHeroDevelopmentCenterIcon");
+    developmentCenterIcon.setAttribute("viewBox", "0 0 24 24");
+    developmentCenterIcon.setAttribute("fill", "none");
+    developmentCenterIcon.setAttribute("stroke", "currentColor");
+    developmentCenterIcon.setAttribute("stroke-width", "2");
+    developmentCenterIcon.setAttribute("stroke-linecap", "round");
+    developmentCenterIcon.setAttribute("stroke-linejoin", "round");
+    developmentCenterIcon.setAttribute("aria-hidden", "true");
+    for (const pathData of [
+      "M16.05 10.966a5 2.5 0 0 1-8.1 0",
+      "m16.923 14.049 4.48 2.04a1 1 0 0 1 .001 1.831l-8.574 3.9a2 2 0 0 1-1.66 0l-8.574-3.91a1 1 0 0 1 0-1.83l4.484-2.04",
+      "M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z",
+      "M9.194 6.57a5 2.5 0 0 0 5.61 0",
+    ]) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      developmentCenterIcon.appendChild(path);
+    }
+    mark.append(logo, developmentCenterIcon);
     return mark;
   }
 
@@ -219,7 +239,7 @@
     const mark = ensurePlayerHeroBrandMark(media);
     if (!(mark instanceof HTMLAnchorElement)) return false;
     const logo = mark.querySelector(":scope > .playerHeroBrandLogo");
-    const visible = Boolean(branding?.logoUrl);
+    const visible = branding?.kind === "development-center" || Boolean(branding?.logoUrl);
 
     mark.classList.toggle("playerHeroBrandMarkVisible", visible);
     mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
@@ -655,7 +675,7 @@ function applyOverallBoxAppearance(box, overall) {
     media.style.flex = "0 0 auto";
     media.style.alignItems = "flex-end";
     media.style.alignSelf = "stretch";
-    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 68);
+    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 48);
     media.style.minWidth = "0";
 
     const overall = document.createElement("div");
