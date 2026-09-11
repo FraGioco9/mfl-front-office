@@ -179,7 +179,7 @@ for (const required of [
   ".flagImage {\n  width: 20px;\n  height: 20px;",
   ".detailGrid > div > span,\n.playerAttributeCard > span {",
   ".playerHeroMedia {",
-  "width: var(--mfl-player-hero-media-width, 328px);",
+  "width: var(--mfl-player-hero-media-width, 392px);",
   ".playerHeroOverall {",
   "width: var(--mfl-player-hero-overall-size, 100px);",
   ".playerHeroPortraitFrame {",
