@@ -44,6 +44,12 @@ includes(bootstrap, 'card.className = "clubInfoCard";', "Club Info loading must 
 includes(bootstrap, 'row.className = "clubInfoCompetition";', "Club competition loading must reuse the real competition-row geometry.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club loading skeleton.");
 
+includes(bootstrap, 'createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton")', "Individual Club first paint/loading must reserve the country-flag footprint before hydrated identity data arrives.");
+includes(clubCore, 'countryFlagElement(identity.nation, "clubLocationFlag")', "Hydrated Club identity must render the canonical country flag immediately before the city/location text.");
+includes(stylesBase, ".clubIdentityLocation {", "Club identity must own explicit flag-plus-location row geometry.");
+includes(stylesBase, ".clubIdentityLocation .clubLocationFlag {", "Club identity must size the location flag from the loaded row geometry.");
+
+
 includes(stylesBase, "grid-template-columns: 168px minmax(0, 1fr);", "Desktop Club identity must reserve the enlarged colour/logo column.");
 includes(stylesBase, "min-height: 184px;", "Desktop Club identity must keep the enlarged profile height.");
 includes(stylesBase, "max-width: 132px;", "Desktop Club identity logo must scale with the enlarged profile geometry.");
