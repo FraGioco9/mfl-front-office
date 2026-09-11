@@ -40,11 +40,14 @@ includes(clubCore, 'type: "recent",\n          clubIds: normalizedClubId,', "Unk
 includes(bootstrap, "function firstPaintClubIdentity(urlLike = window.location.href) {", "Club refresh must resolve cached profile identity during first paint.");
 includes(bootstrap, "function primeClubIdentityFirstPaint(urlLike = window.location.href) {", "Club refresh must paint the cached branded identity shell before hydration.");
 includes(bootstrap, "function primeClubProfileLoading(view = \"info\") {", "Club Info must have a data-shaped first-paint skeleton.");
-includes(bootstrap, 'card.className = "clubInfoCard";', "Club Info loading must reuse the real card geometry.");
+includes(bootstrap, 'card.className = "clubInfoCard clubInfoCardLoading";', "Club Info loading must reuse the real card geometry and expose the whole card as a skeleton surface.");
 includes(bootstrap, 'row.className = "clubInfoCompetition";', "Club competition loading must reuse the real competition-row geometry.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club loading skeleton.");
+includes(bootstrap, 'Reflect.set(window, "__mflCreateFlagSkeleton", createFlagSkeleton);', "Table, My Clubs, and individual Club loading must share one flag-silhouette skeleton renderer.");
+includes(loadingCss, ".clubInfoCardLoading {", "Club Info loading must mask the complete loaded card surface rather than only its text values.");
+includes(loadingCss, "border-color: transparent;", "Club Info skeleton cards must keep border geometry without drawing a visible skeleton border.");
 
-includes(bootstrap, 'createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton")', "Individual Club first paint/loading must reserve the country-flag footprint before hydrated identity data arrives.");
+includes(bootstrap, 'createFlagSkeleton("clubLocationFlag clubLocationFlagSkeleton")', "Individual Club first paint/loading must reuse the canonical table flag silhouette while inheriting Club identity flag dimensions.");
 includes(clubCore, 'countryFlagElement(identity.nation, "clubLocationFlag")', "Hydrated Club identity must render the canonical country flag immediately before the city/location text.");
 includes(stylesBase, ".clubIdentityLocation {", "Club identity must own explicit flag-plus-location row geometry.");
 includes(stylesBase, ".clubIdentityLocation .clubLocationFlag {", "Club identity must size the location flag from the loaded row geometry.");
@@ -114,6 +117,22 @@ for (const forbidden of [
 includes(eagerCore, 'if (pageKey && pageName !== "club") {', "Club view switches must not persist generic table-filter state.");
 includes(eagerCore, 'if (tablePages.has(pageName) && pageName !== "club") {', "Club incremental rendering must not restore saved table-filter state.");
 includes(eagerCore, 'delete state.tablePageStates.club;', "Persisted legacy Club filter state must be purged from shared table preferences.");
+
+includes(
+  eagerCore,
+  'const viewLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())',
+  "Network-backed Club view switches must enter the canonical table skeleton lifecycle.",
+);
+includes(
+  eagerCore,
+  'window.__mflTableLoadingRuntime?.beginRequest?.(route.scope)',
+  "Current Season and All Time Club views must use the shared table loading request owner rather than a Club-specific skeleton.",
+);
+includes(
+  bootstrap,
+  'primeInitialTableStructure(tablePage, view);\n      primeInitialTableRows();\n      if (tablePage === "club") {',
+  "Direct refreshes of Squad, Contracts, Current Season, and All Time must use the canonical table-shaped skeleton before Club-specific identity loading.",
+);
 
 includes(clubCore, 'Reflect.get(window, "__mflPrimeClubProfileLoading")', "Club route loading must prime the shared Club profile skeleton before awaiting data.");
 includes(clubCore, "void clubTitleReady.then((resolvedTitle) => {", "Club title preflight must remain non-blocking while roster data loads.");
