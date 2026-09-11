@@ -2431,13 +2431,13 @@ td a {
   position: relative;
   isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 328px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 392px);
   align-items: flex-end;
   align-self: stretch;
-  gap: var(--mfl-player-hero-media-gap, 24px);
-  width: var(--mfl-player-hero-media-width, 328px);
-  min-width: var(--mfl-player-hero-media-width, 328px);
-  max-width: var(--mfl-player-hero-media-width, 328px);
+  gap: var(--mfl-player-hero-media-gap, 88px);
+  width: var(--mfl-player-hero-media-width, 392px);
+  min-width: var(--mfl-player-hero-media-width, 392px);
+  max-width: var(--mfl-player-hero-media-width, 392px);
 }
 
 .playerHeroOverall {
@@ -2468,17 +2468,17 @@ td a {
 
 .playerHeroBrandMark {
   position: absolute;
-  left: calc(var(--mfl-player-hero-overall-size, 100px) + 4px);
-  bottom: var(--mfl-player-hero-brand-bottom, 30px);
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 8px);
+  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 108px)) / 2);
   z-index: 1;
   display: grid;
   place-items: center;
-  width: var(--mfl-player-hero-brand-size, 40px);
-  min-width: var(--mfl-player-hero-brand-size, 40px);
-  max-width: var(--mfl-player-hero-brand-size, 40px);
-  height: var(--mfl-player-hero-brand-size, 40px);
-  min-height: var(--mfl-player-hero-brand-size, 40px);
-  max-height: var(--mfl-player-hero-brand-size, 40px);
+  width: var(--mfl-player-hero-brand-size, 108px);
+  min-width: var(--mfl-player-hero-brand-size, 108px);
+  max-width: var(--mfl-player-hero-brand-size, 108px);
+  height: var(--mfl-player-hero-brand-size, 108px);
+  min-height: var(--mfl-player-hero-brand-size, 108px);
+  max-height: var(--mfl-player-hero-brand-size, 108px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -2800,33 +2800,6 @@ button.playerIdText:active {
 :root[data-theme="dark"] .playerAttributeCard .attributeValueText {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-}
-#playerDetail:not(.playerOverallRarityPaintComplete) .playerHeroOverall:not(.isPending),
-#playerDetail:not(.playerOverallRarityPaintComplete) .playerAttributeCard.featured:not(.isPending) {
-  background: var(--surface);
-}
-
-@keyframes playerOverallRarityPaint {
-  from {
-    background-size: 100% 0%, 100% 0%;
-  }
-  to {
-    background-size: 100% 100%, 100% 100%;
-  }
-}
-
-.playerHeroOverall.rarityPaintOnce,
-.playerAttributeCard.featured.rarityPaintOnce {
-  background-position: center bottom, center;
-  background-repeat: no-repeat;
-  animation: playerOverallRarityPaint 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .playerHeroOverall.rarityPaintOnce,
-  .playerAttributeCard.featured.rarityPaintOnce {
-    animation: none;
-  }
 }
 .playerAttributeCard.featured {
   border-color: var(--border);
@@ -8859,10 +8832,9 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-player-portrait-width: calc(var(--mfl-player-portrait-height) * 1.824);
     --mfl-player-portrait-radius: clamp(4px, 1vw, 6px);
     --mfl-player-card-radius: var(--mfl-player-panel-radius);
-    --mfl-player-hero-media-gap: clamp(16px, 4vw, 20px);
+    --mfl-player-hero-brand-size: var(--mfl-player-portrait-height);
+    --mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(18px, 4vw, 26px));
     --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
-    --mfl-player-hero-brand-size: clamp(28px, 7vw, 36px);
-    --mfl-player-hero-brand-bottom: clamp(16px, 4vw, 24px);
     --mfl-player-hero-identity-width: 100%;
     --mfl-player-hero-identity-action-gap: 0px;
     --mfl-player-hero-identity-align-self: center;

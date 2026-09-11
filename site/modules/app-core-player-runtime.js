@@ -13,7 +13,7 @@
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
-  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 228;
+  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 292;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
@@ -29,7 +29,6 @@
   let pendingDetailPlayerId = "";
   let readyDetailPlayerId = "";
   let readyTransitionPlayerId = "";
-  let rarityPaintPlayerId = "";
 
   function loadingBlank() {
     return "\u00A0";
@@ -150,7 +149,7 @@
     const red = Number.parseInt(normalized.slice(0, 2), 16);
     const green = Number.parseInt(normalized.slice(2, 4), 16);
     const blue = Number.parseInt(normalized.slice(4, 6), 16);
-    return `linear-gradient(transparent 22%, rgba(${red}, ${green}, ${blue}, 0.4))`;
+    return `linear-gradient(transparent 8%, rgba(${red}, ${green}, ${blue}, 0.65))`;
   }
 
   function playerHeroBranding(contextValue) {
@@ -416,20 +415,14 @@
     return Number.isFinite(value) && value > 0;
   }
 
-function applyLoadedOverallBackground(box, complete = false) {
+function applyLoadedOverallBackground(box) {
   if (!(box instanceof HTMLElement)) return false;
   box.style.background = PLAYER_LOADED_OVERALL_BACKGROUND;
   box.style.backgroundColor = "var(--surface)";
   box.style.backgroundPosition = "center bottom, center";
   box.style.backgroundRepeat = "no-repeat";
-  box.style.backgroundSize = complete ? "100% 100%, 100% 100%" : "100% 0%, 100% 0%";
+  box.style.backgroundSize = "100% 100%, 100% 100%";
   return true;
-}
-
-function overallRarityPaintComplete(box) {
-  if (!(box instanceof HTMLElement)) return false;
-  const detail = box.closest("#playerDetail");
-  return detail instanceof HTMLElement && detail.classList.contains("playerOverallRarityPaintComplete");
 }
 
 function applyOverallBoxAppearance(box, overall) {
@@ -442,11 +435,7 @@ function applyOverallBoxAppearance(box, overall) {
     return false;
   }
   box.style.setProperty("--rarity-color", rarityColor(overall));
-  if (overallRarityPaintComplete(box)) {
-    applyLoadedOverallBackground(box, true);
-  } else {
-    box.style.background = PLAYER_PENDING_OVERALL_BACKGROUND;
-  }
+  applyLoadedOverallBackground(box);
   return true;
 }
 
@@ -463,12 +452,6 @@ function applyOverallBoxAppearance(box, overall) {
     if (!context.playerId) return false;
     pendingDetailPlayerId = context.playerId;
     readyDetailPlayerId = "";
-    rarityPaintPlayerId = "";
-    const detail = document.getElementById("playerDetail");
-    if (detail instanceof HTMLElement) {
-      detail.classList.remove("playerOverallRarityPaintComplete");
-      detail.removeAttribute("data-player-overall-rarity-painted");
-    }
     if (playerIdFromLocation() !== context.playerId) {
       const targetPlayerId = context.playerId;
       queueMicrotask(() => {
@@ -673,7 +656,7 @@ function applyOverallBoxAppearance(box, overall) {
     media.style.flex = "0 0 auto";
     media.style.alignItems = "flex-end";
     media.style.alignSelf = "stretch";
-    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 24);
+    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 88);
     media.style.minWidth = "0";
 
     const overall = document.createElement("div");
@@ -964,35 +947,12 @@ function applyOverallBoxAppearance(box, overall) {
     return true;
   }
 
-function animateReadyOverallBoxes(container = document) {
-  const playerId = playerIdFromLocation();
-  const detail = container instanceof HTMLElement && container.id === "playerDetail"
-    ? container
-    : document.getElementById("playerDetail");
-  if (!playerId || !(detail instanceof HTMLElement)) return false;
-  if (rarityPaintPlayerId === playerId || detail.dataset.playerOverallRarityPainted === playerId) return false;
-  const boxes = Array.from(detail.querySelectorAll(".playerHeroOverall:not(.isPending), .playerAttributeCard.featured:not(.isPending)"))
-    .filter((box) => box instanceof HTMLElement);
-  if (!boxes.length) return false;
-  rarityPaintPlayerId = playerId;
-  detail.dataset.playerOverallRarityPainted = playerId;
-  const reduceMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-  boxes.forEach((box) => {
-    applyLoadedOverallBackground(box, reduceMotion);
-    if (reduceMotion) return;
-    box.classList.add("rarityPaintOnce");
-  });
-  detail.classList.add("playerOverallRarityPaintComplete");
-  return true;
-}
-
 function animateReadyControls(container = document) {
   const playerId = playerIdFromLocation();
   if (!playerId || readyTransitionPlayerId !== playerId) return false;
   const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
     .filter((control) => control instanceof HTMLElement);
   readyTransitionPlayerId = "";
-  const rarityPainted = animateReadyOverallBoxes(container);
   controls.forEach((control) => {
     control.style.opacity = "1";
     control.style.removeProperty("color");
@@ -1000,7 +960,7 @@ function animateReadyControls(container = document) {
     control.style.removeProperty("border-color");
     control.style.transition = PLAYER_READY_TRANSITION;
   });
-  return Boolean(controls.length) || rarityPainted;
+  return Boolean(controls.length);
 }
 
 
