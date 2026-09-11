@@ -276,13 +276,6 @@ function renderTableLoadingShell(pageName) {
 
   const clubPage = pageName === "club";
   if (clubPage) {
-    state.pendingTableControlRestore = null;
-    filterRules.replaceChildren();
-    hideRetiredInput.checked = false;
-    hideRetiringInput.checked = false;
-    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
-    if (packablePlayersInput) packablePlayersInput.checked = false;
-    newMintsInput.checked = false;
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");
