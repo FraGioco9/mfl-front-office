@@ -371,24 +371,26 @@ assert.match(
 );
 assert.match(
   bootstrap,
-  /card\.className = "clubInfoCard clubInfoCardLoading";/u,
-  "Club Info scalar loading cards must reuse the loaded card geometry and mark the whole card as a skeleton surface.",
+  /ownerName\.replaceChildren\(createTextSkeleton\("Agent Name"\)\);/u,
+  "Club Owner loading must use the real Owner name element with representative text.",
 );
 assert.match(
   bootstrap,
-  /colorsCard\.className = "clubInfoCard clubInfoColorsCard clubInfoCardLoading";/u,
-  "Club Info Colours loading must reuse the loaded Colours card geometry.",
+  /ownerWallet\.replaceChildren\(createTextSkeleton\("0x1234567890abcdef"\)\);/u,
+  "Club Owner loading must use the real Owner wallet element with representative text.",
 );
 assert.match(
-  bootstrap,
-  /competitionsCard\.className = "clubInfoCard clubInfoCompetitionsCard clubInfoCardLoading";/u,
-  "Club Info competitions loading must reuse the loaded full-width competition card geometry.",
+  stylesBase,
+  /\.clubIdentityOwner\s*\{[\s\S]*justify-items: end;[\s\S]*text-align: right;/u,
+  "Desktop Club Owner skeleton and loaded content must share the same right-side alignment owner.",
 );
 assert.match(
-  loading,
-  /\.clubInfoCardLoading\s*\{[\s\S]*border-color:\s*transparent;[\s\S]*background:\s*var\(--mfl-loading-placeholder-surface\);/u,
-  "Club Info skeleton cards must visually occupy the full loaded card shape without drawing a skeleton border.",
+  responsive,
+  /\.clubIdentityOwner\s*\{[\s\S]*justify-items: start;[\s\S]*text-align: left;/u,
+  "Phone Club Owner skeleton and loaded content must share the same stacked left alignment.",
 );
+assert.doesNotMatch(bootstrap, /clubInfoCard/u, "Bootstrap must not retain retired Club Info-card skeleton geometry.");
+assert.doesNotMatch(loading, /\.clubInfoCardLoading/u, "Loading CSS must not retain retired Club Info-card skeleton styling.");
 assert.match(
   bootstrap,
   /primeInitialTableStructure\(tablePage, view\);\s*primeInitialTableRows\(\);\s*if \(tablePage === "club"\)/u,
