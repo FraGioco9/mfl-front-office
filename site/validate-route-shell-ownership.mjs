@@ -64,6 +64,7 @@ invariant(
 const validRouteCases = [
   ["/", true],
   ["/evaluation", true],
+  ["/my-clubs", true],
   ["/database/attributes", true],
   ["/database/stats", true],
   ["/mfl/stats", true],
@@ -87,7 +88,7 @@ for (const [path, walletOptedIn] of validRouteCases) {
   }
 }
 
-for (const path of ["/my-players/opted-out", "/watchlist/opted-out", "/settings/opted-out"]) {
+for (const path of Object.values(routes.protectedOptedOutPaths)) {
   const request = routes.initialRequest(path);
   invariant(
     routes.requestShellId(request, { walletOptedIn: false }) === PROTECTED_ROUTE_SHELL_ID,

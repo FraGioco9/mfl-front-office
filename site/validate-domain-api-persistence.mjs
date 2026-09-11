@@ -3,6 +3,7 @@ const validators = [
   "validate-data-read-cache-policy.mjs",
   "validate-public-page-cache-policy.mjs",
   "validate-database-stats-ownership.mjs",
+  "validate-my-clubs-data.mjs",
   "validate-supabase-persistence.mjs",
   "validate-wallet-core.mjs",
   "validate-wallet-preferences-lifecycle.mjs",

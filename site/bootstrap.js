@@ -1264,6 +1264,14 @@
       primeSettingsControls();
       return;
     }
+    if (target.id === "myClubsPage") {
+      const grid = document.getElementById("myClubsGrid");
+      if (grid instanceof HTMLElement) {
+        grid.replaceChildren();
+        grid.setAttribute("aria-busy", "true");
+      }
+      return;
+    }
     resetStatsShell(target);
   }
 

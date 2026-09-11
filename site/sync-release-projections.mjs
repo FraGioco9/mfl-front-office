@@ -158,6 +158,8 @@ function firstPaintDocumentTitleProjectionSource() {
           progression: "Progression",
           "my-players": "My Players",
           myplayers: "My Players",
+          "my-clubs": "My Clubs",
+          myclubs: "My Clubs",
           settings: "Settings",
           changelog: "Changelog",
           privacy: "Privacy",

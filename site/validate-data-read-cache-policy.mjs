@@ -53,10 +53,17 @@ invariant(
   "Conditional safe public page hits must return before SQLite page work.",
 );
 invariant(
-  dataApi.includes('if (mode !== "page") return false;')
+  dataApi.includes('if (mode === "my-clubs") return true;')
+    && !dataApi.includes('if (mode === "my-clubs" || mode === "my-clubs-competitions") return true;')
+    && dataApi.includes('if (mode !== "page") return false;')
     && dataApi.includes('if (scope === "myplayers" || accessMode === "owned-progression") return true;')
     && dataApi.includes('return accessMode === "full-progression"'),
-  "Wallet proof verification must be reserved for page requests whose data actually depends on wallet access.",
+  "Wallet proof verification must be reserved for private ownership reads and page requests whose data actually depends on wallet access; public club competition reads must not reverify Dapper.",
+);
+invariant(
+  dataApi.includes('if (!signedWallet) {')
+    && dataApi.includes('sendJson(response, 401, { error: "Invalid wallet proof." }, startedAt, timings);'),
+  "Private data requests must reject an invalid wallet proof instead of returning a successful empty private dataset.",
 );
 invariant(
   dataAuth.includes('const PRIVATE_CACHE_CONTROL = "private, no-store, no-cache, must-revalidate, max-age=0";')

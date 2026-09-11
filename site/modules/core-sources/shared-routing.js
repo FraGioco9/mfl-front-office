@@ -150,11 +150,14 @@ async function openSavedEvaluationsModal() {
 }
 
 function normalizedPageName(pageName) {
-  return pageName === "my-players" ? "myplayers" : pageName;
+  if (pageName === "my-players") return "myplayers";
+  if (pageName === "myclubs") return "my-clubs";
+  return pageName;
 }
 
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
+  "my-clubs": "/my-clubs/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -171,6 +174,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
+  if (normalizedPage === "my-clubs") return "/my-clubs";
   if (normalizedPage === "settings") return "/settings";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
@@ -310,6 +314,19 @@ function pageTargetFromPath(path) {
         ...(savedId ? { savedId } : {}),
         ...(shareId ? { shareId } : {}),
       },
+    };
+  }
+
+  if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
+    if (!hasWalletOptIn()) {
+      return {
+        pageName: "my-clubs",
+        options: { replaceUrl: optedOutPathForPage("my-clubs") },
+      };
+    }
+    return {
+      pageName: "my-clubs",
+      options: cleanPath === "/myclubs" ? { replaceUrl: "/my-clubs" } : {},
     };
   }
 

@@ -166,9 +166,10 @@ assert.ok(!responsive.includes("body:not(.pinnedSidebarVisible) .myPlayersLocked
 assert.ok(generated.includes(".myPlayersLockedPage {"), "Generated production CSS must include the canonical opted-out shell.");
 assert.ok(!generated.includes(".myPlayersLockedPage {\n  position: fixed;"), "Generated production CSS must keep opted-out routes in normal footer flow.");
 
-for (const protectedPage of ["myplayers", "watchlist", "settings"]) {
-  assert.ok(pageLifecycle.includes(`pageName === "${protectedPage}"`), `${protectedPage} must remain part of the opted-out route guard.`);
-}
+assert.ok(
+  pageLifecycle.includes('["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || ""))'),
+  "All protected pages must remain in the single canonical opted-out route guard.",
+);
 assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");
 
 
