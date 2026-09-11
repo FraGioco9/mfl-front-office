@@ -587,21 +587,27 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 }
 
 .evaluationSearchControl,
-.globalSearchControl,
+.globalSearchControl {
+  position: relative;
+}
+
 .plannerSearchControl {
   position: relative;
 }
 
 .evaluationSearchControl #evaluationSearchInput,
-.globalSearchControl #playerSearchInput,
+.globalSearchControl #playerSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
 .plannerSearchControl #plannerClubSearchInput {
   width: 100%;
   padding-right: 42px;
 }
 
 .evaluationSearchClearButton,
-.playerSearchClearButton,
-.plannerSearchClearButton {
+.playerSearchClearButton {
   position: absolute;
   top: 50%;
   right: 4px;
@@ -629,9 +635,27 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   box-shadow: none;
 }
 
+.plannerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  outline: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 /* Clear controls are visible only while their adjacent search input has a value. */
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
-#playerSearchInput:placeholder-shown + .playerSearchClearButton,
+#playerSearchInput:placeholder-shown + .playerSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 #plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
