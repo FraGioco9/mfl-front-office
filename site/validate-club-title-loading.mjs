@@ -44,6 +44,8 @@ invariant(
 includes(clubCore, 'type: "recent",\n          clubIds: normalizedClubId,', "Unknown Club titles must use the exact local Club lookup.");
 includes(bootstrap, "function firstPaintClubIdentity(urlLike = window.location.href) {", "Club refresh must resolve cached profile identity during first paint.");
 includes(bootstrap, "function primeClubIdentityFirstPaint(urlLike = window.location.href) {", "Club refresh must paint the cached branded identity shell before hydration.");
+includes(bootstrap, "function firstPaintClubNationLabel(value) {", "Club first paint must normalize cached nation casing before rendering location text.");
+includes(bootstrap, "const locationLabel = [identity.city, firstPaintClubNationLabel(identity.nation)].filter(Boolean).join(\", \");", "Club first paint location must use the same nation casing as hydrated Club rendering.");
 includes(bootstrap, "function primeClubProfileLoading(view = \"attributes\") {", "Club identity loading must default to the canonical Squad view.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club identity loading skeleton.");
 includes(bootstrap, 'Reflect.set(window, "__mflCreateFlagSkeleton", createFlagSkeleton);', "Table, My Clubs, and individual Club loading must share one flag-silhouette skeleton renderer.");
