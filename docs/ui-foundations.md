@@ -201,7 +201,7 @@ Specialized tiny steppers, table action buttons, mobile-only touch geometry, and
 
 ## Tables
 
-Table visual foundations are specialist Table-domain contracts owned by `site/styles.css`; they do not collapse tables into the ordinary panel/control surface language.
+Table visual foundations and standard desktop cell geometry are specialist Table-domain contracts owned by `site/styles.css`; they do not collapse tables into the ordinary panel/control surface language.
 
 - Table surface: `var(--surface)` (`--mfl-table-surface`)
 - Table border/divider color: `var(--border)` (`--mfl-table-border-color`)
@@ -210,14 +210,16 @@ Table visual foundations are specialist Table-domain contracts owned by `site/st
 - Sortable-header hover background: `var(--surface-muted)` (`--mfl-table-sort-hover-background`)
 - Row-hover background: `var(--row-hover)` (`--mfl-table-row-hover-background`)
 - Standard desktop header/body typography: `12px` / `14px` (`--mfl-table-header-font-size` / `--mfl-table-row-font-size`)
+- Standard desktop cell inline padding: `6px` (`--mfl-table-cell-padding-inline`)
+- Header/base-cell height: `38px` (`--mfl-table-header-height`)
+- Player body content height: `34px` (`--mfl-table-row-height`)
+- Player outer row pitch: `39px` (`--mfl-table-row-outer-height`)
 
-The shared player table and equivalent Advanced Settings surface/header/divider roles consume these foundations. Advanced Settings retains its smaller row/header typography, sticky cells, and Contracts-cell hover behavior. Mobile sticky Name cells reuse the same table surface/header/row-hover tokens while retaining their stronger stuck separator and responsive geometry.
+Base table cells consume the Table-domain height/padding owner. The populated player table consumes the header/body/outer-row tokens, and its loading rows reuse the same loaded-cell wrappers without declaring an independent height. Advanced Settings retains its smaller row/header geometry and typography, sticky cells, and Contracts-cell hover behavior. Mobile sticky Name cells reuse the same table surface/header/row-hover tokens while retaining their stronger stuck separator and responsive geometry.
 
 Uniform Width remains the only numeric player-table column-width contract.
 
-- Header height: `38px`
-- Body row height: `34px`
-- Outer row pitch: `39px`
+- Header/base-cell height, player body height, and outer row pitch remain owned by the Table-domain geometry tokens above
 - Column percentages remain owned by the `--mfl-table-col-*` variables
 - Responsive table typography and geometry remain in the responsive owner and may scale at the existing breakpoints
 - Evaluation-specific geometry, loading surfaces, table action controls, sticky mechanics, and specialist cell states remain domain-owned
