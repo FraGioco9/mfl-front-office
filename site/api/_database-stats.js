@@ -1,5 +1,6 @@
 const {
   getGeneratedAt,
+  getRuntimeMetadata,
   queryRows,
   queryOne,
   tableExists,
@@ -14,10 +15,7 @@ const EXCLUDED_WALLET_ADDRESSES = Object.freeze([
 const DATABASE_STATS_CONTRACT = "ownership-addresses-v1";
 
 function runtimeMetadataValue(key) {
-  return String(queryOne(
-    "SELECT value FROM runtime_metadata WHERE key = ? LIMIT 1",
-    [String(key || "")],
-  )?.value || "").trim();
+  return String(getRuntimeMetadata(key) ?? "").trim();
 }
 
 function preparedDatabaseStatsData() {
@@ -60,7 +58,6 @@ function liveDatabaseStatsData() {
   const excludedOwnershipSql = `lower(coalesce(wallet_address, '')) NOT IN (?, ?)`;
   const ownershipParameters = EXCLUDED_WALLET_ADDRESSES.map((address) => address.toLowerCase());
   const activeSql = "coalesce(CAST(retirement_years AS INTEGER), -1) <> 0";
-  const retiredSql = "coalesce(CAST(retirement_years AS INTEGER), -1) = 0";
   const overallSql = `CASE
     WHEN upper(trim(CASE WHEN instr(positions, ',') > 0 THEN substr(positions, 1, instr(positions, ',') - 1) ELSE positions END)) = 'GK'
       THEN CAST(goalkeeping AS INTEGER)
@@ -91,20 +88,14 @@ function liveDatabaseStatsData() {
     ownershipParameters,
   );
 
-  const retiredTotals = queryOne(
-    `SELECT count(*) AS totalRetiredPlayers
-     FROM players
-     WHERE ${excludedOwnershipSql}
-       AND ${retiredSql}
-       AND ${overallSql} IS NOT NULL`,
-    ownershipParameters,
-  );
+  const totalPlayers = Number(totals?.totalPlayers || 0);
+  const totalActivePlayers = Number(totals?.totalActivePlayers || 0);
 
   return {
     generatedAt: getGeneratedAt(),
-    totalPlayers: Number(totals?.totalPlayers || 0),
-    totalActivePlayers: Number(totals?.totalActivePlayers || 0),
-    totalRetiredPlayers: Number(retiredTotals?.totalRetiredPlayers || 0),
+    totalPlayers,
+    totalActivePlayers,
+    totalRetiredPlayers: Math.max(0, totalPlayers - totalActivePlayers),
     excludedWallets: ["MFL", "MFL Trade"],
     excludedWalletAddresses: [...EXCLUDED_WALLET_ADDRESSES],
     columns: ["overall", "age", "retirement_years", "count"],
