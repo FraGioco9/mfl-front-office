@@ -434,7 +434,15 @@
   }
 
   .clubIdentityMain {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
     padding: 14px;
+  }
+
+  .clubIdentityOwner {
+    justify-items: start;
+    max-width: 100%;
+    text-align: left;
   }
 
   .clubIdentityId {
@@ -451,25 +459,3 @@
     font-size: 13px;
   }
 
-  .clubInfoGrid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 5px;
-  }
-
-  .clubInfoCard {
-    min-height: 68px;
-    padding: 8px 9px;
-  }
-
-  .clubInfoValue {
-    font-size: 16px;
-  }
-
-  .clubInfoCompetition {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
-
-  .clubInfoCompetition span {
-    text-align: left;
-  }
