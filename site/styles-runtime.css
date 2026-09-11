@@ -2468,17 +2468,17 @@ td a {
 
 .playerHeroBrandMark {
   position: absolute;
-  left: calc(var(--mfl-player-hero-overall-size, 100px) + 16px);
-  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 108px)) / 2);
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 28px);
+  bottom: calc((var(--mfl-player-portrait-height, 112px) - var(--mfl-player-hero-brand-size, 92px)) / 2);
   z-index: 1;
   display: grid;
   place-items: center;
-  width: var(--mfl-player-hero-brand-size, 108px);
-  min-width: var(--mfl-player-hero-brand-size, 108px);
-  max-width: var(--mfl-player-hero-brand-size, 108px);
-  height: var(--mfl-player-hero-brand-size, 108px);
-  min-height: var(--mfl-player-hero-brand-size, 108px);
-  max-height: var(--mfl-player-hero-brand-size, 108px);
+  width: var(--mfl-player-hero-brand-size, 92px);
+  min-width: var(--mfl-player-hero-brand-size, 92px);
+  max-width: var(--mfl-player-hero-brand-size, 92px);
+  height: var(--mfl-player-hero-brand-size, 92px);
+  min-height: var(--mfl-player-hero-brand-size, 92px);
+  max-height: var(--mfl-player-hero-brand-size, 92px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -8849,8 +8849,8 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-player-portrait-width: calc(var(--mfl-player-portrait-height) * 1.824);
     --mfl-player-portrait-radius: clamp(4px, 1vw, 6px);
     --mfl-player-card-radius: var(--mfl-player-panel-radius);
-    --mfl-player-hero-brand-size: var(--mfl-player-portrait-height);
-    --mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(40px, 9vw, 48px));
+    --mfl-player-hero-brand-size: calc(var(--mfl-player-portrait-height) * 0.82);
+    --mfl-player-hero-media-gap: calc(var(--mfl-player-portrait-height) - clamp(40px, 9vw, 48px));
     --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
     --mfl-player-hero-identity-width: 100%;
     --mfl-player-hero-identity-action-gap: 0px;

@@ -997,6 +997,19 @@ function animateReadyControls(container = document) {
     if (event.key === "Escape" && activeHeroActionMenu instanceof HTMLElement) closeHeroActionMenu(activeHeroActionMenu);
   });
 
+  window.addEventListener("mfl:loading-state", () => {
+    if (document.body?.dataset.page !== "player") return;
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return;
+    syncPlayerAttributeViewActiveState(detail);
+  });
+  window.addEventListener("mfl:ready", () => {
+    if (document.body?.dataset.page !== "player") return;
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return;
+    syncPlayerAttributeViewActiveState(detail);
+  });
+
   function applyHeroLayout(hero) {
     if (!(hero instanceof HTMLElement)) return false;
     const identity = hero.querySelector(":scope > .playerHeroIdentity");
@@ -1315,6 +1328,22 @@ function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocati
   return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;
 }
 
+function syncPlayerAttributeViewActiveState(containerValue, playerIdValue = playerIdFromLocation()) {
+  const container = containerValue instanceof HTMLElement
+    ? containerValue
+    : document.getElementById("playerDetail");
+  if (!(container instanceof HTMLElement)) return false;
+  const playerId = normalizePlayerId(playerIdValue);
+  const loading = playerAttributeLoadingActive(playerId);
+  const selectedView = String(state.playerAttributeView || "attributes");
+  const buttons = Array.from(container.querySelectorAll(".playerAttributeViewButton"));
+  buttons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.classList.toggle("active", !loading && button.dataset.playerAttributeView === selectedView);
+  });
+  return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
+}
+
 function stableAttributePanelHtml(row) {
   return renderPlayerAttributePanel(row);
 }
@@ -1568,6 +1597,7 @@ function stableAttributePanelHtml(row) {
     stableAttributePanelHtml,
     attributeViewForRender,
     attributeViewLoadingActive: playerAttributeLoadingActive,
+    syncAttributeViewActiveState: syncPlayerAttributeViewActiveState,
     playerAgeMarkerHtml,
     playerNationalityHtml,
     beginDetailNavigation,
@@ -2164,6 +2194,8 @@ function renderPlayerPageOwner(playerId) {
   }
 
   state.playerAttributeView = selectedAttributeView;
+  const syncAttributeViewActiveState = Reflect.get(Reflect.get(window, "__mflPlayerFirstPaintRuntime") || {}, "syncAttributeViewActiveState");
+  if (typeof syncAttributeViewActiveState === "function") syncAttributeViewActiveState(playerDetail, id);
   window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
     playerId: id,
