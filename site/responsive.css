@@ -408,6 +408,39 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 24px;
   }
 
+  .clubIdentity {
+    grid-template-columns: 140px minmax(0, 1fr);
+    min-height: 156px;
+  }
+
+  .clubIdentityLogoFrame {
+    padding: 14px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 110px;
+    max-height: 120px;
+  }
+
+  .clubIdentityMain {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 30%);
+    gap: 16px;
+    padding: 18px 20px;
+  }
+
+  .clubIdentityId {
+    font-size: 13px;
+  }
+
+  .clubIdentityName {
+    font-size: 30px;
+  }
+
+  .clubIdentityMeta {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
   .tablePageTitle,
   .evaluationTitleRow {
     margin-top: 2px;
@@ -2696,6 +2729,48 @@ html:not(.mflInitialRouteResolved):is(
     height: 11px;
     flex-basis: 11px;
   }
+
+  .clubIdentity {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 136px;
+    margin-bottom: 6px;
+  }
+
+  .clubIdentityLogoFrame {
+    padding: 12px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 88px;
+    max-height: 96px;
+  }
+
+  .clubIdentityMain {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .clubIdentityOwner {
+    justify-items: start;
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .clubIdentityId {
+    font-size: 11px;
+  }
+
+  .clubIdentityName {
+    font-size: 24px;
+  }
+
+  .clubIdentityMeta {
+    gap: 4px 9px;
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
 
   .advancedPlayerTable {
     min-width: 500px;

@@ -29,6 +29,19 @@ try {
       logo_version TEXT,
       owner_wallet_address TEXT
     );
+    CREATE TABLE clubs (
+      club_id TEXT PRIMARY KEY,
+      name TEXT,
+      city TEXT,
+      country TEXT,
+      primary_color TEXT,
+      secondary_color TEXT,
+      status TEXT,
+      division INTEGER,
+      owner_wallet_address TEXT,
+      owner_name TEXT,
+      current_competition_ids TEXT
+    );
     CREATE INDEX runtime_clubs_owner_index ON runtime_clubs(owner_wallet_address, division, club_id);
     CREATE TABLE competitions (
       competition_id INTEGER PRIMARY KEY,
@@ -90,6 +103,12 @@ try {
   `);
   insertClub.run(101, "Owner One A", "Rome", "ITALY", "#111111", "#222222", "[1,8]", 4, "1", "0xaaaaaaaaaaaaaaaa");
   insertClub.run(102, "Owner One B", "Milan", "ITALY", "#333333", "#444444", "[]", 6, "1", "0xaaaaaaaaaaaaaaaa");
+  db.prepare(`
+    INSERT INTO clubs (
+      club_id, name, city, country, primary_color, secondary_color, status,
+      division, owner_wallet_address, owner_name, current_competition_ids
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run("101", "Owner One A", "Rome", "ITALY", "#111111", "#222222", "FOUNDED", 4, "0xaaaaaaaaaaaaaaaa", "Owner One", "[1,8]");
   insertClub.run(202, "Owner Two", "Paris", "FRANCE", "#555555", "#666666", "[]", 3, "1", "0xbbbbbbbbbbbbbbbb");
 
   const insertCompetition = db.prepare(
@@ -119,12 +138,13 @@ try {
   const queryRows = database.queryRows;
   let ownershipPlan = [];
   database.queryRows = (sql, params) => {
-    if (sql.includes("FROM runtime_clubs") && sql.includes("owner_wallet_address")) {
+    if (sql.includes("FROM runtime_clubs") && sql.includes("WHERE owner_wallet_address = ?")) {
       ownershipPlan = queryRows("EXPLAIN QUERY PLAN " + sql, params);
     }
     return queryRows(sql, params);
   };
-  const { myClubsData, myClubsCompetitionsData } = require("./api/_clubs");
+  delete require.cache[require.resolve("./api/_clubs")];
+  const { clubProfileData, myClubsData, myClubsCompetitionsData } = require("./api/_clubs");
 
   const ownerOne = myClubsData("0xAAAAAAAAAAAAAAAA");
   assert.deepEqual(ownerOne.clubs.map((club) => Number(club.clubId)), [101, 102]);
@@ -132,6 +152,19 @@ try {
     "Ownership lookup must use the existing normalized-wallet index rather than scan all clubs.");
   assert.ok(ownerOne.clubs.every((club) => !Object.prototype.hasOwnProperty.call(club, "competitions")),
     "Base My Clubs response must not block on competition enrichment.");
+
+  const profile = clubProfileData("101");
+  assert.equal(profile?.name, "Owner One A");
+  assert.equal(profile?.city, "Rome");
+  assert.equal(profile?.nation, "ITALY");
+  assert.equal(profile?.primaryColor, "#111111");
+  assert.equal(profile?.secondaryColor, "#222222");
+  assert.equal(profile?.status, "FOUNDED",
+    "Club profile must supplement metadata missing from an older runtime_clubs projection using canonical clubs data.");
+  assert.equal(profile?.ownerWalletAddress, "0xaaaaaaaaaaaaaaaa");
+  assert.equal(profile?.ownerName, "Owner One");
+  assert.match(profile?.logoUrl || "", /\/u\/clubs\/101\/logo\.webp\?v=1$/u,
+    "Club profile must use the same canonical MFL logo source as My Clubs.");
 
   const ownerTwo = myClubsData("0xbbbbbbbbbbbbbbbb");
   assert.deepEqual(ownerTwo.clubs.map((club) => Number(club.clubId)), [202]);

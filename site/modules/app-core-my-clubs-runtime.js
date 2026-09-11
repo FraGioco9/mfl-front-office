@@ -74,6 +74,19 @@
     return element;
   }
 
+  function loadingFlagSkeleton(extraClass = "") {
+    const createFlagSkeleton = Reflect.get(window, "__mflCreateFlagSkeleton");
+    if (typeof createFlagSkeleton === "function") return createFlagSkeleton(extraClass);
+
+    const skeleton = document.createElement("span");
+    skeleton.className = `flagImage mflTableFlagSkeleton${extraClass ? ` ${extraClass}` : ""}`;
+    skeleton.setAttribute("aria-hidden", "true");
+    const fill = document.createElement("span");
+    fill.className = "mflTableFlagSkeletonFill";
+    skeleton.appendChild(fill);
+    return skeleton;
+  }
+
   function loadingCompetitionList() {
     const competitions = document.createElement("div");
     competitions.className = "myClubCompetitions myClubCompetitionsLoading";
@@ -133,7 +146,11 @@
     if (location) {
       const locationLine = document.createElement("span");
       locationLine.className = "myClubLocation";
-      appendLoadingText(locationLine, location);
+      locationLine.appendChild(loadingFlagSkeleton("clubLocationFlag"));
+      const locationText = document.createElement("span");
+      locationText.className = "clubLocationText";
+      appendLoadingText(locationText, location);
+      locationLine.appendChild(locationText);
       meta.appendChild(locationLine);
     }
 
@@ -213,7 +230,9 @@
     return "";
   }
 
-  function saveClubDestination(clubId, name, divisionInfo) {
+  function saveClubDestination(club, divisionInfo) {
+    const clubId = String(club?.clubId || "").trim();
+    const name = String(club?.name || "").trim();
     if (!clubId || !name) return;
     try {
       const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
@@ -223,6 +242,15 @@
         name,
         divisionName: String(divisionInfo?.name || ""),
         divisionColor: String(divisionInfo?.color || ""),
+        city: String(club?.city || "").trim(),
+        nation: String(club?.nation || "").trim(),
+        primaryColor: safeColor(club?.primaryColor),
+        secondaryColor: safeColor(club?.secondaryColor),
+        logoUrl: String(club?.logoUrl || "").trim(),
+        logoVersion: String(club?.logoVersion || "").trim(),
+        currentCompetitions: Array.isArray(club?.competitions)
+          ? club.competitions.map((competition) => ({ ...competition }))
+          : [],
       };
       localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -343,7 +371,12 @@
     if (location) {
       const locationNode = document.createElement("span");
       locationNode.className = "myClubLocation";
-      locationNode.textContent = location;
+      const flag = countryFlagElement(club?.nation, "clubLocationFlag");
+      if (flag) locationNode.appendChild(flag);
+      const locationText = document.createElement("span");
+      locationText.className = "clubLocationText";
+      locationText.textContent = location;
+      locationNode.appendChild(locationText);
       meta.appendChild(locationNode);
     }
 
@@ -358,7 +391,7 @@
       const openClub = Reflect.get(window, "mflOpenClubPage");
       if (!clubId || typeof openClub !== "function") return;
       event.preventDefault();
-      saveClubDestination(clubId, name, divisionInfo);
+      saveClubDestination(club, divisionInfo);
       void openClub(clubId, "attributes");
     });
     return link;

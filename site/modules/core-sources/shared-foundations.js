@@ -48,6 +48,7 @@ const state = {
   evaluationSearchIndex: [],
   agentSearchIndex: [],
   clubSearchIndex: [],
+  clubProfile: null,
   searchIndexesLoaded: false,
   incrementalMode: false,
   incrementalApplying: false,

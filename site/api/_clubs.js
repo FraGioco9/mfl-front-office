@@ -286,6 +286,83 @@ function ownedClubRows(wallet, requestedClubIds = null) {
   );
 }
 
+function clubProfileRow(tableName, clubId) {
+  if (!["runtime_clubs", "clubs"].includes(tableName) || !tableExists(tableName)) return null;
+  const id = String(clubId || "").trim();
+  if (!id) return null;
+  const columns = new Set(queryRows(`PRAGMA table_info(${tableName})`).map((row) => String(row.name || "")));
+  if (!columns.has("club_id") || !columns.has("name")) return null;
+  const select = (column, fallback, alias = column) => columns.has(column) ? `${column} AS ${alias}` : `${fallback} AS ${alias}`;
+  const rows = queryRows(
+    `SELECT club_id AS clubId, name,
+            ${select("city", "''")},
+            ${select("country", "''", "nation")},
+            ${select("primary_color", "NULL", "primaryColor")},
+            ${select("secondary_color", "NULL", "secondaryColor")},
+            ${select("status", "''")},
+            ${select("division", "NULL")},
+            ${select("owner_wallet_address", "''", "ownerWalletAddress")},
+            ${select("owner_name", "''", "ownerName")},
+            ${select("logo_version", "''", "logoVersion")},
+            ${select("current_competition_ids", "'[]'", "currentCompetitionIds")}
+     FROM ${tableName}
+     WHERE club_id = ?
+     LIMIT 1`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+function firstProfileValue(...values) {
+  return values.find((value) => value !== null && value !== undefined && String(value).trim() !== "");
+}
+
+function clubProfileData(clubId) {
+  const id = String(clubId || "").trim();
+  if (!id) return null;
+
+  const runtime = clubProfileRow("runtime_clubs", id);
+  const needsCanonicalSupplement = !runtime
+    || !String(runtime.city || "").trim()
+    || !String(runtime.nation || "").trim()
+    || !String(runtime.status || "").trim()
+    || !String(runtime.ownerWalletAddress || "").trim()
+    || !String(runtime.ownerName || "").trim()
+    || !String(runtime.primaryColor || "").trim()
+    || !String(runtime.secondaryColor || "").trim();
+  const canonical = needsCanonicalSupplement ? clubProfileRow("clubs", id) : null;
+  const source = runtime || canonical;
+  if (!source) return null;
+
+  const divisionValue = firstProfileValue(runtime?.division, canonical?.division);
+  const ownerWalletAddress = firstProfileValue(runtime?.ownerWalletAddress, canonical?.ownerWalletAddress);
+  const logoVersion = firstProfileValue(runtime?.logoVersion, canonical?.logoVersion);
+  const currentCompetitionIds = parseCompetitionIds(
+    firstProfileValue(runtime?.currentCompetitionIds, canonical?.currentCompetitionIds) || "[]",
+  );
+  const numericClubId = Number(id);
+  const currentCompetitionContext = Number.isSafeInteger(numericClubId) && numericClubId > 0
+    ? currentCompetitions(numericClubId)
+    : [];
+
+  return {
+    clubId: String(firstProfileValue(runtime?.clubId, canonical?.clubId, id)),
+    name: String(firstProfileValue(runtime?.name, canonical?.name, `Club ${id}`) || "").trim(),
+    city: String(firstProfileValue(runtime?.city, canonical?.city) || "").trim(),
+    nation: String(firstProfileValue(runtime?.nation, canonical?.nation) || "").trim(),
+    primaryColor: firstProfileValue(runtime?.primaryColor, canonical?.primaryColor) || null,
+    secondaryColor: firstProfileValue(runtime?.secondaryColor, canonical?.secondaryColor) || null,
+    status: String(firstProfileValue(runtime?.status, canonical?.status) || "").trim(),
+    division: Number.isFinite(Number(divisionValue)) ? Number(divisionValue) : null,
+    ownerWalletAddress: normalizeWalletAddress(ownerWalletAddress || "").toLowerCase(),
+    ownerName: String(firstProfileValue(runtime?.ownerName, canonical?.ownerName) || "").trim(),
+    logoVersion: String(logoVersion || "").trim(),
+    logoUrl: clubLogoUrl(id, logoVersion),
+    currentCompetitionIds,
+    currentCompetitions: currentCompetitionContext,
+  };
+}
+
 function requestedClubIds(value) {
   return String(value || "")
     .split(",")
@@ -322,4 +399,4 @@ function myClubsCompetitionsData(clubIds) {
   };
 }
 
-module.exports = { CLUB_LOGO_BASE_URL, clubLogoUrl, parseCompetitionIds, calculatedLeagueStanding, cupStage, cupFinalResult, currentCompetitions, myClubsData, myClubsCompetitionsData };
+module.exports = { CLUB_LOGO_BASE_URL, clubLogoUrl, parseCompetitionIds, calculatedLeagueStanding, cupStage, cupFinalResult, currentCompetitions, clubProfileData, myClubsData, myClubsCompetitionsData };

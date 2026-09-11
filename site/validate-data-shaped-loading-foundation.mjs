@@ -18,6 +18,7 @@ const evaluationSearch = read("./evaluation-search-state-runtime.js");
 const evaluationHtml = read("./html-sources/evaluation.html");
 const playerHtml = read("./html-sources/player.html");
 const appConfig = read("./modules/app-config.js");
+const myClubsCssSource = read("./my-clubs.css");
 
 const tableRouteFamily = ["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"];
 for (const pageName of tableRouteFamily) {
@@ -231,6 +232,47 @@ assert.match(
   "Direct Player refresh must size the pending title from representative text in the real title element.",
 );
 
+assert.equal(
+  myClubs.split('countryFlagElement(club?.nation, "clubLocationFlag")').length - 1,
+  1,
+  "My Clubs must render the real country flag only in the fully loaded card.",
+);
+assert.match(
+  bootstrap,
+  /function createFlagSkeleton\(hostClass = ""\)[\s\S]*flagImage mflTableFlagSkeleton[\s\S]*mflTableFlagSkeletonFill/u,
+  "Flag skeletons must have one shared silhouette renderer derived from the canonical table flag skeleton.",
+);
+assert.match(
+  myClubs,
+  /function loadingFlagSkeleton\(extraClass = ""\)[\s\S]*__mflCreateFlagSkeleton[\s\S]*loadingFlagSkeleton\("clubLocationFlag"\)/u,
+  "My Clubs loading cards must reuse the exact table flag silhouette while inheriting My Clubs flag dimensions.",
+);
+assert.doesNotMatch(
+  myClubs,
+  /\/clubs\/\$\{encodeURIComponent\(clubId\)\}\/info/u,
+  "My Clubs cards must not retain the retired Club Info URL.",
+);
+assert.match(
+  myClubs,
+  /\/clubs\/\$\{encodeURIComponent\(clubId\)\}\/squad/u,
+  "My Clubs loaded and skeleton cards must link directly to the canonical Squad URL.",
+);
+assert.match(
+  myClubs,
+  /void openClub\(clubId, "attributes"\);/u,
+  "My Clubs SPA clicks must open the canonical Squad/Attributes view directly.",
+);
+assert.match(
+  myClubsCssSource,
+  /\.myClubLocation\s*\{[\s\S]*display: inline-flex;[\s\S]*align-items: center;[\s\S]*gap: 6px;/u,
+  "My Clubs location flags must share one loaded/loading inline geometry with the city text.",
+);
+assert.match(
+  myClubsCssSource,
+  /\.myClubLocation \.clubLocationFlag\s*\{[\s\S]*flex: 0 0 auto;[\s\S]*align-self: center;[\s\S]*width: 16px;[\s\S]*height: 16px;/u,
+  "My Clubs country flag size must be CSS-owned and stable across loaded/loading cards.",
+);
+
 assert.doesNotMatch(
   bootstrap,
   /<h2 class="tablePageTitle playerTitle">/u,
@@ -341,6 +383,33 @@ assert.match(
   myClubs,
   /Reflect\.get\(window, "__mflCreateTextSkeleton"\)/u,
   "My Clubs text placeholders must use the shared representative-text skeleton foundation.",
+);
+assert.match(
+  bootstrap,
+  /ownerName\.replaceChildren\(createTextSkeleton\("Agent Name"\)\);/u,
+  "Club Owner loading must use the real Owner name element with representative text.",
+);
+assert.match(
+  bootstrap,
+  /ownerWallet\.replaceChildren\(createTextSkeleton\("0x1234567890abcdef"\)\);/u,
+  "Club Owner loading must use the real Owner wallet element with representative text.",
+);
+assert.match(
+  stylesBase,
+  /\.clubIdentityOwner\s*\{[\s\S]*justify-items: end;[\s\S]*text-align: right;/u,
+  "Desktop Club Owner skeleton and loaded content must share the same right-side alignment owner.",
+);
+assert.match(
+  responsive,
+  /\.clubIdentityOwner\s*\{[\s\S]*justify-items: start;[\s\S]*text-align: left;/u,
+  "Phone Club Owner skeleton and loaded content must share the same stacked left alignment.",
+);
+assert.doesNotMatch(bootstrap, /clubInfoCard/u, "Bootstrap must not retain retired Club Info-card skeleton geometry.");
+assert.doesNotMatch(loading, /\.clubInfoCardLoading/u, "Loading CSS must not retain retired Club Info-card skeleton styling.");
+assert.match(
+  bootstrap,
+  /primeInitialTableStructure\(tablePage, view\);\s*primeInitialTableRows\(\);\s*if \(tablePage === "club"\)/u,
+  "Every direct Club view must receive the canonical table skeleton before Club-specific presentation is applied.",
 );
 for (const retiredLoadingGeometry of [
   "myClubLoadingLine",

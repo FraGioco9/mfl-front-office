@@ -1,4 +1,37 @@
 
+  .clubIdentity {
+    grid-template-columns: 140px minmax(0, 1fr);
+    min-height: 156px;
+  }
+
+  .clubIdentityLogoFrame {
+    padding: 14px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 110px;
+    max-height: 120px;
+  }
+
+  .clubIdentityMain {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 30%);
+    gap: 16px;
+    padding: 18px 20px;
+  }
+
+  .clubIdentityId {
+    font-size: 13px;
+  }
+
+  .clubIdentityName {
+    font-size: 30px;
+  }
+
+  .clubIdentityMeta {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
   .tablePageTitle,
   .evaluationTitleRow {
     margin-top: 2px;

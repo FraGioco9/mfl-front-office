@@ -405,7 +405,9 @@ export function browserConfigRuntimeSource(release) {
     const clubId = decodedRoutePart(segments[1]);
     if (!clubId) return null;
     const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
-    const view = normalizeTableView("club", requestedView);
+    const view = String(requestedView || "").toLowerCase() === "info"
+      ? "attributes"
+      : normalizeTableView("club", requestedView);
     if (!view) return null;
     return Object.freeze({
       clubId,

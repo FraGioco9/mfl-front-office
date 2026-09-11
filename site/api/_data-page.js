@@ -13,6 +13,7 @@ const {
 } = require("./_database");
 const { normalizeWalletAddress } = require("./_data-auth");
 const { marketplaceState } = require("./_marketplace-state");
+const { clubProfileData } = require("./_clubs");
 const {
   MFL_WALLET_ADDRESS,
   STAT_COLUMNS,
@@ -110,7 +111,10 @@ function projectedDatabaseColumns(scope, view, includeProgression, rules = []) {
   const selectedColumns = new Set(TABLE_COMMON_RESPONSE_COLUMNS);
   const normalizedView = String(view || "attributes").toLowerCase();
 
-  if (normalizedView === "contracts") {
+  if (String(scope || "").toLowerCase() === "club") {
+    TABLE_CONTRACT_RESPONSE_COLUMNS.forEach((column) => selectedColumns.add(column));
+    STAT_COLUMNS.forEach((column) => selectedColumns.add(column));
+  } else if (normalizedView === "contracts") {
     TABLE_CONTRACT_RESPONSE_COLUMNS.forEach((column) => selectedColumns.add(column));
   } else {
     STAT_COLUMNS.forEach((column) => selectedColumns.add(column));
@@ -515,9 +519,12 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
     [...parameters, pageSize, offset],
   ));
 
+  const club = scope === "club" ? clubProfileData(query.clubId) : null;
+
   return {
     columns,
     rows: rowsAsArrays(rows, columns),
+    ...(scope === "club" ? { club } : {}),
     page,
     pageSize,
     totalRows,

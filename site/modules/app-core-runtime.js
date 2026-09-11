@@ -49,6 +49,7 @@ const state = {
   evaluationSearchIndex: [],
   agentSearchIndex: [],
   clubSearchIndex: [],
+  clubProfile: null,
   searchIndexesLoaded: false,
   incrementalMode: false,
   incrementalApplying: false,
@@ -6151,6 +6152,16 @@ function countryFlagHtml(nationality) {
   return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="" data-tooltip="${label}" aria-label="${label}">`;
 }
 
+function countryFlagElement(nationality, extraClass = "") {
+  if (!countryCodeForNationality(nationality)) return null;
+  const template = document.createElement("template");
+  template.innerHTML = countryFlagHtml(nationality);
+  const flag = template.content.firstElementChild;
+  if (!(flag instanceof HTMLImageElement)) return null;
+  String(extraClass || "").split(/\s+/).filter(Boolean).forEach((className) => flag.classList.add(className));
+  return flag;
+}
+
 function rarityColorForOverall(overall) {
   const value = Number(overall || 0);
 
@@ -6874,6 +6885,11 @@ function applyIncrementalPayload(route, payload) {
   rebuildColumnIndexMap();
   state.rows = Array.isArray(payload.rows) ? payload.rows : [];
   state.filteredRows = [...state.rows];
+  if (route.scope === "club") {
+    state.clubProfile = payload.club && typeof payload.club === "object"
+      ? { ...payload.club }
+      : null;
+  }
   state.page = Number(payload.page || 1);
   if (tableRoute && !["club"].includes(route.scope)) {
     state.pageSize = Number(payload.pageSize || state.pageSize);
@@ -7762,6 +7778,11 @@ function syncLayoutCenter() {
   }
 }
 
+function applyClubPresentationFromSharedView() {
+  const owner = Reflect.get(window, "__mflApplyClubPresentation");
+  if (typeof owner === "function") owner();
+}
+
 const setIncrementalView = async function setIncrementalView(viewName) {
     const pageName = state.currentPage;
     if (!tablePages.has(pageName) && pageName !== "club") {
@@ -7820,6 +7841,18 @@ const setIncrementalView = async function setIncrementalView(viewName) {
       if (!transition) return;
     }
 
+    if (pageName === "club" && state.clubProfile && ["attributes", "contracts"].includes(nextView)) {
+      state.page = 1;
+      state.incrementalApplying = true;
+      try {
+        const result = await applyTableViewOwner.call(this, nextView);
+        applyClubPresentationFromSharedView();
+        return result;
+      } finally {
+        state.incrementalApplying = false;
+      }
+    }
+
     const viewLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())
       ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0
       : 0;
@@ -7831,7 +7864,9 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         if (!payload) return;
         state.incrementalApplying = true;
         try {
-          return await applyTableViewOwner.call(this, nextView);
+          const result = await applyTableViewOwner.call(this, nextView);
+          if (pageName === "club") applyClubPresentationFromSharedView();
+          return result;
         } finally {
           state.incrementalApplying = false;
         }

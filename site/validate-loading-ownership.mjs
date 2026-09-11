@@ -48,10 +48,11 @@ invariant(
   "Shared skeleton placeholders must be borderless.",
 );
 invariant(
-  bootstrap.includes('flagSkeleton.className = "mflTableFlagSkeleton";')
-    && bootstrap.includes('flagSample.className = "flagImage mflTableFlagSkeletonSample";')
-    && bootstrap.includes('flagSkeleton.append(flagSample, flagFill);'),
-  "Table flag skeletons must measure themselves with a real .flagImage sample so loaded and loading dimensions/alignment stay identical.",
+  bootstrap.includes('flagSkeleton.className = `flagImage mflTableFlagSkeleton${hostClass ? ` ${hostClass}` : ""}`;')
+    && bootstrap.includes('flagFill.className = "mflTableFlagSkeletonFill";')
+    && bootstrap.includes("flagSkeleton.appendChild(flagFill);")
+    && !bootstrap.includes("mflTableFlagSkeletonSample"),
+  "Flag skeletons must use the real .flagImage host so loaded and loading dimensions/alignment stay identical without a parallel sample element.",
 );
 invariant(
   loadingStyles.includes(".mflTableFlagSkeletonFill {")
@@ -290,6 +291,13 @@ invariant(
   && !tableLoading.includes("document.createDocumentFragment()")
   && !tableLoading.includes('document.createElement("td")'),
   "Table loading must not retain a second loading-row renderer.",
+);
+
+
+invariant(
+  !tableLoading.includes("clubInfoRouteActive")
+    && !tableLoading.includes("primeClubInfoLoadingSurface"),
+  "Club loading must use the canonical table skeleton lifecycle now that the separate Info view is retired.",
 );
 
 

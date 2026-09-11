@@ -209,6 +209,11 @@ function applyIncrementalPayload(route, payload) {
   rebuildColumnIndexMap();
   state.rows = Array.isArray(payload.rows) ? payload.rows : [];
   state.filteredRows = [...state.rows];
+  if (route.scope === "club") {
+    state.clubProfile = payload.club && typeof payload.club === "object"
+      ? { ...payload.club }
+      : null;
+  }
   state.page = Number(payload.page || 1);
   if (tableRoute && !["club"].includes(route.scope)) {
     state.pageSize = Number(payload.pageSize || state.pageSize);

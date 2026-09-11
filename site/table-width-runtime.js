@@ -113,7 +113,9 @@
     const clubId = decodedRoutePart(segments[1]);
     if (!clubId) return null;
     const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
-    const view = normalizeTableView("club", requestedView);
+    const view = String(requestedView || "").toLowerCase() === "info"
+      ? "attributes"
+      : normalizeTableView("club", requestedView);
     if (!view) return null;
     return Object.freeze({
       clubId,
@@ -378,4 +380,4 @@ window.__mflUniformWidth = Object.freeze({
   source: "styles.css",
   unit: "%",
 });
-window.__mflCoreBuildId = "044616ec1e06ba26";
+window.__mflCoreBuildId = "813c721b17ced8bc";

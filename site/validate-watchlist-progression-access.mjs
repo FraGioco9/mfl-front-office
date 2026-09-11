@@ -61,11 +61,11 @@ invariant(
 );
 invariant(
   coreSource.includes('club: ["attributes", "contracts", "current", "all"],'),
-  "Club public progression views must live in the canonical page-view table.",
+  "Club public progression views must live in the canonical page-view table without the retired Info view.",
 );
 invariant(
   coreSource.includes('club: "attributes",'),
-  "Club must retain its canonical Attributes default view.",
+  "Club must use Squad/Attributes as its canonical default view.",
 );
 for (const retired of [
   "PUBLIC_PROGRESSION_VIEWS",

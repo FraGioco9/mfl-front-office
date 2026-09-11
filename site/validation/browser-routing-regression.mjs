@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
+const browserClubLogo9001 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%23112233'/%3E%3C/svg%3E";
+const browserClubLogo9002 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%23223344'/%3E%3C/svg%3E";
 const testWatchlistId = "browser1";
 const testPlayer = Object.freeze({
   player_id: 1,
@@ -111,6 +113,7 @@ const browserTestSource = String.raw`(() => {
   "use strict";
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
+  const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
   const scenario = window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
@@ -540,6 +543,60 @@ const browserTestSource = String.raw`(() => {
         Math.abs(noCompetitionCard.getBoundingClientRect().height - loadingSkeletonHeight) <= 1,
         "My Clubs changed card height when competition data was empty.",
       );
+      const firstClubCard = document.querySelector('#myClubsGrid .myClubCard[data-club-id="9001"]:not(.myClubCardLoading)');
+      assert(firstClubCard instanceof HTMLAnchorElement, "My Clubs Club A card is unavailable for navigation regression.");
+      const identityLogo = document.getElementById("clubIdentityLogo");
+      const identityLogoFrame = document.querySelector("#clubIdentity .clubIdentityLogoFrame");
+      assert(identityLogo instanceof HTMLImageElement && identityLogoFrame instanceof HTMLElement, "Club identity logo shell is unavailable.");
+      let destinationLogoPainted = false;
+      let destinationLogoDropped = false;
+      const trackDestinationLogo = () => {
+        const currentSrc = String(identityLogo.getAttribute("src") || "");
+        const visible = !identityLogo.hidden && !identityLogoFrame.hidden && currentSrc === expectedBrowserClubLogo;
+        if (visible) destinationLogoPainted = true;
+        if (destinationLogoPainted && !visible) destinationLogoDropped = true;
+      };
+      const logoObserver = new MutationObserver(trackDestinationLogo);
+      logoObserver.observe(identityLogo, { attributes: true, attributeFilter: ["src", "hidden"] });
+      logoObserver.observe(identityLogoFrame, { attributes: true, attributeFilter: ["hidden"] });
+
+      firstClubCard.click();
+      trackDestinationLogo();
+      assert(text("#clubIdentityLocation") === "Bologna, Italy", "Club first paint did not normalize the already-loaded nation label.");
+      assert(!text("#clubIdentityLocation").includes("ITALY"), "Club first paint briefly exposed the raw uppercase nation value.");
+      assert(destinationLogoPainted, "Club first paint did not reuse the logo already loaded by My Clubs.");
+      await delay(120);
+      trackDestinationLogo();
+      assert(!destinationLogoDropped, "Club first paint dropped an already-loaded My Clubs logo before profile hydration.");
+      await waitFor(() => window.location.pathname === "/clubs/9001/squad", "Club A did not open on the canonical Squad route.");
+      await waitFor(() => text("#clubIdentityName") === "Browser Club", "Club A identity did not render before overlap regression.");
+      await waitFor(() => text("#clubIdentityOwnerName") === "Browser Owner", "Club A full profile did not settle after first-paint logo regression.");
+      trackDestinationLogo();
+      logoObserver.disconnect();
+      assert(!destinationLogoDropped, "Club logo disappeared between first paint and the hydrated profile.");
+      await delay(30);
+
+      const returnToMyClubs = setPage("my-clubs", true);
+      await waitFor(
+        () => document.getElementById("myClubsPage")?.hidden === false
+          && document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 3,
+        "My Clubs did not become clickable while the previous Club request was still being superseded.",
+      );
+
+      const secondClubCard = document.querySelector('#myClubsGrid .myClubCard[data-club-id="9002"]:not(.myClubCardLoading)');
+      assert(secondClubCard instanceof HTMLAnchorElement, "My Clubs Club B card is unavailable for navigation regression.");
+      secondClubCard.click();
+      assert(text("#clubIdentityName") !== "Browser Club", "Club B navigation briefly reused Club A identity.");
+      assert(text("#clubIdentityName") === "Second Browser Club", "Club B destination identity was not prepared synchronously.");
+      await waitFor(() => window.location.pathname === "/clubs/9002/squad", "Club B click was blocked by the stale Club A request.");
+      await waitFor(() => text("#clubIdentityName") === "Second Browser Club", "Club B identity did not remain authoritative.");
+      await returnToMyClubs.catch(() => null);
+
+      await setPage("my-clubs", true);
+      await waitFor(
+        () => document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 3,
+        "My Clubs did not recover after the Club A -> My Clubs -> Club B overlap regression.",
+      );
     } else if (scenario === "myclubs-competition-fail") {
       await setPage("my-clubs", true);
       await waitFor(
@@ -728,7 +785,34 @@ function pageDataStub(url) {
     && rule?.operator === ">="
     && Number(rule?.value) === 99
   ));
-  const rows = filteredEmpty ? [] : [rowForColumns(pageColumns)];
+  const requestedClubId = String(url.searchParams.get("clubId") || "").trim();
+  const clubFixtures = {
+    "9001": {
+      clubId: "9001",
+      name: "Browser Club",
+      division: 3,
+      city: "Bologna",
+      nation: "ITALY",
+      primaryColor: "#112233",
+      secondaryColor: "#445566",
+      ownerWalletAddress: "0x3333333333333333",
+      ownerName: "Browser Owner",
+      logoUrl: browserClubLogo9001,
+    },
+    "9002": {
+      clubId: "9002",
+      name: "Second Browser Club",
+      division: 4,
+      city: "Rome",
+      nation: "ITALY",
+      primaryColor: "#223344",
+      secondaryColor: "#556677",
+      ownerWalletAddress: "0x4444444444444444",
+      ownerName: "Second Browser Owner",
+      logoUrl: browserClubLogo9002,
+    },
+  };
+  const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -736,6 +820,7 @@ function pageDataStub(url) {
   return {
     columns: pageColumns,
     rows,
+    ...(scope === "club" ? { club: clubFixtures[requestedClubId] || null } : {}),
     page: 1,
     pageSize,
     totalRows: rows.length,
@@ -778,7 +863,7 @@ function dataStub(url) {
         division: 3,
         city: "Bologna",
         nation: "ITALY",
-        logoUrl: "",
+        logoUrl: browserClubLogo9001,
         primaryColor: "#112233",
         secondaryColor: "#445566",
       }, {
@@ -787,7 +872,7 @@ function dataStub(url) {
         division: 4,
         city: "Rome",
         nation: "ITALY",
-        logoUrl: "",
+        logoUrl: browserClubLogo9002,
         primaryColor: "#223344",
         secondaryColor: "#556677",
       }, {
@@ -895,6 +980,11 @@ async function createRegressionServer() {
       }
       if (myClubsMode === "my-clubs-competitions" && !invalidMyClubsProof) {
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 240));
+      }
+      if (myClubsMode === "page"
+          && String(url.searchParams.get("scope") || "") === "club"
+          && String(url.searchParams.get("clubId") || "") === "9001") {
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 220));
       }
       writeJson(
         response,

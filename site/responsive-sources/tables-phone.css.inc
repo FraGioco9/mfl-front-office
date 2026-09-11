@@ -417,3 +417,45 @@
     height: 11px;
     flex-basis: 11px;
   }
+
+  .clubIdentity {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 136px;
+    margin-bottom: 6px;
+  }
+
+  .clubIdentityLogoFrame {
+    padding: 12px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 88px;
+    max-height: 96px;
+  }
+
+  .clubIdentityMain {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .clubIdentityOwner {
+    justify-items: start;
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .clubIdentityId {
+    font-size: 11px;
+  }
+
+  .clubIdentityName {
+    font-size: 24px;
+  }
+
+  .clubIdentityMeta {
+    gap: 4px 9px;
+    margin-top: 6px;
+    font-size: 13px;
+  }
+

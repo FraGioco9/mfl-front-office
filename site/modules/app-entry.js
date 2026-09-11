@@ -268,6 +268,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
  * __mflIsRouteRuntimeReady?: (pageName: string, options?: Record<string, unknown>) => boolean,
  * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
+ * __mflPrimeClubDestinationIdentity?: (clubId: string, view?: string) => boolean,
  * __mflRunPageTransition?: (pageName: string, updateHash?: boolean, options?: Record<string, unknown>, loader?: (() => unknown)) => Promise<unknown>,
  * __mflMarkApplicationCoreLoaded?: () => void,
  * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
@@ -479,6 +480,11 @@ function installClubRouteRuntimeGate() {
       }
       return await routeOwner.call(runtimeWindow, normalizedClubId, view);
     };
+
+    // The page transition reveals the shared table shell synchronously.
+    // Prime the destination Club identity first so a previously visited Club
+    // can never be exposed while the lazy Club runtime is settling.
+    runtimeWindow.__mflPrimeClubDestinationIdentity?.(normalizedClubId, view);
 
     const runTransition = runtimeWindow.__mflRunPageTransition;
     if (typeof runTransition === "function") {
