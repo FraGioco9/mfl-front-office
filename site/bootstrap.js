@@ -180,11 +180,194 @@
         name: name || `Club ${clubId}`,
         divisionName,
         divisionColor,
+        city: String(identity?.city || "").trim(),
+        nation: String(identity?.nation || "").trim(),
+        primaryColor: String(identity?.primaryColor || "").trim(),
+        secondaryColor: String(identity?.secondaryColor || "").trim(),
+        logoUrl: String(identity?.logoUrl || "").trim(),
       };
     } catch {
       return { clubId, name: `Club ${clubId}`, divisionName: "", divisionColor: "" };
     }
   }
+
+  function primeClubIdentityFirstPaint(urlLike = window.location.href) {
+    const identity = firstPaintClubIdentity(urlLike);
+    const host = document.getElementById("clubIdentity");
+    const progression = document.getElementById("progressionPage");
+    if (!(host instanceof HTMLElement) || !(progression instanceof HTMLElement) || !identity.clubId) return;
+
+    const request = canonicalBootstrapRequest(urlLike);
+    progression.dataset.clubView = String(request?.options?.view || "info");
+
+    const id = document.getElementById("clubIdentityId");
+    const name = document.getElementById("clubIdentityName");
+    const division = document.getElementById("clubIdentityDivision");
+    const location = document.getElementById("clubIdentityLocation");
+    const logoFrame = host.querySelector(".clubIdentityLogoFrame");
+    const logo = document.getElementById("clubIdentityLogo");
+    const colors = document.getElementById("clubIdentityColors");
+
+    if (id instanceof HTMLElement) id.textContent = `Club #${identity.clubId}`;
+    if (name instanceof HTMLElement) name.textContent = identity.name;
+    if (division instanceof HTMLElement) {
+      division.textContent = identity.divisionName;
+      division.hidden = !identity.divisionName;
+      if (identity.divisionColor) division.style.color = identity.divisionColor;
+    }
+    if (location instanceof HTMLElement) {
+      const locationLabel = [identity.city, identity.nation].filter(Boolean).join(", ");
+      location.textContent = locationLabel;
+      location.hidden = !locationLabel;
+    }
+    if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
+      if (identity.logoUrl) {
+        logo.src = identity.logoUrl;
+        logo.alt = `${identity.name} logo`;
+        logo.hidden = false;
+        logoFrame.hidden = false;
+      } else {
+        logo.hidden = true;
+        logoFrame.hidden = true;
+      }
+    }
+    const cachedPrimary = String(identity.primaryColor || "").trim();
+    const cachedSecondary = String(identity.secondaryColor || "").trim();
+    const validPrimary = cachedPrimary && CSS.supports("color", cachedPrimary) ? cachedPrimary : "";
+    const validSecondary = cachedSecondary && CSS.supports("color", cachedSecondary) ? cachedSecondary : "";
+    host.style.setProperty("--club-primary", validPrimary || validSecondary || "var(--border-strong)");
+    host.style.setProperty("--club-secondary", validSecondary || validPrimary || "var(--surface-muted)");
+
+    if (colors instanceof HTMLElement) {
+      colors.replaceChildren();
+      [validPrimary, validSecondary]
+        .filter(Boolean)
+        .forEach((color, index) => {
+        const swatch = document.createElement("span");
+        swatch.className = "clubIdentityColorSwatch";
+        swatch.style.backgroundColor = color;
+        swatch.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
+        colors.appendChild(swatch);
+      });
+      colors.hidden = colors.childElementCount === 0;
+    }
+    host.classList.add("clubIdentityReady");
+  }
+
+  function clubLoadingInfoCard(label, sample, detailSample = "") {
+    const card = document.createElement("article");
+    card.className = "clubInfoCard";
+    const heading = document.createElement("span");
+    heading.className = "clubInfoLabel";
+    heading.textContent = label;
+    const value = document.createElement("strong");
+    value.className = "clubInfoValue";
+    value.appendChild(createTextSkeleton(sample));
+    card.append(heading, value);
+    if (detailSample) {
+      const detail = document.createElement("small");
+      detail.className = "clubInfoDetail";
+      detail.appendChild(createTextSkeleton(detailSample));
+      card.appendChild(detail);
+    }
+    return card;
+  }
+
+  function primeClubProfileLoading(view = "info") {
+    const progression = document.getElementById("progressionPage");
+    const normalizedView = String(view || "info");
+    if (progression instanceof HTMLElement) progression.dataset.clubView = normalizedView;
+
+    const host = document.getElementById("clubIdentity");
+    const logoFrame = host?.querySelector(".clubIdentityLogoFrame");
+    const logo = document.getElementById("clubIdentityLogo");
+    const division = document.getElementById("clubIdentityDivision");
+    const location = document.getElementById("clubIdentityLocation");
+    const colors = document.getElementById("clubIdentityColors");
+    const panel = document.getElementById("clubInfoPanel");
+
+    if (host instanceof HTMLElement) {
+      host.setAttribute("aria-busy", "true");
+      if (logoFrame instanceof HTMLElement && (!(logo instanceof HTMLImageElement) || logo.hidden || !logo.src)) {
+        logoFrame.hidden = false;
+        logoFrame.querySelectorAll("[data-club-loading]").forEach((node) => node.remove());
+        const logoPlaceholder = createDataPlaceholder("clubIdentityLogoSkeleton");
+        logoPlaceholder.dataset.clubLoading = "true";
+        logoFrame.appendChild(logoPlaceholder);
+      }
+      for (const [element, sample] of [[division, "Diamond Division"], [location, "Bologna, Italy"]]) {
+        if (!(element instanceof HTMLElement) || String(element.textContent || "").trim()) continue;
+        element.hidden = false;
+        element.dataset.clubLoading = "true";
+        element.replaceChildren(createTextSkeleton(String(sample || "00")));
+      }
+      if (colors instanceof HTMLElement && colors.childElementCount === 0) {
+        colors.hidden = false;
+        colors.dataset.clubLoading = "true";
+        for (let index = 0; index < 2; index += 1) {
+          const swatch = createDataPlaceholder("clubIdentityColorSwatch");
+          swatch.dataset.clubLoading = "true";
+          colors.appendChild(swatch);
+        }
+      }
+    }
+
+    if (!(panel instanceof HTMLElement) || normalizedView !== "info") return;
+    panel.setAttribute("aria-busy", "true");
+    panel.dataset.loading = "true";
+
+    const grid = document.createElement("div");
+    grid.className = "clubInfoGrid";
+    grid.append(
+      clubLoadingInfoCard("Division", "Diamond Division"),
+      clubLoadingInfoCard("Location", "Bologna, Italy"),
+      clubLoadingInfoCard("Status", "Founded"),
+      clubLoadingInfoCard("Owner", "Agent Name", "0x1234567890abcdef"),
+      clubLoadingInfoCard("Roster", "24 players", "Average overall 74.8"),
+    );
+
+    const colorsCard = document.createElement("article");
+    colorsCard.className = "clubInfoCard clubInfoColorsCard";
+    const colorsLabel = document.createElement("span");
+    colorsLabel.className = "clubInfoLabel";
+    colorsLabel.textContent = "Colours";
+    const colorRow = document.createElement("div");
+    colorRow.className = "clubInfoColorRow";
+    for (let index = 0; index < 2; index += 1) {
+      const item = document.createElement("span");
+      item.className = "clubInfoColor";
+      item.append(
+        createDataPlaceholder("clubInfoColorSwatch"),
+        createTextSkeleton("#123456"),
+      );
+      colorRow.appendChild(item);
+    }
+    colorsCard.append(colorsLabel, colorRow);
+    grid.appendChild(colorsCard);
+
+    const competitionsCard = document.createElement("article");
+    competitionsCard.className = "clubInfoCard clubInfoCompetitionsCard";
+    const competitionsLabel = document.createElement("span");
+    competitionsLabel.className = "clubInfoLabel";
+    competitionsLabel.textContent = "Current competitions";
+    const list = document.createElement("div");
+    list.className = "clubInfoCompetitionList";
+    for (let index = 0; index < 2; index += 1) {
+      const row = document.createElement("div");
+      row.className = "clubInfoCompetition";
+      const name = document.createElement("strong");
+      name.appendChild(createTextSkeleton("Competition Name"));
+      const detail = document.createElement("span");
+      detail.appendChild(createTextSkeleton("Season 15 · 1st · 42 pts"));
+      row.append(name, detail);
+      list.appendChild(row);
+    }
+    competitionsCard.append(competitionsLabel, list);
+    grid.appendChild(competitionsCard);
+    panel.replaceChildren(grid);
+  }
+
+  Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);
 
   function firstPaintEvaluationRouteState(urlLike = window.location.href) {
     try {
@@ -1306,6 +1489,10 @@
       const view = primeTableChrome(tablePage, window.location.href);
       primeInitialTableStructure(tablePage, view);
       primeInitialTableRows();
+      if (tablePage === "club") {
+        primeClubIdentityFirstPaint(window.location.href);
+        primeClubProfileLoading(view);
+      }
     } else {
       primeRouteSkeleton(target);
     }
