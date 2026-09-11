@@ -310,7 +310,7 @@ if (pageName === "my-clubs") {
   const settingsPageActive = pageName === "settings";
   if (options.__mflPreviousTableStateSaved !== true) {
     const previousTablePage = tablePageKey();
-    if (previousTablePage) {
+    if (previousTablePage && previousTablePage !== "club") {
       state.tablePageStates[previousTablePage] = currentTablePageState();
       saveTableState();
     }

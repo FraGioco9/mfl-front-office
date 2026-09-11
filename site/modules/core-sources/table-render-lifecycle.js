@@ -258,8 +258,9 @@ async function tableSetViewOwner(viewName) {
     return;
   }
 
+  const clubPage = state.currentPage === "club";
   const pageKey = tablePageKey();
-  if (pageKey) {
+  if (pageKey && !clubPage) {
     const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
     state.tablePageStates[pageKey] = {
       ...existingPageState,
@@ -290,13 +291,19 @@ async function tableSetViewOwner(viewName) {
 state.sortKey = targetSortState.sortKey;
 state.sortDirection = targetSortState.sortDirection;
 
-  removeUnavailableFilterRules();
-  populateAddFilterSelect();
-  refreshRuleColumnSelects();
+  if (!clubPage) {
+    removeUnavailableFilterRules();
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
+  }
 
   updateViewButtons();
   buildHeader();
 
-  applyFilters();
+  if (clubPage) {
+    applyFilters({ save: false, localOnly: true });
+  } else {
+    applyFilters();
+  }
   if (state.currentPage === "watchlist") saveTableState();
 }

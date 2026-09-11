@@ -276,13 +276,6 @@ function renderTableLoadingShell(pageName) {
 
   const clubPage = pageName === "club";
   if (clubPage) {
-    state.pendingTableControlRestore = null;
-    filterRules.replaceChildren();
-    hideRetiredInput.checked = false;
-    hideRetiringInput.checked = false;
-    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
-    if (packablePlayersInput) packablePlayersInput.checked = false;
-    newMintsInput.checked = false;
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");
@@ -2305,14 +2298,6 @@ function tableApplyFiltersOwner(options = {}) {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
     state.filteredRows.sort(compareRows);
-    state.pendingTableControlRestore = null;
-    filterRules.replaceChildren();
-    hideRetiredInput.checked = false;
-    hideRetiringInput.checked = false;
-    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
-    if (packablePlayersInput) packablePlayersInput.checked = false;
-    newMintsInput.checked = false;
-    if (filterSummary) filterSummary.textContent = "0";
     syncActiveWatchlistFromSet();
     renderTable();
     return;
@@ -2993,8 +2978,9 @@ async function tableSetViewOwner(viewName) {
     return;
   }
 
+  const clubPage = state.currentPage === "club";
   const pageKey = tablePageKey();
-  if (pageKey) {
+  if (pageKey && !clubPage) {
     const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
     state.tablePageStates[pageKey] = {
       ...existingPageState,
@@ -3025,14 +3011,20 @@ async function tableSetViewOwner(viewName) {
 state.sortKey = targetSortState.sortKey;
 state.sortDirection = targetSortState.sortDirection;
 
-  removeUnavailableFilterRules();
-  populateAddFilterSelect();
-  refreshRuleColumnSelects();
+  if (!clubPage) {
+    removeUnavailableFilterRules();
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
+  }
 
   updateViewButtons();
   buildHeader();
 
-  applyFilters();
+  if (clubPage) {
+    applyFilters({ save: false, localOnly: true });
+  } else {
+    applyFilters();
+  }
   if (state.currentPage === "watchlist") saveTableState();
 }
 
