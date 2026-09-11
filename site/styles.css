@@ -14,7 +14,8 @@
   --mfl-loading-placeholder-border: var(--border);
   --mfl-loading-placeholder-radius: 7px;
 
-  /* Shared Table-domain visual language. Responsive geometry remains specialist-owned. */
+  /* Shared Table-domain visual and standard desktop geometry language.
+   * Responsive and specialist table geometry remains locally owned. */
   --mfl-table-surface: var(--surface);
   --mfl-table-border-color: var(--border);
   --mfl-table-radius: 8px;
@@ -24,11 +25,12 @@
   --mfl-table-row-hover-background: var(--row-hover);
   --mfl-table-header-font-size: 12px;
   --mfl-table-row-font-size: 14px;
-
-  /* Uniform Width. This is the only numeric column-width contract. */
+  --mfl-table-cell-padding-inline: 6px;
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
   --mfl-table-row-outer-height: 39px;
+
+  /* Uniform Width. This is the only numeric column-width contract. */
   --mfl-table-col-select: 2.5029289594205983%;
   --mfl-table-col-actions: 2.5029289594205983%;
   --mfl-table-col-flag: 2.5029289594205983%;
