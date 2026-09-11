@@ -569,6 +569,9 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .globalSearchControl #playerSearchInput:hover:not(:disabled),
 .globalSearchControl #playerSearchInput:focus:not(:disabled),
 .globalSearchControl #playerSearchInput:focus-visible:not(:disabled),
+.plannerSearchControl:hover #plannerClubSearchInput:not(:disabled),
+#plannerClubSearchInput:focus:not(:disabled),
+#plannerClubSearchInput:focus-visible:not(:disabled),
 #pageSizeSelect:hover:not(:disabled),
 #pageSizeSelect:focus:not(:disabled),
 #pageSizeSelect:focus-visible:not(:disabled),
@@ -584,18 +587,21 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 }
 
 .evaluationSearchControl,
-.globalSearchControl {
+.globalSearchControl,
+.plannerSearchControl {
   position: relative;
 }
 
 .evaluationSearchControl #evaluationSearchInput,
-.globalSearchControl #playerSearchInput {
+.globalSearchControl #playerSearchInput,
+.plannerSearchControl #plannerClubSearchInput {
   width: 100%;
   padding-right: 42px;
 }
 
 .evaluationSearchClearButton,
-.playerSearchClearButton {
+.playerSearchClearButton,
+.plannerSearchClearButton {
   position: absolute;
   top: 50%;
   right: 4px;
@@ -613,7 +619,10 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .evaluationSearchClearButton:focus-visible:not(:disabled),
 .playerSearchClearButton:hover:not(:disabled),
 .playerSearchClearButton:focus:not(:disabled),
-.playerSearchClearButton:focus-visible:not(:disabled) {
+.playerSearchClearButton:focus-visible:not(:disabled),
+.plannerSearchClearButton:hover:not(:disabled),
+.plannerSearchClearButton:focus:not(:disabled),
+.plannerSearchClearButton:focus-visible:not(:disabled) {
   outline: 0;
   border-color: transparent;
   background: transparent;
@@ -622,7 +631,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 
 /* Clear controls are visible only while their adjacent search input has a value. */
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
-#playerSearchInput:placeholder-shown + .playerSearchClearButton {
+#playerSearchInput:placeholder-shown + .playerSearchClearButton,
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
