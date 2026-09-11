@@ -7862,23 +7862,13 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 }
 
 .mflTableFlagSkeleton {
-  display: inline-grid;
-  place-items: center;
   line-height: 0;
   pointer-events: none;
   user-select: none;
 }
 
-.mflTableFlagSkeleton > :is(.mflTableFlagSkeletonSample, .mflTableFlagSkeletonFill) {
-  grid-area: 1 / 1;
-}
-
-.mflTableFlagSkeletonSample {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .mflTableFlagSkeletonFill {
+  display: block;
   inline-size: 100%;
   block-size: 100%;
   background: var(--mfl-loading-placeholder-surface);
