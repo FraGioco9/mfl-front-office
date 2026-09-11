@@ -46,6 +46,11 @@ for (const [routeId, loadingMarker] of [
 
 assert.match(styles, /--mfl-loading-placeholder-surface:/u, "Global loading placeholders must use one canonical surface token.");
 assert.match(
+  styles,
+  /--mfl-loading-text-placeholder-surface:\s*color-mix\(in srgb, var\(--mfl-loading-placeholder-surface\) 60%, var\(--border\)\);/u,
+  "Text skeletons must use a slightly stronger theme-aware surface now that placeholder borders are removed.",
+);
+assert.match(
   loading,
   /\.mflDataPlaceholder\s*\{[\s\S]*?border:\s*0;/u,
   "Shared skeleton placeholders must be borderless while loaded components retain their own borders.",
@@ -81,8 +86,8 @@ assert.match(
 
 assert.match(
   loading,
-  /\.mflSkeletonTextFill\s*\{[\s\S]*inline-size: 100%;[\s\S]*block-size: 0\.68em;/u,
-  "The mask width must come from representative text and its height must scale with the inherited font size.",
+  /\.mflSkeletonTextFill\s*\{[\s\S]*inline-size: 100%;[\s\S]*block-size: 0\.68em;[\s\S]*background: var\(--mfl-loading-text-placeholder-surface\);/u,
+  "The text mask must inherit representative geometry while using the stronger borderless text-placeholder surface.",
 );
 for (const forbidden of ["font-size:", "font-weight:", "line-height:", "text-align:", "letter-spacing:"]) {
   const textSkeletonRule = loading.match(/\.mflSkeletonText\s*\{([\s\S]*?)\n\}/u)?.[1] || "";
