@@ -7201,6 +7201,9 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .globalSearchControl #playerSearchInput:hover:not(:disabled),
 .globalSearchControl #playerSearchInput:focus:not(:disabled),
 .globalSearchControl #playerSearchInput:focus-visible:not(:disabled),
+.plannerSearchControl:hover #plannerClubSearchInput:not(:disabled),
+#plannerClubSearchInput:focus:not(:disabled),
+#plannerClubSearchInput:focus-visible:not(:disabled),
 #pageSizeSelect:hover:not(:disabled),
 #pageSizeSelect:focus:not(:disabled),
 #pageSizeSelect:focus-visible:not(:disabled),
@@ -7220,8 +7223,17 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   position: relative;
 }
 
+.plannerSearchControl {
+  position: relative;
+}
+
 .evaluationSearchControl #evaluationSearchInput,
 .globalSearchControl #playerSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.plannerSearchControl #plannerClubSearchInput {
   width: 100%;
   padding-right: 42px;
 }
@@ -7245,7 +7257,23 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .evaluationSearchClearButton:focus-visible:not(:disabled),
 .playerSearchClearButton:hover:not(:disabled),
 .playerSearchClearButton:focus:not(:disabled),
-.playerSearchClearButton:focus-visible:not(:disabled) {
+.playerSearchClearButton:focus-visible:not(:disabled),
+.plannerSearchClearButton:hover:not(:disabled),
+.plannerSearchClearButton:focus:not(:disabled),
+.plannerSearchClearButton:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.plannerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
   outline: 0;
   border-color: transparent;
   background: transparent;
@@ -7255,6 +7283,12 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 /* Clear controls are visible only while their adjacent search input has a value. */
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
 #playerSearchInput:placeholder-shown + .playerSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -13447,62 +13481,44 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 
 .plannerClubSearchWrap {
   position: relative;
-  width: min(480px, 100%);
-  margin-top: 5px;
+  width: min(560px, 100%);
+  margin-top: 6px;
 }
 
-.plannerClubSearchInput {
-  width: 100%;
+.plannerSearchControl #plannerClubSearchInput {
+  height: 42px;
 }
 
 .plannerClubSearchResults {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   right: 0;
   left: 0;
   z-index: var(--mfl-z-dropdown);
   display: grid;
-  gap: 4px;
-  max-height: 320px;
-  padding: 6px;
+  gap: 6px;
+  max-height: 362px;
+  padding: 8px;
   overflow-y: auto;
-  border: var(--mfl-panel-border-strong);
-  border-radius: var(--mfl-radius-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}
+
+.plannerClubSearchResults[hidden] {
+  display: none;
 }
 
 .plannerClubSearchResult {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  min-height: 42px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
 }
 
-.plannerClubSearchResult:hover,
-.plannerClubSearchResult:focus-visible {
-  background: var(--row-hover);
-}
-
-.plannerClubSearchResultName {
+.plannerClubSearchResult strong {
   overflow: hidden;
-  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.plannerClubSearchResultMeta {
-  color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .plannerWorkspace {
@@ -13579,38 +13595,10 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 }
 
 .plannerPitch {
-  position: relative;
-  width: min(100%, 700px);
-  aspect-ratio: 68 / 92;
+  width: min(100%, 560px);
+  height: auto;
+  aspect-ratio: 360 / 498;
   margin: 0 auto;
-  overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--text) 46%, transparent);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 49.7%, color-mix(in srgb, var(--text) 24%, transparent) 49.7%, color-mix(in srgb, var(--text) 24%, transparent) 50.3%, transparent 50.3%),
-    linear-gradient(0deg, color-mix(in srgb, var(--primary) 18%, var(--surface-muted)), color-mix(in srgb, var(--primary) 9%, var(--surface-muted)));
-}
-
-.plannerPitch::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18%;
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in srgb, var(--text) 34%, transparent);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.plannerPitch::after {
-  content: "";
-  position: absolute;
-  inset: 8% 27%;
-  border-top: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
-  pointer-events: none;
 }
 
 .plannerSlot {
@@ -13775,10 +13763,6 @@ body[data-page="planner"] #plannerPage {
 
   .plannerFormationField {
     width: min(100%, 220px);
-  }
-
-  .plannerPitch {
-    width: min(100%, 620px);
   }
 
   .plannerRoster {
