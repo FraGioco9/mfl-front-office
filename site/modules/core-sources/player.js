@@ -12,7 +12,7 @@
   const PLAYER_HERO_PRIMARY_ACTION_WIDTH_PX = 152;
   const PLAYER_HERO_ACTION_HEIGHT_PX = 40;
   const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;
-  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 292;
+  const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 272;
   const PLAYER_HERO_IDENTITY_ACTION_GAP_PX = 16;
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
@@ -148,7 +148,7 @@
     const red = Number.parseInt(normalized.slice(0, 2), 16);
     const green = Number.parseInt(normalized.slice(2, 4), 16);
     const blue = Number.parseInt(normalized.slice(4, 6), 16);
-    return `linear-gradient(transparent 8%, rgba(${red}, ${green}, ${blue}, 0.65))`;
+    return `linear-gradient(transparent 22%, rgba(${red}, ${green}, ${blue}, 0.65))`;
   }
 
   function playerHeroBranding(contextValue) {
@@ -655,7 +655,7 @@ function applyOverallBoxAppearance(box, overall) {
     media.style.flex = "0 0 auto";
     media.style.alignItems = "flex-end";
     media.style.alignSelf = "stretch";
-    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 88);
+    media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 68);
     media.style.minWidth = "0";
 
     const overall = document.createElement("div");
