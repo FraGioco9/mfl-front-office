@@ -2,12 +2,13 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [dataApi, dataAuth, dataPage, dataQuery, dataViews, dataCachePolicy, httpCache, database] = await Promise.all([
+const [dataApi, dataAuth, dataPage, dataQuery, dataViews, databaseStats, dataCachePolicy, httpCache, database] = await Promise.all([
   read("./api/data.js"),
   read("./api/_data-auth.js"),
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./api/_data-views.js"),
+  read("./api/_database-stats.js"),
   read("./api/_data-cache-policy.js"),
   read("./api/_http-cache.js"),
   read("./api/_database.js"),
@@ -171,6 +172,23 @@ const summarySource = summaryStart >= 0 && summaryEnd > summaryStart
 invariant(
   !summarySource.includes("SELECT count(*)"),
   "summaryData must not restore request-time player/wallet COUNT(*) queries.",
+);
+invariant(
+  databaseStats.includes("getRuntimeMetadata,")
+    && databaseStats.includes('return String(getRuntimeMetadata(key) ?? "").trim();')
+    && !databaseStats.includes("SELECT value FROM runtime_metadata WHERE key = ? LIMIT 1"),
+  "Database Stats must reuse the canonical cached runtime-metadata owner instead of issuing per-request metadata SELECTs.",
+);
+const liveStatsStart = databaseStats.indexOf("function liveDatabaseStatsData() {");
+const liveStatsEnd = databaseStats.indexOf("\n}\n\nfunction databaseStatsData", liveStatsStart);
+const liveStatsSource = liveStatsStart >= 0 && liveStatsEnd > liveStatsStart
+  ? databaseStats.slice(liveStatsStart, liveStatsEnd)
+  : "";
+invariant(
+  liveStatsSource.includes("totalRetiredPlayers: Math.max(0, totalPlayers - totalActivePlayers)")
+    && !liveStatsSource.includes("retiredTotals")
+    && !liveStatsSource.includes("totalRetiredPlayers\n     FROM players"),
+  "The older-snapshot Database Stats fallback must derive retired totals from total minus active instead of running a third aggregate query.",
 );
 invariant(
   !database.includes("return getDatabase().prepare(sql).all(...parameters);")

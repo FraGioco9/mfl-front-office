@@ -66,6 +66,24 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Database Stats read-path reuse
+
+Owner: `site/api/_database-stats.js`.
+
+The prepared Database Stats path already reads the compact `runtime_database_stats` table, but
+it still queried `runtime_metadata` three times per request for the contract, total-player,
+and active-player values. Those metadata rows are now supplied by the process-local metadata
+map loaded once by `site/api/_database.js`.
+
+The older-snapshot live fallback also previously ran a separate retired-player aggregate after
+already computing total and active players. Retired players are now derived as
+`totalPlayers - totalActivePlayers`.
+
+Deterministic request-work effect:
+
+- rebuilt snapshot: 3 runtime-metadata SELECTs -> 0 per Database Stats request;
+- older-snapshot fallback: 3 aggregate queries against `players` -> 2, with identical totals.
+
 ## Shared summary/manifest counts
 
 Owner: `manifestPayload()` in `site/api/_data-query.js`.
