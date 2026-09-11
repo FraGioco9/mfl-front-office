@@ -18,7 +18,6 @@
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
   const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
-  const PLAYER_DEVELOPMENT_CENTER_LOGO_URL = "/development-center-traffic-cone.svg";
   const PLAYER_DEVELOPMENT_CENTER_GRADIENT = "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))";
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
@@ -254,8 +253,12 @@
       return false;
     }
 
-    if (logo instanceof HTMLImageElement && logo.getAttribute("src") !== branding.logoUrl) {
-      logo.src = branding.logoUrl;
+    if (logo instanceof HTMLImageElement) {
+      if (branding.kind === "club" && branding.logoUrl && logo.getAttribute("src") !== branding.logoUrl) {
+        logo.src = branding.logoUrl;
+      } else if (branding.kind !== "club") {
+        logo.removeAttribute("src");
+      }
     }
     mark.setAttribute("aria-label", branding.name || "Player affiliation");
     if (branding.kind === "club" && branding.clubId) {
