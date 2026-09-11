@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, controls, interactions] = await Promise.all([
+const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch] = await Promise.all([
   read("./modules/app-config.js"),
   read("./modules/core-sources/planner.js"),
   read("./html-sources/planner.html"),
@@ -13,6 +13,7 @@ const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, contr
   read("./planner.css"),
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
+  read("./modules/core-sources/shared-data-search.js"),
 ]);
 
 function invariant(condition, message) {
@@ -33,7 +34,10 @@ invariant(routing.includes('if (pageName === "planner")'), "Shared SPA routing m
 invariant(routing.includes('const plannerMatch = cleanPath.match(/^\\/planner'), "Shared SPA routing must classify Planner URLs.");
 invariant(lifecycle.includes('pageName === "planner"'), "Shared page lifecycle must delegate to the Planner owner.");
 invariant(planner.includes('type: "clubs"'), "Planner Club selection must reuse canonical Club search.");
-invariant(planner.includes('Reflect.get(window, "__mflDataClient")'), "Planner Club search must use the canonical data client explicitly.");
+invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club search must delegate to the canonical database-search owner.");
+invariant(planner.includes('activeInput: () => searchInput?.value || ""'), "Planner Club search must bind canonical stale-request protection to its own field.");
+invariant(sharedSearch.includes('if (type === "clubs")') && sharedSearch.includes('Array.isArray(payload?.results)'), "The canonical database-search owner must normalize Club-only search responses.");
+invariant(sharedSearch.includes('typeof options.activeInput === "function"'), "Canonical search sequencing must support route-owned search inputs without duplicating transport.");
 invariant(planner.includes('syncSearchClearButton()') && planner.includes('searchClearButton?.addEventListener("click"'), "Planner Club search must retain the shared clear-button lifecycle.");
 invariant(planner.includes('event.key === "Enter"') && planner.includes('firstResult.click()'), "Planner Club search must support the canonical Enter-to-select interaction.");
 invariant(planner.includes('pitch.replaceChildren(...fieldLines, fragment);'), "Planner pitch rendering must preserve the canonical field lines.");
