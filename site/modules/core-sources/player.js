@@ -17,6 +17,9 @@
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
+  const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
+  const PLAYER_DEVELOPMENT_CENTER_LOGO_URL = "/development-center-traffic-cone.svg";
+  const PLAYER_DEVELOPMENT_CENTER_GRADIENT = "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))";
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
   const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
@@ -94,6 +97,163 @@
     return entry ? entry.raw : "";
   }
 
+  function normalizePlayerClubBrand(value, expectedClubId = "") {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    if (!source) return null;
+    const clubId = String(source.clubId || expectedClubId || "").trim();
+    if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+    return {
+      clubId,
+      name: String(source.name || "").trim(),
+      primaryColor: String(source.primaryColor || "").trim(),
+      logoUrl: String(source.logoUrl || "").trim(),
+      logoVersion: String(source.logoVersion || "").trim(),
+    };
+  }
+
+  function cachedPlayerClubBrand(clubIdValue) {
+    const clubId = String(clubIdValue || "").trim();
+    if (!clubId) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      return normalizePlayerClubBrand(stored?.[clubId], clubId);
+    } catch {
+      return null;
+    }
+  }
+
+  function contextClubId(knownValues) {
+    return String(normalizeKnownValueEntry(knownValues?.active_contract_club_id)?.raw || "").trim();
+  }
+
+  function contextClubName(context) {
+    return knownDisplayValue(context, "active_contract_club_name");
+  }
+
+  function contextIsRetired(context) {
+    const value = knownRawValue(context, "retirement_years");
+    return value !== "" && Number(value) === 0;
+  }
+
+  function contextIsDevelopmentCenter(context) {
+    return String(contextClubName(context) || "").trim().toLowerCase() === "development center";
+  }
+
+  function playerClubGradient(primaryColor) {
+    const color = String(primaryColor || "").trim();
+    const compact = color.replace(/^#/, "");
+    const normalized = /^[0-9a-f]{3}$/i.test(compact)
+      ? compact.split("").map((character) => character + character).join("")
+      : compact;
+    if (!/^[0-9a-f]{6}$/i.test(normalized)) return "";
+    const red = Number.parseInt(normalized.slice(0, 2), 16);
+    const green = Number.parseInt(normalized.slice(2, 4), 16);
+    const blue = Number.parseInt(normalized.slice(4, 6), 16);
+    return `linear-gradient(transparent 22%, rgba(${red}, ${green}, ${blue}, 0.4))`;
+  }
+
+  function playerHeroBranding(contextValue) {
+    const context = normalizeContext(contextValue);
+    if (contextIsRetired(context)) return null;
+    if (contextIsDevelopmentCenter(context)) {
+      return {
+        kind: "development-center",
+        gradient: PLAYER_DEVELOPMENT_CENTER_GRADIENT,
+        logoUrl: PLAYER_DEVELOPMENT_CENTER_LOGO_URL,
+        clubId: "",
+        name: "Development Center",
+      };
+    }
+
+    const clubId = contextClubId(context.knownValues);
+    if (!clubId) return null;
+    const club = normalizePlayerClubBrand(context.club, clubId);
+    if (!club) return null;
+    return {
+      kind: "club",
+      gradient: playerClubGradient(club.primaryColor),
+      logoUrl: club.logoUrl,
+      clubId,
+      name: club.name || contextClubName(context),
+    };
+  }
+
+  function createPlayerHeroBrandMark() {
+    const mark = document.createElement("a");
+    mark.className = "playerHeroBrandMark";
+    mark.tabIndex = -1;
+    mark.setAttribute("aria-hidden", "true");
+    const logo = document.createElement("img");
+    logo.className = "playerHeroBrandLogo";
+    logo.alt = "";
+    logo.setAttribute("aria-hidden", "true");
+    mark.appendChild(logo);
+    return mark;
+  }
+
+  function ensurePlayerHeroBrandMark(media) {
+    if (!(media instanceof HTMLElement)) return null;
+    let mark = media.querySelector(":scope > .playerHeroBrandMark");
+    if (!(mark instanceof HTMLAnchorElement)) {
+      mark = createPlayerHeroBrandMark();
+      const portrait = media.querySelector(":scope > .playerHeroPortraitFrame");
+      media.insertBefore(mark, portrait instanceof HTMLElement ? portrait : null);
+    }
+    if (mark.dataset.playerHeroBrandBound !== "true") {
+      mark.dataset.playerHeroBrandBound = "true";
+      mark.addEventListener("click", (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const clubId = String(mark.dataset.clubId || "").trim();
+        if (!clubId || typeof window.mflOpenClubPage !== "function") return;
+        event.preventDefault();
+        window.mflOpenClubPage(clubId, "attributes");
+      });
+    }
+    return mark;
+  }
+
+  function syncPlayerHeroBrandMark(media, contextValue) {
+    if (!(media instanceof HTMLElement)) return false;
+    const branding = playerHeroBranding(contextValue);
+    const mark = ensurePlayerHeroBrandMark(media);
+    if (!(mark instanceof HTMLAnchorElement)) return false;
+    const logo = mark.querySelector(":scope > .playerHeroBrandLogo");
+    const visible = Boolean(branding?.logoUrl);
+
+    mark.classList.toggle("playerHeroBrandMarkVisible", visible);
+    mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
+    mark.tabIndex = visible && branding?.kind === "club" ? 0 : -1;
+    mark.setAttribute("aria-hidden", visible ? "false" : "true");
+    mark.removeAttribute("href");
+    mark.removeAttribute("data-club-id");
+    mark.removeAttribute("aria-label");
+
+    if (!visible) {
+      if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+      return false;
+    }
+
+    if (logo instanceof HTMLImageElement && logo.getAttribute("src") !== branding.logoUrl) {
+      logo.src = branding.logoUrl;
+    }
+    mark.setAttribute("aria-label", branding.name || "Player affiliation");
+    if (branding.kind === "club" && branding.clubId) {
+      mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
+      mark.dataset.clubId = branding.clubId;
+    }
+    return true;
+  }
+
+  function syncPlayerHeroBranding(hero, contextValue) {
+    if (!(hero instanceof HTMLElement)) return false;
+    const branding = playerHeroBranding(contextValue);
+    if (branding?.gradient) hero.style.background = branding.gradient;
+    else hero.style.removeProperty("background");
+    const media = hero.querySelector(":scope > .playerHeroMedia");
+    if (media instanceof HTMLElement) syncPlayerHeroBrandMark(media, contextValue);
+    return Boolean(branding);
+  }
+
   function retirementMarkerFromKnownValue(value) {
     const text = value === null || value === undefined ? "" : String(value).trim();
     if (!text) return null;
@@ -138,6 +298,10 @@
     const suppliedPositions = normalizePositions(source.positions);
     const cachedPositions = normalizePositions(knownValues.positions?.display || knownValues.positions?.raw || "");
     const suppliedOverall = source.overall === null || source.overall === undefined ? "" : String(source.overall).trim();
+    const clubKnown = source.clubKnown === true;
+    const clubId = contextClubId(knownValues);
+    const explicitClub = normalizePlayerClubBrand(source.club, clubId);
+    const club = clubKnown ? explicitClub : (explicitClub || cachedPlayerClubBrand(clubId));
     return {
       playerId,
       name: String(source.name || knownValues.name?.display || "").trim(),
@@ -145,12 +309,31 @@
       overall: suppliedOverall || String(knownValues.overall?.display || "").trim(),
       externalUrl: String(source.externalUrl || (playerId ? PLAYER_EXTERNAL_ORIGIN + "/players/" + playerId : "")).trim(),
       knownValues,
+      club,
+      clubKnown,
     };
   }
 
   function mergeContext(baseValue, nextValue) {
     const base = normalizeContext(baseValue);
     const next = normalizeContext(nextValue);
+    const nextClubId = contextClubId(next.knownValues);
+    const baseClubId = String(base.club?.clubId || "").trim();
+    let club = base.club;
+    let clubKnown = base.clubKnown;
+    if (next.clubKnown) {
+      club = next.club;
+      clubKnown = true;
+    } else if (base.clubKnown && (!nextClubId || nextClubId === baseClubId)) {
+      club = base.club;
+      clubKnown = true;
+    } else if (next.club) {
+      club = next.club;
+      clubKnown = false;
+    } else if (nextClubId && nextClubId !== baseClubId) {
+      club = null;
+      clubKnown = false;
+    }
     return {
       playerId: next.playerId || base.playerId,
       name: next.name || base.name,
@@ -158,6 +341,8 @@
       overall: next.overall || base.overall,
       externalUrl: next.externalUrl || base.externalUrl,
       knownValues: mergeKnownValues(base.knownValues, next.knownValues),
+      club,
+      clubKnown,
     };
   }
 
@@ -302,6 +487,20 @@ function applyOverallBoxAppearance(box, overall) {
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
     const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
     if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
+    const clubIdIndex = payload.columns.indexOf("active_contract_club_id");
+    if (clubIdIndex >= 0) {
+      const clubId = String(matchingRow[clubIdIndex] || "").trim();
+      const clubContext = {
+        playerId: routePlayerId,
+        clubKnown: true,
+        club: clubId ? normalizePlayerClubBrand(payload.playerClub, clubId) : null,
+      };
+      rememberContext(clubContext);
+      const pending = window.__mflPlayerFirstPaintPendingContext;
+      if (normalizePlayerId(pending?.playerId) === routePlayerId) {
+        window.__mflPlayerFirstPaintPendingContext = mergeContext(pending, clubContext);
+      }
+    }
     readyDetailPlayerId = routePlayerId;
     return true;
   }
@@ -491,6 +690,8 @@ function applyOverallBoxAppearance(box, overall) {
     overallValue.style.lineHeight = "1";
     overall.appendChild(overallValue);
 
+    const brandMark = createPlayerHeroBrandMark();
+
     const portraitFrame = document.createElement("div");
     portraitFrame.className = "playerHeroPortraitFrame";
     portraitFrame.style.alignSelf = "flex-end";
@@ -501,7 +702,7 @@ function applyOverallBoxAppearance(box, overall) {
     portrait.setAttribute("aria-label", "Player portrait");
     portraitFrame.appendChild(portrait);
 
-    media.append(overall, portraitFrame);
+    media.append(overall, brandMark, portraitFrame);
     updateHeroMedia(media, context);
     return media;
   }
@@ -519,6 +720,7 @@ function applyOverallBoxAppearance(box, overall) {
 
     const portrait = media.querySelector(".playerHeroPortrait");
     if (portrait instanceof HTMLCanvasElement) loadPortraitCrop(portrait, context.playerId);
+    syncPlayerHeroBrandMark(media, context);
     return true;
   }
 
@@ -1224,6 +1426,7 @@ function stableAttributePanelHtml(row) {
       external.removeAttribute("aria-disabled");
     }
     placeHeroMedia(hero, context);
+    syncPlayerHeroBranding(hero, context);
     return true;
   }
 
@@ -1303,6 +1506,7 @@ function stableAttributePanelHtml(row) {
     const actions = createPendingHeroActions(context);
     hero.append(createHeroMedia(context), identity, actions);
     applyHeroLayout(hero);
+    syncPlayerHeroBranding(hero, context);
     detail.replaceChildren(hero, createPendingPlayerGrid(context));
     showPlayerPage();
     if (playerIdFromLocation() === playerId) {
@@ -1313,7 +1517,8 @@ function stableAttributePanelHtml(row) {
   }
 
   function hydrateHero(value = {}) {
-    const context = normalizeContext(value);
+    const incoming = normalizeContext(value);
+    const context = mergeContext(readCachedContext(incoming.playerId), incoming);
     if (!context.playerId) return false;
     const routePlayerId = playerIdFromLocation();
     if (routePlayerId && routePlayerId !== context.playerId) return false;
@@ -1328,6 +1533,7 @@ function stableAttributePanelHtml(row) {
     hero.classList.remove("playerHeroPending");
     container.style.marginTop = "0";
     placeHeroMedia(hero, context);
+    syncPlayerHeroBranding(hero, context);
     const viewRow = container.querySelector(".playerAttributeViews");
     if (viewRow instanceof HTMLElement) viewRow.style.visibility = "visible";
     if (normalizePlayerId(window.__mflPlayerFirstPaintPendingContext?.playerId) === context.playerId) {
@@ -1380,6 +1586,10 @@ function stableAttributePanelHtml(row) {
     beginDetailNavigation,
     markDetailPayloadReady,
     detailDataReady,
+    heroBrandingSignature(playerIdValue) {
+      const context = readCachedContext(normalizePlayerId(playerIdValue));
+      return JSON.stringify([context.clubKnown, context.club, playerHeroBranding(context)]);
+    },
   });
 })();
 
@@ -1843,6 +2053,7 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
     state.settingsDateFormat,
     state.settingsTimeFormat,
     state.trainingAdjustments[key] || null,
+    window.__mflPlayerFirstPaintRuntime?.heroBrandingSignature?.(key) || "",
   ]);
 }
 
