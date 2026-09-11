@@ -52,7 +52,7 @@ tableBody?.addEventListener("click", (event) => {
   const clubLink = event.target.closest(".agentTableLink[data-club-id]");
   if (clubLink instanceof HTMLAnchorElement && tableBody.contains(clubLink) && typeof window.mflOpenClubPage === "function") {
     event.preventDefault();
-    window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");
+    window.mflOpenClubPage(clubLink.dataset.clubId || "", "info");
   }
 });
 
