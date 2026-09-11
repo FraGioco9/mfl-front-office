@@ -617,6 +617,17 @@ function databaseSearchIdentifiers() {
 }
 
 function applyDatabaseSearchPayload(payload, type = "all") {
+  if (type === "clubs") {
+    state.clubSearchIndex = (Array.isArray(payload?.results) ? payload.results : []).map((club) => ({
+      clubId: String(club?.clubId || ""),
+      name: String(club?.name || ""),
+      division: Number.isFinite(Number(club?.division)) ? Number(club.division) : null,
+      searchText: normalizeSearchText(`${club?.name || ""} ${club?.clubId || ""}`),
+    })).filter((club) => club.clubId && club.name);
+    state.searchIndexesLoaded = true;
+    return;
+  }
+
   const players = type === "players" ? payload : (payload?.players || { columns: [], rows: [] });
   const agents = type === "players" ? { columns: [], rows: [] } : (payload?.agents || { columns: [], rows: [] });
   const playerColumns = Array.isArray(players?.columns) ? players.columns : [];
@@ -658,7 +669,9 @@ async function requestDatabaseSearch(rawQuery = "", type = "all", options = {}) 
   const cacheKey = `${type}:${normalizedQuery}`;
   if (options.force) databaseSearchResponseCache.delete(cacheKey);
   const cachedPayload = databaseSearchResponseCache.get(cacheKey);
-  const activeInput = () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
+  const activeInput = typeof options.activeInput === "function"
+    ? options.activeInput
+    : () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
 
   databaseSearchAbortControllers.get(type)?.abort();
   if (cachedPayload) {
