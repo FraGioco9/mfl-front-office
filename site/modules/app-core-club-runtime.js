@@ -390,21 +390,26 @@
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
       if (identity.logoUrl) {
         const canonicalLogoUrl = identity.logoUrl;
-        logo.src = canonicalLogoUrl;
+        const resolvedLogoUrl = new URL(canonicalLogoUrl, window.location.href).href;
+        logo.onerror = null;
         logo.alt = `${identity.name || "Club"} logo`;
         logo.decoding = "async";
         logo.hidden = false;
         logoFrame.hidden = false;
         logo.onerror = () => {
           const baseLogoUrl = canonicalLogoUrl.split("?")[0];
-          if (logo.src !== baseLogoUrl && canonicalLogoUrl.includes("?")) {
+          const resolvedBaseLogoUrl = new URL(baseLogoUrl, window.location.href).href;
+          if (logo.src !== resolvedBaseLogoUrl && canonicalLogoUrl.includes("?")) {
+            logo.onerror = null;
             logo.src = baseLogoUrl;
             return;
           }
           logo.hidden = true;
           logoFrame.hidden = true;
         };
+        if (logo.src !== resolvedLogoUrl) logo.src = canonicalLogoUrl;
       } else {
+        logo.onerror = null;
         logo.removeAttribute("src");
         logo.alt = "";
         logo.hidden = true;
