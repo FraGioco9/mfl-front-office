@@ -138,6 +138,18 @@
   line-height: 1.3;
 }
 
+.myClubLocation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.myClubLocation .clubLocationFlag {
+  width: 16px;
+  height: 16px;
+}
+
 .myClubCompetitions {
   display: grid;
   gap: 5px;
