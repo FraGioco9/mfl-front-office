@@ -1391,6 +1391,7 @@
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
           <h2 class="playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
           <p>${firstPaintTextSkeletonHtml("CM, RW")}</p>
+          <a class="playerClubBrand" tabindex="-1" aria-hidden="true"><img class="playerClubLogo" alt="" aria-hidden="true"></a>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">
           <div class="playerHeroActionMenu">
