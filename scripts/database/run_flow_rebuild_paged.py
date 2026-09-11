@@ -86,11 +86,18 @@ def discover_player_batch_anchors(limiter: RollingRateLimiter) -> list[int]:
     return anchors
 
 
+def prepare_player_batch_anchors(limiter: RollingRateLimiter) -> list[int]:
+    """Discover fresh player page boundaries immediately before current-player loading."""
+    global PLAYER_BATCH_ANCHORS
+    PLAYER_BATCH_ANCHORS = discover_player_batch_anchors(limiter)
+    return list(PLAYER_BATCH_ANCHORS)
+
+
 def refresh_wallets_without_playmfl_limiter(
     connection: Any,
     limiter: RollingRateLimiter,
 ) -> int:
-    """Save leaderboard wallets, then build the PlayMFL player batch plan."""
+    """Save leaderboard wallets without coupling wallet refresh to player pagination."""
     data = pipeline.request_json(pipeline.LEADERBOARD_URL, "Leaderboard")
     users = data.get("users") if isinstance(data, dict) else None
     if not isinstance(users, list):
@@ -112,9 +119,6 @@ def refresh_wallets_without_playmfl_limiter(
     )
     connection.commit()
     pipeline.log(f"Wallets saved: {len(wallets)}")
-
-    global PLAYER_BATCH_ANCHORS
-    PLAYER_BATCH_ANCHORS = discover_player_batch_anchors(limiter)
     return len(wallets)
 
 
@@ -176,9 +180,7 @@ def fetch_predetermined_player_source(
 def fetch_all_player_sources(
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
-    if PLAYER_BATCH_ANCHORS is None:
-        raise RuntimeError("Player ID batches were not prepared before player loading")
-    anchors = list(PLAYER_BATCH_ANCHORS)
+    anchors = prepare_player_batch_anchors(limiter)
 
     pipeline.log(
         "API-derived PlayMFL batches: "
