@@ -146,9 +146,10 @@
           agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
           watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
           myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
-          club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
+          club: Object.freeze({ order: ["info", "attributes", "contracts", "current", "all"], fallback: "info" }),
         });
         const VIEW_BY_SLUG = Object.freeze({
+          info: "info",
           attributes: "attributes",
           squad: "attributes",
           stats: "stats",
@@ -625,9 +626,24 @@
 
         <section id="progressionPage" class="pageView progressionPage" hidden>
           <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
+          <section id="clubIdentity" class="clubIdentity" aria-label="Club identity">
+            <div class="clubIdentityLogoFrame">
+              <img id="clubIdentityLogo" class="clubIdentityLogo" alt="" hidden>
+            </div>
+            <div class="clubIdentityMain">
+              <span id="clubIdentityId" class="clubIdentityId"></span>
+              <h2 id="clubIdentityName" class="clubIdentityName"></h2>
+              <div class="clubIdentityMeta">
+                <span id="clubIdentityDivision" class="clubIdentityDivision"></span>
+                <span id="clubIdentityLocation" class="clubIdentityLocation"></span>
+              </div>
+            </div>
+            <div id="clubIdentityColors" class="clubIdentityColors" aria-label="Club colours"></div>
+          </section>
           <section class="views" aria-label="Table views">
             <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
             <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
+            <button class="viewButton" type="button" data-view="info">Info</button>
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
@@ -643,6 +659,7 @@
               <div id="watchlistDropdown" class="watchlistDropdown" hidden></div>
             </div>
           </section>
+          <section id="clubInfoPanel" class="clubInfoPanel" aria-label="Club information"></section>
           <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->
           <script>
             (() => {
@@ -1423,7 +1440,7 @@
                   if (clubId && !/^(free agent|development center)$/i.test(teamName)) {
                     team = document.createElement("a");
                     team.className = "playerContractTeam playerContractTeamLink clubPageLink";
-                    team.href = "/clubs/" + encodeURIComponent(clubId) + "/squad";
+                    team.href = "/clubs/" + encodeURIComponent(clubId) + "/info";
                     team.dataset.clubId = clubId;
                   } else {
                     team = document.createElement("span");
