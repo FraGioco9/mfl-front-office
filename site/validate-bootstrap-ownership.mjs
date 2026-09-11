@@ -217,6 +217,7 @@ excludes(
 includes(
   bootstrapCore,
   'document.documentElement.classList.remove("mflSingleRenderPending");',
+  'window.__mflInteractionBusy.refresh();',
   "bootstrap-core.js must release first-paint loading state when the visible route is ready.",
 );
 includes(
@@ -441,6 +442,7 @@ includes(
 includes(
   bootstrapCore,
   'window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));',
+  'refresh: applyState,',
   "Uniform Loading Workflow must expose one explicit loading-state event for decoupled consumers.",
 );
 includes(
