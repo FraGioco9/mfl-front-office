@@ -223,7 +223,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   z-index: 4;
   width: 132px;
   min-width: 132px;
-  height: 40px;
+  height: var(--mfl-control-height);
   margin: 0;
 }
 
@@ -232,7 +232,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   flex: 0 0 132px;
   width: 132px;
   min-width: 132px;
-  height: 40px;
+  height: var(--mfl-control-height);
   margin-left: auto;
   order: 101;
 }
@@ -263,7 +263,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
 
 #progressionPage .watchlistButton {
   width: 260px;
-  height: 40px;
+  height: var(--mfl-control-height);
   padding-left: 9px;
   padding-right: 28px;
   font-size: 13px;
@@ -279,7 +279,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
   width: 80px;
   min-width: 80px;
   max-width: 80px;
-  height: 40px;
+  height: var(--mfl-control-height);
   font-size: 13px;
 }
 
