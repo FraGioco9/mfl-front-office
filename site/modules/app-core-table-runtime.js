@@ -276,6 +276,13 @@ function renderTableLoadingShell(pageName) {
 
   const clubPage = pageName === "club";
   if (clubPage) {
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");
@@ -2298,6 +2305,14 @@ function tableApplyFiltersOwner(options = {}) {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
     state.filteredRows.sort(compareRows);
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    if (filterSummary) filterSummary.textContent = "0";
     syncActiveWatchlistFromSet();
     renderTable();
     return;
@@ -2978,9 +2993,8 @@ async function tableSetViewOwner(viewName) {
     return;
   }
 
-  const clubPage = state.currentPage === "club";
   const pageKey = tablePageKey();
-  if (pageKey && !clubPage) {
+  if (pageKey) {
     const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
     state.tablePageStates[pageKey] = {
       ...existingPageState,
@@ -3011,20 +3025,14 @@ async function tableSetViewOwner(viewName) {
 state.sortKey = targetSortState.sortKey;
 state.sortDirection = targetSortState.sortDirection;
 
-  if (!clubPage) {
-    removeUnavailableFilterRules();
-    populateAddFilterSelect();
-    refreshRuleColumnSelects();
-  }
+  removeUnavailableFilterRules();
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
 
   updateViewButtons();
   buildHeader();
 
-  if (clubPage) {
-    applyFilters({ save: false, localOnly: true });
-  } else {
-    applyFilters();
-  }
+  applyFilters();
   if (state.currentPage === "watchlist") saveTableState();
 }
 
@@ -3082,7 +3090,7 @@ tableBody?.addEventListener("click", (event) => {
   const clubLink = event.target.closest(".agentTableLink[data-club-id]");
   if (clubLink instanceof HTMLAnchorElement && tableBody.contains(clubLink) && typeof window.mflOpenClubPage === "function") {
     event.preventDefault();
-    window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");
+    window.mflOpenClubPage(clubLink.dataset.clubId || "", "info");
   }
 });
 
