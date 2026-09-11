@@ -209,6 +209,11 @@
   }
 }
 
+function applyClubPresentationFromSharedView() {
+  const owner = Reflect.get(window, "__mflApplyClubPresentation");
+  if (typeof owner === "function") owner();
+}
+
 const setIncrementalView = async function setIncrementalView(viewName) {
     const pageName = state.currentPage;
     if (!tablePages.has(pageName) && pageName !== "club") {
@@ -267,6 +272,24 @@ const setIncrementalView = async function setIncrementalView(viewName) {
       if (!transition) return;
     }
 
+    if (pageName === "club" && state.clubProfile && ["info", "attributes", "contracts"].includes(nextView)) {
+      state.page = 1;
+      if (nextView === "info") {
+        state.view = "info";
+        updateViewButtons();
+        applyClubPresentationFromSharedView();
+        return true;
+      }
+      state.incrementalApplying = true;
+      try {
+        const result = await applyTableViewOwner.call(this, nextView);
+        applyClubPresentationFromSharedView();
+        return result;
+      } finally {
+        state.incrementalApplying = false;
+      }
+    }
+
     const viewLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())
       ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0
       : 0;
@@ -278,7 +301,16 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         if (!payload) return;
         state.incrementalApplying = true;
         try {
-          return await applyTableViewOwner.call(this, nextView);
+          if (pageName === "club" && nextView === "info") {
+            state.view = "info";
+            state.page = 1;
+            updateViewButtons();
+            applyClubPresentationFromSharedView();
+            return true;
+          }
+          const result = await applyTableViewOwner.call(this, nextView);
+          if (pageName === "club") applyClubPresentationFromSharedView();
+          return result;
         } finally {
           state.incrementalApplying = false;
         }
