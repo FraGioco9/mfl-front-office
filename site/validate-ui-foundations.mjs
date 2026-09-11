@@ -123,9 +123,11 @@ const searchControlGeometry = exactRule(stylesBase, ".searchButton");
 includes(searchControlGeometry, "height: var(--mfl-control-height);", "Search must consume the shared standard control height.");
 const searchLabelTypography = exactRule(stylesBase, ".searchLabel");
 includes(searchLabelTypography, "font-size: var(--mfl-control-label-font-size);", "Search label must consume the shared standard control-label size.");
-const baseFormControlGeometry = exactRule(stylesBase, "input,\nselect");
-includes(baseFormControlGeometry, "height: var(--mfl-control-height);", "Default input/select controls must consume the shared standard control height.");
-includes(baseFormControlGeometry, "border-radius: var(--mfl-radius-control);", "Default input/select controls must consume the shared control radius.");
+includes(
+  stylesBase,
+  "input,\nselect {\n  height: var(--mfl-control-height);\n  width: 100%;\n  border: 1px solid var(--border-strong);\n  border-radius: var(--mfl-radius-control);",
+  "Default input/select controls must consume the shared standard control height and radius.",
+);
 const baseButtonGeometry = exactRule(stylesBase, "button");
 includes(baseButtonGeometry, "height: var(--mfl-control-height);", "Default buttons must consume the shared standard control height.");
 includes(baseButtonGeometry, "border-radius: var(--mfl-radius-control);", "Default buttons must consume the shared control radius.");
