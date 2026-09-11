@@ -18,6 +18,7 @@ const validators = [
   "validate-domain-table.mjs",
   "validate-marketplace-overlay.mjs",
   "validate-table-payload-projection.mjs",
+  "validate-contract-clauses.mjs",
   "validate-data-client-runtime-ownership.mjs",
   "validate-site-date-picker.mjs",
 ];

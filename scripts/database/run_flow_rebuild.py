@@ -51,7 +51,8 @@ flow_module.FLOW_WORKERS = FLOW_WORKERS
 PLAYER_COLUMNS = [
     "player_id", "wallet_address", "wallet_name", "name", "positions", "age",
     "nationality", "preferred_foot", "height", "retirement_years", "owned_since",
-    "active_contract_revenue_share", "active_contract_club_id",
+    "active_contract_revenue_share", "active_contract_revenue_share_penalty",
+    "active_contract_nb_matches", "active_contract_club_id",
     "active_contract_club_name", "active_contract_club_division", "overall", "pace",
     "shooting", "passing", "dribbling", "defense", "physical", "goalkeeping",
     "player_seasons", "overall_prog_all", "pace_prog_all", "shooting_prog_all",
@@ -160,6 +161,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
             wallet_name TEXT NOT NULL DEFAULT '', name TEXT, positions TEXT, age INTEGER,
             nationality TEXT, preferred_foot TEXT, height INTEGER, retirement_years INTEGER,
             owned_since INTEGER, active_contract_revenue_share INTEGER,
+            active_contract_revenue_share_penalty INTEGER, active_contract_nb_matches INTEGER,
             active_contract_club_id TEXT, active_contract_club_name TEXT,
             active_contract_club_division TEXT, overall INTEGER, pace INTEGER,
             shooting INTEGER, passing INTEGER, dribbling INTEGER, defense INTEGER,
@@ -326,15 +328,18 @@ def player_row(player: dict[str, Any]) -> tuple[Any, ...]:
     metadata = player.get("metadata") or {}
     owner = player.get("ownedBy") or {}
     contract = player.get("activeContract") or {}
-    club = contract.get("club") or {} if isinstance(contract, dict) else {}
     if not isinstance(metadata, dict):
         metadata = {}
     if not isinstance(owner, dict):
         owner = {}
     if not isinstance(contract, dict):
         contract = {}
+    club = contract.get("club") or {}
+    clauses = contract.get("clauses") or {}
     if not isinstance(club, dict):
         club = {}
+    if not isinstance(clauses, dict):
+        clauses = {}
     values: dict[str, Any] = {
         "player_id": player_id(player),
         "wallet_address": str(owner.get("walletAddress") or "").strip().lower(),
@@ -348,6 +353,8 @@ def player_row(player: dict[str, Any]) -> tuple[Any, ...]:
         "retirement_years": to_int(metadata.get("retirementYears")),
         "owned_since": to_int(player.get("ownedSince") or player.get("ownedsince")),
         "active_contract_revenue_share": to_int(contract.get("revenueShare")),
+        "active_contract_revenue_share_penalty": to_int(clauses.get("revenueSharePenalty")),
+        "active_contract_nb_matches": to_int(clauses.get("nbMatches")),
         "active_contract_club_id": str(club.get("id") or ""),
         "active_contract_club_name": str(club.get("name") or ""),
         "active_contract_club_division": str(club.get("division") or ""),

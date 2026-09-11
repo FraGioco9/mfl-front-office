@@ -1450,11 +1450,17 @@
             };
             const formatCachedRevenueShare = () => {
               const raw = knownRaw("active_contract_revenue_share");
-              if (raw === null || raw === undefined || raw === "" || String(raw).toUpperCase() === "NULL") return knownDisplay("active_contract_revenue_share");
-              const percentage = Number(raw) / 100;
-              return Number.isFinite(percentage)
-                ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage) + "%"
-                : knownDisplay("active_contract_revenue_share");
+              const formatShare = (value) => {
+                if (value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL") return "";
+                const percentage = Number(value) / 100;
+                return Number.isFinite(percentage)
+                  ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage)}%`
+                  : "";
+              };
+              const base = formatShare(raw);
+              if (!base) return knownDisplay("active_contract_revenue_share");
+              const penalty = formatShare(knownRaw("active_contract_revenue_share_penalty"));
+              return penalty ? base + " + " + penalty : base;
             };
             const formatCachedDivision = () => {
               const raw = knownRaw("active_contract_club_division");

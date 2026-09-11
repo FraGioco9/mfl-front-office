@@ -8,6 +8,7 @@ const {
   queryRows,
   queryOne,
   quoteIdentifier,
+  playerSelectExpression,
   rowsAsArrays,
   setMarketplacePrices,
 } = require("./_database");
@@ -45,6 +46,8 @@ const TABLE_COMMON_RESPONSE_COLUMNS = Object.freeze([
 ]);
 const TABLE_CONTRACT_RESPONSE_COLUMNS = Object.freeze([
   "active_contract_revenue_share",
+  "active_contract_revenue_share_penalty",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -73,7 +76,7 @@ function selectListWithListing(columns) {
   return columns
     .map((column) => column === LISTING_COLUMN
       ? `${LISTING_PRICE_SQL} AS "${LISTING_COLUMN}"`
-      : quoteIdentifier(column))
+      : playerSelectExpression(column))
     .join(", ");
 }
 

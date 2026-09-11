@@ -4,7 +4,7 @@ const {
   SEARCH_PLAYER_COLUMNS,
   getGeneratedAt,
   queryOne,
-  quoteIdentifier,
+  playerSelectExpression,
 } = require("./_database");
 
 const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
@@ -13,7 +13,8 @@ const STAT_COLUMNS = new Set([
 ]);
 const NUMBER_COLUMNS = new Set([
   "player_id", "age", "height", "retirement_years", "player_seasons", "owned_since",
-  "active_contract_revenue_share", "active_contract_club_division",
+  "active_contract_revenue_share", "active_contract_revenue_share_penalty",
+  "active_contract_nb_matches", "active_contract_club_division",
   "next_overall", "next_overall_gap", "pace_to_next_overall", "shooting_to_next_overall",
   "passing_to_next_overall", "dribbling_to_next_overall", "defense_to_next_overall",
   "physical_to_next_overall", "goalkeeping_to_next_overall", ...STAT_COLUMNS,
@@ -31,7 +32,7 @@ function placeholders(values) {
 
 function qualifiedSelectList(alias, columns) {
   return columns
-    .map((column) => `${alias}.${quoteIdentifier(column)} AS ${quoteIdentifier(column)}`)
+    .map((column) => playerSelectExpression(column, alias))
     .join(", ");
 }
 

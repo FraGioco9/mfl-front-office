@@ -23,6 +23,8 @@ const PLAYER_COLUMNS = Object.freeze([
   "retirement_years",
   "owned_since",
   "active_contract_revenue_share",
+  "active_contract_revenue_share_penalty",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -95,10 +97,15 @@ const SEARCH_PLAYER_COLUMNS = Object.freeze([
   "retirement_years",
 ]);
 const VALID_PLAYER_COLUMNS = new Set(PLAYER_COLUMNS);
+const OPTIONAL_PLAYER_COLUMNS = new Set([
+  "active_contract_revenue_share_penalty",
+  "active_contract_nb_matches",
+]);
 
 let database = null;
 let databasePath = "";
 let generatedAt = "";
+let availablePlayerColumns = null;
 let marketplacePrices = Object.freeze({});
 const TABLE_EXISTS_CACHE = new Map();
 
@@ -171,10 +178,12 @@ function getDatabase() {
     }
   }
 
-  const availablePlayerColumns = new Set(
+  availablePlayerColumns = new Set(
     database.prepare("PRAGMA table_info(players)").all().map((row) => String(row.name)),
   );
-  const missingColumns = PLAYER_COLUMNS.filter((column) => !availablePlayerColumns.has(column));
+  const missingColumns = PLAYER_COLUMNS.filter((column) => (
+    !OPTIONAL_PLAYER_COLUMNS.has(column) && !availablePlayerColumns.has(column)
+  ));
   if (missingColumns.length) {
     throw new Error(`Database is incomplete: missing player columns ${missingColumns.join(", ")}.`);
   }
@@ -214,8 +223,18 @@ function quoteIdentifier(value) {
   return `"${name}"`;
 }
 
+function playerSelectExpression(column, alias = "") {
+  const quoted = quoteIdentifier(column);
+  getDatabase();
+  if (OPTIONAL_PLAYER_COLUMNS.has(column) && !availablePlayerColumns.has(column)) {
+    return `NULL AS ${quoted}`;
+  }
+  if (!alias) return quoted;
+  return `${alias}.${quoted} AS ${quoted}`;
+}
+
 function selectList(columns) {
-  return columns.map(quoteIdentifier).join(", ");
+  return columns.map((column) => playerSelectExpression(column)).join(", ");
 }
 
 function rowsAsArrays(rows, columns) {
@@ -243,6 +262,7 @@ module.exports = {
   normalizeWalletName,
   tableExists,
   quoteIdentifier,
+  playerSelectExpression,
   selectList,
   rowsAsArrays,
   setMarketplacePrices,
