@@ -239,7 +239,7 @@ assert.equal(
 );
 assert.match(
   bootstrap,
-  /function createFlagSkeleton\(hostClass = ""\)[\s\S]*mflTableFlagSkeletonSample[\s\S]*mflTableFlagSkeletonFill/u,
+  /function createFlagSkeleton\(hostClass = ""\)[\s\S]*flagImage mflTableFlagSkeleton[\s\S]*mflTableFlagSkeletonFill/u,
   "Flag skeletons must have one shared silhouette renderer derived from the canonical table flag skeleton.",
 );
 assert.match(
@@ -254,7 +254,7 @@ assert.match(
 );
 assert.match(
   myClubsCssSource,
-  /\.myClubLocation \.clubLocationFlag\s*\{[\s\S]*width: 16px;[\s\S]*height: 16px;/u,
+  /\.myClubLocation \.clubLocationFlag\s*\{[\s\S]*flex: 0 0 auto;[\s\S]*align-self: center;[\s\S]*width: 16px;[\s\S]*height: 16px;/u,
   "My Clubs country flag size must be CSS-owned and stable across loaded/loading cards.",
 );
 
