@@ -409,24 +409,34 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .clubIdentity {
-    grid-template-columns: 84px minmax(0, 1fr) auto;
-    gap: 12px;
-    min-height: 96px;
-    padding: 8px 10px;
+    grid-template-columns: 140px minmax(0, 1fr);
+    min-height: 156px;
   }
 
   .clubIdentityLogoFrame {
-    width: 72px;
-    height: 72px;
+    padding: 14px;
   }
 
   .clubIdentityLogo {
-    max-width: 72px;
-    max-height: 72px;
+    max-width: 110px;
+    max-height: 120px;
+  }
+
+  .clubIdentityMain {
+    padding: 18px 20px;
+  }
+
+  .clubIdentityId {
+    font-size: 13px;
   }
 
   .clubIdentityName {
-    font-size: 24px;
+    font-size: 30px;
+  }
+
+  .clubIdentityMeta {
+    margin-top: 8px;
+    font-size: 15px;
   }
 
   .clubInfoGrid {
@@ -2724,45 +2734,36 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .clubIdentity {
-    grid-template-columns: 64px minmax(0, 1fr);
-    gap: 9px;
-    min-height: 78px;
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 136px;
     margin-bottom: 6px;
-    padding: 7px 8px;
   }
 
   .clubIdentityLogoFrame {
-    width: 56px;
-    height: 56px;
+    padding: 12px;
   }
 
   .clubIdentityLogo {
-    max-width: 56px;
-    max-height: 56px;
+    max-width: 88px;
+    max-height: 96px;
+  }
+
+  .clubIdentityMain {
+    padding: 14px;
   }
 
   .clubIdentityId {
-    font-size: 10px;
-  }
-
-  .clubIdentityName {
-    font-size: 20px;
-  }
-
-  .clubIdentityMeta {
-    gap: 3px 8px;
-    margin-top: 4px;
     font-size: 11px;
   }
 
-  .clubIdentityColors {
-    grid-column: 1 / -1;
-    gap: 5px;
+  .clubIdentityName {
+    font-size: 24px;
   }
 
-  .clubIdentityColorSwatch {
-    width: 18px;
-    height: 18px;
+  .clubIdentityMeta {
+    gap: 4px 9px;
+    margin-top: 6px;
+    font-size: 13px;
   }
 
   .clubInfoGrid {
