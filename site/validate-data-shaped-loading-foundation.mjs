@@ -18,6 +18,7 @@ const evaluationSearch = read("./evaluation-search-state-runtime.js");
 const evaluationHtml = read("./html-sources/evaluation.html");
 const playerHtml = read("./html-sources/player.html");
 const appConfig = read("./modules/app-config.js");
+const myClubsCssSource = read("./my-clubs.css");
 
 const tableRouteFamily = ["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"];
 for (const pageName of tableRouteFamily) {
@@ -229,6 +230,21 @@ assert.match(
   playerHtml,
   /playerTitleName"><span class="mflSkeletonText"/u,
   "Direct Player refresh must size the pending title from representative text in the real title element.",
+);
+
+assert.ok(
+  myClubs.split('countryFlagElement(club?.nation, "clubLocationFlag")').length - 1 >= 2,
+  "My Clubs loaded cards and competition-loading shells must both place the canonical country flag before location text.",
+);
+assert.match(
+  myClubsCssSource,
+  /\.myClubLocation\s*\{[\s\S]*display: inline-flex;[\s\S]*align-items: center;[\s\S]*gap: 6px;/u,
+  "My Clubs location flags must share one loaded/loading inline geometry with the city text.",
+);
+assert.match(
+  myClubsCssSource,
+  /\.myClubLocation \.clubLocationFlag\s*\{[\s\S]*width: 16px;[\s\S]*height: 16px;/u,
+  "My Clubs country flag size must be CSS-owned and stable across loaded/loading cards.",
 );
 
 assert.doesNotMatch(
