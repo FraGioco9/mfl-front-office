@@ -289,7 +289,7 @@
               const red = Number.parseInt(normalized.slice(0, 2), 16);
               const green = Number.parseInt(normalized.slice(2, 4), 16);
               const blue = Number.parseInt(normalized.slice(4, 6), 16);
-              return "linear-gradient(transparent 22%, rgba(" + red + ", " + green + ", " + blue + ", 0.4))";
+              return "linear-gradient(transparent 8%, rgba(" + red + ", " + green + ", " + blue + ", 0.65))";
             };
             const cachedHeroBranding = () => {
               const retirementRaw = knownRaw("retirement_years");
@@ -488,10 +488,31 @@
               }
               setProfileText("Rev Share", formatCachedRevenueShare());
             };
+            const playerFirstPaintRarityColor = (overallValue) => {
+              const value = Number(overallValue || 0);
+              if (value >= 95) return "#00ffe9";
+              if (value >= 85) return "#fa53ff";
+              if (value >= 75) return "#0077ff";
+              if (value >= 65) return "#71ff30";
+              if (value >= 55) return "#ecd17f";
+              return "#bebebe";
+            };
+            const playerFirstPaintOverallBackground = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
+            const applyCachedOverallAppearance = (box, overallValue) => {
+              if (!(box instanceof HTMLElement) || !overallValue) return;
+              box.classList.remove("isPending");
+              box.style.setProperty("--rarity-color", playerFirstPaintRarityColor(overallValue));
+              box.style.background = playerFirstPaintOverallBackground;
+              box.style.backgroundColor = "var(--surface)";
+              box.style.backgroundPosition = "center bottom, center";
+              box.style.backgroundRepeat = "no-repeat";
+              box.style.backgroundSize = "100% 100%, 100% 100%";
+            };
             const syncCachedHeroValues = () => {
               const overallValue = cachedAttributeValue("overall");
               const overall = hero?.querySelector(".playerHeroOverall > strong");
               if (overall instanceof HTMLElement && overallValue && overall.textContent !== overallValue) overall.textContent = overallValue;
+              applyCachedOverallAppearance(overall?.closest(".playerHeroOverall"), overallValue);
 
               const listingRaw = knownRaw("listing_price");
               const listingValue = listingRaw === null || listingRaw === undefined || listingRaw === "" ? Number.NaN : Number(listingRaw);
@@ -548,6 +569,7 @@
                     overallStrong.replaceChildren(value);
                   }
                   if (value.textContent !== overallValue) value.textContent = overallValue;
+                  applyCachedOverallAppearance(overallCard, overallValue);
                 }
                 return;
               }
@@ -566,9 +588,11 @@
                   const strong = document.createElement("strong");
                   const value = document.createElement("span");
                   value.className = "attributeValueText";
-                  value.textContent = cachedAttributeValue(columns[index]) || "\u00a0";
+                  const cachedValue = cachedAttributeValue(columns[index]);
+                  value.textContent = cachedValue || "\u00a0";
                   strong.appendChild(value);
                   card.append(name, strong);
+                  if (index === 0) applyCachedOverallAppearance(card, cachedValue);
                   return card;
                 }));
                 return;
@@ -587,8 +611,10 @@
                   value.className = "attributeValueText";
                   strong.replaceChildren(value);
                 }
-                const nextValue = cachedAttributeValue(columns[index]) || "\u00a0";
+                const cachedValue = cachedAttributeValue(columns[index]);
+                const nextValue = cachedValue || "\u00a0";
                 if (value.textContent !== nextValue) value.textContent = nextValue;
+                if (index === 0) applyCachedOverallAppearance(card, cachedValue);
               });
             };
             const syncPendingPlayerShell = () => {
