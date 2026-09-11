@@ -106,9 +106,9 @@ let database = null;
 let databasePath = "";
 let generatedAt = "";
 let runtimeMetadata = new Map();
+let availableTables = null;
 let availablePlayerColumns = null;
 let marketplacePrices = Object.freeze({});
-const TABLE_EXISTS_CACHE = new Map();
 const TABLE_COLUMNS_CACHE = new Map();
 const STATEMENT_CACHE_MAX_ENTRIES = 128;
 const STATEMENT_CACHE = new Map();
@@ -171,13 +171,13 @@ function getDatabase() {
   database.function("normalize_wallet_name", { deterministic: true }, normalizeWalletName);
   database.function("marketplace_price", marketplacePrice);
 
-  const tables = new Set(
+  availableTables = new Set(
     database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
       .all()
       .map((row) => String(row.name)),
   );
   for (const requiredTable of ["players", "wallets", "runtime_metadata"]) {
-    if (!tables.has(requiredTable)) {
+    if (!availableTables.has(requiredTable)) {
       throw new Error(`Database is incomplete: missing ${requiredTable} table.`);
     }
   }
@@ -216,13 +216,8 @@ function getRuntimeMetadata(key) {
 function tableExists(tableName) {
   const name = String(tableName || "");
   if (!/^[a-zA-Z0-9_]+$/.test(name)) return false;
-  if (TABLE_EXISTS_CACHE.has(name)) return TABLE_EXISTS_CACHE.get(name);
-  const exists = Boolean(queryOne(
-    "SELECT 1 AS found FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
-    [name],
-  ));
-  TABLE_EXISTS_CACHE.set(name, exists);
-  return exists;
+  getDatabase();
+  return availableTables.has(name);
 }
 
 function tableColumnNames(tableName) {
