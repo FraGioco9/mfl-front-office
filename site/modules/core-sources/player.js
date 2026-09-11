@@ -2023,13 +2023,14 @@ function bindContractTeamLink(playerId) {
 
 const playerDetailRenderReuse = createRenderReuseGuard();
 
-function playerDetailRenderSignature(row, playerId, attributeView) {
+function playerDetailRenderSignature(row, playerId, attributeView, attributeViewLoading) {
   const key = String(playerId || "").trim();
   return JSON.stringify([
     key,
     state.columns,
     row,
     attributeView,
+    Boolean(attributeViewLoading),
     Boolean(hasWalletOptIn()),
     normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),
     Boolean(state.walletPermissionAllowed),
@@ -2060,8 +2061,9 @@ function renderPlayerPageOwner(playerId) {
     return;
   }
   const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
+  const attributeViewLoading = playerAttributeLoadingActive(playerId);
   const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;
-  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView);
+  const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);
   if (playerDetailRenderReuse.matches(
     renderSignature,
     playerDetail.firstElementChild?.classList.contains("playerHero"),
@@ -2115,7 +2117,7 @@ function renderPlayerPageOwner(playerId) {
   state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
-    .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
+    .map(([view, label]) => `<button class="playerAttributeViewButton ${!attributeViewLoading && state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
     .join("");
   const existingAttributeViews = playerDetail.querySelector(".playerAttributeViews");
   const existingAttributeViewsShell = existingAttributeViews?.closest(".viewsScrollerShell");
