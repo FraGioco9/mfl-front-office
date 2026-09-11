@@ -51,6 +51,9 @@ includes(bootstrap, 'createFlagSkeleton("clubLocationFlag clubLocationFlagSkelet
 includes(clubCore, 'countryFlagElement(identity.nation, "clubLocationFlag")', "Hydrated Club identity must render the canonical country flag immediately before the city/location text.");
 includes(stylesBase, ".clubIdentityLocation {", "Club identity must own explicit flag-plus-location row geometry.");
 includes(stylesBase, ".clubIdentityLocation .clubLocationFlag {", "Club identity must size the location flag from the loaded row geometry.");
+includes(stylesBase, "flex: 0 0 auto;\n  align-self: center;\n  width: 18px;\n  height: 18px;", "Loaded and loading Club identity flags must share the same flex alignment and footprint.");
+includes(coreSource, 'if (route.scope === "club" && String(route.view || "info") === "info") {', "In-site Club Info transitions must select the Info skeleton before generic table loading can paint.");
+includes(coreSource, 'if (typeof primeClubProfileLoading === "function") primeClubProfileLoading("info");', "In-site Club Info transitions must prime the bootstrap-owned Info-card skeleton.");
 
 
 includes(stylesBase, "grid-template-columns: 168px minmax(0, 1fr);", "Desktop Club identity must reserve the enlarged colour/logo column.");
