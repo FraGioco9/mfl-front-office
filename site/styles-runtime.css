@@ -357,7 +357,7 @@ p {
   gap: 12px;
   width: min(560px, 100%);
   min-width: 420px;
-  height: 40px;
+  height: var(--mfl-control-height);
   text-align: left;
   transition: background 120ms ease, border-color 120ms ease;
 }
@@ -373,7 +373,7 @@ p {
   align-items: center;
   gap: 8px;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--mfl-control-label-font-size);
 }
 
 .searchShortcut {
@@ -1045,7 +1045,7 @@ body:not(.pinnedSidebarVisible) .siteFooter {
 
 .viewButton {
   width: 116px;
-  height: 40px;
+  height: var(--mfl-control-height);
   justify-content: center;
   padding: 0 3px;
   border-color: var(--mfl-control-border-color);
@@ -1055,7 +1055,7 @@ body:not(.pinnedSidebarVisible) .siteFooter {
   font-weight: var(--mfl-control-font-weight);
   text-align: center;
   white-space: nowrap;
-  line-height: 1;
+  line-height: var(--mfl-control-line-height);
 }
 
 .watchlistSwitcher {
@@ -1191,7 +1191,7 @@ body:not(.pinnedSidebarVisible) .siteFooter {
   color: var(--text-muted);
   font-size: var(--mfl-metadata-compact-font-size);
   font-weight: var(--mfl-metadata-strong-font-weight);
-  line-height: 40px;
+  line-height: var(--mfl-control-height);
   text-transform: uppercase;
 }
 .compactButton {
@@ -1202,7 +1202,7 @@ body:not(.pinnedSidebarVisible) .siteFooter {
 #openFiltersButton,
 #quickClearFiltersButton {
   width: 92px;
-  font-size: 14px;
+  font-size: var(--mfl-control-label-font-size);
 }
 
 .field {
@@ -1228,10 +1228,10 @@ body:not(.pinnedSidebarVisible) .siteFooter {
 
 input,
 select {
-  height: 40px;
+  height: var(--mfl-control-height);
   width: 100%;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--mfl-radius-control);
   background: var(--surface);
   color: var(--text);
   padding: 0 11px;
@@ -1242,9 +1242,9 @@ select {
 }
 
 button {
-  height: 40px;
+  height: var(--mfl-control-height);
   border: 1px solid var(--primary);
-  border-radius: 6px;
+  border-radius: var(--mfl-radius-control);
   background: var(--primary);
   color: #ffffff;
   padding: 0 14px;
@@ -1271,7 +1271,7 @@ button:disabled:not(.menuButton) {
   display: flex;
   align-items: center;
   align-self: end;
-  height: 40px;
+  height: var(--mfl-control-height);
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -6781,7 +6781,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   flex: 0 0 auto;
   align-items: center;
   width: 116px;
-  height: 40px;
+  height: var(--mfl-control-height);
   gap: 8px;
   padding: 0 10px;
   border-color: var(--mfl-control-border-color);
@@ -6812,7 +6812,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: inline-flex;
   align-items: center;
   align-self: center;
-  height: 40px;
+  height: var(--mfl-control-height);
   line-height: 1;
 }
 #filterSummary.filtersViewCount {
@@ -8214,7 +8214,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   z-index: 4;
   width: 132px;
   min-width: 132px;
-  height: 40px;
+  height: var(--mfl-control-height);
   margin: 0;
 }
 
@@ -8223,7 +8223,7 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   flex: 0 0 132px;
   width: 132px;
   min-width: 132px;
-  height: 40px;
+  height: var(--mfl-control-height);
   margin-left: auto;
   order: 101;
 }
@@ -8254,7 +8254,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
 
 #progressionPage .watchlistButton {
   width: 260px;
-  height: 40px;
+  height: var(--mfl-control-height);
   padding-left: 9px;
   padding-right: 28px;
   font-size: 13px;
@@ -8270,7 +8270,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
   width: 80px;
   min-width: 80px;
   max-width: 80px;
-  height: 40px;
+  height: var(--mfl-control-height);
   font-size: 13px;
 }
 
