@@ -4663,8 +4663,10 @@ body[data-page="club"] #clubIdentity {
   cursor: pointer;
 }
 
-.clubIdentityOwner[href]:hover .clubIdentityOwnerName {
-  text-decoration: underline;
+.clubIdentityOwner[href]:hover .clubIdentityOwnerName,
+.clubIdentityOwner[href]:focus-visible .clubIdentityOwnerName {
+  color: var(--primary);
+  text-decoration: none;
 }
 
 .clubIdentityOwner[href]:focus-visible {
