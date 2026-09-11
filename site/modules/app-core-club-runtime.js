@@ -295,7 +295,9 @@
   }
 
   function renderClubIdentity() {
+    const loadedProfile = clubProfileFromState(activeClubId);
     const identity = activeClubIdentity();
+    const ownerResolved = Boolean(loadedProfile || identity.ownerName || identity.ownerWalletAddress);
     const host = document.getElementById("clubIdentity");
     const logoFrame = host?.querySelector(".clubIdentityLogoFrame");
     const logo = document.getElementById("clubIdentityLogo");
@@ -312,9 +314,10 @@
     host.querySelectorAll("[data-club-loading]").forEach((node) => {
       if (node !== division && node !== location && node !== owner) node.remove();
     });
-    [division, location, owner].forEach((node) => {
+    [division, location].forEach((node) => {
       if (node instanceof HTMLElement) delete node.dataset.clubLoading;
     });
+    if (ownerResolved && owner instanceof HTMLElement) delete owner.dataset.clubLoading;
 
     const primary = validClubColor(identity.primaryColor);
     const secondary = validClubColor(identity.secondaryColor);
@@ -343,7 +346,7 @@
       }
       location.hidden = !locationLabel;
     }
-    if (owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
+    if (ownerResolved && owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
       const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
       ownerName.textContent = ownerLabel;
       ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
