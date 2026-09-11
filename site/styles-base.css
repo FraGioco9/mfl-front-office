@@ -1700,12 +1700,12 @@ th,
 td {
   cursor: default;
   user-select: none;
-  height: 38px;
+  height: var(--mfl-table-header-height);
   border-bottom: 1px solid var(--mfl-table-border-color);
-  padding: 0 6px;
+  padding: 0 var(--mfl-table-cell-padding-inline);
   text-align: left;
   white-space: nowrap;
-  line-height: 38px;
+  line-height: var(--mfl-table-header-height);
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
@@ -1750,7 +1750,7 @@ td {
 }
 
 #tableBody .playerNameCell {
-  min-height: 38px;
+  min-height: var(--mfl-table-header-height);
   align-items: center;
 }
 
