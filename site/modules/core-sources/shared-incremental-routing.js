@@ -115,14 +115,36 @@ function incrementalDataQuery(route, page = 1) {
   return query;
 }
 
+function syncIncrementalCacheNamespace() {
+  const datasetKey = String(state.manifest?.generated_at || "unversioned").trim() || "unversioned";
+  const walletKey = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() || "guest";
+  const namespace = `${datasetKey}:${walletKey}`;
+  if (state.incrementalCacheNamespace && state.incrementalCacheNamespace !== namespace) {
+    state.incrementalPayloadCache.clear();
+  }
+  state.incrementalCacheNamespace = namespace;
+  return { datasetKey, walletKey, namespace };
+}
+
+function adoptIncrementalPayloadDataset(payload) {
+  const generatedAt = String(payload?.generatedAt || "").trim();
+  if (generatedAt && String(state.manifest?.generated_at || "").trim() !== generatedAt) {
+    state.manifest = {
+      ...(state.manifest || {}),
+      generated_at: generatedAt,
+    };
+  }
+  return syncIncrementalCacheNamespace();
+}
+
 function incrementalRequestDetails(route, page = 1) {
   const query = incrementalDataQuery(route, page);
   const requestKey = query.toString();
-  const walletKey = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() || "guest";
+  const { namespace } = syncIncrementalCacheNamespace();
   return {
     query,
     requestKey,
-    cacheKey: `${walletKey}:${requestKey}`,
+    cacheKey: `${namespace}:${requestKey}`,
   };
 }
 
@@ -338,7 +360,9 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
           throw new Error(payload.error || "Could not load this page.");
         }
         if (controller.signal.aborted) return null;
-        rememberIncrementalPayload(cacheKey, payload);
+        adoptIncrementalPayloadDataset(payload);
+        const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;
+        rememberIncrementalPayload(responseCacheKey, payload);
         return payload;
       } catch (error) {
         if (error?.name === "AbortError" && !timedOut) return null;
