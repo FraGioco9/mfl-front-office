@@ -206,7 +206,6 @@
     const location = document.getElementById("clubIdentityLocation");
     const logoFrame = host.querySelector(".clubIdentityLogoFrame");
     const logo = document.getElementById("clubIdentityLogo");
-    const colors = document.getElementById("clubIdentityColors");
 
     if (id instanceof HTMLElement) id.textContent = `Club #${identity.clubId}`;
     if (name instanceof HTMLElement) name.textContent = identity.name;
@@ -238,19 +237,6 @@
     host.style.setProperty("--club-primary", validPrimary || validSecondary || "var(--border-strong)");
     host.style.setProperty("--club-secondary", validSecondary || validPrimary || "var(--surface-muted)");
 
-    if (colors instanceof HTMLElement) {
-      colors.replaceChildren();
-      [validPrimary, validSecondary]
-        .filter(Boolean)
-        .forEach((color, index) => {
-        const swatch = document.createElement("span");
-        swatch.className = "clubIdentityColorSwatch";
-        swatch.style.backgroundColor = color;
-        swatch.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
-        colors.appendChild(swatch);
-      });
-      colors.hidden = colors.childElementCount === 0;
-    }
     host.classList.add("clubIdentityReady");
   }
 
@@ -283,7 +269,6 @@
     const logo = document.getElementById("clubIdentityLogo");
     const division = document.getElementById("clubIdentityDivision");
     const location = document.getElementById("clubIdentityLocation");
-    const colors = document.getElementById("clubIdentityColors");
     const panel = document.getElementById("clubInfoPanel");
 
     if (host instanceof HTMLElement) {
@@ -300,15 +285,6 @@
         element.hidden = false;
         element.dataset.clubLoading = "true";
         element.replaceChildren(createTextSkeleton(String(sample || "00")));
-      }
-      if (colors instanceof HTMLElement && colors.childElementCount === 0) {
-        colors.hidden = false;
-        colors.dataset.clubLoading = "true";
-        for (let index = 0; index < 2; index += 1) {
-          const swatch = createDataPlaceholder("clubIdentityColorSwatch");
-          swatch.dataset.clubLoading = "true";
-          colors.appendChild(swatch);
-        }
       }
     }
 
