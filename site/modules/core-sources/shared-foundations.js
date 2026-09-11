@@ -57,6 +57,7 @@ const state = {
   incrementalSourceRows: 0,
   incrementalLastKey: "",
   incrementalLastLoadedAt: 0,
+  incrementalCacheNamespace: "",
   incrementalPayloadCache: new Map(),
   incrementalRequestPromises: new Map(),
   recentSearchItems: [],
