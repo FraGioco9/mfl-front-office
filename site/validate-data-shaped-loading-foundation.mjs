@@ -12,6 +12,8 @@ const tableLoading = read("./table-loading-runtime.js");
 const tableRender = read("./modules/core-sources/table-render-lifecycle.js");
 const databaseStats = read("./database-stats-runtime.js");
 const mflStats = read("./modules/core-sources/mfl-stats.js");
+const myClubs = read("./modules/core-sources/my-clubs.js");
+const myClubsCss = read("./my-clubs.css");
 const evaluationSearch = read("./evaluation-search-state-runtime.js");
 const evaluationHtml = read("./html-sources/evaluation.html");
 const playerHtml = read("./html-sources/player.html");
@@ -161,6 +163,29 @@ assert.match(
   "Stats skeletons must inherit responsive histogram sizing from the loaded histogram.",
 );
 
+assert.doesNotMatch(
+  databaseStats + mflStats,
+  /mflStatsHistogramLayout/u,
+  "Stats loaded renderers must not maintain a parallel histogram geometry class.",
+);
+for (const inlineGeometry of ["style.display", "style.gridTemplateColumns", "style.alignItems", "style.gap", "style.width", "style.height", "style.paddingTop", "style.minWidth"]) {
+  assert.doesNotMatch(
+    databaseStats + mflStats,
+    new RegExp(`histogram\\.${inlineGeometry.replace(".", "\\.")}`, "u"),
+    `Stats histogram geometry must come from .mflStatsHistogram CSS, not inline ${inlineGeometry}.`,
+  );
+}
+assert.doesNotMatch(
+  bootstrap,
+  /const heights = \[/u,
+  "Stats loading must not own a hard-coded parallel bar-height model.",
+);
+assert.match(
+  bootstrap,
+  /createDataPlaceholder\("mflStatsHistogramBar mflStatsHistogramSkeletonBar"\)/u,
+  "Stats loading bars must use the loaded bar geometry and add only placeholder presentation.",
+);
+
 assert.match(
   bootstrap,
   /firstPaintTextSkeletonHtml\(index === 0 \? "85" : "82", "attributeValueText"\)/u,
@@ -175,6 +200,17 @@ assert.match(
   playerHtml,
   /playerTitleName"><span class="mflSkeletonText"/u,
   "Direct Player refresh must size the pending title from representative text in the real title element.",
+);
+
+assert.doesNotMatch(
+  bootstrap,
+  /<h2 class="tablePageTitle playerTitle">/u,
+  "Bootstrap fallback Player title must use the exact hydrated title class structure.",
+);
+assert.match(
+  bootstrap,
+  /<h2 class="playerTitle"><span class="playerTitleName">/u,
+  "Bootstrap fallback Player title must retain the hydrated Player title classes.",
 );
 assert.match(
   playerHtml,
@@ -221,6 +257,57 @@ assert.doesNotMatch(evaluationSearch, /Loading…|Loading\.\.\./u, "Evaluation l
 assert.match(stylesBase, /\.homeStats span\s*\{[\s\S]*font-size: 28px;/u, "Home must retain ownership of its real metric typography.");
 assert.match(stylesBase, /\.mflStatsCards strong\s*\{[\s\S]*font-size: 22px;/u, "Stats cards must retain ownership of their real metric typography.");
 assert.match(stylesBase, /\.settingsIdentity strong\s*\{[\s\S]*margin-top: 4px;/u, "Settings identity must retain ownership of its real text layout.");
+
+assert.match(
+  myClubs,
+  /const MIN_COMPETITION_ROWS = 2;/u,
+  "My Clubs loading and loaded competition rows must share one minimum-row contract.",
+);
+assert.match(
+  myClubs,
+  /for \(let index = 0; index < MIN_COMPETITION_ROWS; index \+= 1\)/u,
+  "My Clubs loading competition rows must consume the shared minimum-row contract.",
+);
+assert.match(
+  myClubs,
+  /while \(list\.children\.length < MIN_COMPETITION_ROWS\)/u,
+  "My Clubs loaded competition rows must consume the same minimum-row contract.",
+);
+assert.match(
+  myClubs,
+  /const card = document\.createElement\("a"\);[\s\S]*card\.className = "myClubCard myClubCardLoading";/u,
+  "My Clubs skeleton cards must use the same anchor element as loaded cards.",
+);
+assert.match(
+  myClubs,
+  /const nameLine = document\.createElement\("h3"\);[\s\S]*nameLine\.className = "myClubName";/u,
+  "My Clubs skeleton club names must use the same semantic heading as loaded cards.",
+);
+assert.match(
+  myClubs,
+  /Reflect\.get\(window, "__mflCreateTextSkeleton"\)/u,
+  "My Clubs text placeholders must use the shared representative-text skeleton foundation.",
+);
+for (const retiredLoadingGeometry of [
+  "myClubLoadingLine",
+  "myClubLoadingId",
+  "myClubLoadingName",
+  "myClubLoadingDivision",
+  "myClubLoadingLocation",
+  "myClubLoadingCompetitionName",
+  "myClubLoadingCompetitionStanding",
+  "myClubLoadingLogo",
+  "myClubMetaLoading",
+]) {
+  assert.doesNotMatch(myClubs + myClubsCss, new RegExp(retiredLoadingGeometry, "u"), `My Clubs must not retain independent loading geometry via ${retiredLoadingGeometry}.`);
+}
+for (const match of myClubsCss.matchAll(/\.(?:myClub[^\s,{]*Loading[^\s,{]*)\s*\{([\s\S]*?)\n\}/gu)) {
+  assert.doesNotMatch(
+    match[1],
+    /\b(?:width|height|min-width|max-width|min-height|max-height|aspect-ratio|align-items|justify-content|gap|padding|margin|border-radius|display|grid-template-columns|flex-direction)\s*:/u,
+    `My Clubs loading-only selector must not own geometry: ${match[0].split("{", 1)[0].trim()}.`,
+  );
+}
 assert.match(bootstrap, /LOADING_TEXT_SAMPLES/u, "Scalar loaded elements must use representative content while inheriting their existing CSS.");
 
 assert.doesNotMatch(bootstrap, /!important/u, "Bootstrap loading must not introduce CSS priority overrides.");
