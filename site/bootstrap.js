@@ -1334,8 +1334,8 @@
         ["training", "Training"],
         ["next", "Next Overall"],
       ];
-    return views.map(([view, label], index) => (
-      `<button class="playerAttributeViewButton${index === 0 ? " active" : ""}" type="button" data-view="${view}" disabled>${label}</button>`
+    return views.map(([view, label]) => (
+      `<button class="playerAttributeViewButton" type="button" data-view="${view}" disabled>${label}</button>`
     )).join("");
   }
 
