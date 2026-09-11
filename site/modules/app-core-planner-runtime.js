@@ -474,23 +474,33 @@
     const normalized = String(query || "").trim();
     if (!normalized) {
       searchSequence += 1;
+      state.clubSearchIndex = [];
       renderSearchResults([]);
       return;
     }
+
     const sequence = ++searchSequence;
     try {
-      const dataClient = Reflect.get(window, "__mflDataClient");
-      if (!dataClient || typeof dataClient.fetch !== "function") throw new Error("Canonical data client is unavailable.");
-      const parameters = new URLSearchParams({ mode: "search", type: "clubs", limit: "20", q: normalized });
-      const response = await dataClient.fetch("/api/data?" + parameters.toString(), {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
+      const applied = await requestDatabaseSearch(normalized, "clubs", {
+        force: true,
+        activeInput: () => searchInput?.value || "",
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || sequence !== searchSequence) return;
-      renderSearchResults(payload?.results);
-    } catch {
-      if (sequence === searchSequence) renderSearchResults([]);
+      if (!applied || sequence !== searchSequence) return;
+
+      const normalizedQuery = normalizeSearchText(normalized);
+      const clubs = (Array.isArray(state.clubSearchIndex) ? state.clubSearchIndex : [])
+        .filter((club) => club.searchText.includes(normalizedQuery))
+        .sort((left, right) => (
+          (left.division ?? Number.POSITIVE_INFINITY) - (right.division ?? Number.POSITIVE_INFINITY)
+          || left.name.localeCompare(right.name)
+        ))
+        .slice(0, 20);
+      renderSearchResults(clubs);
+    } catch (error) {
+      if (sequence !== searchSequence) return;
+      console.error(error?.message || "Could not search Clubs.");
+      renderSearchResults([]);
+      setStatus("Could not search Clubs.");
     }
   }
 
