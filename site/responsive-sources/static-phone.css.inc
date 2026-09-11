@@ -42,7 +42,7 @@
     padding: 6px 7px;
   }
 
-  .mflStatsCards span,
+  .mflStatsCards article > span,
   .mflStatsCards small {
     font-size: 9px;
   }
