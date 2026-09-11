@@ -830,8 +830,10 @@
       const input = document.createElement("input");
       input.type = "checkbox";
       input.disabled = true;
+      input.className = "mflTableCheckboxSkeleton";
       input.setAttribute("aria-hidden", "true");
-      content.appendChild(createElementSkeleton(input));
+      input.tabIndex = -1;
+      content.appendChild(input);
       cell.appendChild(content);
       return;
     }
