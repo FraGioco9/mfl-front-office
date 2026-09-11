@@ -1102,7 +1102,7 @@
                   <div class="playerPanelHeader">
                     <h3>Attributes</h3>
                     <div class="playerAttributeViews">
-                      <button class="playerAttributeViewButton active" type="button" data-view="attributes" disabled>Attributes</button>
+                      <button class="playerAttributeViewButton" type="button" data-view="attributes" disabled>Attributes</button>
                       <button class="playerAttributeViewButton" type="button" data-view="training" disabled>Training</button>
                       <button class="playerAttributeViewButton" type="button" data-view="next" disabled>Next Overall</button>
                       <button class="playerAttributeViewButton" type="button" data-view="current" disabled>Current Season</button>
@@ -1409,11 +1409,10 @@
               }
             };
             const cachedAttributeValue = (column) => {
-              if (column === "overall") {
-                const overall = knownDisplay("overall") || String(firstPaintContext?.overall || "").trim();
-                return overall.replace(/\s*\([+-]?\d+(?:\.\d+)?\)\s*$/, "").trim();
-              }
-              return knownDisplay(column);
+              const display = column === "overall"
+                ? (knownDisplay("overall") || String(firstPaintContext?.overall || "").trim())
+                : knownDisplay(column);
+              return String(display || "").replace(/\s*\([+-]?\d+(?:\.\d+)?\)\s*$/, "").trim();
             };
             const cachedNationalityFlagCodepoints = () => {
               const rawNationality = String(knownRaw("nationality") || knownDisplay("nationality") || "").trim();
@@ -1773,6 +1772,7 @@
               const progressionAccess = root.dataset.storedProgressionAccess === "true";
               views.querySelectorAll(":scope > .playerAttributeViewButton[data-view]").forEach((button) => {
                 if (!(button instanceof HTMLButtonElement)) return;
+                button.classList.remove("active");
                 const view = String(button.dataset.view || "");
                 if (view === "current" || view === "all") button.hidden = !progressionAccess;
               });
