@@ -45,7 +45,11 @@ for (const [routeId, loadingMarker] of [
 }
 
 assert.match(styles, /--mfl-loading-placeholder-surface:/u, "Global loading placeholders must use one canonical surface token.");
-assert.match(styles, /--mfl-loading-placeholder-border:/u, "Global loading placeholders must use one canonical border token.");
+assert.match(
+  loading,
+  /\.mflDataPlaceholder\s*\{[\s\S]*?border:\s*0;/u,
+  "Shared skeleton placeholders must be borderless while loaded components retain their own borders.",
+);
 assert.match(styles, /--mfl-loading-placeholder-radius:/u, "Global loading placeholders must use one canonical radius token.");
 assert.match(loading, /\.mflDataPlaceholder\s*\{/u, "Every data-shaped loader must share one canonical visual presentation class.");
 
@@ -153,7 +157,7 @@ for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", m
 }
 
 
-for (const histogramClass of ["mflStatsHistogram", "mflStatsHistogramItem", "mflStatsHistogramBar", "mflStatsHistogramLabel"]) {
+for (const histogramClass of ["mflStatsHistogram", "mflStatsHistogramItem", "mflStatsHistogramBar", "mflStatsHistogramFill", "mflStatsHistogramLabel"]) {
   assert.match(bootstrap, new RegExp(histogramClass, "u"), `Stats skeleton must consume the loaded histogram class ${histogramClass}.`);
   assert.match(stylesBase, new RegExp(`\\.${histogramClass}`, "u"), `Loaded Stats CSS must own ${histogramClass} geometry.`);
 }
@@ -162,10 +166,20 @@ assert.match(
   /\.mflStatsHistogramFill\s*\{/u,
   "Loaded Stats CSS must retain the real histogram fill geometry and animation.",
 );
-assert.doesNotMatch(
+assert.match(
   bootstrap,
-  /mflStatsHistogramSkeletonFill/u,
-  "Stats loading must not create a fake fill with independently owned bar-height geometry.",
+  /createDataPlaceholder\("mflStatsHistogramFill mflStatsHistogramSkeletonFill"\)/u,
+  "Stats skeleton columns must reuse the real histogram fill geometry.",
+);
+assert.match(
+  bootstrap,
+  /Math\.exp\(-0\.5 \* distance \* distance\)/u,
+  "Cold Stats loading must present several bell-shaped columns instead of one generic block.",
+);
+assert.match(
+  bootstrap,
+  /fill\.style\.setProperty\("--bar-height", `\$\{bellHeight\}%`\);/u,
+  "Stats skeleton sample data must flow through the same --bar-height contract as loaded data.",
 );
 assert.match(
   responsive,
@@ -188,12 +202,12 @@ for (const inlineGeometry of ["style.display", "style.gridTemplateColumns", "sty
 assert.doesNotMatch(
   bootstrap,
   /const heights = \[/u,
-  "Stats loading must not own a hard-coded parallel bar-height model.",
+  "Stats loading must not own a separate hard-coded bar-height array.",
 );
 assert.match(
   bootstrap,
-  /createDataPlaceholder\("mflStatsHistogramBar mflStatsHistogramSkeletonBar"\)/u,
-  "Stats loading bars must use the loaded bar geometry and add only placeholder presentation.",
+  /previousLabels\.length > 1[\s\S]*\["55", "58", "61", "64", "67", "70", "73", "76", "79", "82", "85", "88", "91", "94", "97"\]/u,
+  "Stats cold loading must reserve several representative columns while revisits reuse the previous loaded column count.",
 );
 
 assert.match(
@@ -266,6 +280,31 @@ assert.doesNotMatch(evaluationSearch, /Loading…|Loading\.\.\./u, "Evaluation l
 
 assert.match(stylesBase, /\.homeStats span\s*\{[\s\S]*font-size: 28px;/u, "Home must retain ownership of its real metric typography.");
 assert.match(stylesBase, /\.mflStatsCards strong\s*\{[\s\S]*font-size: 22px;/u, "Stats cards must retain ownership of their real metric typography.");
+assert.match(
+  stylesBase,
+  /\.stats > div > span\s*\{[\s\S]*font-size: 20px;[\s\S]*font-weight: 700;/u,
+  "Header Players/Wallets values must own their typography without restyling nested skeleton spans.",
+);
+assert.doesNotMatch(
+  stylesBase,
+  /\.stats span\s*\{/u,
+  "Header Stats must not use a descendant span selector that overrides skeleton alignment.",
+);
+assert.match(
+  stylesBase,
+  /\.mflStatsCards article > span\s*\{[\s\S]*font-size: var\(--mfl-metadata-compact-font-size\);/u,
+  "Stats card labels must target only the direct label span so value skeletons inherit <strong> typography.",
+);
+assert.doesNotMatch(
+  stylesBase,
+  /\.mflStatsCards span\s*\{/u,
+  "Stats cards must not restyle nested value skeleton spans as metadata labels.",
+);
+assert.match(
+  stylesBase,
+  /\.mflStatsCards article\s*\{[\s\S]*min-height: 68px;[\s\S]*padding: 8px 10px;/u,
+  "Stats card box size must remain owned by the loaded article geometry during loading.",
+);
 assert.match(stylesBase, /\.settingsIdentity strong\s*\{[\s\S]*margin-top: 4px;/u, "Settings identity must retain ownership of its real text layout.");
 
 assert.match(
