@@ -1541,8 +1541,9 @@ function currentTablePageState() {
 
 function currentTableState() {
   const pageKey = tablePageKey();
+  delete state.tablePageStates.club;
 
-  if (pageKey) {
+  if (pageKey && pageKey !== "club") {
     state.tablePageStates[pageKey] = currentTablePageState();
   }
 
