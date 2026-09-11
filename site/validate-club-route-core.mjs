@@ -140,7 +140,13 @@ excludes(routeLoader, "function installClubRouteGate()", "Route loader must not 
 
 includes(appEntry, "function installClubRouteRuntimeGate()", "app-entry must own the stable Club lazy gate.");
 includes(appEntry, 'runtimeWindow.__mflEnsureRouteCore("club", { view })', "Club gate must request the canonical Club dependency graph.");
+includes(appEntry, 'runtimeWindow.__mflPrimeClubDestinationIdentity?.(normalizedClubId, view);', "Club gate must prime the destination identity before exposing the shared Club shell.");
 includes(appEntry, 'return runTransition("club", true, {', "Club gate must enter through the global transition owner.");
+invariant(
+  appEntry.indexOf('runtimeWindow.__mflPrimeClubDestinationIdentity?.(normalizedClubId, view);')
+    < appEntry.indexOf('return runTransition("club", true, {'),
+  "Destination Club identity priming must precede the outer Club transition.",
+);
 
 includes(dataHandler, '["agent", "club"].includes(scope)', "Club progression must remain public entity data.");
 includes(dataHandler, '["current", "all"].includes(view)', "Club API must support both progression views.");
