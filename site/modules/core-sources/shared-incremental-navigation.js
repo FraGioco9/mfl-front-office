@@ -140,7 +140,12 @@
         tablePageTitle.textContent = tableTitleForPage(pageName);
       }
       updateViewButtons();
-      showTableBusyState();
+      if (route.scope === "club" && String(route.view || "info") === "info") {
+        const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
+        if (typeof primeClubProfileLoading === "function") primeClubProfileLoading("info");
+      } else {
+        showTableBusyState();
+      }
     } else if (mflStatsActive) {
       state.view = "stats";
       updateViewButtons();
