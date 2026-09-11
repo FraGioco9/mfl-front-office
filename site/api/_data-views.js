@@ -294,10 +294,11 @@ function searchData(request) {
 }
 
 function summaryData() {
+  const manifest = manifestPayload();
   return {
-    playerCount: Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0),
-    walletCount: Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0),
-    generatedAt: getGeneratedAt(),
+    playerCount: manifest.row_count,
+    walletCount: manifest.wallet_count,
+    generatedAt: manifest.generated_at,
     source: "sqlite-runtime",
   };
 }
