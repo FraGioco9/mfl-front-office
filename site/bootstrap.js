@@ -264,11 +264,14 @@
     }
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
       if (identity.logoUrl) {
-        logo.src = identity.logoUrl;
+        const nextLogoUrl = new URL(identity.logoUrl, window.location.href).href;
+        logo.onerror = null;
+        if (logo.src !== nextLogoUrl) logo.src = identity.logoUrl;
         logo.alt = `${identity.name} logo`;
         logo.hidden = false;
         logoFrame.hidden = false;
       } else {
+        logo.onerror = null;
         logo.removeAttribute("src");
         logo.alt = "";
         logo.hidden = true;
