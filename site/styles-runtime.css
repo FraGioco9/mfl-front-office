@@ -4792,6 +4792,22 @@ body[data-page="club"] #clubIdentity {
   object-fit: contain;
 }
 
+.clubIdentityLogoSkeleton {
+  width: 100%;
+  height: 100%;
+}
+
+.clubIdentityColorSwatch.mflDataPlaceholder,
+.clubInfoColorSwatch.mflDataPlaceholder {
+  border-color: transparent;
+}
+
+
+.clubIdentityReady {
+  box-shadow: inset 0 2px 0 var(--club-secondary, var(--border-strong));
+}
+
+
 .clubIdentityMain {
   min-width: 0;
 }

@@ -213,7 +213,9 @@
     return "";
   }
 
-  function saveClubDestination(clubId, name, divisionInfo) {
+  function saveClubDestination(club, divisionInfo) {
+    const clubId = String(club?.clubId || "").trim();
+    const name = String(club?.name || "").trim();
     if (!clubId || !name) return;
     try {
       const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
@@ -223,6 +225,15 @@
         name,
         divisionName: String(divisionInfo?.name || ""),
         divisionColor: String(divisionInfo?.color || ""),
+        city: String(club?.city || "").trim(),
+        nation: String(club?.nation || "").trim(),
+        primaryColor: safeColor(club?.primaryColor),
+        secondaryColor: safeColor(club?.secondaryColor),
+        logoUrl: String(club?.logoUrl || "").trim(),
+        logoVersion: String(club?.logoVersion || "").trim(),
+        currentCompetitions: Array.isArray(club?.competitions)
+          ? club.competitions.map((competition) => ({ ...competition }))
+          : [],
       };
       localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -358,7 +369,7 @@
       const openClub = Reflect.get(window, "mflOpenClubPage");
       if (!clubId || typeof openClub !== "function") return;
       event.preventDefault();
-      saveClubDestination(clubId, name, divisionInfo);
+      saveClubDestination(club, divisionInfo);
       void openClub(clubId, "info");
     });
     return link;

@@ -2268,7 +2268,7 @@ if (pageName === "my-clubs") {
   const settingsPageActive = pageName === "settings";
   if (options.__mflPreviousTableStateSaved !== true) {
     const previousTablePage = tablePageKey();
-    if (previousTablePage) {
+    if (previousTablePage && previousTablePage !== "club") {
       state.tablePageStates[previousTablePage] = currentTablePageState();
       saveTableState();
     }
@@ -4354,8 +4354,9 @@ function currentTablePageState() {
 
 function currentTableState() {
   const pageKey = tablePageKey();
+  delete state.tablePageStates.club;
 
-  if (pageKey) {
+  if (pageKey && pageKey !== "club") {
     state.tablePageStates[pageKey] = currentTablePageState();
   }
 
@@ -7746,7 +7747,7 @@ function syncLayoutCenter() {
       __mflNavigationTransition: options.__mflNavigationTransition || null,
     });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
-    if (tablePages.has(pageName)) {
+    if (tablePages.has(pageName) && pageName !== "club") {
       restoreSavedTableState(pageName, {
         view: route.view || options.view,
         path: options.path,
@@ -7804,7 +7805,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
     const previousPath = stagedTransition?.previousPath || currentNavigationPath();
 
-    if (pageKey) {
+    if (pageKey && pageName !== "club") {
       const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
       state.tablePageStates[pageKey] = {
         ...existingPageState,
@@ -7983,7 +7984,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
     const previousPage = state.currentPage;
     if (options.__mflPreviousTableStateSaved !== true) {
       const previousTablePage = tablePageKey();
-      if (previousTablePage) {
+      if (previousTablePage && previousTablePage !== "club") {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }
@@ -8168,7 +8169,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
       }
 
       const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
-      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+      if (previousTablePage !== "club" && previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }

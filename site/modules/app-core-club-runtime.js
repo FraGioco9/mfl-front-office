@@ -306,6 +306,14 @@
     const colors = document.getElementById("clubIdentityColors");
     if (!(host instanceof HTMLElement)) return;
 
+    host.removeAttribute("aria-busy");
+    host.querySelectorAll("[data-club-loading]").forEach((node) => {
+      if (node !== division && node !== location && node !== colors) node.remove();
+    });
+    [division, location, colors].forEach((node) => {
+      if (node instanceof HTMLElement) delete node.dataset.clubLoading;
+    });
+
     const primary = validClubColor(identity.primaryColor);
     const secondary = validClubColor(identity.secondaryColor);
     host.classList.add("clubIdentityReady");
@@ -328,10 +336,21 @@
 
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
       if (identity.logoUrl) {
-        logo.src = identity.logoUrl;
+        const canonicalLogoUrl = identity.logoUrl;
+        logo.src = canonicalLogoUrl;
         logo.alt = `${identity.name || "Club"} logo`;
+        logo.decoding = "async";
         logo.hidden = false;
         logoFrame.hidden = false;
+        logo.onerror = () => {
+          const baseLogoUrl = canonicalLogoUrl.split("?")[0];
+          if (logo.src !== baseLogoUrl && canonicalLogoUrl.includes("?")) {
+            logo.src = baseLogoUrl;
+            return;
+          }
+          logo.hidden = true;
+          logoFrame.hidden = true;
+        };
       } else {
         logo.removeAttribute("src");
         logo.alt = "";
@@ -423,6 +442,8 @@
   function renderClubInfo() {
     const panel = document.getElementById("clubInfoPanel");
     if (!(panel instanceof HTMLElement)) return;
+    panel.removeAttribute("aria-busy");
+    delete panel.dataset.loading;
     const identity = activeClubIdentity();
     const roster = clubRosterSummary();
     const location = [identity.city, clubNationLabel(identity.nation)].filter(Boolean).join(", ");
@@ -584,6 +605,8 @@
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;
       renderClubTitle();
       renderClubIdentity();
+      const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
+      if (typeof primeClubProfileLoading === "function") primeClubProfileLoading(nextView);
       void clubTitleReady.then((resolvedTitle) => {
         if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
         document.documentElement.dataset.initialEntityVerified = "club";
@@ -591,6 +614,9 @@
         activeClubTitle = resolvedTitle;
         renderClubTitle();
         renderClubIdentity();
+        if (!clubProfileFromState(activeClubId) && typeof primeClubProfileLoading === "function") {
+          primeClubProfileLoading(nextView);
+        }
       });
 
       const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
@@ -634,11 +660,6 @@
       state.page = 1;
       state.pageSize = Math.max(100, (Array.isArray(state.rows) ? state.rows.length : 0) || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
-      if (typeof filterRules !== "undefined" && filterRules) filterRules.replaceChildren();
-      if (typeof hideRetiredInput !== "undefined" && hideRetiredInput) hideRetiredInput.checked = false;
-      if (typeof hideRetiringInput !== "undefined" && hideRetiringInput) hideRetiringInput.checked = false;
-      if (typeof hideMflPlayersInput !== "undefined" && hideMflPlayersInput) hideMflPlayersInput.checked = false;
-      if (typeof newMintsInput !== "undefined" && newMintsInput) newMintsInput.checked = false;
 
       if (typeof updateViewButtons === "function") updateViewButtons();
       if (nextView !== "info") {
