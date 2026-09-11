@@ -5,7 +5,7 @@ import { readCanonicalCoreArtifacts, readCanonicalCoreSource } from "./validate-
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [coreSource, bootstrap, loadingCss, generatedEagerCore, generatedClubCore, appEntry] = await Promise.all([
+const [coreSource, bootstrap, loadingCss, stylesBase, tabletCss, phoneCss, generatedEagerCore, generatedClubCore, appEntry] = await Promise.all([
   Promise.all([
     readCanonicalCoreSource("shared"),
     read("./modules/core-sources/evaluation.js"),
@@ -19,6 +19,9 @@ const [coreSource, bootstrap, loadingCss, generatedEagerCore, generatedClubCore,
   ]).then((parts) => parts.join("\n")),
   read("./bootstrap.js"),
   read("./loading.css"),
+  read("./styles-base.css"),
+  read("./responsive-sources/tables-tablet.css.inc"),
+  read("./responsive-sources/tables-phone.css.inc"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-club-runtime.js"),
   read("./modules/app-entry.js"),
@@ -40,6 +43,21 @@ includes(bootstrap, "function primeClubProfileLoading(view = \"info\") {", "Club
 includes(bootstrap, 'card.className = "clubInfoCard";', "Club Info loading must reuse the real card geometry.");
 includes(bootstrap, 'row.className = "clubInfoCompetition";', "Club competition loading must reuse the real competition-row geometry.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club loading skeleton.");
+
+includes(stylesBase, "grid-template-columns: 168px minmax(0, 1fr);", "Desktop Club identity must reserve the enlarged colour/logo column.");
+includes(stylesBase, "min-height: 184px;", "Desktop Club identity must keep the enlarged profile height.");
+includes(stylesBase, "max-width: 132px;", "Desktop Club identity logo must scale with the enlarged profile geometry.");
+includes(stylesBase, "font-size: 34px;", "Desktop Club identity name must scale with the enlarged profile geometry.");
+includes(stylesBase, "var(--club-primary, var(--surface-muted)) 0%", "Club identity must use the primary Club colour in its My Clubs-style gradient.");
+includes(stylesBase, "var(--club-secondary, var(--surface-muted)) 100%", "Club identity must use the secondary Club colour in its My Clubs-style gradient.");
+excludes(stylesBase, ".clubIdentityColorSwatch", "Club identity must not render separate colour swatches once the card itself owns both Club colours.");
+excludes(bootstrap, "clubIdentityColorSwatch", "Club identity first paint/loading must not create separate colour swatches.");
+excludes(clubCore, "clubIdentityColorSwatch", "Loaded Club identity must not create separate colour swatches.");
+includes(tabletCss, "grid-template-columns: 140px minmax(0, 1fr);", "Tablet Club identity must scale the enlarged colour/logo geometry.");
+includes(tabletCss, "min-height: 156px;", "Tablet Club identity must remain proportionally taller.");
+includes(phoneCss, "grid-template-columns: 112px minmax(0, 1fr);", "Phone Club identity must scale the enlarged colour/logo geometry.");
+includes(phoneCss, "min-height: 136px;", "Phone Club identity must remain proportionally taller.");
+
 includes(bootstrap, 'if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();', "Bootstrap must remain the sole owner of the temporary Club view first-paint handoff.");
 excludes(clubCore, 'document.getElementById("mflInitialTableViewFirstPaint")?.remove();', "Club runtime must not compete with bootstrap for Club first-paint ownership.");
 
