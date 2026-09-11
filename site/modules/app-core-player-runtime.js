@@ -1564,6 +1564,7 @@ function stableAttributePanelHtml(row) {
     }
     if (pendingDetailPlayerId === context.playerId) pendingDetailPlayerId = "";
     if (readyDetailPlayerId === context.playerId) readyDetailPlayerId = "";
+    syncPlayerAttributeViewActiveState(container, context.playerId);
     rememberContext(context);
     return true;
   }
@@ -2202,8 +2203,6 @@ function renderPlayerPageOwner(playerId) {
   }
 
   state.playerAttributeView = selectedAttributeView;
-  const syncAttributeViewActiveState = Reflect.get(Reflect.get(window, "__mflPlayerFirstPaintRuntime") || {}, "syncAttributeViewActiveState");
-  if (typeof syncAttributeViewActiveState === "function") syncAttributeViewActiveState(playerDetail, id);
   window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
     playerId: id,
