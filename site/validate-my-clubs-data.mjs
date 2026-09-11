@@ -135,6 +135,11 @@ try {
 process.env.MFL_DATABASE_PATH = databasePath;
 try {
   const database = require("./api/_database");
+  const runtimeClubColumns = database.tableColumnNames("runtime_clubs");
+  assert.ok(Object.isFrozen(runtimeClubColumns),
+    "Canonical runtime table-column metadata must be immutable once cached.");
+  assert.strictEqual(database.tableColumnNames("runtime_clubs"), runtimeClubColumns,
+    "Repeated runtime_clubs schema reads must reuse the same cached metadata object.");
   const queryRows = database.queryRows;
   let ownershipPlan = [];
   database.queryRows = (sql, params) => {
