@@ -66,6 +66,22 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Cached Club table schema
+
+Owner: `site/api/_database.js`.
+
+My Clubs and individual Club profile reads previously executed `PRAGMA table_info(...)` at
+request time to rediscover columns in `runtime_clubs` and, when needed, `clubs`.
+
+Table schema is immutable for the lifetime of the process-local read-only snapshot. The
+database owner now caches the normalized column-name list on first inspection and returns the
+same frozen metadata object on later reads.
+
+Deterministic request-work effect:
+
+- first access to a Club table in one process: 1 schema PRAGMA;
+- subsequent My Clubs / Club profile reads: 0 repeated schema PRAGMAs for that table.
+
 ## Database Stats read-path reuse
 
 Owner: `site/api/_database-stats.js`.
