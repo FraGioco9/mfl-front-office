@@ -80,7 +80,8 @@ for (const required of [
 ]) includes(playerCore, required, `Canonical Player core is missing ${required}`);
 
 includes(playerCore, 'const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"]', "Player detail readiness must require authoritative detail columns.");
-includes(playerCore, "if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;", "Pending Player detail must not render before authoritative detail readiness.");
+excludes(playerCore, "if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;", "A complete matching Player row must not remain blocked by payload-ready bookkeeping on cached/reused routes.");
+includes(playerCore, 'return normalizePlayerId(row[playerIdIndex]) === playerId;', "Authoritative Player detail readiness must still reject stale/mismatched rows by Player ID.");
 includes(playerCore, "const PLAYER_NOTE_MAX_LENGTH = 100;", "Player note limit must remain 100 characters.");
 includes(playerCore, "input.maxLength = PLAYER_NOTE_MAX_LENGTH;", "Player note input must enforce the canonical note limit.");
 includes(bootstrap, ">0/100</span>", "Bootstrap Player notes shell must reserve the 100-character counter.");
