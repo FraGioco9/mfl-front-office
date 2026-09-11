@@ -86,7 +86,7 @@ assert.match(statsUi, /scrollContainer\.scrollTop -= deltaY;\s*event\.preventDef
 assert.match(statsUi, /addEventListener\("touchmove", touch\.move, \{ passive: false \}\)/);
 assert.match(statsUi, /removeEventListener\("touchcancel", handlers\.touch\.end\)/);
 assert.doesNotMatch(statsUi, /MutationObserver/);
-assert.match(statsUi, /:scope > \.mflStatsHistogram, :scope > \.mflStatsHistogramLayout/);
+assert.match(statsUi, /:scope > \.mflStatsHistogram/);\nassert.doesNotMatch(statsUi, /mflStatsHistogramLayout/);
 assert.match(statsUi, /resetStatsHistogramScroll: reset/);
 assert.match(statsUi, /Object\.defineProperty\(window, "__mflSharedTableUiRuntime"/);
 assert.match(statsUi, /window\.__mflStatsMobileUiRuntime = Object\.freeze\(\{ sync, reset, destroy \}\)/);
