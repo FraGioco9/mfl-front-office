@@ -295,11 +295,9 @@ invariant(
 
 
 invariant(
-  tableLoading.includes("function clubInfoRouteActive() {")
-    && tableLoading.includes('Reflect.get(window, "__mflPrimeClubProfileLoading")')
-    && tableLoading.includes('if (scope === "club" && primeClubInfoLoadingSurface()) return token;')
-    && tableLoading.includes("if (primeClubInfoLoadingSurface()) return;"),
-  "Club Info route loading must bypass generic table rows from the first in-site loading frame and prime the Info-card skeleton instead.",
+  !tableLoading.includes("clubInfoRouteActive")
+    && !tableLoading.includes("primeClubInfoLoadingSurface"),
+  "Club loading must use the canonical table skeleton lifecycle now that the separate Info view is retired.",
 );
 
 
