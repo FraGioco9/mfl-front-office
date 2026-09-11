@@ -1385,6 +1385,7 @@
       <section class="playerHero playerHeroPending" aria-hidden="true">
         <div class="playerHeroMedia">
           <div class="playerHeroOverall isPending"><strong>${firstPaintTextSkeletonHtml("85")}</strong></div>
+          <a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo" alt="" aria-hidden="true"></a>
           <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
         </div>
         <div class="playerHeroIdentity">
