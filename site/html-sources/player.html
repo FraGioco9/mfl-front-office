@@ -334,7 +334,10 @@
                 if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
                 return;
               }
-              if (logo instanceof HTMLImageElement) logo.src = branding.logoUrl;
+              if (logo instanceof HTMLImageElement) {
+                if (branding.kind === "club" && branding.logoUrl) logo.src = branding.logoUrl;
+                else logo.removeAttribute("src");
+              }
               mark.setAttribute("aria-label", branding.name || "Player affiliation");
               if (branding.kind === "club" && branding.clubId) {
                 mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
