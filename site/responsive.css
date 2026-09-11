@@ -377,7 +377,7 @@ html:not(.mflInitialRouteResolved):is(
 
   body > #appShell > main {
     --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
-    padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
+    padding: var(--mfl-page-inset-block-start) var(--mfl-page-gutter-inline) var(--mfl-page-inset-block-end);
     overflow-x: hidden;
   }
 
@@ -440,11 +440,6 @@ html:not(.mflInitialRouteResolved):is(
   .clubIdentityMeta {
     margin-top: 8px;
     font-size: 15px;
-  }
-
-  .tablePageTitle,
-  .evaluationTitleRow {
-    margin-top: 2px;
   }
 
   .viewsScrollerShell {
@@ -2047,10 +2042,6 @@ html:not(.mflInitialRouteResolved):is(
     padding-inline: 12px;
   }
 
-  .changelogPage {
-    margin-top: 10px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 4px;
     font-size: 22px;
@@ -3536,10 +3527,6 @@ html:not(.mflInitialRouteResolved):is(
     grid-template-columns: 1fr;
   }
 
-  .changelogPage {
-    margin-top: 8px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 3px;
     font-size: 19px;
@@ -4046,10 +4033,6 @@ html:not(.mflInitialRouteResolved):is(
   .mflStatsHistogramLabel {
     min-height: 10px;
     font-size: 6px;
-  }
-
-  .changelogPage {
-    margin-top: 6px;
   }
 
   .changelogPage h2 {

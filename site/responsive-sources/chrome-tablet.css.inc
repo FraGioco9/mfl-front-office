@@ -377,7 +377,7 @@ html:not(.mflInitialRouteResolved):is(
 
   body > #appShell > main {
     --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
-    padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
+    padding: var(--mfl-page-inset-block-start) var(--mfl-page-gutter-inline) var(--mfl-page-inset-block-end);
     overflow-x: hidden;
   }
 

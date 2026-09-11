@@ -320,7 +320,7 @@ body[data-page="home"] .topbar .stats {
 
 .menuRail {
   position: fixed;
-  top: 102px;
+  top: var(--pinned-topbar-height);
   bottom: 0;
   left: 0;
   z-index: var(--mfl-z-navigation);
@@ -345,7 +345,7 @@ body[data-page="home"] .topbar .stats {
 .changelogPage {
   width: 100%;
   max-width: 860px;
-  margin: 14px auto 0;
+  margin: 0 auto;
   position: relative;
 }
 
@@ -3120,7 +3120,6 @@ button.playerIdText:active {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 14px 0 12px;
 }
 
 .evaluationPage .tablePageTitle {
@@ -5277,7 +5276,7 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
 .privacyPage {
   width: 100%;
   max-width: 780px;
-  margin: 14px auto 0;
+  margin: 0 auto;
   position: relative;
 }
 

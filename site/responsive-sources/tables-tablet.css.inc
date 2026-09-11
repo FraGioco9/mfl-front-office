@@ -32,11 +32,6 @@
     font-size: 15px;
   }
 
-  .tablePageTitle,
-  .evaluationTitleRow {
-    margin-top: 2px;
-  }
-
   .viewsScrollerShell {
     position: relative;
     width: 100%;

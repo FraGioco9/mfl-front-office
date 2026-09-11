@@ -66,7 +66,7 @@ Data visualization and game-state colors are intentionally not part of this rule
 - Shared page/table title size: `20px` (`--mfl-page-title-font-size`)
 - Shared page-title minimum height: `32px` (`--mfl-page-title-min-height`)
 - Phone and compact-phone title scaling override the same token to `18px` / `17px`
-- Page-title block margins: `6px` before / `8px` after (`--mfl-page-title-margin-block-start` / `--mfl-page-title-margin-block-end`)
+- Page-title block margins: `0px` before / `8px` after (`--mfl-page-title-margin-block-start` / `--mfl-page-title-margin-block-end`)
 - Page-title line-height: `1.2` (`--mfl-page-title-line-height`)
 - Shared section title: `16px` (`--mfl-section-title-font-size`)
 - Shared compact section title: `15px` (`--mfl-section-title-compact-font-size`)
@@ -106,7 +106,7 @@ This contract is intentionally narrow. It covers ordinary form/status feedback s
 - Desktop page gutter: `28px` (`--mfl-page-gutter-inline`)
 - Tablet/mobile page gutter at `<=900px`: `12px`, expressed by overriding the same token
 - Phone page gutter at `<=520px`: `8px`, expressed by overriding the same token
-- Desktop page block inset: `4px` top / `6px` bottom (`--mfl-page-inset-block-start` / `--mfl-page-inset-block-end`)
+- Desktop page block inset: `10px` top / `6px` bottom (`--mfl-page-inset-block-start` / `--mfl-page-inset-block-end`)
 - Tablet/mobile bottom page inset derives from the mobile-navigation clearance and safe-area inset through `--mfl-page-inset-block-end`
 - Repeated desktop page-section rhythm: `6px` (`--mfl-page-section-gap`)
 - Phone page-section rhythm: `5px`, expressed by overriding the same shared token
@@ -313,3 +313,9 @@ Do not globalize a value merely because two numbers or colors match. In particul
 - data visualization/game-state colors such as progression, Training deltas, and difficulty/status scales
 
 When a new value is genuinely global, add it to the appropriate canonical owner and update validation so a competing one-off literal cannot silently reappear.
+
+## Page-start ownership (issue #923)
+
+The main scroller owns the complete **10px header-to-content gap** on desktop and mobile. First title rows and static page roots add no leading margin. Measure the gap from the topbar bottom border to the first title/content block border at scroll position zero, not to font glyphs. Home and locked/opt-in feedback keep their intentional centered compositions inside the shell. Player starts with its hero; Evaluation retains its responsive title/action grid.
+
+Mobile consumes the same inset token and preserves safe-area gutters and navigation clearance. Reading widths, Player/Evaluation widths, footer floors and component-internal spacing remain with their existing owners. The sidebar top offset consumes the existing header-height token.

@@ -40,11 +40,11 @@
 
   /* Shared page layout, titles, and vertical rhythm. */
   --mfl-page-gutter-inline: 28px;
-  --mfl-page-inset-block-start: 4px;
+  --mfl-page-inset-block-start: 10px;
   --mfl-page-inset-block-end: 6px;
   --mfl-page-title-font-size: 20px;
   --mfl-page-title-min-height: 32px;
-  --mfl-page-title-margin-block-start: 6px;
+  --mfl-page-title-margin-block-start: 0px;
   --mfl-page-title-margin-block-end: 8px;
   --mfl-page-title-line-height: 1.2;
   --mfl-page-section-gap: 6px;
@@ -490,7 +490,7 @@ body[data-page="home"] .topbar .stats {
 
 .menuRail {
   position: fixed;
-  top: 102px;
+  top: var(--pinned-topbar-height);
   bottom: 0;
   left: 0;
   z-index: var(--mfl-z-navigation);
@@ -515,7 +515,7 @@ body[data-page="home"] .topbar .stats {
 .changelogPage {
   width: 100%;
   max-width: 860px;
-  margin: 14px auto 0;
+  margin: 0 auto;
   position: relative;
 }
 
@@ -3290,7 +3290,6 @@ button.playerIdText:active {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 14px 0 12px;
 }
 
 .evaluationPage .tablePageTitle {
@@ -5447,7 +5446,7 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
 .privacyPage {
   width: 100%;
   max-width: 780px;
-  margin: 14px auto 0;
+  margin: 0 auto;
   position: relative;
 }
 
@@ -9145,7 +9144,7 @@ html:not(.mflInitialRouteResolved):is(
 
   body > #appShell > main {
     --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
-    padding: 4px 12px calc(var(--mobile-nav-height) + 18px);
+    padding: var(--mfl-page-inset-block-start) var(--mfl-page-gutter-inline) var(--mfl-page-inset-block-end);
     overflow-x: hidden;
   }
 
@@ -9208,11 +9207,6 @@ html:not(.mflInitialRouteResolved):is(
   .clubIdentityMeta {
     margin-top: 8px;
     font-size: 15px;
-  }
-
-  .tablePageTitle,
-  .evaluationTitleRow {
-    margin-top: 2px;
   }
 
   .viewsScrollerShell {
@@ -10815,10 +10809,6 @@ html:not(.mflInitialRouteResolved):is(
     padding-inline: 12px;
   }
 
-  .changelogPage {
-    margin-top: 10px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 4px;
     font-size: 22px;
@@ -12304,10 +12294,6 @@ html:not(.mflInitialRouteResolved):is(
     grid-template-columns: 1fr;
   }
 
-  .changelogPage {
-    margin-top: 8px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 3px;
     font-size: 19px;
@@ -12814,10 +12800,6 @@ html:not(.mflInitialRouteResolved):is(
   .mflStatsHistogramLabel {
     min-height: 10px;
     font-size: 6px;
-  }
-
-  .changelogPage {
-    margin-top: 6px;
   }
 
   .changelogPage h2 {

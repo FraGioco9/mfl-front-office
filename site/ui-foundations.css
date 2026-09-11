@@ -35,11 +35,11 @@
 
   /* Shared page layout, titles, and vertical rhythm. */
   --mfl-page-gutter-inline: 28px;
-  --mfl-page-inset-block-start: 4px;
+  --mfl-page-inset-block-start: 10px;
   --mfl-page-inset-block-end: 6px;
   --mfl-page-title-font-size: 20px;
   --mfl-page-title-min-height: 32px;
-  --mfl-page-title-margin-block-start: 6px;
+  --mfl-page-title-margin-block-start: 0px;
   --mfl-page-title-margin-block-end: 8px;
   --mfl-page-title-line-height: 1.2;
   --mfl-page-section-gap: 6px;

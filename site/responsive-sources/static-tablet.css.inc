@@ -86,10 +86,6 @@
     padding-inline: 12px;
   }
 
-  .changelogPage {
-    margin-top: 10px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 4px;
     font-size: 22px;

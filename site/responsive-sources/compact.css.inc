@@ -343,10 +343,6 @@
     font-size: 6px;
   }
 
-  .changelogPage {
-    margin-top: 6px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 2px;
     font-size: 17px;

@@ -2,7 +2,7 @@ import { includes, excludes } from "./assertions.mjs";
 
 export function validateResponsiveEvaluation(context) {
   const { indexHtml, responsive, stylesBase, sharedTableUi, appCore, bootstrap } = context;
-  includes(responsive, ".tablePageTitle,\n  .evaluationTitleRow {\n    margin-top: 2px;\n  }", "Mobile page titles must not recreate the removed top padding as margin.");
+  excludes(responsive, ".tablePageTitle,\n  .evaluationTitleRow {\n    margin-top: 2px;\n  }", "Mobile page titles must inherit the shared zero leading margin.");
   includes(responsive, ".evaluationSummaryTable th,\n  .evaluationTableShell .evaluationTable th {\n    font-size: 10px;\n  }", "Evaluation table headers must follow the same 10px tablet typography step as the other player tables.");
   includes(responsive, ".evaluationSummaryTable td,\n  .evaluationTableShell .evaluationTable td {\n    font-size: 12px;\n  }", "Evaluation table body text must follow the same 12px tablet typography step as the other player tables while row height is owned by the responsive row-height contract.");
   includes(responsive, ".evaluationSummaryShell .tableScroller,\n  .evaluationTableShell .tableScroller {\n    overflow-x: auto;\n  }", "Dense Evaluation tables must own explicit mobile horizontal scrolling.");

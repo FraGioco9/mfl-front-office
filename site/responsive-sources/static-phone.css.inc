@@ -186,10 +186,6 @@
     grid-template-columns: 1fr;
   }
 
-  .changelogPage {
-    margin-top: 8px;
-  }
-
   .changelogPage h2 {
     margin-bottom: 3px;
     font-size: 19px;
