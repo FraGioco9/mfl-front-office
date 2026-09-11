@@ -302,22 +302,21 @@
     const name = document.getElementById("clubIdentityName");
     const division = document.getElementById("clubIdentityDivision");
     const location = document.getElementById("clubIdentityLocation");
-    const colors = document.getElementById("clubIdentityColors");
     if (!(host instanceof HTMLElement)) return;
 
     host.removeAttribute("aria-busy");
     host.querySelectorAll("[data-club-loading]").forEach((node) => {
-      if (node !== division && node !== location && node !== colors) node.remove();
+      if (node !== division && node !== location) node.remove();
     });
-    [division, location, colors].forEach((node) => {
+    [division, location].forEach((node) => {
       if (node instanceof HTMLElement) delete node.dataset.clubLoading;
     });
 
     const primary = validClubColor(identity.primaryColor);
     const secondary = validClubColor(identity.secondaryColor);
     host.classList.add("clubIdentityReady");
-    host.style.setProperty("--club-primary", primary || "var(--border-strong)");
-    host.style.setProperty("--club-secondary", secondary || "var(--surface-muted)");
+    host.style.setProperty("--club-primary", primary || secondary || "var(--surface-muted)");
+    host.style.setProperty("--club-secondary", secondary || primary || "var(--surface-muted)");
 
     if (id instanceof HTMLElement) id.textContent = identity.clubId ? `Club #${identity.clubId}` : "Club";
     if (name instanceof HTMLElement) name.textContent = identity.name || "Club";
@@ -358,18 +357,6 @@
       }
     }
 
-    if (colors instanceof HTMLElement) {
-      colors.replaceChildren();
-      [primary, secondary].filter(Boolean).forEach((color, index) => {
-        const swatch = document.createElement("span");
-        swatch.className = "clubIdentityColorSwatch";
-        swatch.style.backgroundColor = color;
-        swatch.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
-        swatch.title = color;
-        colors.appendChild(swatch);
-      });
-      colors.hidden = colors.childElementCount === 0;
-    }
   }
 
   function readableClubStatus(value) {
