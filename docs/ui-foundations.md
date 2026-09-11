@@ -83,7 +83,7 @@ Data visualization and game-state colors are intentionally not part of this rule
 
 The shared section-title scale is used only where the heading has the same structural role. Settings and Advanced Settings use the standard size; MFL Stats distribution and Privacy cards use the compact size. Player and Evaluation headings remain specialist-owned.
 
-Metadata tokens apply only to true small labels/secondary metadata. Component labels whose geometry controls a row height, and Player/Evaluation-specific labels, may keep locally owned line-height or sizing.
+Metadata tokens apply only to true small labels/secondary metadata. The table Watchlist label consumes the standard metadata size/weight, while the Rows label consumes the compact/strong metadata variant; route/table CSS may add presentation such as uppercase text but must not re-own those typography values. The same classes are present during first paint/loading, so loaded and loading chrome inherit the same typography owner. Component labels whose geometry controls a row height, and Player/Evaluation-specific labels, may keep locally owned line-height or sizing.
 
 ## Helper and status feedback
 
@@ -109,7 +109,7 @@ This contract is intentionally narrow. It covers ordinary form/status feedback s
 - Desktop page block inset: `10px` top / `6px` bottom (`--mfl-page-inset-block-start` / `--mfl-page-inset-block-end`)
 - Tablet/mobile bottom page inset derives from the mobile-navigation clearance and safe-area inset through `--mfl-page-inset-block-end`
 - Repeated desktop page-section rhythm: `6px` (`--mfl-page-section-gap`)
-- Phone page-section rhythm: `5px`, expressed by overriding the same shared token
+- Phone page-section rhythm: `5px`, expressed by overriding the same shared token; table Views consumes that token rather than re-declaring `5px`
 - Safe-area calculations remain in the responsive layout owner while consuming the shared page-gutter token
 - There is intentionally no global content max-width because table-heavy routes use the available width
 
