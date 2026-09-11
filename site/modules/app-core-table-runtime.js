@@ -2305,14 +2305,6 @@ function tableApplyFiltersOwner(options = {}) {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
     state.filteredRows.sort(compareRows);
-    state.pendingTableControlRestore = null;
-    filterRules.replaceChildren();
-    hideRetiredInput.checked = false;
-    hideRetiringInput.checked = false;
-    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
-    if (packablePlayersInput) packablePlayersInput.checked = false;
-    newMintsInput.checked = false;
-    if (filterSummary) filterSummary.textContent = "0";
     syncActiveWatchlistFromSet();
     renderTable();
     return;
