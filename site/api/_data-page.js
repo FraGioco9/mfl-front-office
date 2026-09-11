@@ -29,6 +29,9 @@ const {
 
 const LISTING_COLUMN = "listing_price";
 const LISTING_PRICE_SQL = "marketplace_price(player_id)";
+const PAGE_COUNT_CACHE_MAX_ENTRIES = 256;
+const pageCountCache = new Map();
+let pageCountCacheGeneration = "";
 const TABLE_PAYLOAD_SCOPES = new Set([...TABLE_SCOPES, "club"]);
 const TABLE_COMMON_RESPONSE_COLUMNS = Object.freeze([
   "player_id",
@@ -333,11 +336,40 @@ function progressionActivityCondition(view) {
     .join(" OR ")})`;
 }
 
+function pageCountCacheKey(where, parameters) {
+  return `${where}\u0000${JSON.stringify(parameters)}`;
+}
+
+function syncPageCountCacheGeneration() {
+  const generation = String(getGeneratedAt() || "");
+  if (pageCountCacheGeneration && pageCountCacheGeneration !== generation) {
+    pageCountCache.clear();
+  }
+  pageCountCacheGeneration = generation;
+  return generation;
+}
+
 function countRows(where, parameters) {
-  return Number(queryOne(
+  syncPageCountCacheGeneration();
+  const cacheKey = pageCountCacheKey(where, parameters);
+  if (pageCountCache.has(cacheKey)) {
+    const cached = pageCountCache.get(cacheKey);
+    pageCountCache.delete(cacheKey);
+    pageCountCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  const count = Number(queryOne(
     `SELECT count(*) AS count FROM players${where}`,
     parameters,
   )?.count || 0);
+  pageCountCache.set(cacheKey, count);
+  while (pageCountCache.size > PAGE_COUNT_CACHE_MAX_ENTRIES) {
+    const oldestKey = pageCountCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    pageCountCache.delete(oldestKey);
+  }
+  return count;
 }
 
 function parametersEqual(left, right) {
