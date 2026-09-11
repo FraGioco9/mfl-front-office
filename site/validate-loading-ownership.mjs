@@ -214,6 +214,21 @@ invariant(
   "Completed incremental-route results must use one bounded canonical LRU-style cache owner.",
 );
 invariant(
+  appCoreSource.includes("incrementalCacheNamespace: \"\"")
+    && appCoreSource.includes("function syncIncrementalCacheNamespace() {")
+    && appCoreSource.includes('const datasetKey = String(state.manifest?.generated_at || "unversioned").trim() || "unversioned";')
+    && appCoreSource.includes('const walletKey = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() || "guest";')
+    && appCoreSource.includes("if (state.incrementalCacheNamespace && state.incrementalCacheNamespace !== namespace) {\n    state.incrementalPayloadCache.clear();")
+    && appCoreSource.includes('cacheKey: `${namespace}:${requestKey}`,'),
+  "Completed route-cache reuse must be namespaced by published dataset generation and linked wallet, clearing on namespace changes.",
+);
+invariant(
+  appCoreSource.includes("function adoptIncrementalPayloadDataset(payload) {")
+    && appCoreSource.includes('const generatedAt = String(payload?.generatedAt || "").trim();')
+    && appCoreSource.includes("adoptIncrementalPayloadDataset(payload);\n        const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;\n        rememberIncrementalPayload(responseCacheKey, payload);"),
+  "Fresh route payloads must adopt a newly published dataset identity before entering the completed-result cache.",
+);
+invariant(
   !appCoreSource.includes("const clubViewPayloadCache = new Map();")
     && !appCoreSource.includes("function rememberClubViewPayload(")
     && !appCoreSource.includes("function cachedClubViewPayload("),
