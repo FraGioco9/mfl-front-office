@@ -48,6 +48,23 @@ Deterministic compile-count effect for a repeated SQL shape:
 This records compile-work removal only; production wall-clock improvement remains part of the
 separate runtime baseline.
 
+## Precomputed MFL Stats summary
+
+Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
+`site/api/_mfl-stats-summary.js` for reads.
+
+Before this change, every MFL Stats summary request grouped the full MFL-owned subset of
+`players` by derived overall, age and category at request time. Those values are stable for
+the lifetime of one published database snapshot.
+
+The runtime database now materializes the exact `overall / age / category / player_count`
+summary once during preparation in `runtime_mfl_stats_summary`. The API reads that compact
+table when available and retains the previous live aggregate only as an older-snapshot fallback.
+
+`test_precomputed_mfl_stats_summary_reduces_sqlite_work` verifies both paths return identical
+rows and that the precomputed read executes fewer SQLite VM steps, with no temporary sort
+B-tree in the compact-table plan.
+
 ## Existing query-plan evidence
 
 `scripts/database/runtime_query_plans.py` and `tests/test_runtime_query_plans.py` already
