@@ -6157,6 +6157,16 @@ function countryFlagHtml(nationality) {
   return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="" data-tooltip="${label}" aria-label="${label}">`;
 }
 
+function countryFlagElement(nationality, extraClass = "") {
+  if (!countryCodeForNationality(nationality)) return null;
+  const template = document.createElement("template");
+  template.innerHTML = countryFlagHtml(nationality);
+  const flag = template.content.firstElementChild;
+  if (!(flag instanceof HTMLImageElement)) return null;
+  String(extraClass || "").split(/\s+/).filter(Boolean).forEach((className) => flag.classList.add(className));
+  return flag;
+}
+
 function rarityColorForOverall(overall) {
   const value = Number(overall || 0);
 

@@ -133,7 +133,12 @@
     if (location) {
       const locationLine = document.createElement("span");
       locationLine.className = "myClubLocation";
-      appendLoadingText(locationLine, location);
+      const flag = countryFlagElement(club?.nation, "clubLocationFlag");
+      if (flag) locationLine.appendChild(flag);
+      const locationText = document.createElement("span");
+      locationText.className = "clubLocationText";
+      appendLoadingText(locationText, location);
+      locationLine.appendChild(locationText);
       meta.appendChild(locationLine);
     }
 
@@ -354,7 +359,12 @@
     if (location) {
       const locationNode = document.createElement("span");
       locationNode.className = "myClubLocation";
-      locationNode.textContent = location;
+      const flag = countryFlagElement(club?.nation, "clubLocationFlag");
+      if (flag) locationNode.appendChild(flag);
+      const locationText = document.createElement("span");
+      locationText.className = "clubLocationText";
+      locationText.textContent = location;
+      locationNode.appendChild(locationText);
       meta.appendChild(locationNode);
     }
 

@@ -329,7 +329,15 @@
     }
     if (location instanceof HTMLElement) {
       const locationLabel = [identity.city, clubNationLabel(identity.nation)].filter(Boolean).join(", ");
-      location.textContent = locationLabel;
+      location.replaceChildren();
+      const flag = countryFlagElement(identity.nation, "clubLocationFlag");
+      if (flag) location.appendChild(flag);
+      if (locationLabel) {
+        const locationText = document.createElement("span");
+        locationText.className = "clubLocationText";
+        locationText.textContent = locationLabel;
+        location.appendChild(locationText);
+      }
       location.hidden = !locationLabel;
     }
 
