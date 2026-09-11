@@ -334,12 +334,6 @@
       state.page = 1;
       state.pageSize = Math.max(100, clubRows().length || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
-      if (typeof filterRules !== "undefined" && filterRules) filterRules.replaceChildren();
-      if (typeof hideRetiredInput !== "undefined" && hideRetiredInput) hideRetiredInput.checked = false;
-      if (typeof hideRetiringInput !== "undefined" && hideRetiringInput) hideRetiringInput.checked = false;
-      if (typeof hideMflPlayersInput !== "undefined" && hideMflPlayersInput) hideMflPlayersInput.checked = false;
-      if (typeof newMintsInput !== "undefined" && newMintsInput) newMintsInput.checked = false;
-
       if (typeof updateViewButtons === "function") updateViewButtons();
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
