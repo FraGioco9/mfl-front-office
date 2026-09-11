@@ -81,10 +81,9 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-player-portrait-width: calc(var(--mfl-player-portrait-height) * 1.824);
     --mfl-player-portrait-radius: clamp(4px, 1vw, 6px);
     --mfl-player-card-radius: var(--mfl-player-panel-radius);
-    --mfl-player-hero-media-gap: clamp(16px, 4vw, 20px);
+    --mfl-player-hero-brand-size: var(--mfl-player-portrait-height);
+    --mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(18px, 4vw, 26px));
     --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
-    --mfl-player-hero-brand-size: clamp(28px, 7vw, 36px);
-    --mfl-player-hero-brand-bottom: clamp(16px, 4vw, 24px);
     --mfl-player-hero-identity-width: 100%;
     --mfl-player-hero-identity-action-gap: 0px;
     --mfl-player-hero-identity-align-self: center;
