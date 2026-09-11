@@ -343,11 +343,15 @@ const browserTestSource = String.raw`(() => {
       };
     }
     if (scenario === "player") {
+      const activeViews = Array.from(document.querySelectorAll("#playerDetail .playerAttributeViewButton.active"))
+        .map((button) => String(button.dataset.playerAttributeView || button.dataset.view || ""));
       return {
         path: window.location.pathname,
         title: document.title,
         hasPlayerName: text("#playerDetail").includes(expectedPlayerName),
         pageHidden: hidden("#playerPage"),
+        selectedPlayerView: typeof state !== "undefined" ? String(state.playerAttributeView || "") : "",
+        activePlayerViews: activeViews,
       };
     }
     if (scenario === "watchlist" || scenario === "watchlist-empty") {
@@ -406,6 +410,11 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.hasPlayerName, "Player detail did not render the fixture identity.");
       assert(stateValue.title === expectedPlayerName + " - MFL Front Office", "Player title is not the full player name.");
       assert(stateValue.pageHidden === false, "Player page remained hidden after readiness.");
+      assert(stateValue.activePlayerViews.length === 1, "Player must expose exactly one active view after loading completes.");
+      assert(
+        stateValue.activePlayerViews[0] === stateValue.selectedPlayerView,
+        "Player active view does not match the selected Player view after loading completes.",
+      );
     } else if (scenario === "watchlist") {
       assert(
         stateValue.path === "/watchlist/" + testWatchlistId + "/current-season",
