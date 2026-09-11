@@ -33,7 +33,7 @@ invariant(html.includes('id="plannerClubSearchClearButton"') && html.includes('c
 invariant(routing.includes('if (pageName === "planner")'), "Shared SPA routing must build Planner URLs.");
 invariant(routing.includes('const plannerMatch = cleanPath.match(/^\\/planner'), "Shared SPA routing must classify Planner URLs.");
 invariant(lifecycle.includes('pageName === "planner"'), "Shared page lifecycle must delegate to the Planner owner.");
-invariant(planner.includes('type: "clubs"'), "Planner Club selection must reuse canonical Club search.");
+invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club selection must reuse canonical Club search.");
 invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club search must delegate to the canonical database-search owner.");
 invariant(planner.includes('activeInput: () => searchInput?.value || ""'), "Planner Club search must bind canonical stale-request protection to its own field.");
 invariant(sharedSearch.includes('if (type === "clubs")') && sharedSearch.includes('Array.isArray(payload?.results)'), "The canonical database-search owner must normalize Club-only search responses.");
