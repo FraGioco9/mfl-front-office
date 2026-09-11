@@ -82,7 +82,7 @@ for (const canonicalConfig of [
   'agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" })',
   'watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" })',
   'myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" })',
-  'club: Object.freeze({ order: ["info", "attributes", "contracts", "current", "all"], fallback: "info" })',
+  'club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" })',
 ]) {
   includes(indexHtml, canonicalConfig, `First paint must retain canonical view configuration ${canonicalConfig}.`);
 }
@@ -100,9 +100,10 @@ includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view
 includes(staticUi, "const insertionPoint = switcher instanceof HTMLElement && switcher.parentElement === container", "View ordering must preserve the Watchlist/scroll-cue insertion boundary.");
 includes(staticUi, "container.insertBefore(button, insertionPoint);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
-includes(indexHtml, 'data-view="info">Info</button>', "Club first paint must ship the canonical Info view button.");
+excludes(indexHtml, 'data-view="info">Info</button>', "Club first paint must not ship the retired Info view button.");
 includes(indexHtml, 'id="clubIdentity"', "Club first paint must ship the persistent identity shell.");
-includes(indexHtml, 'id="clubInfoPanel"', "Club first paint must ship the Info content shell.");
+includes(indexHtml, 'id="clubIdentityOwner"', "Club first paint must ship Owner inside the persistent identity shell.");
+excludes(indexHtml, 'id="clubInfoPanel"', "Club first paint must not ship the retired Info content shell.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy })", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
 includes(staticUi, 'const routes = window.__mflAppConfig?.routes;', "Static route chrome must consume the canonical route configuration.");
