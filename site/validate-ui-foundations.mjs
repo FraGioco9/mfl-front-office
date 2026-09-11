@@ -128,9 +128,11 @@ includes(
   "input,\nselect {\n  height: var(--mfl-control-height);\n  width: 100%;\n  border: 1px solid var(--border-strong);\n  border-radius: var(--mfl-radius-control);",
   "Default input/select controls must consume the shared standard control height and radius.",
 );
-const baseButtonGeometry = exactRule(stylesBase, "button");
-includes(baseButtonGeometry, "height: var(--mfl-control-height);", "Default buttons must consume the shared standard control height.");
-includes(baseButtonGeometry, "border-radius: var(--mfl-radius-control);", "Default buttons must consume the shared control radius.");
+includes(
+  stylesBase,
+  "button {\n  height: var(--mfl-control-height);\n  border: 1px solid var(--primary);\n  border-radius: var(--mfl-radius-control);",
+  "Default buttons must consume the shared standard control height and radius.",
+);
 const rowsMetadataGeometry = exactRule(stylesBase, ".field.rowsField span");
 includes(rowsMetadataGeometry, "line-height: var(--mfl-control-height);", "Rows metadata must align to the shared control height.");
 const filterSummaryGeometry = exactRule(stylesBase, "#filterSummary");
