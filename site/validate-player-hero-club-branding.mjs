@@ -46,16 +46,16 @@ includes(bootstrap, '<a class="playerHeroBrandMark" tabindex="-1" aria-hidden="t
 
 for (const token of [
   "position: relative;",
-  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 28px);",
+  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 18px);",
   "width: var(--mfl-player-hero-brand-size, 92px);",
   "opacity: 0.42;",
   ".playerHeroPortraitFrame {\n  position: relative;\n  z-index: 2;",
 ]) includes(styles, token, `Player affiliation layering is missing: ${token}`);
 
-includes(player, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 232;", "Desktop media geometry must move the Player portrait another 20px left while preserving Club-mark overlap.");
-includes(player, 'media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 28);', "Runtime Player media gap must match the additional 20px portrait shift.");
+includes(player, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 212;", "Desktop media geometry must move the Player portrait another 20px left while preserving Club-mark overlap.");
+includes(player, 'media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 8);', "Runtime Player media gap must match the second additional 20px portrait shift.");
 includes(responsive, "--mfl-player-hero-brand-size: calc(var(--mfl-player-portrait-height) * 0.82);", "Responsive affiliation mark must scale down relative to the Player portrait.");
-includes(responsive, "--mfl-player-hero-media-gap: max(0px, calc(var(--mfl-player-portrait-height) - clamp(60px, 13vw, 68px)));", "Responsive Player portrait must receive the additional left shift without allowing a negative gap.");
+includes(responsive, "--mfl-player-hero-media-gap: max(0px, calc(var(--mfl-player-portrait-height) - clamp(60px, 13vw, 68px) - 20px));", "Responsive Player portrait must receive the second additional 20px left shift without allowing a negative gap.");
 
 includes(styles, ".playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {\n  display: block;", "Development Center cone must render inline from the Player hero mark.");
 includes(styles, ".playerHeroDevelopmentCenterIcon {\n  display: none;\n  color: #ffffff;", "Development Center cone must be white.");
