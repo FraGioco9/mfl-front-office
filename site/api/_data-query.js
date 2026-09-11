@@ -56,15 +56,18 @@ function hiddenMflJoinedDateCondition(alias = "") {
   return `NOT (${mflCondition(alias)} AND coalesce(${joinedDate} IN ('2025-10-09', '2025-10-10'), 0) = 1)`;
 }
 
+function runtimeMetadataCount(key) {
+  const rawValue = getRuntimeMetadata(key);
+  if (rawValue === null || String(rawValue).trim() === "") return null;
+  const value = Number(rawValue);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 function manifestPayload() {
-  const cachedPlayerCount = Number(getRuntimeMetadata("row_count"));
-  const cachedWalletCount = Number(getRuntimeMetadata("wallet_count"));
-  const playerCount = Number.isFinite(cachedPlayerCount)
-    ? cachedPlayerCount
-    : Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0);
-  const walletCount = Number.isFinite(cachedWalletCount)
-    ? cachedWalletCount
-    : Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0);
+  const cachedPlayerCount = runtimeMetadataCount("row_count");
+  const cachedWalletCount = runtimeMetadataCount("wallet_count");
+  const playerCount = cachedPlayerCount ?? Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0);
+  const walletCount = cachedWalletCount ?? Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0);
   return {
     generated_at: getGeneratedAt(),
     row_count: playerCount,
