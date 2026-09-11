@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
+const browserClubLogo9001 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%23112233'/%3E%3C/svg%3E";
+const browserClubLogo9002 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%23223344'/%3E%3C/svg%3E";
 const testWatchlistId = "browser1";
 const testPlayer = Object.freeze({
   player_id: 1,
@@ -111,6 +113,7 @@ const browserTestSource = String.raw`(() => {
   "use strict";
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
+  const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
   const scenario = window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
@@ -542,9 +545,33 @@ const browserTestSource = String.raw`(() => {
       );
       const firstClubCard = document.querySelector('#myClubsGrid .myClubCard[data-club-id="9001"]:not(.myClubCardLoading)');
       assert(firstClubCard instanceof HTMLAnchorElement, "My Clubs Club A card is unavailable for navigation regression.");
+      const identityLogo = document.getElementById("clubIdentityLogo");
+      const identityLogoFrame = document.querySelector("#clubIdentity .clubIdentityLogoFrame");
+      assert(identityLogo instanceof HTMLImageElement && identityLogoFrame instanceof HTMLElement, "Club identity logo shell is unavailable.");
+      let destinationLogoPainted = false;
+      let destinationLogoDropped = false;
+      const trackDestinationLogo = () => {
+        const currentSrc = String(identityLogo.getAttribute("src") || "");
+        const visible = !identityLogo.hidden && !identityLogoFrame.hidden && currentSrc === expectedBrowserClubLogo;
+        if (visible) destinationLogoPainted = true;
+        if (destinationLogoPainted && !visible) destinationLogoDropped = true;
+      };
+      const logoObserver = new MutationObserver(trackDestinationLogo);
+      logoObserver.observe(identityLogo, { attributes: true, attributeFilter: ["src", "hidden"] });
+      logoObserver.observe(identityLogoFrame, { attributes: true, attributeFilter: ["hidden"] });
+
       firstClubCard.click();
+      trackDestinationLogo();
+      assert(destinationLogoPainted, "Club first paint did not reuse the logo already loaded by My Clubs.");
+      await delay(120);
+      trackDestinationLogo();
+      assert(!destinationLogoDropped, "Club first paint dropped an already-loaded My Clubs logo before profile hydration.");
       await waitFor(() => window.location.pathname === "/clubs/9001/squad", "Club A did not open on the canonical Squad route.");
       await waitFor(() => text("#clubIdentityName") === "Browser Club", "Club A identity did not render before overlap regression.");
+      await waitFor(() => text("#clubIdentityOwnerName") === "Browser Owner", "Club A full profile did not settle after first-paint logo regression.");
+      trackDestinationLogo();
+      logoObserver.disconnect();
+      assert(!destinationLogoDropped, "Club logo disappeared between first paint and the hydrated profile.");
       await delay(30);
 
       const returnToMyClubs = setPage("my-clubs", true);
@@ -768,7 +795,7 @@ function pageDataStub(url) {
       secondaryColor: "#445566",
       ownerWalletAddress: "0x3333333333333333",
       ownerName: "Browser Owner",
-      logoUrl: "",
+      logoUrl: browserClubLogo9001,
     },
     "9002": {
       clubId: "9002",
@@ -780,7 +807,7 @@ function pageDataStub(url) {
       secondaryColor: "#556677",
       ownerWalletAddress: "0x4444444444444444",
       ownerName: "Second Browser Owner",
-      logoUrl: "",
+      logoUrl: browserClubLogo9002,
     },
   };
   const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
@@ -834,7 +861,7 @@ function dataStub(url) {
         division: 3,
         city: "Bologna",
         nation: "ITALY",
-        logoUrl: "",
+        logoUrl: browserClubLogo9001,
         primaryColor: "#112233",
         secondaryColor: "#445566",
       }, {
@@ -843,7 +870,7 @@ function dataStub(url) {
         division: 4,
         city: "Rome",
         nation: "ITALY",
-        logoUrl: "",
+        logoUrl: browserClubLogo9002,
         primaryColor: "#223344",
         secondaryColor: "#556677",
       }, {
