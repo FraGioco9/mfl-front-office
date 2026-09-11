@@ -406,8 +406,8 @@ assert.match(
 );
 assert.doesNotMatch(
   stylesBase,
-  /\.clubIdentityLogoSkeleton\s*\{[\s\S]*\b(?:width|height|min-width|max-width|min-height|max-height|aspect-ratio)\s*:/u,
-  "Club identity loading-only logo selectors must not own independent geometry.",
+  /(?:^|\n)\.clubIdentityLogoSkeleton\s*\{/u,
+  "Club identity loading-only logo selectors must not own an independent rule.",
 );
 assert.match(
   responsive,
