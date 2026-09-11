@@ -74,9 +74,9 @@
 
   const page = document.getElementById("plannerPage");
   const workspace = document.getElementById("plannerWorkspace");
-  const searchInput = document.getElementById("plannerClubSearchInput");
+  const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById("plannerClubSearchInput"));
   const searchResults = document.getElementById("plannerClubSearchResults");
-  const formationSelect = document.getElementById("plannerFormationSelect");
+  const formationSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById("plannerFormationSelect"));
   const pitch = document.getElementById("plannerPitch");
   const roster = document.getElementById("plannerRoster");
   const rosterCount = document.getElementById("plannerRosterCount");
@@ -391,7 +391,7 @@
       if (updateUrl) setCanonicalUrl(normalizedClubId);
       renderWorkspace();
       setStatus(rows.length + " players loaded. Select a player, then a position.");
-      window.__mflDocumentTitleRuntime?.sync?.();
+      Reflect.get(window, "__mflDocumentTitleRuntime")?.sync?.();
       return true;
     } catch (error) {
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
@@ -516,7 +516,8 @@
 
   document.addEventListener("click", (event) => {
     if (!(searchResults instanceof HTMLElement) || searchResults.hidden) return;
-    if (event.target === searchInput || searchResults.contains(event.target)) return;
+    const target = event.target;
+    if (target === searchInput || (target instanceof Node && searchResults.contains(target))) return;
     searchResults.hidden = true;
   });
 
