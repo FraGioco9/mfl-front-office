@@ -38,6 +38,21 @@
     return String(document.body?.dataset.page || "").toLowerCase() !== "club";
   }
 
+  function clubInfoRouteActive() {
+    const path = String(location.pathname || "").replace(/\/+$/u, "");
+    return /^\/(?:clubs?|club)\/[^/]+(?:\/info)?$/iu.test(path);
+  }
+
+  function primeClubInfoLoadingSurface() {
+    if (!clubInfoRouteActive()) return false;
+    const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
+    if (typeof primeClubProfileLoading !== "function") return false;
+    primeClubProfileLoading("info");
+    hidePager();
+    neutralizeSelectionHeader();
+    return true;
+  }
+
   function elements() {
     const body = document.getElementById("tableBody");
     const empty = document.getElementById("emptyState");
@@ -201,6 +216,7 @@
     if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return 0;
     const token = ++nextRequestToken;
     activeRequestToken = token;
+    if (scope === "club" && primeClubInfoLoadingSurface()) return token;
     hidePager();
     neutralizeSelectionHeader();
     const currentBody = elements().body;
@@ -296,6 +312,7 @@
       return;
     }
     if (snapshot.dataLoading || requestActive()) {
+      if (primeClubInfoLoadingSurface()) return;
       const renderedRowsPresent = syncRenderedRows();
       const renderedEmptyStatePresent = hasRenderedEmptyState();
       neutralizeSelectionHeader();
