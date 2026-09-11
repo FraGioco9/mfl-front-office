@@ -350,9 +350,29 @@
         const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
         ownerName.textContent = ownerLabel;
         ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
+        if (identity.ownerWalletAddress) {
+          owner.dataset.walletAddress = identity.ownerWalletAddress;
+          owner.dataset.agentName = identity.ownerName || "";
+          owner.setAttribute(
+            "href",
+            typeof agentRoute === "function"
+              ? agentRoute(identity.ownerWalletAddress)
+              : `/agents/${encodeURIComponent(identity.ownerWalletAddress)}/attributes`,
+          );
+          owner.setAttribute("aria-label", `Open agent ${ownerLabel}`);
+        } else {
+          delete owner.dataset.walletAddress;
+          delete owner.dataset.agentName;
+          owner.removeAttribute("href");
+          owner.removeAttribute("aria-label");
+        }
       } else {
         const createTextSkeleton = Reflect.get(window, "__mflCreateTextSkeleton");
         owner.dataset.clubLoading = "true";
+        delete owner.dataset.walletAddress;
+        delete owner.dataset.agentName;
+        owner.removeAttribute("href");
+        owner.removeAttribute("aria-label");
         if (typeof createTextSkeleton === "function") {
           ownerName.replaceChildren(createTextSkeleton("Agent Name"));
           ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));
@@ -389,6 +409,18 @@
     }
 
   }
+
+  const clubIdentityOwnerLink = document.getElementById("clubIdentityOwner");
+  clubIdentityOwnerLink?.addEventListener("click", (event) => {
+    const walletAddress = String(clubIdentityOwnerLink.dataset.walletAddress || "").trim();
+    if (!walletAddress) {
+      event.preventDefault();
+      return;
+    }
+    if (typeof openAgentPage !== "function") return;
+    event.preventDefault();
+    openAgentPage(walletAddress, String(clubIdentityOwnerLink.dataset.agentName || "").trim());
+  });
 
   function primaryPosition(row) {
     if (typeof playerPositions === "function") {
@@ -456,8 +488,20 @@
       const nextClubId = String(clubId);
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
-      const clubTitleReady = ensureClubTitleIdentity(activeClubId);
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
+      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromSearchIndex(activeClubId);
+      if (earlyClubTitle) activeClubTitle = earlyClubTitle;
+
+      // Prepare the destination identity while the Club page is still hidden.
+      // This prevents a previous Club from flashing when returning through My Clubs
+      // or any other non-Club route before opening a different Club.
+      renderClubTitle();
+      renderClubIdentity();
+      const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
+      if (typeof primeClubProfileLoading === "function") primeClubProfileLoading(nextView);
+
+      const clubTitleReady = ensureClubTitleIdentity(activeClubId);
       const route = canonicalClubRoute(activeClubId, nextView);
       const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
       if (!routeAlreadyCommitted) {
@@ -469,14 +513,6 @@
         });
         if (!transition) return;
       }
-
-      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
-        || clubTitleIdentityFromSearchIndex(activeClubId);
-      if (earlyClubTitle) activeClubTitle = earlyClubTitle;
-      renderClubTitle();
-      renderClubIdentity();
-      const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
-      if (typeof primeClubProfileLoading === "function") primeClubProfileLoading(nextView);
       void clubTitleReady.then((resolvedTitle) => {
         if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
         document.documentElement.dataset.initialEntityVerified = "club";
