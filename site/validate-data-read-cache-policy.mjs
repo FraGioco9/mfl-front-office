@@ -147,11 +147,13 @@ invariant(
   "Runtime metadata must be loaded once with the canonical SQLite connection and exposed through one read owner.",
 );
 invariant(
-  dataQuery.includes('getRuntimeMetadata("row_count")')
-    && dataQuery.includes('getRuntimeMetadata("wallet_count")')
-    && dataQuery.includes('queryOne("SELECT count(*) AS count FROM players")')
-    && dataQuery.includes('queryOne("SELECT count(*) AS count FROM wallets")'),
-  "Manifest counts must prefer snapshot metadata while retaining older-snapshot live COUNT fallbacks.",
+  dataQuery.includes("function runtimeMetadataCount(key) {")
+    && dataQuery.includes('if (rawValue === null || String(rawValue).trim() === "") return null;')
+    && dataQuery.includes('runtimeMetadataCount("row_count")')
+    && dataQuery.includes('runtimeMetadataCount("wallet_count")')
+    && dataQuery.includes('cachedPlayerCount ?? Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0)')
+    && dataQuery.includes('cachedWalletCount ?? Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0)'),
+  "Manifest counts must prefer valid snapshot metadata and fall back to live COUNT queries when older snapshots omit those keys.",
 );
 invariant(
   !database.includes("return getDatabase().prepare(sql).all(...parameters);")
