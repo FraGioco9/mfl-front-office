@@ -1030,22 +1030,23 @@
     if (!(element instanceof HTMLElement)) return element;
 
     delete element.dataset.mflStatsDistributionSignature;
-    const heights = [44, 68, 36, 82, 58, 76, 48, 64, 40, 72, 52, 60];
+    const previousLabels = Array.from(element.querySelectorAll(":scope > .mflStatsHistogram .mflStatsHistogramLabel"))
+      .map((label) => String(label.textContent || "").trim())
+      .filter(Boolean);
+    const labels = previousLabels.length
+      ? previousLabels
+      : Array.from({ length: 12 }, (_, index) => String(50 + index * 4));
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram mflStatsHistogramSkeleton";
-    histogram.style.setProperty("--mfl-stats-bars", String(heights.length));
+    histogram.style.setProperty("--mfl-stats-bars", String(labels.length));
 
-    heights.forEach((height, index) => {
+    labels.forEach((sample) => {
       const item = document.createElement("div");
       item.className = "mflStatsHistogramItem";
-      const bar = document.createElement("div");
-      bar.className = "mflStatsHistogramBar";
-      const fill = createDataPlaceholder("mflStatsHistogramFill mflStatsHistogramSkeletonFill");
-      fill.style.setProperty("--bar-height", `${height}%`);
+      const bar = createDataPlaceholder("mflStatsHistogramBar mflStatsHistogramSkeletonBar");
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
-      label.appendChild(createTextSkeleton(String(50 + index * 4)));
-      bar.appendChild(fill);
+      label.appendChild(createTextSkeleton(sample));
       item.append(bar, label);
       histogram.appendChild(item);
     });
@@ -1211,7 +1212,7 @@
         </div>
         <div class="playerHeroIdentity">
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
-          <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
+          <h2 class="playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
           <p>${firstPaintTextSkeletonHtml("CM, RW")}</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">
