@@ -22,6 +22,7 @@ RUNTIME_TABLES = frozenset({
     "runtime_agents",
     "runtime_clubs",
     "runtime_database_stats",
+    "runtime_mfl_stats_summary",
     "runtime_metadata",
 })
 
@@ -230,6 +231,67 @@ def prepare_runtime_clubs(connection: sqlite3.Connection) -> None:
     )
 
 
+
+def prepare_runtime_mfl_stats_summary(connection: sqlite3.Connection) -> None:
+    """Precompute stable MFL Stats summary buckets for the published snapshot."""
+    overall_sql = """
+      CASE
+        WHEN upper(trim(
+          CASE
+            WHEN instr(positions, ',') > 0
+              THEN substr(positions, 1, instr(positions, ',') - 1)
+            ELSE positions
+          END
+        )) = 'GK'
+          THEN CAST(goalkeeping AS INTEGER)
+        ELSE CAST(overall AS INTEGER)
+      END
+    """
+    joined_seconds_sql = "(CASE WHEN abs(owned_since) < 100000000000 THEN owned_since ELSE owned_since / 1000 END)"
+    joined_date_sql = f"date({joined_seconds_sql}, 'unixepoch')"
+    category_sql = f"""
+      CASE
+        WHEN coalesce({joined_date_sql} IN ('2025-10-09', '2025-10-10'), 0) = 1 THEN 'other'
+        WHEN CAST(player_seasons AS INTEGER) = 1 THEN 'packable'
+        WHEN CAST(player_seasons AS INTEGER) >= 2 THEN 'aged'
+        ELSE 'other'
+      END
+    """
+
+    connection.executescript(
+        """
+        DROP TABLE IF EXISTS runtime_mfl_stats_summary;
+        CREATE TABLE runtime_mfl_stats_summary (
+          overall INTEGER NOT NULL,
+          age INTEGER,
+          category TEXT NOT NULL,
+          player_count INTEGER NOT NULL,
+          PRIMARY KEY (overall, age, category)
+        ) WITHOUT ROWID;
+        """
+    )
+    connection.execute(
+        f"""
+        INSERT INTO runtime_mfl_stats_summary (
+          overall,
+          age,
+          category,
+          player_count
+        )
+        SELECT
+          {overall_sql} AS overall,
+          CAST(age AS INTEGER) AS age,
+          {category_sql} AS category,
+          count(*) AS player_count
+        FROM players
+        WHERE lower(coalesce(wallet_address, '')) = ?
+          AND {overall_sql} IS NOT NULL
+        GROUP BY overall, age, category
+        ORDER BY overall, age, category
+        """,
+        (MFL_WALLET_ADDRESS.lower(),),
+    )
+
 def prepare_runtime_database(database_path: Path) -> None:
     if not database_path.is_file():
         raise FileNotFoundError(f"Database not found: {database_path}")
@@ -338,6 +400,7 @@ def prepare_runtime_database(database_path: Path) -> None:
             """
         )
         prepare_runtime_clubs(connection)
+        prepare_runtime_mfl_stats_summary(connection)
 
         overall_sql = """
           CASE
