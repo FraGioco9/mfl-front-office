@@ -379,7 +379,7 @@
                   if (clubId && !/^(free agent|development center)$/i.test(teamName)) {
                     team = document.createElement("a");
                     team.className = "playerContractTeam playerContractTeamLink clubPageLink";
-                    team.href = "/clubs/" + encodeURIComponent(clubId) + "/squad";
+                    team.href = "/clubs/" + encodeURIComponent(clubId) + "/info";
                     team.dataset.clubId = clubId;
                   } else {
                     team = document.createElement("span");
