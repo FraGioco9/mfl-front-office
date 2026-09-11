@@ -113,7 +113,7 @@
     const location = [String(club?.city || "").trim(), countryLabel(club?.nation)].filter(Boolean).join(", ");
     const card = document.createElement("a");
     card.className = "myClubCard myClubCardLoading";
-    card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/info` : "#";
+    card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/squad` : "#";
     card.dataset.clubId = clubId;
     card.setAttribute("aria-hidden", "true");
 
@@ -320,7 +320,7 @@
 
     const link = document.createElement("a");
     link.className = "myClubCard";
-    link.href = `/clubs/${encodeURIComponent(clubId)}/info`;
+    link.href = `/clubs/${encodeURIComponent(clubId)}/squad`;
     link.dataset.clubId = clubId;
     link.setAttribute("aria-label", `Open ${name}`);
     if (primary || secondary) {
@@ -391,7 +391,7 @@
       if (!clubId || typeof openClub !== "function") return;
       event.preventDefault();
       saveClubDestination(club, divisionInfo);
-      void openClub(clubId, "info");
+      void openClub(clubId, "attributes");
     });
     return link;
   }
