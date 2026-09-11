@@ -18,9 +18,9 @@ function incrementalRouteTarget(pageName, options = {}) {
     const requestedClubId = String(options.clubId || clubTarget?.clubId || "").trim();
     if (!requestedClubId) return null;
     const requestedClubView = String(options.view || clubTarget?.view || "attributes").toLowerCase();
-    const clubView = ["info", "attributes", "contracts", "current", "all"].includes(requestedClubView)
+    const clubView = ["attributes", "contracts", "current", "all"].includes(requestedClubView)
       ? requestedClubView
-      : "info";
+      : "attributes";
     return {
       pageName: "club",
       scope: "club",
