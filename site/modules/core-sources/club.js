@@ -345,10 +345,22 @@
       }
       location.hidden = !locationLabel;
     }
-    if (ownerResolved && owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
-      const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
-      ownerName.textContent = ownerLabel;
-      ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
+    if (owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
+      if (ownerResolved) {
+        const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
+        ownerName.textContent = ownerLabel;
+        ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
+      } else {
+        const createTextSkeleton = Reflect.get(window, "__mflCreateTextSkeleton");
+        owner.dataset.clubLoading = "true";
+        if (typeof createTextSkeleton === "function") {
+          ownerName.replaceChildren(createTextSkeleton("Agent Name"));
+          ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));
+        } else {
+          ownerName.textContent = "";
+          ownerWallet.textContent = "";
+        }
+      }
     }
 
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
