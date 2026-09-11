@@ -410,7 +410,22 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.hasPlayerName, "Player detail did not render the fixture identity.");
       assert(stateValue.title === expectedPlayerName + " - MFL Front Office", "Player title is not the full player name.");
       assert(stateValue.pageHidden === false, "Player page remained hidden after readiness.");
-      assert(stateValue.activePlayerViews.length === 1, "Player must expose exactly one active view after loading completes.");
+      assert(
+        stateValue.activePlayerViews.length === 1,
+        "Player must expose exactly one active view after loading completes. Debug: " + JSON.stringify({
+          selectedPlayerView: stateValue.selectedPlayerView,
+          activePlayerViews: stateValue.activePlayerViews,
+          rootClasses: document.documentElement.className,
+          loadingSnapshot: window.__mflInteractionBusy?.snapshot?.() || null,
+          navigationPending: window.__mflNavigation?.isPending?.() || false,
+          buttons: Array.from(document.querySelectorAll("#playerDetail .playerAttributeViewButton")).map((button) => ({
+            className: button.className,
+            dataView: button.dataset.view || "",
+            dataPlayerAttributeView: button.dataset.playerAttributeView || "",
+            disabled: button.disabled === true,
+          })),
+        }),
+      );
       assert(
         stateValue.activePlayerViews[0] === stateValue.selectedPlayerView,
         "Player active view does not match the selected Player view after loading completes.",
