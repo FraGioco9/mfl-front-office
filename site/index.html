@@ -1067,7 +1067,7 @@
             <section class="playerHero playerHeroPending" aria-hidden="true">
               <div class="playerHeroMedia">
                 <div class="playerHeroOverall isPending"><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
-                <a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo" alt="" aria-hidden="true"></a>
+                <a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo" alt="" aria-hidden="true"><svg class="playerHeroDevelopmentCenterIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.05 10.966a5 2.5 0 0 1-8.1 0"></path><path d="m16.923 14.049 4.48 2.04a1 1 0 0 1 .001 1.831l-8.574 3.9a2 2 0 0 1-1.66 0l-8.574-3.91a1 1 0 0 1 0-1.83l4.484-2.04"></path><path d="M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z"></path><path d="M9.194 6.57a5 2.5 0 0 0 5.61 0"></path></svg></a>
                 <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
               </div>
               <div class="playerHeroIdentity">
@@ -1359,16 +1359,16 @@
               const retirementRaw = knownRaw("retirement_years");
               if (retirementRaw !== "" && Number(retirementRaw) === 0) return null;
               const clubName = String(knownDisplay("active_contract_club_name") || "").trim();
-              if (clubName.toLowerCase() === "development center") {
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (clubName.toLowerCase() === "development center" || clubId === "100000") {
                 return {
                   kind: "development-center",
                   gradient: "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))",
-                  logoUrl: "/development-center-traffic-cone.svg",
+                  logoUrl: "",
                   clubId: "",
                   name: "Development Center",
                 };
               }
-              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
               if (!clubId || !cachedClubBrand) return null;
               return {
                 kind: "club",
@@ -1386,7 +1386,7 @@
               const mark = hero.querySelector(".playerHeroBrandMark");
               const logo = mark?.querySelector(".playerHeroBrandLogo");
               if (!(mark instanceof HTMLAnchorElement)) return;
-              const visible = Boolean(branding?.logoUrl);
+              const visible = branding?.kind === "development-center" || Boolean(branding?.logoUrl);
               mark.classList.toggle("playerHeroBrandMarkVisible", visible);
               mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
               mark.tabIndex = visible && branding?.kind === "club" ? 0 : -1;
@@ -1398,7 +1398,10 @@
                 if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
                 return;
               }
-              if (logo instanceof HTMLImageElement) logo.src = branding.logoUrl;
+              if (logo instanceof HTMLImageElement) {
+                if (branding.kind === "club" && branding.logoUrl) logo.src = branding.logoUrl;
+                else logo.removeAttribute("src");
+              }
               mark.setAttribute("aria-label", branding.name || "Player affiliation");
               if (branding.kind === "club" && branding.clubId) {
                 mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
