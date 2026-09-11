@@ -15,7 +15,10 @@
           <section class="plannerClubPicker" aria-label="Select Club">
             <label class="plannerFieldLabel" for="plannerClubSearchInput">Club</label>
             <div class="plannerClubSearchWrap">
-              <input id="plannerClubSearchInput" class="plannerClubSearchInput" type="search" autocomplete="off" placeholder="Search Clubs" aria-autocomplete="list" aria-controls="plannerClubSearchResults">
+              <div class="plannerSearchControl">
+                <input id="plannerClubSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by Club ID or name" aria-autocomplete="list" aria-controls="plannerClubSearchResults">
+                <button id="plannerClubSearchClearButton" class="iconButton popupCloseButton plannerSearchClearButton" type="button" aria-label="Clear Club search" hidden></button>
+              </div>
               <div id="plannerClubSearchResults" class="plannerClubSearchResults" role="listbox" hidden></div>
             </div>
           </section>
@@ -37,7 +40,9 @@
                   <select id="plannerFormationSelect" class="plannerFormationSelect"></select>
                 </label>
               </div>
-              <div id="plannerPitch" class="plannerPitch" aria-label="Formation pitch"></div>
+              <div id="plannerPitch" class="pitch plannerPitch" aria-label="Formation pitch">
+                <span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>
+              </div>
             </section>
 
             <aside class="plannerRosterPanel" aria-label="Available players">
