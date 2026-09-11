@@ -7,7 +7,7 @@
     "current_club_id",
     "active_club_id",
   ];
-  const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
+  const CLUB_VIEWS = new Set(["info", "attributes", "contracts", "current", "all"]);
   const POSITION_ORDER = [
     "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
   ];
@@ -18,16 +18,44 @@
   let openingClub = false;
   const clubTitleIdentityPromises = new Map();
 
+  function clubDivisionInfo(value) {
+    if (value && typeof value === "object" && String(value.name || "").trim()) {
+      return {
+        name: String(value.name || "").trim(),
+        color: String(value.color || "").trim(),
+      };
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && typeof contractDivisionInfo === "function") {
+      return contractDivisionInfo(numeric);
+    }
+    return null;
+  }
+
   function normalizedClubTitleIdentity(value, fallbackClubId = "") {
     const clubId = String(value?.clubId || fallbackClubId || "").trim();
     const name = String(value?.name || "").trim();
-    const divisionName = String(value?.division?.name || value?.divisionName || "").trim();
-    const divisionColor = String(value?.division?.color || value?.divisionColor || "").trim();
+    const explicitDivisionName = String(value?.divisionName || "").trim();
+    const explicitDivisionColor = String(value?.divisionColor || "").trim();
+    const division = clubDivisionInfo(value?.division)
+      || (explicitDivisionName ? { name: explicitDivisionName, color: explicitDivisionColor } : null);
     if (!clubId || !name) return null;
     return {
       clubId,
       name,
-      division: divisionName ? { name: divisionName, color: divisionColor } : null,
+      division,
+      city: String(value?.city || "").trim(),
+      nation: String(value?.nation || value?.country || "").trim(),
+      primaryColor: String(value?.primaryColor || "").trim(),
+      secondaryColor: String(value?.secondaryColor || "").trim(),
+      status: String(value?.status || "").trim(),
+      ownerWalletAddress: String(value?.ownerWalletAddress || "").trim().toLowerCase(),
+      ownerName: String(value?.ownerName || "").trim(),
+      logoUrl: String(value?.logoUrl || "").trim(),
+      logoVersion: String(value?.logoVersion || "").trim(),
+      currentCompetitions: Array.isArray(value?.currentCompetitions)
+        ? value.currentCompetitions.map((competition) => ({ ...competition }))
+        : [],
     };
   }
 
@@ -53,10 +81,20 @@
         name: normalized.name,
         divisionName: normalized.division?.name || "",
         divisionColor: normalized.division?.color || "",
+        city: normalized.city,
+        nation: normalized.nation,
+        primaryColor: normalized.primaryColor,
+        secondaryColor: normalized.secondaryColor,
+        status: normalized.status,
+        ownerWalletAddress: normalized.ownerWalletAddress,
+        ownerName: normalized.ownerName,
+        logoUrl: normalized.logoUrl,
+        logoVersion: normalized.logoVersion,
+        currentCompetitions: normalized.currentCompetitions,
       };
       localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(next));
     } catch {
-      // Title rendering can continue even when browser storage is unavailable.
+      // Club presentation can continue even when browser storage is unavailable.
     }
     return normalized;
   }
@@ -86,10 +124,22 @@
       : null;
     return normalizedClubTitleIdentity({ clubId: normalizedClubId, name, division });
   }
+  function clubProfileFromState(clubId = activeClubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    const profile = state.clubProfile && typeof state.clubProfile === "object"
+      ? state.clubProfile
+      : null;
+    if (!profile || String(profile.clubId || "") !== normalizedClubId) return null;
+    return normalizedClubTitleIdentity(profile, normalizedClubId);
+  }
 
-  async function ensureClubTitleIdentity(clubId) {
+
+  async function ensureClubTitleIdentity(clubId, allowNetwork = false) {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return null;
+
+    const profileIdentity = clubProfileFromState(normalizedClubId);
+    if (profileIdentity) return saveClubTitleIdentity(profileIdentity);
 
     const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);
     if (rowIdentity) return saveClubTitleIdentity(rowIdentity);
@@ -99,6 +149,7 @@
 
     const indexed = clubTitleIdentityFromSearchIndex(normalizedClubId);
     if (indexed) return saveClubTitleIdentity(indexed);
+    if (!allowNetwork) return null;
 
     const existing = clubTitleIdentityPromises.get(normalizedClubId);
     if (existing) return existing;
@@ -178,9 +229,12 @@
       : null;
   }
 
-    function renderClubTitle() {
-    if (typeof tablePageTitle === "undefined" || !tablePageTitle) return;
-
+  function activeClubIdentity() {
+    const loadedProfile = clubProfileFromState(activeClubId);
+    if (loadedProfile) {
+      activeClubTitle = saveClubTitleIdentity(loadedProfile);
+      return activeClubTitle;
+    }
     if (!activeClubTitle || activeClubTitle.clubId !== String(activeClubId)) {
       const resolvedTitle = clubTitleIdentityFromRows(activeClubId)
         || cachedClubTitleIdentity(activeClubId)
@@ -189,23 +243,279 @@
         clubId: String(activeClubId),
         name: activeClubId ? `Club ${activeClubId}` : "Club",
         division: null,
+        city: "",
+        nation: "",
+        primaryColor: "",
+        secondaryColor: "",
+        status: "",
+        ownerWalletAddress: "",
+        ownerName: "",
+        logoUrl: "",
+        logoVersion: "",
+        currentCompetitions: [],
       };
       if (resolvedTitle) saveClubTitleIdentity(resolvedTitle);
     }
+    return activeClubTitle;
+  }
 
-    if (!activeClubTitle.division) {
-      tablePageTitle.textContent = activeClubTitle.name;
+  function validClubColor(value) {
+    const color = String(value || "").trim();
+    return color && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", color)
+      ? color
+      : "";
+  }
+
+  function clubNationLabel(value) {
+    const nation = String(value || "").trim();
+    if (!nation) return "";
+    return nation === nation.toUpperCase() || nation === nation.toLowerCase()
+      ? nation.toLocaleLowerCase().replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toLocaleUpperCase())
+      : nation;
+  }
+
+  function renderClubTitle() {
+    if (typeof tablePageTitle === "undefined" || !tablePageTitle) return;
+    const identity = activeClubIdentity();
+
+    if (!identity.division) {
+      tablePageTitle.textContent = identity.name;
       return;
     }
 
     const divisionLabel = document.createElement("span");
     divisionLabel.className = "clubPageTitleDivision";
-    divisionLabel.style.color = activeClubTitle.division.color;
-    divisionLabel.textContent = activeClubTitle.division.name;
+    if (identity.division.color) divisionLabel.style.color = identity.division.color;
+    divisionLabel.textContent = identity.division.name;
     tablePageTitle.replaceChildren(
-      document.createTextNode(`${activeClubTitle.name} - `),
+      document.createTextNode(`${identity.name} - `),
       divisionLabel,
     );
+  }
+
+  function renderClubIdentity() {
+    const identity = activeClubIdentity();
+    const host = document.getElementById("clubIdentity");
+    const logoFrame = host?.querySelector(".clubIdentityLogoFrame");
+    const logo = document.getElementById("clubIdentityLogo");
+    const id = document.getElementById("clubIdentityId");
+    const name = document.getElementById("clubIdentityName");
+    const division = document.getElementById("clubIdentityDivision");
+    const location = document.getElementById("clubIdentityLocation");
+    const colors = document.getElementById("clubIdentityColors");
+    if (!(host instanceof HTMLElement)) return;
+
+    host.removeAttribute("aria-busy");
+    host.querySelectorAll("[data-club-loading]").forEach((node) => {
+      if (node !== division && node !== location && node !== colors) node.remove();
+    });
+    [division, location, colors].forEach((node) => {
+      if (node instanceof HTMLElement) delete node.dataset.clubLoading;
+    });
+
+    const primary = validClubColor(identity.primaryColor);
+    const secondary = validClubColor(identity.secondaryColor);
+    host.classList.add("clubIdentityReady");
+    host.style.setProperty("--club-primary", primary || "var(--border-strong)");
+    host.style.setProperty("--club-secondary", secondary || "var(--surface-muted)");
+
+    if (id instanceof HTMLElement) id.textContent = identity.clubId ? `Club #${identity.clubId}` : "Club";
+    if (name instanceof HTMLElement) name.textContent = identity.name || "Club";
+    if (division instanceof HTMLElement) {
+      division.textContent = identity.division?.name || "";
+      division.hidden = !identity.division?.name;
+      if (identity.division?.color) division.style.color = identity.division.color;
+      else division.style.removeProperty("color");
+    }
+    if (location instanceof HTMLElement) {
+      const locationLabel = [identity.city, clubNationLabel(identity.nation)].filter(Boolean).join(", ");
+      location.textContent = locationLabel;
+      location.hidden = !locationLabel;
+    }
+
+    if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
+      if (identity.logoUrl) {
+        const canonicalLogoUrl = identity.logoUrl;
+        logo.src = canonicalLogoUrl;
+        logo.alt = `${identity.name || "Club"} logo`;
+        logo.decoding = "async";
+        logo.hidden = false;
+        logoFrame.hidden = false;
+        logo.onerror = () => {
+          const baseLogoUrl = canonicalLogoUrl.split("?")[0];
+          if (logo.src !== baseLogoUrl && canonicalLogoUrl.includes("?")) {
+            logo.src = baseLogoUrl;
+            return;
+          }
+          logo.hidden = true;
+          logoFrame.hidden = true;
+        };
+      } else {
+        logo.removeAttribute("src");
+        logo.alt = "";
+        logo.hidden = true;
+        logoFrame.hidden = true;
+      }
+    }
+
+    if (colors instanceof HTMLElement) {
+      colors.replaceChildren();
+      [primary, secondary].filter(Boolean).forEach((color, index) => {
+        const swatch = document.createElement("span");
+        swatch.className = "clubIdentityColorSwatch";
+        swatch.style.backgroundColor = color;
+        swatch.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
+        swatch.title = color;
+        colors.appendChild(swatch);
+      });
+      colors.hidden = colors.childElementCount === 0;
+    }
+  }
+
+  function readableClubStatus(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .split(/[ _-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  function clubInfoCard(label, value, detail = "") {
+    const card = document.createElement("article");
+    card.className = "clubInfoCard";
+    const heading = document.createElement("span");
+    heading.className = "clubInfoLabel";
+    heading.textContent = label;
+    const main = document.createElement("strong");
+    main.className = "clubInfoValue";
+    main.textContent = String(value || "—");
+    card.append(heading, main);
+    if (detail) {
+      const secondary = document.createElement("small");
+      secondary.className = "clubInfoDetail";
+      secondary.textContent = detail;
+      card.appendChild(secondary);
+    }
+    return card;
+  }
+
+  function ordinalPosition(value) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number <= 0) return "";
+    const mod100 = number % 100;
+    const suffix = mod100 >= 11 && mod100 <= 13
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" }[number % 10] || "th");
+    return `${number}${suffix}`;
+  }
+
+  function competitionDetail(competition) {
+    const parts = [];
+    if (Number.isInteger(Number(competition?.seasonNumber))) parts.push(`Season ${Number(competition.seasonNumber)}`);
+    const standingPosition = ordinalPosition(competition?.standing?.position);
+    if (standingPosition) {
+      const points = Number(competition?.standing?.points);
+      parts.push(Number.isFinite(points) ? `${standingPosition} · ${points} pts` : standingPosition);
+    } else if (String(competition?.stage || "").trim()) {
+      parts.push(String(competition.stage).trim());
+    }
+    return parts.join(" · ");
+  }
+
+  function clubRosterSummary() {
+    const rows = Array.isArray(state.rows) ? state.rows : [];
+    const overalls = rows
+      .map((row) => Number(getValue(row, "overall")))
+      .filter((value) => Number.isFinite(value));
+    const average = overalls.length
+      ? (overalls.reduce((sum, value) => sum + value, 0) / overalls.length).toFixed(1)
+      : "";
+    return {
+      count: rows.length,
+      detail: average ? `Average overall ${average}` : "",
+    };
+  }
+
+  function renderClubInfo() {
+    const panel = document.getElementById("clubInfoPanel");
+    if (!(panel instanceof HTMLElement)) return;
+    panel.removeAttribute("aria-busy");
+    delete panel.dataset.loading;
+    const identity = activeClubIdentity();
+    const roster = clubRosterSummary();
+    const location = [identity.city, clubNationLabel(identity.nation)].filter(Boolean).join(", ");
+    const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
+    const ownerDetail = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
+    const colors = [validClubColor(identity.primaryColor), validClubColor(identity.secondaryColor)].filter(Boolean);
+
+    const grid = document.createElement("div");
+    grid.className = "clubInfoGrid";
+    grid.append(
+      clubInfoCard("Division", identity.division?.name || "—"),
+      clubInfoCard("Location", location || "—"),
+      clubInfoCard("Status", readableClubStatus(identity.status) || "—"),
+      clubInfoCard("Owner", ownerLabel, ownerDetail),
+      clubInfoCard("Roster", `${roster.count} player${roster.count === 1 ? "" : "s"}`, roster.detail),
+    );
+
+    const colorCard = document.createElement("article");
+    colorCard.className = "clubInfoCard clubInfoColorsCard";
+    const colorLabel = document.createElement("span");
+    colorLabel.className = "clubInfoLabel";
+    colorLabel.textContent = "Colours";
+    const colorRow = document.createElement("div");
+    colorRow.className = "clubInfoColorRow";
+    if (colors.length) {
+      colors.forEach((color, index) => {
+        const item = document.createElement("span");
+        item.className = "clubInfoColor";
+        const swatch = document.createElement("span");
+        swatch.className = "clubInfoColorSwatch";
+        swatch.style.backgroundColor = color;
+        const text = document.createElement("strong");
+        text.textContent = color;
+        item.append(swatch, text);
+        item.setAttribute("aria-label", `${index === 0 ? "Primary" : "Secondary"} club colour ${color}`);
+        colorRow.appendChild(item);
+      });
+    } else {
+      colorRow.textContent = "—";
+    }
+    colorCard.append(colorLabel, colorRow);
+    grid.appendChild(colorCard);
+
+    const competitionsCard = document.createElement("article");
+    competitionsCard.className = "clubInfoCard clubInfoCompetitionsCard";
+    const competitionsLabel = document.createElement("span");
+    competitionsLabel.className = "clubInfoLabel";
+    competitionsLabel.textContent = "Current competitions";
+    competitionsCard.appendChild(competitionsLabel);
+    const competitions = Array.isArray(identity.currentCompetitions) ? identity.currentCompetitions : [];
+    if (!competitions.length) {
+      const empty = document.createElement("strong");
+      empty.className = "clubInfoValue";
+      empty.textContent = "No current competition data";
+      competitionsCard.appendChild(empty);
+    } else {
+      const list = document.createElement("div");
+      list.className = "clubInfoCompetitionList";
+      competitions.forEach((competition) => {
+        const row = document.createElement("div");
+        row.className = "clubInfoCompetition";
+        const competitionName = document.createElement("strong");
+        competitionName.textContent = String(competition?.name || "Competition");
+        const detail = document.createElement("span");
+        detail.textContent = competitionDetail(competition);
+        row.append(competitionName, detail);
+        list.appendChild(row);
+      });
+      competitionsCard.appendChild(list);
+    }
+    grid.appendChild(competitionsCard);
+
+    panel.replaceChildren(grid);
   }
 
   function primaryPosition(row) {
@@ -250,17 +560,25 @@
   function applyClubPresentation() {
     if (state.currentPage !== CLUB_PAGE || !activeClubId) return;
     document.body.dataset.page = CLUB_PAGE;
+    if (typeof progressionPage !== "undefined" && progressionPage instanceof HTMLElement) {
+      progressionPage.dataset.clubView = CLUB_VIEWS.has(state.view) ? state.view : "info";
+    }
     document.querySelectorAll(".navButton").forEach((link) => link.classList.remove("active"));
     renderClubTitle();
+    renderClubIdentity();
+    renderClubInfo();
     hideClubPageControls();
+    window.__mflDocumentTitleRuntime?.sync?.();
   }
 
-  function openClubImmediately(clubId, view = "attributes") {
+  window.__mflApplyClubPresentation = applyClubPresentation;
+
+  function openClubImmediately(clubId, view = "info") {
     return openClubPage(clubId, view, true);
   }
   window.__mflOpenClubPageRoute = openClubImmediately;
 
-  async function openClubPage(clubId, view = "attributes", updateHistory = true) {
+  async function openClubPage(clubId, view = "info", updateHistory = true) {
     if (!clubId || openingClub) return;
     openingClub = true;
     try {
@@ -268,7 +586,7 @@
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
       const clubTitleReady = ensureClubTitleIdentity(activeClubId);
-      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
+      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "info";
       const route = canonicalClubRoute(activeClubId, nextView);
       const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
       if (!routeAlreadyCommitted) {
@@ -285,12 +603,19 @@
         || clubTitleIdentityFromSearchIndex(activeClubId);
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;
       renderClubTitle();
+      renderClubIdentity();
+      const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
+      if (typeof primeClubProfileLoading === "function") primeClubProfileLoading(nextView);
       void clubTitleReady.then((resolvedTitle) => {
         if (!resolvedTitle || String(activeClubId) !== nextClubId) return;
         document.documentElement.dataset.initialEntityVerified = "club";
         if (state.currentPage !== CLUB_PAGE) return;
         activeClubTitle = resolvedTitle;
         renderClubTitle();
+        renderClubIdentity();
+        if (!clubProfileFromState(activeClubId) && typeof primeClubProfileLoading === "function") {
+          primeClubProfileLoading(nextView);
+        }
       });
 
       const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
@@ -301,20 +626,20 @@
           })
         : false;
       if (!dataLoaded) return;
-      const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
+      const loadedClubTitle = clubProfileFromState(activeClubId) || clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
         document.documentElement.dataset.initialEntityVerified = "club";
       }
-      if (!loadedClubTitle && clubRows().length === 0) {
-        const resolvedClubTitle = await clubTitleReady;
+      if (!loadedClubTitle && (!Array.isArray(state.rows) || state.rows.length === 0)) {
+        const resolvedClubTitle = await ensureClubTitleIdentity(activeClubId, true);
         if (!resolvedClubTitle) {
           window.__mflStaticUiRuntime?.showNotFound?.("Club");
           return;
         }
         activeClubTitle = resolvedClubTitle;
         document.documentElement.dataset.initialEntityVerified = "club";
-      } else if (clubRows().length > 0) {
+      } else if (Array.isArray(state.rows) && state.rows.length > 0) {
         document.documentElement.dataset.initialEntityVerified = "club";
       }
 
@@ -332,11 +657,14 @@
       changelogPage.hidden = true;
       privacyPage.hidden = true;
       state.page = 1;
-      state.pageSize = Math.max(100, clubRows().length || 100);
+      state.pageSize = Math.max(100, (Array.isArray(state.rows) ? state.rows.length : 0) || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
+
       if (typeof updateViewButtons === "function") updateViewButtons();
-      if (typeof buildHeader === "function") buildHeader();
-      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      if (nextView !== "info") {
+        if (typeof buildHeader === "function") buildHeader();
+        if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      }
       applyClubPresentation();
     } finally {
       openingClub = false;
