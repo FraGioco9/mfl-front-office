@@ -279,18 +279,27 @@ function rowHasActiveContract(row) {
   return !isBlankValue(clubName) || !isBlankValue(getValue(row, "active_contract_club_id"));
 }
 
-function formatContractRevenueShare(value) {
+function formatContractPercentage(value) {
   if (isBlankValue(value)) {
     return "";
   }
 
   const percentage = Number(value) / 100;
-
   if (!Number.isFinite(percentage)) {
     return "";
   }
 
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage)}%`;
+}
+
+function formatContractRevenueShare(value, penaltyValue = null) {
+  const base = formatContractPercentage(value);
+  if (!base) {
+    return "";
+  }
+
+  const penalty = formatContractPercentage(penaltyValue);
+  return penalty ? `${base} + ${penalty}` : base;
 }
 
 
@@ -358,7 +367,12 @@ function formatCellValue(row, column) {
   }
 
   if (column === "active_contract_revenue_share") {
-    return rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, column)) : "";
+    return rowHasActiveContract(row)
+      ? formatContractRevenueShare(
+        getValue(row, column),
+        getValue(row, "active_contract_revenue_share_penalty"),
+      )
+      : "";
   }
 
   if (column === "active_contract_club_name") {
