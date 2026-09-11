@@ -417,3 +417,68 @@
     height: 11px;
     flex-basis: 11px;
   }
+
+  .clubIdentity {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 9px;
+    min-height: 78px;
+    margin-bottom: 6px;
+    padding: 7px 8px;
+  }
+
+  .clubIdentityLogoFrame {
+    width: 56px;
+    height: 56px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 56px;
+    max-height: 56px;
+  }
+
+  .clubIdentityId {
+    font-size: 10px;
+  }
+
+  .clubIdentityName {
+    font-size: 20px;
+  }
+
+  .clubIdentityMeta {
+    gap: 3px 8px;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .clubIdentityColors {
+    grid-column: 1 / -1;
+    gap: 5px;
+  }
+
+  .clubIdentityColorSwatch {
+    width: 18px;
+    height: 18px;
+  }
+
+  .clubInfoGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .clubInfoCard {
+    min-height: 68px;
+    padding: 8px 9px;
+  }
+
+  .clubInfoValue {
+    font-size: 16px;
+  }
+
+  .clubInfoCompetition {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .clubInfoCompetition span {
+    text-align: left;
+  }
