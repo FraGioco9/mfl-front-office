@@ -1030,21 +1030,30 @@
     if (!(element instanceof HTMLElement)) return element;
 
     delete element.dataset.mflStatsDistributionSignature;
-    const heights = [44, 68, 36, 82, 58, 76, 48, 64, 40, 72, 52, 60];
+    const previousLabels = Array.from(element.querySelectorAll(":scope > .mflStatsHistogram .mflStatsHistogramLabel"))
+      .map((label) => String(label.textContent || "").trim())
+      .filter(Boolean);
+    const labels = previousLabels.length > 1
+      ? previousLabels
+      : ["55", "58", "61", "64", "67", "70", "73", "76", "79", "82", "85", "88", "91", "94", "97"];
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram mflStatsHistogramSkeleton";
-    histogram.style.setProperty("--mfl-stats-bars", String(heights.length));
+    histogram.style.setProperty("--mfl-stats-bars", String(labels.length));
 
-    heights.forEach((height, index) => {
+    const midpoint = (labels.length - 1) / 2;
+    const sigma = Math.max(1, labels.length / 5);
+    labels.forEach((sample, index) => {
       const item = document.createElement("div");
       item.className = "mflStatsHistogramItem";
       const bar = document.createElement("div");
       bar.className = "mflStatsHistogramBar";
       const fill = createDataPlaceholder("mflStatsHistogramFill mflStatsHistogramSkeletonFill");
-      fill.style.setProperty("--bar-height", `${height}%`);
+      const distance = (index - midpoint) / sigma;
+      const bellHeight = Math.max(8, Math.round(Math.exp(-0.5 * distance * distance) * 96));
+      fill.style.setProperty("--bar-height", `${bellHeight}%`);
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
-      label.appendChild(createTextSkeleton(String(50 + index * 4)));
+      label.appendChild(createTextSkeleton(sample));
       bar.appendChild(fill);
       item.append(bar, label);
       histogram.appendChild(item);
@@ -1211,7 +1220,7 @@
         </div>
         <div class="playerHeroIdentity">
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
-          <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
+          <h2 class="playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
           <p>${firstPaintTextSkeletonHtml("CM, RW")}</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">

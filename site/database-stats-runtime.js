@@ -68,15 +68,7 @@
   }
 
   function configureHistogramLayout(histogram) {
-    histogram.className = "mflStatsHistogramLayout";
-    histogram.style.display = "grid";
-    histogram.style.gridTemplateColumns = "repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr))";
-    histogram.style.alignItems = "end";
-    histogram.style.gap = "clamp(3px, 0.45vw, 7px)";
-    histogram.style.width = "100%";
-    histogram.style.height = "100%";
-    histogram.style.paddingTop = "34px";
-    histogram.style.minWidth = "620px";
+    histogram.className = "mflStatsHistogram";
   }
 
   function dispatchCustomStepperChange(input) {

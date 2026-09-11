@@ -32,7 +32,7 @@
 
   function histogramForScroller(scroller) {
     if (!(scroller instanceof HTMLElement)) return null;
-    return scroller.querySelector(":scope > .mflStatsHistogram, :scope > .mflStatsHistogramLayout");
+    return scroller.querySelector(":scope > .mflStatsHistogram");
   }
 
   function histogramColumnGap(histogram) {

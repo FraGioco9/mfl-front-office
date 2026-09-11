@@ -44,6 +44,10 @@ for (const required of [
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 invariant(
+  /\.mflDataPlaceholder\s*\{[\s\S]*?border:\s*0;/u.test(loadingStyles),
+  "Shared skeleton placeholders must be borderless.",
+);
+invariant(
   bootstrap.includes('flagSkeleton.className = "mflTableFlagSkeleton";')
     && bootstrap.includes('flagSample.className = "flagImage mflTableFlagSkeletonSample";')
     && bootstrap.includes('flagSkeleton.append(flagSample, flagFill);'),
@@ -51,14 +55,13 @@ invariant(
 );
 invariant(
   loadingStyles.includes(".mflTableFlagSkeletonFill {")
-    && loadingStyles.includes("background: var(--mfl-loading-placeholder-border);")
-    && loadingStyles.includes(".mflTableFlagSkeletonFill::after {")
-    && loadingStyles.includes("inset: 1px;")
+    && loadingStyles.includes("background: var(--mfl-loading-placeholder-surface);")
+    && !loadingStyles.includes(".mflTableFlagSkeletonFill::after {")
     && loadingStyles.includes('-webkit-mask: url("data:image/svg+xml,%3Csvg')
     && loadingStyles.includes('mask: url("data:image/svg+xml,%3Csvg')
     && !loadingStyles.includes("72.222222%")
     && !loadingStyles.includes("15.384615%"),
-  "Table flag skeleton shape and border must use one neutral outer flag silhouette without internal country-specific stripes.",
+  "Table flag skeleton must use one borderless neutral silhouette without internal country-specific stripes.",
 );
 invariant(
   bootstrap.includes('input.className = "mflTableCheckboxSkeleton";')
@@ -68,11 +71,11 @@ invariant(
 );
 invariant(
   loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {")
-    && loadingStyles.includes("border-color: var(--mfl-loading-placeholder-border);")
+    && loadingStyles.includes("border-color: transparent;")
     && loadingStyles.includes("background-color: var(--mfl-loading-placeholder-surface);")
     && loadingStyles.includes("background-image: none;")
     && !loadingStyles.includes("input.mflTableCheckboxSkeleton:disabled {\n  border-radius:"),
-  "Table checkbox skeleton styling may change only loading appearance, leaving shape and dimensions to the real checkbox foundation.",
+  "Table checkbox skeleton must keep the real checkbox geometry while hiding its visible border.",
 );
 invariant(
   !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")

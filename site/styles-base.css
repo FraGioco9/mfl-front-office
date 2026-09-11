@@ -293,7 +293,7 @@ body[data-page="home"] .topbar .stats {
   background: var(--surface-muted);
 }
 
-.stats span {
+.stats > div > span {
   display: block;
   font-size: 20px;
   font-weight: 700;
@@ -4154,7 +4154,7 @@ button.playerIdText:active {
   padding: 8px 10px;
 }
 
-.mflStatsCards span {
+.mflStatsCards article > span {
   display: block;
   color: var(--text-soft);
   font-size: var(--mfl-metadata-compact-font-size);
@@ -4230,7 +4230,6 @@ button.playerIdText:active {
   width: 100%;
   height: 100%;
   padding-top: 34px;
-  animation: mflStatsHistogramFade 170ms ease-out;
 }
 
 .mflStatsHistogramItem {
@@ -4274,16 +4273,6 @@ button.playerIdText:active {
   font-weight: 800;
 }
 
-@keyframes mflStatsHistogramFade {
-  from {
-    opacity: 0.55;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes mflStatsBarRise {
   from {

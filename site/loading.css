@@ -21,7 +21,7 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 .mflDataPlaceholder {
   box-sizing: border-box;
   background: var(--mfl-loading-placeholder-surface);
-  border: 1px solid var(--mfl-loading-placeholder-border);
+  border: 0;
   border-radius: var(--mfl-loading-placeholder-radius);
   color: transparent;
   pointer-events: none;
@@ -46,18 +46,8 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 }
 
 .mflTableFlagSkeletonFill {
-  position: relative;
   inline-size: 100%;
   block-size: 100%;
-  background: var(--mfl-loading-placeholder-border);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.mflTableFlagSkeletonFill::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
   background: var(--mfl-loading-placeholder-surface);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -65,7 +55,7 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 
 input.mflTableCheckboxSkeleton:disabled {
   opacity: 1;
-  border-color: var(--mfl-loading-placeholder-border);
+  border-color: transparent;
   background-color: var(--mfl-loading-placeholder-surface);
   background-image: none;
   cursor: default;
@@ -109,6 +99,7 @@ input.mflTableCheckboxSkeleton:disabled {
   inline-size: 100%;
   block-size: 0.68em;
   min-inline-size: 1ch;
+  background: var(--mfl-loading-text-placeholder-surface);
 }
 
 .mflSkeletonElement {
@@ -136,23 +127,16 @@ input.mflTableCheckboxSkeleton:disabled {
 .mflTableLoadingRow .listingCellContent.mflDataPlaceholder,
 .mflTableLoadingRow .tableOverallRarityCircle.mflDataPlaceholder {
   background: var(--mfl-loading-placeholder-surface);
-  border-color: var(--mfl-loading-placeholder-border);
 }
 
 .mflTableLoadingRow .mflSkeletonText {
   max-width: 100%;
 }
 
-.mflStatsHistogramSkeleton {
-  animation: none;
-}
-
 .mflStatsHistogramSkeletonFill {
   animation: none;
   cursor: default;
 }
-
-
 
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */

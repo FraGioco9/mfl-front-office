@@ -24,6 +24,11 @@ const mobile = responsive.slice(media520Start, media380Start);
 const narrow = responsive.slice(media380Start, coarsePointerStart);
 
 assert.match(mobile, /#databaseStatsPage \.databaseStatsCards,\s*\.mflStatsCards \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+assert.match(mobile, /\.mflStatsCards article \{\s*min-height: 56px;\s*padding: 6px 7px;/);
+assert.match(mobile, /\.mflStatsCards article > span,\s*\.mflStatsCards small \{\s*font-size: 9px;/);
+assert.match(mobile, /\.mflStatsCards strong \{\s*margin-top: 2px;\s*font-size: 18px;/);
+assert.match(narrow, /\.mflStatsCards article \{\s*min-height: 52px;\s*padding: 5px 6px;/);
+assert.match(narrow, /\.mflStatsCards strong \{\s*font-size: 17px;/);
 assert.match(mobile, /\.mflStatsFilterButtons \{\s*grid-template-columns: repeat\(auto-fit, minmax\(68px, 1fr\)\);/);
 assert.match(mobile, /\.mflStatsFilterButton \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?height: 24px;/);
 assert.match(mobile, /#databaseStatsPage \.databaseStatsCustomFilter \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
@@ -86,7 +91,8 @@ assert.match(statsUi, /scrollContainer\.scrollTop -= deltaY;\s*event\.preventDef
 assert.match(statsUi, /addEventListener\("touchmove", touch\.move, \{ passive: false \}\)/);
 assert.match(statsUi, /removeEventListener\("touchcancel", handlers\.touch\.end\)/);
 assert.doesNotMatch(statsUi, /MutationObserver/);
-assert.match(statsUi, /:scope > \.mflStatsHistogram, :scope > \.mflStatsHistogramLayout/);
+assert.match(statsUi, /:scope > \.mflStatsHistogram/);
+assert.doesNotMatch(statsUi, /mflStatsHistogramLayout/);
 assert.match(statsUi, /resetStatsHistogramScroll: reset/);
 assert.match(statsUi, /Object\.defineProperty\(window, "__mflSharedTableUiRuntime"/);
 assert.match(statsUi, /window\.__mflStatsMobileUiRuntime = Object\.freeze\(\{ sync, reset, destroy \}\)/);

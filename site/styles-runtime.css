@@ -463,7 +463,7 @@ body[data-page="home"] .topbar .stats {
   background: var(--surface-muted);
 }
 
-.stats span {
+.stats > div > span {
   display: block;
   font-size: 20px;
   font-weight: 700;
@@ -4324,7 +4324,7 @@ button.playerIdText:active {
   padding: 8px 10px;
 }
 
-.mflStatsCards span {
+.mflStatsCards article > span {
   display: block;
   color: var(--text-soft);
   font-size: var(--mfl-metadata-compact-font-size);
@@ -4400,7 +4400,6 @@ button.playerIdText:active {
   width: 100%;
   height: 100%;
   padding-top: 34px;
-  animation: mflStatsHistogramFade 170ms ease-out;
 }
 
 .mflStatsHistogramItem {
@@ -4444,16 +4443,6 @@ button.playerIdText:active {
   font-weight: 800;
 }
 
-@keyframes mflStatsHistogramFade {
-  from {
-    opacity: 0.55;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes mflStatsBarRise {
   from {
@@ -7621,7 +7610,7 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 .mflDataPlaceholder {
   box-sizing: border-box;
   background: var(--mfl-loading-placeholder-surface);
-  border: 1px solid var(--mfl-loading-placeholder-border);
+  border: 0;
   border-radius: var(--mfl-loading-placeholder-radius);
   color: transparent;
   pointer-events: none;
@@ -7646,18 +7635,8 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 }
 
 .mflTableFlagSkeletonFill {
-  position: relative;
   inline-size: 100%;
   block-size: 100%;
-  background: var(--mfl-loading-placeholder-border);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.mflTableFlagSkeletonFill::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
   background: var(--mfl-loading-placeholder-surface);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -7665,7 +7644,7 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 
 input.mflTableCheckboxSkeleton:disabled {
   opacity: 1;
-  border-color: var(--mfl-loading-placeholder-border);
+  border-color: transparent;
   background-color: var(--mfl-loading-placeholder-surface);
   background-image: none;
   cursor: default;
@@ -7709,6 +7688,7 @@ input.mflTableCheckboxSkeleton:disabled {
   inline-size: 100%;
   block-size: 0.68em;
   min-inline-size: 1ch;
+  background: var(--mfl-loading-text-placeholder-surface);
 }
 
 .mflSkeletonElement {
@@ -7736,23 +7716,16 @@ input.mflTableCheckboxSkeleton:disabled {
 .mflTableLoadingRow .listingCellContent.mflDataPlaceholder,
 .mflTableLoadingRow .tableOverallRarityCircle.mflDataPlaceholder {
   background: var(--mfl-loading-placeholder-surface);
-  border-color: var(--mfl-loading-placeholder-border);
 }
 
 .mflTableLoadingRow .mflSkeletonText {
   max-width: 100%;
 }
 
-.mflStatsHistogramSkeleton {
-  animation: none;
-}
-
 .mflStatsHistogramSkeletonFill {
   animation: none;
   cursor: default;
 }
-
-
 
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
@@ -7845,6 +7818,7 @@ html.mflSelectionStartupResetPending #selectionBar {
 
   /* Shared data-shaped loading presentation. Component geometry remains specialist-owned. */
   --mfl-loading-placeholder-surface: color-mix(in srgb, var(--surface-muted) 76%, var(--page-bg));
+  --mfl-loading-text-placeholder-surface: color-mix(in srgb, var(--mfl-loading-placeholder-surface) 60%, var(--border));
   --mfl-loading-placeholder-border: var(--border);
   --mfl-loading-placeholder-radius: 7px;
 
@@ -11926,7 +11900,7 @@ html:not(.mflInitialRouteResolved):is(
     padding: 6px 7px;
   }
 
-  .mflStatsCards span,
+  .mflStatsCards article > span,
   .mflStatsCards small {
     font-size: 9px;
   }
@@ -13108,62 +13082,7 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 .myClubLogoFrameLoading {
-  background: var(--surface-muted);
-}
-
-.myClubLoadingLogo {
-  aspect-ratio: 1;
-  border-radius: var(--mfl-radius-control);
-  background: var(--border);
-  opacity: 0.55;
-}
-
-.myClubLoadingLine {
-  display: block;
-  height: 1lh;
-  border-radius: var(--mfl-radius-control);
-  background: var(--border);
-  opacity: 0.55;
-}
-
-.myClubLoadingId {
-  width: 4ch;
-}
-
-.myClubLoadingName {
-  width: min(12ch, 78%);
-}
-
-.myClubMetaLoading {
-  align-items: center;
-}
-
-.myClubLoadingDivision {
-  width: 7ch;
-}
-
-.myClubLoadingLocation {
-  width: min(10ch, 44%);
-}
-
-.myClubLoadingCompetitionName {
-  width: min(16ch, 62%);
-}
-
-.myClubLoadingCompetitionStanding {
-  flex: 0 0 auto;
-}
-
-.myClubCompetitionLoading:first-child .myClubLoadingCompetitionStanding {
-  width: 3ch;
-}
-
-.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionName {
-  width: min(14ch, 58%);
-}
-
-.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionStanding {
-  width: min(10ch, 32%);
+  background: var(--mfl-loading-placeholder-surface);
 }
 
 .myClubsStatusWrap {

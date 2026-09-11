@@ -9,6 +9,7 @@
   const CACHE_MAX_AGE_MS = 60_000;
   const CLUB_REQUEST_TIMEOUT_MS = 10_000;
   const COMPETITION_REQUEST_TIMEOUT_MS = 15_000;
+  const MIN_COMPETITION_ROWS = 2;
   const page = document.getElementById("myClubsPage");
   const grid = document.getElementById("myClubsGrid");
   const status = document.getElementById("myClubsStatus");
@@ -58,17 +59,33 @@
   }
 
 
+  function appendLoadingText(element, sample) {
+    const createTextSkeleton = Reflect.get(window, "__mflCreateTextSkeleton");
+    if (!(element instanceof HTMLElement)) return element;
+    if (typeof createTextSkeleton === "function") {
+      element.appendChild(createTextSkeleton(String(sample || "00")));
+    } else {
+      const placeholder = document.createElement("span");
+      placeholder.className = "mflDataPlaceholder";
+      placeholder.setAttribute("aria-hidden", "true");
+      element.appendChild(placeholder);
+    }
+    return element;
+  }
+
   function loadingCompetitionList() {
     const competitions = document.createElement("div");
     competitions.className = "myClubCompetitions myClubCompetitionsLoading";
     competitions.dataset.competitionState = "loading";
-    for (let index = 0; index < 2; index += 1) {
+    for (let index = 0; index < MIN_COMPETITION_ROWS; index += 1) {
       const row = document.createElement("div");
       row.className = "myClubCompetition myClubCompetitionLoading";
       const competition = document.createElement("span");
-      competition.className = "myClubCompetitionName myClubLoadingLine myClubLoadingCompetitionName";
+      competition.className = "myClubCompetitionName";
+      appendLoadingText(competition, "Competition");
       const position = document.createElement("span");
-      position.className = "myClubCompetitionStanding myClubLoadingLine myClubLoadingCompetitionStanding";
+      position.className = "myClubCompetitionStanding";
+      appendLoadingText(position, index === 0 ? "00th" : "Runner-up");
       row.append(competition, position);
       competitions.appendChild(row);
     }
@@ -77,19 +94,19 @@
 
   function skeletonCard(club) {
     const clubId = String(club?.clubId || "").trim();
-    const card = document.createElement("div");
+    const name = String(club?.name || "").trim() || `Club ${clubId || "0000"}`;
+    const divisionInfo = typeof contractDivisionInfo === "function" ? contractDivisionInfo(Number(club?.division)) : null;
+    const divisionLabel = divisionInfo?.name || "Division -";
+    const location = [String(club?.city || "").trim(), countryLabel(club?.nation)].filter(Boolean).join(", ");
+    const card = document.createElement("a");
     card.className = "myClubCard myClubCardLoading";
+    card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/squad` : "#";
     card.dataset.clubId = clubId;
     card.setAttribute("aria-hidden", "true");
 
     const logoFrame = document.createElement("div");
     logoFrame.className = "myClubLogoFrame myClubLogoFrameLoading";
-    const logoUrl = String(club?.logoUrl || "").trim();
-    if (logoUrl) {
-      const logo = document.createElement("div");
-      logo.className = "myClubLogo myClubLoadingLogo";
-      logoFrame.appendChild(logo);
-    } else {
+    if (!String(club?.logoUrl || "").trim()) {
       logoFrame.hidden = true;
       card.classList.add("myClubCardNoLogo");
     }
@@ -99,18 +116,25 @@
     const titleBlock = document.createElement("div");
     titleBlock.className = "myClubTitleBlock";
     const idLine = document.createElement("span");
-    idLine.className = "myClubId myClubLoadingLine myClubLoadingId";
-    const nameLine = document.createElement("span");
-    nameLine.className = "myClubName myClubLoadingLine myClubLoadingName";
+    idLine.className = "myClubId";
+    appendLoadingText(idLine, clubId ? `#${clubId}` : "#0000");
+    const nameLine = document.createElement("h3");
+    nameLine.className = "myClubName";
+    appendLoadingText(nameLine, name);
     titleBlock.append(idLine, nameLine);
 
     const meta = document.createElement("div");
-    meta.className = "myClubMeta myClubMetaLoading";
+    meta.className = "myClubMeta";
     const divisionLine = document.createElement("span");
-    divisionLine.className = "myClubDivision myClubLoadingLine myClubLoadingDivision";
-    const locationLine = document.createElement("span");
-    locationLine.className = "myClubLocation myClubLoadingLine myClubLoadingLocation";
-    meta.append(divisionLine, locationLine);
+    divisionLine.className = "myClubDivision";
+    appendLoadingText(divisionLine, divisionLabel);
+    meta.appendChild(divisionLine);
+    if (location) {
+      const locationLine = document.createElement("span");
+      locationLine.className = "myClubLocation";
+      appendLoadingText(locationLine, location);
+      meta.appendChild(locationLine);
+    }
 
     body.append(titleBlock, meta, loadingCompetitionList());
     card.append(logoFrame, body);
@@ -234,7 +258,7 @@
       });
     }
 
-    while (list.children.length < 2) {
+    while (list.children.length < MIN_COMPETITION_ROWS) {
       const row = document.createElement("div");
       row.className = "myClubCompetition myClubCompetitionReserved";
       const name = document.createElement("span");

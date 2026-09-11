@@ -266,7 +266,7 @@ for (const [selector, sizeToken, weightToken, lineToken] of [
   [".field.rowsField span", "var(--mfl-metadata-compact-font-size)", "var(--mfl-metadata-strong-font-weight)", null],
   [".field span", "var(--mfl-metadata-font-size)", "var(--mfl-metadata-font-weight)", null],
   [".mflStatsFilters > span", "var(--mfl-metadata-font-size)", "var(--mfl-metadata-strong-font-weight)", null],
-  [".mflStatsCards span", "var(--mfl-metadata-compact-font-size)", "var(--mfl-metadata-strong-font-weight)", "var(--mfl-metadata-line-height)"],
+  [".mflStatsCards article > span", "var(--mfl-metadata-compact-font-size)", "var(--mfl-metadata-strong-font-weight)", "var(--mfl-metadata-line-height)"],
   [".settingsIdentity span", "var(--mfl-metadata-font-size)", "var(--mfl-metadata-font-weight)", null],
 ]) {
   const rule = exactRule(stylesBase, selector);
