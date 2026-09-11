@@ -4,10 +4,11 @@ import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [styles, stylesBase, loadingStyles, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource, index] = await Promise.all([
+const [styles, stylesBase, loadingStyles, bootstrap, bootstrapCore, appEntry, routeLoader, tableLoading, appCoreSource, index] = await Promise.all([
   read("./styles.css"),
   read("./styles-base.css"),
   read("./loading.css"),
+  read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./modules/app-entry.js"),
   read("./route-core-loader-runtime.js"),
@@ -42,6 +43,18 @@ for (const required of [
   invariant(loadingStyles.includes(required), `loading.css is missing canonical loading rule: ${required}`);
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
+invariant(
+  bootstrap.includes('flag.className = "flagImage mflTableFlagPlaceholder";')
+    && bootstrap.includes('flag.appendChild(createDataPlaceholder("mflTableFlagPlaceholderShape"));')
+    && !bootstrap.includes('createDataPlaceholder("flagImage mflTableFlagPlaceholder")'),
+  "Table flag skeletons must inherit the real .flagImage canvas while masking only the visible flag body.",
+);
+invariant(
+  loadingStyles.includes(".mflTableFlagPlaceholderShape {")
+    && loadingStyles.includes("block-size: 72.222222%;")
+    && loadingStyles.includes("border-radius: 11.111111% / 15.384615%;"),
+  "Table flag skeleton masking must preserve the canonical Twemoji flag-body proportions without breakpoint-specific dimensions.",
+);
 invariant(
   !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
     && !loadingStyles.includes("html.mflInteractionBusy #progressionPage nav.pager"),
