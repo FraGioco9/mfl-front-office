@@ -55,6 +55,7 @@ export const ROUTE_SHELL_IDS = Object.freeze({
   myplayers: "progressionPage",
   club: "progressionPage",
   "my-clubs": "myClubsPage",
+  planner: "plannerPage",
   evaluation: "evaluationPage",
   player: "playerPage",
   settings: "settingsPage",
@@ -103,6 +104,7 @@ export const ROUTE_CORE_PATHS = Object.freeze({
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
   club: "/modules/app-core-club-runtime.js",
   "my-clubs": "/modules/app-core-my-clubs-runtime.js",
+  planner: "/modules/app-core-planner-runtime.js",
   settings: "/modules/app-core-settings-runtime.js",
   player: "/modules/app-core-player-runtime.js",
   table: "/modules/app-core-table-runtime.js",
@@ -379,6 +381,7 @@ export function browserConfigRuntimeSource(release) {
     if (first === "clubs" || first === "club") return "Club";
     if (first === "players") return "Player";
     if (first === "agents") return "Agent";
+    if (first === "planner") return "Planner";
     if (first === "watchlist") return "Watchlist";
     return "Page";
   }
@@ -497,6 +500,16 @@ export function browserConfigRuntimeSource(release) {
     if (pageSegment === "home" && segments.length === 1) return homeRequest(path);
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
     if ((pageSegment === "my-clubs" || pageSegment === "myclubs") && segments.length === 1) return requestResult(path, "my-clubs", {}, "/my-clubs");
+    if (pageSegment === "planner") {
+      if (segments.length === 1) return requestResult(path, "planner", {}, "/planner");
+      if (segments.length === 2) {
+        const planId = decodedRoutePart(segments[1]);
+        if (!planId) return notFoundRequest(path, "Planner");
+        const canonicalPath = "/planner/" + encodeURIComponent(planId);
+        return requestResult(path, "planner", { planId }, canonicalPath);
+      }
+      return notFoundRequest(path, "Planner");
+    }
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
     if (pageSegment === "privacy" && segments.length === 1) return requestResult(path, "privacy", {}, "/privacy");
