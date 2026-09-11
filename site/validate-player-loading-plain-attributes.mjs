@@ -41,7 +41,8 @@ for (const [label, runtime] of [["Canonical Player source", source], ["Generated
 const renderRequired = [
   'const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);',
   'const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;',
-  "const attributeViewLoading = playerAttributeLoadingActive(playerId);",
+  "attributeViewLoadingActive: playerAttributeLoadingActive,",
+  "const attributeViewLoading = Boolean(window.__mflPlayerFirstPaintRuntime?.attributeViewLoadingActive?.(playerId));",
   "const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);",
   'const viewButtons = allowedPlayerAttributeViews(row)',
   '!attributeViewLoading && state.playerAttributeView === view ? "active" : ""',
