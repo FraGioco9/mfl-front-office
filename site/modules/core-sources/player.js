@@ -996,23 +996,14 @@ function animateReadyControls(container = document) {
   });
 
   window.addEventListener("mfl:loading-state", () => {
-    if (document.body?.dataset.page !== "player") return;
-    const detail = document.getElementById("playerDetail");
-    if (!(detail instanceof HTMLElement)) return;
-    syncPlayerAttributeViewActiveState(detail);
+    finalizePlayerAttributeViewAfterLoading();
   });
   window.addEventListener("mfl:ready", () => {
-    if (document.body?.dataset.page !== "player") return;
-    const detail = document.getElementById("playerDetail");
-    if (!(detail instanceof HTMLElement)) return;
-    syncPlayerAttributeViewActiveState(detail);
+    finalizePlayerAttributeViewAfterLoading();
   });
   window.addEventListener("mfl:navigation-state", (event) => {
-    if (document.body?.dataset.page !== "player") return;
     if (event instanceof CustomEvent && event.detail?.pending === true) return;
-    const detail = document.getElementById("playerDetail");
-    if (!(detail instanceof HTMLElement)) return;
-    syncPlayerAttributeViewActiveState(detail);
+    finalizePlayerAttributeViewAfterLoading();
   });
 
   function applyHeroLayout(hero) {
@@ -1348,6 +1339,23 @@ function syncPlayerAttributeViewActiveState(containerValue, playerIdValue = play
     button.classList.toggle("active", !loading && buttonView === selectedView);
   });
   return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
+}
+
+function finalizePlayerAttributeViewAfterLoading() {
+  if (document.body?.dataset.page !== "player") return false;
+  const playerId = playerIdFromLocation();
+  if (!playerId || playerAttributeLoadingActive(playerId)) return false;
+  const detail = document.getElementById("playerDetail");
+  if (!(detail instanceof HTMLElement)) return false;
+
+  const pendingHero = detail.querySelector(":scope > .playerHero.playerHeroPending");
+  const disabledView = detail.querySelector(".playerAttributeViewButton:disabled");
+  if (pendingHero instanceof HTMLElement || disabledView instanceof HTMLButtonElement) {
+    const renderPlayer = Reflect.get(window, "__mflRenderPlayerPageOwner");
+    if (typeof renderPlayer === "function") renderPlayer(playerId);
+  }
+
+  return syncPlayerAttributeViewActiveState(detail, playerId);
 }
 
 function stableAttributePanelHtml(row) {
@@ -2103,10 +2111,12 @@ function renderPlayerPageOwner(playerId) {
   const attributeViewLoading = Boolean(window.__mflPlayerFirstPaintRuntime?.attributeViewLoadingActive?.(playerId));
   const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;
   const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);
-  if (playerDetailRenderReuse.matches(
-    renderSignature,
-    playerDetail.firstElementChild?.classList.contains("playerHero"),
-  )) {
+  const existingPlayerHero = playerDetail.firstElementChild;
+  const reusablePlayerDetail = existingPlayerHero instanceof HTMLElement
+    && existingPlayerHero.classList.contains("playerHero")
+    && !existingPlayerHero.classList.contains("playerHeroPending")
+    && !playerDetail.querySelector(".playerAttributeViewButton:disabled");
+  if (playerDetailRenderReuse.matches(renderSignature, reusablePlayerDetail)) {
     document.documentElement.dataset.initialEntityVerified = "player";
     return;
   }
