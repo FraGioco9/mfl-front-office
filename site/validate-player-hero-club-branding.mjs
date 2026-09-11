@@ -46,16 +46,16 @@ includes(bootstrap, '<a class="playerHeroBrandMark" tabindex="-1" aria-hidden="t
 
 for (const token of [
   "position: relative;",
-  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 16px);",
-  "width: var(--mfl-player-hero-brand-size, 108px);",
+  "left: calc(var(--mfl-player-hero-overall-size, 100px) + 28px);",
+  "width: var(--mfl-player-hero-brand-size, 92px);",
   "opacity: 0.42;",
   ".playerHeroPortraitFrame {\n  position: relative;\n  z-index: 2;",
 ]) includes(styles, token, `Player affiliation layering is missing: ${token}`);
 
 includes(player, "const PLAYER_HERO_IDENTITY_OVERALL_GAP_PX = 252;", "Desktop media geometry must move the Player portrait further left while preserving Club-mark overlap.");
 includes(player, 'media.style.gap = playerCssLength("--mfl-player-hero-media-gap", 48);', "Runtime Player media gap must match the stronger portrait overlap.");
-includes(responsive, "--mfl-player-hero-brand-size: var(--mfl-player-portrait-height);", "Responsive affiliation mark must scale with the Player portrait.");
-includes(responsive, "--mfl-player-hero-media-gap: calc(var(--mfl-player-hero-brand-size) - clamp(40px, 9vw, 48px));", "Responsive Player portrait must overlap the Club mark more strongly while staying in front.");
+includes(responsive, "--mfl-player-hero-brand-size: calc(var(--mfl-player-portrait-height) * 0.82);", "Responsive affiliation mark must scale down relative to the Player portrait.");
+includes(responsive, "--mfl-player-hero-media-gap: calc(var(--mfl-player-portrait-height) - clamp(40px, 9vw, 48px));", "Responsive Player portrait position must remain stable while the affiliation mark scales down.");
 
 includes(styles, ".playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter .playerHeroDevelopmentCenterIcon {\n  display: block;", "Development Center cone must render inline from the Player hero mark.");
 includes(styles, ".playerHeroDevelopmentCenterIcon {\n  display: none;\n  color: #ffffff;", "Development Center cone must be white.");
