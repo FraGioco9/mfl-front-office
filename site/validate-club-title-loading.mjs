@@ -60,6 +60,10 @@ includes(clubCore, 'ownerName.replaceChildren(createTextSkeleton("Agent Name"));
 includes(clubCore, 'ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));', "Unresolved Owner must replace any previous Club wallet with the canonical wallet skeleton.");
 includes(clubCore, 'ownerName.textContent = ownerLabel;', "Hydrated Club identity must render Owner in the same permanent Owner name element used by loading.");
 includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";', "Hydrated Club identity must render the Owner wallet in the permanent wallet element.");
+includes(clubCore, 'owner.setAttribute(\n            "href",', "A resolved Club Owner must become a real link without replacing the Owner geometry.");
+includes(clubCore, 'openAgentPage(walletAddress, String(clubIdentityOwnerLink.dataset.agentName || "").trim());', "Club Owner clicks must reuse the canonical SPA Agent navigation.");
+includes(stylesBase, ".clubIdentityOwner[href] {\n  cursor: pointer;", "Only resolved clickable Club Owners must expose the pointer cursor.");
+includes(stylesBase, ".clubIdentityOwner[href]:focus-visible {", "Clickable Club Owner must keep a visible keyboard focus state.");
 excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
 
 
@@ -147,6 +151,17 @@ includes(
 );
 
 includes(clubCore, 'Reflect.get(window, "__mflPrimeClubProfileLoading")', "Club route loading must prime the shared Club profile skeleton before awaiting data.");
+const clubOpenStart = clubCore.indexOf('async function openClubPage(clubId, view = "attributes", updateHistory = true) {');
+const destinationIdentityRender = clubCore.indexOf("renderClubIdentity();", clubOpenStart);
+const destinationIdentityPrime = clubCore.indexOf('primeClubProfileLoading(nextView);', destinationIdentityRender);
+const destinationTransition = clubCore.indexOf("const transition = await runPageTransition(CLUB_PAGE, updateHistory, {", destinationIdentityPrime);
+invariant(
+  clubOpenStart >= 0
+    && destinationIdentityRender > clubOpenStart
+    && destinationIdentityPrime > destinationIdentityRender
+    && destinationTransition > destinationIdentityPrime,
+  "Destination Club identity and its skeletons must be prepared before the Club page transition can reveal the shell.",
+);
 includes(clubCore, "void clubTitleReady.then((resolvedTitle) => {", "Club title preflight must remain non-blocking while roster data loads.");
 includes(clubCore, 'document.documentElement.dataset.initialEntityVerified = "club";', "A confirmed Club identity must release the guarded first-paint Club shell.");
 includes(clubCore, "const loadedClubTitle = clubProfileFromState(activeClubId) || clubTitleIdentityFromRows(activeClubId);", "The embedded Club profile must become the authoritative hydrated identity before roster fallback.");
