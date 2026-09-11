@@ -516,7 +516,6 @@ function applyOverallBoxAppearance(box, overall) {
   function detailDataReady(row, playerIdValue) {
     const playerId = normalizePlayerId(playerIdValue);
     if (!playerId) return false;
-    if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;
     if (!Array.isArray(row)) return pendingDetailPlayerId !== playerId || readyDetailPlayerId === playerId;
     if (!Array.isArray(state.columns) || !state.columns.length) return false;
     const playerIdIndex = state.columns.indexOf("player_id");
