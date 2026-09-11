@@ -207,7 +207,7 @@ invariant(
   sharedGlobalSearch.startsWith("async function openSearch() {")
     && sharedGlobalSearch.includes("function clubSearchResult(entry) {")
     && sharedGlobalSearch.includes("const clubResults = state.clubSearchIndex")
-    && sharedGlobalSearch.includes('void window.mflOpenClubPage(entry.clubId, "info");')
+    && sharedGlobalSearch.includes('void window.mflOpenClubPage(entry.clubId, "attributes");')
     && sharedGlobalSearch.replace(/\s*$/, "").endsWith("  })();\n}"),
   "Shared Global Search must own open/close, Player/Club/Agent matching, mixed recents, navigation, clear state, and result rendering through renderSearchResults().",
 );
