@@ -7628,17 +7628,29 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   user-select: none;
 }
 
-.mflTableFlagPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.mflTableFlagSkeleton {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
+  pointer-events: none;
+  user-select: none;
 }
 
-.mflTableFlagPlaceholderShape {
-  display: block;
+.mflTableFlagSkeleton > :is(.mflTableFlagSkeletonSample, .mflTableFlagSkeletonFill) {
+  grid-area: 1 / 1;
+}
+
+.mflTableFlagSkeletonSample {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mflTableFlagSkeletonFill {
   inline-size: 100%;
-  block-size: 72.222222%;
-  border-radius: 11.111111% / 15.384615%;
+  block-size: 100%;
+  background: var(--mfl-loading-placeholder-surface);
+  -webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+  mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
 }
 
 .mflSkeletonText {
