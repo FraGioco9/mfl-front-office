@@ -13,7 +13,7 @@ for (const source of [shared, player, firstPaint]) {
 }
 
 assert.ok(
-  shared.includes("return penalty ? \`\${base} + \${penalty}\` : base;"),
+  shared.includes("return penalty ? `${base} + ${penalty}` : base;"),
   "Canonical formatter must preserve base and penalty as separate percentages.",
 );
 assert.ok(
