@@ -31,6 +31,9 @@ for (const [label, runtime] of [["Canonical Player source", source], ["Generated
   if (runtime.includes("pendingAttributeViewRestore")) {
     throw new Error(`${label}: legacy event-based selected-view restoration must not remain.`);
   }
+  if (runtime.includes("playerAttributeLoadingObserver = new MutationObserver")) {
+    throw new Error(`${label}: Player Attribute loading completion must use the canonical loading lifecycle, not a MutationObserver fix.`);
+  }
   const pendingStart = runtime.indexOf("function pendingAttributeValue(context, column) {");
   const pendingEnd = runtime.indexOf("function createPendingAttributesPanel(context) {", pendingStart);
   if (runtime.slice(pendingStart, pendingEnd).includes("knownDisplayValue(context, column)")) {
@@ -42,6 +45,10 @@ const renderRequired = [
   'const selectedAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);',
   'const normalizedAttributeView = window.__mflPlayerFirstPaintRuntime?.attributeViewForRender?.(selectedAttributeView, playerId) || selectedAttributeView;',
   "attributeViewLoadingActive: playerAttributeLoadingActive,",
+  "syncAttributeViewActiveState: syncPlayerAttributeViewActiveState,",
+  'window.addEventListener("mfl:loading-state", () => {',
+  'window.addEventListener("mfl:ready", () => {',
+  'button.classList.toggle("active", !loading && button.dataset.playerAttributeView === selectedView);',
   "const attributeViewLoading = Boolean(window.__mflPlayerFirstPaintRuntime?.attributeViewLoadingActive?.(playerId));",
   "const renderSignature = playerDetailRenderSignature(row, playerId, normalizedAttributeView, attributeViewLoading);",
   'const viewButtons = allowedPlayerAttributeViews(row)',
