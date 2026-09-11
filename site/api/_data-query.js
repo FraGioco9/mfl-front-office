@@ -56,8 +56,14 @@ function hiddenMflJoinedDateCondition(alias = "") {
 }
 
 function manifestPayload() {
-  const playerCount = Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0);
-  const walletCount = Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0);
+  const cachedPlayerCount = Number(getRuntimeMetadata("row_count"));
+  const cachedWalletCount = Number(getRuntimeMetadata("wallet_count"));
+  const playerCount = Number.isFinite(cachedPlayerCount)
+    ? cachedPlayerCount
+    : Number(queryOne("SELECT count(*) AS count FROM players")?.count || 0);
+  const walletCount = Number.isFinite(cachedWalletCount)
+    ? cachedWalletCount
+    : Number(queryOne("SELECT count(*) AS count FROM wallets")?.count || 0);
   return {
     generated_at: getGeneratedAt(),
     row_count: playerCount,
