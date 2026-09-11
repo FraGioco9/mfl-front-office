@@ -27,8 +27,11 @@ includes(
 );
 
 for (const [name, source] of [["Database Stats", databaseStats], ["MFL Stats", mflStats]]) {
-  includes(source, "mflStatsHistogramLayout", `${name} must use the structural histogram wrapper.`);
-  excludes(source, 'className = "mflStatsHistogram";', `${name} must not render the animated histogram wrapper.`);
+  includes(source, 'className = "mflStatsHistogram";', `${name} must use the canonical structural histogram wrapper.`);
+  excludes(source, "mflStatsHistogramLayout", `${name} must not maintain a second histogram geometry wrapper.`);
+  for (const inlineGeometry of ["style.display", "style.gridTemplateColumns", "style.alignItems", "style.gap", "style.width", "style.height", "style.paddingTop", "style.minWidth"]) {
+    excludes(source, `histogram.${inlineGeometry}`, `${name} must inherit histogram geometry from CSS instead of duplicating ${inlineGeometry} inline.`);
+  }
   includes(source, "mflStatsHistogramFill", `${name} must retain the existing fill rise as the sole column animation owner.`);
   includes(source, "mflStatsDistributionSignature", `${name} must preserve identical histogram DOM instead of recreating animated fills.`);
   excludes(source, "fill.animate(", `${name} must not introduce a JavaScript animation owner.`);
@@ -71,8 +74,8 @@ includes(
 );
 includes(
   mflStats,
-  'histogram.style.display = "grid";',
-  "Generated MFL Stats must retain the full structural histogram layout after removing the animated wrapper class.",
+  'histogram.className = "mflStatsHistogram";',
+  "Generated MFL Stats must consume the canonical CSS-owned histogram layout.",
 );
 includes(
   mflStats,
@@ -124,8 +127,8 @@ includes(
 );
 includes(
   mflStatsSource,
-  'histogram.className = "mflStatsHistogramLayout";',
-  "The MFL Stats generator must remove the animated wrapper from the render path.",
+  'histogram.className = "mflStatsHistogram";',
+  "The MFL Stats generator must consume the canonical structural histogram wrapper.",
 );
 includes(
   mflStatsSource,
