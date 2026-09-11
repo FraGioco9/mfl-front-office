@@ -1073,6 +1073,7 @@
                 <button class="playerEyebrow playerIdText" type="button" disabled>ID #000000</button>
                 <h2 class="playerTitle"><span class="playerTitleName"><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">Name Surname</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span><span class="playerTitleNoteIcon" data-player-note-title-icon></span></h2>
                 <p><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">CM, RW</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></p>
+                <a class="playerClubBrand" tabindex="-1" aria-hidden="true"><img class="playerClubLogo" alt="" aria-hidden="true"></a>
               </div>
               <div class="playerHeroActions">
                 <div class="playerHeroActionMenu">
@@ -1318,6 +1319,67 @@
                 ? suppliedPositions.join(",")
                 : cachedPositionText,
             );
+            const normalizeCachedClubBrand = (value, expectedClubId = "") => {
+              const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+              if (!source) return null;
+              const clubId = String(source.clubId || expectedClubId || "").trim();
+              if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+              return {
+                clubId,
+                name: String(source.name || "").trim(),
+                primaryColor: String(source.primaryColor || "").trim(),
+                secondaryColor: String(source.secondaryColor || "").trim(),
+                logoUrl: String(source.logoUrl || "").trim(),
+              };
+            };
+            const cachedClubBrand = (() => {
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (firstPaintContext?.clubKnown === true) return normalizeCachedClubBrand(firstPaintContext.club, clubId);
+              const explicit = normalizeCachedClubBrand(firstPaintContext?.club, clubId);
+              if (explicit) return explicit;
+              if (!clubId) return null;
+              try {
+                const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
+                return normalizeCachedClubBrand(stored?.[clubId], clubId);
+              } catch {
+                return null;
+              }
+            })();
+            const syncCachedClubBrand = () => {
+              const identity = hero?.querySelector(":scope > .playerHeroIdentity");
+              const brand = identity?.querySelector(":scope > .playerClubBrand");
+              if (!(identity instanceof HTMLElement) || !(brand instanceof HTMLAnchorElement)) return;
+              const primary = String(cachedClubBrand?.primaryColor || "").trim();
+              const secondary = String(cachedClubBrand?.secondaryColor || "").trim();
+              const validColor = (color) => color && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", color);
+              const first = validColor(primary) ? primary : (validColor(secondary) ? secondary : "");
+              const second = validColor(secondary) ? secondary : first;
+              identity.classList.toggle("playerHeroIdentityBranded", Boolean(cachedClubBrand && first));
+              if (cachedClubBrand && first) {
+                identity.style.setProperty("--player-club-primary", first);
+                identity.style.setProperty("--player-club-secondary", second || first);
+              } else {
+                identity.style.removeProperty("--player-club-primary");
+                identity.style.removeProperty("--player-club-secondary");
+              }
+              const logo = brand.querySelector(":scope > .playerClubLogo");
+              const logoUrl = String(cachedClubBrand?.logoUrl || "").trim();
+              const visible = Boolean(cachedClubBrand?.clubId && logoUrl);
+              brand.classList.toggle("playerClubBrandVisible", visible);
+              brand.tabIndex = visible ? 0 : -1;
+              brand.setAttribute("aria-hidden", visible ? "false" : "true");
+              if (!visible) {
+                brand.removeAttribute("href");
+                brand.removeAttribute("data-club-id");
+                brand.removeAttribute("aria-label");
+                if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+                return;
+              }
+              brand.href = "/clubs/" + encodeURIComponent(cachedClubBrand.clubId) + "/squad";
+              brand.dataset.clubId = cachedClubBrand.clubId;
+              brand.setAttribute("aria-label", cachedClubBrand.name ? "Open " + cachedClubBrand.name : "Open Club #" + cachedClubBrand.clubId);
+              if (logo instanceof HTMLImageElement) logo.src = logoUrl;
+            };
             const cachedAttributeValue = (column) => {
               if (column === "overall") {
                 const overall = knownDisplay("overall") || String(firstPaintContext?.overall || "").trim();
@@ -1637,6 +1699,7 @@
               }
             }
 
+            syncCachedClubBrand();
             syncCachedHeroValues();
             syncCachedProfileValues();
             syncPendingPlayerShell();
