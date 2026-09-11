@@ -90,6 +90,23 @@ invariant(
   "Paged reads must expose marketplace and accumulated SQLite phases through the shared Server-Timing collector.",
 );
 invariant(
+  dataPage.includes("const PAGE_COUNT_CACHE_MAX_ENTRIES = 256;")
+    && dataPage.includes("const pageCountCache = new Map();")
+    && dataPage.includes("function pageCountCacheKey(where, parameters) {")
+    && dataPage.includes("function syncPageCountCacheGeneration() {")
+    && dataPage.includes("const generation = String(getGeneratedAt() || \"\");")
+    && dataPage.includes("pageCountCache.clear();")
+    && dataPage.includes("if (pageCountCache.has(cacheKey)) {")
+    && dataPage.includes("while (pageCountCache.size > PAGE_COUNT_CACHE_MAX_ENTRIES) {"),
+  "Paged COUNT(*) reuse must stay dataset-aware, bounded, and owned by the canonical page-query module.",
+);
+invariant(
+  dataPage.includes('const cacheKey = pageCountCacheKey(where, parameters);')
+    && !dataPage.includes('pageCountCacheKey(where, parameters, page')
+    && !dataPage.includes('pageCountCacheKey(where, parameters, sort'),
+  "COUNT(*) cache identity must depend on the result-set predicate/parameters, not page or sort state.",
+);
+invariant(
   dataAuth.includes("Object.entries(timings || {}).forEach")
     && dataAuth.includes('response.setHeader("Server-Timing", serverTimingHeader(startedAt, timings));'),
   "Backend phase timings must continue flowing through the canonical Server-Timing response owner.",
