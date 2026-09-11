@@ -63,6 +63,8 @@ includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.own
 includes(clubCore, 'owner.setAttribute(\n            "href",', "A resolved Club Owner must become a real link without replacing the Owner geometry.");
 includes(clubCore, 'openAgentPage(walletAddress, String(clubIdentityOwnerLink.dataset.agentName || "").trim());', "Club Owner clicks must reuse the canonical SPA Agent navigation.");
 includes(stylesBase, ".clubIdentityOwner[href] {\n  cursor: pointer;", "Only resolved clickable Club Owners must expose the pointer cursor.");
+includes(stylesBase, ".agentTableLink:hover,\n.agentTableLink.tableInteractiveHovered {\n  color: var(--primary);\n  text-decoration: none;", "Table Agent links must retain the canonical hover treatment.");
+includes(stylesBase, ".clubIdentityOwner[href]:hover .clubIdentityOwnerName,\n.clubIdentityOwner[href]:focus-visible .clubIdentityOwnerName {\n  color: var(--primary);\n  text-decoration: none;", "Club Owner hover must match table Agent links: primary text colour with no underline.");
 includes(stylesBase, ".clubIdentityOwner[href]:focus-visible {", "Clickable Club Owner must keep a visible keyboard focus state.");
 excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
 
@@ -151,6 +153,11 @@ includes(
 );
 
 includes(clubCore, 'Reflect.get(window, "__mflPrimeClubProfileLoading")', "Club route loading must prime the shared Club profile skeleton before awaiting data.");
+includes(clubCore, "let clubOpenSequence = 0;", "Club navigation must use latest-open sequencing instead of a blocking global lock.");
+excludes(clubCore, "openingClub", "A stale in-flight Club must never block navigation to a newer Club.");
+includes(clubCore, "const openSequence = ++clubOpenSequence;", "Each Club navigation must supersede every older in-flight Club.");
+includes(clubCore, 'if (!dataLoaded || openSequence !== clubOpenSequence || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;', "Stale Club payload completions must be discarded after leaving the Club route or opening another Club.");
+
 const clubOpenStart = clubCore.indexOf('async function openClubPage(clubId, view = "attributes", updateHistory = true) {');
 const destinationIdentityRender = clubCore.indexOf("renderClubIdentity();", clubOpenStart);
 const destinationIdentityPrime = clubCore.indexOf('primeClubProfileLoading(nextView);', destinationIdentityRender);
