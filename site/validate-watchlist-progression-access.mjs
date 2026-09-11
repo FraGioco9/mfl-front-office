@@ -60,12 +60,12 @@ invariant(
   "Club must be a canonical table page without post-start mutation.",
 );
 invariant(
-  coreSource.includes('club: ["attributes", "contracts", "current", "all"],'),
+  coreSource.includes('club: ["info", "attributes", "contracts", "current", "all"],'),
   "Club public progression views must live in the canonical page-view table.",
 );
 invariant(
-  coreSource.includes('club: "attributes",'),
-  "Club must retain its canonical Attributes default view.",
+  coreSource.includes('club: "info",'),
+  "Club must use Info as its canonical default view.",
 );
 for (const retired of [
   "PUBLIC_PROGRESSION_VIEWS",
