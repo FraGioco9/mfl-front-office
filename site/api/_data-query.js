@@ -3,6 +3,7 @@ const {
   PROGRESSION_COLUMNS,
   SEARCH_PLAYER_COLUMNS,
   getGeneratedAt,
+  getRuntimeMetadata,
   queryOne,
   playerSelectExpression,
 } = require("./_database");
