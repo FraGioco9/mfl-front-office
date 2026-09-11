@@ -2,10 +2,11 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [dataApi, dataAuth, dataPage, dataCachePolicy, httpCache, database] = await Promise.all([
+const [dataApi, dataAuth, dataPage, dataQuery, dataCachePolicy, httpCache, database] = await Promise.all([
   read("./api/data.js"),
   read("./api/_data-auth.js"),
   read("./api/_data-page.js"),
+  read("./api/_data-query.js"),
   read("./api/_data-cache-policy.js"),
   read("./api/_http-cache.js"),
   read("./api/_database.js"),
@@ -138,6 +139,19 @@ invariant(
   database.includes("return preparedStatement(sql).all(...parameters);")
     && database.includes("return preparedStatement(sql).get(...parameters) || null;"),
   "queryRows/queryOne must reuse compiled SQL while binding fresh parameters for each execution.",
+);
+invariant(
+  database.includes('runtimeMetadata = new Map(')
+    && database.includes('database.prepare("SELECT key, value FROM runtime_metadata").all()')
+    && database.includes("function getRuntimeMetadata(key) {"),
+  "Runtime metadata must be loaded once with the canonical SQLite connection and exposed through one read owner.",
+);
+invariant(
+  dataQuery.includes('getRuntimeMetadata("row_count")')
+    && dataQuery.includes('getRuntimeMetadata("wallet_count")')
+    && dataQuery.includes('queryOne("SELECT count(*) AS count FROM players")')
+    && dataQuery.includes('queryOne("SELECT count(*) AS count FROM wallets")'),
+  "Manifest counts must prefer snapshot metadata while retaining older-snapshot live COUNT fallbacks.",
 );
 invariant(
   !database.includes("return getDatabase().prepare(sql).all(...parameters);")
