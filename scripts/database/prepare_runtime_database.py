@@ -461,12 +461,20 @@ def prepare_runtime_database(database_path: Path) -> None:
             """,
             parameters,
         ).fetchone()
+        manifest_row_count = connection.execute(
+            "SELECT count(*) FROM players"
+        ).fetchone()[0]
+        manifest_wallet_count = connection.execute(
+            "SELECT count(*) FROM wallets"
+        ).fetchone()[0]
         generated_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
             "+00:00",
             "Z",
         )
         metadata = {
             "generated_at": generated_at,
+            "row_count": str(int(manifest_row_count or 0)),
+            "wallet_count": str(int(manifest_wallet_count or 0)),
             "database_stats_contract": DATABASE_STATS_CONTRACT,
             "database_stats_total_players": str(int(total_players or 0)),
             "database_stats_total_active_players": str(int(total_active_players or 0)),

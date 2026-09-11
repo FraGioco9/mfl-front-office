@@ -105,6 +105,7 @@ const OPTIONAL_PLAYER_COLUMNS = new Set([
 let database = null;
 let databasePath = "";
 let generatedAt = "";
+let runtimeMetadata = new Map();
 let availablePlayerColumns = null;
 let marketplacePrices = Object.freeze({});
 const TABLE_EXISTS_CACHE = new Map();
@@ -190,10 +191,11 @@ function getDatabase() {
     throw new Error(`Database is incomplete: missing player columns ${missingColumns.join(", ")}.`);
   }
 
-  const generatedAtRow = database.prepare(
-    "SELECT value FROM runtime_metadata WHERE key = ? LIMIT 1",
-  ).get("generated_at");
-  generatedAt = String(generatedAtRow?.value || "").trim();
+  runtimeMetadata = new Map(
+    database.prepare("SELECT key, value FROM runtime_metadata").all()
+      .map((row) => [String(row.key), String(row.value)]),
+  );
+  generatedAt = String(runtimeMetadata.get("generated_at") || "").trim();
   if (!generatedAt || Number.isNaN(Date.parse(generatedAt))) {
     throw new Error("Database is incomplete: missing valid runtime_metadata generated_at value.");
   }
@@ -203,6 +205,11 @@ function getDatabase() {
 function getGeneratedAt() {
   getDatabase();
   return generatedAt;
+}
+
+function getRuntimeMetadata(key) {
+  getDatabase();
+  return runtimeMetadata.get(String(key || "")) ?? null;
 }
 
 function tableExists(tableName) {
@@ -280,6 +287,7 @@ module.exports = {
   VALID_PLAYER_COLUMNS,
   getDatabase,
   getGeneratedAt,
+  getRuntimeMetadata,
   normalizeSearchText,
   normalizeWalletName,
   tableExists,

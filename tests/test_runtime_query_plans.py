@@ -190,6 +190,21 @@ class RuntimeQueryPlanTests(unittest.TestCase):
                 f"seek={seek.vm_steps} VM steps, offset={offset.vm_steps} VM steps",
             )
 
+    def test_manifest_counts_are_precomputed_in_runtime_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = self.prepare_database(directory)
+            with sqlite3.connect(database_path) as connection:
+                metadata = dict(
+                    connection.execute(
+                        "SELECT key, value FROM runtime_metadata WHERE key IN ('row_count', 'wallet_count')"
+                    ).fetchall()
+                )
+                player_count = connection.execute("SELECT count(*) FROM players").fetchone()[0]
+                wallet_count = connection.execute("SELECT count(*) FROM wallets").fetchone()[0]
+
+            self.assertEqual(int(metadata["row_count"]), player_count)
+            self.assertEqual(int(metadata["wallet_count"]), wallet_count)
+
     def test_precomputed_mfl_stats_summary_reduces_sqlite_work(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             database_path = self.prepare_database(directory)
