@@ -105,6 +105,9 @@ includes(sharedCore, "const clubViewPayloadCache = new Map();", "Shared incremen
 includes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Shared incremental routing must own Club payload cache writes.");
 includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremental routing must own Club payload cache reads.");
 includes(tableCore, 'else if (pageName !== "club") {', "Table rendering must preserve the Club title during view changes.");
+includes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");', "Table Club links must open the canonical Squad/Attributes view directly.");
+excludes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "info");', "Table Club links must not retain retired Info navigation.");
+
 
 includes(clubCore, 'const CLUB_PAGE = "club";', "Canonical Club source must own Club route state.");
 includes(clubCore, "async function openClubPage(clubId", "Canonical Club source must own Club hydration.");
