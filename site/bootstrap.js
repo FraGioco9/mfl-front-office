@@ -216,7 +216,16 @@
     }
     if (location instanceof HTMLElement) {
       const locationLabel = [identity.city, identity.nation].filter(Boolean).join(", ");
-      location.textContent = locationLabel;
+      location.replaceChildren();
+      if (locationLabel) {
+        const flagPlaceholder = createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton");
+        flagPlaceholder.dataset.clubLoading = "true";
+        location.appendChild(flagPlaceholder);
+        const locationText = document.createElement("span");
+        locationText.className = "clubLocationText";
+        locationText.textContent = locationLabel;
+        location.appendChild(locationText);
+      }
       location.hidden = !locationLabel;
     }
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
@@ -280,11 +289,20 @@
         logoPlaceholder.dataset.clubLoading = "true";
         logoFrame.appendChild(logoPlaceholder);
       }
-      for (const [element, sample] of [[division, "Diamond Division"], [location, "Bologna, Italy"]]) {
-        if (!(element instanceof HTMLElement) || String(element.textContent || "").trim()) continue;
-        element.hidden = false;
-        element.dataset.clubLoading = "true";
-        element.replaceChildren(createTextSkeleton(String(sample || "00")));
+      if (division instanceof HTMLElement && !String(division.textContent || "").trim()) {
+        division.hidden = false;
+        division.dataset.clubLoading = "true";
+        division.replaceChildren(createTextSkeleton("Diamond Division"));
+      }
+      if (location instanceof HTMLElement && !String(location.textContent || "").trim()) {
+        location.hidden = false;
+        location.dataset.clubLoading = "true";
+        const flagPlaceholder = createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton");
+        flagPlaceholder.dataset.clubLoading = "true";
+        const locationText = document.createElement("span");
+        locationText.className = "clubLocationText";
+        locationText.appendChild(createTextSkeleton("Bologna, Italy"));
+        location.replaceChildren(flagPlaceholder, locationText);
       }
     }
 
