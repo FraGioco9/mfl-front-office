@@ -996,6 +996,19 @@ function animateReadyControls(container = document) {
     if (event.key === "Escape" && activeHeroActionMenu instanceof HTMLElement) closeHeroActionMenu(activeHeroActionMenu);
   });
 
+  if (typeof MutationObserver === "function") {
+    const playerAttributeLoadingObserver = new MutationObserver(() => {
+      if (document.body?.dataset.page !== "player") return;
+      const detail = document.getElementById("playerDetail");
+      if (!(detail instanceof HTMLElement)) return;
+      syncPlayerAttributeViewActiveState(detail);
+    });
+    playerAttributeLoadingObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+
   function applyHeroLayout(hero) {
     if (!(hero instanceof HTMLElement)) return false;
     const identity = hero.querySelector(":scope > .playerHeroIdentity");
@@ -1314,6 +1327,18 @@ function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocati
   return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;
 }
 
+function syncPlayerAttributeViewActiveState(container = document, playerIdValue = playerIdFromLocation()) {
+  const playerId = normalizePlayerId(playerIdValue);
+  const loading = playerAttributeLoadingActive(playerId);
+  const selectedView = String(state.playerAttributeView || "attributes");
+  const buttons = Array.from(container?.querySelectorAll?.(".playerAttributeViewButton") || [])
+    .filter((button) => button instanceof HTMLButtonElement);
+  buttons.forEach((button) => {
+    button.classList.toggle("active", !loading && button.dataset.playerAttributeView === selectedView);
+  });
+  return !loading && buttons.some((button) => button.classList.contains("active"));
+}
+
 function stableAttributePanelHtml(row) {
   return renderPlayerAttributePanel(row);
 }
@@ -1567,6 +1592,7 @@ function stableAttributePanelHtml(row) {
     stableAttributePanelHtml,
     attributeViewForRender,
     attributeViewLoadingActive: playerAttributeLoadingActive,
+    syncAttributeViewActiveState: syncPlayerAttributeViewActiveState,
     playerAgeMarkerHtml,
     playerNationalityHtml,
     beginDetailNavigation,
@@ -2163,6 +2189,7 @@ function renderPlayerPageOwner(playerId) {
   }
 
   state.playerAttributeView = selectedAttributeView;
+  window.__mflPlayerFirstPaintRuntime?.syncAttributeViewActiveState?.(playerDetail, id);
   window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
     playerId: id,
