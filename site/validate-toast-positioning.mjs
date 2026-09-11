@@ -58,8 +58,9 @@ for (const block of responsive.match(/\.toastMessage\s*\{[^}]*\}/g) || []) {
 }
 
 assert.ok(
-  session.includes('showToast("Dapper opt-in removed.");'),
-  "Dapper opt-out feedback must continue through the canonical shared showToast path.",
+  session.includes('const toastMessage = String(options.toastMessage || "Dapper opt-in removed.");')
+    && session.includes("showToast(toastMessage);"),
+  "Dapper opt-out and invalid-session feedback must continue through the canonical shared showToast path.",
 );
 
 console.log("Toast positioning foundation validation passed: every toast shares the main-content horizontal center while selection-stack owns only intentional vertical collision spacing.");

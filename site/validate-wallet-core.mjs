@@ -34,7 +34,7 @@ new Function(walletCore);
 
 includes(sharedCore, "function walletAccessMessage() {", "Shared core must retain the stable wallet proof message used during startup restoration.");
 includes(sharedCore, "function restoreLinkedWalletProof() {", "Saved wallet-proof restoration must remain in shared startup core.");
-includes(sharedCore, "function optOutWallet() {", "Opt-out must remain immediately available without loading Wallet opt-in code.");
+includes(sharedCore, "function optOutWallet(options = {}) {", "Opt-out and invalid-session recovery must remain immediately available without loading Wallet opt-in code.");
 includes(sharedCore, "let __mflWalletLinkOwner = null;", "Shared core must retain stable Wallet facade state.");
 includes(sharedCore, "async function linkWallet() {", "Shared core must retain the linkWallet facade for existing controls.");
 includes(sharedCore, 'await window.__mflEnsureRouteCore("wallet");', "linkWallet must lazy-load Wallet ownership on demand.");
@@ -61,7 +61,7 @@ for (const required of [
   "__mflWalletLinkOwner = walletLinkOwner;",
 ]) includes(walletCore, required, `Canonical Wallet core is missing ${required}`);
 excludes(walletCore, "function restoreLinkedWalletProof() {", "Startup wallet-proof restoration must not become Wallet-only.");
-excludes(walletCore, "function optOutWallet() {", "Opt-out must not depend on loading the Wallet core.");
+excludes(walletCore, "function optOutWallet(options = {}) {", "Opt-out and invalid-session recovery must not depend on loading the Wallet core.");
 
 includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical app config must map the Wallet action core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "Route-core loader must consume canonical route-core paths.");

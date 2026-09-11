@@ -109,7 +109,7 @@ function hasWalletOptIn() {
 }
 
 function pageRequiresData(pageName) {
-  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
+  if (["myplayers", "my-clubs", "watchlist", "settings"].includes(pageName) && !hasWalletOptIn()) {
     return false;
   }
 
@@ -504,14 +504,16 @@ function updateAccountState() {
   syncHomeLoginButton();
 }
 
-function optOutWallet() {
+function optOutWallet(options = {}) {
+  const toastMessage = String(options.toastMessage || "Dapper opt-in removed.");
   const previousWalletAddress = state.linkedWalletAddress;
   const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
   const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
-  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+  const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
   clearWalletNotesState();
+  Reflect.get(window, "__mflMyClubsRoute")?.clear?.();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -545,7 +547,7 @@ function optOutWallet() {
     );
     setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
     saveTableState();
-    showToast("Dapper opt-in removed.");
+    showToast(toastMessage);
     return;
   }
 
@@ -556,14 +558,14 @@ function optOutWallet() {
     applyFilters();
   }
   saveTableState();
-  showToast("Dapper opt-in removed.");
+  showToast(toastMessage);
 
   if (state.currentPage === "evaluation") {
     redirectSavedEvaluationLinkToBasicEvaluation();
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+  if (["myplayers", "my-clubs", "watchlist", "settings"].includes(state.currentPage)) {
     setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }

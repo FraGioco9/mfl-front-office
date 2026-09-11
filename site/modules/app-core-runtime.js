@@ -593,7 +593,7 @@ function hasWalletOptIn() {
 }
 
 function pageRequiresData(pageName) {
-  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
+  if (["myplayers", "my-clubs", "watchlist", "settings"].includes(pageName) && !hasWalletOptIn()) {
     return false;
   }
 
@@ -988,14 +988,16 @@ function updateAccountState() {
   syncHomeLoginButton();
 }
 
-function optOutWallet() {
+function optOutWallet(options = {}) {
+  const toastMessage = String(options.toastMessage || "Dapper opt-in removed.");
   const previousWalletAddress = state.linkedWalletAddress;
   const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
   const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
-  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+  const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
   clearWalletNotesState();
+  Reflect.get(window, "__mflMyClubsRoute")?.clear?.();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -1029,7 +1031,7 @@ function optOutWallet() {
     );
     setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });
     saveTableState();
-    showToast("Dapper opt-in removed.");
+    showToast(toastMessage);
     return;
   }
 
@@ -1040,14 +1042,14 @@ function optOutWallet() {
     applyFilters();
   }
   saveTableState();
-  showToast("Dapper opt-in removed.");
+  showToast(toastMessage);
 
   if (state.currentPage === "evaluation") {
     redirectSavedEvaluationLinkToBasicEvaluation();
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+  if (["myplayers", "my-clubs", "watchlist", "settings"].includes(state.currentPage)) {
     setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }
@@ -1270,11 +1272,14 @@ async function openSavedEvaluationsModal() {
 }
 
 function normalizedPageName(pageName) {
-  return pageName === "my-players" ? "myplayers" : pageName;
+  if (pageName === "my-players") return "myplayers";
+  if (pageName === "myclubs") return "my-clubs";
+  return pageName;
 }
 
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
+  "my-clubs": "/my-clubs/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -1291,6 +1296,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
+  if (normalizedPage === "my-clubs") return "/my-clubs";
   if (normalizedPage === "settings") return "/settings";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
@@ -1430,6 +1436,19 @@ function pageTargetFromPath(path) {
         ...(savedId ? { savedId } : {}),
         ...(shareId ? { shareId } : {}),
       },
+    };
+  }
+
+  if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
+    if (!hasWalletOptIn()) {
+      return {
+        pageName: "my-clubs",
+        options: { replaceUrl: optedOutPathForPage("my-clubs") },
+      };
+    }
+    return {
+      pageName: "my-clubs",
+      options: cleanPath === "/myclubs" ? { replaceUrl: "/my-clubs" } : {},
     };
   }
 
@@ -1716,6 +1735,10 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   if (targetPath && currentPath !== targetPath && (updateHash || replaceRoute)) {
     window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
+
+if (protectedOptOutRoute(routePageName)) {
+  renderProtectedOptOutShell(routePageName);
+}
 
   window.__mflStaticUiRuntime?.sync?.();
   return { pageName: routePageName, viewName: nextView, targetPath };
@@ -2151,8 +2174,37 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
+function protectedOptOutRoute(pageName) {
+  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+}
+
+function renderProtectedOptOutShell(pageName) {
+  const protectedPage = String(pageName || "myplayers");
+  const copy = {
+    myplayers: ["My Players", "In order to see your players, you need to opt in."],
+    "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
+    settings: ["Settings", "In order to view settings, you need to opt in."],
+  }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
+
+  state.currentPage = protectedPage;
+  document.body.dataset.page = protectedPage;
+  homePage.hidden = true;
+  progressionPage.hidden = true;
+  mflStatsPage.hidden = true;
+  myPlayersLockedPage.hidden = false;
+  evaluationPage.hidden = true;
+  playerPage.hidden = true;
+  settingsPage.hidden = true;
+  changelogPage.hidden = true;
+  privacyPage.hidden = true;
+  if (optInLockedTitle) optInLockedTitle.textContent = copy[0];
+  if (optInLockedMessage) optInLockedMessage.textContent = copy[1];
+  syncHomeLoginButton();
+}
+
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  const lockedOptOutRoute = protectedOptOutRoute(pageName);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -2188,35 +2240,19 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   }
 
   if (lockedOptOutRoute) {
-    state.currentPage = pageName;
-    homePage.hidden = true;
-    progressionPage.hidden = true;
-    mflStatsPage.hidden = true;
-    myPlayersLockedPage.hidden = false;
-    evaluationPage.hidden = true;
-    playerPage.hidden = true;
-    settingsPage.hidden = true;
-    changelogPage.hidden = true;
-    privacyPage.hidden = true;
-    if (optInLockedTitle) {
-      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
-    }
-    if (optInLockedMessage) {
-      optInLockedMessage.textContent = pageName === "watchlist"
-        ? "In order to use the watchlist, you need to opt in."
-        : pageName === "settings"
-          ? "In order to view settings, you need to opt in."
-          : "In order to see your players, you need to opt in.";
-    }
-    syncHomeLoginButton();
-    if (document.body.classList.contains("loading")) {
-      await finishLoading();
-    }
-    if (!pageNavigationIsCurrent(options)) return null;
-    if (shouldResetScroll) {
-      resetPageScroll();
-    }
-    return;
+  renderProtectedOptOutShell(pageName);
+  if (document.body.classList.contains("loading")) {
+    await finishLoading();
+  }
+  if (!pageNavigationIsCurrent(options)) return null;
+  if (shouldResetScroll) resetPageScroll();
+  return;
+}
+
+if (pageName === "my-clubs") {
+    const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
+    if (typeof myClubsOwner !== "function") throw new Error("My Clubs route owner is unavailable.");
+    return myClubsOwner.call(this, updateHash, options);
   }
 
   const tablePage = tablePages.has(pageName);
@@ -8047,6 +8083,16 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
       const stagedTransition = incomingOptions.__mflNavigationTransition
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
+        if (transition && !navigationTransitionIsCurrent(transition)) return null;
+  if (protectedOptOutRoute(pageName)) {
+    return renderPage.call(this, pageName, false, {
+      ...incomingOptions,
+      skipNavigationTransition: true,
+      ...(transition ? { __mflNavigationTransition: transition } : {}),
+      ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+    });
+  }
+
         const featureOwnerBeforeRuntime = Reflect.get(window, "__mflSetPageFeatureOwner");
         const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
           ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)

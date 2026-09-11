@@ -52,20 +52,23 @@ excludes(indexHtml, ') #myPlayersLockedPage {\n        display: block;', "Opted-
 includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");
 includes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");
 includes(indexHtml, 'settings: ["Settings", "In order to view settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
+includes(indexHtml, '"my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."]', "My Clubs must render My Clubs-specific opt-out copy at first paint.");
+includes(indexHtml, 'id="myClubsGrid" class="myClubsGrid" aria-live="polite" aria-busy="true"></div>', "My Clubs first paint must expose an empty busy grid until ownership count is known.");
+excludes(indexHtml, '<div class="myClubCard myClubCardLoading" aria-hidden="true">', "My Clubs first paint must not guess a one-card skeleton before ownership data resolves.");
 const setPageStart = coreSource.indexOf('async function renderPage(pageName, updateHash = true, options = {}) {');
 invariant(setPageStart >= 0, "Canonical base page renderer must exist for opted-out route validation.");
-const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
+const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = protectedOptOutRoute(pageName);', setPageStart);
 const lockedRouteGuard = coreSource.indexOf('if (lockedOptOutRoute) {', lockedRouteDecision);
 const canonicalReplace = coreSource.indexOf('if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl)', lockedRouteDecision);
 const canonicalUpdate = coreSource.indexOf('updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });', lockedRouteDecision);
 invariant(lockedRouteDecision > setPageStart && lockedRouteGuard > lockedRouteDecision && canonicalReplace > lockedRouteDecision && canonicalUpdate > canonicalReplace, "Opted-out protected routes must participate in canonical replace/push URL handling while reusing one scoped base-render lock decision.");
-const optOutStart = coreSource.indexOf("function optOutWallet() {");
+const optOutStart = coreSource.indexOf("function optOutWallet(options = {}) {");
 const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("\nfunction ", optOutStart + "function optOutWallet".length) : -1;
 invariant(optOutStart >= 0 && optOutEnd > optOutStart, "Wallet opt-out transition owner must remain in canonical app core.");
 const optOutSource = coreSource.slice(optOutStart, optOutEnd);
 includes(optOutSource, 'const protectedReturnPath = `${window.location.pathname}${window.location.search}`;', "Wallet opt-out must capture the exact live URL before clearing wallet identity.");
 includes(optOutSource, 'const routeAtOptOut = pageTargetFromPath(protectedReturnPath);', "Wallet opt-out must derive protected-page identity from the captured live route.");
-includes(optOutSource, 'const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)', "Protected-page opt-out must derive locked-page identity from the live route rather than stale page state.");
+includes(optOutSource, 'const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)', "Protected-page opt-out must derive locked-page identity from the live route rather than stale page state.");
 includes(optOutSource, 'const optedOutPath = optedOutPathForPage(lockedPage);', "Protected-page opt-out must select the routed page's canonical opted-out URL.");
 includes(optOutSource, 'mflProtectedReturnPath: protectedReturnPath', "Protected-page opt-out must retain the exact signed-in return route in history state.");
 includes(optOutSource, 'setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });', "Protected-page opt-out must immediately render the locked shell for the routed page.");
@@ -171,6 +174,8 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableHeaderSignature", first
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);', "Bootstrap must own static table-header rendering.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
+includes(bootstrap, 'if (target.id === "myClubsPage") {', "My Clubs route priming must synchronously clear stale cards before the destination shell becomes visible.");
+includes(bootstrap, 'grid.replaceChildren();', "My Clubs route priming must show zero guessed or stale club boxes until ownership data resolves.");
 
 includes(tableLoading, "function show({", "Table loading must remain available only after navigation commits.");
 includes(tableLoading, "function hidePager() {", "Post-commit Table loading must own pager hiding instead of static route chrome.");

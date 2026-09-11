@@ -52,6 +52,16 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
       const stagedTransition = incomingOptions.__mflNavigationTransition
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
+        if (transition && !navigationTransitionIsCurrent(transition)) return null;
+  if (protectedOptOutRoute(pageName)) {
+    return renderPage.call(this, pageName, false, {
+      ...incomingOptions,
+      skipNavigationTransition: true,
+      ...(transition ? { __mflNavigationTransition: transition } : {}),
+      ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+    });
+  }
+
         const featureOwnerBeforeRuntime = Reflect.get(window, "__mflSetPageFeatureOwner");
         const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
           ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)

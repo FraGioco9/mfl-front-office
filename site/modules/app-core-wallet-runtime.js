@@ -489,7 +489,7 @@ async function walletLinkOwner() {
     return;
   }
 
-  const protectedPages = ["myplayers", "watchlist", "settings"];
+  const protectedPages = ["myplayers", "my-clubs", "watchlist", "settings"];
   const optedOutPage = optedOutPageFromPath(window.location.pathname);
   const historyState = window.history.state && typeof window.history.state === "object" && !Array.isArray(window.history.state)
     ? window.history.state

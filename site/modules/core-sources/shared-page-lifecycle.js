@@ -222,8 +222,37 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
+function protectedOptOutRoute(pageName) {
+  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+}
+
+function renderProtectedOptOutShell(pageName) {
+  const protectedPage = String(pageName || "myplayers");
+  const copy = {
+    myplayers: ["My Players", "In order to see your players, you need to opt in."],
+    "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
+    settings: ["Settings", "In order to view settings, you need to opt in."],
+  }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
+
+  state.currentPage = protectedPage;
+  document.body.dataset.page = protectedPage;
+  homePage.hidden = true;
+  progressionPage.hidden = true;
+  mflStatsPage.hidden = true;
+  myPlayersLockedPage.hidden = false;
+  evaluationPage.hidden = true;
+  playerPage.hidden = true;
+  settingsPage.hidden = true;
+  changelogPage.hidden = true;
+  privacyPage.hidden = true;
+  if (optInLockedTitle) optInLockedTitle.textContent = copy[0];
+  if (optInLockedMessage) optInLockedMessage.textContent = copy[1];
+  syncHomeLoginButton();
+}
+
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  const lockedOptOutRoute = protectedOptOutRoute(pageName);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -259,35 +288,19 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   }
 
   if (lockedOptOutRoute) {
-    state.currentPage = pageName;
-    homePage.hidden = true;
-    progressionPage.hidden = true;
-    mflStatsPage.hidden = true;
-    myPlayersLockedPage.hidden = false;
-    evaluationPage.hidden = true;
-    playerPage.hidden = true;
-    settingsPage.hidden = true;
-    changelogPage.hidden = true;
-    privacyPage.hidden = true;
-    if (optInLockedTitle) {
-      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
-    }
-    if (optInLockedMessage) {
-      optInLockedMessage.textContent = pageName === "watchlist"
-        ? "In order to use the watchlist, you need to opt in."
-        : pageName === "settings"
-          ? "In order to view settings, you need to opt in."
-          : "In order to see your players, you need to opt in.";
-    }
-    syncHomeLoginButton();
-    if (document.body.classList.contains("loading")) {
-      await finishLoading();
-    }
-    if (!pageNavigationIsCurrent(options)) return null;
-    if (shouldResetScroll) {
-      resetPageScroll();
-    }
-    return;
+  renderProtectedOptOutShell(pageName);
+  if (document.body.classList.contains("loading")) {
+    await finishLoading();
+  }
+  if (!pageNavigationIsCurrent(options)) return null;
+  if (shouldResetScroll) resetPageScroll();
+  return;
+}
+
+if (pageName === "my-clubs") {
+    const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
+    if (typeof myClubsOwner !== "function") throw new Error("My Clubs route owner is unavailable.");
+    return myClubsOwner.call(this, updateHash, options);
   }
 
   const tablePage = tablePages.has(pageName);

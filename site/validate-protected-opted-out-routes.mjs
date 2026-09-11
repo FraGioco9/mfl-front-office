@@ -6,6 +6,7 @@ const routing = read("./modules/core-sources/shared-routing.js");
 const session = read("./modules/core-sources/shared-session.js");
 const pageLifecycle = read("./modules/core-sources/shared-page-lifecycle.js");
 const wallet = read("./modules/core-sources/wallet.js");
+const myClubs = read("./modules/core-sources/my-clubs.js");
 const access = read("./html-sources/access.html");
 const firstPaint = read("./html-sources/first-paint.html");
 
@@ -15,10 +16,12 @@ function invariant(condition, message) {
 
 for (const [page, path] of [
   ["myplayers", "/my-players/opted-out"],
+  ["my-clubs", "/my-clubs/opted-out"],
   ["watchlist", "/watchlist/opted-out"],
   ["settings", "/settings/opted-out"],
 ]) {
-  invariant(appConfig.includes(`${page}: "${path}"`), `${page} must own canonical opted-out path ${path}.`);
+  const appConfigPathEntry = page === "my-clubs" ? `"my-clubs": "${path}"` : `${page}: "${path}"`;
+  invariant(appConfig.includes(appConfigPathEntry), `${page} must own canonical opted-out path ${path}.`);
   invariant(routing.includes(`options: { replaceUrl: optedOutPathForPage("${page}") }`), `${page} signed-out routes must canonicalize to their opted-out URL.`);
 }
 
@@ -42,7 +45,7 @@ invariant(
   "Protected navigation while signed out must use the canonical opted-out URL.",
 );
 
-const optOutStart = session.indexOf("function optOutWallet() {");
+const optOutStart = session.indexOf("function optOutWallet(options = {}) {");
 const optOutEnd = session.indexOf("\nfunction walletAccessMessage()", optOutStart);
 invariant(optOutStart >= 0 && optOutEnd > optOutStart, "Wallet opt-out owner must exist.");
 const optOut = session.slice(optOutStart, optOutEnd);
@@ -56,6 +59,18 @@ invariant(
 invariant(
   optOut.indexOf("window.history.replaceState(") < optOut.indexOf("setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });"),
   "The opted-out URL must become authoritative before the locked page is rendered.",
+);
+
+invariant(
+  optOut.includes('const toastMessage = String(options.toastMessage || "Dapper opt-in removed.");')
+    && (optOut.match(/showToast\(toastMessage\);/g) || []).length === 2,
+  "Wallet-session invalidation must reuse canonical opt-out cleanup while allowing the caller to explain why re-authentication is required.",
+);
+
+invariant(
+  myClubs.includes("if (response.status === 401) {")
+    && myClubs.includes('optOutWallet({ toastMessage: "Dapper opt-in expired. Opt in again to load My Clubs." });'),
+  "My Clubs must turn a rejected private-data proof into canonical wallet-session invalidation instead of rendering an empty owned-club result.",
 );
 
 invariant(
@@ -74,6 +89,7 @@ invariant(
 
 for (const copy of [
   'myplayers: ["My Players", "In order to see your players, you need to opt in."]',
+  '"my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."]',
   'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]',
   'settings: ["Settings", "In order to view settings, you need to opt in."]',
 ]) {
@@ -83,6 +99,7 @@ invariant(
   firstPaint.includes("root.dataset.initialLockedPage = initialLockedPage;")
     && firstPaint.includes('[data-initial-page^="watchlist"]')
     && firstPaint.includes('[data-initial-page^="my-players"]')
+    && firstPaint.includes('[data-initial-page^="my-clubs"]')
     && firstPaint.includes('[data-initial-page="settings"]'),
   "First paint must continue selecting the locked shell from the requested protected route.",
 );

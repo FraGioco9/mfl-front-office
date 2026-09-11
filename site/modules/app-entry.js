@@ -276,6 +276,64 @@ const runtimeWindow = window;
 const dataClient = createDataClient();
 runtimeWindow.__mflDataClient = dataClient;
 
+// Start the exact ownership lookup while the route scripts are still loading.
+// This is a one-use response, scoped to the full proof headers; it never renders UI.
+function primeInitialMyClubsOwnership() {
+  if (normalizeRoutePageName(initialRouteRuntime.pageName) !== "my-clubs") return;
+  const path = "/api/data?mode=my-clubs";
+  try {
+    const wallet = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim().toLowerCase();
+    const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+    if (!wallet || String(proof?.address || "").trim().toLowerCase() !== wallet
+        || proof?.message !== "MFL Front Office Dapper Opt-In"
+        || !Array.isArray(proof?.signatures) || !proof.signatures.length) return;
+    const headers = {
+      Accept: "application/json",
+      "x-dapper-wallet-address": wallet,
+      "x-wallet-signing-address": proof.signingAddress || wallet,
+      "x-wallet-message": proof.message,
+      "x-wallet-proof-type": proof.type || "user-signature",
+      "x-wallet-app-identifier": proof.appIdentifier || "MFL Front Office Dapper Opt-In",
+      "x-wallet-nonce": proof.nonce || "",
+      "x-wallet-signatures": JSON.stringify(proof.signatures),
+    };
+    const key = canonicalRequestKey(path, {}, new Headers(headers));
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 10_000);
+    let available = true;
+    const pending = dataClient.fetch(path, {
+      cache: "no-store", headers, signal: controller.signal,
+    }).then(
+      (response) => ({ response, error: null }),
+      (error) => ({ response: null, error }),
+    ).finally(() => window.clearTimeout(timer));
+
+    Reflect.set(window, "__mflMyClubsOwnershipPrefetch", Object.freeze({
+      take(currentHeaders) {
+        if (!available) return null;
+        available = false;
+        if (key !== canonicalRequestKey(path, {}, new Headers({ Accept: "application/json", ...currentHeaders }))) {
+          controller.abort();
+          return null;
+        }
+        return pending.then(({ response, error }) => {
+          if (error) throw error;
+          return response;
+        });
+      },
+      clear() {
+        available = false;
+        controller.abort();
+      },
+    }));
+  } catch {
+    // Unavailable or invalid stored proof falls back to the normal route request.
+  }
+}
+
+primeInitialMyClubsOwnership();
+
+
 function releaseFromBootstrap() {
   const version = String(runtimeWindow.__mflReleaseVersion || "").trim();
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("The application bootstrap is missing a valid release version.");

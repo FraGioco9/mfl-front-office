@@ -26,7 +26,7 @@ invariant(
   "Protected opted-out route intent must be captured before asynchronous wallet opt-in begins.",
 );
 invariant(
-  owner.includes('const protectedPages = ["myplayers", "watchlist", "settings"];'),
+  owner.includes('const protectedPages = ["myplayers", "my-clubs", "watchlist", "settings"];'),
   "Protected route capture must cover every opt-in-gated page.",
 );
 

@@ -81,6 +81,10 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
     window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
+if (protectedOptOutRoute(routePageName)) {
+  renderProtectedOptOutShell(routePageName);
+}
+
   window.__mflStaticUiRuntime?.sync?.();
   return { pageName: routePageName, viewName: nextView, targetPath };
 }
