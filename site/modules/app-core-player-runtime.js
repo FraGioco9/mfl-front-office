@@ -18,6 +18,7 @@
   const PLAYER_PENDING_OVERALL_BACKGROUND = "var(--surface)";
   const PLAYER_LOADED_OVERALL_BACKGROUND = "linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))";
   const PLAYER_CONTEXT_CACHE_PREFIX = "mfl-player-first-paint-v1:";
+  const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
   const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
@@ -95,6 +96,123 @@
     return entry ? entry.raw : "";
   }
 
+  function normalizePlayerClubBrand(value, expectedClubId = "") {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    if (!source) return null;
+    const clubId = String(source.clubId || expectedClubId || "").trim();
+    if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+    return {
+      clubId,
+      name: String(source.name || "").trim(),
+      primaryColor: String(source.primaryColor || "").trim(),
+      secondaryColor: String(source.secondaryColor || "").trim(),
+      logoUrl: String(source.logoUrl || "").trim(),
+      logoVersion: String(source.logoVersion || "").trim(),
+    };
+  }
+
+  function cachedPlayerClubBrand(clubIdValue) {
+    const clubId = String(clubIdValue || "").trim();
+    if (!clubId) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      return normalizePlayerClubBrand(stored?.[clubId], clubId);
+    } catch {
+      return null;
+    }
+  }
+
+  function contextClubId(knownValues) {
+    return String(normalizeKnownValueEntry(knownValues?.active_contract_club_id)?.raw || "").trim();
+  }
+
+  function validPlayerClubColor(value) {
+    const color = String(value || "").trim();
+    return color && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", color)
+      ? color
+      : "";
+  }
+
+  function playerClubPath(clubId) {
+    return window.__mflAppConfig?.routes?.clubPath?.(clubId, "attributes")
+      || "/clubs/" + encodeURIComponent(clubId) + "/squad";
+  }
+
+  function createPlayerClubBrandHost() {
+    const brand = document.createElement("a");
+    brand.className = "playerClubBrand";
+    brand.tabIndex = -1;
+    brand.setAttribute("aria-hidden", "true");
+    const logo = document.createElement("img");
+    logo.className = "playerClubLogo";
+    logo.alt = "";
+    logo.setAttribute("aria-hidden", "true");
+    brand.appendChild(logo);
+    return brand;
+  }
+
+  function ensurePlayerClubBrandHost(identity) {
+    if (!(identity instanceof HTMLElement)) return null;
+    let brand = identity.querySelector(":scope > .playerClubBrand");
+    if (!(brand instanceof HTMLAnchorElement)) {
+      brand = createPlayerClubBrandHost();
+      identity.appendChild(brand);
+    }
+    if (brand.dataset.playerClubBrandBound !== "true") {
+      brand.dataset.playerClubBrandBound = "true";
+      brand.addEventListener("click", (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const clubId = String(brand.dataset.clubId || "").trim();
+        if (!clubId || typeof window.mflOpenClubPage !== "function") return;
+        event.preventDefault();
+        window.mflOpenClubPage(clubId, "attributes");
+      });
+    }
+    return brand;
+  }
+
+  function syncPlayerClubBrand(identity, contextValue) {
+    if (!(identity instanceof HTMLElement)) return false;
+    const context = normalizeContext(contextValue);
+    const club = context.club;
+    const brand = ensurePlayerClubBrandHost(identity);
+    if (!(brand instanceof HTMLAnchorElement)) return false;
+
+    const primary = validPlayerClubColor(club?.primaryColor);
+    const secondary = validPlayerClubColor(club?.secondaryColor);
+    const branded = Boolean(club && (primary || secondary));
+    identity.classList.toggle("playerHeroIdentityBranded", branded);
+    if (branded) {
+      identity.style.setProperty("--player-club-primary", primary || secondary);
+      identity.style.setProperty("--player-club-secondary", secondary || primary);
+    } else {
+      identity.style.removeProperty("--player-club-primary");
+      identity.style.removeProperty("--player-club-secondary");
+    }
+
+    const logo = brand.querySelector(":scope > .playerClubLogo");
+    const logoUrl = String(club?.logoUrl || "").trim();
+    const showLogo = Boolean(club?.clubId && logoUrl);
+    brand.classList.toggle("playerClubBrandVisible", showLogo);
+    if (!showLogo) {
+      brand.removeAttribute("href");
+      brand.removeAttribute("aria-label");
+      brand.removeAttribute("data-club-id");
+      brand.tabIndex = -1;
+      brand.setAttribute("aria-hidden", "true");
+      if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+      return branded;
+    }
+
+    brand.href = playerClubPath(club.clubId);
+    brand.dataset.clubId = club.clubId;
+    brand.tabIndex = 0;
+    brand.setAttribute("aria-hidden", "false");
+    brand.setAttribute("aria-label", club.name ? "Open " + club.name : "Open Club #" + club.clubId);
+    if (logo instanceof HTMLImageElement && logo.getAttribute("src") !== logoUrl) logo.src = logoUrl;
+    return true;
+  }
+
   function retirementMarkerFromKnownValue(value) {
     const text = value === null || value === undefined ? "" : String(value).trim();
     if (!text) return null;
@@ -139,6 +257,10 @@
     const suppliedPositions = normalizePositions(source.positions);
     const cachedPositions = normalizePositions(knownValues.positions?.display || knownValues.positions?.raw || "");
     const suppliedOverall = source.overall === null || source.overall === undefined ? "" : String(source.overall).trim();
+    const clubKnown = source.clubKnown === true;
+    const clubId = contextClubId(knownValues);
+    const explicitClub = normalizePlayerClubBrand(source.club, clubId);
+    const club = clubKnown ? explicitClub : (explicitClub || cachedPlayerClubBrand(clubId));
     return {
       playerId,
       name: String(source.name || knownValues.name?.display || "").trim(),
@@ -146,12 +268,27 @@
       overall: suppliedOverall || String(knownValues.overall?.display || "").trim(),
       externalUrl: String(source.externalUrl || (playerId ? PLAYER_EXTERNAL_ORIGIN + "/players/" + playerId : "")).trim(),
       knownValues,
+      club,
+      clubKnown,
     };
   }
 
   function mergeContext(baseValue, nextValue) {
     const base = normalizeContext(baseValue);
     const next = normalizeContext(nextValue);
+    const nextClubId = contextClubId(next.knownValues);
+    let club = base.club;
+    let clubKnown = base.clubKnown;
+    if (next.clubKnown) {
+      club = next.club;
+      clubKnown = true;
+    } else if (next.club) {
+      club = next.club;
+      clubKnown = false;
+    } else if (nextClubId && String(base.club?.clubId || "") !== nextClubId) {
+      club = null;
+      clubKnown = false;
+    }
     return {
       playerId: next.playerId || base.playerId,
       name: next.name || base.name,
@@ -159,6 +296,8 @@
       overall: next.overall || base.overall,
       externalUrl: next.externalUrl || base.externalUrl,
       knownValues: mergeKnownValues(base.knownValues, next.knownValues),
+      club,
+      clubKnown,
     };
   }
 
@@ -303,6 +442,20 @@ function applyOverallBoxAppearance(box, overall) {
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
     const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
     if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
+    const clubIdIndex = payload.columns.indexOf("active_contract_club_id");
+    if (clubIdIndex >= 0) {
+      const clubId = String(matchingRow[clubIdIndex] || "").trim();
+      const clubContext = {
+        playerId: routePlayerId,
+        clubKnown: true,
+        club: clubId ? normalizePlayerClubBrand(payload.playerClub, clubId) : null,
+      };
+      rememberContext(clubContext);
+      const pending = window.__mflPlayerFirstPaintPendingContext;
+      if (normalizePlayerId(pending?.playerId) === routePlayerId) {
+        window.__mflPlayerFirstPaintPendingContext = mergeContext(pending, clubContext);
+      }
+    }
     readyDetailPlayerId = routePlayerId;
     return true;
   }
@@ -1216,6 +1369,7 @@ function stableAttributePanelHtml(row) {
         positions.classList.toggle("playerPositionsPending", !context.positions.length);
         positions.textContent = context.positions.length ? context.positions.join(", ") : loadingBlank();
       }
+      syncPlayerClubBrand(identity, context);
     }
     const external = hero.querySelector(".playerHeroPrimaryAction");
     if (external instanceof HTMLAnchorElement) {
@@ -1299,7 +1453,8 @@ function stableAttributePanelHtml(row) {
     const positions = document.createElement("p");
     positions.className = context.positions.length ? "" : "playerPositionsPending";
     positions.textContent = context.positions.length ? context.positions.join(", ") : loadingBlank();
-    identity.append(eyebrow, title, positions);
+    identity.append(eyebrow, title, positions, createPlayerClubBrandHost());
+    syncPlayerClubBrand(identity, context);
 
     const actions = createPendingHeroActions(context);
     hero.append(createHeroMedia(context), identity, actions);
@@ -1314,7 +1469,8 @@ function stableAttributePanelHtml(row) {
   }
 
   function hydrateHero(value = {}) {
-    const context = normalizeContext(value);
+    const incoming = normalizeContext(value);
+    const context = mergeContext(readCachedContext(incoming.playerId), incoming);
     if (!context.playerId) return false;
     const routePlayerId = playerIdFromLocation();
     if (routePlayerId && routePlayerId !== context.playerId) return false;
@@ -1324,7 +1480,10 @@ function stableAttributePanelHtml(row) {
     if (!(hero instanceof HTMLElement)) return false;
 
     const identity = hero.querySelector(":scope > .playerHeroIdentity") || hero.querySelector(":scope > div:not(.playerHeroMedia):not(.playerHeroActions)");
-    if (identity instanceof HTMLElement) identity.classList.add("playerHeroIdentity");
+    if (identity instanceof HTMLElement) {
+      identity.classList.add("playerHeroIdentity");
+      syncPlayerClubBrand(identity, context);
+    }
     hero.dataset.playerShellId = context.playerId;
     hero.classList.remove("playerHeroPending");
     container.style.marginTop = "0";
@@ -1381,6 +1540,10 @@ function stableAttributePanelHtml(row) {
     beginDetailNavigation,
     markDetailPayloadReady,
     detailDataReady,
+    clubBrandingSignature(playerIdValue) {
+      const context = readCachedContext(normalizePlayerId(playerIdValue));
+      return JSON.stringify([context.clubKnown, context.club]);
+    },
   });
 })();
 
@@ -1844,6 +2007,7 @@ function playerDetailRenderSignature(row, playerId, attributeView) {
     state.settingsDateFormat,
     state.settingsTimeFormat,
     state.trainingAdjustments[key] || null,
+    window.__mflPlayerFirstPaintRuntime?.clubBrandingSignature?.(key) || "",
   ]);
 }
 
@@ -1935,6 +2099,7 @@ function renderPlayerPageOwner(playerId) {
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
         <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span>${listingPriceBadgeHtml(row)}<span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
+        <a class="playerClubBrand" tabindex="-1" aria-hidden="true"><img class="playerClubLogo" alt="" aria-hidden="true"></a>
       </div>
       <div class="playerHeroActions">
         <div class="playerHeroActionMenu">
