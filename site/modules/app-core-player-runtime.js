@@ -1346,7 +1346,8 @@ function syncPlayerAttributeViewActiveState(containerValue, playerIdValue = play
   const buttons = Array.from(container.querySelectorAll(".playerAttributeViewButton"));
   buttons.forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
-    button.classList.toggle("active", !loading && button.dataset.playerAttributeView === selectedView);
+    const buttonView = String(button.dataset.playerAttributeView || button.dataset.view || "");
+    button.classList.toggle("active", !loading && buttonView === selectedView);
   });
   return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
 }
