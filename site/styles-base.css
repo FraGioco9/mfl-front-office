@@ -2322,6 +2322,10 @@ td a {
   pointer-events: auto;
 }
 
+.playerHeroBrandMark.playerHeroBrandMarkDevelopmentCenter {
+  pointer-events: none;
+}
+
 .playerHeroBrandLogo {
   display: block;
   width: 100%;
