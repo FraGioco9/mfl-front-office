@@ -4795,6 +4795,8 @@ body[data-page="club"] #clubIdentity {
 }
 
 .clubIdentity {
+  --mfl-club-identity-logo-width: 132px;
+  --mfl-club-identity-logo-height: 144px;
   grid-template-columns: 168px minmax(0, 1fr);
   align-items: stretch;
   gap: 0;
@@ -4822,17 +4824,17 @@ body[data-page="club"] #clubIdentity {
   background: transparent;
 }
 
-.clubIdentityLogo {
+.clubIdentityLogo,
+.clubIdentityLogoSkeleton {
   display: block;
   width: 100%;
-  max-width: 132px;
-  max-height: 144px;
-  object-fit: contain;
+  max-width: var(--mfl-club-identity-logo-width);
+  height: 100%;
+  max-height: var(--mfl-club-identity-logo-height);
 }
 
-.clubIdentityLogoSkeleton {
-  width: 100%;
-  height: 100%;
+.clubIdentityLogo {
+  object-fit: contain;
 }
 
 .clubIdentityMain {
@@ -9175,17 +9177,14 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .clubIdentity {
+    --mfl-club-identity-logo-width: 110px;
+    --mfl-club-identity-logo-height: 120px;
     grid-template-columns: 140px minmax(0, 1fr);
     min-height: 156px;
   }
 
   .clubIdentityLogoFrame {
     padding: 14px;
-  }
-
-  .clubIdentityLogo {
-    max-width: 110px;
-    max-height: 120px;
   }
 
   .clubIdentityMain {
@@ -11488,6 +11487,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .clubIdentity {
+    --mfl-club-identity-logo-width: 88px;
+    --mfl-club-identity-logo-height: 96px;
     grid-template-columns: 112px minmax(0, 1fr);
     min-height: 136px;
     margin-bottom: 6px;
@@ -11495,11 +11496,6 @@ html:not(.mflInitialRouteResolved):is(
 
   .clubIdentityLogoFrame {
     padding: 12px;
-  }
-
-  .clubIdentityLogo {
-    max-width: 88px;
-    max-height: 96px;
   }
 
   .clubIdentityMain {

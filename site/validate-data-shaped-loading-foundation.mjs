@@ -400,6 +400,15 @@ assert.match(
   "Desktop Club Owner skeleton and loaded content must share the same right-side alignment owner.",
 );
 assert.match(
+  stylesBase,
+  /\.clubIdentityLogo,\n\.clubIdentityLogoSkeleton\s*\{[\s\S]*max-width: var\(--mfl-club-identity-logo-width\);[\s\S]*height: 100%;[\s\S]*max-height: var\(--mfl-club-identity-logo-height\);/u,
+  "Club identity loaded logo and loading placeholder must consume one shared geometry owner.",
+);
+assert.ok(
+  !stylesBase.includes("\n\n.clubIdentityLogoSkeleton {\n"),
+  "Club identity loading-only logo selectors must not own an independent rule.",
+);
+assert.match(
   responsive,
   /\.clubIdentityOwner\s*\{[\s\S]*justify-items: start;[\s\S]*text-align: left;/u,
   "Phone Club Owner skeleton and loaded content must share the same stacked left alignment.",

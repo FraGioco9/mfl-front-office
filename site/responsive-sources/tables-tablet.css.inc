@@ -1,16 +1,13 @@
 
   .clubIdentity {
+    --mfl-club-identity-logo-width: 110px;
+    --mfl-club-identity-logo-height: 120px;
     grid-template-columns: 140px minmax(0, 1fr);
     min-height: 156px;
   }
 
   .clubIdentityLogoFrame {
     padding: 14px;
-  }
-
-  .clubIdentityLogo {
-    max-width: 110px;
-    max-height: 120px;
   }
 
   .clubIdentityMain {

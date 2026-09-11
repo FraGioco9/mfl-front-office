@@ -84,7 +84,11 @@ excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not ret
 
 includes(stylesBase, "grid-template-columns: 168px minmax(0, 1fr);", "Desktop Club identity must reserve the enlarged colour/logo column.");
 includes(stylesBase, "min-height: 184px;", "Desktop Club identity must keep the enlarged profile height.");
-includes(stylesBase, "max-width: 132px;", "Desktop Club identity logo must scale with the enlarged profile geometry.");
+includes(stylesBase, "--mfl-club-identity-logo-width: 132px;", "Desktop Club identity must own the canonical logo width.");
+includes(stylesBase, "--mfl-club-identity-logo-height: 144px;", "Desktop Club identity must own the canonical logo height.");
+includes(stylesBase, ".clubIdentityLogo,\n.clubIdentityLogoSkeleton {", "Loaded and loading Club logos must share one geometry rule.");
+includes(stylesBase, "max-width: var(--mfl-club-identity-logo-width);", "Club identity logo geometry must consume the container-owned width.");
+includes(stylesBase, "max-height: var(--mfl-club-identity-logo-height);", "Club identity logo geometry must consume the container-owned height.");
 includes(stylesBase, "font-size: 34px;", "Desktop Club identity name must scale with the enlarged profile geometry.");
 includes(stylesBase, "var(--club-primary, var(--surface-muted)) 0%", "Club identity must use the primary Club colour in its My Clubs-style gradient.");
 includes(stylesBase, "var(--club-secondary, var(--surface-muted)) 100%", "Club identity must use the secondary Club colour in its My Clubs-style gradient.");
@@ -93,8 +97,14 @@ excludes(bootstrap, "clubIdentityColorSwatch", "Club identity first paint/loadin
 excludes(clubCore, "clubIdentityColorSwatch", "Loaded Club identity must not create separate colour swatches.");
 includes(tabletCss, "grid-template-columns: 140px minmax(0, 1fr);", "Tablet Club identity must scale the enlarged colour/logo geometry.");
 includes(tabletCss, "min-height: 156px;", "Tablet Club identity must remain proportionally taller.");
+includes(tabletCss, "--mfl-club-identity-logo-width: 110px;", "Tablet Club identity must scale the shared logo width.");
+includes(tabletCss, "--mfl-club-identity-logo-height: 120px;", "Tablet Club identity must scale the shared logo height.");
+excludes(tabletCss, ".clubIdentityLogo {\n    max-width:", "Tablet Club identity must not re-own loaded-only logo geometry.");
 includes(phoneCss, "grid-template-columns: 112px minmax(0, 1fr);", "Phone Club identity must scale the enlarged colour/logo geometry.");
 includes(phoneCss, "min-height: 136px;", "Phone Club identity must remain proportionally taller.");
+includes(phoneCss, "--mfl-club-identity-logo-width: 88px;", "Phone Club identity must scale the shared logo width.");
+includes(phoneCss, "--mfl-club-identity-logo-height: 96px;", "Phone Club identity must scale the shared logo height.");
+excludes(phoneCss, ".clubIdentityLogo {\n    max-width:", "Phone Club identity must not re-own loaded-only logo geometry.");
 includes(tabletCss, "grid-template-columns: minmax(0, 1fr) minmax(140px, 30%);", "Tablet Club identity content must keep a bounded right-side Owner column.");
 includes(phoneCss, "grid-template-columns: minmax(0, 1fr);", "Phone Club identity content must stack Owner below the primary identity.");
 includes(phoneCss, "justify-items: start;", "Phone Club Owner must align with the left edge of the identity content.");

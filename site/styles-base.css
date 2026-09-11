@@ -4625,6 +4625,8 @@ body[data-page="club"] #clubIdentity {
 }
 
 .clubIdentity {
+  --mfl-club-identity-logo-width: 132px;
+  --mfl-club-identity-logo-height: 144px;
   grid-template-columns: 168px minmax(0, 1fr);
   align-items: stretch;
   gap: 0;
@@ -4652,17 +4654,17 @@ body[data-page="club"] #clubIdentity {
   background: transparent;
 }
 
-.clubIdentityLogo {
+.clubIdentityLogo,
+.clubIdentityLogoSkeleton {
   display: block;
   width: 100%;
-  max-width: 132px;
-  max-height: 144px;
-  object-fit: contain;
+  max-width: var(--mfl-club-identity-logo-width);
+  height: 100%;
+  max-height: var(--mfl-club-identity-logo-height);
 }
 
-.clubIdentityLogoSkeleton {
-  width: 100%;
-  height: 100%;
+.clubIdentityLogo {
+  object-fit: contain;
 }
 
 .clubIdentityMain {
