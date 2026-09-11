@@ -2261,13 +2261,13 @@ td a {
   position: relative;
   isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 352px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 332px);
   align-items: flex-end;
   align-self: stretch;
-  gap: var(--mfl-player-hero-media-gap, 48px);
-  width: var(--mfl-player-hero-media-width, 352px);
-  min-width: var(--mfl-player-hero-media-width, 352px);
-  max-width: var(--mfl-player-hero-media-width, 352px);
+  gap: var(--mfl-player-hero-media-gap, 28px);
+  width: var(--mfl-player-hero-media-width, 332px);
+  min-width: var(--mfl-player-hero-media-width, 332px);
+  max-width: var(--mfl-player-hero-media-width, 332px);
 }
 
 .playerHeroOverall {
