@@ -4828,22 +4828,6 @@ body[data-page="club"] #clubIdentity {
   text-align: right;
 }
 
-.clubIdentityOwnerName[href] {
-  cursor: pointer;
-}
-
-.clubIdentityOwnerName[href]:hover,
-.clubIdentityOwnerName[href]:focus-visible {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.clubIdentityOwnerName[href]:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-  border-radius: 3px;
-}
-
 .clubIdentityOwnerLabel {
   color: var(--text-soft);
   font-size: 11px;
@@ -4858,6 +4842,7 @@ body[data-page="club"] #clubIdentity {
   overflow: hidden;
   color: var(--text);
   font-size: 15px;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
