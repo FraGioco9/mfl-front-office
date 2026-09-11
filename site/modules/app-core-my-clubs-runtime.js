@@ -74,6 +74,19 @@
     return element;
   }
 
+  function loadingFlagSkeleton(extraClass = "") {
+    const createFlagSkeleton = Reflect.get(window, "__mflCreateFlagSkeleton");
+    if (typeof createFlagSkeleton === "function") return createFlagSkeleton(extraClass);
+
+    const skeleton = document.createElement("span");
+    skeleton.className = `mflTableFlagSkeleton${extraClass ? ` ${extraClass}` : ""}`;
+    skeleton.setAttribute("aria-hidden", "true");
+    const fill = document.createElement("span");
+    fill.className = "mflTableFlagSkeletonFill";
+    skeleton.appendChild(fill);
+    return skeleton;
+  }
+
   function loadingCompetitionList() {
     const competitions = document.createElement("div");
     competitions.className = "myClubCompetitions myClubCompetitionsLoading";
@@ -133,10 +146,7 @@
     if (location) {
       const locationLine = document.createElement("span");
       locationLine.className = "myClubLocation";
-      const flag = document.createElement("span");
-      flag.className = "clubLocationFlag mflDataPlaceholder";
-      flag.setAttribute("aria-hidden", "true");
-      locationLine.appendChild(flag);
+      locationLine.appendChild(loadingFlagSkeleton("clubLocationFlag"));
       const locationText = document.createElement("span");
       locationText.className = "clubLocationText";
       appendLoadingText(locationText, location);
