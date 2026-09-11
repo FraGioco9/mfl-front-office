@@ -441,7 +441,6 @@ html:not(.mflInitialRouteResolved):is(
     font-size: 15px;
   }
 
-
   .tablePageTitle,
   .evaluationTitleRow {
     margin-top: 2px;
@@ -2771,6 +2770,7 @@ html:not(.mflInitialRouteResolved):is(
     margin-top: 6px;
     font-size: 13px;
   }
+
 
   .advancedPlayerTable {
     min-width: 500px;
