@@ -238,9 +238,14 @@ assert.equal(
   "My Clubs must render the real country flag only in the fully loaded card.",
 );
 assert.match(
+  bootstrap,
+  /function createFlagSkeleton\(hostClass = ""\)[\s\S]*mflTableFlagSkeletonSample[\s\S]*mflTableFlagSkeletonFill/u,
+  "Flag skeletons must have one shared silhouette renderer derived from the canonical table flag skeleton.",
+);
+assert.match(
   myClubs,
-  /function skeletonCard\(club\)[\s\S]*flag\.className = "clubLocationFlag mflDataPlaceholder";[\s\S]*flag\.setAttribute\("aria-hidden", "true"\);[\s\S]*locationLine\.appendChild\(flag\);/u,
-  "My Clubs loading cards must reserve the flag's loaded geometry with the shared skeleton placeholder until enrichment completes.",
+  /function loadingFlagSkeleton\(extraClass = ""\)[\s\S]*__mflCreateFlagSkeleton[\s\S]*loadingFlagSkeleton\("clubLocationFlag"\)/u,
+  "My Clubs loading cards must reuse the exact table flag silhouette while inheriting My Clubs flag dimensions.",
 );
 assert.match(
   myClubsCssSource,
@@ -363,6 +368,31 @@ assert.match(
   myClubs,
   /Reflect\.get\(window, "__mflCreateTextSkeleton"\)/u,
   "My Clubs text placeholders must use the shared representative-text skeleton foundation.",
+);
+assert.match(
+  bootstrap,
+  /card\.className = "clubInfoCard clubInfoCardLoading";/u,
+  "Club Info scalar loading cards must reuse the loaded card geometry and mark the whole card as a skeleton surface.",
+);
+assert.match(
+  bootstrap,
+  /colorsCard\.className = "clubInfoCard clubInfoColorsCard clubInfoCardLoading";/u,
+  "Club Info Colours loading must reuse the loaded Colours card geometry.",
+);
+assert.match(
+  bootstrap,
+  /competitionsCard\.className = "clubInfoCard clubInfoCompetitionsCard clubInfoCardLoading";/u,
+  "Club Info competitions loading must reuse the loaded full-width competition card geometry.",
+);
+assert.match(
+  loading,
+  /\.clubInfoCardLoading\s*\{[\s\S]*border-color:\s*transparent;[\s\S]*background:\s*var\(--mfl-loading-placeholder-surface\);/u,
+  "Club Info skeleton cards must visually occupy the full loaded card shape without drawing a skeleton border.",
+);
+assert.match(
+  bootstrap,
+  /primeInitialTableStructure\(tablePage, view\);\s*primeInitialTableRows\(\);\s*if \(tablePage === "club"\)/u,
+  "Every direct Club view must receive the canonical table skeleton before Club-specific presentation is applied.",
 );
 for (const retiredLoadingGeometry of [
   "myClubLoadingLine",
