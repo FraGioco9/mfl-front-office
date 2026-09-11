@@ -1,6 +1,8 @@
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
+const bootstrap = await read("./bootstrap.js");
+
 const [source, generated] = await Promise.all([
   read("./modules/core-sources/player.js"),
   read("./modules/app-core-player-runtime.js"),
@@ -72,6 +74,13 @@ const normalizedStateIndex = generated.indexOf("state.playerAttributeView = norm
 const restoreIndex = generated.indexOf("state.playerAttributeView = selectedAttributeView;", normalizedStateIndex);
 if (!(selectedIndex >= 0 && renderViewIndex > selectedIndex && normalizedStateIndex > renderViewIndex && restoreIndex > normalizedStateIndex)) {
   throw new Error("Generated Player runtime must render with the Attributes-only loading view before restoring the user's selected view.");
+}
+
+if (bootstrap.includes('playerAttributeViewButton${index === 0 ? " active" : ""}')) {
+  throw new Error("Player loading shell must not hard-code the Attributes view as active.");
+}
+if (!bootstrap.includes('<button class="playerAttributeViewButton" type="button" data-view="${view}" disabled>')) {
+  throw new Error("Player loading shell must render neutral Player view buttons until loading completes.");
 }
 
 console.log("Player loading uses raw plain Attributes without progression suffixes and restores the selected view only after the loading render.");
