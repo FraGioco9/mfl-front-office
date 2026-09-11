@@ -157,6 +157,8 @@ assert.ok(
 for (const token of [
   'const knownDisplay = (column) => {',
   'const cachedAttributeValue = (column) => {',
+  'return String(display || "").replace(/\\s*\\([+-]?\\d+(?:\\.\\d+)?\\)\\s*$/, "").trim();',
+  'button.classList.remove("active");',
   'const syncCachedProfileValues = () => {',
   'setProfileText("Height", formatCachedHeight());',
   'setProfileText("Foot", formatCachedFoot());',
@@ -172,6 +174,10 @@ for (const token of [
   'syncCachedHeroValues();',
   'syncCachedProfileValues();',
 ]) assert.ok(indexHtml.includes(token), `Parser-owned Player first paint must project cached data without waiting for hydration: ${token}`);
+assert.ok(
+  !indexHtml.includes('<button class="playerAttributeViewButton active" type="button" data-view="attributes" disabled>Attributes</button>'),
+  "Parser-owned Player loading must not mark an Attribute view active before authoritative loading completes.",
+);
 assert.ok(
   indexHtml.includes('pendingObserver.observe(playerDetail, { childList: true, subtree: true, characterData: true });')
     && indexHtml.includes('pendingObserver.observe(root, { attributes: true, attributeFilter: ["data-player-first-paint-content-ready"] });')
