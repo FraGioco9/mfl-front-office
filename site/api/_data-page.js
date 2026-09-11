@@ -520,11 +520,16 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
   ));
 
   const club = scope === "club" ? clubProfileData(query.clubId) : null;
+  const playerClubId = scope === "player" && rows.length
+    ? String(rows[0]?.active_contract_club_id || "").trim()
+    : "";
+  const playerClub = playerClubId ? clubProfileData(playerClubId) : null;
 
   return {
     columns,
     rows: rowsAsArrays(rows, columns),
     ...(scope === "club" ? { club } : {}),
+    ...(scope === "player" ? { playerClub } : {}),
     page,
     pageSize,
     totalRows,
