@@ -51,11 +51,28 @@ invariant(
 );
 invariant(
   loadingStyles.includes(".mflTableFlagSkeletonFill {")
+    && loadingStyles.includes("background: var(--mfl-loading-placeholder-border);")
+    && loadingStyles.includes(".mflTableFlagSkeletonFill::after {")
+    && loadingStyles.includes("inset: 1px;")
     && loadingStyles.includes('-webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;')
     && loadingStyles.includes('mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;')
     && !loadingStyles.includes("72.222222%")
     && !loadingStyles.includes("15.384615%"),
-  "Table flag skeleton shape must come from real Twemoji artwork rather than estimated dimensions or border radii.",
+  "Table flag skeleton shape and border must come from real Twemoji artwork rather than estimated geometry.",
+);
+invariant(
+  bootstrap.includes('input.className = "mflTableCheckboxSkeleton";')
+    && bootstrap.includes("content.appendChild(input);")
+    && !bootstrap.includes("content.appendChild(createElementSkeleton(input));"),
+  "Table checkbox skeletons must use the real checkbox element so canonical size and radius rules stay shared.",
+);
+invariant(
+  loadingStyles.includes(".mflTableCheckboxSkeleton {")
+    && loadingStyles.includes("border-color: var(--mfl-loading-placeholder-border);")
+    && loadingStyles.includes("background-color: var(--mfl-loading-placeholder-surface);")
+    && loadingStyles.includes("background-image: none;")
+    && !loadingStyles.includes(".mflTableCheckboxSkeleton {\n  border-radius:"),
+  "Table checkbox skeleton styling may change only loading appearance, leaving shape and dimensions to the real checkbox foundation.",
 );
 invariant(
   !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
