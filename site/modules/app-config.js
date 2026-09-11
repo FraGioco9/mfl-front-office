@@ -21,7 +21,6 @@ export const VIEW_BY_SLUG = Object.freeze({
 });
 
 export const VIEW_SLUGS = Object.freeze({
-  info: "info",
   attributes: "attributes",
   stats: "stats",
   next: "next-overall",
