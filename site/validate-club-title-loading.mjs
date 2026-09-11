@@ -36,6 +36,11 @@ new Function(clubCore);
 includes(clubCore, 'const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";', "The canonical Club core must own the persistent Club title cache.");
 includes(clubCore, "const profileIdentity = clubProfileFromState(normalizedClubId);", "The embedded Club profile must be the first hydrated identity source.");
 includes(clubCore, "if (!allowNetwork) return null;", "Normal Club loading must not make a redundant identity request before the embedded Club profile arrives.");
+invariant(
+  clubCore.indexOf("const cached = cachedClubTitleIdentity(normalizedClubId);")
+    < clubCore.indexOf("const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);"),
+  "Already-loaded cached Club identity must outrank poorer row-derived identity during first paint.",
+);
 includes(clubCore, 'type: "recent",\n          clubIds: normalizedClubId,', "Unknown Club titles must use the exact local Club lookup.");
 includes(bootstrap, "function firstPaintClubIdentity(urlLike = window.location.href) {", "Club refresh must resolve cached profile identity during first paint.");
 includes(bootstrap, "function primeClubIdentityFirstPaint(urlLike = window.location.href) {", "Club refresh must paint the cached branded identity shell before hydration.");
@@ -100,6 +105,9 @@ includes(appEntry, 'runtimeWindow.__mflEnsureRouteCore("club", { view })', "The 
 includes(appEntry, 'const routeRuntimePromise = ensureRouteRuntime("club", { view });', "The public Club gate must ensure Club runtime readiness.");
 includes(appEntry, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club core and runtime ownership must settle together before rendering.");
 includes(bootstrap, "function primeClubDestinationIdentity(clubId, view = \"attributes\") {", "Bootstrap must expose a destination Club identity primer for in-site navigation.");
+includes(bootstrap, "logo.onerror = null;\n        if (logo.src !== nextLogoUrl) logo.src = identity.logoUrl;", "Destination Club first paint must clear stale logo error ownership and avoid reassigning an already-painted logo.");
+includes(clubCore, "const resolvedLogoUrl = new URL(canonicalLogoUrl, window.location.href).href;", "Hydrated Club logo rendering must compare the resolved destination URL before replacing the visible image.");
+includes(clubCore, "if (logo.src !== resolvedLogoUrl) logo.src = canonicalLogoUrl;", "Club hydration must retain an already-painted destination logo instead of forcing an image reload.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubDestinationIdentity", primeClubDestinationIdentity);', "The destination Club primer must be available before lazy Club runtime loading.");
 const gateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
 const primeDestinationIndex = appEntry.indexOf("runtimeWindow.__mflPrimeClubDestinationIdentity?.(normalizedClubId, view);", gateStart);
