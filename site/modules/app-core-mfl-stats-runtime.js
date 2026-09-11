@@ -151,8 +151,10 @@ function renderMflStatsDistribution(packableRows) {
     totalPackable,
     rows,
   ]);
+  const renderedDistribution = mflStatsAgeDistribution.firstElementChild;
   if (mflStatsAgeDistribution.dataset.mflStatsDistributionSignature === distributionSignature
-      && mflStatsAgeDistribution.firstElementChild) {
+      && renderedDistribution
+      && !renderedDistribution.classList.contains("mflStatsHistogramSkeleton")) {
     return;
   }
   mflStatsAgeDistribution.dataset.mflStatsDistributionSignature = distributionSignature;

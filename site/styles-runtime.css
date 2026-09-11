@@ -7616,6 +7616,100 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 /* Loading rows intentionally have no separate height or border owner: they inherit the exact
  * player-table tbody/tr/td geometry used by populated rows. */
 
+/* Shared data-shaped loading appearance. Loaded component classes own typography,
+ * alignment, spacing, responsive behavior, and dimensions; skeleton CSS owns only masking. */
+.mflDataPlaceholder {
+  box-sizing: border-box;
+  background: var(--mfl-loading-placeholder-surface);
+  border: 1px solid var(--mfl-loading-placeholder-border);
+  border-radius: var(--mfl-loading-placeholder-radius);
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mflSkeletonText {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: baseline;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mflSkeletonText.mflSkeletonText,
+.mflSkeletonText > .mflSkeletonTextSample,
+.mflSkeletonText > .mflSkeletonTextFill {
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+}
+
+.mflSkeletonText > :is(.mflSkeletonTextSample, .mflSkeletonTextFill) {
+  grid-area: 1 / 1;
+}
+
+.mflSkeletonTextSample {
+  min-width: 0;
+  overflow: hidden;
+  color: transparent;
+  visibility: hidden;
+  text-overflow: inherit;
+  white-space: inherit;
+}
+
+.mflSkeletonTextFill {
+  align-self: center;
+  inline-size: 100%;
+  block-size: 0.68em;
+  min-inline-size: 1ch;
+}
+
+.mflSkeletonElement {
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mflSkeletonElement > :is(.mflSkeletonElementSample, .mflSkeletonElementFill) {
+  grid-area: 1 / 1;
+}
+
+.mflSkeletonElementSample {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mflSkeletonElementFill {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.mflTableLoadingRow .listingCellContent.mflDataPlaceholder,
+.mflTableLoadingRow .tableOverallRarityCircle.mflDataPlaceholder {
+  background: var(--mfl-loading-placeholder-surface);
+  border-color: var(--mfl-loading-placeholder-border);
+}
+
+.mflTableLoadingRow .mflSkeletonText {
+  max-width: 100%;
+}
+
+.mflStatsHistogramSkeleton {
+  animation: none;
+}
+
+.mflStatsHistogramSkeletonFill {
+  animation: none;
+  cursor: default;
+}
+
+
+
 /* Evaluation first paint is derived from the URL state captured in index.html.
  * Plain Evaluation exposes Load only; player, saved, and shared Evaluation expose Reset + Player Page. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"] #evaluationButtons {
@@ -7645,40 +7739,16 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   display: none;
 }
 
-/* The plain Evaluation Loading… surface exists at parser/first paint, before bootstrap.js reaches
- * the bottom of the document. Bootstrap replaces this generated first-paint text with the real
- * loading node in-place; keep its typography identical to .searchHint so that handoff is invisible. */
+/* Plain Evaluation ships result-shaped placeholders in the static HTML so parser paint,
+ * bootstrap, and SPA loading all use the same real result geometry. */
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
-  #evaluationSearchResults[hidden]:empty {
+  #evaluationSearchResults[data-mfl-evaluation-recent-loading="true"][hidden] {
   display: grid;
 }
 
-html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
-  #evaluationSearchResults[hidden]:empty::before {
-  content: "Loading…";
-  color: var(--text-soft);
-  font-size: 12px;
-}
-
-@media (max-width: 900px) {
-  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
-    #evaluationSearchResults[hidden]:empty::before {
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 520px) {
-  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
-    #evaluationSearchResults[hidden]:empty::before {
-    font-size: 9px;
-  }
-}
-
-@media (max-width: 380px) {
-  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]
-    #evaluationSearchResults[hidden]:empty::before {
-    font-size: 8px;
-  }
+.mflEvaluationRecentPlaceholder {
+  pointer-events: none;
+  cursor: default;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationSearchInput::placeholder {
@@ -7728,6 +7798,11 @@ html.mflSelectionStartupResetPending #selectionBar {
 
 :root {
   --mfl-pager-block-padding: 12px;
+
+  /* Shared data-shaped loading presentation. Component geometry remains specialist-owned. */
+  --mfl-loading-placeholder-surface: color-mix(in srgb, var(--surface-muted) 76%, var(--page-bg));
+  --mfl-loading-placeholder-border: var(--border);
+  --mfl-loading-placeholder-radius: 7px;
 
   /* Shared Table-domain visual language. Responsive geometry remains specialist-owned. */
   --mfl-table-surface: var(--surface);
@@ -7883,8 +7958,8 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   }
 
   #progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {
-    background: var(--surface-muted);
-    background-image: linear-gradient(var(--surface-muted), var(--surface-muted));
+    background: var(--mfl-table-surface);
+    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
   }
 }
 
@@ -8152,7 +8227,7 @@ body[data-page="club"] #progressionPage .rowsField {
 #tableBody > .mflTableLoadingRow > td {
   padding-top: 0;
   padding-bottom: 0;
-  background: var(--surface-muted);
+  background: var(--mfl-table-surface);
   color: transparent;
   user-select: none;
 }
