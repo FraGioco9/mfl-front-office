@@ -4683,6 +4683,22 @@ body[data-page="club"] #clubIdentity {
   font-weight: 800;
 }
 
+.clubIdentityLocation {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.clubIdentityLocation .clubLocationFlag {
+  width: 18px;
+  height: 18px;
+}
+
+.clubLocationFlagSkeleton {
+  flex: 0 0 auto;
+}
+
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage .tableShell,
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage #selectionBar,
 body[data-page="club"] #progressionPage[data-club-view="info"] .tableShell,
