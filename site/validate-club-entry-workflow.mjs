@@ -25,7 +25,7 @@ includes(routeLoader, "const dependencies = routeConfig.routeDependencyPlan(page
 excludes(routeLoader, "function installClubRouteGate()", "The route-core dependency loader must not own a second Club navigation transition.");
 
 includes(appEntry, "function installClubRouteRuntimeGate()", "app-entry must own the single public Club lazy-navigation gate.");
-includes(appEntry, 'mflOpenClubPageWithRouteRuntime(clubId, view = "info")', "The public Club navigation gate must default to Info.");
+includes(appEntry, 'mflOpenClubPageWithRouteRuntime(clubId, view = "attributes")', "The public Club navigation gate must default to Squad.");
 includes(appEntry, 'const routeCorePromise = typeof runtimeWindow.__mflEnsureRouteCore === "function"', "The public Club gate must start route-core loading from app-entry.");
 includes(appEntry, 'const routeRuntimePromise = ensureRouteRuntime("club", { view });', "The public Club gate must start route-runtime loading from app-entry.");
 includes(appEntry, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "The single Club gate must overlap core and runtime loading before rendering.");
@@ -63,7 +63,7 @@ const shell = eagerCore.slice(shellStart, shellEnd);
 
 includes(shell, 'if (pageName === "club") {', "Shared shell entry must identify Club before generic setPage.");
 includes(shell, 'const clubId = String(options?.clubId || route?.clubId || "").trim();', "Shared Club entry must preserve the explicit startup Club ID.");
-includes(shell, 'const view = String(options?.view || route?.view || "info");', "Shared Club entry must default direct Club startup to Info.");
+includes(shell, 'const view = String(options?.view || route?.view || "attributes");', "Shared Club entry must default direct Club startup to Squad.");
 includes(shell, 'const navigateClub = window.mflOpenClubPage;', "Shared Club entry must resolve the same public gate used by in-site links.");
 includes(shell, "result = await navigateClub(clubId, view);", "Direct refresh must await the public Club loading workflow.");
 includes(shell, "result = await setPage(pageName, updateUrl, options);", "Non-Club routes must keep the normal shared setPage workflow.");
