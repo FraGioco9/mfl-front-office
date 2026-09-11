@@ -4861,12 +4861,10 @@ body[data-page="club"] #clubIdentity {
 }
 
 .clubIdentityLocation .clubLocationFlag {
+  flex: 0 0 auto;
+  align-self: center;
   width: 18px;
   height: 18px;
-}
-
-.clubLocationFlagSkeleton {
-  flex: 0 0 auto;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"][data-initial-table-view="info"] #progressionPage .tableShell,
