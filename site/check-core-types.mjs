@@ -100,7 +100,6 @@ for (const [key, count] of Object.entries(counts)) {
   if (count > allowed) regressions.push(`${key}: ${count} > ${allowed}`);
 }
 if (regressions.length) {
-  process.stderr.write(output);
   throw new Error(`Canonical core TypeScript diagnostic baseline regressed:\n${regressions.join("\n")}`);
 }
 
