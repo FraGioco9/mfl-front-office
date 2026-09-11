@@ -28,7 +28,7 @@ invariant(
 );
 
 includes(clubCore, "function hideClubPageControls() {", "Club presentation must retain ownership of Club-only non-view controls.");
-excludes(clubCore, 'const orderedViews = ["attributes", "contracts", "current", "all"]', "Club presentation must not duplicate shared view-button ordering.");
+excludes(clubCore, 'const orderedViews = ["info", "attributes", "contracts", "current", "all"]', "Club presentation must not duplicate shared view-button ordering.");
 excludes(clubCore, "views.appendChild(button);", "Club presentation must not detach and reinsert view buttons after the first-paint handoff.");
 excludes(clubCore, 'button.hidden = !CLUB_VIEWS.has(button.dataset.view);', "Club presentation must not duplicate shared view-button visibility ownership.");
 
