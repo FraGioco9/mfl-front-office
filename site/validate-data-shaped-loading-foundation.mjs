@@ -232,9 +232,15 @@ assert.match(
   "Direct Player refresh must size the pending title from representative text in the real title element.",
 );
 
-assert.ok(
-  myClubs.split('countryFlagElement(club?.nation, "clubLocationFlag")').length - 1 >= 2,
-  "My Clubs loaded cards and competition-loading shells must both place the canonical country flag before location text.",
+assert.equal(
+  myClubs.split('countryFlagElement(club?.nation, "clubLocationFlag")').length - 1,
+  1,
+  "My Clubs must render the real country flag only in the fully loaded card.",
+);
+assert.match(
+  myClubs,
+  /function skeletonCard\(club\)[\s\S]*flag\.className = "clubLocationFlag mflDataPlaceholder";[\s\S]*flag\.setAttribute\("aria-hidden", "true"\);[\s\S]*locationLine\.appendChild\(flag\);/u,
+  "My Clubs loading cards must reserve the flag's loaded geometry with the shared skeleton placeholder until enrichment completes.",
 );
 assert.match(
   myClubsCssSource,
