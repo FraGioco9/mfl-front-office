@@ -276,15 +276,19 @@
     const base = normalizeContext(baseValue);
     const next = normalizeContext(nextValue);
     const nextClubId = contextClubId(next.knownValues);
+    const baseClubId = String(base.club?.clubId || "").trim();
     let club = base.club;
     let clubKnown = base.clubKnown;
     if (next.clubKnown) {
       club = next.club;
       clubKnown = true;
+    } else if (base.clubKnown && (!nextClubId || nextClubId === baseClubId)) {
+      club = base.club;
+      clubKnown = true;
     } else if (next.club) {
       club = next.club;
       clubKnown = false;
-    } else if (nextClubId && String(base.club?.clubId || "") !== nextClubId) {
+    } else if (nextClubId && baseClubId !== nextClubId) {
       club = null;
       clubKnown = false;
     }
