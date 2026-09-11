@@ -7646,11 +7646,30 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
 }
 
 .mflTableFlagSkeletonFill {
+  position: relative;
   inline-size: 100%;
   block-size: 100%;
+  background: var(--mfl-loading-placeholder-border);
+  -webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+  mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+}
+
+.mflTableFlagSkeletonFill::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
   background: var(--mfl-loading-placeholder-surface);
   -webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
   mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;
+}
+
+.mflTableCheckboxSkeleton {
+  opacity: 1;
+  border-color: var(--mfl-loading-placeholder-border);
+  background-color: var(--mfl-loading-placeholder-surface);
+  background-image: none;
+  cursor: default;
+  pointer-events: none;
 }
 
 .mflSkeletonText {
