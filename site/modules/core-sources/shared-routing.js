@@ -456,7 +456,7 @@ function pagePath(pageName, options = {}) {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);
     const clubId = String(options.clubId || currentClubRoute?.clubId || "").trim();
-    const clubView = String(options.view || currentClubRoute?.view || state.view || "info").trim().toLowerCase();
+    const clubView = String(options.view || currentClubRoute?.view || state.view || "attributes").trim().toLowerCase();
     const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
     return clubPath || window.location.pathname;
   }
