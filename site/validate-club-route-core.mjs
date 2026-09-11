@@ -101,9 +101,10 @@ excludes(sharedCore, "renderSearchResultsFromBootstrap", "Retired bootstrap Club
 includes(sharedCore, 'const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;', "Shared view switching must resolve Club identity canonically.");
 includes(sharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "Shared Club view switching must use canonical URL construction.");
 includes(sharedCore, "const setIncrementalView = async function setIncrementalView(viewName) {", "Club views must share the canonical incremental view owner.");
-includes(sharedCore, "const clubViewPayloadCache = new Map();", "Shared incremental routing must own the canonical Club payload cache.");
-includes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Shared incremental routing must own Club payload cache writes.");
-includes(sharedCore, "function cachedClubViewPayload(route) {", "Shared incremental routing must own Club payload cache reads.");
+excludes(sharedCore, "const clubViewPayloadCache = new Map();", "Club views must not retain a competing completed-result cache.");
+excludes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Club views must not retain a route-specific cache writer.");
+excludes(sharedCore, "function cachedClubViewPayload(route) {", "Club views must not retain a route-specific cache reader.");
+includes(sharedCore, "return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);", "Club views must reuse the canonical incremental payload cache reader.");
 includes(tableCore, 'else if (pageName !== "club") {', "Table rendering must preserve the Club title during view changes.");
 includes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");', "Table Club links must open the canonical Squad/Attributes view directly.");
 excludes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "info");', "Table Club links must not retain retired Info navigation.");

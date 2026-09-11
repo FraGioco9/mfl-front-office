@@ -43,7 +43,7 @@ const fastRender = section(
 invariant(fastRender, "Evaluation search must define an immediate render fast path.");
 for (const required of [
   "evaluationSearchRoutePayload(entry)",
-  "state.incrementalPayloadCache.set(cacheKey, payload);",
+  "rememberIncrementalPayload(cacheKey, payload);",
   "applyIncrementalPayload(route, payload);",
   "renderEvaluationTable(row);",
   "return true;",

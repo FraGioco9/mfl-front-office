@@ -206,6 +206,26 @@ invariant(
   "Incremental requests must not be blanket-wrapped outside their cache-aware request owner.",
 );
 invariant(
+  appCoreSource.includes("const INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES = 64;")
+    && appCoreSource.includes("function readIncrementalPayloadCache(cacheKey) {")
+    && appCoreSource.includes("function rememberIncrementalPayload(cacheKey, payload) {")
+    && appCoreSource.includes("while (state.incrementalPayloadCache.size > INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES) {")
+    && appCoreSource.includes("const oldestKey = state.incrementalPayloadCache.keys().next().value;"),
+  "Completed incremental-route results must use one bounded canonical LRU-style cache owner.",
+);
+invariant(
+  !appCoreSource.includes("const clubViewPayloadCache = new Map();")
+    && !appCoreSource.includes("function rememberClubViewPayload(")
+    && !appCoreSource.includes("function cachedClubViewPayload("),
+  "Club views must not maintain a competing completed-result cache beside the canonical incremental cache.",
+);
+invariant(
+  appCoreSource.includes("return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);")
+    && appCoreSource.includes("const cachedPayload = !force ? readIncrementalPayloadCache(cacheKey) : null;")
+    && appCoreSource.includes("rememberIncrementalPayload(cacheKey, payload);"),
+  "Canonical incremental-route reads and writes must flow through the shared cache owner.",
+);
+invariant(
   !bootstrapCore.includes('"setView",'),
   "View transitions must not be blanket-wrapped outside their cache-aware transition owners.",
 );
