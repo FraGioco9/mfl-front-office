@@ -194,7 +194,7 @@ invariant(
 );
 includes(clubCore, "void clubTitleReady.then((resolvedTitle) => {", "Club title preflight must remain non-blocking while roster data loads.");
 includes(clubCore, 'document.documentElement.dataset.initialEntityVerified = "club";', "A confirmed Club identity must release the guarded first-paint Club shell.");
-includes(clubCore, "const loadedClubTitle = clubProfileFromState(activeClubId) || clubTitleIdentityFromRows(activeClubId);", "The embedded Club profile must become the authoritative hydrated identity before roster fallback.");
+includes(clubCore, "const loadedClubTitle = clubProfileFromState(activeClubId)\n        || cachedClubTitleIdentity(activeClubId)\n        || clubTitleIdentityFromRows(activeClubId);", "Hydration must prefer the authoritative Club profile, then retain already-loaded cached identity, before falling back to poorer roster identity.");
 const emptyRosterIdentityGuard = clubCore.indexOf("if (!loadedClubTitle && (!Array.isArray(state.rows) || state.rows.length === 0)) {");
 const deferredEmptyRosterTitle = clubCore.indexOf("const resolvedClubTitle = await ensureClubTitleIdentity(activeClubId, true);", emptyRosterIdentityGuard);
 invariant(emptyRosterIdentityGuard >= 0 && deferredEmptyRosterTitle > emptyRosterIdentityGuard, "Only a payload with neither Club profile nor roster may fall back to the exact identity lookup before deciding that the Club is missing.");
