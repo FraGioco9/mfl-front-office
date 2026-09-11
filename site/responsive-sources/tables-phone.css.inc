@@ -419,45 +419,36 @@
   }
 
   .clubIdentity {
-    grid-template-columns: 64px minmax(0, 1fr);
-    gap: 9px;
-    min-height: 78px;
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 136px;
     margin-bottom: 6px;
-    padding: 7px 8px;
   }
 
   .clubIdentityLogoFrame {
-    width: 56px;
-    height: 56px;
+    padding: 12px;
   }
 
   .clubIdentityLogo {
-    max-width: 56px;
-    max-height: 56px;
+    max-width: 88px;
+    max-height: 96px;
+  }
+
+  .clubIdentityMain {
+    padding: 14px;
   }
 
   .clubIdentityId {
-    font-size: 10px;
-  }
-
-  .clubIdentityName {
-    font-size: 20px;
-  }
-
-  .clubIdentityMeta {
-    gap: 3px 8px;
-    margin-top: 4px;
     font-size: 11px;
   }
 
-  .clubIdentityColors {
-    grid-column: 1 / -1;
-    gap: 5px;
+  .clubIdentityName {
+    font-size: 24px;
   }
 
-  .clubIdentityColorSwatch {
-    width: 18px;
-    height: 18px;
+  .clubIdentityMeta {
+    gap: 4px 9px;
+    margin-top: 6px;
+    font-size: 13px;
   }
 
   .clubInfoGrid {
