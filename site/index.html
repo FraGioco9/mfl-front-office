@@ -433,6 +433,7 @@
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page^="my-clubs"] #sidebar .navButton[data-page="my-clubs"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="myclubs"] #sidebar .navButton[data-page="my-clubs"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page^="planner"] #sidebar .navButton[data-page="planner"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
         border-color: var(--primary);
         background: var(--primary);
@@ -581,6 +582,7 @@
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
           <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
           <a class="navButton" href="/my-clubs" data-page="my-clubs"><svg class="navEmoji" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><span class="navText">My Clubs</span></a>
+          <a class="navButton" href="/planner" data-page="planner"><svg class="navEmoji" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M12 4v16M3 12h18"></path><circle cx="12" cy="12" r="2.4"></circle></svg><span class="navText">Planner</span></a>
           </div>
           <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon settingsIcon" viewBox="0 0 24 24" aria-hidden="true"><use href="#settingsIconGlyph"></use></svg><span class="navText">Settings</span></a>
           <div id="settingsNavParking" hidden></div>
@@ -642,6 +644,7 @@
                 <span class="clubIdentityOwnerLabel">Owner</span>
                 <a id="clubIdentityOwnerName" class="clubIdentityOwnerName agentTableLink"></a>
                 <span id="clubIdentityOwnerWallet" class="clubIdentityOwnerWallet"></span>
+                <a id="clubIdentityPlannerLink" class="compactButton clubIdentityPlannerLink" href="/planner" hidden>Open in Planner</a>
               </div>
             </div>
           </section>
@@ -902,6 +905,63 @@
             <button id="myClubsRetryButton" class="compactButton myClubsRetryButton" type="button" hidden>Retry</button>
           </div>
         </section>
+        <section id="plannerPage" class="pageView plannerPage" hidden>
+          <header class="plannerPageHeader">
+            <div>
+              <h2 class="tablePageTitle">Planner</h2>
+              <p class="plannerPageIntro">Build a lineup for any Club and keep the workspace ready for saved, shareable plans.</p>
+            </div>
+            <div class="plannerPlanActions" aria-label="Plan actions">
+              <button id="plannerNewPlanButton" class="compactButton" type="button">New Plan</button>
+              <button id="plannerSavePlanButton" class="compactButton primary" type="button" disabled>Save Plan</button>
+              <button id="plannerSharePlanButton" class="compactButton" type="button" disabled>Share Plan</button>
+            </div>
+          </header>
+
+          <section class="plannerClubPicker" aria-label="Select Club">
+            <label class="plannerFieldLabel" for="plannerClubSearchInput">Club</label>
+            <div class="plannerClubSearchWrap">
+              <input id="plannerClubSearchInput" class="plannerClubSearchInput" type="search" autocomplete="off" placeholder="Search Clubs" aria-autocomplete="list" aria-controls="plannerClubSearchResults">
+              <div id="plannerClubSearchResults" class="plannerClubSearchResults" role="listbox" hidden></div>
+            </div>
+          </section>
+
+          <section id="plannerWorkspace" class="plannerWorkspace" hidden>
+            <section class="plannerPitchPanel" aria-label="Lineup">
+              <div class="plannerWorkspaceHeader">
+                <div id="plannerClubIdentity" class="plannerClubIdentity">
+                  <div class="plannerClubLogoFrame">
+                    <img id="plannerClubLogo" class="plannerClubLogo" alt="" hidden>
+                  </div>
+                  <div class="plannerClubIdentityText">
+                    <span class="plannerClubEyebrow">Club</span>
+                    <strong id="plannerClubName" class="plannerClubName">Select a Club</strong>
+                  </div>
+                </div>
+                <label class="plannerFormationField" for="plannerFormationSelect">
+                  <span>Formation</span>
+                  <select id="plannerFormationSelect" class="plannerFormationSelect"></select>
+                </label>
+              </div>
+              <div id="plannerPitch" class="plannerPitch" aria-label="Formation pitch"></div>
+            </section>
+
+            <aside class="plannerRosterPanel" aria-label="Available players">
+              <div class="plannerRosterHeader">
+                <div>
+                  <span class="plannerRosterEyebrow">Squad</span>
+                  <h3>Available players</h3>
+                </div>
+                <span id="plannerRosterCount" class="plannerRosterCount">0</span>
+              </div>
+              <p class="plannerRosterHint">Select a player, then select a position on the pitch.</p>
+              <div id="plannerRoster" class="plannerRoster"></div>
+            </aside>
+          </section>
+
+          <p id="plannerStatus" class="plannerStatus" role="status">Choose a Club to start planning.</p>
+        </section>
+
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
           <div class="myPlayersLockedContent">
             <h2 id="optInLockedTitle">My Players</h2>
