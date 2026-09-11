@@ -996,18 +996,18 @@ function animateReadyControls(container = document) {
     if (event.key === "Escape" && activeHeroActionMenu instanceof HTMLElement) closeHeroActionMenu(activeHeroActionMenu);
   });
 
-  if (typeof MutationObserver === "function") {
-    const playerAttributeLoadingObserver = new MutationObserver(() => {
-      if (document.body?.dataset.page !== "player") return;
-      const detail = document.getElementById("playerDetail");
-      if (!(detail instanceof HTMLElement)) return;
-      syncPlayerAttributeViewActiveState(detail);
-    });
-    playerAttributeLoadingObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-  }
+  window.addEventListener("mfl:loading-state", () => {
+    if (document.body?.dataset.page !== "player") return;
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return;
+    syncPlayerAttributeViewActiveState(detail);
+  });
+  window.addEventListener("mfl:ready", () => {
+    if (document.body?.dataset.page !== "player") return;
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return;
+    syncPlayerAttributeViewActiveState(detail);
+  });
 
   function applyHeroLayout(hero) {
     if (!(hero instanceof HTMLElement)) return false;
