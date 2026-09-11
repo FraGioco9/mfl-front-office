@@ -199,6 +199,16 @@ Specialized tiny steppers, table action buttons, mobile-only touch geometry, and
 - Main scrolling is locked while a modal backdrop is open
 - Toasts remain above every modal/overlay
 
+## Identity
+
+Identity geometry stays domain-owned, but loaded and loading states must consume the same structural owner.
+
+- Club identity desktop logo box is owned by `.clubIdentity` through `--mfl-club-identity-logo-width: 132px` and `--mfl-club-identity-logo-height: 144px`.
+- Tablet and phone Club identity breakpoints override only those two container variables (`110×120px` and `88×96px` respectively).
+- The real `.clubIdentityLogo` image and `.clubIdentityLogoSkeleton` placeholder share one width/height/max-size rule. Loading-only selectors may change presentation, but must not own separate geometry.
+- Club location flags already share the real `.clubLocationFlag` class during loading, so flag size/alignment remains inherited from the loaded identity rule.
+- My Clubs cards keep their existing loaded/skeleton shared card/logo-frame structure; Player hero media remains Player-domain geometry and is not collapsed into the Club identity contract.
+
 ## Tables
 
 Table visual foundations and standard desktop cell geometry are specialist Table-domain contracts owned by `site/styles.css`; they do not collapse tables into the ordinary panel/control surface language.
