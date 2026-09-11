@@ -76,6 +76,7 @@
   const workspace = document.getElementById("plannerWorkspace");
   const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById("plannerClubSearchInput"));
   const searchResults = document.getElementById("plannerClubSearchResults");
+  const searchClearButton = document.getElementById("plannerClubSearchClearButton");
   const formationSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById("plannerFormationSelect"));
   const pitch = document.getElementById("plannerPitch");
   const roster = document.getElementById("plannerRoster");
@@ -95,6 +96,15 @@
     selectedPlayerId: "",
     requestSequence: 0,
   };
+
+  const PITCH_LINE_CLASSES = Object.freeze([
+    "pitchBoxTop",
+    "pitchGoalTop",
+    "pitchArcTop",
+    "pitchBoxBottom",
+    "pitchGoalBottom",
+    "pitchArcBottom",
+  ]);
 
   let searchTimer = 0;
   let searchSequence = 0;
@@ -170,11 +180,19 @@
     window.history[replace ? "replaceState" : "pushState"]({}, "", next);
   }
 
+  function syncSearchClearButton() {
+    if (!(searchInput instanceof HTMLInputElement) || !(searchClearButton instanceof HTMLElement)) return;
+    const hidden = !searchInput.value.trim();
+    searchClearButton.hidden = hidden;
+    searchClearButton.toggleAttribute("hidden", hidden);
+  }
+
   function renderClubIdentity() {
     const identity = plannerState.club && typeof plannerState.club === "object" ? plannerState.club : {};
     const name = String(identity.name || identity.clubName || (plannerState.clubId ? "Club " + plannerState.clubId : "Select a Club")).trim();
     if (clubName instanceof HTMLElement) clubName.textContent = name;
     if (searchInput instanceof HTMLInputElement && plannerState.clubId) searchInput.value = name;
+    syncSearchClearButton();
 
     if (clubLogo instanceof HTMLImageElement) {
       const logoUrl = String(identity.logoUrl || "").trim();
@@ -212,6 +230,12 @@
     if (!(pitch instanceof HTMLElement)) return;
     const slots = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
     const fragment = document.createDocumentFragment();
+    const fieldLines = PITCH_LINE_CLASSES.map((className) => {
+      const line = document.createElement("span");
+      line.className = "pitchLine " + className;
+      line.setAttribute("aria-hidden", "true");
+      return line;
+    });
 
     slots.forEach(([slotId, label, x, y]) => {
       const button = document.createElement("button");
@@ -268,7 +292,7 @@
       fragment.appendChild(button);
     });
 
-    pitch.replaceChildren(fragment);
+    pitch.replaceChildren(...fieldLines, fragment);
   }
 
   function renderRoster() {
@@ -339,6 +363,7 @@
       plannerState.columns = [];
       plannerState.rows = [];
       if (searchInput instanceof HTMLInputElement) searchInput.value = "";
+      syncSearchClearButton();
       setCanonicalUrl("");
     }
     renderWorkspace();
@@ -422,19 +447,20 @@
       if (!id || !name) return;
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "plannerClubSearchResult";
+      button.className = "searchResult plannerClubSearchResult";
       button.setAttribute("role", "option");
-      const nameNode = document.createElement("span");
-      nameNode.className = "plannerClubSearchResultName";
+      button.dataset.clubId = id;
+      const nameNode = document.createElement("strong");
       nameNode.textContent = name;
       const metaNode = document.createElement("span");
-      metaNode.className = "plannerClubSearchResultMeta";
-      metaNode.textContent = String(club?.divisionName || club?.division || ("#" + id));
+      const division = String(club?.divisionName || club?.division || "").trim();
+      metaNode.textContent = ["Club #" + id, division ? "Division " + division : ""].filter(Boolean).join(" · ");
       button.append(nameNode, metaNode);
       button.addEventListener("click", () => {
         searchResults.hidden = true;
         searchResults.replaceChildren();
         if (searchInput instanceof HTMLInputElement) searchInput.value = name;
+        syncSearchClearButton();
         void loadClub(id);
       });
       fragment.appendChild(button);
@@ -445,14 +471,17 @@
 
   async function searchClubs(query) {
     const normalized = String(query || "").trim();
-    if (normalized.length < 2) {
+    if (!normalized) {
+      searchSequence += 1;
       renderSearchResults([]);
       return;
     }
     const sequence = ++searchSequence;
     try {
+      const dataClient = Reflect.get(window, "__mflDataClient");
+      if (!dataClient || typeof dataClient.fetch !== "function") throw new Error("Canonical data client is unavailable.");
       const parameters = new URLSearchParams({ mode: "search", type: "clubs", limit: "20", q: normalized });
-      const response = await window.__mflDataClient.fetch("/api/data?" + parameters.toString(), {
+      const response = await dataClient.fetch("/api/data?" + parameters.toString(), {
         cache: "no-store",
         headers: { Accept: "application/json" },
       });
@@ -500,18 +529,37 @@
   });
 
   searchInput?.addEventListener("input", () => {
+    syncSearchClearButton();
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => {
       void searchClubs(searchInput.value);
-    }, 180);
+    }, 140);
   });
 
   searchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      const firstResult = searchResults?.querySelector(".plannerClubSearchResult");
+      if (firstResult instanceof HTMLButtonElement) {
+        event.preventDefault();
+        firstResult.click();
+      }
+      return;
+    }
     if (event.key === "Escape") {
       searchResults.hidden = true;
       searchResults.replaceChildren();
       searchInput.blur();
     }
+  });
+
+  searchClearButton?.addEventListener("click", () => {
+    if (!(searchInput instanceof HTMLInputElement)) return;
+    window.clearTimeout(searchTimer);
+    searchSequence += 1;
+    searchInput.value = "";
+    syncSearchClearButton();
+    renderSearchResults([]);
+    searchInput.focus();
   });
 
   document.addEventListener("click", (event) => {
