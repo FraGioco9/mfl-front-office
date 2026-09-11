@@ -79,7 +79,7 @@
     if (typeof createFlagSkeleton === "function") return createFlagSkeleton(extraClass);
 
     const skeleton = document.createElement("span");
-    skeleton.className = `mflTableFlagSkeleton${extraClass ? ` ${extraClass}` : ""}`;
+    skeleton.className = `flagImage mflTableFlagSkeleton${extraClass ? ` ${extraClass}` : ""}`;
     skeleton.setAttribute("aria-hidden", "true");
     const fill = document.createElement("span");
     fill.className = "mflTableFlagSkeletonFill";
