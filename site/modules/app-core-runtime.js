@@ -8125,7 +8125,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
       }
 
       const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
-      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+      if (previousTablePage !== "club" && previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }
