@@ -100,14 +100,14 @@
   function normalizePlayerClubBrand(value, expectedClubId = "") {
     const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
     if (!source) return null;
-    const clubId = String(source.clubId || expectedClubId || "").trim();
+    const clubId = String(Reflect.get(source, "clubId") || expectedClubId || "").trim();
     if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
     return {
       clubId,
-      name: String(source.name || "").trim(),
-      primaryColor: String(source.primaryColor || "").trim(),
-      logoUrl: String(source.logoUrl || "").trim(),
-      logoVersion: String(source.logoVersion || "").trim(),
+      name: String(Reflect.get(source, "name") || "").trim(),
+      primaryColor: String(Reflect.get(source, "primaryColor") || "").trim(),
+      logoUrl: String(Reflect.get(source, "logoUrl") || "").trim(),
+      logoVersion: String(Reflect.get(source, "logoVersion") || "").trim(),
     };
   }
 
@@ -298,9 +298,9 @@
     const suppliedPositions = normalizePositions(source.positions);
     const cachedPositions = normalizePositions(knownValues.positions?.display || knownValues.positions?.raw || "");
     const suppliedOverall = source.overall === null || source.overall === undefined ? "" : String(source.overall).trim();
-    const clubKnown = source.clubKnown === true;
+    const clubKnown = Reflect.get(source, "clubKnown") === true;
     const clubId = contextClubId(knownValues);
-    const explicitClub = normalizePlayerClubBrand(source.club, clubId);
+    const explicitClub = normalizePlayerClubBrand(Reflect.get(source, "club"), clubId);
     const club = clubKnown ? explicitClub : (explicitClub || cachedPlayerClubBrand(clubId));
     return {
       playerId,
