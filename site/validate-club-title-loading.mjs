@@ -39,21 +39,24 @@ includes(clubCore, "if (!allowNetwork) return null;", "Normal Club loading must 
 includes(clubCore, 'type: "recent",\n          clubIds: normalizedClubId,', "Unknown Club titles must use the exact local Club lookup.");
 includes(bootstrap, "function firstPaintClubIdentity(urlLike = window.location.href) {", "Club refresh must resolve cached profile identity during first paint.");
 includes(bootstrap, "function primeClubIdentityFirstPaint(urlLike = window.location.href) {", "Club refresh must paint the cached branded identity shell before hydration.");
-includes(bootstrap, "function primeClubProfileLoading(view = \"info\") {", "Club Info must have a data-shaped first-paint skeleton.");
-includes(bootstrap, 'card.className = "clubInfoCard clubInfoCardLoading";', "Club Info loading must reuse the real card geometry and expose the whole card as a skeleton surface.");
-includes(bootstrap, 'row.className = "clubInfoCompetition";', "Club competition loading must reuse the real competition-row geometry.");
-includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club loading skeleton.");
+includes(bootstrap, "function primeClubProfileLoading(view = \"attributes\") {", "Club identity loading must default to the canonical Squad view.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeClubProfileLoading", primeClubProfileLoading);', "SPA Club navigation must reuse the bootstrap-owned Club identity loading skeleton.");
 includes(bootstrap, 'Reflect.set(window, "__mflCreateFlagSkeleton", createFlagSkeleton);', "Table, My Clubs, and individual Club loading must share one flag-silhouette skeleton renderer.");
-includes(loadingCss, ".clubInfoCardLoading {", "Club Info loading must mask the complete loaded card surface rather than only its text values.");
-includes(loadingCss, "border-color: transparent;", "Club Info skeleton cards must keep border geometry without drawing a visible skeleton border.");
+includes(bootstrap, 'ownerName.replaceChildren(createTextSkeleton("Agent Name"));', "Club Owner loading must use the real Owner name element with representative text.");
+includes(bootstrap, 'ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));', "Club Owner loading must use the real Owner wallet element with representative text.");
+excludes(bootstrap, "clubInfoCard", "Bootstrap must not retain the retired Club Info-card skeleton.");
+excludes(loadingCss, ".clubInfoCardLoading", "Loading styles must not retain a retired Club Info-card surface.");
 
 includes(bootstrap, 'createFlagSkeleton("clubLocationFlag clubLocationFlagSkeleton")', "Individual Club first paint/loading must reuse the canonical table flag silhouette while inheriting Club identity flag dimensions.");
 includes(clubCore, 'countryFlagElement(identity.nation, "clubLocationFlag")', "Hydrated Club identity must render the canonical country flag immediately before the city/location text.");
 includes(stylesBase, ".clubIdentityLocation {", "Club identity must own explicit flag-plus-location row geometry.");
 includes(stylesBase, ".clubIdentityLocation .clubLocationFlag {", "Club identity must size the location flag from the loaded row geometry.");
 includes(stylesBase, "flex: 0 0 auto;\n  align-self: center;\n  width: 18px;\n  height: 18px;", "Loaded and loading Club identity flags must share the same flex alignment and footprint.");
-includes(coreSource, 'if (route.scope === "club" && String(route.view || "info") === "info") {', "In-site Club Info transitions must select the Info skeleton before generic table loading can paint.");
-includes(coreSource, 'if (typeof primeClubProfileLoading === "function") primeClubProfileLoading("info");', "In-site Club Info transitions must prime the bootstrap-owned Info-card skeleton.");
+includes(stylesBase, ".clubIdentityOwner {", "Owner must be part of the persistent Club identity geometry.");
+includes(stylesBase, "grid-template-columns: minmax(0, 1fr) minmax(180px, auto);", "Desktop Club identity must reserve a right-side Owner column.");
+includes(clubCore, 'ownerName.textContent = ownerLabel;', "Hydrated Club identity must render Owner in the same permanent Owner name element used by loading.");
+includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";', "Hydrated Club identity must render the Owner wallet in the permanent wallet element.");
+excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
 
 
 includes(stylesBase, "grid-template-columns: 168px minmax(0, 1fr);", "Desktop Club identity must reserve the enlarged colour/logo column.");
@@ -69,6 +72,9 @@ includes(tabletCss, "grid-template-columns: 140px minmax(0, 1fr);", "Tablet Club
 includes(tabletCss, "min-height: 156px;", "Tablet Club identity must remain proportionally taller.");
 includes(phoneCss, "grid-template-columns: 112px minmax(0, 1fr);", "Phone Club identity must scale the enlarged colour/logo geometry.");
 includes(phoneCss, "min-height: 136px;", "Phone Club identity must remain proportionally taller.");
+includes(tabletCss, "grid-template-columns: minmax(0, 1fr) minmax(140px, 30%);", "Tablet Club identity content must keep a bounded right-side Owner column.");
+includes(phoneCss, "grid-template-columns: minmax(0, 1fr);", "Phone Club identity content must stack Owner below the primary identity.");
+includes(phoneCss, "justify-items: start;", "Phone Club Owner must align with the left edge of the identity content.");
 
 includes(bootstrap, 'if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();', "Bootstrap must remain the sole owner of the temporary Club view first-paint handoff.");
 excludes(clubCore, 'document.getElementById("mflInitialTableViewFirstPaint")?.remove();', "Club runtime must not compete with bootstrap for Club first-paint ownership.");
@@ -101,11 +107,10 @@ excludes(clubCore, "applyFilters = function applyFiltersWithClubRows", "Club mus
 excludes(clubCore, "const originalApplyFilters = applyFilters;", "Club must not capture a second Table filter owner.");
 
 const rosterLoad = clubCore.indexOf("window.mflLoadIncrementalRoutePage");
-const infoRenderGate = clubCore.indexOf('if (nextView !== "info") {', rosterLoad);
-const finalClubRender = clubCore.indexOf('applyFilters({ save: false, localOnly: true });', infoRenderGate);
+const finalClubRender = clubCore.indexOf('applyFilters({ save: false, localOnly: true });', rosterLoad);
 invariant(
-  rosterLoad >= 0 && infoRenderGate > rosterLoad && finalClubRender > infoRenderGate,
-  "Club must render its loaded roster only for non-Info views without entering the generic saved-filter lifecycle.",
+  rosterLoad >= 0 && finalClubRender > rosterLoad,
+  "Every Club view must render its loaded roster through the canonical local table lifecycle.",
 );
 for (const forbidden of [
   "filterRules.replaceChildren();",
@@ -160,4 +165,4 @@ invariant(
   "The tracked Club runtime must exactly match the canonical Club source.",
 );
 
-console.log("Club profile loading checks passed: identity and Info skeletons are stable, Club filter state remains isolated, and non-Info roster views render without saved-filter mutation.");
+console.log("Club loading checks passed: Owner and flag skeletons inherit identity geometry, Squad is the default view, and all Club roster views share the canonical table lifecycle.");
