@@ -2313,7 +2313,6 @@ td a {
   visibility: hidden;
   pointer-events: none;
   text-decoration: none;
-  transition: opacity 180ms ease;
 }
 
 .playerHeroBrandMark.playerHeroBrandMarkVisible {
