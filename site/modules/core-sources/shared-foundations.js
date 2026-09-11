@@ -343,6 +343,7 @@ const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
 const playerDetail = document.querySelector("#playerDetail");
+const plannerPage = document.querySelector("#plannerPage");
 const settingsPage = document.querySelector("#settingsPage");
 const settingsAgentName = document.querySelector("#settingsAgentName");
 const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
