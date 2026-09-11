@@ -1584,7 +1584,7 @@ function pagePath(pageName, options = {}) {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);
     const clubId = String(options.clubId || currentClubRoute?.clubId || "").trim();
-    const clubView = String(options.view || currentClubRoute?.view || state.view || "info").trim().toLowerCase();
+    const clubView = String(options.view || currentClubRoute?.view || state.view || "attributes").trim().toLowerCase();
     const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
     return clubPath || window.location.pathname;
   }
@@ -6597,7 +6597,7 @@ function renderSearchResultsNow() {
       button.addEventListener("click", () => {
         closeSearch();
         if (typeof window.mflOpenClubPage === "function") {
-          void window.mflOpenClubPage(entry.clubId, "info");
+          void window.mflOpenClubPage(entry.clubId, "attributes");
         }
       });
       fragment.appendChild(button);
@@ -6699,9 +6699,9 @@ function incrementalRouteTarget(pageName, options = {}) {
     const requestedClubId = String(options.clubId || clubTarget?.clubId || "").trim();
     if (!requestedClubId) return null;
     const requestedClubView = String(options.view || clubTarget?.view || "attributes").toLowerCase();
-    const clubView = ["info", "attributes", "contracts", "current", "all"].includes(requestedClubView)
+    const clubView = ["attributes", "contracts", "current", "all"].includes(requestedClubView)
       ? requestedClubView
-      : "info";
+      : "attributes";
     return {
       pageName: "club",
       scope: "club",
@@ -7714,12 +7714,7 @@ function syncLayoutCenter() {
         tablePageTitle.textContent = tableTitleForPage(pageName);
       }
       updateViewButtons();
-      if (route.scope === "club" && String(route.view || "info") === "info") {
-        const primeClubProfileLoading = Reflect.get(window, "__mflPrimeClubProfileLoading");
-        if (typeof primeClubProfileLoading === "function") primeClubProfileLoading("info");
-      } else {
-        showTableBusyState();
-      }
+      showTableBusyState();
     } else if (mflStatsActive) {
       state.view = "stats";
       updateViewButtons();
@@ -7851,14 +7846,8 @@ const setIncrementalView = async function setIncrementalView(viewName) {
       if (!transition) return;
     }
 
-    if (pageName === "club" && state.clubProfile && ["info", "attributes", "contracts"].includes(nextView)) {
+    if (pageName === "club" && state.clubProfile && ["attributes", "contracts"].includes(nextView)) {
       state.page = 1;
-      if (nextView === "info") {
-        state.view = "info";
-        updateViewButtons();
-        applyClubPresentationFromSharedView();
-        return true;
-      }
       state.incrementalApplying = true;
       try {
         const result = await applyTableViewOwner.call(this, nextView);
@@ -7880,13 +7869,6 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         if (!payload) return;
         state.incrementalApplying = true;
         try {
-          if (pageName === "club" && nextView === "info") {
-            state.view = "info";
-            state.page = 1;
-            updateViewButtons();
-            applyClubPresentationFromSharedView();
-            return true;
-          }
           const result = await applyTableViewOwner.call(this, nextView);
           if (pageName === "club") applyClubPresentationFromSharedView();
           return result;
