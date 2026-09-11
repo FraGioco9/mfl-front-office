@@ -27,6 +27,27 @@ Page number and sort order are deliberately excluded from the key.
 Therefore, after the first request for a result set, subsequent page/sort requests execute
 **zero repeated COUNT queries** for that result set until the dataset generation changes.
 
+## Prepared-statement reuse
+
+Owner: `site/api/_database.js`.
+
+Before this change, every `queryRows(sql, parameters)` and `queryOne(sql, parameters)`
+execution called `DatabaseSync.prepare(sql)`, even when the SQL text was identical to a
+previous request.
+
+The canonical database owner now retains compiled statements by exact SQL text, promotes them
+on reuse, and caps the cache at 128 statements. Bound values are still supplied fresh on every
+`.all(...parameters)` or `.get(...parameters)` call.
+
+Deterministic compile-count effect for a repeated SQL shape:
+
+- before: N executions => N calls to `prepare(sql)`;
+- after: N executions => 1 initial `prepare(sql)` plus N parameter-bound executions, until
+  that SQL text is evicted from the bounded cache or the server process ends.
+
+This records compile-work removal only; production wall-clock improvement remains part of the
+separate runtime baseline.
+
 ## Existing query-plan evidence
 
 `scripts/database/runtime_query_plans.py` and `tests/test_runtime_query_plans.py` already
