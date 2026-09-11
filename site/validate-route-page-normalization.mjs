@@ -94,7 +94,6 @@ for (const [page, view, expectedView, expectedPath] of [
 }
 
 for (const [view, expectedView, expectedPath] of [
-  ["info", "info", "/clubs/123/info"],
   ["attributes", "attributes", "/clubs/123/squad"],
   ["squad", "attributes", "/clubs/123/squad"],
   ["contracts", "contracts", "/clubs/123/contracts"],
@@ -114,8 +113,8 @@ for (const [view, expectedView, expectedPath] of [
 }
 
 for (const [path, expectedView, expectedPath] of [
-  ["/clubs/123", "info", "/clubs/123/info"],
-  ["/clubs/123/info", "info", "/clubs/123/info"],
+  ["/clubs/123", "attributes", "/clubs/123/squad"],
+  ["/clubs/123/info", "attributes", "/clubs/123/squad"],
   ["/clubs/123/squad", "attributes", "/clubs/123/squad"],
   ["/clubs/123/attributes", "attributes", "/clubs/123/squad"],
   ["/club/123/contracts", "contracts", "/clubs/123/contracts"],
@@ -176,8 +175,8 @@ for (const [path, expectedReplacement] of [
   ["/agents/0xABC", "/agents/0xabc/attributes?keep=1#route"],
   ["/watchlist", "/watchlist/current-season?keep=1#route"],
   ["/watchlist/example", "/watchlist/example/current-season?keep=1#route"],
-  ["/clubs/123", "/clubs/123/info?keep=1#route"],
-  ["/clubs/123/info", ""],
+  ["/clubs/123", "/clubs/123/squad?keep=1#route"],
+  ["/clubs/123/info", "/clubs/123/squad?keep=1#route"],
   ["/clubs/123/attributes", "/clubs/123/squad?keep=1#route"],
   ["/club/123/current", "/clubs/123/current-season?keep=1#route"],
   ["/clubs/123/unknown", ""],
