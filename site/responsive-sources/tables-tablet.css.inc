@@ -1,4 +1,30 @@
 
+  .clubIdentity {
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 96px;
+    padding: 8px 10px;
+  }
+
+  .clubIdentityLogoFrame {
+    width: 72px;
+    height: 72px;
+  }
+
+  .clubIdentityLogo {
+    max-width: 72px;
+    max-height: 72px;
+  }
+
+  .clubIdentityName {
+    font-size: 24px;
+  }
+
+  .clubInfoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+
   .tablePageTitle,
   .evaluationTitleRow {
     margin-top: 2px;
