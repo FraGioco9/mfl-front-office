@@ -346,34 +346,34 @@
       }
       location.hidden = !locationLabel;
     }
-    if (owner instanceof HTMLElement && ownerName instanceof HTMLElement && ownerWallet instanceof HTMLElement) {
+    if (owner instanceof HTMLElement && ownerName instanceof HTMLAnchorElement && ownerWallet instanceof HTMLElement) {
       if (ownerResolved) {
         const ownerLabel = identity.ownerName || identity.ownerWalletAddress || "—";
         ownerName.textContent = ownerLabel;
         ownerWallet.textContent = identity.ownerName && identity.ownerWalletAddress ? identity.ownerWalletAddress : "";
         if (identity.ownerWalletAddress) {
-          owner.dataset.walletAddress = identity.ownerWalletAddress;
-          owner.dataset.agentName = identity.ownerName || "";
-          owner.setAttribute(
+          ownerName.dataset.walletAddress = identity.ownerWalletAddress;
+          ownerName.dataset.agentName = identity.ownerName || "";
+          ownerName.setAttribute(
             "href",
             typeof agentRoute === "function"
               ? agentRoute(identity.ownerWalletAddress)
               : `/agents/${encodeURIComponent(identity.ownerWalletAddress)}/attributes`,
           );
-          owner.setAttribute("aria-label", `Open agent ${ownerLabel}`);
+          ownerName.setAttribute("aria-label", `Open agent ${ownerLabel}`);
         } else {
-          delete owner.dataset.walletAddress;
-          delete owner.dataset.agentName;
-          owner.removeAttribute("href");
-          owner.removeAttribute("aria-label");
+          delete ownerName.dataset.walletAddress;
+          delete ownerName.dataset.agentName;
+          ownerName.removeAttribute("href");
+          ownerName.removeAttribute("aria-label");
         }
       } else {
         const createTextSkeleton = Reflect.get(window, "__mflCreateTextSkeleton");
         owner.dataset.clubLoading = "true";
-        delete owner.dataset.walletAddress;
-        delete owner.dataset.agentName;
-        owner.removeAttribute("href");
-        owner.removeAttribute("aria-label");
+        delete ownerName.dataset.walletAddress;
+        delete ownerName.dataset.agentName;
+        ownerName.removeAttribute("href");
+        ownerName.removeAttribute("aria-label");
         if (typeof createTextSkeleton === "function") {
           ownerName.replaceChildren(createTextSkeleton("Agent Name"));
           ownerWallet.replaceChildren(createTextSkeleton("0x1234567890abcdef"));
@@ -411,7 +411,7 @@
 
   }
 
-  const clubIdentityOwnerLink = document.getElementById("clubIdentityOwner");
+  const clubIdentityOwnerLink = document.getElementById("clubIdentityOwnerName");
   clubIdentityOwnerLink?.addEventListener("click", (event) => {
     const walletAddress = String(clubIdentityOwnerLink.dataset.walletAddress || "").trim();
     if (!walletAddress) {
