@@ -166,7 +166,9 @@ for (const token of [
   'setProfileText("Rev Share", formatCachedRevenueShare());',
   'const syncCachedHeroValues = () => {',
   'const listingRaw = knownRaw("listing_price");',
-  'value.textContent = cachedAttributeValue(columns[index]) || "\\u00a0";',
+  'const cachedValue = cachedAttributeValue(columns[index]);',
+  'value.textContent = cachedValue || "\\u00a0";',
+  'if (index === 0) applyCachedOverallAppearance(card, cachedValue);',
   'syncCachedHeroValues();',
   'syncCachedProfileValues();',
 ]) assert.ok(indexHtml.includes(token), `Parser-owned Player first paint must project cached data without waiting for hydration: ${token}`);
