@@ -126,37 +126,36 @@ function incrementalRequestDetails(route, page = 1) {
   };
 }
 
-const clubViewPayloadCache = new Map();
+const INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES = 64;
 
-function clubViewPayloadCacheKey(route) {
-  if (!route || route.scope !== "club" || !route.clubId || !route.view) return "";
-  return String(route.clubId) + ":" + String(route.view);
+function readIncrementalPayloadCache(cacheKey) {
+  const key = String(cacheKey || "");
+  if (!key) return null;
+  const payload = state.incrementalPayloadCache.get(key) || null;
+  if (!payload) return null;
+  state.incrementalPayloadCache.delete(key);
+  state.incrementalPayloadCache.set(key, payload);
+  return payload;
 }
 
-function rememberClubViewPayload(route, payload) {
-  const key = clubViewPayloadCacheKey(route);
-  if (!key || !payload || !Array.isArray(payload.rows)) return;
-  clubViewPayloadCache.set(key, {
-    ...payload,
-    columns: Array.isArray(payload.columns) ? [...payload.columns] : [],
-    rows: [...payload.rows],
-  });
-}
-
-function cachedClubViewPayload(route) {
-  const key = clubViewPayloadCacheKey(route);
-  return key ? clubViewPayloadCache.get(key) || null : null;
+function rememberIncrementalPayload(cacheKey, payload) {
+  const key = String(cacheKey || "");
+  if (!key || !payload) return payload || null;
+  state.incrementalPayloadCache.delete(key);
+  state.incrementalPayloadCache.set(key, payload);
+  while (state.incrementalPayloadCache.size > INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES) {
+    const oldestKey = state.incrementalPayloadCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    state.incrementalPayloadCache.delete(oldestKey);
+  }
+  return payload;
 }
 
 function cachedIncrementalPayload(route, page = 1) {
   if (!route || route.scope === "empty") {
     return null;
   }
-  if (route.scope === "club") {
-    const clubPayload = cachedClubViewPayload(route);
-    if (clubPayload) return clubPayload;
-  }
-  return state.incrementalPayloadCache.get(incrementalRequestDetails(route, page).cacheKey) || null;
+  return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);
 }
 
 function incrementalRouteIsCached(route, page = 1) {
@@ -203,7 +202,6 @@ Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({
 }));
 
 function applyIncrementalPayload(route, payload) {
-  rememberClubViewPayload(route, payload);
   const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
   state.columns = Array.isArray(payload.columns) ? payload.columns : [];
   rebuildColumnIndexMap();
@@ -294,7 +292,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   const generation = beginIncrementalRouteRequest(cacheKey, force);
   if (force) state.incrementalPayloadCache.delete(cacheKey);
 
-  const cachedPayload = !force ? state.incrementalPayloadCache.get(cacheKey) : null;
+  const cachedPayload = !force ? readIncrementalPayloadCache(cacheKey) : null;
   const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);
   const cachedPayloadSupersedesActiveRequest = Boolean(cachedPayload && window.__mflTableLoadingRuntime?.requestActive?.());
   const tableLoadingRequestToken = inheritedTableLoadingRequestToken
@@ -340,7 +338,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
           throw new Error(payload.error || "Could not load this page.");
         }
         if (controller.signal.aborted) return null;
-        state.incrementalPayloadCache.set(cacheKey, payload);
+        rememberIncrementalPayload(cacheKey, payload);
         return payload;
       } catch (error) {
         if (error?.name === "AbortError" && !timedOut) return null;
