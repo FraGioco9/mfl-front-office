@@ -247,6 +247,21 @@ assert.match(
   /function loadingFlagSkeleton\(extraClass = ""\)[\s\S]*__mflCreateFlagSkeleton[\s\S]*loadingFlagSkeleton\("clubLocationFlag"\)/u,
   "My Clubs loading cards must reuse the exact table flag silhouette while inheriting My Clubs flag dimensions.",
 );
+assert.doesNotMatch(
+  myClubs,
+  /\/clubs\/\$\{encodeURIComponent\(clubId\)\}\/info/u,
+  "My Clubs cards must not retain the retired Club Info URL.",
+);
+assert.match(
+  myClubs,
+  /\/clubs\/\$\{encodeURIComponent\(clubId\)\}\/squad/u,
+  "My Clubs loaded and skeleton cards must link directly to the canonical Squad URL.",
+);
+assert.match(
+  myClubs,
+  /void openClub\(clubId, "attributes"\);/u,
+  "My Clubs SPA clicks must open the canonical Squad/Attributes view directly.",
+);
 assert.match(
   myClubsCssSource,
   /\.myClubLocation\s*\{[\s\S]*display: inline-flex;[\s\S]*align-items: center;[\s\S]*gap: 6px;/u,
