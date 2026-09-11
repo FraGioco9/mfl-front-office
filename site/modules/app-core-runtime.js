@@ -137,7 +137,7 @@ const pageViewOptions = {
   database: ["attributes", "contracts", "stats"],
   mfl: ["attributes", "stats"],
   agents: ["attributes", "contracts", "next", "current", "all"],
-  club: ["info", "attributes", "contracts", "current", "all"],
+  club: ["attributes", "contracts", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "contracts", "current", "all"],
   myplayers: ["attributes", "next", "contracts", "current", "all"],
@@ -146,14 +146,13 @@ const defaultPageViews = {
   database: "attributes",
   mfl: "attributes",
   agents: "attributes",
-  club: "info",
+  club: "attributes",
   progression: "current",
   watchlist: "current",
   myplayers: "attributes",
 };
 
 const viewSlugs = {
-  info: "info",
   attributes: "attributes",
   next: "next-overall",
   contracts: "contracts",
@@ -176,10 +175,6 @@ function defaultViewSlugForPage(pageName) {
 }
 
 const views = {
-  info: {
-    columns: canonicalTableConfig.viewColumns.attributes,
-    progressionSuffix: null,
-  },
   attributes: {
     columns: canonicalTableConfig.viewColumns.attributes,
     progressionSuffix: null,
@@ -626,7 +621,7 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   if (pageName === "club") {
     const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
     const clubId = String(options?.clubId || route?.clubId || "").trim();
-    const view = String(options?.view || route?.view || "info");
+    const view = String(options?.view || route?.view || "attributes");
     const navigateClub = window.mflOpenClubPage;
     if (!clubId || typeof navigateClub !== "function") {
       throw new Error("Club navigation gate is unavailable during startup.");
