@@ -74,6 +74,13 @@ const postPendingSyncIndex = source.indexOf("syncPlayerAttributeViewActiveState(
 if (pendingClearIndex < 0 || postPendingSyncIndex < 0 || postPendingSyncIndex < pendingClearIndex) {
   throw new Error("Selected Player view must be activated only after Player-specific pending state clears.");
 }
+if (source.includes("if (pendingDetailPlayerId === playerId && readyDetailPlayerId !== playerId) return false;")) {
+  throw new Error("A complete matching Player row must not stay pending solely because payload-ready bookkeeping was skipped on a cached route.");
+}
+if (!source.includes('return normalizePlayerId(row[playerIdIndex]) === playerId;')) {
+  throw new Error("Player readiness must still reject stale rows by canonical Player ID.");
+}
+
 if (source.includes('const syncAttributeViewActiveState = Reflect.get(Reflect.get(window, "__mflPlayerFirstPaintRuntime") || {}, "syncAttributeViewActiveState");')) {
   throw new Error("Player renderer must not try to activate the selected view before hydrateHero clears pending state.");
 }
