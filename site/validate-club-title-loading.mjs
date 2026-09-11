@@ -27,8 +27,10 @@ const [coreSource, bootstrap, loadingCss, generatedEagerCore, generatedClubCore,
 const artifacts = readCanonicalCoreArtifacts(coreSource);
 const eagerCore = String(artifacts.core || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
 new Function(eagerCore);
 new Function(clubCore);
+new Function(tableCore);
 
 includes(clubCore, 'const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";', "The canonical Club core must own the persistent Club title cache.");
 includes(clubCore, "const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);", "Loaded Club rows must remain the first title-identity source.");
@@ -65,16 +67,44 @@ excludes(clubCore, "applyFilters = function applyFiltersWithClubRows", "Club mus
 excludes(clubCore, "const originalApplyFilters = applyFilters;", "Club must not capture a second Table filter owner.");
 
 const rosterLoad = clubCore.indexOf("window.mflLoadIncrementalRoutePage");
-const filterRulesReset = clubCore.indexOf("filterRules.replaceChildren();", rosterLoad);
-const hideRetiredReset = clubCore.indexOf("hideRetiredInput.checked = false;", filterRulesReset);
-const hideRetiringReset = clubCore.indexOf("hideRetiringInput.checked = false;", hideRetiredReset);
-const hideMflReset = clubCore.indexOf("hideMflPlayersInput.checked = false;", hideRetiringReset);
-const newMintsReset = clubCore.indexOf("newMintsInput.checked = false;", hideMflReset);
-const finalFilterRender = clubCore.indexOf('applyFilters({ save: false, localOnly: true });', newMintsReset);
+const finalClubRender = clubCore.indexOf('applyFilters({ save: false, localOnly: true });', rosterLoad);
 invariant(
-  rosterLoad >= 0 && filterRulesReset > rosterLoad && hideRetiredReset > filterRulesReset && hideRetiringReset > hideRetiredReset && hideMflReset > hideRetiringReset && newMintsReset > hideMflReset && finalFilterRender > newMintsReset,
-  "Club must clear every generic filter control before the single final Table render.",
+  rosterLoad >= 0 && finalClubRender > rosterLoad,
+  "Club must render its loaded roster once without entering the generic saved-filter lifecycle.",
 );
+for (const forbidden of [
+  "filterRules.replaceChildren();",
+  "hideRetiredInput.checked = false;",
+  "hideRetiringInput.checked = false;",
+  "hideMflPlayersInput.checked = false;",
+  "packablePlayersInput.checked = false;",
+  "newMintsInput.checked = false;",
+]) {
+  excludes(clubCore, forbidden, `Club route ownership must not mutate shared filter control state through ${forbidden}`);
+}
+
+const clubApplyStart = tableCore.indexOf("function tableApplyFiltersOwner(options = {}) {");
+const clubApplyEnd = tableCore.indexOf("\n  const rules = readFilterRules();", clubApplyStart);
+const clubApplyBranch = tableCore.slice(clubApplyStart, clubApplyEnd);
+invariant(clubApplyStart >= 0 && clubApplyEnd > clubApplyStart, "Canonical Table core must expose a dedicated Club render branch.");
+includes(clubApplyBranch, "state.filteredRows = [...state.rows];", "Club rendering must use the complete loaded roster.");
+includes(clubApplyBranch, "state.filteredRows.sort(compareRows);", "Club rendering must preserve canonical Club ordering.");
+for (const forbidden of [
+  "filterRules",
+  "hideRetiredInput",
+  "hideRetiringInput",
+  "hideMflPlayersInput",
+  "packablePlayersInput",
+  "newMintsInput",
+  "filterSummary",
+  "pendingTableControlRestore",
+]) {
+  excludes(clubApplyBranch, forbidden, `Club rendering must not read or mutate generic filter state through ${forbidden}`);
+}
+
+includes(eagerCore, 'if (pageKey && pageName !== "club") {', "Club view switches must not persist generic table-filter state.");
+includes(eagerCore, 'if (tablePages.has(pageName) && pageName !== "club") {', "Club incremental rendering must not restore saved table-filter state.");
+includes(eagerCore, 'delete state.tablePageStates.club;', "Persisted legacy Club filter state must be purged from shared table preferences.");
 
 includes(clubCore, "void clubTitleReady.then((resolvedTitle) => {", "Club title preflight must remain non-blocking while roster data loads.");
 includes(clubCore, 'document.documentElement.dataset.initialEntityVerified = "club";', "A confirmed Club identity must release the guarded first-paint Club shell.");
@@ -98,4 +128,4 @@ invariant(
   "The tracked Club runtime must exactly match the canonical Club source.",
 );
 
-console.log("Club filter-free refresh checks passed: shared public entry, guarded first-paint identity, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club filter-free checks passed: Club views hide generic controls without mutating or persisting filter state, and render the complete roster directly.");
