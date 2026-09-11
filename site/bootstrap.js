@@ -97,6 +97,22 @@
     return host;
   }
 
+  function createFlagSkeleton(hostClass = "") {
+    const flagSkeleton = document.createElement("span");
+    flagSkeleton.className = `mflTableFlagSkeleton${hostClass ? ` ${hostClass}` : ""}`;
+    flagSkeleton.setAttribute("aria-hidden", "true");
+
+    const flagSample = document.createElement("img");
+    flagSample.className = "flagImage mflTableFlagSkeletonSample";
+    flagSample.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E";
+    flagSample.alt = "";
+
+    const flagFill = document.createElement("span");
+    flagFill.className = "mflTableFlagSkeletonFill";
+    flagSkeleton.append(flagSample, flagFill);
+    return flagSkeleton;
+  }
+
   function setLoadingValue(target, sampleText = "") {
     const element = typeof target === "string" ? document.getElementById(target) : target;
     if (element instanceof HTMLElement) {
@@ -108,6 +124,7 @@
 
   Reflect.set(window, "__mflCreateDataPlaceholder", createDataPlaceholder);
   Reflect.set(window, "__mflCreateTextSkeleton", createTextSkeleton);
+  Reflect.set(window, "__mflCreateFlagSkeleton", createFlagSkeleton);
   Reflect.set(window, "__mflSetLoadingValue", setLoadingValue);
 
   root.classList.add("mflSingleRenderPending");
@@ -218,7 +235,7 @@
       const locationLabel = [identity.city, identity.nation].filter(Boolean).join(", ");
       location.replaceChildren();
       if (locationLabel) {
-        const flagPlaceholder = createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton");
+        const flagPlaceholder = createFlagSkeleton("clubLocationFlag clubLocationFlagSkeleton");
         flagPlaceholder.dataset.clubLoading = "true";
         location.appendChild(flagPlaceholder);
         const locationText = document.createElement("span");
@@ -251,7 +268,7 @@
 
   function clubLoadingInfoCard(label, sample, detailSample = "") {
     const card = document.createElement("article");
-    card.className = "clubInfoCard";
+    card.className = "clubInfoCard clubInfoCardLoading";
     const heading = document.createElement("span");
     heading.className = "clubInfoLabel";
     heading.textContent = label;
@@ -297,7 +314,7 @@
       if (location instanceof HTMLElement && !String(location.textContent || "").trim()) {
         location.hidden = false;
         location.dataset.clubLoading = "true";
-        const flagPlaceholder = createDataPlaceholder("clubLocationFlag clubLocationFlagSkeleton");
+        const flagPlaceholder = createFlagSkeleton("clubLocationFlag clubLocationFlagSkeleton");
         flagPlaceholder.dataset.clubLoading = "true";
         const locationText = document.createElement("span");
         locationText.className = "clubLocationText";
@@ -321,7 +338,7 @@
     );
 
     const colorsCard = document.createElement("article");
-    colorsCard.className = "clubInfoCard clubInfoColorsCard";
+    colorsCard.className = "clubInfoCard clubInfoColorsCard clubInfoCardLoading";
     const colorsLabel = document.createElement("span");
     colorsLabel.className = "clubInfoLabel";
     colorsLabel.textContent = "Colours";
@@ -340,7 +357,7 @@
     grid.appendChild(colorsCard);
 
     const competitionsCard = document.createElement("article");
-    competitionsCard.className = "clubInfoCard clubInfoCompetitionsCard";
+    competitionsCard.className = "clubInfoCard clubInfoCompetitionsCard clubInfoCardLoading";
     const competitionsLabel = document.createElement("span");
     competitionsLabel.className = "clubInfoLabel";
     competitionsLabel.textContent = "Current competitions";
@@ -1033,17 +1050,7 @@
       cell.classList.add("flagCell");
       const content = document.createElement("span");
       content.className = "tableControlCellContent tableControlCellContentCentered";
-      const flagSkeleton = document.createElement("span");
-      flagSkeleton.className = "mflTableFlagSkeleton";
-      flagSkeleton.setAttribute("aria-hidden", "true");
-      const flagSample = document.createElement("img");
-      flagSample.className = "flagImage mflTableFlagSkeletonSample";
-      flagSample.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E";
-      flagSample.alt = "";
-      const flagFill = document.createElement("span");
-      flagFill.className = "mflTableFlagSkeletonFill";
-      flagSkeleton.append(flagSample, flagFill);
-      content.appendChild(flagSkeleton);
+      content.appendChild(createFlagSkeleton());
       cell.appendChild(content);
       return;
     }
