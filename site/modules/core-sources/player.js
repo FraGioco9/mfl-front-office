@@ -2193,7 +2193,7 @@ function renderPlayerPageOwner(playerId) {
   }
 
   state.playerAttributeView = selectedAttributeView;
-  const syncAttributeViewActiveState = Reflect.get(window.__mflPlayerFirstPaintRuntime || {}, "syncAttributeViewActiveState");
+  const syncAttributeViewActiveState = Reflect.get(Reflect.get(window, "__mflPlayerFirstPaintRuntime") || {}, "syncAttributeViewActiveState");
   if (typeof syncAttributeViewActiveState === "function") syncAttributeViewActiveState(playerDetail, id);
   window.__mflPlayerFirstPaintRuntime?.hydrateHero?.({
     container: playerDetail,
