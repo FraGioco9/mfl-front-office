@@ -15,7 +15,7 @@
     'input[type="checkbox"]',
     'input[type="radio"]',
   ].join(", ");
-  const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";
+  const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput, #plannerClubSearchInput";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
   const PLAYER_VIEW_SCROLL_MEDIA = window.matchMedia("(max-width: 900px)");
 
