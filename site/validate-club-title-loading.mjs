@@ -63,9 +63,11 @@ includes(clubCore, 'ownerWallet.textContent = identity.ownerName && identity.own
 includes(clubCore, 'ownerName.setAttribute(\n            "href",', "A resolved Club Owner name must become a real link without making the surrounding Owner section interactive.");
 includes(clubCore, 'const clubIdentityOwnerLink = document.getElementById("clubIdentityOwnerName");', "Club Owner navigation must bind only to the agent-name text link.");
 includes(clubCore, 'openAgentPage(walletAddress, String(clubIdentityOwnerLink.dataset.agentName || "").trim());', "Club Owner clicks must reuse the canonical SPA Agent navigation.");
-includes(stylesBase, ".clubIdentityOwnerName[href] {\n  cursor: pointer;", "Only the resolved Owner name text must expose the pointer cursor.");
-includes(stylesBase, ".agentTableLink:hover,\n.agentTableLink.tableInteractiveHovered {\n  color: var(--primary);\n  text-decoration: none;", "Table Agent links must retain the canonical hover treatment.");
-includes(stylesBase, ".clubIdentityOwnerName[href]:hover,\n.clubIdentityOwnerName[href]:focus-visible {\n  color: var(--primary);\n  text-decoration: none;", "Club Owner name hover must match table Agent links without activating the surrounding Owner section.");
+includes(indexHtml, '<a id="clubIdentityOwnerName" class="clubIdentityOwnerName agentTableLink"></a>', "Club Owner name must reuse the exact canonical table Agent link class.");
+includes(stylesBase, ".agentTableLink:hover,\n.agentTableLink.tableInteractiveHovered {\n  color: var(--primary);\n  text-decoration: none;", "Club Owner and table Agent links must share one hover treatment.");
+includes(stylesBase, ".clubIdentityOwnerName {", "Club Owner name must retain its own identity typography while sharing Agent hover behavior.");
+includes(stylesBase, "font-size: 15px;\n  font-weight: 700;\n  line-height: 1.2;", "Club Owner name must preserve the original strong-text weight and geometry.");
+excludes(stylesBase, ".clubIdentityOwnerName[href]:hover", "Club Owner must not duplicate or override the canonical Agent hover rule.");
 excludes(stylesBase, ".clubIdentityOwner[href]:hover", "The Owner section itself must never trigger the Agent hover treatment.");
 excludes(coreSource, 'nextView === "info"', "Shared Club navigation must not retain a retired Info-view branch.");
 
