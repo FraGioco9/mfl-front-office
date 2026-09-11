@@ -2258,17 +2258,21 @@ td a {
 }
 
 .playerHeroMedia {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
-  flex: 0 0 var(--mfl-player-hero-media-width, 320px);
+  flex: 0 0 var(--mfl-player-hero-media-width, 328px);
   align-items: flex-end;
   align-self: stretch;
-  gap: var(--mfl-player-hero-media-gap, 8px);
-  width: var(--mfl-player-hero-media-width, 320px);
-  min-width: var(--mfl-player-hero-media-width, 320px);
-  max-width: var(--mfl-player-hero-media-width, 320px);
+  gap: var(--mfl-player-hero-media-gap, 24px);
+  width: var(--mfl-player-hero-media-width, 328px);
+  min-width: var(--mfl-player-hero-media-width, 328px);
+  max-width: var(--mfl-player-hero-media-width, 328px);
 }
 
 .playerHeroOverall {
+  position: relative;
+  z-index: 3;
   display: grid;
   flex: 0 0 var(--mfl-player-hero-overall-size, 100px);
   align-self: center;
@@ -2292,9 +2296,44 @@ td a {
   line-height: 1;
 }
 
+.playerHeroBrandMark {
+  position: absolute;
+  left: calc(var(--mfl-player-hero-overall-size, 100px) + 4px);
+  bottom: 30px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--mfl-player-hero-brand-size, 40px);
+  min-width: var(--mfl-player-hero-brand-size, 40px);
+  max-width: var(--mfl-player-hero-brand-size, 40px);
+  height: var(--mfl-player-hero-brand-size, 40px);
+  min-height: var(--mfl-player-hero-brand-size, 40px);
+  max-height: var(--mfl-player-hero-brand-size, 40px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  text-decoration: none;
+  transition: opacity 180ms ease;
+}
+
+.playerHeroBrandMark.playerHeroBrandMarkVisible {
+  opacity: 0.42;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.playerHeroBrandLogo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .playerHeroPortraitFrame {
   position: relative;
+  z-index: 2;
   flex: 0 0 var(--mfl-player-portrait-width, 204.288px);
+  pointer-events: none;
   align-self: flex-end;
   width: var(--mfl-player-portrait-width, 204.288px);
   min-width: var(--mfl-player-portrait-width, 204.288px);
