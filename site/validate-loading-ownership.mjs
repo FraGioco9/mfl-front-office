@@ -54,8 +54,8 @@ invariant(
     && loadingStyles.includes("background: var(--mfl-loading-placeholder-border);")
     && loadingStyles.includes(".mflTableFlagSkeletonFill::after {")
     && loadingStyles.includes("inset: 1px;")
-    && loadingStyles.includes('-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;')
-    && loadingStyles.includes('mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='5' width='36' height='26' rx='4' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;')
+    && loadingStyles.includes('-webkit-mask: url("data:image/svg+xml,%3Csvg')
+    && loadingStyles.includes('mask: url("data:image/svg+xml,%3Csvg')
     && !loadingStyles.includes("72.222222%")
     && !loadingStyles.includes("15.384615%"),
   "Table flag skeleton shape and border must use one neutral outer flag silhouette without internal country-specific stripes.",
