@@ -854,11 +854,17 @@
       cell.classList.add("flagCell");
       const content = document.createElement("span");
       content.className = "tableControlCellContent tableControlCellContentCentered";
-      const flag = document.createElement("span");
-      flag.className = "flagImage mflTableFlagPlaceholder";
-      flag.setAttribute("aria-hidden", "true");
-      flag.appendChild(createDataPlaceholder("mflTableFlagPlaceholderShape"));
-      content.appendChild(flag);
+      const flagSkeleton = document.createElement("span");
+      flagSkeleton.className = "mflTableFlagSkeleton";
+      flagSkeleton.setAttribute("aria-hidden", "true");
+      const flagSample = document.createElement("img");
+      flagSample.className = "flagImage mflTableFlagSkeletonSample";
+      flagSample.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg";
+      flagSample.alt = "";
+      const flagFill = document.createElement("span");
+      flagFill.className = "mflTableFlagSkeletonFill";
+      flagSkeleton.append(flagSample, flagFill);
+      content.appendChild(flagSkeleton);
       cell.appendChild(content);
       return;
     }
