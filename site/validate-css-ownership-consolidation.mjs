@@ -61,7 +61,7 @@ for (const visualDeclaration of [
 for (const geometryDeclaration of [
   "display: grid;",
   "width: min(560px, 100%);",
-  "height: 40px;",
+  "height: var(--mfl-control-height);",
 ]) {
   invariant(
     baseSearchRule.includes(geometryDeclaration),
