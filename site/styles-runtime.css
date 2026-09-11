@@ -8248,11 +8248,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
   display: flex;
 }
 
-#progressionPage .watchlistSwitcherLabel,
-#progressionPage .rowsField > span {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
+#progressionPage .watchlistSwitcherLabel {
   text-transform: uppercase;
 }
 
@@ -11097,7 +11093,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage .views {
     --mfl-views-gap: 4px;
-    margin-bottom: 5px;
+    margin-bottom: var(--mfl-page-section-gap);
   }
 
   #progressionPage > .quickFilters {

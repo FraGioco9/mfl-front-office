@@ -174,7 +174,7 @@ export function validateResponsiveTables(context) {
   includes(sharedTableUi, 'select.value = MOBILE_PAGE_SIZE;\n    select.dispatchEvent(new Event("change", { bubbles: true }));', "Entering mobile after startup must reuse the canonical page-size change path.");
   includes(sharedTableUi, 'MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);', "Entering the mobile breakpoint must immediately restore the fixed 100-row policy.");
   excludes(responsive, "#progressionPage:not([hidden])", "Phone table chrome must not depend on hidden removal before receiving its first-paint layout.");
-  includes(responsive, "#progressionPage .views {\n    --mfl-views-gap: 4px;\n    margin-bottom: 5px;\n  }", "Phone views must keep their compact measured gap inside the non-scrolling shell.");
+  includes(responsive, "#progressionPage .views {\n    --mfl-views-gap: 4px;\n    margin-bottom: var(--mfl-page-section-gap);\n  }", "Phone views must consume the shared compact page-section rhythm inside the non-scrolling shell.");
   includes(responsive, "#progressionPage .views > #openFiltersButton {\n    flex-basis: 74px;\n    width: 74px;\n    min-width: 74px;\n    max-width: 74px;", "The Filters button must match the fixed phone view-button width.");
   includes(responsive, ".quickFiltersScrollerShell .viewsScrollButton {\n    width: 20px;\n    min-width: 20px;\n    height: 20px;\n    min-height: 20px;\n    padding: 4px;", "Phone quick-filter arrows must fit inside the compact 26px quick-filter row.");
   includes(responsive, ".quickFiltersScrollerShell .viewsScrollButton::before {\n    top: -3px;\n    bottom: -3px;\n    width: 50px;", "Phone quick-filter fading must match the compact row height.");

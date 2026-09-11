@@ -257,11 +257,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
   display: flex;
 }
 
-#progressionPage .watchlistSwitcherLabel,
-#progressionPage .rowsField > span {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
+#progressionPage .watchlistSwitcherLabel {
   text-transform: uppercase;
 }
 
