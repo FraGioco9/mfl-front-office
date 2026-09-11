@@ -3,6 +3,7 @@
             <section class="playerHero playerHeroPending" aria-hidden="true">
               <div class="playerHeroMedia">
                 <div class="playerHeroOverall isPending"><strong><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">85</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></strong></div>
+                <a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo" alt="" aria-hidden="true"></a>
                 <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
               </div>
               <div class="playerHeroIdentity">
@@ -254,6 +255,92 @@
                 ? suppliedPositions.join(",")
                 : cachedPositionText,
             );
+            const normalizeCachedClubBrand = (value, expectedClubId = "") => {
+              const source = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+              if (!source) return null;
+              const clubId = String(source.clubId || expectedClubId || "").trim();
+              if (!clubId || (expectedClubId && clubId !== String(expectedClubId).trim())) return null;
+              return {
+                clubId,
+                name: String(source.name || "").trim(),
+                primaryColor: String(source.primaryColor || "").trim(),
+                logoUrl: String(source.logoUrl || "").trim(),
+              };
+            };
+            const cachedClubBrand = (() => {
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (!clubId) return null;
+              if (firstPaintContext?.clubKnown === true) return normalizeCachedClubBrand(firstPaintContext.club, clubId);
+              const explicit = normalizeCachedClubBrand(firstPaintContext?.club, clubId);
+              if (explicit) return explicit;
+              try {
+                const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
+                return normalizeCachedClubBrand(stored?.[clubId], clubId);
+              } catch {
+                return null;
+              }
+            })();
+            const playerFirstPaintClubGradient = (primaryColor) => {
+              const compact = String(primaryColor || "").trim().replace(/^#/, "");
+              const normalized = /^[0-9a-f]{3}$/i.test(compact)
+                ? compact.split("").map((character) => character + character).join("")
+                : compact;
+              if (!/^[0-9a-f]{6}$/i.test(normalized)) return "";
+              const red = Number.parseInt(normalized.slice(0, 2), 16);
+              const green = Number.parseInt(normalized.slice(2, 4), 16);
+              const blue = Number.parseInt(normalized.slice(4, 6), 16);
+              return "linear-gradient(transparent 22%, rgba(" + red + ", " + green + ", " + blue + ", 0.4))";
+            };
+            const cachedHeroBranding = () => {
+              const retirementRaw = knownRaw("retirement_years");
+              if (retirementRaw !== "" && Number(retirementRaw) === 0) return null;
+              const clubName = String(knownDisplay("active_contract_club_name") || "").trim();
+              if (clubName.toLowerCase() === "development center") {
+                return {
+                  kind: "development-center",
+                  gradient: "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))",
+                  logoUrl: "/development-center-traffic-cone.svg",
+                  clubId: "",
+                  name: "Development Center",
+                };
+              }
+              const clubId = String(knownRaw("active_contract_club_id") || "").trim();
+              if (!clubId || !cachedClubBrand) return null;
+              return {
+                kind: "club",
+                gradient: playerFirstPaintClubGradient(cachedClubBrand.primaryColor),
+                logoUrl: cachedClubBrand.logoUrl,
+                clubId,
+                name: cachedClubBrand.name || clubName,
+              };
+            };
+            const syncCachedHeroBranding = () => {
+              if (!(hero instanceof HTMLElement)) return;
+              const branding = cachedHeroBranding();
+              if (branding?.gradient) hero.style.background = branding.gradient;
+              else hero.style.removeProperty("background");
+              const mark = hero.querySelector(".playerHeroBrandMark");
+              const logo = mark?.querySelector(".playerHeroBrandLogo");
+              if (!(mark instanceof HTMLAnchorElement)) return;
+              const visible = Boolean(branding?.logoUrl);
+              mark.classList.toggle("playerHeroBrandMarkVisible", visible);
+              mark.classList.toggle("playerHeroBrandMarkDevelopmentCenter", branding?.kind === "development-center");
+              mark.tabIndex = visible && branding?.kind === "club" ? 0 : -1;
+              mark.setAttribute("aria-hidden", visible ? "false" : "true");
+              mark.removeAttribute("href");
+              mark.removeAttribute("data-club-id");
+              mark.removeAttribute("aria-label");
+              if (!visible) {
+                if (logo instanceof HTMLImageElement) logo.removeAttribute("src");
+                return;
+              }
+              if (logo instanceof HTMLImageElement) logo.src = branding.logoUrl;
+              mark.setAttribute("aria-label", branding.name || "Player affiliation");
+              if (branding.kind === "club" && branding.clubId) {
+                mark.href = "/clubs/" + encodeURIComponent(branding.clubId) + "/squad";
+                mark.dataset.clubId = branding.clubId;
+              }
+            };
             const cachedAttributeValue = (column) => {
               if (column === "overall") {
                 const overall = knownDisplay("overall") || String(firstPaintContext?.overall || "").trim();
@@ -573,6 +660,7 @@
               }
             }
 
+            syncCachedHeroBranding();
             syncCachedHeroValues();
             syncCachedProfileValues();
             syncPendingPlayerShell();
