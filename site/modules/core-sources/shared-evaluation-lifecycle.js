@@ -387,7 +387,7 @@ function renderEvaluationSearchEntryImmediately(entry, route) {
   if (!payload) return false;
 
   const { requestKey, cacheKey } = incrementalRequestDetails(route, 1);
-  state.incrementalPayloadCache.set(cacheKey, payload);
+  rememberIncrementalPayload(cacheKey, payload);
   applyIncrementalPayload(route, payload);
   state.incrementalLastKey = requestKey;
   state.incrementalLastLoadedAt = Date.now();
