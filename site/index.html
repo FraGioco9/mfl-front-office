@@ -631,18 +631,24 @@
               <img id="clubIdentityLogo" class="clubIdentityLogo" alt="" hidden>
             </div>
             <div class="clubIdentityMain">
-              <span id="clubIdentityId" class="clubIdentityId"></span>
-              <h2 id="clubIdentityName" class="clubIdentityName"></h2>
-              <div class="clubIdentityMeta">
-                <span id="clubIdentityDivision" class="clubIdentityDivision"></span>
-                <span id="clubIdentityLocation" class="clubIdentityLocation"></span>
+              <div class="clubIdentityPrimary">
+                <span id="clubIdentityId" class="clubIdentityId"></span>
+                <h2 id="clubIdentityName" class="clubIdentityName"></h2>
+                <div class="clubIdentityMeta">
+                  <span id="clubIdentityDivision" class="clubIdentityDivision"></span>
+                  <span id="clubIdentityLocation" class="clubIdentityLocation"></span>
+                </div>
+              </div>
+              <div id="clubIdentityOwner" class="clubIdentityOwner">
+                <span class="clubIdentityOwnerLabel">Owner</span>
+                <strong id="clubIdentityOwnerName" class="clubIdentityOwnerName"></strong>
+                <span id="clubIdentityOwnerWallet" class="clubIdentityOwnerWallet"></span>
               </div>
             </div>
           </section>
           <section class="views" aria-label="Table views">
             <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
             <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
-            <button class="viewButton" type="button" data-view="info">Info</button>
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
@@ -658,7 +664,6 @@
               <div id="watchlistDropdown" class="watchlistDropdown" hidden></div>
             </div>
           </section>
-          <section id="clubInfoPanel" class="clubInfoPanel" aria-label="Club information"></section>
           <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->
           <script>
             (() => {
