@@ -132,6 +132,11 @@ assert.ok(
   "Direct Player bootstrap must adopt the parser-owned hero before the fallback skeleton replacement path.",
 );
 assert.ok(
+  primePlayerBody.includes('<h2 class="playerTitle"><span class="playerTitleName">')
+    && !primePlayerBody.includes('<h2 class="tablePageTitle playerTitle">'),
+  "Bootstrap fallback Player hero must use the exact loaded title class structure.",
+);
+assert.ok(
   indexHtml.includes('class="playerGrid playerGridPending" data-mfl-static-player-grid="true"')
     && indexHtml.includes('data-mfl-static-player-age')
     && indexHtml.includes('hero.dataset.playerShellId = playerId;')
