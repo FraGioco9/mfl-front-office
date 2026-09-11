@@ -259,6 +259,17 @@ excludes(tableShellSurface, "var(--mfl-panel-", "Table surfaces must remain tabl
 const playerHeroSurface = exactRule(stylesBase, ".playerHero,\n.playerPanel");
 excludes(playerHeroSurface, "var(--mfl-panel-", "Player surfaces must remain Player-owned rather than consuming ordinary panel surface tokens.");
 
+excludes(
+  styles,
+  "#progressionPage .watchlistSwitcherLabel,\n#progressionPage .rowsField > span {\n  font-size: 12px;\n  font-weight: 600;",
+  "Table chrome must not override shared metadata typography after the foundation is applied.",
+);
+includes(
+  styles,
+  "#progressionPage .watchlistSwitcherLabel {\n  text-transform: uppercase;\n}",
+  "Table chrome may keep presentation-only uppercase styling without re-owning metadata size/weight/line-height.",
+);
+
 for (const [selector, sizeToken, weightToken, lineToken] of [
   [".changelogMinorMeta", "var(--mfl-metadata-font-size)", "var(--mfl-metadata-font-weight)", "var(--mfl-metadata-line-height)"],
   [".homeStats label", "var(--mfl-metadata-font-size)", "var(--mfl-metadata-font-weight)", null],
