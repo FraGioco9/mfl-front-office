@@ -422,6 +422,7 @@
       run,
       waitForRoutePaint,
       subscribe,
+      refresh: applyState,
       snapshot: () => currentSnapshot,
       routeReady: routeDestinationReady,
       isBusy: () => currentSnapshot.busy,
@@ -500,6 +501,7 @@
     document.documentElement.classList.remove("mflInitialRouteSuperseded");
     document.documentElement.classList.add("mflInitialRouteResolved");
     window.__mflInteractionBusy.end(initialRouteToken);
+    window.__mflInteractionBusy.refresh();
   };
 
   const recoverCompletedApplicationStartup = async () => {
