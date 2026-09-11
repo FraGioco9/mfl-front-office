@@ -44,16 +44,18 @@ for (const required of [
 }
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 invariant(
-  bootstrap.includes('flag.className = "flagImage mflTableFlagPlaceholder";')
-    && bootstrap.includes('flag.appendChild(createDataPlaceholder("mflTableFlagPlaceholderShape"));')
-    && !bootstrap.includes('createDataPlaceholder("flagImage mflTableFlagPlaceholder")'),
-  "Table flag skeletons must inherit the real .flagImage canvas while masking only the visible flag body.",
+  bootstrap.includes('flagSkeleton.className = "mflTableFlagSkeleton";')
+    && bootstrap.includes('flagSample.className = "flagImage mflTableFlagSkeletonSample";')
+    && bootstrap.includes('flagSkeleton.append(flagSample, flagFill);'),
+  "Table flag skeletons must measure themselves with a real .flagImage sample so loaded and loading dimensions/alignment stay identical.",
 );
 invariant(
-  loadingStyles.includes(".mflTableFlagPlaceholderShape {")
-    && loadingStyles.includes("block-size: 72.222222%;")
-    && loadingStyles.includes("border-radius: 11.111111% / 15.384615%;"),
-  "Table flag skeleton masking must preserve the canonical Twemoji flag-body proportions without breakpoint-specific dimensions.",
+  loadingStyles.includes(".mflTableFlagSkeletonFill {")
+    && loadingStyles.includes('-webkit-mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;')
+    && loadingStyles.includes('mask: url("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ee-1f1f9.svg") center / contain no-repeat;')
+    && !loadingStyles.includes("72.222222%")
+    && !loadingStyles.includes("15.384615%"),
+  "Table flag skeleton shape must come from real Twemoji artwork rather than estimated dimensions or border radii.",
 );
 invariant(
   !loadingStyles.includes("html.mflNavigationPending #progressionPage nav.pager")
