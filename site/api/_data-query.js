@@ -4,7 +4,6 @@ const {
   SEARCH_PLAYER_COLUMNS,
   getGeneratedAt,
   queryOne,
-  quoteIdentifier,
   playerSelectExpression,
 } = require("./_database");
 
