@@ -49,6 +49,7 @@ const state = {
   evaluationSearchIndex: [],
   agentSearchIndex: [],
   clubSearchIndex: [],
+  clubProfile: null,
   searchIndexesLoaded: false,
   incrementalMode: false,
   incrementalApplying: false,
@@ -136,7 +137,7 @@ const pageViewOptions = {
   database: ["attributes", "contracts", "stats"],
   mfl: ["attributes", "stats"],
   agents: ["attributes", "contracts", "next", "current", "all"],
-  club: ["attributes", "contracts", "current", "all"],
+  club: ["info", "attributes", "contracts", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "contracts", "current", "all"],
   myplayers: ["attributes", "next", "contracts", "current", "all"],
@@ -145,13 +146,14 @@ const defaultPageViews = {
   database: "attributes",
   mfl: "attributes",
   agents: "attributes",
-  club: "attributes",
+  club: "info",
   progression: "current",
   watchlist: "current",
   myplayers: "attributes",
 };
 
 const viewSlugs = {
+  info: "info",
   attributes: "attributes",
   next: "next-overall",
   contracts: "contracts",
@@ -174,6 +176,10 @@ function defaultViewSlugForPage(pageName) {
 }
 
 const views = {
+  info: {
+    columns: canonicalTableConfig.viewColumns.attributes,
+    progressionSuffix: null,
+  },
   attributes: {
     columns: canonicalTableConfig.viewColumns.attributes,
     progressionSuffix: null,
@@ -620,7 +626,7 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   if (pageName === "club") {
     const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
     const clubId = String(options?.clubId || route?.clubId || "").trim();
-    const view = String(options?.view || route?.view || "attributes");
+    const view = String(options?.view || route?.view || "info");
     const navigateClub = window.mflOpenClubPage;
     if (!clubId || typeof navigateClub !== "function") {
       throw new Error("Club navigation gate is unavailable during startup.");
@@ -1578,7 +1584,7 @@ function pagePath(pageName, options = {}) {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);
     const clubId = String(options.clubId || currentClubRoute?.clubId || "").trim();
-    const clubView = String(options.view || currentClubRoute?.view || state.view || "attributes").trim().toLowerCase();
+    const clubView = String(options.view || currentClubRoute?.view || state.view || "info").trim().toLowerCase();
     const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
     return clubPath || window.location.pathname;
   }
@@ -2262,7 +2268,7 @@ if (pageName === "my-clubs") {
   const settingsPageActive = pageName === "settings";
   if (options.__mflPreviousTableStateSaved !== true) {
     const previousTablePage = tablePageKey();
-    if (previousTablePage && previousTablePage !== "club") {
+    if (previousTablePage) {
       state.tablePageStates[previousTablePage] = currentTablePageState();
       saveTableState();
     }
@@ -4348,9 +4354,8 @@ function currentTablePageState() {
 
 function currentTableState() {
   const pageKey = tablePageKey();
-  delete state.tablePageStates.club;
 
-  if (pageKey && pageKey !== "club") {
+  if (pageKey) {
     state.tablePageStates[pageKey] = currentTablePageState();
   }
 
@@ -6581,7 +6586,7 @@ function renderSearchResultsNow() {
       button.addEventListener("click", () => {
         closeSearch();
         if (typeof window.mflOpenClubPage === "function") {
-          void window.mflOpenClubPage(entry.clubId, "attributes");
+          void window.mflOpenClubPage(entry.clubId, "info");
         }
       });
       fragment.appendChild(button);
@@ -6683,9 +6688,9 @@ function incrementalRouteTarget(pageName, options = {}) {
     const requestedClubId = String(options.clubId || clubTarget?.clubId || "").trim();
     if (!requestedClubId) return null;
     const requestedClubView = String(options.view || clubTarget?.view || "attributes").toLowerCase();
-    const clubView = ["attributes", "contracts", "current", "all"].includes(requestedClubView)
+    const clubView = ["info", "attributes", "contracts", "current", "all"].includes(requestedClubView)
       ? requestedClubView
-      : "attributes";
+      : "info";
     return {
       pageName: "club",
       scope: "club",
@@ -6874,6 +6879,11 @@ function applyIncrementalPayload(route, payload) {
   rebuildColumnIndexMap();
   state.rows = Array.isArray(payload.rows) ? payload.rows : [];
   state.filteredRows = [...state.rows];
+  if (route.scope === "club") {
+    state.clubProfile = payload.club && typeof payload.club === "object"
+      ? { ...payload.club }
+      : null;
+  }
   state.page = Number(payload.page || 1);
   if (tableRoute && !["club"].includes(route.scope)) {
     state.pageSize = Number(payload.pageSize || state.pageSize);
@@ -7736,7 +7746,7 @@ function syncLayoutCenter() {
       __mflNavigationTransition: options.__mflNavigationTransition || null,
     });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
-    if (tablePages.has(pageName) && pageName !== "club") {
+    if (tablePages.has(pageName)) {
       restoreSavedTableState(pageName, {
         view: route.view || options.view,
         path: options.path,
@@ -7760,6 +7770,11 @@ function syncLayoutCenter() {
       window.__mflTableLoadingRuntime?.finishRequest?.(renderLoadingRequestToken);
     }
   }
+}
+
+function applyClubPresentationFromSharedView() {
+  const owner = Reflect.get(window, "__mflApplyClubPresentation");
+  if (typeof owner === "function") owner();
 }
 
 const setIncrementalView = async function setIncrementalView(viewName) {
@@ -7789,7 +7804,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
     const previousPath = stagedTransition?.previousPath || currentNavigationPath();
 
-    if (pageKey && pageName !== "club") {
+    if (pageKey) {
       const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
       state.tablePageStates[pageKey] = {
         ...existingPageState,
@@ -7820,6 +7835,24 @@ const setIncrementalView = async function setIncrementalView(viewName) {
       if (!transition) return;
     }
 
+    if (pageName === "club" && state.clubProfile && ["info", "attributes", "contracts"].includes(nextView)) {
+      state.page = 1;
+      if (nextView === "info") {
+        state.view = "info";
+        updateViewButtons();
+        applyClubPresentationFromSharedView();
+        return true;
+      }
+      state.incrementalApplying = true;
+      try {
+        const result = await applyTableViewOwner.call(this, nextView);
+        applyClubPresentationFromSharedView();
+        return result;
+      } finally {
+        state.incrementalApplying = false;
+      }
+    }
+
     const viewLoadingRequestToken = (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.())
       ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0
       : 0;
@@ -7831,7 +7864,16 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         if (!payload) return;
         state.incrementalApplying = true;
         try {
-          return await applyTableViewOwner.call(this, nextView);
+          if (pageName === "club" && nextView === "info") {
+            state.view = "info";
+            state.page = 1;
+            updateViewButtons();
+            applyClubPresentationFromSharedView();
+            return true;
+          }
+          const result = await applyTableViewOwner.call(this, nextView);
+          if (pageName === "club") applyClubPresentationFromSharedView();
+          return result;
         } finally {
           state.incrementalApplying = false;
         }
@@ -7941,7 +7983,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
     const previousPage = state.currentPage;
     if (options.__mflPreviousTableStateSaved !== true) {
       const previousTablePage = tablePageKey();
-      if (previousTablePage && previousTablePage !== "club") {
+      if (previousTablePage) {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }
@@ -8126,7 +8168,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
       }
 
       const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
-      if (previousTablePage !== "club" && previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }
