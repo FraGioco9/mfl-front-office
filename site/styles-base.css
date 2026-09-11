@@ -4654,7 +4654,23 @@ body[data-page="club"] #clubIdentity {
   align-content: center;
   min-width: 0;
   max-width: 320px;
+  color: inherit;
   text-align: right;
+  text-decoration: none;
+}
+
+.clubIdentityOwner[href] {
+  cursor: pointer;
+}
+
+.clubIdentityOwner[href]:hover .clubIdentityOwnerName {
+  text-decoration: underline;
+}
+
+.clubIdentityOwner[href]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .clubIdentityOwnerLabel {
