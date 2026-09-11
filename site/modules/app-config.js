@@ -7,11 +7,10 @@ export const TABLE_VIEW_CONFIG = Object.freeze({
   agents: Object.freeze({ order: Object.freeze(["attributes", "contracts", "next", "current", "all"]), fallback: "attributes" }),
   watchlist: Object.freeze({ order: Object.freeze(["attributes", "next", "contracts", "current", "all"]), fallback: "current" }),
   myplayers: Object.freeze({ order: Object.freeze(["attributes", "next", "contracts", "current", "all"]), fallback: "attributes" }),
-  club: Object.freeze({ order: Object.freeze(["info", "attributes", "contracts", "current", "all"]), fallback: "info" }),
+  club: Object.freeze({ order: Object.freeze(["attributes", "contracts", "current", "all"]), fallback: "attributes" }),
 });
 
 export const VIEW_BY_SLUG = Object.freeze({
-  info: "info",
   attributes: "attributes",
   squad: "attributes",
   stats: "stats",
@@ -32,7 +31,6 @@ export const VIEW_SLUGS = Object.freeze({
 });
 
 export const CLUB_VIEW_SLUGS = Object.freeze({
-  info: "info",
   attributes: "squad",
   contracts: "contracts",
   current: "current-season",
@@ -391,7 +389,7 @@ export function browserConfigRuntimeSource(release) {
     return requestResult(originalPath, "notfound", { notFoundKind: kind }, canonicalPath);
   }
 
-  function clubPath(clubId, view = "info") {
+  function clubPath(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return "";
     const normalizedView = normalizeTableView("club", view);
@@ -408,7 +406,9 @@ export function browserConfigRuntimeSource(release) {
     const clubId = decodedRoutePart(segments[1]);
     if (!clubId) return null;
     const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
-    const view = normalizeTableView("club", requestedView);
+    const view = String(requestedView || "").toLowerCase() === "info"
+      ? "attributes"
+      : normalizeTableView("club", requestedView);
     if (!view) return null;
     return Object.freeze({
       clubId,
