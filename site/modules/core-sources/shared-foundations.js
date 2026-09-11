@@ -136,7 +136,7 @@ const pageViewOptions = {
   database: ["attributes", "contracts", "stats"],
   mfl: ["attributes", "stats"],
   agents: ["attributes", "contracts", "next", "current", "all"],
-  club: ["info", "attributes", "contracts", "current", "all"],
+  club: ["attributes", "contracts", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "contracts", "current", "all"],
   myplayers: ["attributes", "next", "contracts", "current", "all"],
@@ -145,14 +145,13 @@ const defaultPageViews = {
   database: "attributes",
   mfl: "attributes",
   agents: "attributes",
-  club: "info",
+  club: "attributes",
   progression: "current",
   watchlist: "current",
   myplayers: "attributes",
 };
 
 const viewSlugs = {
-  info: "info",
   attributes: "attributes",
   next: "next-overall",
   contracts: "contracts",
@@ -175,10 +174,6 @@ function defaultViewSlugForPage(pageName) {
 }
 
 const views = {
-  info: {
-    columns: canonicalTableConfig.viewColumns.attributes,
-    progressionSuffix: null,
-  },
   attributes: {
     columns: canonicalTableConfig.viewColumns.attributes,
     progressionSuffix: null,
