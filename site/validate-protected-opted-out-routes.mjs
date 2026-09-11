@@ -15,10 +15,12 @@ function invariant(condition, message) {
 
 for (const [page, path] of [
   ["myplayers", "/my-players/opted-out"],
+  ["my-clubs", "/my-clubs/opted-out"],
   ["watchlist", "/watchlist/opted-out"],
   ["settings", "/settings/opted-out"],
 ]) {
-  invariant(appConfig.includes(`${page}: "${path}"`), `${page} must own canonical opted-out path ${path}.`);
+  const configKey = page.includes("-") ? `"${page}"` : page;
+  invariant(appConfig.includes(`${configKey}: "${path}"`), `${page} must own canonical opted-out path ${path}.`);
   invariant(routing.includes(`options: { replaceUrl: optedOutPathForPage("${page}") }`), `${page} signed-out routes must canonicalize to their opted-out URL.`);
 }
 
@@ -74,6 +76,7 @@ invariant(
 
 for (const copy of [
   'myplayers: ["My Players", "In order to see your players, you need to opt in."]',
+  '"my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."]',
   'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]',
   'settings: ["Settings", "In order to view settings, you need to opt in."]',
 ]) {
@@ -83,6 +86,7 @@ invariant(
   firstPaint.includes("root.dataset.initialLockedPage = initialLockedPage;")
     && firstPaint.includes('[data-initial-page^="watchlist"]')
     && firstPaint.includes('[data-initial-page^="my-players"]')
+    && firstPaint.includes('[data-initial-page^="my-clubs"]')
     && firstPaint.includes('[data-initial-page="settings"]'),
   "First paint must continue selecting the locked shell from the requested protected route.",
 );

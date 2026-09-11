@@ -223,7 +223,8 @@ function setView() {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  const myClubsRoutePage = document.getElementById("myClubsPage");
+  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "my-clubs" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -263,6 +264,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     homePage.hidden = true;
     progressionPage.hidden = true;
     mflStatsPage.hidden = true;
+    if (myClubsRoutePage) myClubsRoutePage.hidden = true;
     myPlayersLockedPage.hidden = false;
     evaluationPage.hidden = true;
     playerPage.hidden = true;
@@ -270,14 +272,16 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     changelogPage.hidden = true;
     privacyPage.hidden = true;
     if (optInLockedTitle) {
-      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
+      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : pageName === "my-clubs" ? "My Clubs" : "My Players";
     }
     if (optInLockedMessage) {
       optInLockedMessage.textContent = pageName === "watchlist"
         ? "In order to use the watchlist, you need to opt in."
         : pageName === "settings"
           ? "In order to view settings, you need to opt in."
-          : "In order to see your players, you need to opt in.";
+          : pageName === "my-clubs"
+            ? "In order to see your clubs, you need to opt in."
+            : "In order to see your players, you need to opt in.";
     }
     syncHomeLoginButton();
     if (document.body.classList.contains("loading")) {
@@ -292,6 +296,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
 
   const tablePage = tablePages.has(pageName);
   const mflStatsActive = pageName === "mflstats";
+  const myClubsPageActive = pageName === "my-clubs";
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
@@ -309,6 +314,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     homePage.hidden = true;
     progressionPage.hidden = !tablePage;
     mflStatsPage.hidden = !mflStatsActive;
+    if (myClubsRoutePage) myClubsRoutePage.hidden = true;
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
@@ -343,6 +349,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
   mflStatsPage.hidden = !mflStatsActive;
+  if (myClubsRoutePage) myClubsRoutePage.hidden = !myClubsPageActive;
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
@@ -368,6 +375,22 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     buildHeader();
   }
   globalThis.syncQuickFilterLabels?.();
+
+  if (myClubsPageActive) {
+    const renderMyClubsPage = Reflect.get(window, "__mflRenderMyClubsPageOwner");
+    if (typeof renderMyClubsPage !== "function") throw new Error("My Clubs route core is unavailable.");
+    const myClubsRouteEntry = Boolean(options.__mflNavigationTransition);
+    await renderMyClubsPage({ force: options.force === true || myClubsRouteEntry });
+    if (!pageNavigationIsCurrent(options)) return null;
+    const finishMyClubsLoading = Reflect.get(window, "finishLoading");
+    if (document.body.classList.contains("loading") && typeof finishMyClubsLoading === "function") {
+      await finishMyClubsLoading();
+    }
+    if (!pageNavigationIsCurrent(options)) return null;
+    syncHomeLoginButton();
+    if (shouldResetScroll) resetPageScroll();
+    return;
+  }
 
   if (mflStatsActive) {
     state.view = "stats";

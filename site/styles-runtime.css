@@ -7795,6 +7795,288 @@ html.mflSelectionStartupResetPending #selectionBar {
   opacity: 0;
   pointer-events: none;
 }
+/* Source: my-clubs.css */
+/* My Clubs owns only club-card geometry and route-specific states.
+ * Shared page frame, title, panel, metadata, focus, and motion semantics come from canonical foundations. */
+
+.myClubsPage {
+  --my-club-medal-gold: #946a00;
+  --my-club-medal-silver: #5f7185;
+  --my-club-medal-bronze: #93502b;
+  width: 100%;
+  min-width: 0;
+}
+
+:root[data-theme="dark"] .myClubsPage {
+  --my-club-medal-gold: #f0c75e;
+  --my-club-medal-silver: #b7c2d0;
+  --my-club-medal-bronze: #d89462;
+}
+
+.myClubsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.myClubCard {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  align-items: stretch;
+  min-width: 0;
+  min-height: 156px;
+  overflow: hidden;
+  border: var(--mfl-panel-border-strong);
+  border-radius: var(--mfl-radius-panel);
+  background-color: var(--mfl-panel-background);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.18) 14%, rgba(0, 0, 0, 0) 100%),
+    linear-gradient(
+      var(--my-club-primary, var(--surface-muted)) 0%,
+      var(--my-club-secondary, var(--surface-muted)) 100%
+    );
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--mfl-motion-fast) ease;
+}
+
+.myClubCard:hover {
+  border-color: var(--primary-hover);
+}
+
+.myClubCard:hover .myClubCardBody {
+  background-color: var(--row-hover);
+}
+
+.myClubCard.myClubCardNoLogo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.myClubCard:focus-visible {
+  outline: var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color);
+  outline-offset: var(--mfl-focus-ring-offset);
+}
+
+.myClubLogoFrame {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 12px;
+  border-right: 1px solid var(--border);
+  background: transparent;
+}
+
+/* Loaded content and loading shells share the same geometry selectors.
+ * Responsive/data sizing changes therefore propagate to skeletons automatically. */
+.myClubLogo {
+  display: block;
+  width: 100%;
+  max-width: 100px;
+  max-height: 108px;
+}
+
+.myClubLogo {
+  object-fit: contain;
+}
+
+.myClubCardBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 16px 18px;
+  background-color: var(--mfl-panel-background);
+  transition: background-color var(--mfl-motion-fast) ease;
+}
+
+.myClubTitleBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.myClubName {
+  font-size: 20px;
+  font-weight: var(--mfl-section-title-font-weight);
+  line-height: 1.2;
+}
+
+.myClubName {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.myClubId {
+  font-size: 13px;
+  font-weight: var(--mfl-metadata-font-weight);
+  line-height: 1.2;
+}
+
+.myClubId {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+}
+
+.myClubMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-height: 14px;
+  margin-top: 9px;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: var(--mfl-metadata-font-weight);
+  line-height: 1.3;
+}
+
+.myClubCompetitions {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+.myClubCompetition {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: var(--mfl-metadata-font-weight);
+  line-height: 1.25;
+}
+
+.myClubCompetitionName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.myClubCompetitionStanding {
+  flex: 0 0 auto;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.myClubCompetitionStanding[data-medal="gold"] {
+  color: var(--my-club-medal-gold);
+}
+
+.myClubCompetitionStanding[data-medal="silver"] {
+  color: var(--my-club-medal-silver);
+}
+
+.myClubCompetitionStanding[data-medal="bronze"] {
+  color: var(--my-club-medal-bronze);
+}
+
+.myClubCardLoading {
+  pointer-events: none;
+}
+
+.myClubLogoFrameLoading {
+  background: var(--surface-muted);
+}
+
+.myClubLoadingLogo {
+  aspect-ratio: 1;
+  border-radius: var(--mfl-radius-control);
+  background: var(--border);
+  opacity: 0.55;
+}
+
+.myClubLoadingLine {
+  display: block;
+  height: 1lh;
+  border-radius: var(--mfl-radius-control);
+  background: var(--border);
+  opacity: 0.55;
+}
+
+.myClubLoadingId {
+  width: 4ch;
+}
+
+.myClubLoadingName {
+  width: min(12ch, 78%);
+}
+
+.myClubMetaLoading {
+  align-items: center;
+}
+
+.myClubLoadingDivision {
+  width: 7ch;
+}
+
+.myClubLoadingLocation {
+  width: min(10ch, 44%);
+}
+
+.myClubLoadingCompetitionName {
+  width: min(16ch, 62%);
+}
+
+.myClubLoadingCompetitionStanding {
+  flex: 0 0 auto;
+}
+
+.myClubCompetitionLoading:first-child .myClubLoadingCompetitionStanding {
+  width: 3ch;
+}
+
+.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionName {
+  width: min(14ch, 58%);
+}
+
+.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionStanding {
+  width: min(10ch, 32%);
+}
+
+.myClubsStatusWrap {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.myClubsStatus {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.myClubsStatus.error {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.myClubsRetryButton {
+  min-width: 84px;
+}
+
+html[data-stored-wallet-opt-in="true"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="my-clubs"] #myClubsPage {
+  display: block;
+}
+
+html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="my-clubs"] #myPlayersLockedPage {
+  display: grid;
+  place-items: center;
+}
 
 :root {
   --mfl-pager-block-padding: 12px;
@@ -10644,6 +10926,46 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
+  .myClubsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .myClubCard {
+    grid-template-columns: 96px minmax(0, 1fr);
+    min-height: 120px;
+  }
+
+  .myClubLogoFrame {
+    padding: 9px;
+  }
+
+  .myClubLogo {
+    max-width: 76px;
+    max-height: 84px;
+  }
+
+  .myClubCardBody {
+    padding: 11px 12px;
+  }
+
+  .myClubName {
+    font-size: 18px;
+  }
+
+  .myClubId {
+    font-size: 12px;
+  }
+
+  .myClubMeta {
+    font-size: 13px;
+  }
+
+  .myClubCompetition {
+    gap: 8px;
+    font-size: 12px;
+  }
+
 /* Mobile parity contract.
  * Viewport-specific behavior belongs here so desktop changes cannot silently
  * gain a second, competing mobile implementation in a runtime or base style.
@@ -12105,6 +12427,52 @@ html:not(.mflInitialRouteResolved):is(
     text-align: center;
   }
 }
+
+  .myClubsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .myClubCard {
+    grid-template-columns: 104px minmax(0, 1fr);
+    min-height: 128px;
+  }
+
+  .myClubLogoFrame {
+    padding: 10px;
+  }
+
+  .myClubLogo {
+    max-width: 82px;
+    max-height: 90px;
+  }
+
+  .myClubCardBody {
+    padding: 12px 13px;
+  }
+
+  .myClubName {
+    font-size: 19px;
+  }
+
+  .myClubId {
+    font-size: 12px;
+  }
+
+  .myClubMeta {
+    font-size: 14px;
+  }
+
+  .myClubCompetition {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+  }
+
+  .myClubCompetitionStanding {
+    white-space: normal;
+  }
 
 @media (max-width: 380px) {
   :root {

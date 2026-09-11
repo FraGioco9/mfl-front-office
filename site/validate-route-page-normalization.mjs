@@ -30,6 +30,7 @@ invariant(routeConfig, "Generated canonical route configuration is unavailable."
 
 for (const [input, expected] of [
   ["my-players", "myplayers"],
+  ["myclubs", "my-clubs"],
   ["databasestats", "database"],
   ["clubs", "club"],
   ["HOME", "home"],

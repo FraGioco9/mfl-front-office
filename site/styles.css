@@ -4,6 +4,7 @@
 @import url("/controls.css");
 @import url("/footer.css");
 @import url("/loading.css");
+@import url("/my-clubs.css");
 
 :root {
   --mfl-pager-block-padding: 12px;

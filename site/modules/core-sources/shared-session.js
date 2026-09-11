@@ -508,10 +508,11 @@ function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
   const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
   const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
-  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+  const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
   clearWalletNotesState();
+  window.__mflMyClubsRoute?.clear?.();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -563,7 +564,7 @@ function optOutWallet() {
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+  if (state.currentPage === "myplayers" || state.currentPage === "my-clubs" || state.currentPage === "watchlist" || state.currentPage === "settings") {
     setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }

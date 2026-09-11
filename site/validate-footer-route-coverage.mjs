@@ -13,7 +13,7 @@ const generated = read("styles-runtime.css");
 const staticUi = read("static-ui-runtime.js");
 const pageLifecycle = read("modules/core-sources/shared-page-lifecycle.js");
 
-const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
+const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myClubsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
 for (const id of ids) assert.match(html, new RegExp(`<section id="${id}" class="[^"]*\\bpageView\\b[^"]*"`), `${id} must remain a pageView.`);
 
 const mainIndex = html.indexOf("<main>");
@@ -166,7 +166,7 @@ assert.ok(!responsive.includes("body:not(.pinnedSidebarVisible) .myPlayersLocked
 assert.ok(generated.includes(".myPlayersLockedPage {"), "Generated production CSS must include the canonical opted-out shell.");
 assert.ok(!generated.includes(".myPlayersLockedPage {\n  position: fixed;"), "Generated production CSS must keep opted-out routes in normal footer flow.");
 
-for (const protectedPage of ["myplayers", "watchlist", "settings"]) {
+for (const protectedPage of ["myplayers", "my-clubs", "watchlist", "settings"]) {
   assert.ok(pageLifecycle.includes(`pageName === "${protectedPage}"`), `${protectedPage} must remain part of the opted-out route guard.`);
 }
 assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");

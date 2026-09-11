@@ -11,6 +11,7 @@
     evaluation: "Evaluation",
     watchlist: "Watchlist",
     myplayers: "My Players",
+    "my-clubs": "My Clubs",
     player: "Player",
     club: "Club",
     agents: "Agent",
@@ -48,6 +49,7 @@
     const page = cleanText(value).toLowerCase();
     if (page === "mflstats") return "mfl";
     if (page === "my-players") return "myplayers";
+    if (page === "myclubs") return "my-clubs";
     return page || "home";
   }
 
@@ -58,7 +60,8 @@
     if (firstPart === "my-players") return "myplayers";
     if (["club", "clubs"].includes(firstPart)) return "club";
     if (firstPart === "players") return "player";
-    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
+    if (firstPart === "myclubs") return "my-clubs";
+    if (["database", "mfl", "progression", "evaluation", "watchlist", "my-clubs", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
     return "notfound";

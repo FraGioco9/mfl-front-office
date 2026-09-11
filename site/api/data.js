@@ -19,6 +19,7 @@ const {
 const { filterOptionsData } = require("./_filter-options");
 const { databaseStatsData } = require("./_database-stats");
 const { mflStatsSummaryData } = require("./_mfl-stats-summary");
+const { myClubsData, myClubsCompetitionsData } = require("./_my-clubs");
 
 const PUBLIC_SNAPSHOT_MODES = new Set([
   "bootstrap",
@@ -36,6 +37,7 @@ function publicSnapshotEtag(request) {
 }
 
 function requiresSignedWallet(mode, scope, accessMode, publicEntityProgression, publicWatchlistProgression) {
+  if (mode === "my-clubs" || mode === "my-clubs-competitions") return true;
   if (mode !== "page") return false;
   if (scope === "myplayers" || accessMode === "owned-progression") return true;
   return accessMode === "full-progression"
@@ -90,6 +92,10 @@ module.exports = async function handler(request, response) {
       const authStartedAt = performance.now();
       signedWallet = await signedWalletFromRequest(request);
       timings.auth = performance.now() - authStartedAt;
+      if ((mode === "my-clubs" || mode === "my-clubs-competitions") && !signedWallet) {
+        sendJson(response, 401, { error: "Invalid wallet proof." }, startedAt, timings);
+        return;
+      }
     }
 
     async function measuredWalletAllowed(wallet) {
@@ -122,6 +128,8 @@ module.exports = async function handler(request, response) {
     else if (mode === "mfl-stats-summary") data = mflStatsSummaryData();
     else if (mode === "mfl-stats") data = mflStatsData(request, false);
     else if (mode === "mfl-stats-all") data = mflStatsData(request, true);
+    else if (mode === "my-clubs") data = myClubsData(signedWallet);
+    else if (mode === "my-clubs-competitions") data = myClubsCompetitionsData(signedWallet, query.clubIds);
     else {
       timings.query = performance.now() - queryStartedAt;
       sendJson(response, 400, { error: "Invalid database request." }, startedAt, timings);

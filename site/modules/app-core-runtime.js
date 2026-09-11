@@ -992,10 +992,11 @@ function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
   const protectedReturnPath = `${window.location.pathname}${window.location.search}`;
   const routeAtOptOut = pageTargetFromPath(protectedReturnPath);
-  const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)
+  const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)
     ? routeAtOptOut
     : null;
   clearWalletNotesState();
+  window.__mflMyClubsRoute?.clear?.();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -1047,7 +1048,7 @@ function optOutWallet() {
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") {
+  if (state.currentPage === "myplayers" || state.currentPage === "my-clubs" || state.currentPage === "watchlist" || state.currentPage === "settings") {
     setPage(state.currentPage, false, { preserveScroll: true });
     return;
   }
@@ -1270,11 +1271,13 @@ async function openSavedEvaluationsModal() {
 }
 
 function normalizedPageName(pageName) {
-  return pageName === "my-players" ? "myplayers" : pageName;
+  const page = pageName === "my-players" ? "myplayers" : pageName;
+  return page === "myclubs" ? "my-clubs" : page;
 }
 
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
+  "my-clubs": "/my-clubs/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -1292,6 +1295,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
   if (normalizedPage === "settings") return "/settings";
+  if (normalizedPage === "my-clubs") return "/my-clubs";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
     return `/watchlist/${viewSlug(viewName)}`;
@@ -1399,6 +1403,13 @@ function pageTargetFromPath(path) {
         replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
       },
     };
+  }
+
+  if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
+    if (!hasWalletOptIn()) {
+      return { pageName: "my-clubs", options: { replaceUrl: optedOutPathForPage("my-clubs") } };
+    }
+    return { pageName: "my-clubs", options: cleanPath === "/my-clubs" ? {} : { replaceUrl: "/my-clubs" } };
   }
 
   if (cleanPath === "/evaluation") {
@@ -1549,7 +1560,7 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "evaluation", "my-clubs", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -2152,7 +2163,8 @@ function setView() {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
+  const myClubsRoutePage = document.getElementById("myClubsPage");
+  const lockedOptOutRoute = (pageName === "myplayers" || pageName === "my-clubs" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -2192,6 +2204,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     homePage.hidden = true;
     progressionPage.hidden = true;
     mflStatsPage.hidden = true;
+    if (myClubsRoutePage) myClubsRoutePage.hidden = true;
     myPlayersLockedPage.hidden = false;
     evaluationPage.hidden = true;
     playerPage.hidden = true;
@@ -2199,14 +2212,16 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     changelogPage.hidden = true;
     privacyPage.hidden = true;
     if (optInLockedTitle) {
-      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
+      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : pageName === "my-clubs" ? "My Clubs" : "My Players";
     }
     if (optInLockedMessage) {
       optInLockedMessage.textContent = pageName === "watchlist"
         ? "In order to use the watchlist, you need to opt in."
         : pageName === "settings"
           ? "In order to view settings, you need to opt in."
-          : "In order to see your players, you need to opt in.";
+          : pageName === "my-clubs"
+            ? "In order to see your clubs, you need to opt in."
+            : "In order to see your players, you need to opt in.";
     }
     syncHomeLoginButton();
     if (document.body.classList.contains("loading")) {
@@ -2221,6 +2236,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
 
   const tablePage = tablePages.has(pageName);
   const mflStatsActive = pageName === "mflstats";
+  const myClubsPageActive = pageName === "my-clubs";
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
@@ -2238,6 +2254,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     homePage.hidden = true;
     progressionPage.hidden = !tablePage;
     mflStatsPage.hidden = !mflStatsActive;
+    if (myClubsRoutePage) myClubsRoutePage.hidden = true;
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
@@ -2272,6 +2289,7 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
   mflStatsPage.hidden = !mflStatsActive;
+  if (myClubsRoutePage) myClubsRoutePage.hidden = !myClubsPageActive;
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
@@ -2297,6 +2315,22 @@ async function renderPage(pageName, updateHash = true, options = {}) {
     buildHeader();
   }
   globalThis.syncQuickFilterLabels?.();
+
+  if (myClubsPageActive) {
+    const renderMyClubsPage = Reflect.get(window, "__mflRenderMyClubsPageOwner");
+    if (typeof renderMyClubsPage !== "function") throw new Error("My Clubs route core is unavailable.");
+    const myClubsRouteEntry = Boolean(options.__mflNavigationTransition);
+    await renderMyClubsPage({ force: options.force === true || myClubsRouteEntry });
+    if (!pageNavigationIsCurrent(options)) return null;
+    const finishMyClubsLoading = Reflect.get(window, "finishLoading");
+    if (document.body.classList.contains("loading") && typeof finishMyClubsLoading === "function") {
+      await finishMyClubsLoading();
+    }
+    if (!pageNavigationIsCurrent(options)) return null;
+    syncHomeLoginButton();
+    if (shouldResetScroll) resetPageScroll();
+    return;
+  }
 
   if (mflStatsActive) {
     state.view = "stats";

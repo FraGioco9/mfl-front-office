@@ -69,6 +69,7 @@ const validRouteCases = [
   ["/mfl/stats", true],
   ["/progression/current-season", true],
   ["/my-players/attributes", true],
+  ["/my-clubs", true],
   ["/watchlist/current-season", true],
   ["/agents/0xabc/attributes", true],
   ["/clubs/123/squad", true],
@@ -87,7 +88,7 @@ for (const [path, walletOptedIn] of validRouteCases) {
   }
 }
 
-for (const path of ["/my-players/opted-out", "/watchlist/opted-out", "/settings/opted-out"]) {
+for (const path of ["/my-players/opted-out", "/my-clubs/opted-out", "/watchlist/opted-out", "/settings/opted-out"]) {
   const request = routes.initialRequest(path);
   invariant(
     routes.requestShellId(request, { walletOptedIn: false }) === PROTECTED_ROUTE_SHELL_ID,

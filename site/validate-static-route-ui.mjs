@@ -52,9 +52,10 @@ excludes(indexHtml, ') #myPlayersLockedPage {\n        display: block;', "Opted-
 includes(indexHtml, 'root.dataset.initialLockedPage = initialLockedPage;', "Opted-out first paint must preserve the requested protected-route identity before runtime hydration.");
 includes(indexHtml, 'watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."]', "Watchlist must render Watchlist-specific opt-out copy at first paint.");
 includes(indexHtml, 'settings: ["Settings", "In order to view settings, you need to opt in."]', "Settings must render Settings-specific opt-out copy at first paint.");
+includes(indexHtml, '"my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."]', "My Clubs must render My Clubs-specific opt-out copy at first paint.");
 const setPageStart = coreSource.indexOf('async function renderPage(pageName, updateHash = true, options = {}) {');
 invariant(setPageStart >= 0, "Canonical base page renderer must exist for opted-out route validation.");
-const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
+const lockedRouteDecision = coreSource.indexOf('const lockedOptOutRoute = (pageName === "myplayers" || pageName === "my-clubs" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn();', setPageStart);
 const lockedRouteGuard = coreSource.indexOf('if (lockedOptOutRoute) {', lockedRouteDecision);
 const canonicalReplace = coreSource.indexOf('if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl)', lockedRouteDecision);
 const canonicalUpdate = coreSource.indexOf('updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });', lockedRouteDecision);
@@ -65,7 +66,7 @@ invariant(optOutStart >= 0 && optOutEnd > optOutStart, "Wallet opt-out transitio
 const optOutSource = coreSource.slice(optOutStart, optOutEnd);
 includes(optOutSource, 'const protectedReturnPath = `${window.location.pathname}${window.location.search}`;', "Wallet opt-out must capture the exact live URL before clearing wallet identity.");
 includes(optOutSource, 'const routeAtOptOut = pageTargetFromPath(protectedReturnPath);', "Wallet opt-out must derive protected-page identity from the captured live route.");
-includes(optOutSource, 'const protectedRouteAtOptOut = ["myplayers", "watchlist", "settings"].includes(routeAtOptOut.pageName)', "Protected-page opt-out must derive locked-page identity from the live route rather than stale page state.");
+includes(optOutSource, 'const protectedRouteAtOptOut = ["myplayers", "my-clubs", "watchlist", "settings"].includes(routeAtOptOut.pageName)', "Protected-page opt-out must derive locked-page identity from the live route rather than stale page state.");
 includes(optOutSource, 'const optedOutPath = optedOutPathForPage(lockedPage);', "Protected-page opt-out must select the routed page's canonical opted-out URL.");
 includes(optOutSource, 'mflProtectedReturnPath: protectedReturnPath', "Protected-page opt-out must retain the exact signed-in return route in history state.");
 includes(optOutSource, 'setPage(lockedPage, false, { ...lockedOptions, preserveScroll: true });', "Protected-page opt-out must immediately render the locked shell for the routed page.");

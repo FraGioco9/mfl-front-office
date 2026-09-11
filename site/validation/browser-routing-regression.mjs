@@ -119,16 +119,20 @@ const browserTestSource = String.raw`(() => {
         ? "player"
         : window.location.pathname.startsWith("/watchlist/")
           ? (filteredEmpty ? "watchlist-empty" : "watchlist")
-          : window.location.pathname === "/mfl/stats"
-            ? "mflstats"
-            : "unknown";
+          : window.location.pathname === "/my-clubs/opted-out"
+            ? "myclubs-out"
+            : window.location.pathname === "/my-clubs"
+              ? "myclubs"
+              : window.location.pathname === "/mfl/stats"
+                ? "mflstats"
+                : "unknown";
   const testWallet = "0x1111111111111111";
   const testWatchlistId = "browser1";
   const expectedPlayerName = "Browser Player";
   const errors = [];
   let parserSnapshot = null;
 
-  if (scenario === "watchlist" || scenario === "watchlist-empty") {
+  if (scenario === "watchlist" || scenario === "watchlist-empty" || scenario === "myclubs") {
     const proof = {
       type: "user-signature",
       address: testWallet,
@@ -138,10 +142,12 @@ const browserTestSource = String.raw`(() => {
     };
     localStorage.setItem("mfl-linked-wallet-v1", testWallet);
     localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify(proof));
-    localStorage.setItem(
-      "mfl-wallet-watchlist-v1:" + testWallet,
-      JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: ["1"] }]),
-    );
+    if (scenario === "watchlist" || scenario === "watchlist-empty") {
+      localStorage.setItem(
+        "mfl-wallet-watchlist-v1:" + testWallet,
+        JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: ["1"] }]),
+      );
+    }
   }
 
   if (scenario === "player") {
@@ -239,6 +245,12 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialTablePage === "watchlist", "Watchlist first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "current", "Watchlist first paint has the wrong view.");
       assert(parserSnapshot.storedWalletOptIn === "true", "Watchlist first paint did not recognize the stored opt-in.");
+    } else if (scenario === "myclubs") {
+      assert(parserSnapshot.initialPage === "my-clubs", "My Clubs first paint has the wrong initial path.");
+      assert(parserSnapshot.storedWalletOptIn === "true", "My Clubs first paint did not recognize the stored opt-in.");
+    } else if (scenario === "myclubs-out") {
+      assert(parserSnapshot.initialPage === "my-clubs/opted-out", "My Clubs opted-out first paint has the wrong initial path.");
+      assert(parserSnapshot.storedWalletOptIn === "false", "My Clubs opted-out first paint unexpectedly recognized an opt-in.");
     } else if (scenario === "mflstats") {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
@@ -304,6 +316,27 @@ const browserTestSource = String.raw`(() => {
         lockedHidden: hidden("#myPlayersLockedPage"),
       };
     }
+    if (scenario === "myclubs") {
+      return {
+        path: window.location.pathname,
+        title: document.title,
+        pageHidden: hidden("#myClubsPage"),
+        clubCards: document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length,
+        clubText: text("#myClubsGrid"),
+        statusText: text("#myClubsStatus"),
+        lockedHidden: hidden("#myPlayersLockedPage"),
+      };
+    }
+    if (scenario === "myclubs-out") {
+      return {
+        path: window.location.pathname,
+        title: document.title,
+        pageHidden: hidden("#myClubsPage"),
+        lockedHidden: hidden("#myPlayersLockedPage"),
+        lockedTitle: text("#optInLockedTitle"),
+        lockedMessage: text("#optInLockedMessage"),
+      };
+    }
     return {
       path: window.location.pathname,
       title: document.title,
@@ -356,6 +389,20 @@ const browserTestSource = String.raw`(() => {
       );
       assert(stateValue.watchlistName === "Browser List", "Filtered Watchlist selector did not retain the selected list name.");
       assert(stateValue.lockedHidden === true, "Filtered Watchlist incorrectly rendered the guest lock screen.");
+    } else if (scenario === "myclubs") {
+      assert(stateValue.path === "/my-clubs", "My Clubs canonical path is wrong: " + stateValue.path);
+      assert(stateValue.pageHidden === false, "My Clubs page remained hidden after readiness.");
+      assert(stateValue.clubCards === 1, "My Clubs did not render the fixture club card.");
+      assert(stateValue.clubText.includes("Browser Club"), "My Clubs did not render fixture club data.");
+      assert(stateValue.clubText.includes("2nd"), "My Clubs did not render current league position.");
+      assert(stateValue.statusText === "", "My Clubs reported an unexpected load status: " + stateValue.statusText);
+      assert(stateValue.lockedHidden === true, "My Clubs incorrectly rendered the guest lock screen.");
+    } else if (scenario === "myclubs-out") {
+      assert(stateValue.path === "/my-clubs/opted-out", "My Clubs opted-out canonical path is wrong: " + stateValue.path);
+      assert(stateValue.pageHidden === true, "My Clubs private page was visible while opted out.");
+      assert(stateValue.lockedHidden === false, "My Clubs opted-out shell remained hidden.");
+      assert(stateValue.lockedTitle === "My Clubs", "My Clubs opted-out title is wrong.");
+      assert(stateValue.lockedMessage === "In order to see your clubs, you need to opt in.", "My Clubs opted-out copy is wrong.");
     } else if (scenario === "mflstats") {
       assert(stateValue.path === "/mfl/stats", "MFL Stats canonical path is wrong: " + stateValue.path);
       assert(stateValue.total === "1", "MFL Stats total count did not render the fixture player.");
@@ -377,6 +424,19 @@ const browserTestSource = String.raw`(() => {
       await setPage("player", true, { playerId: "1" });
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       await setPage("watchlist", true, { watchlistId: testWatchlistId, view: "current" });
+    } else if (scenario === "myclubs") {
+      const navigation = setPage("my-clubs", true);
+      await waitFor(
+        () => !hidden("#myClubsPage") && document.querySelectorAll("#myClubsGrid .myClubCardLoading").length > 0,
+        "My Clubs did not reveal its canonical shell and skeleton while data was pending.",
+      );
+      await navigation;
+      await waitFor(
+        () => text("#myClubsGrid").includes("2nd"),
+        "My Clubs did not enrich the visible club card with current competition data.",
+      );
+    } else if (scenario === "myclubs-out") {
+      await setPage("my-clubs", true);
     } else if (scenario === "mflstats") {
       await setPage("mfl", true, { view: "stats" });
     }
@@ -395,6 +455,16 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    if (scenario === "myclubs") {
+      await waitFor(
+        () => document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 1,
+        "My Clubs direct refresh did not replace the full-card skeleton with base club content.",
+      );
+      await waitFor(
+        () => text("#myClubsGrid").includes("2nd"),
+        "My Clubs direct refresh did not enrich the base club card with competition data.",
+      );
+    }
     await delay(80);
     const directState = routeState();
     assertRouteState(directState);
@@ -584,6 +654,37 @@ function dataStub(url) {
     };
   }
   if (mode === "page") return pageDataStub(url);
+  if (mode === "my-clubs") {
+    return {
+      clubs: [{
+        clubId: "101",
+        name: "Browser Club",
+        city: "Bologna",
+        nation: "Italy",
+        division: 2,
+        primaryColor: "#112233",
+        secondaryColor: "#445566",
+        logoUrl: "",
+      }],
+      generatedAt,
+      source: "browser-regression",
+    };
+  }
+  if (mode === "my-clubs-competitions") {
+    return {
+      competitionsByClub: {
+        "101": [{
+          competitionId: 501,
+          name: "Browser League",
+          type: "LEAGUE",
+          seasonNumber: 16,
+          standing: { position: 2 },
+        }],
+      },
+      generatedAt,
+      source: "browser-regression",
+    };
+  }
   return {};
 }
 
@@ -622,6 +723,12 @@ async function createRegressionServer() {
       return;
     }
     if (url.pathname === "/api/data") {
+      const mode = String(url.searchParams.get("mode") || "");
+      if (mode === "my-clubs") {
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 180));
+      } else if (mode === "my-clubs-competitions") {
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 220));
+      }
       writeJson(response, dataStub(url));
       return;
     }
@@ -799,6 +906,8 @@ const regressionScenarios = Object.freeze([
   ["player", "/players/1"],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
   ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
+  ["myclubs", "/my-clubs"],
+  ["myclubs-out", "/my-clubs/opted-out"],
   ["mflstats", "/mfl/stats"],
 ]);
 

@@ -150,11 +150,13 @@ async function openSavedEvaluationsModal() {
 }
 
 function normalizedPageName(pageName) {
-  return pageName === "my-players" ? "myplayers" : pageName;
+  const page = pageName === "my-players" ? "myplayers" : pageName;
+  return page === "myclubs" ? "my-clubs" : page;
 }
 
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
+  "my-clubs": "/my-clubs/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -172,6 +174,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
   if (normalizedPage === "settings") return "/settings";
+  if (normalizedPage === "my-clubs") return "/my-clubs";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
     return `/watchlist/${viewSlug(viewName)}`;
@@ -279,6 +282,13 @@ function pageTargetFromPath(path) {
         replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
       },
     };
+  }
+
+  if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
+    if (!hasWalletOptIn()) {
+      return { pageName: "my-clubs", options: { replaceUrl: optedOutPathForPage("my-clubs") } };
+    }
+    return { pageName: "my-clubs", options: cleanPath === "/my-clubs" ? {} : { replaceUrl: "/my-clubs" } };
   }
 
   if (cleanPath === "/evaluation") {
@@ -429,7 +439,7 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "evaluation", "my-clubs", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }

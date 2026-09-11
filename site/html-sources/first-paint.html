@@ -198,9 +198,11 @@
         if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
         const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
           ? tablePage
-          : firstPart === "settings"
-            ? "settings"
-            : "";
+          : firstPart === "my-clubs" || firstPart === "myclubs"
+            ? "my-clubs"
+            : firstPart === "settings"
+              ? "settings"
+              : "";
         if (initialLockedPage) root.dataset.initialLockedPage = initialLockedPage;
         const tableConfig = TABLE_VIEW_CONFIG[tablePage];
         if (tableConfig) {
@@ -300,6 +302,8 @@
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page^="my-clubs"] #sidebar .navButton[data-page="my-clubs"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="myclubs"] #sidebar .navButton[data-page="my-clubs"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
         border-color: var(--primary);
         background: var(--primary);
@@ -314,6 +318,8 @@
       html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
+        [data-initial-page^="my-clubs"],
+        [data-initial-page="myclubs"],
         [data-initial-page="settings"]
       ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
@@ -321,6 +327,8 @@
       html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
+        [data-initial-page^="my-clubs"],
+        [data-initial-page="myclubs"],
         [data-initial-page="settings"]
       ) #myPlayersLockedPage {
         display: grid;
