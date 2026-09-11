@@ -23,13 +23,23 @@ includes(
 );
 includes(
   bootstrap,
-  'const LOADING_VALUE_TEXT = "-";',
-  "The shared non-Player loading placeholder must remain available without forcing it onto Player first paint.",
+  'function createDataPlaceholder(variantClass = "") {',
+  "Bootstrap must own one visual data-placeholder primitive while real component classes retain geometry.",
 );
 includes(
   bootstrap,
-  'Reflect.set(window, "__mflLoadingValueText", LOADING_VALUE_TEXT);',
-  "The loading-value placeholder must be published for route runtimes to reuse.",
+  'placeholder.className = `mflDataPlaceholder${variantClass ? ` ${variantClass}` : ""}`;',
+  "All bootstrap data placeholders must consume the shared presentation foundation without forcing a geometry class.",
+);
+includes(
+  bootstrap,
+  'element.replaceChildren(createTextSkeleton(sample));',
+  "Scalar data loading must preserve the loaded element typography by sizing from representative text.",
+);
+includes(
+  bootstrap,
+  'Reflect.set(window, "__mflCreateDataPlaceholder", createDataPlaceholder);',
+  "The structural placeholder creator must be published for route runtimes that need the same primitive.",
 );
 includes(
   bootstrap,
@@ -38,13 +48,23 @@ includes(
 );
 includes(
   bootstrap,
-  'const BLANK_TABLE_LOADING_TEXT = "\\u00a0";',
-  "Table-row loading skeletons must remain separate from data-box placeholders.",
+  "function appendTableLoadingCellContent(cell, renderedColumn) {",
+  "Table rows must mirror populated cell wrappers rather than inserting generic bars.",
 );
 includes(
   bootstrap,
-  "cell.textContent = BLANK_TABLE_LOADING_TEXT;",
-  "Table-row skeletons must keep their dedicated blank placeholder.",
+  'content.className = "tableControlCellContent tableControlCellContentCentered";',
+  "Selection, actions, and flag skeletons must reuse the populated table centering host.",
+);
+includes(
+  bootstrap,
+  'nameWrap.className = "playerNameCell";',
+  "Name skeletons must preserve the populated player-name wrapper.",
+);
+includes(
+  bootstrap,
+  'content.className = centered ? "tableOverallCellContent" : "tableControlCellContent";',
+  "Data skeletons must reuse the populated table value hosts.",
 );
 excludes(
   bootstrap,
@@ -53,8 +73,8 @@ excludes(
 );
 includes(
   bootstrap,
-  '<strong>${BLANK_TABLE_LOADING_TEXT}</strong>',
-  "Player loading cards must keep pending data visually blank while preserving their final geometry.",
+  'firstPaintTextSkeletonHtml(index === 0 ? "85" : "82", "attributeValueText")',
+  "Player loading cards must size skeletons through representative values inside the loaded typography classes.",
 );
 includes(
   bootstrap,

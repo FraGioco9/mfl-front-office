@@ -356,7 +356,10 @@
       distributionMode,
       rows,
     ]);
-    if (container.dataset.mflStatsDistributionSignature === distributionSignature && container.firstElementChild) return;
+    const renderedDistribution = container.firstElementChild;
+    if (container.dataset.mflStatsDistributionSignature === distributionSignature
+        && renderedDistribution
+        && !renderedDistribution.classList.contains("mflStatsHistogramSkeleton")) return;
     container.dataset.mflStatsDistributionSignature = distributionSignature;
 
     if (!counts.size) {

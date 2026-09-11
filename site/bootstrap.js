@@ -10,8 +10,6 @@
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v2:";
   const EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
-  const LOADING_VALUE_TEXT = "-";
-  const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const FIRST_PAINT_HORIZONTAL_MEDIA = window.matchMedia("(max-width: 900px)");
   const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
   const FIRST_PAINT_OVERFLOW_CLASS = "mflViewsOverflowing";
@@ -59,13 +57,57 @@
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
-  function setLoadingValue(target) {
+  const LOADING_TEXT_SAMPLES = Object.freeze({
+    totalPlayers: "1,500",
+    totalWallets: "500",
+    homePlayers: "1,500",
+    homeWallets: "500",
+    evaluationDiscountRate: "15%",
+    settingsAgentName: "Agent Name",
+    settingsWalletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+    databaseStatsTotalPlayers: "1,500",
+    databaseStatsRetiringThree: "150",
+    databaseStatsRetiringTwo: "100",
+    databaseStatsRetiringOne: "50",
+    databaseStatsRetired: "250",
+    mflStatsTotalPlayers: "250",
+    mflStatsPackablePlayers: "125",
+    mflStatsAgedPlayers: "75",
+    mflStatsOtherPlayers: "50",
+  });
+
+  function createDataPlaceholder(variantClass = "") {
+    const placeholder = document.createElement("span");
+    placeholder.className = `mflDataPlaceholder${variantClass ? ` ${variantClass}` : ""}`;
+    placeholder.setAttribute("aria-hidden", "true");
+    return placeholder;
+  }
+
+  function createTextSkeleton(sampleText = "00", hostClass = "") {
+    const host = document.createElement("span");
+    host.className = `mflSkeletonText${hostClass ? ` ${hostClass}` : ""}`;
+    host.setAttribute("aria-hidden", "true");
+
+    const sample = document.createElement("span");
+    sample.className = "mflSkeletonTextSample";
+    sample.textContent = String(sampleText || "00");
+
+    const fill = createDataPlaceholder("mflSkeletonTextFill");
+    host.append(sample, fill);
+    return host;
+  }
+
+  function setLoadingValue(target, sampleText = "") {
     const element = typeof target === "string" ? document.getElementById(target) : target;
-    if (element instanceof HTMLElement) element.textContent = LOADING_VALUE_TEXT;
+    if (element instanceof HTMLElement) {
+      const sample = String(sampleText || LOADING_TEXT_SAMPLES[element.id] || "00");
+      element.replaceChildren(createTextSkeleton(sample));
+    }
     return element;
   }
 
-  Reflect.set(window, "__mflLoadingValueText", LOADING_VALUE_TEXT);
+  Reflect.set(window, "__mflCreateDataPlaceholder", createDataPlaceholder);
+  Reflect.set(window, "__mflCreateTextSkeleton", createTextSkeleton);
   Reflect.set(window, "__mflSetLoadingValue", setLoadingValue);
 
   root.classList.add("mflSingleRenderPending");
@@ -192,6 +234,19 @@
     }
   }
 
+  function createEvaluationRecentLoadingPlaceholder() {
+    const placeholder = document.createElement("div");
+    placeholder.className = "evaluationSearchResult mflEvaluationRecentPlaceholder";
+    placeholder.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("strong");
+    name.appendChild(createTextSkeleton("Player Name"));
+    const metadata = document.createElement("span");
+    metadata.appendChild(createTextSkeleton("CM · 24 · Overall 85"));
+    placeholder.append(name, metadata);
+    return placeholder;
+  }
+
   function syncFirstPaintEvaluationRecentLoadingShell() {
     const results = document.getElementById("evaluationSearchResults");
     if (!(results instanceof HTMLElement)) return false;
@@ -205,21 +260,17 @@
       return false;
     }
 
-    const currentHint = results.firstElementChild;
+    const loadingPlaceholders = Array.from(results.children);
     if (results.dataset.mflEvaluationRecentLoading === "true"
-      && results.hidden === false
-      && results.children.length === 1
-      && currentHint instanceof HTMLElement
-      && currentHint.classList.contains("searchHint")
-      && currentHint.textContent === "Loading…") {
+      && loadingPlaceholders.length === 3
+      && loadingPlaceholders.every((placeholder) => placeholder instanceof HTMLElement
+        && placeholder.classList.contains("mflEvaluationRecentPlaceholder"))) {
+      results.hidden = false;
       return true;
     }
 
-    const hint = document.createElement("div");
-    hint.className = "searchHint";
-    hint.textContent = "Loading…";
     results.dataset.mflEvaluationRecentLoading = "true";
-    results.replaceChildren(hint);
+    results.replaceChildren(...Array.from({ length: 3 }, createEvaluationRecentLoadingPlaceholder));
     results.hidden = false;
     return true;
   }
@@ -733,6 +784,119 @@
 
   Reflect.set(window, "__mflTableLoadingRowCount", tableLoadingRowCount);
 
+  function loadingTableView() {
+    const activeView = document.querySelector("#progressionPage .viewButton.active[data-view]");
+    const activeViewName = activeView instanceof HTMLElement ? activeView.dataset.view : "";
+    return String(activeViewName || root.dataset.initialTableView || "attributes").toLowerCase();
+  }
+
+  function tableLoadingTextSample(columnClassName = "") {
+    const classes = new Set(String(columnClassName || "").split(/\s+/).filter(Boolean));
+    const view = loadingTableView();
+    if (classes.has("col-name")) return "Name Surname";
+    if (classes.has("col-listing")) return "1,234 MFL";
+    if (classes.has("col-age")) return "24";
+    if (classes.has("col-positions")) return "CM, RW";
+    if (classes.has("col-seasons")) return "4";
+    if (classes.has("col-contract-revenue")) return "25%";
+    if (classes.has("col-contract-club")) return "Club Name";
+    if (classes.has("col-contract-division")) return "Diamond";
+    if (classes.has("col-agent")) return "Agent Name";
+    if (classes.has("col-overall")) return view === "next" ? "85 (4.2)" : (view === "current" || view === "all" ? "85 (+3)" : "85");
+    if (classes.has("col-stat")) return view === "next" ? "82 (3.5)" : (view === "current" || view === "all" ? "82 (+2)" : "82");
+    return "00";
+  }
+
+  function createElementSkeleton(sampleElement) {
+    const host = document.createElement("span");
+    host.className = "mflSkeletonElement";
+    host.setAttribute("aria-hidden", "true");
+    sampleElement.classList.add("mflSkeletonElementSample");
+    sampleElement.tabIndex = -1;
+    const fill = createDataPlaceholder("mflSkeletonElementFill");
+    host.append(sampleElement, fill);
+    return host;
+  }
+
+  function appendTableLoadingCellContent(cell, renderedColumn) {
+    const columnClassName = renderedColumn instanceof HTMLElement ? renderedColumn.className : "";
+    const classes = new Set(String(columnClassName || "").split(/\s+/).filter(Boolean));
+    if (renderedColumn instanceof HTMLElement) cell.className = columnClassName;
+
+    if (classes.has("col-select")) {
+      cell.classList.add("selectionCell");
+      const content = document.createElement("span");
+      content.className = "tableControlCellContent tableControlCellContentCentered";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.disabled = true;
+      input.setAttribute("aria-hidden", "true");
+      content.appendChild(createElementSkeleton(input));
+      cell.appendChild(content);
+      return;
+    }
+
+    if (classes.has("col-actions")) {
+      cell.classList.add("rowActionsCell");
+      const content = document.createElement("span");
+      content.className = "tableControlCellContent tableControlCellContentCentered";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.disabled = true;
+      button.className = "playerTableActionsButton";
+      button.setAttribute("aria-hidden", "true");
+      content.appendChild(createElementSkeleton(button));
+      cell.appendChild(content);
+      return;
+    }
+
+    if (classes.has("col-flag")) {
+      cell.classList.add("flagCell");
+      const content = document.createElement("span");
+      content.className = "tableControlCellContent tableControlCellContentCentered";
+      const flag = createDataPlaceholder("flagImage mflTableFlagPlaceholder");
+      content.appendChild(flag);
+      cell.appendChild(content);
+      return;
+    }
+
+    if (classes.has("col-name")) {
+      cell.classList.add("nameCell");
+      const nameWrap = document.createElement("div");
+      nameWrap.className = "playerNameCell";
+      nameWrap.appendChild(createTextSkeleton("Name Surname", "playerNameLink"));
+      cell.appendChild(nameWrap);
+      return;
+    }
+
+    if (classes.has("col-listing")) {
+      const host = document.createElement("span");
+      host.className = "listingCellTableHost";
+      const badge = document.createElement("span");
+      badge.className = "listingCellContent mflDataPlaceholder mflTableListingPlaceholder";
+      badge.setAttribute("aria-hidden", "true");
+      const icon = document.createElement("span");
+      icon.className = "listingCellIcon";
+      const price = document.createElement("span");
+      price.className = "listingCellPrice mflSkeletonTextSample";
+      price.textContent = "1,234 MFL";
+      badge.append(icon, price);
+      host.appendChild(badge);
+      cell.appendChild(host);
+      return;
+    }
+
+    const content = document.createElement("span");
+    const centered = classes.has("col-overall");
+    content.className = centered ? "tableOverallCellContent" : "tableControlCellContent";
+    if (classes.has("col-overall")) {
+      const rarityCircle = createDataPlaceholder("tableOverallRarityCircle mflTableRarityPlaceholder");
+      content.appendChild(rarityCircle);
+    }
+    content.appendChild(createTextSkeleton(tableLoadingTextSample(columnClassName)));
+    cell.appendChild(content);
+  }
+
   function primeInitialTableRows(replaceExisting = false) {
     const body = document.getElementById("tableBody");
     const colGroup = document.getElementById("tableColGroup");
@@ -741,7 +905,6 @@
 
     const renderedColumns = Array.from(colGroup?.children || []);
     const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);
-    const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));
     const rowCount = tableLoadingRowCount();
     const fragment = document.createDocumentFragment();
     Array.from({ length: rowCount }, (_, index) => {
@@ -753,14 +916,7 @@
       row.style.opacity = String(opacity);
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
         const cell = document.createElement("td");
-        if (columnIndex === nameColumnIndex) {
-          const nameCell = document.createElement("span");
-          nameCell.className = "playerNameCell";
-          nameCell.textContent = BLANK_TABLE_LOADING_TEXT;
-          cell.appendChild(nameCell);
-        } else {
-          cell.textContent = BLANK_TABLE_LOADING_TEXT;
-        }
+        appendTableLoadingCellContent(cell, renderedColumns[columnIndex]);
         row.appendChild(cell);
       }
       fragment.appendChild(row);
@@ -858,18 +1014,47 @@
     primeSettingsActions();
   }
 
+  function primeStatsHistogramSkeleton(target) {
+    const element = typeof target === "string" ? document.getElementById(target) : target;
+    if (!(element instanceof HTMLElement)) return element;
+
+    delete element.dataset.mflStatsDistributionSignature;
+    const heights = [44, 68, 36, 82, 58, 76, 48, 64, 40, 72, 52, 60];
+    const histogram = document.createElement("div");
+    histogram.className = "mflStatsHistogram mflStatsHistogramSkeleton";
+    histogram.style.setProperty("--mfl-stats-bars", String(heights.length));
+
+    heights.forEach((height, index) => {
+      const item = document.createElement("div");
+      item.className = "mflStatsHistogramItem";
+      const bar = document.createElement("div");
+      bar.className = "mflStatsHistogramBar";
+      const fill = createDataPlaceholder("mflStatsHistogramFill mflStatsHistogramSkeletonFill");
+      fill.style.setProperty("--bar-height", `${height}%`);
+      const label = document.createElement("span");
+      label.className = "mflStatsHistogramLabel";
+      label.appendChild(createTextSkeleton(String(50 + index * 4)));
+      bar.appendChild(fill);
+      item.append(bar, label);
+      histogram.appendChild(item);
+    });
+
+    element.replaceChildren(histogram);
+    return element;
+  }
+
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
       ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
-        .forEach(setLoadingValue);
-      document.getElementById("databaseStatsDistribution")?.replaceChildren();
+        .forEach((id) => setLoadingValue(id));
+      primeStatsHistogramSkeleton("databaseStatsDistribution");
       return;
     }
     if (target.id === "mflStatsPage") {
       primeMflStatsControls();
       ["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]
-        .forEach(setLoadingValue);
-      document.getElementById("mflStatsAgeDistribution")?.replaceChildren();
+        .forEach((id) => setLoadingValue(id));
+      primeStatsHistogramSkeleton("mflStatsAgeDistribution");
     }
   }
 
@@ -904,6 +1089,12 @@
       '"': "&quot;",
       "'": "&#39;",
     })[character]);
+  }
+
+  function firstPaintTextSkeletonHtml(sampleText, hostClass = "") {
+    const className = `mflSkeletonText${hostClass ? ` ${hostClass}` : ""}`;
+    const sample = escapeFirstPaintPlayerHtml(sampleText || "00");
+    return `<span class="${className}" aria-hidden="true"><span class="mflSkeletonTextSample">${sample}</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span>`;
   }
 
   function firstPaintPlayerRetirementMarkerHtml(context) {
@@ -986,30 +1177,31 @@
       const cardClass = label === "Contract"
         ? "contractDetailCard playerInfoFullWidthCard"
         : (label === "Rev Share" ? "revShareDetailCard playerInfoFullWidthCard" : "");
-      let valueHtml = BLANK_TABLE_LOADING_TEXT;
+      const samples = { Nationality: "Italy", Age: "24", Height: "182 cm", Foot: "Right", Seasons: "4", Agent: "Agent Name", Contract: "Club Name · Diamond", "Rev Share": "25%" };
+      let valueHtml = firstPaintTextSkeletonHtml(samples[label] || "00");
       if (label === "Age") {
         const cachedAge = firstPaintPlayerKnownDisplay(firstPaintContext, "age");
-        valueHtml = `<span class="playerDetailAgeLine">${cachedAge ? escapeFirstPaintPlayerHtml(cachedAge) : BLANK_TABLE_LOADING_TEXT}${firstPaintPlayerRetirementMarkerHtml(firstPaintContext)}</span>`;
+        valueHtml = `<span class="playerDetailAgeLine">${cachedAge ? escapeFirstPaintPlayerHtml(cachedAge) : firstPaintTextSkeletonHtml("24")}${firstPaintPlayerRetirementMarkerHtml(firstPaintContext)}</span>`;
       }
       return `<div${cardClass ? ` class="${cardClass}"` : ""}><span>${label}</span><strong>${valueHtml}</strong></div>`;
     }).join("");
     const attributeLabels = playerLoadingAttributeLabels(firstPaintContext);
     const goalkeeperAttributeShell = attributeLabels.length === 2;
     const attributeCards = attributeLabels.map((label, index) => (
-      `<div class="playerAttributeCard${index === 0 ? " featured" : ""}${index === 0 || goalkeeperAttributeShell ? " fullWidth" : ""}"><span>${label || BLANK_TABLE_LOADING_TEXT}</span><strong>${BLANK_TABLE_LOADING_TEXT}</strong></div>`
+      `<div class="playerAttributeCard${index === 0 ? " featured" : ""}${index === 0 || goalkeeperAttributeShell ? " fullWidth" : ""}"><span>${label || firstPaintTextSkeletonHtml("Attribute")}</span><strong>${firstPaintTextSkeletonHtml(index === 0 ? "85" : "82", "attributeValueText")}</strong></div>`
     )).join("");
 
     playerDetail.dataset.loadingShell = "true";
     playerDetail.innerHTML = `
       <section class="playerHero playerHeroPending" aria-hidden="true">
         <div class="playerHeroMedia">
-          <div class="playerHeroOverall isPending"><strong>&nbsp;</strong></div>
+          <div class="playerHeroOverall isPending"><strong>${firstPaintTextSkeletonHtml("85")}</strong></div>
           <div class="playerHeroPortraitFrame"><canvas class="playerHeroPortrait" aria-hidden="true"></canvas></div>
         </div>
         <div class="playerHeroIdentity">
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
-          <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
-          <p>&nbsp;</p>
+          <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">${firstPaintTextSkeletonHtml("Name Surname")}</span></h2>
+          <p>${firstPaintTextSkeletonHtml("CM, RW")}</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">
           <div class="playerHeroActionMenu">

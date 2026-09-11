@@ -90,7 +90,10 @@ for (const token of [
 assert.ok(indexHtml.includes('<h2 class="playerTitle">'), "Parser-owned Player hero must use the same title class structure as the hydrated hero.");
 assert.ok(!indexHtml.includes('<h2 class="tablePageTitle playerTitle">'), "Player first paint must not inherit table-title layout that changes the mobile hero size before hydration.");
 assert.ok(indexHtml.includes('<div class="attributeGrid" data-mfl-static-player-attributes>'), "Static Player first paint must own a parser-synchronized Attribute grid.");
-assert.ok(indexHtml.includes('<span>Overall</span><strong>&nbsp;</strong>'), "Overall is position-independent and must be labeled before cached values are projected.");
+assert.ok(
+  indexHtml.includes('<span>Overall</span><strong><span class="mflSkeletonText attributeValueText"'),
+  "Overall is position-independent and must be labeled with loaded-value typography before cached values are projected.",
+);
 for (const label of ["Nationality", "Height", "Foot", "Seasons", "Agent", "Contract", "Rev Share"]) {
   assert.ok(!indexHtml.includes(`<span>${label}</span><strong>-</strong>`), `Static Player first paint must not show '-' for pending ${label} data.`);
 }

@@ -1,5 +1,6 @@
 const validators = [
   "validate-loading-ownership.mjs",
+  "validate-data-shaped-loading-foundation.mjs",
   "validate-home-summary-first-paint.mjs",
   "validate-route-runtime.mjs",
   "validate-bootstrap-ownership.mjs",

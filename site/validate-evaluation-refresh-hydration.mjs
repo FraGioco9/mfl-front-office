@@ -3,7 +3,7 @@ import { readCanonicalCoreArtifacts, readCanonicalCoreSource } from "./validate-
 
 const read = (path) => readValidationText(path, import.meta.url);
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
-const [appCoreSource, bootstrap, searchRuntime, loading, responsive, indexHtml] = await Promise.all([
+const [appCoreSource, bootstrap, searchRuntime, loading, indexHtml] = await Promise.all([
   Promise.all([
     readCanonicalCoreSource("shared"), read("./modules/core-sources/evaluation.js"),
     read("./modules/core-sources/mfl-stats.js"), read("./modules/core-sources/club.js"),
@@ -12,7 +12,7 @@ const [appCoreSource, bootstrap, searchRuntime, loading, responsive, indexHtml] 
     read("./modules/core-sources/watchlist.js"),
   ]).then((parts) => parts.join("\n")),
   read("./bootstrap.js"), read("./evaluation-search-state-runtime.js"),
-  read("./loading.css"), read("./responsive.css"), read("./index.html"),
+  read("./loading.css"), read("./index.html"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
@@ -71,11 +71,11 @@ const primeEnd = shared.indexOf("function waitForEvaluationDiscountRate()", prim
 const prime = shared.slice(primeStart, primeEnd);
 invariant(!prime.includes("focus(") && !prime.includes("select()")
   && prime.includes("void prime(false, true, false);")
-  && searchRuntime.includes('hint.textContent = "Loading…";')
+  && searchRuntime.includes("function renderRecentLoadingSkeleton(field = input())")
   && searchRuntime.includes("ownsEmptyRecentResults"),
-  "Plain Evaluation must not auto-focus, while unresolved recent-five rows show one local Loading… surface on refresh and in-site entry.");
+  "Plain Evaluation must not auto-focus, while unresolved recent-five rows show the local result-shaped skeleton surface on refresh and in-site entry.");
 
-const firstPaintLoadingSelector = 'html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n  #evaluationSearchResults[hidden]:empty::before';
+const firstPaintLoadingSelector = 'html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n  #evaluationSearchResults[data-mfl-evaluation-recent-loading="true"][hidden]';
 const evaluationHandoffMarker = '<!-- Evaluation first paint: expose the route only after top controls are fully parsed. -->';
 const evaluationHandoffIndex = indexHtml.indexOf(evaluationHandoffMarker);
 const evaluationOptionsIndex = indexHtml.indexOf('id="evaluationOptionFilters"');
@@ -101,31 +101,32 @@ invariant(
   "Parser-time plain Evaluation actions must use final mobile grid and desktop/tablet flex display.",
 );
 invariant(
-  loading.includes(`${firstPaintLoadingSelector} {\n  content: "Loading…";\n  color: var(--text-soft);\n  font-size: 12px;\n}`)
-    && loading.includes(`@media (max-width: 900px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 10px;\n  }\n}`)
-    && loading.includes(`@media (max-width: 520px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 9px;\n  }\n}`)
-    && loading.includes(`@media (max-width: 380px) {\n  html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="false"]\n    #evaluationSearchResults[hidden]:empty::before {\n    font-size: 8px;\n  }\n}`)
-    && responsive.includes(".searchHint {\n    font-size: 10px;\n  }")
-    && responsive.includes(".searchHint {\n    font-size: 9px;\n  }")
-    && responsive.includes(".searchHint {\n    font-size: 8px;\n  }"),
-  "Evaluation parser-time Loading… typography must match the hydrated searchHint contract at desktop, tablet, phone, and tiny-phone breakpoints.",
+  loading.includes(`${firstPaintLoadingSelector} {\n  display: grid;\n}`)
+    && (indexHtml.match(/evaluationSearchResult mflEvaluationRecentPlaceholder/g) || []).length >= 3
+    && (indexHtml.match(/<strong><span class="mflSkeletonText"/g) || []).length >= 3
+    && (indexHtml.match(/<span><span class="mflSkeletonText"/g) || []).length >= 3
+    && !loading.includes('content: "Loading…";'),
+  "Evaluation parser-time loading must reuse the loaded result row, name, and metadata layout with representative skeleton text.",
 );
 
 invariant(bootstrap.includes("function syncFirstPaintEvaluationRecentLoadingShell()")
-  && bootstrap.includes('const currentHint = results.firstElementChild;')
+  && bootstrap.includes("const loadingPlaceholders = Array.from(results.children);")
   && bootstrap.includes('results.dataset.mflEvaluationRecentLoading === "true"')
-  && bootstrap.includes('currentHint.textContent === "Loading…"')
-  && bootstrap.includes('hint.textContent = "Loading…";')
+  && bootstrap.includes("loadingPlaceholders.length === 3")
+  && bootstrap.includes('placeholder.classList.contains("mflEvaluationRecentPlaceholder")')
+  && bootstrap.includes('name.appendChild(createTextSkeleton("Player Name"));')
+  && bootstrap.includes('metadata.appendChild(createTextSkeleton("CM · 24 · Overall 85"));')
+  && bootstrap.includes('results.replaceChildren(...Array.from({ length: 3 }, createEvaluationRecentLoadingPlaceholder));')
   && bootstrap.includes('results.dataset.mflEvaluationRecentLoading = "true";')
   && bootstrap.includes('Reflect.set(window, "__mflSyncEvaluationRecentLoadingShell", syncFirstPaintEvaluationRecentLoadingShell);')
   && bootstrap.includes("syncFirstPaintEvaluationRecentLoadingShell();")
   && shared.includes('if (preserveInitialRecentLoading) window.__mflSyncEvaluationRecentLoadingShell?.();')
   && !shared.includes('if (requestedPageName === "evaluation") {\n    window.__mflSyncEvaluationRecentLoadingShell?.();\n  }'),
-  "Evaluation recent Loading must be painted before destination visibility, reuse its existing DOM node when already owned, and never be recreated by route commit.");
+  "Evaluation recent loading must be painted before destination visibility, reuse its result-shaped DOM when already owned, and never be recreated by route commit.");
 invariant(bootstrap.includes("function firstPaintEvaluationRouteState(")
   && !bootstrap.includes("requestPlainEvaluationFirstPaintFocus")
   && !bootstrap.includes("searchInput.focus({ preventScroll: true });")
   && !bootstrap.includes("searchInput.select();"),
   "Bootstrap may restore selected names but must never auto-focus plain Evaluation.");
 new Function(shared); new Function(evaluation);
-console.log("Evaluation refresh/loading validation passed: one snapshot lifecycle, stale-route guards, stable Loading typography, local recent-five Loading feedback, background refresh, cached saved reuse, and no autofocus.");
+console.log("Evaluation refresh/loading validation passed: one snapshot lifecycle, stale-route guards, stable result-shaped loading geometry, local recent-five skeleton feedback, background refresh, cached saved reuse, and no autofocus.");

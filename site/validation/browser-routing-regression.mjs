@@ -310,6 +310,8 @@ const browserTestSource = String.raw`(() => {
       total: text("#mflStatsTotalPlayers"),
       packable: text("#mflStatsPackablePlayers"),
       statsHidden: hidden("#mflStatsPage"),
+      distributionSkeleton: Boolean(document.querySelector("#mflStatsAgeDistribution .mflStatsHistogramSkeleton")),
+      distributionColumns: document.querySelectorAll("#mflStatsAgeDistribution .mflStatsHistogramFill:not(.mflStatsHistogramSkeletonFill)").length,
     };
   }
 
@@ -359,6 +361,8 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.total === "1", "MFL Stats total count did not render the fixture player.");
       assert(stateValue.packable === "1", "MFL Stats packable count did not classify the fixture player.");
       assert(stateValue.statsHidden === false, "MFL Stats page remained hidden after readiness.");
+      assert(stateValue.distributionSkeleton === false, "MFL Stats kept its skeleton after authoritative data rendered.");
+      assert(stateValue.distributionColumns > 0, "MFL Stats did not restore real histogram columns after navigation.");
     }
   }
 
