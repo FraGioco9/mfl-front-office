@@ -136,7 +136,7 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   if (pageName === "club") {
     const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
     const clubId = String(options?.clubId || route?.clubId || "").trim();
-    const view = String(options?.view || route?.view || "info");
+    const view = String(options?.view || route?.view || "attributes");
     const navigateClub = window.mflOpenClubPage;
     if (!clubId || typeof navigateClub !== "function") {
       throw new Error("Club navigation gate is unavailable during startup.");
