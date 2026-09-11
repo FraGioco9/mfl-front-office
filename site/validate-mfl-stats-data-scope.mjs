@@ -3,9 +3,10 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
+const [dataPage, dataQuery, mflStatsSummary, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
+  read("./api/_mfl-stats-summary.js"),
   read("./styles.css"),
   read("./styles-base.css"),
   read("./controls.css"),
@@ -32,6 +33,18 @@ invariant(
 invariant(
   dataPage.includes('const pageSize = scope === "mflstats"\n    ? Math.max(1, totalRows)'),
   "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
+);
+invariant(
+  mflStatsSummary.includes('tableExists("runtime_mfl_stats_summary")')
+    && mflStatsSummary.includes("precomputedMflStatsSummaryRows()")
+    && mflStatsSummary.includes("liveMflStatsSummaryRows()")
+    && mflStatsSummary.includes('"sqlite-runtime-precomputed-mfl-stats-summary"'),
+  "MFL Stats summary must prefer the precomputed runtime aggregate while retaining the live older-snapshot fallback.",
+);
+invariant(
+  mflStatsSummary.includes("FROM runtime_mfl_stats_summary")
+    && mflStatsSummary.includes("ORDER BY overall, age, category"),
+  "The precomputed MFL Stats summary read must stay a compact deterministic ordered scan.",
 );
 
 for (const selector of [
