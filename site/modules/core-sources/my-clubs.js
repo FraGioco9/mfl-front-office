@@ -100,7 +100,7 @@
     const location = [String(club?.city || "").trim(), countryLabel(club?.nation)].filter(Boolean).join(", ");
     const card = document.createElement("a");
     card.className = "myClubCard myClubCardLoading";
-    card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/squad` : "#";
+    card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/info` : "#";
     card.dataset.clubId = clubId;
     card.setAttribute("aria-hidden", "true");
 
@@ -212,7 +212,9 @@
     return "";
   }
 
-  function saveClubDestination(clubId, name, divisionInfo) {
+  function saveClubDestination(club, divisionInfo) {
+    const clubId = String(club?.clubId || "").trim();
+    const name = String(club?.name || "").trim();
     if (!clubId || !name) return;
     try {
       const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
@@ -222,6 +224,15 @@
         name,
         divisionName: String(divisionInfo?.name || ""),
         divisionColor: String(divisionInfo?.color || ""),
+        city: String(club?.city || "").trim(),
+        nation: String(club?.nation || "").trim(),
+        primaryColor: safeColor(club?.primaryColor),
+        secondaryColor: safeColor(club?.secondaryColor),
+        logoUrl: String(club?.logoUrl || "").trim(),
+        logoVersion: String(club?.logoVersion || "").trim(),
+        currentCompetitions: Array.isArray(club?.competitions)
+          ? club.competitions.map((competition) => ({ ...competition }))
+          : [],
       };
       localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -292,7 +303,7 @@
 
     const link = document.createElement("a");
     link.className = "myClubCard";
-    link.href = `/clubs/${encodeURIComponent(clubId)}/squad`;
+    link.href = `/clubs/${encodeURIComponent(clubId)}/info`;
     link.dataset.clubId = clubId;
     link.setAttribute("aria-label", `Open ${name}`);
     if (primary || secondary) {
@@ -357,8 +368,8 @@
       const openClub = Reflect.get(window, "mflOpenClubPage");
       if (!clubId || typeof openClub !== "function") return;
       event.preventDefault();
-      saveClubDestination(clubId, name, divisionInfo);
-      void openClub(clubId, "attributes");
+      saveClubDestination(club, divisionInfo);
+      void openClub(clubId, "info");
     });
     return link;
   }
