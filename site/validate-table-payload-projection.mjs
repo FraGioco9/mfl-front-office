@@ -40,6 +40,8 @@ for (const column of ["pace", "shooting", "passing", "dribbling", "defense", "ph
 
 for (const column of [
   "active_contract_revenue_share",
+  "active_contract_revenue_share_penalty",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
