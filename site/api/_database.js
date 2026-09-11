@@ -109,6 +109,7 @@ let runtimeMetadata = new Map();
 let availablePlayerColumns = null;
 let marketplacePrices = Object.freeze({});
 const TABLE_EXISTS_CACHE = new Map();
+const TABLE_COLUMNS_CACHE = new Map();
 const STATEMENT_CACHE_MAX_ENTRIES = 128;
 const STATEMENT_CACHE = new Map();
 
@@ -224,6 +225,19 @@ function tableExists(tableName) {
   return exists;
 }
 
+function tableColumnNames(tableName) {
+  const name = String(tableName || "");
+  if (!/^[a-zA-Z0-9_]+$/.test(name)) return Object.freeze([]);
+  if (TABLE_COLUMNS_CACHE.has(name)) return TABLE_COLUMNS_CACHE.get(name);
+  if (!tableExists(name)) return Object.freeze([]);
+
+  const columns = Object.freeze(
+    queryRows(`PRAGMA table_info(${name})`).map((row) => String(row.name || "")),
+  );
+  TABLE_COLUMNS_CACHE.set(name, columns);
+  return columns;
+}
+
 function quoteIdentifier(value) {
   const name = String(value || "");
   if (!VALID_PLAYER_COLUMNS.has(name)) {
@@ -291,6 +305,7 @@ module.exports = {
   normalizeSearchText,
   normalizeWalletName,
   tableExists,
+  tableColumnNames,
   quoteIdentifier,
   playerSelectExpression,
   selectList,
