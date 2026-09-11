@@ -165,6 +165,8 @@ Cross-site semantic values live in `ui-foundations.css`:
 - Checkbox size: `16px` (`--mfl-checkbox-size`)
 - Checkbox radius: `4px` (`--mfl-radius-checkbox`)
 
+Default inputs/selects/buttons consume the shared standard height and control radius. View, Filters, Search, Rows, page-size, Watchlist, and filter-summary chrome consume the same standard height where they are the equivalent ordinary 40px control role; their widths and specialist internals remain locally owned. Search, View, and Filters also consume the shared standard label/line-height contracts where applicable.
+
 Specialized tiny steppers, table action buttons, mobile-only touch geometry, and other domain-specific controls keep their own sizes. View and Filters share the standard 14px label size and 700 weight; View, Filters, Search, and refresh-first-paint View controls share the ordinary resting/hover state language. Smaller Stats and Player controls retain locally owned font sizes, and navigation, Stats, Player, dropdown, destructive, opt-in, and other specialist states remain independently owned even when their current colors match.
 
 ## Dropdowns and menus

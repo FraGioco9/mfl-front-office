@@ -105,9 +105,12 @@ for (const token of [
 includes(stacking, '@import url("/ui-foundations.css");', "Global UI foundations must load before shared stacking/base styles.");
 
 const viewControlTypography = exactRule(stylesBase, ".viewButton");
+includes(viewControlTypography, "height: var(--mfl-control-height);", "View controls must consume the shared standard control height.");
 includes(viewControlTypography, "font-size: var(--mfl-control-label-font-size);", "View controls must consume the shared standard control-label size.");
 includes(viewControlTypography, "font-weight: var(--mfl-control-font-weight);", "View controls must consume the shared ordinary-control weight.");
+includes(viewControlTypography, "line-height: var(--mfl-control-line-height);", "View controls must consume the shared ordinary-control line height.");
 const filtersControlTypography = exactRule(controls, ".filtersViewButton");
+includes(filtersControlTypography, "height: var(--mfl-control-height);", "Filters must consume the shared standard control height.");
 includes(filtersControlTypography, "font-size: var(--mfl-control-label-font-size);", "Filters must consume the shared standard control-label size.");
 includes(filtersControlTypography, "font-weight: var(--mfl-control-font-weight);", "Filters must consume the shared ordinary-control weight.");
 includes(filtersControlTypography, "line-height: var(--mfl-control-line-height);", "Filters must consume the shared ordinary-control line height.");
@@ -116,6 +119,35 @@ for (const [label, rule] of [["View", viewControlTypography], ["Filters", filter
   includes(rule, "background: var(--mfl-control-background);", label + " controls must consume the shared resting background.");
   includes(rule, "color: var(--mfl-control-text-color);", label + " controls must consume the shared resting text color.");
 }
+const searchControlGeometry = exactRule(stylesBase, ".searchButton");
+includes(searchControlGeometry, "height: var(--mfl-control-height);", "Search must consume the shared standard control height.");
+const searchLabelTypography = exactRule(stylesBase, ".searchLabel");
+includes(searchLabelTypography, "font-size: var(--mfl-control-label-font-size);", "Search label must consume the shared standard control-label size.");
+includes(
+  stylesBase,
+  "input,\nselect {\n  height: var(--mfl-control-height);\n  width: 100%;\n  border: 1px solid var(--border-strong);\n  border-radius: var(--mfl-radius-control);",
+  "Default input/select controls must consume the shared standard control height and radius.",
+);
+includes(
+  stylesBase,
+  "button {\n  height: var(--mfl-control-height);\n  border: 1px solid var(--primary);\n  border-radius: var(--mfl-radius-control);",
+  "Default buttons must consume the shared standard control height and radius.",
+);
+const rowsMetadataGeometry = exactRule(stylesBase, ".field.rowsField span");
+includes(rowsMetadataGeometry, "line-height: var(--mfl-control-height);", "Rows metadata must align to the shared control height.");
+const filterSummaryGeometry = exactRule(stylesBase, "#filterSummary");
+includes(filterSummaryGeometry, "height: var(--mfl-control-height);", "Filter summary must align to the shared control height.");
+for (const selector of [
+  "#progressionPage > .controlsBar > .rowsField",
+  "#progressionPage .views > .rowsField",
+  "#progressionPage .watchlistButton",
+  "#progressionPage #pageSizeSelect",
+]) {
+  const rule = exactRule(styles, selector);
+  if (!rule) throw new Error(`Expected shared table-control consumer ${selector}.`);
+  includes(rule, "height: var(--mfl-control-height);", `${selector} must consume the shared standard control height.`);
+}
+
 const searchControlState = exactRule(controls, ".searchButton");
 includes(searchControlState, "border-color: var(--mfl-control-border-color);", "Search must consume the shared resting border color.");
 includes(searchControlState, "background: var(--mfl-control-background);", "Search must consume the shared resting background.");

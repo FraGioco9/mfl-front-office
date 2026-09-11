@@ -61,7 +61,7 @@ invariant(
 for (const required of [
   ".filtersViewButton",
   "width: 116px;",
-  "height: 40px;",
+  "height: var(--mfl-control-height);",
   ".filtersViewIcon",
   ".filtersViewLabel",
   "#filterSummary.filtersViewCount",

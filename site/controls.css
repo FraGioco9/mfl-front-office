@@ -150,7 +150,7 @@
   flex: 0 0 auto;
   align-items: center;
   width: 116px;
-  height: 40px;
+  height: var(--mfl-control-height);
   gap: 8px;
   padding: 0 10px;
   border-color: var(--mfl-control-border-color);
@@ -181,7 +181,7 @@
   display: inline-flex;
   align-items: center;
   align-self: center;
-  height: 40px;
+  height: var(--mfl-control-height);
   line-height: 1;
 }
 #filterSummary.filtersViewCount {
