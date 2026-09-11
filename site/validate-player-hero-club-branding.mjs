@@ -31,6 +31,7 @@ excludes(player, 'fetch("/api/', "Player hero branding must not introduce anothe
 
 for (const token of [
   '<a class="playerHeroBrandMark" tabindex="-1" aria-hidden="true"><img class="playerHeroBrandLogo"',
+  'return "linear-gradient(transparent 8%, rgba(" + red + ", " + green + ", " + blue + ", 0.65))";',
   'gradient: "linear-gradient(transparent 22%, rgba(255, 247, 0, 0.4))"',
   'logoUrl: "/development-center-traffic-cone.svg"',
   'if (retirementRaw !== "" && Number(retirementRaw) === 0) return null;',
