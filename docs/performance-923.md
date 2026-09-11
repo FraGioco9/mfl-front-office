@@ -66,6 +66,21 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Shared summary/manifest counts
+
+Owner: `manifestPayload()` in `site/api/_data-query.js`.
+
+The public `mode=summary` endpoint previously duplicated the bootstrap manifest's player and
+wallet `COUNT(*)` queries. It now reads the same manifest payload used by bootstrap.
+
+On rebuilt snapshots this means both endpoints consume the precomputed runtime metadata counts.
+On older snapshots both endpoints share the same compatibility fallback.
+
+Deterministic request-work effect for `mode=summary` on a rebuilt snapshot:
+
+- before: 2 request-time `COUNT(*)` queries;
+- after: 0 request-time `COUNT(*)` queries.
+
 ## Precomputed MFL Stats summary
 
 Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
