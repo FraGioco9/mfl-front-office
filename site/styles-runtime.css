@@ -13097,62 +13097,7 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 .myClubLogoFrameLoading {
-  background: var(--surface-muted);
-}
-
-.myClubLoadingLogo {
-  aspect-ratio: 1;
-  border-radius: var(--mfl-radius-control);
-  background: var(--border);
-  opacity: 0.55;
-}
-
-.myClubLoadingLine {
-  display: block;
-  height: 1lh;
-  border-radius: var(--mfl-radius-control);
-  background: var(--border);
-  opacity: 0.55;
-}
-
-.myClubLoadingId {
-  width: 4ch;
-}
-
-.myClubLoadingName {
-  width: min(12ch, 78%);
-}
-
-.myClubMetaLoading {
-  align-items: center;
-}
-
-.myClubLoadingDivision {
-  width: 7ch;
-}
-
-.myClubLoadingLocation {
-  width: min(10ch, 44%);
-}
-
-.myClubLoadingCompetitionName {
-  width: min(16ch, 62%);
-}
-
-.myClubLoadingCompetitionStanding {
-  flex: 0 0 auto;
-}
-
-.myClubCompetitionLoading:first-child .myClubLoadingCompetitionStanding {
-  width: 3ch;
-}
-
-.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionName {
-  width: min(14ch, 58%);
-}
-
-.myClubCompetitionLoading:nth-child(2) .myClubLoadingCompetitionStanding {
-  width: min(10ch, 32%);
+  background: var(--mfl-loading-placeholder-surface);
 }
 
 .myClubsStatusWrap {
