@@ -1327,16 +1327,17 @@ function attributeViewForRender(selectedView, playerIdValue = playerIdFromLocati
   return playerAttributeLoadingActive(playerIdValue) ? "attributes" : selectedView;
 }
 
-function syncPlayerAttributeViewActiveState(container = document, playerIdValue = playerIdFromLocation()) {
+function syncPlayerAttributeViewActiveState(container, playerIdValue = playerIdFromLocation()) {
   const playerId = normalizePlayerId(playerIdValue);
   const loading = playerAttributeLoadingActive(playerId);
   const selectedView = String(state.playerAttributeView || "attributes");
-  const buttons = Array.from(container?.querySelectorAll?.(".playerAttributeViewButton") || [])
-    .filter((button) => button instanceof HTMLButtonElement);
+  const scope = container && typeof container.querySelectorAll === "function" ? container : document;
+  const buttons = Array.from(scope.querySelectorAll(".playerAttributeViewButton"));
   buttons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
     button.classList.toggle("active", !loading && button.dataset.playerAttributeView === selectedView);
   });
-  return !loading && buttons.some((button) => button.classList.contains("active"));
+  return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
 }
 
 function stableAttributePanelHtml(row) {
