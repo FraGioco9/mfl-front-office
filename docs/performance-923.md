@@ -213,8 +213,65 @@ VM work of the equivalent deep OFFSET query on the deterministic fixture. Produc
 supports arbitrary page jumps and arbitrary sorts/filters, so cursor pagination requires a
 separate contract rather than replacing OFFSET opportunistically.
 
+## Repeatable browser/runtime baseline harness
+
+Owner: `site/validation/performance-baseline.mjs`.
+
+Run the real application in local Vercel development mode (port 4000 by default), then execute:
+
+```powershell
+npm --prefix site run performance:baseline
+```
+
+The harness discovers a representative Player and contracted Club from the live database before
+measurement, then covers exactly the representative #923 journeys:
+
+- Database: `/database/attributes`;
+- Player: discovered `/players/<id>`;
+- Club: discovered `/clubs/<id>/squad`;
+- My Clubs: `/my-clubs`;
+- Evaluation: `/evaluation?player=<id>`;
+- Stats: `/mfl/stats`.
+
+For each journey it captures **cold**, **refresh**, and **cached SPA revisit** behavior. The
+default run count is five repetitions per phase/profile; reports show the median and observed
+slowest result. Profiles are:
+
+- `desktop`: 1280x900, unthrottled;
+- `mobile-slow`: 390x844, 4x CPU slowdown plus explicit network latency/throughput
+  throttling.
+
+Collected metrics include:
+
+- total/API request counts;
+- total/API transferred bytes from Chrome's network events;
+- canonical `window.__mflClientPerformance` useful-content and visually-settled timing;
+- existing API `Server-Timing` durations;
+- browser long-task count/duration;
+- cumulative layout shift.
+
+Useful overrides:
+
+```powershell
+$env:MFL_BASE_URL="http://127.0.0.1:4000"
+$env:MFL_BASELINE_RUNS="5"
+$env:MFL_BASELINE_PROFILES="desktop,mobile-slow"
+$env:MFL_BASELINE_LABEL="local-main"
+$env:MFL_BASELINE_OUTPUT="performance-baseline.local.json"
+npm --prefix site run performance:baseline
+```
+
+The benchmark is deliberately **opt-in** and is not added to normal Site Quality CI: browser
+wall-clock measurements are noisy and should not make every PR slower. CI instead validates the
+harness contract statically. Measurements against a fixture or CI environment must be labelled
+as synthetic and must never be described as production latency.
+
+The harness establishes one repeatable measurement method; committed/current baseline values
+still need to be captured against the chosen local or deployed environment before the first
+delivery-plan baseline checkbox can be closed.
+
 ## Still required
 
-Representative browser/runtime baselines for Database, Player, Club, My Clubs, Evaluation and
-Stats remain to be captured separately, including request counts/bytes, Server-Timing,
-content-commit/settled duration, long tasks and layout shift under fixed test conditions.
+Run the repeatable harness against the chosen reference environment and record the resulting
+baseline values before closing the #923 baseline deliverable. The measurement tooling itself is
+now canonical; fixture/CI latency must remain clearly separated from local/production results.
