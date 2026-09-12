@@ -298,12 +298,83 @@ Long phases print their individual `cold`, `refresh`, and `cached` start/complet
 30-second heartbeat. This is especially important for Stats under `mobile-slow`, where the
 reference bandwidth makes large payload transfers intentionally slow rather than silently hung.
 
-The harness establishes one repeatable measurement method; committed/current baseline values
-still need to be captured against the chosen local or deployed environment before the first
-delivery-plan baseline checkbox can be closed.
+The harness establishes one repeatable measurement method. The first reference capture below
+uses the local Vercel runtime with the harness label `local-reference`; its wall-clock values are
+local/synthetic evidence only and must not be presented as production latency.
 
-## Still required
+## Reference browser/runtime baseline — 2026-09-12
 
-Run the repeatable harness against the chosen reference environment and record the resulting
-baseline values before closing the #923 baseline deliverable. The measurement tooling itself is
-now canonical; fixture/CI latency must remain clearly separated from local/production results.
+Configuration:
+
+- five repetitions per journey/profile;
+- `desktop`: 1280x900, unthrottled;
+- `mobile-slow`: 390x844, 4x CPU slowdown, 150 ms network latency, 200 KB/s download and
+  100 KB/s upload throughput;
+- journeys: Database, Player, Club, My Clubs, Evaluation and MFL Stats;
+- phases: cold, hard refresh and cached SPA revisit;
+- table values: median / observed slowest.
+
+| Profile | Journey | Phase | Useful ms | Settled ms | Requests | API req | KiB | API KiB | Long-task ms | CLS |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| desktop | database | cold | 1637.9 / 1764.7 | 1707.8 / 1846.7 | 78 / 78 | 5 / 5 | 2061.2 / 2061.5 | 604.0 / 604.0 | 56.0 / 111.0 | 0.0000 / 0.0000 |
+| desktop | database | refresh | 1883.7 / 1999.5 | 1903.8 / 2025.6 | 77 / 77 | 5 / 5 | 610.5 / 610.5 | 604.0 / 604.0 | 274.0 / 318.0 | 0.0000 / 0.0000 |
+| desktop | database | cached | 102.4 / 104.3 | 147.5 / 154.9 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 103.0 / 105.0 | 0.0000 / 0.0000 |
+| desktop | player | cold | 1343.3 / 1411.2 | 1375.5 / 1433.0 | 28 / 28 | 3 / 3 | 1449.5 / 1450.2 | 5.7 / 5.7 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | player | refresh | 1349.1 / 1388.5 | 1371.0 / 1420.7 | 28 / 28 | 3 / 3 | 9.9 / 9.9 | 5.7 / 5.7 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | player | cached | 34.2 / 35.4 | 47.0 / 54.5 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | club | cold | 1430.4 / 1438.0 | 1457.1 / 1468.6 | 51 / 51 | 4 / 4 | 2098.5 / 2099.1 | 594.5 / 594.5 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | club | refresh | 1526.2 / 1550.9 | 1561.0 / 1582.6 | 51 / 51 | 4 / 4 | 600.9 / 600.9 | 594.5 / 594.5 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | club | cached | 45.9 / 65.3 | 60.0 / 80.8 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | my-clubs | cold | 256.7 / 258.2 | 288.7 / 292.5 | 22 / 22 | 2 / 2 | 1221.0 / 1221.7 | 2.8 / 2.8 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | my-clubs | refresh | 227.1 / 239.9 | 261.1 / 273.3 | 22 / 22 | 2 / 2 | 157.1 / 157.1 | 2.8 / 2.8 | 0.0 / 0.0 | 0.0046 / 0.0046 |
+| desktop | my-clubs | cached | 47.8 / 58.3 | 80.8 / 92.8 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0008 / 0.0008 |
+| desktop | evaluation | cold | 1308.8 / 1710.3 | 1342.4 / 1742.7 | 30 / 30 | 5 / 5 | 1322.2 / 1322.2 | 5.2 / 5.2 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | evaluation | refresh | 1325.0 / 1414.8 | 1359.1 / 1447.6 | 30 / 30 | 5 / 5 | 161.7 / 161.7 | 5.2 / 5.2 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | evaluation | cached | 56.3 / 59.4 | 88.3 / 92.3 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| desktop | stats | cold | 3111.3 / 3222.6 | 3128.2 / 3243.3 | 35 / 35 | 5 / 5 | 22655.1 / 22655.1 | 21224.0 / 21224.0 | 462.0 / 469.0 | 0.0000 / 0.0000 |
+| desktop | stats | refresh | 3063.7 / 3176.1 | 3080.7 / 3204.6 | 35 / 35 | 5 / 5 | 21230.4 / 21230.4 | 21224.0 / 21224.0 | 448.0 / 469.0 | 0.0000 / 0.0000 |
+| desktop | stats | cached | 37.6 / 46.4 | 51.4 / 64.5 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0000 / 0.0000 |
+| mobile-slow | database | cold | 7634.4 / 8014.5 | 8996.8 / 9539.8 | 80 / 80 | 5 / 5 | 2060.8 / 2061.2 | 604.0 / 604.0 | 5458.0 / 5795.0 | 0.0001 / 0.0001 |
+| mobile-slow | database | refresh | 3769.1 / 4070.2 | 3903.5 / 4215.4 | 80 / 80 | 5 / 5 | 610.5 / 610.5 | 604.0 / 604.0 | 3165.0 / 4370.0 | 0.0001 / 0.0001 |
+| mobile-slow | database | cached | 724.4 / 931.6 | 948.8 / 1485.0 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 858.0 / 1423.0 | 0.0167 / 0.0167 |
+| mobile-slow | player | cold | 4716.8 / 4844.8 | 4744.8 / 4871.3 | 28 / 28 | 3 / 3 | 1449.5 / 1450.1 | 5.7 / 5.7 | 677.0 / 800.0 | 0.0000 / 0.0000 |
+| mobile-slow | player | refresh | 1886.3 / 1926.2 | 1914.6 / 1958.2 | 28 / 28 | 3 / 3 | 9.9 / 9.9 | 5.7 / 5.7 | 414.0 / 489.0 | 0.0000 / 0.0000 |
+| mobile-slow | player | cached | 254.3 / 373.2 | 296.2 / 422.0 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 280.0 / 388.0 | 0.0054 / 0.0054 |
+| mobile-slow | club | cold | 6054.8 / 6539.9 | 6083.3 / 6560.4 | 52 / 52 | 4 / 4 | 2098.4 / 2099.1 | 594.5 / 594.5 | 1340.0 / 1648.0 | 0.0000 / 0.0000 |
+| mobile-slow | club | refresh | 2137.7 / 2241.0 | 2158.4 / 2266.9 | 52 / 52 | 4 / 4 | 600.9 / 600.9 | 594.5 / 594.5 | 924.0 / 1196.0 | 0.0000 / 0.0000 |
+| mobile-slow | club | cached | 376.7 / 409.5 | 404.0 / 474.5 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 359.0 / 438.0 | 0.0000 / 0.0000 |
+| mobile-slow | my-clubs | cold | 2737.8 / 2810.4 | 2768.0 / 2842.3 | 22 / 22 | 2 / 2 | 1221.0 / 1221.7 | 2.8 / 2.8 | 176.0 / 227.0 | 0.0000 / 0.0000 |
+| mobile-slow | my-clubs | refresh | 489.9 / 519.2 | 520.7 / 549.2 | 22 / 22 | 2 / 2 | 157.1 / 157.1 | 2.8 / 2.8 | 0.0 / 53.0 | 0.0110 / 0.0110 |
+| mobile-slow | my-clubs | cached | 52.1 / 84.3 | 83.7 / 117.8 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0016 / 0.0016 |
+| mobile-slow | evaluation | cold | 4215.9 / 4296.0 | 4247.3 / 4327.8 | 29 / 29 | 4 / 4 | 1321.5 / 1321.5 | 5.2 / 5.2 | 263.0 / 547.0 | 0.0001 / 0.0001 |
+| mobile-slow | evaluation | refresh | 1446.9 / 1502.3 | 1466.3 / 1518.3 | 30 / 30 | 5 / 5 | 161.7 / 161.7 | 5.2 / 5.2 | 58.0 / 125.0 | 0.0002 / 0.0002 |
+| mobile-slow | evaluation | cached | 113.8 / 139.5 | 142.4 / 167.3 | 1 / 1 | 0 / 0 | 0.2 / 0.2 | 0.0 / 0.0 | 0.0 / 106.0 | 0.0000 / 0.0000 |
+| mobile-slow | stats | cold | 114213.7 / 114618.0 | 114244.3 / 114649.5 | 35 / 35 | 5 / 5 | 22654.4 / 22654.4 | 21224.0 / 21224.0 | 1256.0 / 1409.0 | 0.0362 / 0.0362 |
+| mobile-slow | stats | refresh | 111638.8 / 112054.8 | 111669.1 / 112088.8 | 35 / 35 | 5 / 5 | 21230.4 / 21230.4 | 21224.0 / 21224.0 | 1177.0 / 1216.0 | 0.0362 / 0.0362 |
+| mobile-slow | stats | cached | 111774.9 / 112349.3 | 111807.1 / 112395.9 | 3 / 3 | 2 / 2 | 21220.2 / 21220.2 | 21219.9 / 21219.9 | 751.0 / 1077.0 | 0.0000 / 0.0000 |
+
+### Baseline findings and first optimization targets
+
+- **Cached navigation works correctly for every representative journey except MFL Stats.** Database,
+  Player, Club, My Clubs and Evaluation cached revisits issue zero API requests in both profiles.
+- **MFL Stats transfers about 20.7 MiB of API payload per full load.** Desktop is therefore still
+  usable on the local reference environment (~3.1 s median), while the fixed 200 KB/s slow-mobile
+  profile is transfer-bound at roughly 112–114 s.
+- **MFL Stats cached re-entry is incorrect under the slow profile.** It issues two API requests and
+  retransfers essentially the entire 20.7 MiB payload (~111.8 s median), despite
+  `shared-incremental-routing.js` owning a session cache with no time-based expiry. This is a
+  measured cache-key/namespace/re-entry defect and is the highest-priority cache investigation for
+  the next performance PR.
+- **Database rendering is the next browser-main-thread hotspot on constrained hardware.** Its
+  slow-mobile cold median records about 5.46 s of long-task time, and even the network-free cached
+  revisit records about 0.86 s.
+- **Layout stability is generally strong.** The largest reference CLS is MFL Stats slow-mobile
+  cold/refresh at 0.0362; Database and most entity routes are effectively zero. My Clubs retains a
+  small refresh shift (0.0110 slow-mobile median).
+- **The baseline harness itself is now validated.** Refreshes carry real timings, network accounting
+  is phase-isolated, missing metrics are rejected rather than rendered as zero, and the focused
+  Database/Club slow-profile smoke test plus the full capture both completed successfully.
+
+The repeatable baseline portion of #923 is therefore complete. Subsequent performance PRs should
+use these values as before/after evidence and should not reinterpret the synthetic slow-mobile
+numbers as production latency.
