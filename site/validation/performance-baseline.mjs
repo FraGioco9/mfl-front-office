@@ -697,55 +697,153 @@ function printSummary(summary) {
   }
 }
 
-const executable = browserExecutable();
-const entities = await discoverRepresentativeEntities();
-const journeys = journeysFor(entities);
-const raw = {};
+function emptyRaw(journeys) {
+  const raw = {};
+  for (const profile of profiles) {
+    raw[profile.id] = {};
+    for (const journey of journeys) {
+      raw[profile.id][journey.id] = { cold: [], refresh: [], cached: [] };
+    }
+  }
+  return raw;
+}
 
-for (const profile of profiles) {
-  raw[profile.id] = {};
-  for (const journey of journeys) {
-    raw[profile.id][journey.id] = { cold: [], refresh: [], cached: [] };
-    for (let repetition = 1; repetition <= repetitions; repetition += 1) {
-      console.log(`Baseline ${profile.id} / ${journey.id} / run ${repetition} of ${repetitions}`);
-      const result = await runJourney(executable, profile, journey);
+function normalizeRawShape(raw, journeys) {
+  const normalized = emptyRaw(journeys);
+  for (const profile of profiles) {
+    for (const journey of journeys) {
+      const source = raw?.[profile.id]?.[journey.id];
+      const completed = Math.min(
+        Array.isArray(source?.cold) ? source.cold.length : 0,
+        Array.isArray(source?.refresh) ? source.refresh.length : 0,
+        Array.isArray(source?.cached) ? source.cached.length : 0,
+        repetitions,
+      );
       for (const phase of ["cold", "refresh", "cached"]) {
-        raw[profile.id][journey.id][phase].push(result[phase]);
+        normalized[profile.id][journey.id][phase] = Array.isArray(source?.[phase])
+          ? source[phase].slice(0, completed)
+          : [];
       }
     }
   }
+  return normalized;
 }
 
-const summary = {};
-for (const profile of Object.keys(raw)) {
-  summary[profile] = {};
-  for (const journey of Object.keys(raw[profile])) {
-    summary[profile][journey] = {};
-    for (const phase of ["cold", "refresh", "cached"]) {
-      summary[profile][journey][phase] = summarizePhase(raw[profile][journey][phase]);
+function completedRunCount(raw, journeys) {
+  let total = 0;
+  for (const profile of profiles) {
+    for (const journey of journeys) {
+      total += Math.min(
+        raw?.[profile.id]?.[journey.id]?.cold?.length || 0,
+        raw?.[profile.id]?.[journey.id]?.refresh?.length || 0,
+        raw?.[profile.id]?.[journey.id]?.cached?.length || 0,
+      );
     }
   }
+  return total;
 }
 
-const report = {
-  metadata: {
-    capturedAt: new Date().toISOString(),
+function buildSummary(raw) {
+  const summary = {};
+  for (const profile of Object.keys(raw)) {
+    summary[profile] = {};
+    for (const journey of Object.keys(raw[profile])) {
+      summary[profile][journey] = {};
+      for (const phase of ["cold", "refresh", "cached"]) {
+        summary[profile][journey][phase] = summarizePhase(raw[profile][journey][phase]);
+      }
+    }
+  }
+  return summary;
+}
+
+function baselineResumeKey(entities, journeys) {
+  return JSON.stringify({
     baseUrl,
     environmentLabel,
     repetitions,
     profiles: profiles.map((profile) => profile.id),
     journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
     representativeEntities: entities,
-    note: "Real browser measurements against the configured base URL. Throttled profiles simulate client constraints; do not describe fixture/CI latency as production latency.",
-  },
-  summary,
-  raw,
-};
+  });
+}
 
+function buildReport(raw, entities, journeys, complete) {
+  return {
+    metadata: {
+      capturedAt: new Date().toISOString(),
+      baseUrl,
+      environmentLabel,
+      repetitions,
+      profiles: profiles.map((profile) => profile.id),
+      journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
+      representativeEntities: entities,
+      completedRuns: completedRunCount(raw, journeys),
+      complete,
+      resumeKey: baselineResumeKey(entities, journeys),
+      note: "Real browser measurements against the configured base URL. Throttled profiles simulate client constraints; do not describe fixture/CI latency as production latency.",
+    },
+    summary: buildSummary(raw),
+    raw,
+  };
+}
+
+async function writeCheckpoint(raw, entities, journeys, complete = false) {
+  if (!outputPath) return;
+  const report = buildReport(raw, entities, journeys, complete);
+  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+async function loadCheckpoint(entities, journeys) {
+  if (!outputPath) return null;
+  try {
+    const parsed = JSON.parse(await readFile(outputPath, "utf8"));
+    if (parsed?.metadata?.resumeKey !== baselineResumeKey(entities, journeys)) {
+      console.log(`Existing ${outputPath} does not match this baseline configuration; starting a new capture.`);
+      return null;
+    }
+    const resumed = normalizeRawShape(parsed?.raw, journeys);
+    const completed = completedRunCount(resumed, journeys);
+    if (completed > 0) {
+      console.log(`Resuming ${completed} completed journey repetitions from ${outputPath}.`);
+    }
+    return resumed;
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      console.log(`Could not resume ${outputPath}: ${String(error?.message || error)}. Starting a new capture.`);
+    }
+    return null;
+  }
+}
+
+const executable = browserExecutable();
+const entities = await discoverRepresentativeEntities();
+const journeys = journeysFor(entities);
+const raw = (await loadCheckpoint(entities, journeys)) || emptyRaw(journeys);
+
+for (const profile of profiles) {
+  for (const journey of journeys) {
+    const completed = Math.min(
+      raw[profile.id][journey.id].cold.length,
+      raw[profile.id][journey.id].refresh.length,
+      raw[profile.id][journey.id].cached.length,
+    );
+    for (let repetition = completed + 1; repetition <= repetitions; repetition += 1) {
+      console.log(`Baseline ${profile.id} / ${journey.id} / run ${repetition} of ${repetitions}`);
+      const result = await runJourney(executable, profile, journey);
+      for (const phase of ["cold", "refresh", "cached"]) {
+        raw[profile.id][journey.id][phase].push(result[phase]);
+      }
+      await writeCheckpoint(raw, entities, journeys, false);
+    }
+  }
+}
+
+const summary = buildSummary(raw);
 printSummary(summary);
 if (outputPath) {
-  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeCheckpoint(raw, entities, journeys, true);
   console.log(`\nWrote full baseline report to ${outputPath}`);
 } else {
-  console.log("\nSet MFL_BASELINE_OUTPUT to persist the full JSON report.");
+  console.log("\nSet MFL_BASELINE_OUTPUT to persist and resume the full JSON report.");
 }
