@@ -14,7 +14,8 @@
     "validate": "node validate-all.mjs",
     "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
     "build:html": "node build-html.mjs",
-    "build:responsive": "node build-responsive.mjs"
+    "build:responsive": "node build-responsive.mjs",
+    "performance:baseline": "node validation/performance-baseline.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
