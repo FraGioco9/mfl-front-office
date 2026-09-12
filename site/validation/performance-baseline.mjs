@@ -62,19 +62,37 @@ const profiles = requestedProfiles.map((id) => {
 });
 
 function browserExecutable() {
+  const windowsRoots = [
+    process.env.PROGRAMFILES,
+    process.env["PROGRAMFILES(X86)"],
+    process.env.LOCALAPPDATA,
+  ].filter(Boolean);
+  const windowsCandidates = process.platform === "win32"
+    ? windowsRoots.flatMap((root) => [
+        join(root, "Google", "Chrome", "Application", "chrome.exe"),
+        join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
+        join(root, "Chromium", "Application", "chrome.exe"),
+      ])
+    : [];
   const candidates = [
     process.env.CHROME_PATH,
+    ...windowsCandidates,
     "google-chrome",
     "google-chrome-stable",
     "chromium",
     "chromium-browser",
+    "chrome",
+    "msedge",
   ].filter(Boolean);
 
-  for (const candidate of candidates) {
+  for (const candidate of [...new Set(candidates)]) {
     const probe = spawnSync(candidate, ["--version"], { stdio: "ignore" });
     if (!probe.error && probe.status === 0) return candidate;
   }
-  throw new Error("Performance baseline requires Chrome or Chromium on PATH, or CHROME_PATH.");
+  throw new Error(
+    "Performance baseline could not find Chrome/Chromium/Edge. "
+      + "Install a Chromium browser in its standard location or set CHROME_PATH to the browser executable.",
+  );
 }
 
 function delay(ms) {
