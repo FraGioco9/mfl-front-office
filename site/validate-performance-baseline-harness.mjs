@@ -39,6 +39,10 @@ for (const token of [
   'server-timing',
   "function median(values)",
   'process.env.MFL_BASELINE_OUTPUT',
+  'process.env["PROGRAMFILES(X86)"]',
+  'join(root, "Google", "Chrome", "Application", "chrome.exe")',
+  'join(root, "Microsoft", "Edge", "Application", "msedge.exe")',
+  'process.env.CHROME_PATH',
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
