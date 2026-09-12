@@ -3,9 +3,10 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [dataPage, dataQuery, mflStatsSummary, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
+const [dataPage, dataQuery, dataViews, mflStatsSummary, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
+  read("./api/_data-views.js"),
   read("./api/_mfl-stats-summary.js"),
   read("./styles.css"),
   read("./styles-base.css"),
@@ -33,6 +34,22 @@ invariant(
 invariant(
   dataPage.includes('const pageSize = scope === "mflstats"\n    ? Math.max(1, totalRows)'),
   "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
+);
+const mflStatsDataStart = dataViews.indexOf("function mflStatsData(request, complete = false) {");
+const mflStatsDataEnd = dataViews.indexOf("\n\nmodule.exports", mflStatsDataStart);
+const mflStatsDataSource = mflStatsDataStart >= 0 && mflStatsDataEnd > mflStatsDataStart
+  ? dataViews.slice(mflStatsDataStart, mflStatsDataEnd)
+  : "";
+const normalStatsBranch = mflStatsDataSource.indexOf("if (!complete) {");
+const normalStatsDerivedCount = mflStatsDataSource.indexOf("const totalRows = rows.length;", normalStatsBranch);
+const completeStatsCount = mflStatsDataSource.indexOf("SELECT count(*) AS count FROM players");
+const completeStatsPaging = mflStatsDataSource.indexOf("const requestedPageSize = Number(request.query?.pageSize);");
+invariant(
+  normalStatsBranch >= 0
+    && normalStatsDerivedCount > normalStatsBranch
+    && completeStatsCount > normalStatsDerivedCount
+    && completeStatsPaging > completeStatsCount,
+  "Normal MFL Stats must derive totals from its already-complete row set; only paginated mfl-stats-all may run COUNT(*).",
 );
 invariant(
   mflStatsSummary.includes('tableExists("runtime_mfl_stats_summary")')
