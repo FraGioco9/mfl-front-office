@@ -48,6 +48,9 @@ for (const token of [
   'ready: document.documentElement?.dataset?.mflRouteReady === "true"',
   'loading: !document.body || document.body.classList.contains("loading")',
   '/execution context|cannot find context|context was destroyed/i',
+  "async function waitForSpaNavigationReady(cdp)",
+  'typeof Reflect.get(window, "setPage") === "function"',
+  "await waitForSpaNavigationReady(cdp);",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
