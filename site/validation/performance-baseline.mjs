@@ -513,17 +513,40 @@ async function applyProfile(cdp, profile) {
   }
 }
 
-async function runMeasuredPhase(cdp, network, phase, action, expectedPath, timeoutMs) {
+async function runMeasuredPhase(
+  cdp,
+  network,
+  phase,
+  action,
+  expectedPath,
+  timeoutMs,
+  progressLabel,
+) {
   const minimumSequence = phase === "cached"
     ? Number(await evaluate(cdp, "window.__mflClientPerformance?.snapshot?.().at(-1)?.sequence || 0")) || 0
     : 0;
   await resetBrowserObservers(cdp);
   const networkMetrics = network.start();
-  await action();
-  await waitForRouteReady(cdp, expectedPath, timeoutMs);
-  const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
-  network.stop();
-  return { ...browserMetrics, ...networkMetrics };
+  const phaseStartedAt = Date.now();
+  const label = `${progressLabel} / ${phase}`;
+  console.log(`  ${label}: start`);
+  const heartbeat = setInterval(() => {
+    const elapsedSeconds = Math.round((Date.now() - phaseStartedAt) / 1000);
+    console.log(`  ${label}: still running (${elapsedSeconds}s elapsed)`);
+  }, 30_000);
+  heartbeat.unref?.();
+
+  try {
+    await action();
+    await waitForRouteReady(cdp, expectedPath, timeoutMs);
+    const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
+    const elapsedSeconds = Math.round((Date.now() - phaseStartedAt) / 1000);
+    console.log(`  ${label}: complete (${elapsedSeconds}s)`);
+    return { ...browserMetrics, ...networkMetrics };
+  } finally {
+    clearInterval(heartbeat);
+    network.stop();
+  }
 }
 
 async function navigateSpa(cdp, page, options) {
@@ -569,6 +592,7 @@ async function runJourney(executable, profile, journey) {
     const targetUrl = `${baseUrl}${journey.path}`;
     const expectedPath = journey.expectedPath || journey.path;
     const routeTimeoutMs = Number(profile.routeTimeoutMs) || DEFAULT_ROUTE_TIMEOUT_MS;
+    const progressLabel = `${profile.id} / ${journey.id}`;
 
     await cdp.send("Network.clearBrowserCache");
     const cold = await runMeasuredPhase(
@@ -578,6 +602,7 @@ async function runJourney(executable, profile, journey) {
       () => cdp.send("Page.navigate", { url: targetUrl }),
       expectedPath,
       routeTimeoutMs,
+      progressLabel,
     );
 
     const refresh = await runMeasuredPhase(
@@ -587,6 +612,7 @@ async function runJourney(executable, profile, journey) {
       () => cdp.send("Page.reload", { ignoreCache: false }),
       expectedPath,
       routeTimeoutMs,
+      progressLabel,
     );
 
     await waitForSpaNavigationReady(cdp, routeTimeoutMs);
@@ -599,6 +625,7 @@ async function runJourney(executable, profile, journey) {
       () => navigateSpa(cdp, journey.page, journey.options),
       expectedPath,
       routeTimeoutMs,
+      progressLabel,
     );
 
     return { cold, refresh, cached };
