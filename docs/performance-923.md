@@ -260,10 +260,15 @@ Useful overrides:
 $env:MFL_BASE_URL="http://127.0.0.1:4000"
 $env:MFL_BASELINE_RUNS="5"
 $env:MFL_BASELINE_PROFILES="desktop,mobile-slow"
+$env:MFL_BASELINE_JOURNEYS="database,player,club,my-clubs,evaluation,stats"
 $env:MFL_BASELINE_LABEL="local-main"
 $env:MFL_BASELINE_OUTPUT="performance-baseline.local.json"
 npm --prefix site run performance:baseline
 ```
+
+Omit `MFL_BASELINE_JOURNEYS` to run all six journeys. For a focused smoke test, provide a
+comma-separated subset such as `database,club`; the selected journey set is part of the resume
+key, so focused runs cannot be mistaken for a complete reference capture.
 
 The benchmark is deliberately **opt-in** and is not added to normal Site Quality CI: browser
 wall-clock measurements are noisy and should not make every PR slower. CI instead validates the
