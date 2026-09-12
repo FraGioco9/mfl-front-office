@@ -9,6 +9,7 @@ const DEFAULT_RUNS = 5;
 const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
+const BASELINE_SCHEMA_VERSION = 2;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -436,6 +437,22 @@ async function waitForSpaNavigationReady(cdp, timeoutMs = DEFAULT_ROUTE_TIMEOUT_
   throw new Error("Canonical SPA navigation owner did not become ready before timeout.");
 }
 
+async function waitForDocumentNavigation(cdp, previousTimeOrigin, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    let timeOrigin = null;
+    try {
+      timeOrigin = Number(await evaluate(cdp, "performance.timeOrigin"));
+    } catch (error) {
+      const message = String(error?.message || error);
+      if (!/execution context|cannot find context|context was destroyed/i.test(message)) throw error;
+    }
+    if (Number.isFinite(timeOrigin) && timeOrigin !== previousTimeOrigin) return;
+    await delay(25);
+  }
+  throw new Error("Document navigation did not commit before timeout.");
+}
+
 async function resetBrowserObservers(cdp) {
   await evaluate(cdp, `(() => {
     window.__mflBaselineLongTasks = [];
@@ -466,6 +483,15 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const settledMs = Number.isFinite(startAt) && Number.isFinite(Number(settled?.at))
     ? Number(settled.at) - startAt
     : null;
+
+  assert(
+    Number.isFinite(usefulContentMs),
+    `Missing ${phase} useful-content timing; refusing to record a partial baseline sample.`,
+  );
+  assert(
+    Number.isFinite(settledMs),
+    `Missing ${phase} visually-settled timing; refusing to record a partial baseline sample.`,
+  );
 
   const longTasks = Array.isArray(value?.longTasks) ? value.longTasks : [];
   const longTaskDurations = longTasks.map((entry) => Math.max(0, Number(entry?.duration) || 0));
@@ -525,6 +551,9 @@ async function runMeasuredPhase(
   const minimumSequence = phase === "cached"
     ? Number(await evaluate(cdp, "window.__mflClientPerformance?.snapshot?.().at(-1)?.sequence || 0")) || 0
     : 0;
+  const documentTimeOrigin = phase === "cached"
+    ? null
+    : Number(await evaluate(cdp, "performance.timeOrigin"));
   await resetBrowserObservers(cdp);
   const networkMetrics = network.start();
   const phaseStartedAt = Date.now();
@@ -538,6 +567,9 @@ async function runMeasuredPhase(
 
   try {
     await action();
+    if (documentTimeOrigin !== null) {
+      await waitForDocumentNavigation(cdp, documentTimeOrigin, timeoutMs);
+    }
     await waitForRouteReady(cdp, expectedPath, timeoutMs);
     const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
     const elapsedSeconds = Math.round((Date.now() - phaseStartedAt) / 1000);
@@ -646,6 +678,7 @@ async function runJourney(executable, profile, journey) {
 function numericValues(runs, selector) {
   return runs
     .map(selector)
+    .filter((value) => value !== null && value !== undefined && value !== "")
     .map(Number)
     .filter(Number.isFinite)
     .sort((left, right) => left - right);
@@ -696,7 +729,7 @@ function summarizePhase(runs) {
 }
 
 function round(value, digits = 1) {
-  if (!Number.isFinite(Number(value))) return "-";
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) return "-";
   return Number(value).toFixed(digits);
 }
 
@@ -786,6 +819,7 @@ function buildSummary(raw) {
 
 function baselineResumeKey(entities, journeys) {
   return JSON.stringify({
+    schemaVersion: BASELINE_SCHEMA_VERSION,
     baseUrl,
     environmentLabel,
     repetitions,
@@ -798,6 +832,7 @@ function baselineResumeKey(entities, journeys) {
 function buildReport(raw, entities, journeys, complete) {
   return {
     metadata: {
+      schemaVersion: BASELINE_SCHEMA_VERSION,
       capturedAt: new Date().toISOString(),
       baseUrl,
       environmentLabel,
