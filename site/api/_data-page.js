@@ -25,6 +25,7 @@ const {
   appendCondition,
   mflCondition,
   hiddenMflJoinedDateCondition,
+  runtimeMetadataCount,
 } = require("./_data-query");
 
 const LISTING_COLUMN = "listing_price";
@@ -516,10 +517,18 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
 
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   const sameResultSet = where === sourceWhere && parametersEqual(parameters, baseParameters);
-  const totalRows = measureSync(timings, "sqlite", () => countRows(where, parameters));
+  const canonicalMflStatsSource = scope === "mflstats"
+    && sourceWhere === ` WHERE ${mflCondition()}`
+    && parametersEqual(baseParameters, [MFL_WALLET_ADDRESS]);
+  const precomputedSourceRows = canonicalMflStatsSource
+    ? runtimeMetadataCount("mfl_stats_all_total_players")
+    : null;
+  const totalRows = sameResultSet && precomputedSourceRows !== null
+    ? precomputedSourceRows
+    : measureSync(timings, "sqlite", () => countRows(where, parameters));
   const sourceRows = sameResultSet
     ? totalRows
-    : measureSync(timings, "sqlite", () => countRows(sourceWhere, baseParameters));
+    : precomputedSourceRows ?? measureSync(timings, "sqlite", () => countRows(sourceWhere, baseParameters));
 
   const allRows = ["player", "players", "evaluation", "club", "mflstats"].includes(scope);
   const maximumPageSize = allRows ? 5000 : 250;
