@@ -43,6 +43,9 @@ for (const token of [
   'join(root, "Google", "Chrome", "Application", "chrome.exe")',
   'join(root, "Microsoft", "Edge", "Application", "msedge.exe")',
   'process.env.CHROME_PATH',
+  'ready: document.documentElement?.dataset?.mflRouteReady === "true"',
+  'loading: !document.body || document.body.classList.contains("loading")',
+  '/execution context|cannot find context|context was destroyed/i',
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
