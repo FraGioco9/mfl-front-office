@@ -414,6 +414,25 @@ async function waitForRouteReady(cdp, expectedPath) {
   throw new Error(`Route did not settle before timeout: ${expectedPath}`);
 }
 
+async function waitForSpaNavigationReady(cdp) {
+  const deadline = Date.now() + ROUTE_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    let ready = false;
+    try {
+      ready = Boolean(await evaluate(
+        cdp,
+        'typeof Reflect.get(window, "setPage") === "function"',
+      ));
+    } catch (error) {
+      const message = String(error?.message || error);
+      if (!/execution context|cannot find context|context was destroyed/i.test(message)) throw error;
+    }
+    if (ready) return;
+    await delay(50);
+  }
+  throw new Error("Canonical SPA navigation owner did not become ready before timeout.");
+}
+
 async function resetBrowserObservers(cdp) {
   await evaluate(cdp, `(() => {
     window.__mflBaselineLongTasks = [];
@@ -564,6 +583,7 @@ async function runJourney(executable, profile, journey) {
       expectedPath,
     );
 
+    await waitForSpaNavigationReady(cdp);
     await navigateSpa(cdp, "home", {});
     await waitForRouteReady(cdp, "/");
     const cached = await runMeasuredPhase(
