@@ -168,6 +168,7 @@ function journeysFor({ playerId, clubId }) {
     Object.freeze({
       id: "my-clubs",
       path: "/my-clubs",
+      expectedPath: "/my-clubs/opted-out",
       page: "my-clubs",
       options: Object.freeze({}),
     }),
@@ -544,6 +545,7 @@ async function runJourney(executable, profile, journey) {
     await applyProfile(cdp, profile);
     const network = createNetworkCollector(cdp);
     const targetUrl = `${baseUrl}${journey.path}`;
+    const expectedPath = journey.expectedPath || journey.path;
 
     await cdp.send("Network.clearBrowserCache");
     const cold = await runMeasuredPhase(
@@ -551,7 +553,7 @@ async function runJourney(executable, profile, journey) {
       network,
       "cold",
       () => cdp.send("Page.navigate", { url: targetUrl }),
-      journey.path,
+      expectedPath,
     );
 
     const refresh = await runMeasuredPhase(
@@ -559,7 +561,7 @@ async function runJourney(executable, profile, journey) {
       network,
       "refresh",
       () => cdp.send("Page.reload", { ignoreCache: false }),
-      journey.path,
+      expectedPath,
     );
 
     await navigateSpa(cdp, "home", {});
@@ -569,7 +571,7 @@ async function runJourney(executable, profile, journey) {
       network,
       "cached",
       () => navigateSpa(cdp, journey.page, journey.options),
-      journey.path,
+      expectedPath,
     );
 
     return { cold, refresh, cached };
@@ -705,7 +707,7 @@ const report = {
     environmentLabel,
     repetitions,
     profiles: profiles.map((profile) => profile.id),
-    journeys: journeys.map(({ id, path }) => ({ id, path })),
+    journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
     representativeEntities: entities,
     note: "Real browser measurements against the configured base URL. Throttled profiles simulate client constraints; do not describe fixture/CI latency as production latency.",
   },
