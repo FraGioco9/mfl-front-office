@@ -66,6 +66,23 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## MFL Stats redundant-count removal
+
+Owner: `mflStatsData()` in `site/api/_data-views.js`.
+
+The normal `mfl-stats` mode already loads its complete matching player population in one
+ordered query. It previously issued a separate `COUNT(*)` over the identical predicate before
+that full-row read.
+
+The normal mode now derives `totalRows`, `sourceRows`, and `pageSize` directly from the
+materialized row count. The paginated `mfl-stats-all` mode retains its count query because it
+does not load the complete result set on each request.
+
+Deterministic request-work effect for normal MFL Stats:
+
+- before: 1 aggregate count query + 1 full result query;
+- after: 0 aggregate count queries + 1 full result query.
+
 ## Loaded table-catalog reuse
 
 Owner: `site/api/_database.js`.
