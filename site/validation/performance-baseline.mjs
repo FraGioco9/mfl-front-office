@@ -104,11 +104,14 @@ async function discoverRepresentativeEntities() {
   const params = {
     mode: "page",
     scope: "database",
-    view: "attributes",
+    view: "contracts",
     page: "1",
     pageSize: "25",
     sortKey: "overall",
     sortDirection: "desc",
+    filters: JSON.stringify([
+      { column: "contract_status", operator: "is", value: "under_contract" },
+    ]),
   };
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
 
