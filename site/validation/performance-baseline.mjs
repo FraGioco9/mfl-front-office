@@ -32,6 +32,12 @@ const requestedProfiles = String(process.env.MFL_BASELINE_PROFILES || "desktop,m
   .split(",")
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
+const requestedJourneyIds = [...new Set(
+  String(process.env.MFL_BASELINE_JOURNEYS || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean),
+)];
 const outputPath = String(process.env.MFL_BASELINE_OUTPUT || "").trim();
 
 const PROFILES = Object.freeze({
@@ -190,6 +196,20 @@ function journeysFor({ playerId, clubId }) {
       options: Object.freeze({ view: "stats" }),
     }),
   ]);
+}
+
+function selectedJourneys(journeys) {
+  if (!requestedJourneyIds.length) return journeys;
+  const byId = new Map(journeys.map((journey) => [journey.id, journey]));
+  return Object.freeze(requestedJourneyIds.map((id) => {
+    const journey = byId.get(id);
+    if (!journey) {
+      throw new Error(
+        `Unknown MFL_BASELINE_JOURNEYS entry: ${id}. Expected one of: ${[...byId.keys()].join(", ")}`,
+      );
+    }
+    return journey;
+  }));
 }
 
 async function reserveTcpPort() {
@@ -923,7 +943,7 @@ async function loadCheckpoint(entities, journeys) {
 
 const executable = browserExecutable();
 const entities = await discoverRepresentativeEntities();
-const journeys = journeysFor(entities);
+const journeys = selectedJourneys(journeysFor(entities));
 const raw = (await loadCheckpoint(entities, journeys)) || emptyRaw(journeys);
 
 for (const profile of profiles) {
