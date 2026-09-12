@@ -277,8 +277,14 @@ itself.
 
 When `MFL_BASELINE_OUTPUT` is set, the harness checkpoints the JSON report after every completed
 journey repetition. Rerunning the exact same baseline command resumes completed repetitions when
-the output file's base URL, label, run count, profiles, journeys, and representative entities
-match. A late timeout therefore does not discard earlier completed measurements.
+the output file's schema version, base URL, label, run count, profiles, journeys, and representative
+entities match. A harness measurement-contract change invalidates older checkpoints instead of
+silently reusing incompatible samples, and a late timeout therefore does not discard compatible
+earlier completed measurements.
+
+Hard navigations and refreshes are not considered ready until Chrome has committed a new document.
+The harness also refuses to record samples that are missing canonical useful-content or
+visually-settled timings; missing timing values are never coerced to zero in summaries.
 
 Long phases print their individual `cold`, `refresh`, and `cached` start/completion plus a
 30-second heartbeat. This is especially important for Stats under `mobile-slow`, where the
