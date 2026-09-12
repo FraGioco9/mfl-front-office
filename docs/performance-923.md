@@ -66,6 +66,23 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Loaded table-catalog reuse
+
+Owner: `site/api/_database.js`.
+
+Opening the read-only SQLite snapshot already reads every table name from `sqlite_master` to
+validate the database contract. Previously, each distinct later `tableExists(name)` check
+issued another `sqlite_master` lookup before caching that answer.
+
+The connection owner now retains the table-name set loaded at open time and answers all route
+table-existence checks from that in-memory catalog.
+
+Deterministic request-work effect per process/snapshot:
+
+- before: 1 initial full table-catalog read + up to 1 extra sqlite_master query per distinct
+  table checked by request paths;
+- after: 1 initial full table-catalog read + 0 later table-existence queries.
+
 ## Cached Club table schema
 
 Owner: `site/api/_database.js`.

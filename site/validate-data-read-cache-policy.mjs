@@ -149,6 +149,15 @@ invariant(
   "Runtime metadata must be loaded once with the canonical SQLite connection and exposed through one read owner.",
 );
 invariant(
+  database.includes("let availableTables = null;")
+    && database.includes('availableTables = new Set(')
+    && database.includes('database.prepare("SELECT name FROM sqlite_master WHERE type = \'table\'")')
+    && database.includes("return availableTables.has(name);")
+    && !database.includes("TABLE_EXISTS_CACHE")
+    && !database.includes('"SELECT 1 AS found FROM sqlite_master WHERE type = \'table\' AND name = ? LIMIT 1"'),
+  "Table existence checks must reuse the catalog loaded when SQLite opens instead of issuing per-table sqlite_master queries.",
+);
+invariant(
   dataQuery.includes("function runtimeMetadataCount(key) {")
     && dataQuery.includes('if (rawValue === null || String(rawValue).trim() === "") return null;')
     && dataQuery.includes('runtimeMetadataCount("row_count")')
