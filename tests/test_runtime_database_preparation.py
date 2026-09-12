@@ -183,6 +183,41 @@ class RuntimeDatabasePreparationTests(unittest.TestCase):
             self.assertEqual(int(metadata["database_stats_total_players"]), 2)
             self.assertEqual(int(metadata["database_stats_total_active_players"]), 1)
 
+    def test_mfl_stats_all_total_matches_canonical_wallet_population(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = Path(directory) / "mfl_database.db"
+            create_source_database(database_path)
+            with sqlite3.connect(database_path) as connection:
+                connection.executemany(
+                    """
+                    INSERT INTO players(player_id, wallet_address, wallet_name, name)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        (43, runtime_db.MFL_WALLET_ADDRESS, "MFL", "MFL exact"),
+                        (44, runtime_db.MFL_WALLET_ADDRESS.upper(), "MFL", "MFL upper"),
+                        (45, runtime_db.MFL_TRADE_WALLET_ADDRESS, "MFL Trade", "Trade"),
+                        (46, "0xnot-mfl", "MFL", "Name-only lookalike"),
+                    ),
+                )
+                connection.commit()
+
+            runtime_db.prepare_runtime_database(database_path)
+
+            with sqlite3.connect(database_path) as connection:
+                metadata = dict(connection.execute("SELECT key, value FROM runtime_metadata"))
+                live_total = connection.execute(
+                    """
+                    SELECT count(*)
+                    FROM players
+                    WHERE lower(coalesce(wallet_address, '')) = ?
+                    """,
+                    (runtime_db.MFL_WALLET_ADDRESS.lower(),),
+                ).fetchone()[0]
+
+            self.assertEqual(int(metadata["mfl_stats_all_total_players"]), live_total)
+            self.assertEqual(live_total, 2)
+
     def test_validation_api_does_not_mutate_prepared_database(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             database_path = Path(directory) / "mfl_database.db"
