@@ -48,7 +48,9 @@ for (const token of [
 }
 
 invariant(
-  harness.includes('pageSize: "25"')
+  harness.includes('view: "contracts"')
+    && harness.includes('{ column: "contract_status", operator: "is", value: "under_contract" }')
+    && harness.includes('pageSize: "25"')
     && harness.includes('columns.indexOf("player_id")')
     && harness.includes('columns.indexOf("active_contract_club_id")'),
   "The baseline harness must discover representative Player/Club IDs before measured journeys rather than hard-coding dataset IDs.",
