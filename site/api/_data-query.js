@@ -91,5 +91,6 @@ module.exports = {
   mflCondition,
   normalizedEpochSeconds,
   hiddenMflJoinedDateCondition,
+  runtimeMetadataCount,
   manifestPayload,
 };

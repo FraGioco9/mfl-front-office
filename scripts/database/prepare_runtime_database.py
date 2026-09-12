@@ -467,6 +467,14 @@ def prepare_runtime_database(database_path: Path) -> None:
         manifest_wallet_count = connection.execute(
             "SELECT count(*) FROM wallets"
         ).fetchone()[0]
+        mfl_stats_all_total_players = connection.execute(
+            """
+            SELECT count(*)
+            FROM players
+            WHERE lower(coalesce(wallet_address, '')) = ?
+            """,
+            (MFL_WALLET_ADDRESS.lower(),),
+        ).fetchone()[0]
         generated_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
             "+00:00",
             "Z",
@@ -475,6 +483,7 @@ def prepare_runtime_database(database_path: Path) -> None:
             "generated_at": generated_at,
             "row_count": str(int(manifest_row_count or 0)),
             "wallet_count": str(int(manifest_wallet_count or 0)),
+            "mfl_stats_all_total_players": str(int(mfl_stats_all_total_players or 0)),
             "database_stats_contract": DATABASE_STATS_CONTRACT,
             "database_stats_total_players": str(int(total_players or 0)),
             "database_stats_total_active_players": str(int(total_active_players or 0)),

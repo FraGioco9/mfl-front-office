@@ -66,6 +66,25 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Precomputed MFL Stats all-player total
+
+Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
+`runtimeMetadataCount()` / `mflStatsData()` for reads.
+
+The paginated `mfl-stats-all` mode needs the complete MFL-wallet population size before it can
+calculate page bounds. That population is stable for one published database snapshot.
+
+Runtime preparation now stores the exact count for
+`lower(coalesce(wallet_address, '')) = MFL_WALLET_ADDRESS` as
+`mfl_stats_all_total_players`. Rebuilt snapshots therefore read the count from the metadata
+map already loaded at SQLite open. Older snapshots retain the previous live `COUNT(*)`
+fallback.
+
+Deterministic request-work effect for `mfl-stats-all` on rebuilt snapshots:
+
+- before: 1 request-time `COUNT(*)` + 1 paged result query;
+- after: 0 request-time `COUNT(*)` + 1 paged result query.
+
 ## MFL Stats redundant-count removal
 
 Owner: `mflStatsData()` in `site/api/_data-views.js`.

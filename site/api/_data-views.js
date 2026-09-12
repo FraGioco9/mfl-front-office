@@ -17,6 +17,7 @@ const {
   appendCondition,
   mflCondition,
   hiddenMflJoinedDateCondition,
+  runtimeMetadataCount,
   manifestPayload,
 } = require("./_data-query");
 const { integerIds } = require("./_data-page");
@@ -348,7 +349,8 @@ function mflStatsData(request, complete = false) {
     };
   }
 
-  const totalRows = Number(queryOne(
+  const cachedTotalRows = runtimeMetadataCount("mfl_stats_all_total_players");
+  const totalRows = cachedTotalRows ?? Number(queryOne(
     `SELECT count(*) AS count FROM players${where}`,
     parameters,
   )?.count || 0);
