@@ -48,7 +48,7 @@ for (const token of [
   'ready: document.documentElement?.dataset?.mflRouteReady === "true"',
   'loading: !document.body || document.body.classList.contains("loading")',
   '/execution context|cannot find context|context was destroyed/i',
-  "async function waitForSpaNavigationReady(cdp)",
+  "async function waitForSpaNavigationReady(cdp, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS)",
   'typeof Reflect.get(window, "setPage") === "function"',
   "await waitForSpaNavigationReady(cdp, routeTimeoutMs);",
   "const SLOW_ROUTE_TIMEOUT_MS = 240_000;",
