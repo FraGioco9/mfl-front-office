@@ -50,7 +50,13 @@ for (const token of [
   '/execution context|cannot find context|context was destroyed/i',
   "async function waitForSpaNavigationReady(cdp)",
   'typeof Reflect.get(window, "setPage") === "function"',
-  "await waitForSpaNavigationReady(cdp);",
+  "await waitForSpaNavigationReady(cdp, routeTimeoutMs);",
+  "const SLOW_ROUTE_TIMEOUT_MS = 240_000;",
+  "routeTimeoutMs: SLOW_ROUTE_TIMEOUT_MS",
+  "async function writeCheckpoint(raw, entities, journeys, complete = false)",
+  "async function loadCheckpoint(entities, journeys)",
+  "resumeKey: baselineResumeKey(entities, journeys)",
+  "await writeCheckpoint(raw, entities, journeys, false);",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
