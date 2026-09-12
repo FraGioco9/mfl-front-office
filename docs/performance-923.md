@@ -283,7 +283,10 @@ silently reusing incompatible samples, and a late timeout therefore does not dis
 earlier completed measurements.
 
 Hard navigations and refreshes are not considered ready until Chrome has committed a new document.
-The harness also refuses to record samples that are missing canonical useful-content or
+After visual readiness, the harness also waits for requests started inside that measured phase to
+become idle before finalizing request counts, transferred bytes and Server-Timing. Late completion
+events from a previous phase are ignored rather than leaking into the next measurement. The
+harness also refuses to record samples that are missing canonical useful-content or
 visually-settled timings; missing timing values are never coerced to zero in summaries.
 
 Long phases print their individual `cold`, `refresh`, and `cached` start/completion plus a
