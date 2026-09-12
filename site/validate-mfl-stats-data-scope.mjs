@@ -35,6 +35,11 @@ invariant(
   dataPage.includes('const pageSize = scope === "mflstats"\n    ? Math.max(1, totalRows)'),
   "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
 );
+invariant(
+  dataQuery.includes("function runtimeMetadataCount(key) {")
+    && dataQuery.includes("  runtimeMetadataCount,"),
+  "Non-negative runtime metadata counts must use the shared parser exported by _data-query.js.",
+);
 const mflStatsDataStart = dataViews.indexOf("function mflStatsData(request, complete = false) {");
 const mflStatsDataEnd = dataViews.indexOf("\n\nmodule.exports", mflStatsDataStart);
 const mflStatsDataSource = mflStatsDataStart >= 0 && mflStatsDataEnd > mflStatsDataStart
@@ -42,14 +47,16 @@ const mflStatsDataSource = mflStatsDataStart >= 0 && mflStatsDataEnd > mflStatsD
   : "";
 const normalStatsBranch = mflStatsDataSource.indexOf("if (!complete) {");
 const normalStatsDerivedCount = mflStatsDataSource.indexOf("const totalRows = rows.length;", normalStatsBranch);
+const cachedCompleteStatsCount = mflStatsDataSource.indexOf('runtimeMetadataCount("mfl_stats_all_total_players")');
 const completeStatsCount = mflStatsDataSource.indexOf("SELECT count(*) AS count FROM players");
 const completeStatsPaging = mflStatsDataSource.indexOf("const requestedPageSize = Number(request.query?.pageSize);");
 invariant(
   normalStatsBranch >= 0
     && normalStatsDerivedCount > normalStatsBranch
-    && completeStatsCount > normalStatsDerivedCount
+    && cachedCompleteStatsCount > normalStatsDerivedCount
+    && completeStatsCount > cachedCompleteStatsCount
     && completeStatsPaging > completeStatsCount,
-  "Normal MFL Stats must derive totals from its already-complete row set; only paginated mfl-stats-all may run COUNT(*).",
+  "Normal MFL Stats must derive totals from its complete row set, while mfl-stats-all must prefer the precomputed snapshot total and retain a live COUNT(*) fallback for older databases.",
 );
 invariant(
   mflStatsSummary.includes('tableExists("runtime_mfl_stats_summary")')
