@@ -14,6 +14,17 @@ for (const token of [
   includes(dataPage, token, `Paged table count fast path is missing: ${token}`);
 }
 
+for (const token of [
+  'const canonicalMflStatsSource = scope === "mflstats"',
+  'sourceWhere === ` WHERE ${mflCondition()}`',
+  'parametersEqual(baseParameters, [MFL_WALLET_ADDRESS])',
+  'runtimeMetadataCount("mfl_stats_all_total_players")',
+  "const totalRows = sameResultSet && precomputedSourceRows !== null",
+  "precomputedSourceRows ?? measureSync(timings, \"sqlite\", () => countRows(sourceWhere, baseParameters))",
+]) {
+  includes(dataPage, token, `MFL Stats source-count reuse is missing: ${token}`);
+}
+
 excludes(
   dataPage,
   "const sourceRows = Number(queryOne(\n    `SELECT count(*) AS count FROM players${sourceWhere}`",
