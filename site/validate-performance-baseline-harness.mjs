@@ -57,6 +57,11 @@ for (const token of [
   "async function loadCheckpoint(entities, journeys)",
   "resumeKey: baselineResumeKey(entities, journeys)",
   "await writeCheckpoint(raw, entities, journeys, false);",
+  "const heartbeat = setInterval(() => {",
+  "still running (",
+  "heartbeat.unref?.();",
+  "clearInterval(heartbeat);",
+  "const progressLabel = `${profile.id} / ${journey.id}`;",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
