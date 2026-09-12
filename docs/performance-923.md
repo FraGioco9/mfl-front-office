@@ -270,6 +270,16 @@ wall-clock measurements are noisy and should not make every PR slower. CI instea
 harness contract statically. Measurements against a fixture or CI environment must be labelled
 as synthetic and must never be described as production latency.
 
+The desktop profile keeps a 60-second route ceiling. The intentionally constrained
+`mobile-slow` profile uses a four-minute route ceiling because large payloads are transferred
+through its 200 KB/s emulated link; changing that bandwidth would change the reference profile
+itself.
+
+When `MFL_BASELINE_OUTPUT` is set, the harness checkpoints the JSON report after every completed
+journey repetition. Rerunning the exact same baseline command resumes completed repetitions when
+the output file's base URL, label, run count, profiles, journeys, and representative entities
+match. A late timeout therefore does not discard earlier completed measurements.
+
 The harness establishes one repeatable measurement method; committed/current baseline values
 still need to be captured against the chosen local or deployed environment before the first
 delivery-plan baseline checkbox can be closed.
