@@ -16,6 +16,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
+  "const BASELINE_SCHEMA_VERSION = 2;",
   '"desktop"',
   '"mobile-slow"',
   'id: "database"',
@@ -49,6 +50,9 @@ for (const token of [
   'loading: !document.body || document.body.classList.contains("loading")',
   '/execution context|cannot find context|context was destroyed/i',
   "async function waitForSpaNavigationReady(cdp, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS)",
+  "async function waitForDocumentNavigation(cdp, previousTimeOrigin, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS)",
+  '"performance.timeOrigin"',
+  "await waitForDocumentNavigation(cdp, documentTimeOrigin, timeoutMs);",
   'typeof Reflect.get(window, "setPage") === "function"',
   "await waitForSpaNavigationReady(cdp, routeTimeoutMs);",
   "const SLOW_ROUTE_TIMEOUT_MS = 240_000;",
@@ -56,6 +60,9 @@ for (const token of [
   "async function writeCheckpoint(raw, entities, journeys, complete = false)",
   "async function loadCheckpoint(entities, journeys)",
   "resumeKey: baselineResumeKey(entities, journeys)",
+  "schemaVersion: BASELINE_SCHEMA_VERSION",
+  'value !== null && value !== undefined && value !== ""',
+  "refusing to record a partial baseline sample",
   "await writeCheckpoint(raw, entities, journeys, false);",
   "const heartbeat = setInterval(() => {",
   "still running (",
