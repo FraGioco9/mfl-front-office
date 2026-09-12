@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4000";
 const DEFAULT_RUNS = 5;
-const ROUTE_TIMEOUT_MS = 60_000;
+const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
+const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
@@ -38,6 +39,7 @@ const PROFILES = Object.freeze({
     height: 900,
     mobile: false,
     cpuRate: 1,
+    routeTimeoutMs: DEFAULT_ROUTE_TIMEOUT_MS,
     network: null,
   }),
   "mobile-slow": Object.freeze({
@@ -46,6 +48,7 @@ const PROFILES = Object.freeze({
     height: 844,
     mobile: true,
     cpuRate: 4,
+    routeTimeoutMs: SLOW_ROUTE_TIMEOUT_MS,
     network: Object.freeze({
       latency: 150,
       downloadThroughput: 200_000,
@@ -388,8 +391,8 @@ function createNetworkCollector(cdp) {
   });
 }
 
-async function waitForRouteReady(cdp, expectedPath) {
-  const deadline = Date.now() + ROUTE_TIMEOUT_MS;
+async function waitForRouteReady(cdp, expectedPath, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     let state = null;
     try {
@@ -414,8 +417,8 @@ async function waitForRouteReady(cdp, expectedPath) {
   throw new Error(`Route did not settle before timeout: ${expectedPath}`);
 }
 
-async function waitForSpaNavigationReady(cdp) {
-  const deadline = Date.now() + ROUTE_TIMEOUT_MS;
+async function waitForSpaNavigationReady(cdp, timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     let ready = false;
     try {
@@ -510,14 +513,14 @@ async function applyProfile(cdp, profile) {
   }
 }
 
-async function runMeasuredPhase(cdp, network, phase, action, expectedPath) {
+async function runMeasuredPhase(cdp, network, phase, action, expectedPath, timeoutMs) {
   const minimumSequence = phase === "cached"
     ? Number(await evaluate(cdp, "window.__mflClientPerformance?.snapshot?.().at(-1)?.sequence || 0")) || 0
     : 0;
   await resetBrowserObservers(cdp);
   const networkMetrics = network.start();
   await action();
-  await waitForRouteReady(cdp, expectedPath);
+  await waitForRouteReady(cdp, expectedPath, timeoutMs);
   const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
   network.stop();
   return { ...browserMetrics, ...networkMetrics };
@@ -565,6 +568,7 @@ async function runJourney(executable, profile, journey) {
     const network = createNetworkCollector(cdp);
     const targetUrl = `${baseUrl}${journey.path}`;
     const expectedPath = journey.expectedPath || journey.path;
+    const routeTimeoutMs = Number(profile.routeTimeoutMs) || DEFAULT_ROUTE_TIMEOUT_MS;
 
     await cdp.send("Network.clearBrowserCache");
     const cold = await runMeasuredPhase(
@@ -573,6 +577,7 @@ async function runJourney(executable, profile, journey) {
       "cold",
       () => cdp.send("Page.navigate", { url: targetUrl }),
       expectedPath,
+      routeTimeoutMs,
     );
 
     const refresh = await runMeasuredPhase(
@@ -581,17 +586,19 @@ async function runJourney(executable, profile, journey) {
       "refresh",
       () => cdp.send("Page.reload", { ignoreCache: false }),
       expectedPath,
+      routeTimeoutMs,
     );
 
-    await waitForSpaNavigationReady(cdp);
+    await waitForSpaNavigationReady(cdp, routeTimeoutMs);
     await navigateSpa(cdp, "home", {});
-    await waitForRouteReady(cdp, "/");
+    await waitForRouteReady(cdp, "/", routeTimeoutMs);
     const cached = await runMeasuredPhase(
       cdp,
       network,
       "cached",
       () => navigateSpa(cdp, journey.page, journey.options),
       expectedPath,
+      routeTimeoutMs,
     );
 
     return { cold, refresh, cached };
