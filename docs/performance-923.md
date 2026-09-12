@@ -250,6 +250,10 @@ Collected metrics include:
 - browser long-task count/duration;
 - cumulative layout shift.
 
+On Windows, the harness automatically checks standard Chrome, Edge (Chromium), and Chromium
+install locations under Program Files and LocalAppData. `CHROME_PATH` remains available only as
+an explicit fallback for non-standard installations.
+
 Useful overrides:
 
 ```powershell
