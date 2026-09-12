@@ -22,6 +22,8 @@ for (const token of [
   'id: "player"',
   'id: "club"',
   'id: "my-clubs"',
+  'expectedPath: "/my-clubs/opted-out"',
+  'const expectedPath = journey.expectedPath || journey.path;',
   'id: "evaluation"',
   'id: "stats"',
   'path: "/database/attributes"',
