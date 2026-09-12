@@ -66,6 +66,24 @@ Deterministic request-work effect on a rebuilt snapshot:
 - before: 2 request-time `COUNT(*)` queries per uncached manifest build;
 - after: 0 request-time `COUNT(*)` queries for those totals.
 
+## Paged MFL Stats source-count reuse
+
+Owner: `pagedData()` in `site/api/_data-page.js`.
+
+The primary MFL Stats table route uses `scope=mflstats`. Its unfiltered source population is
+the same canonical normalized MFL-wallet population precomputed for `mfl-stats-all`.
+
+The paged table owner now reuses `mfl_stats_all_total_players` only when the source SQL
+predicate and bound parameters exactly match that canonical population. This preserves access
+constraints and avoids applying the snapshot total to a different result set.
+
+Deterministic request-work effect on rebuilt snapshots:
+
+- unfiltered MFL Stats: 1 request-time source/result `COUNT(*)` -> 0;
+- filtered MFL Stats: filtered result count remains live, but the separate unfiltered
+  `sourceRows` count is read from metadata -> 1 fewer `COUNT(*)`;
+- older snapshots: unchanged live-count fallback.
+
 ## Precomputed MFL Stats all-player total
 
 Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
