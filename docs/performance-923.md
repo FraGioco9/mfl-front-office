@@ -280,6 +280,10 @@ journey repetition. Rerunning the exact same baseline command resumes completed 
 the output file's base URL, label, run count, profiles, journeys, and representative entities
 match. A late timeout therefore does not discard earlier completed measurements.
 
+Long phases print their individual `cold`, `refresh`, and `cached` start/completion plus a
+30-second heartbeat. This is especially important for Stats under `mobile-slow`, where the
+reference bandwidth makes large payload transfers intentionally slow rather than silently hung.
+
 The harness establishes one repeatable measurement method; committed/current baseline values
 still need to be captured against the chosen local or deployed environment before the first
 delivery-plan baseline checkbox can be closed.
