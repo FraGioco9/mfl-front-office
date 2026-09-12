@@ -9,6 +9,7 @@ const DEFAULT_RUNS = 5;
 const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
+const NETWORK_IDLE_GRACE_MS = 250;
 const BASELINE_SCHEMA_VERSION = 2;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
@@ -329,7 +330,9 @@ function parseServerTiming(header) {
 
 function createNetworkCollector(cdp) {
   let current = null;
+  let activitySequence = 0;
   const requests = new Map();
+  const pendingRequestIds = new Set();
 
   cdp.on("Network.requestWillBeSent", ({ requestId, request, type }) => {
     if (!current) return;
@@ -345,6 +348,8 @@ function createNetworkCollector(cdp) {
     current.requestCount += 1;
     if (api) current.apiRequestCount += 1;
     requests.set(requestId, { api, url, type: String(type || "") });
+    pendingRequestIds.add(requestId);
+    activitySequence += 1;
   });
 
   cdp.on("Network.responseReceived", ({ requestId, response }) => {
@@ -367,14 +372,27 @@ function createNetworkCollector(cdp) {
   cdp.on("Network.loadingFinished", ({ requestId, encodedDataLength }) => {
     if (!current) return;
     const request = requests.get(requestId);
+    if (!request) return;
     const bytes = Math.max(0, Number(encodedDataLength) || 0);
     current.bytes += bytes;
-    if (request?.api) current.apiBytes += bytes;
+    if (request.api) current.apiBytes += bytes;
+    pendingRequestIds.delete(requestId);
+    requests.delete(requestId);
+    activitySequence += 1;
+  });
+
+  cdp.on("Network.loadingFailed", ({ requestId }) => {
+    if (!current || !requests.has(requestId)) return;
+    pendingRequestIds.delete(requestId);
+    requests.delete(requestId);
+    activitySequence += 1;
   });
 
   return Object.freeze({
     start() {
       requests.clear();
+      pendingRequestIds.clear();
+      activitySequence = 0;
       current = {
         requestCount: 0,
         apiRequestCount: 0,
@@ -384,9 +402,33 @@ function createNetworkCollector(cdp) {
       };
       return current;
     },
+    async waitForIdle(timeoutMs = DEFAULT_ROUTE_TIMEOUT_MS) {
+      assert(current, "Network collector is not active.");
+      const deadline = Date.now() + timeoutMs;
+      let observedActivitySequence = activitySequence;
+      let quietSince = Date.now();
+      while (Date.now() < deadline) {
+        if (activitySequence !== observedActivitySequence) {
+          observedActivitySequence = activitySequence;
+          quietSince = Date.now();
+        }
+        if (
+          pendingRequestIds.size === 0
+          && Date.now() - quietSince >= NETWORK_IDLE_GRACE_MS
+        ) {
+          return;
+        }
+        await delay(25);
+      }
+      throw new Error(
+        `Network did not become idle before timeout (${pendingRequestIds.size} measured requests still pending).`,
+      );
+    },
     stop() {
       const completed = current;
       current = null;
+      requests.clear();
+      pendingRequestIds.clear();
       return completed;
     },
   });
@@ -571,6 +613,7 @@ async function runMeasuredPhase(
       await waitForDocumentNavigation(cdp, documentTimeOrigin, timeoutMs);
     }
     await waitForRouteReady(cdp, expectedPath, timeoutMs);
+    await network.waitForIdle(timeoutMs);
     const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
     const elapsedSeconds = Math.round((Date.now() - phaseStartedAt) / 1000);
     console.log(`  ${label}: complete (${elapsedSeconds}s)`);
