@@ -328,21 +328,18 @@ function mflStatsData(request, complete = false) {
   }
 
   const where = ` WHERE ${conditions.join(" AND ")}`;
-  const totalRows = Number(queryOne(
-    `SELECT count(*) AS count FROM players${where}`,
-    parameters,
-  )?.count || 0);
 
   if (!complete) {
     const rows = queryRows(
       `SELECT ${selectList(columns)} FROM players${where} ORDER BY overall DESC, player_id DESC`,
       parameters,
     );
+    const totalRows = rows.length;
     return {
       columns,
       rows: rowsAsArrays(rows, columns),
       page: 1,
-      pageSize: rows.length,
+      pageSize: totalRows,
       totalRows,
       sourceRows: totalRows,
       totalPages: 1,
@@ -351,6 +348,10 @@ function mflStatsData(request, complete = false) {
     };
   }
 
+  const totalRows = Number(queryOne(
+    `SELECT count(*) AS count FROM players${where}`,
+    parameters,
+  )?.count || 0);
   const requestedPageSize = Number(request.query?.pageSize);
   const pageSize = Math.max(
     1,
