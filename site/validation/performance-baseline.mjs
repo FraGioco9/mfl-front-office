@@ -390,11 +390,17 @@ function createNetworkCollector(cdp) {
 async function waitForRouteReady(cdp, expectedPath) {
   const deadline = Date.now() + ROUTE_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    const state = await evaluate(cdp, `(() => ({
-      ready: document.documentElement.dataset.mflRouteReady === "true",
-      loading: document.body.classList.contains("loading"),
-      path: window.location.pathname + window.location.search
-    }))()`);
+    let state = null;
+    try {
+      state = await evaluate(cdp, `(() => ({
+        ready: document.documentElement?.dataset?.mflRouteReady === "true",
+        loading: !document.body || document.body.classList.contains("loading"),
+        path: window.location.pathname + window.location.search
+      }))()`);
+    } catch (error) {
+      const message = String(error?.message || error);
+      if (!/execution context|cannot find context|context was destroyed/i.test(message)) throw error;
+    }
     if (state?.ready && !state?.loading) {
       if (expectedPath && state.path !== expectedPath) {
         throw new Error(`Expected route ${expectedPath}, got ${state.path}.`);
