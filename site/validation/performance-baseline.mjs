@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 8;
+const BASELINE_SCHEMA_VERSION = 9;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -556,7 +556,8 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   );
   const shellSyncStartAt = firstStageAt("route-shell-sync-start");
   const shellSyncCompleteAt = firstStageAt("route-shell-sync-complete");
-  const preloaderPaintAt = firstStageAt("route-preloader-paint-complete");
+  const preloaderPaintEntry = timeline.find((entry) => entry?.phase === "route-preloader-paint-complete") || null;
+  const preloaderPaintAt = Number.isFinite(Number(preloaderPaintEntry?.at)) ? Number(preloaderPaintEntry.at) : null;
   const loaderCompleteAt = firstStageAt("route-loader-complete");
   const postloaderPaintAt = firstStageAt("route-postloader-paint-complete");
   const contentCommitAt = Number.isFinite(Number(contentCommit?.at)) ? Number(contentCommit.at) : null;
@@ -567,6 +568,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         commitPrepMs: stageDelta(startAt, shellSyncStartAt),
         shellSyncMs: stageDelta(shellSyncStartAt, shellSyncCompleteAt),
         revealPaintMs: stageDelta(shellSyncCompleteAt, preloaderPaintAt),
+        preloaderPaintSkipped: preloaderPaintEntry?.detail?.skipped === true ? 1 : 0,
         loaderMs: stageDelta(preloaderPaintAt, loaderCompleteAt),
         postloaderPaintMs: stageDelta(loaderCompleteAt, postloaderPaintAt),
         releaseMs: stageDelta(releaseStartAt, contentCommitAt),
@@ -934,6 +936,7 @@ function summarizePhase(runs) {
       commitPrepMs: summarizeMetric(runs, (run) => run.routeStages?.commitPrepMs),
       shellSyncMs: summarizeMetric(runs, (run) => run.routeStages?.shellSyncMs),
       revealPaintMs: summarizeMetric(runs, (run) => run.routeStages?.revealPaintMs),
+      preloaderPaintSkipped: summarizeMetric(runs, (run) => run.routeStages?.preloaderPaintSkipped),
       loaderMs: summarizeMetric(runs, (run) => run.routeStages?.loaderMs),
       postloaderPaintMs: summarizeMetric(runs, (run) => run.routeStages?.postloaderPaintMs),
       releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
@@ -1017,14 +1020,15 @@ function printSummary(summary) {
   }
 
   console.log("\nCached SPA stage breakdown (median / observed slowest)");
-  console.log("| Profile | Journey | Commit prep ms | Shell sync ms | Reveal paint ms | Loader ms | Loading paint ms | Release ms | Settle paint ms |");
-  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  console.log("| Profile | Journey | Commit prep ms | Shell sync ms | Reveal wait ms | Preloader wait skipped | Loader ms | Loading paint ms | Release ms | Settle paint ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |");
   for (const profile of Object.keys(summary)) {
     for (const journey of Object.keys(summary[profile])) {
       const stages = summary[profile][journey].cached.routeStages;
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      const preloaderSkipped = stages.preloaderPaintSkipped.median >= 0.5 ? "yes" : "no";
       console.log(
-        `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+        `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${preloaderSkipped} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
       );
     }
   }
