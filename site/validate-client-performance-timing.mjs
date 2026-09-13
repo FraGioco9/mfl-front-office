@@ -101,7 +101,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 6;",
+  "const BASELINE_SCHEMA_VERSION = 7;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
@@ -109,12 +109,16 @@ for (const token of [
   'firstStageAt("route-postloader-paint-complete")',
   "commitPrepMs:",
   "shellSyncMs:",
+  "shellStages:",
+  "horizontalCuesMs:",
+  "staticTotalMs:",
   "revealPaintMs:",
   "loaderMs:",
   "postloaderPaintMs:",
   "releaseMs:",
   "settlePaintMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Cached shell sync breakdown (median / observed slowest)",
   "Cached loader overview (median / observed slowest)",
   "Cached filter/render breakdown (median / observed slowest)",
   'loaderStageAt("route-loader-request-start")',
