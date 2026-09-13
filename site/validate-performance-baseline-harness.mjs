@@ -79,7 +79,7 @@ for (const token of [
   "const progressLabel = `${profile.id} / ${journey.id}`;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
-  'firstStageAt("route-preloader-paint-complete")',
+  'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
   "Cached SPA stage breakdown (median / observed slowest)",
