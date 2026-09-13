@@ -324,6 +324,7 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
   }
 }
 
+Reflect.set(window, "__mflRecordRoutePerformanceStage", recordPageTransitionStage);
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
 Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
 Reflect.set(window, "__mflRunViewTransition", runViewTransition);
