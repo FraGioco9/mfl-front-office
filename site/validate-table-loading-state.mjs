@@ -351,6 +351,14 @@ invariant(
   "Incremental fetches must release only request-owned loading tokens; render-owned tokens survive payload application.",
 );
 
+invariant(
+  appCoreSource.includes("function retainedDatabaseReentryReady(route) {")
+    && appCoreSource.includes('const reuseRetainedDatabase = pageName === "database" && retainedDatabaseReentryReady(route);')
+    && appCoreSource.includes("if (reuseRetainedDatabase) {")
+    && appCoreSource.includes("reuseRetainedTableDom: true,"),
+  "Exact cached Database re-entry must bypass cached payload reapplication and the table/filter reconstruction path only after retained-state verification.",
+);
+
 const pageRenderStart = appCoreSource.indexOf("async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {})");
 const pageRenderEnd = appCoreSource.indexOf("const setIncrementalView = async function setIncrementalView", pageRenderStart);
 const pageRenderTransaction = appCoreSource.slice(pageRenderStart, pageRenderEnd);
@@ -424,9 +432,9 @@ invariant(
 );
 
 invariant(
-  appCoreSource.includes('if (tablePage) {\n    state.page = 1;\n    applyFilters({ save: false });\n  }')
+  appCoreSource.includes('if (tablePage) {\n    state.page = 1;\n    if (options.reuseRetainedTableDom !== true) {\n      applyFilters({ save: false });\n    }\n  }')
     && !appCoreSource.includes("if (tablePage && state.rows.length)"),
-  "Completed table routes must run the authoritative filter/render commit even when the first request returns zero rows.",
+  "Completed table routes must run the authoritative filter/render commit even when the first request returns zero rows, except for an explicitly verified retained-table re-entry.",
 );
 
 invariant(
