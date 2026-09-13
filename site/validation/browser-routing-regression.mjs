@@ -506,12 +506,22 @@ const browserTestSource = String.raw`(() => {
   }
 
   async function navigateBackToScenario(setPage, timeline) {
+    const reusableDatabaseRow = scenario === "database"
+      ? document.querySelector("#tableBody tr[data-player-id]")
+      : null;
     await setPage("privacy", true);
     await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
 
     if (scenario === "database" || scenario === "database-empty") {
       await setPage("database", true, { view: "attributes" });
+      if (scenario === "database") {
+        assert(reusableDatabaseRow instanceof HTMLTableRowElement, "Database cached-reentry fixture row was unavailable before navigation.");
+        assert(
+          document.querySelector("#tableBody tr[data-player-id]") === reusableDatabaseRow,
+          "Database cached re-entry rebuilt an unchanged table row instead of reusing retained DOM.",
+        );
+      }
     } else if (scenario === "player") {
       await setPage("player", true, { playerId: "1" });
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
