@@ -107,7 +107,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 10;",
+  "const BASELINE_SCHEMA_VERSION = 11;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
@@ -136,6 +136,11 @@ for (const token of [
   "settleViewFrameMs:",
   "settlePlayerFrameMs:",
   "Cached settlement breakdown (median / observed slowest)",
+  "Cached settlement long-animation-frame breakdown (median / observed slowest)",
+  "settlementLoafDurationMs:",
+  "settlementLoafScriptMs:",
+  "settlementLoafForcedStyleLayoutMs:",
+  "settlementLoafRenderPhaseMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
   "Preloader wait skipped",
   "Cached shell sync breakdown (median / observed slowest)",
