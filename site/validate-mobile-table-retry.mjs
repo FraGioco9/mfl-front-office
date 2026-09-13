@@ -58,10 +58,12 @@ for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
 includes(tableSource, "function compactMobilePlayerName(value)", "Canonical Table source must own N. Surname formatting.");
 includes(tableSource, 'nameLink.setAttribute("aria-label", fullPlayerName);', "Compact names must retain the full accessible name.");
 includes(tableSource, 'column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")', "Listing header blanking must remain inside mobile behavior.");
-includes(tableSource, 'const priceText = String(price?.textContent || "").trim();', "Mobile Listing tooltip must reuse the formatted price.");
-includes(tableSource, "price?.remove();", "Mobile Listing price must not remain visible in the cell.");
+includes(tableSource, 'const priceText = `${listingPriceFormatter.format(numericValue)}`;', "Table Listing rendering must derive one formatted price for desktop and mobile.");
+includes(tableSource, "if (compactTableLayout) {", "Mobile Listing behavior must remain explicitly gated.");
 includes(tableSource, "badge.dataset.tooltip = priceText;", "Mobile Listing price must move to the tooltip.");
-excludes(tableSource, "For Sale at", "Mobile Listing tooltips must contain only the formatted price.");
+includes(tableSource, 'badge.setAttribute("aria-label", priceText);', "Mobile Listing accessibility must contain only the formatted price.");
+includes(tableSource, 'badge.setAttribute("aria-label", `For Sale at ${priceText}`);', "Desktop Listing accessibility must retain the full For Sale label.");
+excludes(tableSource, "price?.remove();", "Parser-free mobile Listing rendering must not create then remove the hidden price node.");
 
 includes(staticUi, 'const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");', "Global tooltip ownership must recognize mobile input.");
 includes(staticUi, "function onTooltipClick(event)", "Mobile tooltips must be click/tap driven.");
