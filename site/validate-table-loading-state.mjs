@@ -406,8 +406,13 @@ invariant(
   "The loading runtime must treat a visible non-empty empty-state message as an authoritative completed table render instead of repainting loading rows.",
 );
 
+const completedTableRouteStart = appCoreSource.indexOf('if (tablePage) {\n    state.page = 1;');
+const completedTableRouteEnd = appCoreSource.indexOf('\n  if (document.body.classList.contains("loading")) {', completedTableRouteStart);
+const completedTableRoute = appCoreSource.slice(completedTableRouteStart, completedTableRouteEnd);
 invariant(
-  appCoreSource.includes('if (tablePage) {\n    state.page = 1;\n    applyFilters({ save: false });\n  }')
+  completedTableRouteStart >= 0
+    && completedTableRouteEnd > completedTableRouteStart
+    && completedTableRoute.includes("applyFilters({ save: false });")
     && !appCoreSource.includes("if (tablePage && state.rows.length)"),
   "Completed table routes must run the authoritative filter/render commit even when the first request returns zero rows.",
 );

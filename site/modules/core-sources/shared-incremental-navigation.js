@@ -176,33 +176,54 @@
       ? window.__mflTableLoadingRuntime?.beginRequest?.(route.scope, { loadingMode: requestOptions.loadingMode }) || 0
       : 0);
   const ownsRenderLoadingRequestToken = inheritedTableLoadingRequestToken === 0 && renderLoadingRequestToken !== 0;
+  const previousPerformanceTraceId = String(Reflect.get(window, "__mflRoutePerformanceTraceId") || "");
+  const performanceTraceSequence = Number(Reflect.get(window, "__mflRoutePerformanceTraceSequence") || 0) + 1;
+  Reflect.set(window, "__mflRoutePerformanceTraceSequence", performanceTraceSequence);
+  const performanceTraceId = `${route.scope || pageName}:${performanceTraceSequence}`;
+  Reflect.set(window, "__mflRoutePerformanceTraceId", performanceTraceId);
   try {
+    const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-request-start", { page: pageName });
     const payload = await requestIncrementalRoute(route, 1, {
       ...requestOptions,
       tableLoadingRequestToken: renderLoadingRequestToken,
       __mflNavigationTransition: options.__mflNavigationTransition || null,
     });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-request-complete", { page: pageName });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
     if (tablePages.has(pageName) && pageName !== "club") {
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-outer-restore-start", { page: pageName });
       restoreSavedTableState(pageName, {
         view: route.view || options.view,
         path: options.path,
         replaceUrl: options.replaceUrl,
       });
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-outer-restore-complete", { page: pageName });
     }
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;
     try {
+      const renderPageStartedAt = performance.now();
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-render-page-start", { page: pageName });
       const result = await renderPage.call(this, pageName, false, {
         ...options,
         replaceUrl: "",
         skipNavigationLoading: true,
+      });
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-render-page-complete", {
+        page: pageName,
+        durationMs: performance.now() - renderPageStartedAt,
       });
       return pageNavigationIsCurrent(options) ? result : false;
     } finally {
       state.incrementalApplying = false;
     }
   } finally {
+    if (previousPerformanceTraceId) {
+      Reflect.set(window, "__mflRoutePerformanceTraceId", previousPerformanceTraceId);
+    } else {
+      Reflect.deleteProperty(window, "__mflRoutePerformanceTraceId");
+    }
     if (ownsRenderLoadingRequestToken) {
       window.__mflTableLoadingRuntime?.finishRequest?.(renderLoadingRequestToken);
     }

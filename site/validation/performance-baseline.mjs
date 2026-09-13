@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 3;
+const BASELINE_SCHEMA_VERSION = 6;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -574,6 +574,78 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
       }
     : null;
 
+  const loaderTraceEntry = phase === "cached"
+    ? timeline.find((entry) => entry?.phase === "route-loader-request-start")
+    : null;
+  const loaderTraceId = String(loaderTraceEntry?.detail?.traceId || "");
+  const loaderStageEntry = (stage) => {
+    if (phase !== "cached") return null;
+    return timeline.find((entry) => (
+      entry?.phase === stage
+      && (!loaderTraceId || String(entry?.detail?.traceId || "") === loaderTraceId)
+    )) || null;
+  };
+  const loaderStageAt = (stage) => {
+    const at = Number(loaderStageEntry(stage)?.at);
+    return Number.isFinite(at) ? at : null;
+  };
+  const requestStartAt = loaderStageAt("route-loader-request-start");
+  const requestCompleteAt = loaderStageAt("route-loader-request-complete");
+  const outerRestoreStartAt = loaderStageAt("route-loader-outer-restore-start");
+  const outerRestoreCompleteAt = loaderStageAt("route-loader-outer-restore-complete");
+  const renderPageStartAt = loaderStageAt("route-loader-render-page-start");
+  const pageChromeStartAt = loaderStageAt("route-loader-page-chrome-start");
+  const pageChromeCompleteAt = loaderStageAt("route-loader-page-chrome-complete");
+  const tableControlsStartAt = loaderStageAt("route-loader-table-controls-start");
+  const tableControlsCompleteAt = loaderStageAt("route-loader-table-controls-complete");
+  const quickFiltersStartAt = loaderStageAt("route-loader-quick-filters-start");
+  const quickFiltersCompleteAt = loaderStageAt("route-loader-quick-filters-complete");
+  const applyFiltersStartAt = loaderStageAt("route-loader-apply-filters-start");
+  const filterPrepStartAt = loaderStageAt("route-loader-filter-prep-start");
+  const filterSourceCompleteAt = loaderStageAt("route-loader-filter-source-complete");
+  const filterRowsCompleteAt = loaderStageAt("route-loader-filter-rows-complete");
+  const filterUiCompleteAt = loaderStageAt("route-loader-filter-ui-complete");
+  const tableRenderStartAt = loaderStageAt("route-loader-table-render-start");
+  const tableBuildCompleteAt = loaderStageAt("route-loader-table-build-complete");
+  const tableDomCommitCompleteAt = loaderStageAt("route-loader-table-dom-commit-complete");
+  const tableRenderCompleteAt = loaderStageAt("route-loader-table-render-complete");
+  const applyFiltersCompleteAt = loaderStageAt("route-loader-apply-filters-complete");
+  const tailLoadingStartAt = loaderStageAt("route-loader-tail-loading-start");
+  const tailLoadingCompleteAt = loaderStageAt("route-loader-tail-loading-complete");
+  const tailNavigationCompleteAt = loaderStageAt("route-loader-tail-navigation-complete");
+  const tailScrollCompleteAt = loaderStageAt("route-loader-tail-scroll-complete");
+  const tailHomeSyncCompleteAt = loaderStageAt("route-loader-tail-home-sync-complete");
+  const renderPageCompleteEntry = loaderStageEntry("route-loader-render-page-complete");
+  const renderPageCompleteAt = loaderStageAt("route-loader-render-page-complete");
+  const renderPageDirectMs = Number(renderPageCompleteEntry?.detail?.durationMs);
+  const loaderStages = phase === "cached"
+    ? {
+        requestMs: stageDelta(requestStartAt, requestCompleteAt),
+        outerRestoreMs: stageDelta(outerRestoreStartAt, outerRestoreCompleteAt),
+        renderPagePreChromeMs: stageDelta(renderPageStartAt, pageChromeStartAt),
+        pageChromeMs: stageDelta(pageChromeStartAt, pageChromeCompleteAt),
+        tableControlsMs: stageDelta(tableControlsStartAt, tableControlsCompleteAt),
+        quickFiltersMs: stageDelta(quickFiltersStartAt, quickFiltersCompleteAt),
+        filterPrepMs: stageDelta(filterPrepStartAt, filterSourceCompleteAt),
+        rowFilterMs: stageDelta(filterSourceCompleteAt, filterRowsCompleteAt),
+        filterUiMs: stageDelta(filterRowsCompleteAt, filterUiCompleteAt),
+        tableBuildMs: stageDelta(tableRenderStartAt, tableBuildCompleteAt),
+        tableDomCommitMs: stageDelta(tableBuildCompleteAt, tableDomCommitCompleteAt),
+        tablePostMs: stageDelta(tableDomCommitCompleteAt, tableRenderCompleteAt),
+        applyFiltersTailMs: stageDelta(tableRenderCompleteAt, applyFiltersCompleteAt),
+        tailLoadingMs: stageDelta(tailLoadingStartAt, tailLoadingCompleteAt),
+        tailNavigationMs: stageDelta(tailLoadingCompleteAt, tailNavigationCompleteAt),
+        tailScrollMs: stageDelta(tailNavigationCompleteAt, tailScrollCompleteAt),
+        tailHomeSyncMs: stageDelta(tailScrollCompleteAt, tailHomeSyncCompleteAt),
+        tailContinuationMs: stageDelta(tailHomeSyncCompleteAt, renderPageCompleteAt),
+        renderPageTailMs: stageDelta(applyFiltersCompleteAt, renderPageCompleteAt),
+        renderPageTotalMs: stageDelta(renderPageStartAt, renderPageCompleteAt),
+        renderPageDirectMs: Number.isFinite(renderPageDirectMs) ? renderPageDirectMs : null,
+        applyFiltersTotalMs: stageDelta(applyFiltersStartAt, applyFiltersCompleteAt),
+        tableRenderTotalMs: stageDelta(tableRenderStartAt, tableRenderCompleteAt),
+      }
+    : null;
+
   assert(
     Number.isFinite(usefulContentMs),
     `Missing ${phase} useful-content timing; refusing to record a partial baseline sample.`,
@@ -595,6 +667,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     longestTaskMs: longTaskDurations.length ? Math.max(...longTaskDurations) : 0,
     cls: layoutShifts.reduce((total, entry) => total + Math.max(0, Number(entry?.value) || 0), 0),
     routeStages,
+    loaderStages,
     dataSources: dataResponses.reduce((counts, entry) => {
       const source = String(entry?.detail?.source || "unknown");
       counts[source] = (counts[source] || 0) + 1;
@@ -825,6 +898,31 @@ function summarizePhase(runs) {
       releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
       settlePaintMs: summarizeMetric(runs, (run) => run.routeStages?.settlePaintMs),
     },
+    loaderStages: {
+      requestMs: summarizeMetric(runs, (run) => run.loaderStages?.requestMs),
+      outerRestoreMs: summarizeMetric(runs, (run) => run.loaderStages?.outerRestoreMs),
+      renderPagePreChromeMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPagePreChromeMs),
+      pageChromeMs: summarizeMetric(runs, (run) => run.loaderStages?.pageChromeMs),
+      tableControlsMs: summarizeMetric(runs, (run) => run.loaderStages?.tableControlsMs),
+      quickFiltersMs: summarizeMetric(runs, (run) => run.loaderStages?.quickFiltersMs),
+      filterPrepMs: summarizeMetric(runs, (run) => run.loaderStages?.filterPrepMs),
+      rowFilterMs: summarizeMetric(runs, (run) => run.loaderStages?.rowFilterMs),
+      filterUiMs: summarizeMetric(runs, (run) => run.loaderStages?.filterUiMs),
+      tableBuildMs: summarizeMetric(runs, (run) => run.loaderStages?.tableBuildMs),
+      tableDomCommitMs: summarizeMetric(runs, (run) => run.loaderStages?.tableDomCommitMs),
+      tablePostMs: summarizeMetric(runs, (run) => run.loaderStages?.tablePostMs),
+      applyFiltersTailMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTailMs),
+      tailLoadingMs: summarizeMetric(runs, (run) => run.loaderStages?.tailLoadingMs),
+      tailNavigationMs: summarizeMetric(runs, (run) => run.loaderStages?.tailNavigationMs),
+      tailScrollMs: summarizeMetric(runs, (run) => run.loaderStages?.tailScrollMs),
+      tailHomeSyncMs: summarizeMetric(runs, (run) => run.loaderStages?.tailHomeSyncMs),
+      tailContinuationMs: summarizeMetric(runs, (run) => run.loaderStages?.tailContinuationMs),
+      renderPageTailMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTailMs),
+      renderPageTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTotalMs),
+      renderPageDirectMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageDirectMs),
+      applyFiltersTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTotalMs),
+      tableRenderTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.tableRenderTotalMs),
+    },
     serverTiming,
   };
 }
@@ -866,6 +964,45 @@ function printSummary(summary) {
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached loader overview (median / observed slowest)");
+  console.log("| Profile | Journey | Cache apply ms | Outer restore ms | Render pre-chrome ms | Page chrome ms | Table controls ms | Quick filters ms | RenderPage total ms | RenderPage direct ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.loaderStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.requestMs)} | ${pair(stages.outerRestoreMs)} | ${pair(stages.renderPagePreChromeMs)} | ${pair(stages.pageChromeMs)} | ${pair(stages.tableControlsMs)} | ${pair(stages.quickFiltersMs)} | ${pair(stages.renderPageTotalMs)} | ${pair(stages.renderPageDirectMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached filter/render breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | ApplyFilters total ms | Filter prep ms | Row filter ms | Filter UI ms | Table render total ms | Table build ms | DOM commit ms | Table post ms | Apply tail ms | Page tail ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.loaderStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached renderPage tail breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Loading finish ms | Navigation guard ms | Scroll reset ms | Home sync ms | Async continuation ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.loaderStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.tailLoadingMs)} | ${pair(stages.tailNavigationMs)} | ${pair(stages.tailScrollMs)} | ${pair(stages.tailHomeSyncMs)} | ${pair(stages.tailContinuationMs)} |`,
       );
     }
   }

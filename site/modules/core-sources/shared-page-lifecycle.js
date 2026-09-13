@@ -352,6 +352,8 @@ if (pageName === "my-clubs") {
   }
 
   if (!pageNavigationIsCurrent(options)) return null;
+  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-page-chrome-start", { page: pageName });
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
@@ -370,7 +372,9 @@ if (pageName === "my-clubs") {
     tablePageTitle.textContent = tableTitleForPage(pageName);
   }
   renderWatchlistSwitcher();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-page-chrome-complete", { page: pageName });
   if (tablePage) {
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-controls-start", { page: pageName });
     restoreSavedTableState(pageName, {
       view: options.view,
       path: options.path,
@@ -379,8 +383,11 @@ if (pageName === "my-clubs") {
     syncRestoredTableControls(pageName);
     updateViewButtons();
     buildHeader();
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-controls-complete", { page: pageName });
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-quick-filters-start", { page: pageName });
   globalThis.syncQuickFilterLabels?.();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-quick-filters-complete", { page: pageName });
 
   if (mflStatsActive) {
     state.view = "stats";
@@ -487,19 +494,29 @@ if (pageName === "my-clubs") {
   }
   if (tablePage) {
     state.page = 1;
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-apply-filters-start", { page: pageName });
     applyFilters({ save: false });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-apply-filters-complete", { page: pageName });
   }
 
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-loading-start", { page: pageName });
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-loading-complete", { page: pageName });
   if (!pageNavigationIsCurrent(options)) return null;
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-navigation-complete", { page: pageName });
 
   if (shouldResetScroll) {
     resetPageScroll();
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-scroll-complete", {
+    page: pageName,
+    reset: shouldResetScroll,
+  });
 
   syncHomeLoginButton();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-home-sync-complete", { page: pageName });
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {

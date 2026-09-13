@@ -15,7 +15,7 @@
     const entries = [];
     let sequence = 0;
 
-    function record(phase, detail = {}) {
+    function makeEntry(phase, detail = {}) {
       const normalizedPhase = String(phase || "").trim();
       if (!normalizedPhase) return null;
       const normalizedDetail = detail && typeof detail === "object" && !Array.isArray(detail)
@@ -31,13 +31,24 @@
       if (entries.length > CLIENT_TIMING_ENTRY_LIMIT) {
         entries.splice(0, entries.length - CLIENT_TIMING_ENTRY_LIMIT);
       }
-      performance.mark(`mfl:${normalizedPhase}`, { detail: entry });
+      return entry;
+    }
+
+    function record(phase, detail = {}) {
+      const entry = makeEntry(phase, detail);
+      if (!entry) return null;
+      performance.mark(`mfl:${entry.phase}`, { detail: entry });
       window.dispatchEvent(new CustomEvent("mfl:client-timing", { detail: entry }));
       return entry;
     }
 
+    function recordInternal(phase, detail = {}) {
+      return makeEntry(phase, detail);
+    }
+
     return Object.freeze({
       record,
+      recordInternal,
       snapshot: () => Object.freeze(entries.slice()),
     });
   }
