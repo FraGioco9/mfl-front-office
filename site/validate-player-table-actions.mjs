@@ -32,6 +32,15 @@ for (const code of [source, generatedTable]) {
     "Player table actions must own a real column between selection and the player data columns in canonical and generated table code.",
   );
   invariant(
+    code.includes('const playerTableActionsButtonIconTemplate = document.createElement("template");')
+      && code.includes("button.appendChild(playerTableActionsButtonIconTemplate.content.cloneNode(true));")
+      && !code.includes('button.addEventListener("pointerdown", (event) => event.stopPropagation());')
+      && !code.includes('openPlayerTableActionMenu(button, playerId);')
+      && code.includes('const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");')
+      && code.includes('openPlayerTableActionMenu(actionButton, actionButton.dataset.playerId || "");'),
+    "Rendered Player action triggers must reuse one parsed icon template and delegate pointer/click behavior through tableBody instead of allocating per-row listeners.",
+  );
+  invariant(
     code.includes('createPlayerTableActionItem("profile", "Player profile", "profile")')
       && code.includes('createPlayerTableActionItem("mfl", "MFL profile", "external")')
       && code.includes('createPlayerTableActionItem("evaluate", "Evaluate", "evaluate")')
