@@ -82,7 +82,7 @@ for (const token of [
   'firstStageAt("route-preloader-paint-complete")',
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
-  '"Cached SPA stage breakdown (median / observed slowest)"',
+  "Cached SPA stage breakdown (median / observed slowest)",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
