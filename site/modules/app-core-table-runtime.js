@@ -2782,6 +2782,10 @@ function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, c
   ]);
 }
 
+function currentTableBodyRouteIdentity() {
+  return `${state.currentPage}|${state.view}|${window.location.pathname}${window.location.search}`;
+}
+
 function tableBodyStructureReusable(pageRows) {
   if (tableBody.getAttribute("data-static-loading") === "true") return false;
   if (tableBody.children.length !== pageRows.length) return false;
@@ -3033,6 +3037,7 @@ function tableRenderTableOwner() {
     if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage, reused: true });
     if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-dom-commit-complete", { page: state.currentPage, reused: true });
   }
+  tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
