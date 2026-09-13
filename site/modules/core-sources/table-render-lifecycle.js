@@ -103,6 +103,8 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const renderSignature = tableBodyRenderSignature(pageRows);
+  const previousCommittedSignature = tableBodyCommittedRenderSignature;
+  const previousCommittedParts = tableBodyCommittedRenderParts;
   const reusableStructure = tableBodyStructureReusable(pageRows);
   const reusableBody = tableBodyRenderReuse.matches(renderSignature, reusableStructure);
   Reflect.set(window, "__mflTableRenderReuseDebug", Object.freeze({
@@ -110,8 +112,8 @@ function tableRenderTableOwner() {
     structure: reusableStructure,
     signature: renderSignature,
     parts: tableBodyRenderSignatureParts(pageRows),
-    previousSignature: tableBodyCommittedRenderSignature,
-    previousParts: tableBodyCommittedRenderParts,
+    previousSignature: previousCommittedSignature,
+    previousParts: previousCommittedParts,
   }));
   if (reusableBody) {
     syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
@@ -314,6 +316,8 @@ function tableRenderTableOwner() {
     structure: true,
     signature: renderSignature,
     parts: tableBodyRenderSignatureParts(pageRows),
+    previousSignature: previousCommittedSignature,
+    previousParts: previousCommittedParts,
     committed: true,
   }));
   syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
