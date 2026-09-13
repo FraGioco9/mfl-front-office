@@ -151,8 +151,10 @@ const mflRouteOwner = sourceContaining(
   "MFL incremental route owner",
 );
 invariant(
-  mflRouteOwner.text.includes('["club", "mflstats"].includes(route.scope)'),
-  "MFL Stats must use the complete shared incremental page size instead of the normal paginated MFL table size.",
+  mflRouteOwner.text.includes('if (route.scope === "mflstats") {')
+    && mflRouteOwner.text.includes('return new URLSearchParams({ mode: "mfl-stats-summary" });')
+    && !mflRouteOwner.text.includes('["club", "mflstats"].includes(route.scope)'),
+  "MFL Stats must use the compact precomputed summary request instead of the complete player-population page size.",
 );
 const mflStatsBranch = pageLoader.indexOf('if (pageName === "mfl" && requestedMflView === "stats") {');
 const mflStatsPrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", mflStatsBranch);
