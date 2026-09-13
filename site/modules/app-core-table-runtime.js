@@ -872,6 +872,9 @@ function openPlayerTableActionMenu(trigger, playerId) {
   return true;
 }
 
+const playerTableActionsButtonIconTemplate = document.createElement("template");
+playerTableActionsButtonIconTemplate.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
+
 function createPlayerTableActionsButton(playerId) {
   const button = document.createElement("button");
   button.type = "button";
@@ -880,13 +883,7 @@ function createPlayerTableActionsButton(playerId) {
   button.setAttribute("aria-label", `Actions for player ${playerId}`);
   button.setAttribute("aria-haspopup", "menu");
   button.setAttribute("aria-expanded", "false");
-  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
-  button.addEventListener("pointerdown", (event) => event.stopPropagation());
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openPlayerTableActionMenu(button, playerId);
-  });
+  button.appendChild(playerTableActionsButtonIconTemplate.content.cloneNode(true));
   return button;
 }
 
@@ -3059,6 +3056,11 @@ function copyDelegatedPlayerId(button, event) {
 
 tableBody?.addEventListener("pointerdown", (event) => {
   if (event.isPrimary === false || event.button !== 0 || !(event.target instanceof Element)) return;
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.stopPropagation();
+    return;
+  }
   const button = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (!(button instanceof HTMLButtonElement) || !tableBody.contains(button)) return;
   copyDelegatedPlayerId(button, event);
@@ -3066,6 +3068,14 @@ tableBody?.addEventListener("pointerdown", (event) => {
 
 tableBody?.addEventListener("click", (event) => {
   if (!(event.target instanceof Element)) return;
+
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.preventDefault();
+    event.stopPropagation();
+    openPlayerTableActionMenu(actionButton, actionButton.dataset.playerId || "");
+    return;
+  }
 
   const copyButton = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (copyButton instanceof HTMLButtonElement && tableBody.contains(copyButton)) {
