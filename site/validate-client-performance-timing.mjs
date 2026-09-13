@@ -106,7 +106,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 8;",
+  "const BASELINE_SCHEMA_VERSION = 9;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
@@ -123,11 +123,13 @@ for (const token of [
   "horizontalMeasuredTotalMs:",
   "staticTotalMs:",
   "revealPaintMs:",
+  "preloaderPaintSkipped:",
   "loaderMs:",
   "postloaderPaintMs:",
   "releaseMs:",
   "settlePaintMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Preloader wait skipped",
   "Cached shell sync breakdown (median / observed slowest)",
   "Cached horizontal cue breakdown (median / observed slowest)",
   "Cached loader overview (median / observed slowest)",
