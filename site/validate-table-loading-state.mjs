@@ -225,7 +225,7 @@ invariant(
   appCoreSource.includes("function databaseTableRouteForCacheReadiness(options = {}) {")
     && appCoreSource.includes('const tableUrlState = Reflect.get(window, "__mflTableUrlState");')
     && appCoreSource.includes('tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)')
-    && appCoreSource.includes("route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);")
+    && appCoreSource.includes('Reflect.set(route, "filterRules", filterRulesForLoading(pageName, resolvedState, route.view));')
     && appCoreSource.includes('Reflect.set(route, "tableFilters", {')
     && appCoreSource.includes('Reflect.set(route, "requestPageSize", Number(Reflect.get(resolvedState, "pageSize") || defaultTablePageState(pageName).pageSize));')
     && appCoreSource.includes("const sortState = defaultSortStateForView(route.view, pageName);")
