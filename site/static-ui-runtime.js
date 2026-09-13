@@ -326,7 +326,11 @@
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
     recordStaticRouteStage("route-shell-visibility-complete", state);
-    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    if (target.id === "progressionPage") {
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalStructureNow?.();
+    } else {
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    }
     recordStaticRouteStage("route-shell-horizontal-cues-complete", state);
     recordStaticRouteStage("route-shell-show-complete", state);
   }
