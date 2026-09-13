@@ -40,6 +40,19 @@
   let lastRoutePage = "";
   let lastRouteView = "";
 
+  function recordStaticRouteStage(phase, state = {}) {
+    const owner = Reflect.get(window, "__mflClientPerformance");
+    const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
+    if (typeof recordInternal !== "function") return null;
+    return recordInternal(phase, {
+      kind: "page",
+      path: `${window.location.pathname}${window.location.search}`,
+      traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
+      page: String(state.page || ""),
+      view: String(state.view || ""),
+    });
+  }
+
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
     return configured && typeof configured === "object" ? configured : {};
@@ -295,20 +308,27 @@
   }
 
   function showRouteShell(state, options = {}) {
+    recordStaticRouteStage("route-shell-show-start", state);
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) {
       document.querySelectorAll("main > .pageView").forEach((page) => {
         if (page instanceof HTMLElement) page.hidden = true;
       });
+      recordStaticRouteStage("route-shell-show-complete", state);
       return;
     }
     if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
+    recordStaticRouteStage("route-shell-table-chrome-complete", state);
     if (target.id !== "notFoundPage") primeDestinationRouteShell(state, target);
+    recordStaticRouteStage("route-shell-prime-complete", state);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
+    recordStaticRouteStage("route-shell-visibility-complete", state);
     window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    recordStaticRouteStage("route-shell-horizontal-cues-complete", state);
+    recordStaticRouteStage("route-shell-show-complete", state);
   }
 
   function showNotFound(kind = "Page") {
@@ -350,10 +370,15 @@
     }
 
     if (state.page === "notfound") document.body.dataset.page = "notfound";
+    recordStaticRouteStage("route-shell-static-start", state);
     syncFooter();
+    recordStaticRouteStage("route-shell-footer-complete", state);
     setActiveNavigation(state.page);
+    recordStaticRouteStage("route-shell-navigation-complete", state);
     syncTableViews(state.page, state.view);
+    recordStaticRouteStage("route-shell-views-complete", state);
     showRouteShell(state, { resetFilters });
+    recordStaticRouteStage("route-shell-static-complete", state);
     return state;
   }
 
