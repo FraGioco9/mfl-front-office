@@ -90,9 +90,9 @@ const tableBusyStart = tableCore.indexOf("\nfunction showTableBusyState()", tabl
 const tableRenderer = tableRendererStart >= 0 && tableBusyStart > tableRendererStart ? tableCore.slice(tableRendererStart, tableBusyStart) : "";
 invariant(tableRenderer, "The Table renderer owner must remain available.");
 const tableReuseIndex = tableRenderer.indexOf("tableBodyRenderReuse.matches(");
-const tableReplaceIndex = tableRenderer.indexOf("tableBody.replaceChildren(fragment);");
+const tableBodyReplaceIndex = tableRenderer.indexOf("tableBody.replaceChildren(fragment);");
 const tableCommitIndex = tableRenderer.indexOf("tableBodyRenderReuse.commit(renderSignature);");
-invariant(tableReuseIndex >= 0 && tableReplaceIndex > tableReuseIndex && tableCommitIndex > tableReplaceIndex, "Table reuse must be checked before tbody replacement and committed only after rebuilding rows.");
+invariant(tableReuseIndex >= 0 && tableBodyReplaceIndex > tableReuseIndex && tableCommitIndex > tableBodyReplaceIndex, "Table reuse must be checked before tbody replacement and committed only after rebuilding rows.");
 invariant((tableRenderer.match(/tableBody\.replaceChildren\(fragment\);/g) || []).length === 1, "Table must retain exactly one canonical tbody rebuild site.");
 
 const evaluationCore = String(artifacts.routeChunks.evaluation);
