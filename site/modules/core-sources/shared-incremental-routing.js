@@ -74,6 +74,10 @@ function incrementalRouteTarget(pageName, options = {}) {
 }
 
 function incrementalDataQuery(route, page = 1) {
+  if (route.scope === "mflstats") {
+    return new URLSearchParams({ mode: "mfl-stats-summary" });
+  }
+
   const query = new URLSearchParams({
     mode: "page",
     scope: route.scope,
@@ -81,7 +85,7 @@ function incrementalDataQuery(route, page = 1) {
     page: String(page),
     pageSize: String(["player", "evaluation"].includes(route.scope)
       ? 1
-      : ["club", "mflstats"].includes(route.scope)
+      : route.scope === "club"
         ? 5000
         : state.pageSize),
     sortKey: route.scope === "club" ? "positions" : state.sortKey,
