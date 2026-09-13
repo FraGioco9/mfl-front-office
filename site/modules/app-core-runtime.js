@@ -1829,9 +1829,9 @@ function waitForViewTransitionPaint() {
 
 function recordPageTransitionStage(phase, detail = {}) {
   const owner = Reflect.get(window, "__mflClientPerformance");
-  const record = owner && typeof owner === "object" ? Reflect.get(owner, "record") : null;
-  if (typeof record !== "function") return null;
-  return record(phase, {
+  const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
+  if (typeof recordInternal !== "function") return null;
+  return recordInternal(phase, {
     kind: "page",
     path: currentNavigationPath(),
     ...detail,
