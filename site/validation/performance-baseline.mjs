@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 2;
+const BASELINE_SCHEMA_VERSION = 3;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -546,6 +546,34 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     ? Number(settled.at) - startAt
     : null;
 
+  const firstStageAt = (stage) => {
+    const entry = timeline.find((candidate) => candidate?.phase === stage);
+    const at = Number(entry?.at);
+    return Number.isFinite(at) ? at : null;
+  };
+  const stageDelta = (from, to) => (
+    Number.isFinite(from) && Number.isFinite(to) && to >= from ? to - from : null
+  );
+  const shellSyncStartAt = firstStageAt("route-shell-sync-start");
+  const shellSyncCompleteAt = firstStageAt("route-shell-sync-complete");
+  const preloaderPaintAt = firstStageAt("route-preloader-paint-complete");
+  const loaderCompleteAt = firstStageAt("route-loader-complete");
+  const postloaderPaintAt = firstStageAt("route-postloader-paint-complete");
+  const contentCommitAt = Number.isFinite(Number(contentCommit?.at)) ? Number(contentCommit.at) : null;
+  const settledAt = Number.isFinite(Number(settled?.at)) ? Number(settled.at) : null;
+  const releaseStartAt = Number.isFinite(postloaderPaintAt) ? postloaderPaintAt : loaderCompleteAt;
+  const routeStages = phase === "cached"
+    ? {
+        commitPrepMs: stageDelta(startAt, shellSyncStartAt),
+        shellSyncMs: stageDelta(shellSyncStartAt, shellSyncCompleteAt),
+        revealPaintMs: stageDelta(shellSyncCompleteAt, preloaderPaintAt),
+        loaderMs: stageDelta(preloaderPaintAt, loaderCompleteAt),
+        postloaderPaintMs: stageDelta(loaderCompleteAt, postloaderPaintAt),
+        releaseMs: stageDelta(releaseStartAt, contentCommitAt),
+        settlePaintMs: stageDelta(contentCommitAt, settledAt),
+      }
+    : null;
+
   assert(
     Number.isFinite(usefulContentMs),
     `Missing ${phase} useful-content timing; refusing to record a partial baseline sample.`,
@@ -566,6 +594,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     longTaskMs: longTaskDurations.reduce((total, duration) => total + duration, 0),
     longestTaskMs: longTaskDurations.length ? Math.max(...longTaskDurations) : 0,
     cls: layoutShifts.reduce((total, entry) => total + Math.max(0, Number(entry?.value) || 0), 0),
+    routeStages,
     dataSources: dataResponses.reduce((counts, entry) => {
       const source = String(entry?.detail?.source || "unknown");
       counts[source] = (counts[source] || 0) + 1;
@@ -787,6 +816,15 @@ function summarizePhase(runs) {
     longTaskMs: summarizeMetric(runs, (run) => run.longTaskMs),
     longestTaskMs: summarizeMetric(runs, (run) => run.longestTaskMs),
     cls: summarizeMetric(runs, (run) => run.cls),
+    routeStages: {
+      commitPrepMs: summarizeMetric(runs, (run) => run.routeStages?.commitPrepMs),
+      shellSyncMs: summarizeMetric(runs, (run) => run.routeStages?.shellSyncMs),
+      revealPaintMs: summarizeMetric(runs, (run) => run.routeStages?.revealPaintMs),
+      loaderMs: summarizeMetric(runs, (run) => run.routeStages?.loaderMs),
+      postloaderPaintMs: summarizeMetric(runs, (run) => run.routeStages?.postloaderPaintMs),
+      releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
+      settlePaintMs: summarizeMetric(runs, (run) => run.routeStages?.settlePaintMs),
+    },
     serverTiming,
   };
 }
@@ -816,6 +854,19 @@ function printSummary(summary) {
           `| ${profile} | ${journey} | ${phase} | ${pair(row.usefulContentMs)} | ${pair(row.settledMs)} | ${pair(row.requestCount, (value) => round(value, 0))} | ${pair(row.apiRequestCount, (value) => round(value, 0))} | ${pair(row.transferredBytes, kib)} | ${pair(row.apiTransferredBytes, kib)} | ${pair(row.longTaskMs)} | ${pair(row.cls, (value) => round(value, 4))} |`,
         );
       }
+    }
+  }
+
+  console.log("\nCached SPA stage breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Commit prep ms | Shell sync ms | Reveal paint ms | Loader ms | Loading paint ms | Release ms | Settle paint ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.routeStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+      );
     }
   }
 }
