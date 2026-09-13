@@ -28,10 +28,10 @@ function tableCenterCellContents(cell) {
 }
 
 function tableRenderTableOwner() {
-  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
-  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-render-start", { page: state.currentPage });
   if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
+  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-render-start", { page: state.currentPage });
   const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
     && playerTableActionRenderSignature
     && playerTableActionRenderSignature === currentPlayerTableActionRenderSignature()
