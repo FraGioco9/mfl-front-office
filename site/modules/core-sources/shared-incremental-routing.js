@@ -225,7 +225,7 @@ function databaseTableRouteForCacheReadiness(options = {}) {
   });
   if (!route) return null;
 
-  route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);
+  Reflect.set(route, "filterRules", filterRulesForLoading(pageName, resolvedState, route.view));
   Reflect.set(route, "tableFilters", {
     hideRetired: Reflect.get(resolvedState, "hideRetired") !== false,
     hideRetiring: Boolean(Reflect.get(resolvedState, "hideRetiring")),
