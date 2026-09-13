@@ -16,7 +16,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
-  "const BASELINE_SCHEMA_VERSION = 6;",
+  "const BASELINE_SCHEMA_VERSION = 7;",
   "const NETWORK_IDLE_GRACE_MS = 250;",
   '"desktop"',
   '"mobile-slow"',
@@ -83,6 +83,12 @@ for (const token of [
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Cached shell sync breakdown (median / observed slowest)",
+  'firstStageAt("route-shell-static-start")',
+  'firstStageAt("route-shell-horizontal-cues-complete")',
+  "shellStages,",
+  "horizontalCuesMs:",
+  "staticTotalMs:",
   "Cached loader overview (median / observed slowest)",
   "Cached filter/render breakdown (median / observed slowest)",
   'loaderStageAt("route-loader-request-start")',
