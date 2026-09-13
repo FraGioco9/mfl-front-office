@@ -85,6 +85,11 @@ function tableBodyStructureReusable(pageRows) {
 }
 
 function syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature = "") {
+  Reflect.set(
+    tableBody,
+    "__mflRenderedTableRouteIdentity",
+    `${state.currentPage}|${state.view}|${window.location.pathname}${window.location.search}`,
+  );
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
