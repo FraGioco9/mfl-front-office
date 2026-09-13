@@ -43,6 +43,15 @@ invariant(!guard.matches("alpha"), "Explicit invalidation must clear the committ
 const reuseOwnerCount = (coreSource.match(/= createRenderReuseGuard\(\);/g) || []).length;
 invariant(reuseOwnerCount === 3, `Only the three measured heavy render surfaces should own render guards; found ${reuseOwnerCount}.`);
 
+includes(sharedCore, "function retainedDatabaseReentryReady(route) {", "Cached Database navigation must have one exact retained-state fast-path gate.");
+includes(sharedCore, 'route?.scope !== "database" || !state.dataLoaded || !state.incrementalMode', "Database fast re-entry must reject non-Database and non-authoritative state.");
+includes(sharedCore, "if (!incrementalRouteIsCached(route, 1)) return false;", "Database fast re-entry must require the canonical payload cache.");
+includes(sharedCore, 'String(state.incrementalLastKey || "") !== requestKey', "Database fast re-entry must require the currently applied request key to match the cached destination.");
+includes(sharedCore, 'Reflect.get(body, "__mflTableBodyRenderSignature")', "Database fast re-entry must require an authoritative retained table render.");
+includes(sharedCore, 'Reflect.get(body, "__mflRenderedTableRouteIdentity")', "Database fast re-entry must require the exact retained page/view/path/query identity.");
+includes(sharedCore, 'const reuseRetainedDatabase = pageName === "database" && retainedDatabaseReentryReady(route);', "Only Database may take the retained-state fast path in this PR.");
+includes(sharedCore, "reuseRetainedTableDom: true,", "Verified cached Database re-entry must tell the base renderer to preserve the authoritative table DOM.");
+includes(sharedCore, 'if (options.reuseRetainedTableDom !== true) {\n      applyFilters({ save: false });\n    }', "The base renderer must skip filter/render reconstruction only for explicitly verified retained DOM.");
 includes(tableCore, "const tableBodyRenderReuse = createRenderReuseGuard();", "Player tables must consume the shared render-reuse guard.");
 includes(tableCore, "function tableBodyRenderSignature(pageRows) {", "Player tables must derive a source-owned render signature.");
 for (const input of [
