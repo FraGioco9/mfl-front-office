@@ -125,6 +125,15 @@ invariant(
 );
 
 for (const source of [canonical, tableRuntime]) {
+  const tableCommitStart = source.indexOf("function syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature =");
+  const tableRenderStart = source.indexOf("function tableRenderTableOwner() {", tableCommitStart);
+  const tableCommitSource = tableCommitStart >= 0 && tableRenderStart > tableCommitStart
+    ? source.slice(tableCommitStart, tableRenderStart)
+    : "";
+  const tableRenderEnd = source.indexOf("\nfunction showTableBusyState() {", tableRenderStart);
+  const tableRenderSource = tableRenderStart >= 0 && tableRenderEnd > tableRenderStart
+    ? source.slice(tableRenderStart, tableRenderEnd)
+    : "";
   invariant(
     source.includes("function updateSelectionHeader(pageRows = currentPageRows(), { rendered = false } = {}) {")
       && source.includes('if (document.documentElement.classList.contains("mflDataLoading") && !rendered) {')
@@ -132,9 +141,11 @@ for (const source of [canonical, tableRuntime]) {
       && source.includes("selectVisibleInput.disabled = visibleIds.length === 0;")
       && source.includes("function updateSelectionBar(pageRows = currentPageRows(), options = {}) {")
       && source.includes("updateSelectionHeader(pageRows, options);")
-      && source.includes("updateSelectionBar(pageRows, { rendered: true });")
-      && source.indexOf("tableBody.replaceChildren(fragment);") < source.indexOf("updateSelectionBar(pageRows, { rendered: true });"),
-    "Canonical table selection state must stay disabled for preserved loading rows and restore immediately when current rows are committed.",
+      && tableCommitSource.includes("updateSelectionBar(pageRows, { rendered: true });")
+      && tableRenderSource.includes("tableBody.replaceChildren(fragment);")
+      && tableRenderSource.lastIndexOf("syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);")
+        > tableRenderSource.indexOf("tableBody.replaceChildren(fragment);"),
+    "Canonical table selection state must stay disabled for preserved loading rows and restore immediately through the synchronous render-commit helper for retained or rebuilt rows.",
   );
 }
 
