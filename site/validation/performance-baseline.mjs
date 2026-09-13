@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 7;
+const BASELINE_SCHEMA_VERSION = 8;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -585,6 +585,11 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const shellHorizontalCuesCompleteAt = firstStageAt("route-shell-horizontal-cues-complete");
   const shellShowCompleteAt = firstStageAt("route-shell-show-complete");
   const shellStaticCompleteAt = firstStageAt("route-shell-static-complete");
+  const horizontalStartAt = firstStageAt("route-shell-horizontal-start");
+  const horizontalWatchlistCompleteAt = firstStageAt("route-shell-horizontal-watchlist-complete");
+  const horizontalEnsureViewsCompleteAt = firstStageAt("route-shell-horizontal-ensure-views-complete");
+  const horizontalViewSyncCompleteAt = firstStageAt("route-shell-horizontal-view-sync-complete");
+  const horizontalPlayerSyncCompleteAt = firstStageAt("route-shell-horizontal-player-sync-complete");
   const shellStages = phase === "cached"
     ? {
         footerMs: stageDelta(shellStaticStartAt, shellFooterCompleteAt),
@@ -595,6 +600,11 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         primeMs: stageDelta(shellTableChromeCompleteAt, shellPrimeCompleteAt),
         visibilityMs: stageDelta(shellPrimeCompleteAt, shellVisibilityCompleteAt),
         horizontalCuesMs: stageDelta(shellVisibilityCompleteAt, shellHorizontalCuesCompleteAt),
+        horizontalWatchlistMs: stageDelta(horizontalStartAt, horizontalWatchlistCompleteAt),
+        horizontalEnsureViewsMs: stageDelta(horizontalWatchlistCompleteAt, horizontalEnsureViewsCompleteAt),
+        horizontalViewSyncMs: stageDelta(horizontalEnsureViewsCompleteAt, horizontalViewSyncCompleteAt),
+        horizontalPlayerSyncMs: stageDelta(horizontalViewSyncCompleteAt, horizontalPlayerSyncCompleteAt),
+        horizontalMeasuredTotalMs: stageDelta(horizontalStartAt, horizontalPlayerSyncCompleteAt),
         showTailMs: stageDelta(shellHorizontalCuesCompleteAt, shellShowCompleteAt),
         staticTailMs: stageDelta(shellShowCompleteAt, shellStaticCompleteAt),
         showTotalMs: stageDelta(shellShowStartAt, shellShowCompleteAt),
@@ -936,6 +946,11 @@ function summarizePhase(runs) {
       primeMs: summarizeMetric(runs, (run) => run.shellStages?.primeMs),
       visibilityMs: summarizeMetric(runs, (run) => run.shellStages?.visibilityMs),
       horizontalCuesMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalCuesMs),
+      horizontalWatchlistMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalWatchlistMs),
+      horizontalEnsureViewsMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalEnsureViewsMs),
+      horizontalViewSyncMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalViewSyncMs),
+      horizontalPlayerSyncMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalPlayerSyncMs),
+      horizontalMeasuredTotalMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalMeasuredTotalMs),
       showTailMs: summarizeMetric(runs, (run) => run.shellStages?.showTailMs),
       staticTailMs: summarizeMetric(runs, (run) => run.shellStages?.staticTailMs),
       showTotalMs: summarizeMetric(runs, (run) => run.shellStages?.showTotalMs),
@@ -1020,6 +1035,19 @@ function printSummary(summary) {
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.footerMs)} | ${pair(stages.navigationMs)} | ${pair(stages.viewsMs)} | ${pair(stages.tableChromeMs)} | ${pair(stages.primeMs)} | ${pair(stages.visibilityMs)} | ${pair(stages.horizontalCuesMs)} | ${pair(stages.showTotalMs)} | ${pair(stages.staticTotalMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached horizontal cue breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Watchlist ms | Ensure views ms | View sync ms | Player sync ms | Measured total ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.shellStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.horizontalWatchlistMs)} | ${pair(stages.horizontalEnsureViewsMs)} | ${pair(stages.horizontalViewSyncMs)} | ${pair(stages.horizontalPlayerSyncMs)} | ${pair(stages.horizontalMeasuredTotalMs)} |`,
       );
     }
   }
