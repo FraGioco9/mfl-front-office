@@ -227,7 +227,7 @@ invariant(
     && appCoreSource.includes('tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)')
     && appCoreSource.includes("route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);")
     && appCoreSource.includes('Reflect.set(route, "tableFilters", {')
-    && appCoreSource.includes('Reflect.set(route, "requestPageSize", Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize));')
+    && appCoreSource.includes('Reflect.set(route, "requestPageSize", Number(Reflect.get(resolvedState, "pageSize") || defaultTablePageState(pageName).pageSize));')
     && appCoreSource.includes("const sortState = defaultSortStateForView(route.view, pageName);")
     && appCoreSource.includes('Reflect.set(route, "requestSortKey", sortState.sortKey);')
     && appCoreSource.includes('Reflect.set(route, "requestSortDirection", sortState.sortDirection);')
