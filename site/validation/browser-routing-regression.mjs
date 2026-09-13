@@ -519,7 +519,8 @@ const browserTestSource = String.raw`(() => {
         assert(reusableDatabaseRow instanceof HTMLTableRowElement, "Database cached-reentry fixture row was unavailable before navigation.");
         assert(
           document.querySelector("#tableBody tr[data-player-id]") === reusableDatabaseRow,
-          "Database cached re-entry rebuilt an unchanged table row instead of reusing retained DOM.",
+          "Database cached re-entry rebuilt an unchanged table row instead of reusing retained DOM. Debug: "
+            + JSON.stringify(window.__mflTableRenderReuseDebug || null),
         );
       }
     } else if (scenario === "player") {
