@@ -51,6 +51,8 @@ for (const input of [
   "state.settingsDateFormat,", "state.settingsTimeFormat,", 'window.matchMedia("(max-width: 900px)").matches,',
   'window.matchMedia("(max-width: 520px)").matches,',
 ]) includes(tableCore, input, `Table render signature must include ${input}`);
+includes(tableCore, 'Reflect.set(\n    tableBody,\n    "__mflRenderedTableRouteIdentity",', "Authoritative table commits must publish their exact retained route identity for static shell ownership.");
+includes(tableCore, '`${state.currentPage}|${state.view}|${window.location.pathname}${window.location.search}`', "Retained table route identity must include page, view, path, and query.");
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must validate the retained row structure.");
 includes(tableCore, 'tableBody.getAttribute("data-static-loading") === "true"', "Table reuse must reject parser/loading skeleton rows.");
 includes(tableCore, 'const TABLE_BODY_RENDER_SIGNATURE_KEY = "__mflTableBodyRenderSignature";', "Player tables must keep their retained render signature on the persistent table body.");
