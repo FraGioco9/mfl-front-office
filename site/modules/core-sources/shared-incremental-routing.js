@@ -210,25 +210,31 @@ function databaseTableRouteForCacheReadiness(options = {}) {
   const tableUrlResolve = tableUrlState && typeof tableUrlState === "object"
     ? Reflect.get(tableUrlState, "resolve")
     : null;
-  const resolvedState = typeof tableUrlResolve === "function"
-    ? tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)?.state || fallbackState
+  const resolvedUrlState = typeof tableUrlResolve === "function"
+    ? tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)
+    : null;
+  const resolvedStateCandidate = resolvedUrlState && typeof resolvedUrlState === "object"
+    ? Reflect.get(resolvedUrlState, "state")
+    : null;
+  const resolvedState = resolvedStateCandidate && typeof resolvedStateCandidate === "object"
+    ? resolvedStateCandidate
     : fallbackState;
   const route = incrementalRouteTarget(pageName, {
     ...options,
-    view: resolvedState.view || requestedView,
+    view: Reflect.get(resolvedState, "view") || requestedView,
   });
   if (!route) return null;
 
   route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);
   Reflect.set(route, "tableFilters", {
-    hideRetired: resolvedState.hideRetired !== false,
-    hideRetiring: Boolean(resolvedState.hideRetiring),
-    hideMflPlayers: resolvedState.hideMflPlayers !== false,
+    hideRetired: Reflect.get(resolvedState, "hideRetired") !== false,
+    hideRetiring: Boolean(Reflect.get(resolvedState, "hideRetiring")),
+    hideMflPlayers: Reflect.get(resolvedState, "hideMflPlayers") !== false,
     mflPackable: false,
-    newMints: Boolean(resolvedState.newMints),
+    newMints: Boolean(Reflect.get(resolvedState, "newMints")),
   });
   const sortState = defaultSortStateForView(route.view, pageName);
-  Reflect.set(route, "requestPageSize", Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize));
+  Reflect.set(route, "requestPageSize", Number(Reflect.get(resolvedState, "pageSize") || defaultTablePageState(pageName).pageSize));
   Reflect.set(route, "requestSortKey", sortState.sortKey);
   Reflect.set(route, "requestSortDirection", sortState.sortDirection);
   return route;
