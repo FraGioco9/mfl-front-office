@@ -43,6 +43,14 @@ assert.ok(
   "Selection-stack may retain only the intentional vertical collision offset for selection actions.",
 );
 assert.ok(
+  selectionStack.includes('function selectionLayoutActive(selectedCount = applicationSelectionCount()) {')
+    && selectionStack.includes('if (!selectionLayoutActive(selectedCount)) {')
+    && selectionStack.includes('document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== "88px"')
+    && selectionStack.indexOf('if (!selectionLayoutActive(selectedCount)) {')
+      < selectionStack.indexOf("syncSelectionBarPosition();"),
+  "Inactive selection-stack synchronization must return before any selection/footer geometry reads while preserving the default toast bottom.",
+);
+assert.ok(
   loading.includes("bottom: var(--mfl-toast-bottom, 88px);")
     && !loading.includes("--toast-center-x"),
   "Loading/stacking CSS may own toast vertical placement but must not duplicate its horizontal anchor.",
