@@ -506,11 +506,11 @@ const browserTestSource = String.raw`(() => {
   }
 
   async function navigateBackToScenario(setPage, timeline) {
+    await setPage("privacy", true);
+    await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
     const reusableDatabaseRow = scenario === "database"
       ? document.querySelector("#tableBody tr[data-player-id]")
       : null;
-    await setPage("privacy", true);
-    await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
 
     if (scenario === "database" || scenario === "database-empty") {
