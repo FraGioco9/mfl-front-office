@@ -511,19 +511,6 @@ const browserTestSource = String.raw`(() => {
     const reusableDatabaseRow = scenario === "database"
       ? document.querySelector("#tableBody tr[data-player-id]")
       : null;
-    const databaseTableBody = scenario === "database" ? document.getElementById("tableBody") : null;
-    const databaseReplaceChildrenCalls = [];
-    const originalDatabaseReplaceChildren = databaseTableBody?.replaceChildren;
-    if (databaseTableBody instanceof HTMLTableSectionElement && typeof originalDatabaseReplaceChildren === "function") {
-      databaseTableBody.replaceChildren = function (...args) {
-        databaseReplaceChildrenCalls.push({
-          childCount: args.length,
-          staticLoading: this.getAttribute("data-static-loading"),
-          stack: String(new Error().stack || "").split("\n").slice(1, 7),
-        });
-        return originalDatabaseReplaceChildren.apply(this, args);
-      };
-    }
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
 
     if (scenario === "database" || scenario === "database-empty") {
@@ -532,8 +519,7 @@ const browserTestSource = String.raw`(() => {
         assert(reusableDatabaseRow instanceof HTMLTableRowElement, "Database cached-reentry fixture row was unavailable before navigation.");
         assert(
           document.querySelector("#tableBody tr[data-player-id]") === reusableDatabaseRow,
-          "Database cached re-entry rebuilt an unchanged table row instead of reusing retained DOM. replaceChildren calls: "
-            + JSON.stringify(databaseReplaceChildrenCalls),
+          "Database cached re-entry rebuilt an unchanged table row instead of reusing retained DOM.",
         );
       }
     } else if (scenario === "player") {
