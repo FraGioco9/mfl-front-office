@@ -644,6 +644,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const filterRowsCompleteAt = loaderStageAt("route-loader-filter-rows-complete");
   const filterUiCompleteAt = loaderStageAt("route-loader-filter-ui-complete");
   const tableRenderStartAt = loaderStageAt("route-loader-table-render-start");
+  const tableBuildCompleteEntry = loaderStageEntry("route-loader-table-build-complete");
   const tableBuildCompleteAt = loaderStageAt("route-loader-table-build-complete");
   const tableDomCommitCompleteAt = loaderStageAt("route-loader-table-dom-commit-complete");
   const tableRenderCompleteAt = loaderStageAt("route-loader-table-render-complete");
@@ -668,6 +669,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         rowFilterMs: stageDelta(filterSourceCompleteAt, filterRowsCompleteAt),
         filterUiMs: stageDelta(filterRowsCompleteAt, filterUiCompleteAt),
         tableBuildMs: stageDelta(tableRenderStartAt, tableBuildCompleteAt),
+        tableReused: tableBuildCompleteEntry?.detail?.reused === true ? 1 : 0,
         tableDomCommitMs: stageDelta(tableBuildCompleteAt, tableDomCommitCompleteAt),
         tablePostMs: stageDelta(tableDomCommitCompleteAt, tableRenderCompleteAt),
         applyFiltersTailMs: stageDelta(tableRenderCompleteAt, applyFiltersCompleteAt),
@@ -967,6 +969,7 @@ function summarizePhase(runs) {
       rowFilterMs: summarizeMetric(runs, (run) => run.loaderStages?.rowFilterMs),
       filterUiMs: summarizeMetric(runs, (run) => run.loaderStages?.filterUiMs),
       tableBuildMs: summarizeMetric(runs, (run) => run.loaderStages?.tableBuildMs),
+      tableReused: summarizeMetric(runs, (run) => run.loaderStages?.tableReused),
       tableDomCommitMs: summarizeMetric(runs, (run) => run.loaderStages?.tableDomCommitMs),
       tablePostMs: summarizeMetric(runs, (run) => run.loaderStages?.tablePostMs),
       applyFiltersTailMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTailMs),
@@ -1066,14 +1069,15 @@ function printSummary(summary) {
   }
 
   console.log("\nCached filter/render breakdown (median / observed slowest)");
-  console.log("| Profile | Journey | ApplyFilters total ms | Filter prep ms | Row filter ms | Filter UI ms | Table render total ms | Table build ms | DOM commit ms | Table post ms | Apply tail ms | Page tail ms |");
-  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  console.log("| Profile | Journey | ApplyFilters total ms | Filter prep ms | Row filter ms | Filter UI ms | Table render total ms | Table build ms | Body reused | DOM commit ms | Table post ms | Apply tail ms | Page tail ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |");
   for (const profile of Object.keys(summary)) {
     for (const journey of Object.keys(summary[profile])) {
       const stages = summary[profile][journey].cached.loaderStages;
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      const reused = stages.tableReused.median >= 0.5 ? "yes" : "no";
       console.log(
-        `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
+        `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${reused} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
       );
     }
   }
