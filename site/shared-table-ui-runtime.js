@@ -792,28 +792,6 @@
     return button;
   }
 
-  function renderedViewItems(views) {
-    return Array.from(views.children).filter((child) => {
-      if (!(child instanceof HTMLElement) || child.hidden) return false;
-      const style = getComputedStyle(child);
-      return style.display !== "none" && style.position !== "absolute" && child.getClientRects().length > 0;
-    });
-  }
-
-  function viewContentWidth(views) {
-    const items = renderedViewItems(views);
-    if (!items.length) return 0;
-    const viewStyle = getComputedStyle(views);
-    const gap = Number.parseFloat(viewStyle.columnGap || viewStyle.gap) || 0;
-    const itemWidth = items.reduce((total, item) => {
-      const style = getComputedStyle(item);
-      return total + item.getBoundingClientRect().width
-        + (Number.parseFloat(style.marginLeft) || 0)
-        + (Number.parseFloat(style.marginRight) || 0);
-    }, 0);
-    return itemWidth + gap * Math.max(0, items.length - 1);
-  }
-
   function viewMaxScroll(views) {
     return Math.max(0, views.scrollWidth - views.clientWidth);
   }
@@ -851,12 +829,11 @@
       clearViewScrollerCues(views);
       return;
     }
-    if (views.getClientRects().length === 0) return;
-    if (!renderedViewItems(views).length) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
-    const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
+    const maxScroll = viewMaxScroll(views);
+    const overflowing = maxScroll > VIEW_SCROLL_EPSILON;
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
       setViewScrollButtonVisible(button, false);
@@ -865,7 +842,6 @@
       if (views.scrollLeft) views.scrollLeft = 0;
       return;
     }
-    const maxScroll = viewMaxScroll(views);
     const scrollLeft = clampViewScroll(views, maxScroll);
     const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;
     const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;
