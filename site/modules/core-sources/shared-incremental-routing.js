@@ -87,13 +87,13 @@ function incrementalDataQuery(route, page = 1) {
       ? 1
       : route.scope === "club"
         ? 5000
-        : Number(route.requestPageSize || state.pageSize)),
+        : Number(Reflect.get(route, "requestPageSize") || state.pageSize)),
     sortKey: route.scope === "club"
       ? "positions"
-      : String(route.requestSortKey || state.sortKey),
+      : String(Reflect.get(route, "requestSortKey") || state.sortKey),
     sortDirection: route.scope === "club"
       ? "asc"
-      : String(route.requestSortDirection || state.sortDirection),
+      : String(Reflect.get(route, "requestSortDirection") || state.sortDirection),
   });
 
   if (route.access === "owned") query.set("access", "owned-progression");
@@ -207,8 +207,11 @@ function databaseTableRouteForCacheReadiness(options = {}) {
     : routePath
       ? ""
       : window.location.search;
-  const resolvedState = typeof tableUrlState?.resolve === "function"
-    ? tableUrlState.resolve(pageName, requestedView, routeSearch, fallbackState)?.state || fallbackState
+  const tableUrlResolve = tableUrlState && typeof tableUrlState === "object"
+    ? Reflect.get(tableUrlState, "resolve")
+    : null;
+  const resolvedState = typeof tableUrlResolve === "function"
+    ? tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)?.state || fallbackState
     : fallbackState;
   const route = incrementalRouteTarget(pageName, {
     ...options,
@@ -225,9 +228,9 @@ function databaseTableRouteForCacheReadiness(options = {}) {
     newMints: Boolean(resolvedState.newMints),
   });
   const sortState = defaultSortStateForView(route.view, pageName);
-  route.requestPageSize = Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize);
-  route.requestSortKey = sortState.sortKey;
-  route.requestSortDirection = sortState.sortDirection;
+  Reflect.set(route, "requestPageSize", Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize));
+  Reflect.set(route, "requestSortKey", sortState.sortKey);
+  Reflect.set(route, "requestSortDirection", sortState.sortDirection);
   return route;
 }
 
