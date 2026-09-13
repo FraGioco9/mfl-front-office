@@ -119,6 +119,8 @@ export function validateResponsiveTables(context) {
   excludes(sharedTableUi, 'button.style.left =', "Pinned arrows must never be repositioned horizontally during scrolling.");
   excludes(sharedTableUi, "function renderedViewItems(views) {", "Horizontal overflow must not force per-control style/layout scans.");
   excludes(sharedTableUi, "function viewContentWidth(views) {", "Horizontal overflow must use the browser's native scroll extent instead of recomputing child widths.");
+  includes(sharedTableUi, "function hasViewItems(views) {", "Horizontal overflow must retain a cheap direct-child presence guard without per-child style/layout reads.");
+  includes(sharedTableUi, "if (views.getClientRects().length === 0) return;\n    if (!hasViewItems(views)) return;", "Temporary hydration invisibility or missing controls must preserve the previous cue state.");
   includes(sharedTableUi, "function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }", "The browser's native scroll extent must define the canonical right boundary once overlay chrome is outside the scroller.");
   includes(sharedTableUi, "const maxScroll = viewMaxScroll(views);\n    const overflowing = maxScroll > VIEW_SCROLL_EPSILON;", "Horizontal scrolling must remain enabled only when the browser reports content beyond the strip width.");
   includes(sharedTableUi, "const scrollLeft = clampViewScroll(views, maxScroll);", "Horizontal scrolling must retain a defensive clamp at the native scroll boundary.");
