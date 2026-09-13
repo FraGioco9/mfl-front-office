@@ -297,6 +297,7 @@ function renderTableLoadingShell(pageName) {
   }
   emptyState.hidden = true;
   emptyState.textContent = "";
+  tableBodyRenderReuse.invalidate();
   tableBody.replaceChildren();
   window.__mflTableLoadingRuntime?.show?.();
 }
