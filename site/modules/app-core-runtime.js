@@ -6778,9 +6778,13 @@ function incrementalDataQuery(route, page = 1) {
       ? 1
       : route.scope === "club"
         ? 5000
-        : state.pageSize),
-    sortKey: route.scope === "club" ? "positions" : state.sortKey,
-    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,
+        : Number(Reflect.get(route, "requestPageSize") || state.pageSize)),
+    sortKey: route.scope === "club"
+      ? "positions"
+      : String(Reflect.get(route, "requestSortKey") || state.sortKey),
+    sortDirection: route.scope === "club"
+      ? "asc"
+      : String(Reflect.get(route, "requestSortDirection") || state.sortDirection),
   });
 
   if (route.access === "owned") query.set("access", "owned-progression");
@@ -6879,6 +6883,54 @@ function incrementalRouteIsCached(route, page = 1) {
   return Boolean(cachedIncrementalPayload(route, page));
 }
 
+function databaseTableRouteForCacheReadiness(options = {}) {
+  const pageName = "database";
+  const storedState = state.tablePageStates?.[pageName] || defaultTablePageState(pageName);
+  const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+  const fallbackState = resetFilters
+    ? tableStateWithoutPageFilters(pageName, storedState)
+    : storedState;
+  const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);
+  const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+  const routePath = String(options.path || options.replaceUrl || "");
+  const routeSearch = routePath.includes("?")
+    ? routePath.slice(routePath.indexOf("?"))
+    : routePath
+      ? ""
+      : window.location.search;
+  const tableUrlResolve = tableUrlState && typeof tableUrlState === "object"
+    ? Reflect.get(tableUrlState, "resolve")
+    : null;
+  const resolvedUrlState = typeof tableUrlResolve === "function"
+    ? tableUrlResolve(pageName, requestedView, routeSearch, fallbackState)
+    : null;
+  const resolvedStateCandidate = resolvedUrlState && typeof resolvedUrlState === "object"
+    ? Reflect.get(resolvedUrlState, "state")
+    : null;
+  const resolvedState = resolvedStateCandidate && typeof resolvedStateCandidate === "object"
+    ? resolvedStateCandidate
+    : fallbackState;
+  const route = incrementalRouteTarget(pageName, {
+    ...options,
+    view: Reflect.get(resolvedState, "view") || requestedView,
+  });
+  if (!route) return null;
+
+  Reflect.set(route, "filterRules", filterRulesForLoading(pageName, resolvedState, route.view));
+  Reflect.set(route, "tableFilters", {
+    hideRetired: Reflect.get(resolvedState, "hideRetired") !== false,
+    hideRetiring: Boolean(Reflect.get(resolvedState, "hideRetiring")),
+    hideMflPlayers: Reflect.get(resolvedState, "hideMflPlayers") !== false,
+    mflPackable: false,
+    newMints: Boolean(Reflect.get(resolvedState, "newMints")),
+  });
+  const sortState = defaultSortStateForView(route.view, pageName);
+  Reflect.set(route, "requestPageSize", Number(Reflect.get(resolvedState, "pageSize") || defaultTablePageState(pageName).pageSize));
+  Reflect.set(route, "requestSortKey", sortState.sortKey);
+  Reflect.set(route, "requestSortDirection", sortState.sortDirection);
+  return route;
+}
+
 function databaseStatsDataCacheReady() {
   const total = document.getElementById("databaseStatsTotalPlayers");
   if (!(total instanceof HTMLElement)) return false;
@@ -6899,6 +6951,10 @@ function routeDataCacheReady(pageName, options = {}) {
   if (page === "settings") return settingsDataCacheReady();
   if (page === "database" && normalizeViewForPage(routeOptions.view, "database") === "stats") {
     return databaseStatsDataCacheReady();
+  }
+  if (page === "database") {
+    const databaseRoute = databaseTableRouteForCacheReadiness(routeOptions);
+    return Boolean(databaseRoute && incrementalRouteIsCached(databaseRoute, 1));
   }
 
   const route = incrementalRouteTarget(page, routeOptions);

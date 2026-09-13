@@ -2748,8 +2748,9 @@ function tableCenterCellContents(cell) {
 }
 
 const tableBodyRenderReuse = createRenderReuseGuard();
+const TABLE_BODY_RENDER_SIGNATURE_KEY = "__mflTableBodyRenderSignature";
 
-function tableBodyRenderSignature(pageRows) {
+function tableBodyRenderSignatureParts(pageRows) {
   const rowUiState = pageRows.map((row) => {
     const playerId = String(getValue(row, "player_id"));
     return [
@@ -2758,7 +2759,7 @@ function tableBodyRenderSignature(pageRows) {
       playerNote(playerId),
     ];
   });
-  return JSON.stringify([
+  return [
     state.currentPage,
     state.view,
     state.page,
@@ -2771,7 +2772,26 @@ function tableBodyRenderSignature(pageRows) {
     state.settingsTimeFormat,
     window.matchMedia("(max-width: 900px)").matches,
     window.matchMedia("(max-width: 520px)").matches,
-  ]);
+  ];
+}
+
+function tableBodyRenderSignature(pageRows) {
+  return JSON.stringify(tableBodyRenderSignatureParts(pageRows));
+}
+
+function retainedTableBodyRenderSignature() {
+  return String(Reflect.get(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY) || "");
+}
+
+function commitTableBodyRenderSignature(renderSignature) {
+  const signature = String(renderSignature || "");
+  tableBodyRenderReuse.commit(signature);
+  Reflect.set(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY, signature);
+}
+
+function invalidateTableBodyRenderSignature() {
+  tableBodyRenderReuse.invalidate();
+  Reflect.deleteProperty(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY);
 }
 
 function tableBodyStructureReusable(pageRows) {
@@ -2785,6 +2805,11 @@ function tableBodyStructureReusable(pageRows) {
 }
 
 function syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature = "") {
+  Reflect.set(
+    tableBody,
+    "__mflRenderedTableRouteIdentity",
+    `${state.currentPage}|${state.view}|${window.location.pathname}${window.location.search}`,
+  );
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
@@ -2817,7 +2842,12 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const renderSignature = tableBodyRenderSignature(pageRows);
-  if (tableBodyRenderReuse.matches(renderSignature, tableBodyStructureReusable(pageRows))) {
+  const reusableStructure = tableBodyStructureReusable(pageRows);
+  const guardMatches = tableBodyRenderReuse.matches(renderSignature, reusableStructure);
+  const retainedSignatureMatches = reusableStructure
+    && retainedTableBodyRenderSignature() === renderSignature;
+  if (guardMatches || retainedSignatureMatches) {
+    if (!guardMatches) tableBodyRenderReuse.commit(renderSignature);
     syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
     return;
   }
@@ -3010,13 +3040,13 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
-  tableBodyRenderReuse.commit(renderSignature);
+  commitTableBodyRenderSignature(renderSignature);
   syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
 }
 
 function showTableBusyState() {
   if (window.__mflTableLoadingRuntime?.show?.()) return;
-  tableBodyRenderReuse.invalidate();
+  invalidateTableBodyRenderSignature();
   emptyState.hidden = true;
   emptyState.textContent = "";
   tableBody.replaceChildren();
