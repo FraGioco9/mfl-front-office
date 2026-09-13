@@ -46,7 +46,7 @@ assert.ok(
 );
 assert.ok(
   shared.includes('function clearViewScrollerCues(views) {')
-    && shared.includes('if (!MOBILE_TABLE_MEDIA.matches || views.hidden) {\n      clearViewScrollerCues(views);\n      return;\n    }\n    if (views.getClientRects().length === 0) return;'),
+    && shared.includes('if (!MOBILE_TABLE_MEDIA.matches || views.hidden) {\n      clearViewScrollerCues(views);\n      return;\n    }\n    if (views.getClientRects().length === 0) return;\n    if (!hasViewItems(views)) return;'),
   "Views and Quick Filters must clear overflow cues only when intentionally unavailable, not during a temporary non-renderable hydration phase.",
 );
 assert.doesNotMatch(
@@ -54,15 +54,15 @@ assert.doesNotMatch(
   /if \(!MOBILE_TABLE_MEDIA\.matches \|\| views\.getClientRects\(\)\.length === 0\) \{[\s\S]*?removeViewScrollShell\(views\);/,
   "Temporary Views/Quick Filters invisibility must not destroy the fade/chevron shell.",
 );
-const emptyRenderedViewsGuard = shared.includes('if (!renderedViewItems(views).length) return;')
-  || shared.includes('if (!renderedViewItems(views).length) {\n      syncPlayerViewEndSpacer(views, false);\n      return;\n    }');
 assert.ok(
-  emptyRenderedViewsGuard,
-  "Hydration must keep the previous horizontal cue until rendered controls provide a meaningful visible-content measurement; Player-only terminal geometry may be removed without clearing the cue shell.",
+  shared.includes('function hasViewItems(views) {')
+    && !shared.includes('function renderedViewItems(views) {')
+    && !shared.includes('function viewContentWidth(views) {'),
+  "Hydration must keep a cheap direct-child presence guard without reintroducing per-control style/layout measurement.",
 );
 assert.ok(
-  shared.includes('const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;'),
-  "Once measurable, horizontal overflow must remain derived directly from rendered visible controls.",
+  shared.includes('const maxScroll = viewMaxScroll(views);\n    const overflowing = maxScroll > VIEW_SCROLL_EPSILON;'),
+  "Once measurable, horizontal overflow must come directly from native scroll geometry.",
 );
 
 for (const token of [
