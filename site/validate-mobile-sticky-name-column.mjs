@@ -99,8 +99,10 @@ invariant(
 
 invariant(
   tableSource.includes('const cell = document.createElement("th");\n    const columnClass = tableColumnClass(column);')
-    && tableSource.includes('const cell = document.createElement("td");\n      const columnClass = tableColumnClass(column);'),
-  "Hydrated table headers and body cells must retain their semantic column classes for sticky Name ownership.",
+    && tableSource.includes('const renderColumns = currentViewColumns().map((column) => ({')
+    && tableSource.includes('className: tableColumnClass(column),')
+    && tableSource.includes('const cell = document.createElement("td");\n      if (className) cell.className = className;'),
+  "Hydrated table headers and body cells must retain their semantic column classes for sticky Name ownership while body classes may be precomputed once per render.",
 );
 invariant(
   bootstrap.includes('const className = firstPaintTableColumnClass(column);\n      if (className) header.classList.add(...className.split(" "));')
