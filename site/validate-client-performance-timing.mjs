@@ -14,7 +14,9 @@ for (const token of [
   "function createClientPerformanceTimeline() {",
   "window.__mflClientPerformance = clientPerformance;",
   'clientPerformance.record("bootstrap-start"',
-  'performance.mark(`mfl:${normalizedPhase}`, { detail: entry });',
+  'performance.mark(`mfl:${entry.phase}`, { detail: entry });',
+  "function recordInternal(phase, detail = {}) {",
+  "recordInternal,",
   'window.dispatchEvent(new CustomEvent("mfl:client-timing", { detail: entry }));',
   "const CLIENT_TIMING_ENTRY_LIMIT = 200;",
   'clientPerformance.record("route-transition-start"',
@@ -25,9 +27,22 @@ for (const token of [
   invariant(bootstrapCore.includes(token), `Canonical bootstrap client timing ownership is missing: ${token}`);
 }
 
+
+const internalRecordStart = bootstrapCore.indexOf("function recordInternal(phase, detail = {}) {");
+const internalRecordEnd = bootstrapCore.indexOf("\n    return Object.freeze({", internalRecordStart);
+const internalRecordSource = bootstrapCore.slice(internalRecordStart, internalRecordEnd);
+invariant(
+  internalRecordStart >= 0
+    && internalRecordSource.includes("return makeEntry(phase, detail);")
+    && !internalRecordSource.includes("performance.mark")
+    && !internalRecordSource.includes("dispatchEvent"),
+  "Fine-grained internal performance stages must use passive in-memory timestamps without PerformanceMark or event-dispatch overhead.",
+);
+
 for (const token of [
   "function recordPageTransitionStage(phase, detail = {}) {",
   'Reflect.get(window, "__mflClientPerformance")',
+  'Reflect.get(owner, "recordInternal")',
   'recordPageTransitionStage("route-shell-sync-start"',
   'recordPageTransitionStage("route-shell-sync-complete"',
   'recordPageTransitionStage("route-preloader-paint-complete"',
@@ -85,7 +100,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 4;",
+  "const BASELINE_SCHEMA_VERSION = 5;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
