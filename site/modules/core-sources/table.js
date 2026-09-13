@@ -2293,6 +2293,8 @@ function appliedTableFilterSignature(rules) {
 }
 
 function tableApplyFiltersOwner(options = {}) {
+  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-prep-start", { page: state.currentPage });
   if (state.currentPage === "club") {
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
@@ -2330,6 +2332,7 @@ function tableApplyFiltersOwner(options = {}) {
   if (!state.incrementalMode) {
     state.tableSourceRowsCount = sourceRows.length;
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-source-complete", { page: state.currentPage });
 
   state.filteredRows = sourceRows.filter((row) => {
     if (rowIsHiddenFromTableAsMflPlayer(row)) {
@@ -2373,11 +2376,13 @@ function tableApplyFiltersOwner(options = {}) {
   if (!state.incrementalApplying) {
     state.filteredRows.sort(compareRows);
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-rows-complete", { page: state.currentPage });
   updateFilterSummary();
   syncActiveWatchlistFromSet();
   if (options.save !== false) {
     saveTableState();
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-ui-complete", { page: state.currentPage });
   renderTable();
 }
 
