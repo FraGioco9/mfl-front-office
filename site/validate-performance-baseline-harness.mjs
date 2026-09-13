@@ -16,7 +16,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
-  "const BASELINE_SCHEMA_VERSION = 5;",
+  "const BASELINE_SCHEMA_VERSION = 6;",
   "const NETWORK_IDLE_GRACE_MS = 250;",
   '"desktop"',
   '"mobile-slow"',
@@ -99,6 +99,8 @@ for (const token of [
   "Cached renderPage tail breakdown (median / observed slowest)",
   "tailLoadingMs:",
   "tailContinuationMs:",
+  "const loaderTraceId = String(loaderTraceEntry?.detail?.traceId || \"\");",
+  "renderPageDirectMs:",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
