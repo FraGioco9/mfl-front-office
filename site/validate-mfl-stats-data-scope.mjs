@@ -3,11 +3,13 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [dataPage, dataQuery, dataViews, mflStatsSummary, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
+const [dataPage, dataQuery, dataViews, mflStatsSummary, sharedIncrementalRouting, mflStatsCore, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./api/_data-views.js"),
   read("./api/_mfl-stats-summary.js"),
+  read("./modules/core-sources/shared-incremental-routing.js"),
+  read("./modules/core-sources/mfl-stats.js"),
   read("./styles.css"),
   read("./styles-base.css"),
   read("./controls.css"),
@@ -32,8 +34,17 @@ invariant(
 );
 
 invariant(
-  dataPage.includes('const pageSize = scope === "mflstats"\n    ? Math.max(1, totalRows)'),
-  "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
+  sharedIncrementalRouting.includes('if (route.scope === "mflstats") {\n    return new URLSearchParams({ mode: "mfl-stats-summary" });\n  }')
+    && !sharedIncrementalRouting.includes('["club", "mflstats"].includes(route.scope)'),
+  "MFL Stats browser routing must request the compact summary endpoint instead of the complete player population.",
+);
+invariant(
+  mflStatsCore.includes('const count = Math.max(0, Number(getValue(row, "count")) || 0);')
+    && mflStatsCore.includes('count: count || 1,')
+    && mflStatsCore.includes('totalCount += count;')
+    && mflStatsCore.includes('packableCount += count;')
+    && mflStatsCore.includes('counts.set(value, (counts.get(value) || 0) + Math.max(0, Number(row.count) || 0));'),
+  "MFL Stats cards and distributions must preserve exact totals when rendering aggregated summary rows.",
 );
 invariant(
   dataQuery.includes("function runtimeMetadataCount(key) {")
