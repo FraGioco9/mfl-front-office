@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 5;
+const BASELINE_SCHEMA_VERSION = 6;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -574,7 +574,21 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
       }
     : null;
 
-  const loaderStageAt = (stage) => phase === "cached" ? firstStageAt(stage) : null;
+  const loaderTraceEntry = phase === "cached"
+    ? timeline.find((entry) => entry?.phase === "route-loader-request-start")
+    : null;
+  const loaderTraceId = String(loaderTraceEntry?.detail?.traceId || "");
+  const loaderStageEntry = (stage) => {
+    if (phase !== "cached") return null;
+    return timeline.find((entry) => (
+      entry?.phase === stage
+      && (!loaderTraceId || String(entry?.detail?.traceId || "") === loaderTraceId)
+    )) || null;
+  };
+  const loaderStageAt = (stage) => {
+    const at = Number(loaderStageEntry(stage)?.at);
+    return Number.isFinite(at) ? at : null;
+  };
   const requestStartAt = loaderStageAt("route-loader-request-start");
   const requestCompleteAt = loaderStageAt("route-loader-request-complete");
   const outerRestoreStartAt = loaderStageAt("route-loader-outer-restore-start");
@@ -601,7 +615,9 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const tailNavigationCompleteAt = loaderStageAt("route-loader-tail-navigation-complete");
   const tailScrollCompleteAt = loaderStageAt("route-loader-tail-scroll-complete");
   const tailHomeSyncCompleteAt = loaderStageAt("route-loader-tail-home-sync-complete");
+  const renderPageCompleteEntry = loaderStageEntry("route-loader-render-page-complete");
   const renderPageCompleteAt = loaderStageAt("route-loader-render-page-complete");
+  const renderPageDirectMs = Number(renderPageCompleteEntry?.detail?.durationMs);
   const loaderStages = phase === "cached"
     ? {
         requestMs: stageDelta(requestStartAt, requestCompleteAt),
@@ -624,6 +640,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         tailContinuationMs: stageDelta(tailHomeSyncCompleteAt, renderPageCompleteAt),
         renderPageTailMs: stageDelta(applyFiltersCompleteAt, renderPageCompleteAt),
         renderPageTotalMs: stageDelta(renderPageStartAt, renderPageCompleteAt),
+        renderPageDirectMs: Number.isFinite(renderPageDirectMs) ? renderPageDirectMs : null,
         applyFiltersTotalMs: stageDelta(applyFiltersStartAt, applyFiltersCompleteAt),
         tableRenderTotalMs: stageDelta(tableRenderStartAt, tableRenderCompleteAt),
       }
@@ -902,6 +919,7 @@ function summarizePhase(runs) {
       tailContinuationMs: summarizeMetric(runs, (run) => run.loaderStages?.tailContinuationMs),
       renderPageTailMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTailMs),
       renderPageTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTotalMs),
+      renderPageDirectMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageDirectMs),
       applyFiltersTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTotalMs),
       tableRenderTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.tableRenderTotalMs),
     },
@@ -951,14 +969,14 @@ function printSummary(summary) {
   }
 
   console.log("\nCached loader overview (median / observed slowest)");
-  console.log("| Profile | Journey | Cache apply ms | Outer restore ms | Render pre-chrome ms | Page chrome ms | Table controls ms | Quick filters ms | RenderPage total ms |");
-  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  console.log("| Profile | Journey | Cache apply ms | Outer restore ms | Render pre-chrome ms | Page chrome ms | Table controls ms | Quick filters ms | RenderPage total ms | RenderPage direct ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   for (const profile of Object.keys(summary)) {
     for (const journey of Object.keys(summary[profile])) {
       const stages = summary[profile][journey].cached.loaderStages;
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
-        `| ${profile} | ${journey} | ${pair(stages.requestMs)} | ${pair(stages.outerRestoreMs)} | ${pair(stages.renderPagePreChromeMs)} | ${pair(stages.pageChromeMs)} | ${pair(stages.tableControlsMs)} | ${pair(stages.quickFiltersMs)} | ${pair(stages.renderPageTotalMs)} |`,
+        `| ${profile} | ${journey} | ${pair(stages.requestMs)} | ${pair(stages.outerRestoreMs)} | ${pair(stages.renderPagePreChromeMs)} | ${pair(stages.pageChromeMs)} | ${pair(stages.tableControlsMs)} | ${pair(stages.quickFiltersMs)} | ${pair(stages.renderPageTotalMs)} | ${pair(stages.renderPageDirectMs)} |`,
       );
     }
   }
