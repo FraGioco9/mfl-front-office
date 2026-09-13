@@ -177,6 +177,7 @@ function recordPageTransitionStage(phase, detail = {}) {
   return recordInternal(phase, {
     kind: "page",
     path: currentNavigationPath(),
+    traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
     ...detail,
   });
 }
