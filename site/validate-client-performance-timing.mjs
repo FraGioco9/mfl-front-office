@@ -1,9 +1,12 @@
 import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
+import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 
-const [bootstrapCore, appEntry] = await Promise.all([
+const [bootstrapCore, appEntry, sharedCore, baselineHarness] = await Promise.all([
   readValidationText("./bootstrap-core.js", import.meta.url),
   readValidationText("./modules/app-entry.js", import.meta.url),
+  Promise.resolve(readCanonicalCoreSource("shared")),
+  readValidationText("./validation/performance-baseline.mjs", import.meta.url),
 ]);
 
 for (const token of [
@@ -19,6 +22,51 @@ for (const token of [
   'clientPerformance.record("route-visually-settled"',
 ]) {
   invariant(bootstrapCore.includes(token), `Canonical bootstrap client timing ownership is missing: ${token}`);
+}
+
+for (const token of [
+  "function recordPageTransitionStage(phase, detail = {}) {",
+  'Reflect.get(window, "__mflClientPerformance")',
+  'recordPageTransitionStage("route-shell-sync-start"',
+  'recordPageTransitionStage("route-shell-sync-complete"',
+  'recordPageTransitionStage("route-preloader-paint-complete"',
+  'recordPageTransitionStage("route-loader-complete"',
+  'recordPageTransitionStage("route-postloader-paint-complete"',
+]) {
+  invariant(sharedCore.includes(token), `SPA route-stage timing is missing: ${token}`);
+}
+
+const pageTransitionStart = sharedCore.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
+const pageTransitionEnd = sharedCore.indexOf("\nasync function runViewTransition", pageTransitionStart);
+const pageTransitionSource = sharedCore.slice(pageTransitionStart, pageTransitionEnd);
+const preloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-preloader-paint-complete"');
+const loaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-loader-complete"');
+const postloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-postloader-paint-complete"');
+invariant(
+  pageTransitionStart >= 0
+    && preloaderStage > pageTransitionSource.indexOf("await waitForViewTransitionPaint();")
+    && loaderStage > pageTransitionSource.indexOf('typeof loader === "function" ? await loader(transition) : transition')
+    && postloaderStage > loaderStage,
+  "SPA stage timing must follow the actual paint and loader boundaries without changing their ownership.",
+);
+
+for (const token of [
+  "const BASELINE_SCHEMA_VERSION = 3;",
+  'firstStageAt("route-shell-sync-start")',
+  'firstStageAt("route-shell-sync-complete")',
+  'firstStageAt("route-preloader-paint-complete")',
+  'firstStageAt("route-loader-complete")',
+  'firstStageAt("route-postloader-paint-complete")',
+  "commitPrepMs:",
+  "shellSyncMs:",
+  "revealPaintMs:",
+  "loaderMs:",
+  "postloaderPaintMs:",
+  "releaseMs:",
+  "settlePaintMs:",
+  "Cached SPA stage breakdown (median / observed slowest)",
+]) {
+  invariant(baselineHarness.includes(token), `Performance baseline route-stage reporting is missing: ${token}`);
 }
 
 for (const token of [
