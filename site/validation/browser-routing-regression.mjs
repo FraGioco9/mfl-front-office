@@ -135,11 +135,13 @@ const browserTestSource = String.raw`(() => {
               : "unknown";
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
+  let mflStatsSummaryRequests = 0;
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const requestUrl = new URL(typeof input === "string" ? input : input.url, window.location.origin);
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
+    if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
     if (scenario !== "myclubs-competition-fail") return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
@@ -514,6 +516,13 @@ const browserTestSource = String.raw`(() => {
       await setPage("player", true, { playerId: "1" });
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       await setPage("watchlist", true, { watchlistId: testWatchlistId, view: "current" });
+    } else if (scenario === "mflstats") {
+      const requestsBefore = mflStatsSummaryRequests;
+      await setPage("mfl", true, { view: "stats" });
+      assert(
+        mflStatsSummaryRequests === requestsBefore,
+        "MFL Stats cached re-entry repeated the compact summary request.",
+      );
     } else if (scenario === "myclubs-in") {
       const requestsBefore = { ...myClubsRequests };
       await setPage("home", true);
@@ -936,6 +945,15 @@ function dataStub(url) {
     return {
       generatedAt,
       competitionsByClub: Object.fromEntries(requested.map((clubId) => [clubId, fixtures[clubId] || []])),
+    };
+  }
+  if (mode === "mfl-stats-summary") {
+    return {
+      generatedAt,
+      totalPlayers: 1,
+      columns: ["overall", "age", "category", "count"],
+      rows: [[80, 23, "packable", 1]],
+      source: "browser-regression-summary",
     };
   }
   if (mode === "search") {

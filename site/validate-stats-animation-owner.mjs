@@ -87,11 +87,17 @@ for (const required of [
   "let mflStatsPreparedSourceRows = null;",
   "function mflStatsPreparedRowsForCurrentRoute() {",
   "mflStatsPreparedSourceRows === state.rows && mflStatsPreparedSourceColumns === state.columns",
-  "category: mflStatsCategory(row),",
+  'const explicitCategory = String(getValue(row, "category") || "").trim().toLowerCase();',
+  'const count = Math.max(0, Number(getValue(row, "count")) || 0);',
+  'category: ["packable", "aged", "other"].includes(explicitCategory)',
+  "count: count || 1,",
   "if (filter.min === null && filter.max === null) return preparedRows;",
   "return preparedRows.filter((entry) => rowMatchesMflStatsOverallFilter(entry.overall, filter));",
   "if (state.mflStatsDistributionMode === \"age\") return entry.age;",
   "rows.forEach((entry) => {",
+  "totalCount += count;",
+  "packableCount += count;",
+  "counts.set(value, (counts.get(value) || 0) + Math.max(0, Number(row.count) || 0));",
 ]) {
   includes(
     mflStats,

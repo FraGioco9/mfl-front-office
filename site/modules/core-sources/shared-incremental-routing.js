@@ -74,6 +74,10 @@ function incrementalRouteTarget(pageName, options = {}) {
 }
 
 function incrementalDataQuery(route, page = 1) {
+  if (route.scope === "mflstats") {
+    return new URLSearchParams({ mode: "mfl-stats-summary" });
+  }
+
   const query = new URLSearchParams({
     mode: "page",
     scope: route.scope,
@@ -81,7 +85,7 @@ function incrementalDataQuery(route, page = 1) {
     page: String(page),
     pageSize: String(["player", "evaluation"].includes(route.scope)
       ? 1
-      : ["club", "mflstats"].includes(route.scope)
+      : route.scope === "club"
         ? 5000
         : state.pageSize),
     sortKey: route.scope === "club" ? "positions" : state.sortKey,
@@ -241,8 +245,13 @@ function applyIncrementalPayload(route, payload) {
   }
   state.incrementalMode = tableRoute;
   state.incrementalRoute = { ...route };
-  state.incrementalTotalRows = Number(payload.totalRows || 0);
-  state.incrementalSourceRows = Number(payload.sourceRows || 0);
+  const payloadTotalRows = route.scope === "mflstats"
+    ? Number(payload.totalPlayers || 0)
+    : Number(payload.totalRows || 0);
+  state.incrementalTotalRows = payloadTotalRows;
+  state.incrementalSourceRows = route.scope === "mflstats"
+    ? payloadTotalRows
+    : Number(payload.sourceRows || 0);
   state.tableSourceRowsCount = state.incrementalSourceRows;
   state.dataAccess = route.access;
   state.dataLoaded = true;

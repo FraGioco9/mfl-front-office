@@ -43,13 +43,18 @@ function mflStatsPreparedRowsForCurrentRoute() {
   if (!Array.isArray(state.rows)) return mflStatsPreparedRows;
 
   state.rows.forEach((row) => {
-    const overall = Number(statDisplayValue(row, "overall"));
+    const overall = Number(getValue(row, "overall"));
     if (!Number.isFinite(overall)) return;
     const age = Number(getValue(row, "age"));
+    const explicitCategory = String(getValue(row, "category") || "").trim().toLowerCase();
+    const count = Math.max(0, Number(getValue(row, "count")) || 0);
     mflStatsPreparedRows.push({
       overall,
       age: Number.isFinite(age) ? age : null,
-      category: mflStatsCategory(row),
+      category: ["packable", "aged", "other"].includes(explicitCategory)
+        ? explicitCategory
+        : mflStatsCategory(row),
+      count: count || 1,
     });
   });
 
@@ -138,12 +143,15 @@ function renderMflStatsDistribution(packableRows) {
   packableRows.forEach((row) => {
     const value = mflStatsDistributionValue(row);
     if (value !== null) {
-      counts.set(value, (counts.get(value) || 0) + 1);
+      counts.set(value, (counts.get(value) || 0) + Math.max(0, Number(row.count) || 0));
     }
   });
 
   const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
-  const totalPackable = packableRows.length;
+  const totalPackable = packableRows.reduce(
+    (total, row) => total + Math.max(0, Number(row.count) || 0),
+    0,
+  );
   const distributionSignature = JSON.stringify([
     state.mflStatsOverallFilter,
     state.mflStatsDistributionMode,
@@ -191,19 +199,25 @@ function renderMflStatsPage() {
   if (state.incrementalRoute?.scope !== "mflstats") return;
   const rows = mflStatsRows();
   const packableRows = [];
+  let totalCount = 0;
+  let packableCount = 0;
   let agedCount = 0;
   let otherCount = 0;
   rows.forEach((entry) => {
-    if (entry.category === "packable") packableRows.push(entry);
-    else if (entry.category === "aged") agedCount += 1;
-    else otherCount += 1;
+    const count = Math.max(0, Number(entry.count) || 0);
+    totalCount += count;
+    if (entry.category === "packable") {
+      packableRows.push(entry);
+      packableCount += count;
+    } else if (entry.category === "aged") agedCount += count;
+    else otherCount += count;
   });
 
   if (mflStatsTotalPlayers) {
-    mflStatsTotalPlayers.textContent = formatCount(rows.length);
+    mflStatsTotalPlayers.textContent = formatCount(totalCount);
   }
   if (mflStatsPackablePlayers) {
-    mflStatsPackablePlayers.textContent = formatCount(packableRows.length);
+    mflStatsPackablePlayers.textContent = formatCount(packableCount);
   }
   if (mflStatsAgedPlayers) {
     mflStatsAgedPlayers.textContent = formatCount(agedCount);
