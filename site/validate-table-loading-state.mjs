@@ -221,6 +221,23 @@ invariant(
   "View transitions must use the same pager-hidden Table loading contract as every other uncached request."
 );
 
+invariant(
+  appCoreSource.includes("function databaseTableRouteForCacheReadiness(options = {}) {")
+    && appCoreSource.includes('const tableUrlState = Reflect.get(window, "__mflTableUrlState");')
+    && appCoreSource.includes('tableUrlState.resolve(pageName, requestedView, routeSearch, fallbackState)')
+    && appCoreSource.includes("route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);")
+    && appCoreSource.includes('Reflect.set(route, "tableFilters", {')
+    && appCoreSource.includes("route.requestPageSize = Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize);")
+    && appCoreSource.includes("const sortState = defaultSortStateForView(route.view, pageName);")
+    && appCoreSource.includes("route.requestSortKey = sortState.sortKey;")
+    && appCoreSource.includes("route.requestSortDirection = sortState.sortDirection;")
+    && appCoreSource.includes('if (page === "database") {\n    const databaseRoute = databaseTableRouteForCacheReadiness(routeOptions);')
+    && appCoreSource.includes("Number(route.requestPageSize || state.pageSize)")
+    && appCoreSource.includes("String(route.requestSortKey || state.sortKey)")
+    && appCoreSource.includes("String(route.requestSortDirection || state.sortDirection)"),
+  "Database pre-transition cache readiness must resolve the destination's saved/URL filters, page size, and default sort without mutating visible controls, so a true cache hit cannot enter the loading-row path.",
+);
+
 const incrementalPageStart = appCoreSource.indexOf("const setIncrementalPage = async function setIncrementalPage(");
 const incrementalPageEnd = appCoreSource.indexOf("const loadIncrementalRoutePage = async function loadIncrementalRoutePage", incrementalPageStart);
 const incrementalPageSource = appCoreSource.slice(incrementalPageStart, incrementalPageEnd);
