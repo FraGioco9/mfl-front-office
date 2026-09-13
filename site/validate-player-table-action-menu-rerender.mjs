@@ -25,11 +25,12 @@ for (const code of [source, generatedTable]) {
       && code.includes("function restorePlayerTableActionMenuAfterRender(renderSignature)")
       && code.includes('tableBody.querySelectorAll(".playerTableActionsButton")')
       && code.includes('String(button.dataset.playerId || "") === key')
-      && code.includes('const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"')
+      && code.includes('let preservedPlayerTableActionRenderSignature = "";')
+      && code.includes('preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"')
       && code.includes("playerTableActionRenderSignature === currentPlayerTableActionRenderSignature()")
       && code.includes("restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);")
       && code.includes('playerTableActionTrigger.setAttribute("aria-expanded", "true");'),
-    "A structurally identical background table rerender must keep an open Player action menu and re-anchor it to the rebuilt trigger for the same player.",
+    "An unchanged reusable table must keep the open Player action menu in place, while a real background rebuild must preserve and re-anchor it to the rebuilt trigger for the same player.",
   );
 
   invariant(
