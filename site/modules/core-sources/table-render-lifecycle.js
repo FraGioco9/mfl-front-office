@@ -66,7 +66,7 @@ function tableBodyStructureReusable(pageRows) {
   const firstRow = tableBody.firstElementChild;
   const lastRow = tableBody.lastElementChild;
   const firstPlayerId = String(getValue(pageRows[0], "player_id") || "");
-  const lastPlayerId = String(getValue(pageRows.at(-1), "player_id") || "");
+  const lastPlayerId = String(getValue(pageRows[pageRows.length - 1], "player_id") || "");
   return firstRow instanceof HTMLTableRowElement
     && lastRow instanceof HTMLTableRowElement
     && String(firstRow.dataset.playerId || "") === firstPlayerId
