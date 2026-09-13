@@ -28,6 +28,8 @@ function tableCenterCellContents(cell) {
 }
 
 const tableBodyRenderReuse = createRenderReuseGuard();
+let tableBodyCommittedRenderSignature = "";
+let tableBodyCommittedRenderParts = null;
 
 function tableBodyRenderSignatureParts(pageRows) {
   const rowUiState = pageRows.map((row) => {
@@ -108,6 +110,8 @@ function tableRenderTableOwner() {
     structure: reusableStructure,
     signature: renderSignature,
     parts: tableBodyRenderSignatureParts(pageRows),
+    previousSignature: tableBodyCommittedRenderSignature,
+    previousParts: tableBodyCommittedRenderParts,
   });
   if (reusableBody) {
     syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
@@ -303,6 +307,8 @@ function tableRenderTableOwner() {
 
   tableBody.replaceChildren(fragment);
   tableBodyRenderReuse.commit(renderSignature);
+  tableBodyCommittedRenderSignature = renderSignature;
+  tableBodyCommittedRenderParts = tableBodyRenderSignatureParts(pageRows);
   window.__mflTableRenderReuseDebug = Object.freeze({
     reused: false,
     structure: true,
@@ -316,6 +322,8 @@ function tableRenderTableOwner() {
 function showTableBusyState() {
   if (window.__mflTableLoadingRuntime?.show?.()) return;
   tableBodyRenderReuse.invalidate();
+  tableBodyCommittedRenderSignature = "";
+  tableBodyCommittedRenderParts = null;
   emptyState.hidden = true;
   emptyState.textContent = "";
   tableBody.replaceChildren();
