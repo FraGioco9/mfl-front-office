@@ -315,10 +315,9 @@
     }
   }
 
-  function syncSelectionState() {
+  function syncSelectionState(selectedCount = applicationSelectionCount()) {
     const bar = selectionBar();
     if (!(bar instanceof HTMLElement)) return;
-    const selectedCount = applicationSelectionCount();
 
     if (selectedCount > 0) {
       lastKnownSelectionCount = selectedCount;
@@ -370,12 +369,27 @@
     });
   }
 
+  function selectionLayoutActive(selectedCount = applicationSelectionCount()) {
+    return selectedCount > 0
+      || lastKnownSelectionCount > 0
+      || awaitingSelectionReset
+      || Boolean(frozenSelectionLabel)
+      || (lastSelectionTop !== null && Date.now() < toastAnchorUntil);
+  }
+
   function sync() {
     frame = 0;
     if (destroyed) return;
     bindObserver();
+    const selectedCount = applicationSelectionCount();
+    if (!selectionLayoutActive(selectedCount)) {
+      if (document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== "88px") {
+        document.documentElement.style.setProperty("--mfl-toast-bottom", "88px");
+      }
+      return;
+    }
     syncSelectionBarPosition();
-    syncSelectionState();
+    syncSelectionState(selectedCount);
     syncToastPosition();
   }
 

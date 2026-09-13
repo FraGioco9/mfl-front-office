@@ -338,12 +338,12 @@ invariant(
 
 invariant(
   appCoreSource.includes("function syncLayoutCenter() {")
-    && appCoreSource.includes('toast.classList.add("visible");\n  syncLayoutCenter();')
-    && appCoreSource.includes('window.addEventListener("resize", syncLayoutCenter, { passive: true });')
-    && appCoreSource.includes('new MutationObserver(syncLayoutCenter).observe(document.body, {')
+    && !appCoreSource.includes('toast.classList.add("visible");\n  syncLayoutCenter();')
+    && !appCoreSource.includes('new MutationObserver(syncLayoutCenter)')
+    && !appCoreSource.includes("getBoundingClientRect();\n  const center =")
     && !appCoreSource.includes("showLayoutCenteredToast")
     && !appCoreSource.includes("originalShowToast"),
-  "Toast/layout centering must be owned directly by canonical showToast plus the shared layout-center subscriber, without post-start showToast reassignment.",
+  "Toast presentation must remain canonical without a synchronous layout-center observer or geometry read.",
 );
 
 console.log("Non-blocking route/data loading, local mutation feedback, local table loading, and absence of every global Loading-toast/interaction-blocker owner validation passed.");

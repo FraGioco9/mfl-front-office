@@ -2255,8 +2255,10 @@ td a {
 
 .toastMessage {
   position: fixed;
-  left: var(--toast-center-x, 50%);
+  left: var(--pinned-sidebar-width);
+  right: 0;
   bottom: 88px;
+  margin-inline: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2276,7 +2278,7 @@ td a {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transform: translate(-50%, 14px);
+  transform: translateY(14px);
   transition: opacity 180ms ease, transform 180ms ease, visibility 0ms linear 180ms;
 }
 
@@ -2290,8 +2292,12 @@ td a {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
   transition-delay: 0ms;
+}
+
+body:not(.pinnedSidebarVisible) .toastMessage {
+  left: 0;
 }
 
 .toastWatchlistContent,

@@ -36,7 +36,6 @@ function showToast(message, options = {}) {
     toast.textContent = message;
   }
   toast.classList.add("visible");
-  syncLayoutCenter();
   if (options.sticky) {
     window.clearTimeout(state.toastTimer);
   } else {
