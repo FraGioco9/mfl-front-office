@@ -908,11 +908,7 @@
   }
 
   function schedulePlayerTableSync() {
-    if (destroyed) return;
-    syncPlayerTableFadeState();
-    const evaluationScroller = evaluationTableScroller();
-    if (evaluationScroller instanceof HTMLElement) syncPlayerTableFadeState(evaluationScroller);
-    if (playerSyncFrame) return;
+    if (destroyed || playerSyncFrame) return;
     playerSyncFrame = requestAnimationFrame(() => {
       playerSyncFrame = 0;
       syncPlayerTableScroller();
