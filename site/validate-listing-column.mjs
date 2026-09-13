@@ -32,11 +32,13 @@ assert.match(core, /: column === "listing_price" \|\| \(column === agentColumn &
 assert.match(core, /function listingPriceBadgeHtml\(row\)/);
 assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
 assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
-assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
+assert.match(core, /function createTableListingContent\(row, compactTableLayout\)/);
 assert.match(core, /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/);
-assert.match(core, /if \(listingBadge\) \{\s*if \(!compactTableLayout\) \{\s*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
-assert.match(core, /const template = document\.createElement\("template"\);/);
+assert.match(core, /const listingContent = createTableListingContent\(row, compactTableLayout\);/);
+assert.match(core, /icon\.src = "\/listing-shopping-bag\.svg";/);
 assert.match(core, /badge\.dataset\.tooltip = priceText;/);
+assert.doesNotMatch(core, /template\.innerHTML = listingBadge\.trim\(\);/);
+assert.doesNotMatch(core, /cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
 assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
 assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
