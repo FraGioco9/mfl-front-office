@@ -1981,6 +1981,7 @@ async function runViewTransition(pageName, viewName, options = {}, loader = null
   }
 }
 
+Reflect.set(window, "__mflRecordRoutePerformanceStage", recordPageTransitionStage);
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
 Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
 Reflect.set(window, "__mflRunViewTransition", runViewTransition);
@@ -2342,6 +2343,8 @@ if (pageName === "my-clubs") {
   }
 
   if (!pageNavigationIsCurrent(options)) return null;
+  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-page-chrome-start", { page: pageName });
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
@@ -2360,7 +2363,9 @@ if (pageName === "my-clubs") {
     tablePageTitle.textContent = tableTitleForPage(pageName);
   }
   renderWatchlistSwitcher();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-page-chrome-complete", { page: pageName });
   if (tablePage) {
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-controls-start", { page: pageName });
     restoreSavedTableState(pageName, {
       view: options.view,
       path: options.path,
@@ -2369,8 +2374,11 @@ if (pageName === "my-clubs") {
     syncRestoredTableControls(pageName);
     updateViewButtons();
     buildHeader();
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-controls-complete", { page: pageName });
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-quick-filters-start", { page: pageName });
   globalThis.syncQuickFilterLabels?.();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-quick-filters-complete", { page: pageName });
 
   if (mflStatsActive) {
     state.view = "stats";
@@ -2477,7 +2485,9 @@ if (pageName === "my-clubs") {
   }
   if (tablePage) {
     state.page = 1;
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-apply-filters-start", { page: pageName });
     applyFilters({ save: false });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-apply-filters-complete", { page: pageName });
   }
 
   if (document.body.classList.contains("loading")) {
@@ -7828,27 +7838,34 @@ function syncLayoutCenter() {
       : 0);
   const ownsRenderLoadingRequestToken = inheritedTableLoadingRequestToken === 0 && renderLoadingRequestToken !== 0;
   try {
+    const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-request-start", { page: pageName });
     const payload = await requestIncrementalRoute(route, 1, {
       ...requestOptions,
       tableLoadingRequestToken: renderLoadingRequestToken,
       __mflNavigationTransition: options.__mflNavigationTransition || null,
     });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-request-complete", { page: pageName });
     if (!payload || !pageNavigationIsCurrent(options)) return false;
     if (tablePages.has(pageName) && pageName !== "club") {
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-outer-restore-start", { page: pageName });
       restoreSavedTableState(pageName, {
         view: route.view || options.view,
         path: options.path,
         replaceUrl: options.replaceUrl,
       });
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-outer-restore-complete", { page: pageName });
     }
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;
     try {
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-render-page-start", { page: pageName });
       const result = await renderPage.call(this, pageName, false, {
         ...options,
         replaceUrl: "",
         skipNavigationLoading: true,
       });
+      if (typeof recordRouteStage === "function") recordRouteStage("route-loader-render-page-complete", { page: pageName });
       return pageNavigationIsCurrent(options) ? result : false;
     } finally {
       state.incrementalApplying = false;
