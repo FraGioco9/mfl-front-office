@@ -245,8 +245,13 @@ function applyIncrementalPayload(route, payload) {
   }
   state.incrementalMode = tableRoute;
   state.incrementalRoute = { ...route };
-  state.incrementalTotalRows = Number(payload.totalRows || 0);
-  state.incrementalSourceRows = Number(payload.sourceRows || 0);
+  const payloadTotalRows = route.scope === "mflstats"
+    ? Number(payload.totalPlayers || 0)
+    : Number(payload.totalRows || 0);
+  state.incrementalTotalRows = payloadTotalRows;
+  state.incrementalSourceRows = route.scope === "mflstats"
+    ? payloadTotalRows
+    : Number(payload.sourceRows || 0);
   state.tableSourceRowsCount = state.incrementalSourceRows;
   state.dataAccess = route.access;
   state.dataLoaded = true;
