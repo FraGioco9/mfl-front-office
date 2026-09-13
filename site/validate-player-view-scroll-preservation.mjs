@@ -294,14 +294,10 @@ assert.ok(
   "Real touch/momentum scrolling must not be imperatively clamped on every scroll event; clamping belongs only to layout synchronization.",
 );
 
-const renderedItemsStart = shared.indexOf("function renderedViewItems(views) {");
-const renderedItemsEnd = shared.indexOf("\n  function viewContentWidth", renderedItemsStart);
-const renderedItems = shared.slice(renderedItemsStart, renderedItemsEnd);
 assert.ok(
-  renderedItems.includes("Array.from(views.children)")
-    && !renderedItems.includes("SPACER")
-    && !renderedItems.includes("data-mfl-view-scroll-end-spacer"),
-  "Player view overflow must be derived only from the rendered controls, with no synthetic terminal child.",
+  !shared.includes("function renderedViewItems(views) {")
+    && !shared.includes("function viewContentWidth(views) {"),
+  "Player view overflow must not reintroduce per-control style/layout scans or synthetic width reconstruction.",
 );
 assert.ok(
   shared.includes("function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }"),
@@ -311,11 +307,11 @@ assert.ok(
 const syncViewScrollerStart = shared.indexOf("function syncViewScroller(views) {");
 const syncViewScrollerEnd = shared.indexOf("\n  function syncWidthAwareHeaderLabels()", syncViewScrollerStart);
 const syncViewScroller = shared.slice(syncViewScrollerStart, syncViewScrollerEnd);
-const overflowIndex = syncViewScroller.indexOf("const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;");
 const maxIndex = syncViewScroller.indexOf("const maxScroll = viewMaxScroll(views);");
+const overflowIndex = syncViewScroller.indexOf("const overflowing = maxScroll > VIEW_SCROLL_EPSILON;");
 assert.ok(
-  overflowIndex >= 0 && maxIndex > overflowIndex,
-  "Player view overflow must be classified from the real controls before the natural native maximum is read.",
+  maxIndex >= 0 && overflowIndex > maxIndex,
+  "Player view overflow must be classified directly from the browser's native scroll extent.",
 );
 assert.ok(
   !syncViewScroller.includes("appendChild") && !syncViewScroller.includes("insertAdjacentElement"),
