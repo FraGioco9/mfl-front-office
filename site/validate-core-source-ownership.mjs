@@ -250,11 +250,11 @@ invariant(
 );
 invariant(
   sharedLayoutCenter.startsWith("function syncLayoutCenter() {")
-    && sharedLayoutCenter.includes('window.addEventListener("resize", syncLayoutCenter, { passive: true });')
-    && sharedLayoutCenter.includes("new MutationObserver(syncLayoutCenter).observe(document.body, {")
-    && sharedLayoutCenter.replace(/\s*$/, "").endsWith("})();")
+    && sharedLayoutCenter.replace(/\s*$/, "").endsWith("}")
+    && !sharedLayoutCenter.includes("getBoundingClientRect")
+    && !sharedLayoutCenter.includes("MutationObserver")
     && !sharedLayoutCenter.includes("setIncrementalPage"),
-  "Shared layout centering must own page-content center synchronization and its resize/mutation bindings without absorbing incremental navigation orchestration.",
+  "Shared layout-center compatibility boundary must remain non-blocking and must not own synchronous geometry reads or mutation observers.",
 );
 invariant(
   sharedIncrementalNavigation.startsWith("/* Session-cached incremental route data and destination-first loading */")
