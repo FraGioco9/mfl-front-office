@@ -53,12 +53,20 @@ for (const input of [
 ]) includes(tableCore, input, `Table render signature must include ${input}`);
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must validate the retained row structure.");
 includes(tableCore, 'tableBody.getAttribute("data-static-loading") === "true"', "Table reuse must reject parser/loading skeleton rows.");
-includes(tableCore, "const reusableBody = tableBodyRenderReuse.matches(renderSignature, reusableStructure);", "Table renderer must test reuse before rebuilding rows.");
-includes(tableCore, "if (reusableBody) {", "Table renderer must enter the retained-DOM path only after the shared reuse guard accepts the signature and structure.");
+includes(tableCore, 'const TABLE_BODY_RENDER_SIGNATURE_KEY = "__mflTableBodyRenderSignature";', "Player tables must keep their retained render signature on the persistent table body.");
+includes(tableCore, "function retainedTableBodyRenderSignature() {", "Table reuse must read the durable signature from the retained DOM.");
+includes(tableCore, 'Reflect.get(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY)', "Table reuse must survive lazy Table-runtime reinitialization by reading the DOM-owned signature.");
+includes(tableCore, "function commitTableBodyRenderSignature(renderSignature) {", "Table rebuilds must commit both shared-guard and DOM-owned render signatures.");
+includes(tableCore, 'Reflect.set(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY, signature);', "Table rebuilds must persist the committed signature on the retained DOM.");
+includes(tableCore, "function invalidateTableBodyRenderSignature() {", "Table blank loading must invalidate both reuse owners.");
+includes(tableCore, 'Reflect.deleteProperty(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY);', "Blank loading must clear the durable DOM signature.");
+includes(tableCore, "const guardMatches = tableBodyRenderReuse.matches(renderSignature, reusableStructure);", "Table renderer must retain the shared in-runtime reuse guard.");
+includes(tableCore, "const retainedSignatureMatches = reusableStructure", "Table renderer must compare retained DOM identity when the lazy runtime was reinitialized.");
+includes(tableCore, "if (guardMatches || retainedSignatureMatches) {", "Table renderer must reuse DOM when either validated in-runtime or durable retained identity matches.");
+includes(tableCore, "if (!guardMatches) tableBodyRenderReuse.commit(renderSignature);", "Durable DOM reuse must resynchronize the shared in-runtime guard.");
 includes(tableCore, "syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);\n    return;", "Table reuse must still synchronize count, pager, loading, actions, and selection chrome.");
-includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table renderer must commit reuse only after replacing the body.");
-includes(tableCore, "tableBodyRenderReuse.invalidate();", "Explicit blank loading must invalidate retained table DOM reuse.");
-includes(tableCore, 'tableBodyCommittedRenderSignature = "";\n  tableBodyCommittedRenderParts = null;\n  emptyState.hidden = true;', "Blank loading must clear retained table reuse diagnostics before hiding the empty state.");
+includes(tableCore, "commitTableBodyRenderSignature(renderSignature);", "Table renderer must commit durable reuse identity only after replacing the body.");
+includes(tableCore, "invalidateTableBodyRenderSignature();\n  emptyState.hidden = true;", "Explicit blank loading must invalidate retained table DOM reuse.");
 
 const tableRendererStart = tableCore.indexOf("function tableRenderTableOwner() {");
 const tableBusyStart = tableCore.indexOf("\nfunction showTableBusyState() {", tableRendererStart);
@@ -66,8 +74,8 @@ const tableRenderer = tableRendererStart >= 0 && tableBusyStart > tableRendererS
 invariant(tableRenderer, "The Table renderer owner must remain available.");
 const tableReuseIndex = tableRenderer.indexOf("tableBodyRenderReuse.matches(");
 const tableReplaceBodyIndex = tableRenderer.indexOf("tableBody.replaceChildren(fragment);");
-const tableReuseCommitIndex = tableRenderer.lastIndexOf("tableBodyRenderReuse.commit(renderSignature);");
-invariant(tableReuseIndex >= 0 && tableReplaceBodyIndex > tableReuseIndex && tableReuseCommitIndex > tableReplaceBodyIndex, "Table reuse must be checked before row reconstruction and committed only after a completed body rebuild.");
+const tableReuseCommitIndex = tableRenderer.lastIndexOf("commitTableBodyRenderSignature(renderSignature);");
+invariant(tableReuseIndex >= 0 && tableReplaceBodyIndex > tableReuseIndex && tableReuseCommitIndex > tableReplaceBodyIndex, "Table reuse must be checked before row reconstruction and durable identity committed only after a completed body rebuild.");
 
 includes(playerCore, "const playerDetailRenderReuse = createRenderReuseGuard();", "Player must consume the shared render-reuse guard.");
 includes(playerCore, "function playerDetailRenderSignature(row, playerId, attributeView, attributeViewLoading) {", "Player must derive a domain-owned render signature.");
