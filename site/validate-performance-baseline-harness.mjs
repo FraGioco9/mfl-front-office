@@ -94,6 +94,11 @@ for (const token of [
   'loaderStageAt("route-loader-table-dom-commit-complete")',
   'loaderStageAt("route-loader-table-render-complete")',
   "loaderStages,",
+  'loaderStageAt("route-loader-tail-loading-start")',
+  'loaderStageAt("route-loader-tail-home-sync-complete")',
+  "Cached renderPage tail breakdown (median / observed slowest)",
+  "tailLoadingMs:",
+  "tailContinuationMs:",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
