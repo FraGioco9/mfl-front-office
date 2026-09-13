@@ -60,7 +60,7 @@ function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, c
 }
 
 function tableBodyStructureReusable(pageRows) {
-  if (tableBody.dataset.staticLoading === "true") return false;
+  if (tableBody.getAttribute("data-static-loading") === "true") return false;
   if (tableBody.children.length !== pageRows.length) return false;
   if (!pageRows.length) return true;
   const firstRow = tableBody.firstElementChild;
