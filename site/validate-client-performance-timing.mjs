@@ -68,6 +68,7 @@ for (const token of [
   '"route-loader-tail-navigation-complete"',
   '"route-loader-tail-scroll-complete"',
   '"route-loader-tail-home-sync-complete"',
+  'traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || "")',
 ]) {
   invariant(sharedCore.includes(token), `SPA route-stage timing is missing: ${token}`);
 }
@@ -100,7 +101,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 5;",
+  "const BASELINE_SCHEMA_VERSION = 6;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
@@ -127,6 +128,8 @@ for (const token of [
   "tailLoadingMs:",
   "tailContinuationMs:",
   "Cached renderPage tail breakdown (median / observed slowest)",
+  "const loaderTraceId = String(loaderTraceEntry?.detail?.traceId || \"\");",
+  "renderPageDirectMs:",
 ]) {
   invariant(baselineHarness.includes(token), `Performance baseline route-stage reporting is missing: ${token}`);
 }
