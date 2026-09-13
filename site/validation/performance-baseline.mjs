@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 9;
+const BASELINE_SCHEMA_VERSION = 10;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -554,6 +554,17 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const stageDelta = (from, to) => (
     Number.isFinite(from) && Number.isFinite(to) && to >= from ? to - from : null
   );
+  const stageEntries = (stage) => timeline.filter((entry) => entry?.phase === stage);
+  const summedStageDurationInWindow = (stage, from, to) => {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return null;
+    return stageEntries(stage).reduce((total, entry) => {
+      const at = Number(entry?.at);
+      const duration = Number(entry?.detail?.durationMs);
+      return Number.isFinite(at) && at >= from && at <= to && Number.isFinite(duration)
+        ? total + Math.max(0, duration)
+        : total;
+    }, 0);
+  };
   const shellSyncStartAt = firstStageAt("route-shell-sync-start");
   const shellSyncCompleteAt = firstStageAt("route-shell-sync-complete");
   const preloaderPaintEntry = timeline.find((entry) => entry?.phase === "route-preloader-paint-complete") || null;
@@ -562,6 +573,18 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const postloaderPaintAt = firstStageAt("route-postloader-paint-complete");
   const contentCommitAt = Number.isFinite(Number(contentCommit?.at)) ? Number(contentCommit.at) : null;
   const settledAt = Number.isFinite(Number(settled?.at)) ? Number(settled.at) : null;
+  const settleFrameOneAt = firstStageAt("route-settle-frame-one");
+  const longTasks = Array.isArray(value?.longTasks) ? value.longTasks : [];
+  const settlementLongTaskMs = Number.isFinite(contentCommitAt) && Number.isFinite(settledAt)
+    ? longTasks.reduce((total, entry) => {
+        const startTime = Number(entry?.startTime);
+        const duration = Math.max(0, Number(entry?.duration) || 0);
+        if (!Number.isFinite(startTime) || !duration) return total;
+        const overlapStart = Math.max(contentCommitAt, startTime);
+        const overlapEnd = Math.min(settledAt, startTime + duration);
+        return total + Math.max(0, overlapEnd - overlapStart);
+      }, 0)
+    : null;
   const releaseStartAt = Number.isFinite(postloaderPaintAt) ? postloaderPaintAt : loaderCompleteAt;
   const routeStages = phase === "cached"
     ? {
@@ -573,6 +596,12 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         postloaderPaintMs: stageDelta(loaderCompleteAt, postloaderPaintAt),
         releaseMs: stageDelta(releaseStartAt, contentCommitAt),
         settlePaintMs: stageDelta(contentCommitAt, settledAt),
+        settleFirstFrameMs: stageDelta(contentCommitAt, settleFrameOneAt),
+        settleSecondFrameMs: stageDelta(settleFrameOneAt, settledAt),
+        settlementLongTaskMs,
+        settlePlayerImmediateMs: summedStageDurationInWindow("route-settle-player-immediate-complete", contentCommitAt, settledAt),
+        settleViewFrameMs: summedStageDurationInWindow("route-settle-view-frame-complete", contentCommitAt, settledAt),
+        settlePlayerFrameMs: summedStageDurationInWindow("route-settle-player-frame-complete", contentCommitAt, settledAt),
       }
     : null;
 
@@ -697,7 +726,6 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     `Missing ${phase} visually-settled timing; refusing to record a partial baseline sample.`,
   );
 
-  const longTasks = Array.isArray(value?.longTasks) ? value.longTasks : [];
   const longTaskDurations = longTasks.map((entry) => Math.max(0, Number(entry?.duration) || 0));
   const layoutShifts = Array.isArray(value?.layoutShifts) ? value.layoutShifts : [];
 
@@ -941,6 +969,12 @@ function summarizePhase(runs) {
       postloaderPaintMs: summarizeMetric(runs, (run) => run.routeStages?.postloaderPaintMs),
       releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
       settlePaintMs: summarizeMetric(runs, (run) => run.routeStages?.settlePaintMs),
+      settleFirstFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleFirstFrameMs),
+      settleSecondFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleSecondFrameMs),
+      settlementLongTaskMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLongTaskMs),
+      settlePlayerImmediateMs: summarizeMetric(runs, (run) => run.routeStages?.settlePlayerImmediateMs),
+      settleViewFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleViewFrameMs),
+      settlePlayerFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settlePlayerFrameMs),
     },
     shellStages: {
       footerMs: summarizeMetric(runs, (run) => run.shellStages?.footerMs),
@@ -1029,6 +1063,19 @@ function printSummary(summary) {
       const preloaderSkipped = stages.preloaderPaintSkipped.median >= 0.5 ? "yes" : "no";
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${preloaderSkipped} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached settlement breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Commit → frame 1 ms | Frame 1 → frame 2 ms | Settlement long-task ms | Player immediate ms | View frame ms | Player frame ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.routeStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.settleFirstFrameMs)} | ${pair(stages.settleSecondFrameMs)} | ${pair(stages.settlementLongTaskMs)} | ${pair(stages.settlePlayerImmediateMs)} | ${pair(stages.settleViewFrameMs)} | ${pair(stages.settlePlayerFrameMs)} |`,
       );
     }
   }
