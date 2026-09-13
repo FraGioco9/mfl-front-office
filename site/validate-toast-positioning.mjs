@@ -12,28 +12,26 @@ const responsive = read("./responsive.css");
 const session = read("./modules/core-sources/shared-session.js");
 
 assert.ok(
-  layoutCenter.includes('const pageLayout = document.querySelector("main");')
-    && layoutCenter.includes("const bounds = pageLayout.getBoundingClientRect();")
-    && layoutCenter.includes('document.documentElement.style.setProperty("--toast-center-x", center);'),
-  "The always-loaded shared layout-center foundation must own the toast horizontal anchor from the real main-content bounds.",
+  layoutCenter.startsWith("function syncLayoutCenter() {")
+    && !layoutCenter.includes("getBoundingClientRect")
+    && !layoutCenter.includes("MutationObserver")
+    && !layoutCenter.includes('setProperty("--toast-center-x"')
+    && !layoutCenter.includes('setProperty("--selection-center-x"'),
+  "Shared layout compatibility must not force geometry reads or own toast/selection horizontal positioning.",
 );
 assert.ok(
-  layoutCenter.includes('window.addEventListener("resize", syncLayoutCenter, { passive: true });')
-    && layoutCenter.includes('attributeFilter: ["class", "data-page"],'),
-  "Toast centering must resynchronize when viewport or sidebar/page layout state changes.",
+  !toastCore.includes("syncLayoutCenter()"),
+  "Canonical showToast must not synchronously read or synchronize layout before presentation.",
 );
 assert.ok(
-  !layoutCenter.includes("__mflToastPosition"),
-  "Shared toast centering must not depend on an optional/lazy runtime bridge.",
-);
-assert.ok(
-  toastCore.includes('toast.classList.add("visible");\n  syncLayoutCenter();'),
-  "Every canonical showToast call must synchronize the shared content-centered anchor before presentation settles.",
-);
-assert.ok(
-  stylesBase.includes("left: var(--toast-center-x, 50%);")
-    && stylesBase.includes("transform: translateX(-50%)"),
-  "The toast surface must consume the single shared horizontal-center variable.",
+  stylesBase.includes("left: var(--pinned-sidebar-width);")
+    && stylesBase.includes("right: 0;")
+    && stylesBase.includes("margin-inline: auto;")
+    && stylesBase.includes("body:not(.pinnedSidebarVisible) .toastMessage {\n  left: 0;")
+    && stylesBase.includes("transform: translateY(14px);")
+    && stylesBase.includes("transform: translateY(0);")
+    && !stylesBase.includes("--toast-center-x"),
+  "Toast horizontal centering must be CSS-owned from the canonical pinned-sidebar geometry without a runtime center variable.",
 );
 assert.ok(
   !selectionStack.includes('setProperty("--toast-center-x"')
@@ -63,4 +61,4 @@ assert.ok(
   "Dapper opt-out and invalid-session feedback must continue through the canonical shared showToast path.",
 );
 
-console.log("Toast positioning foundation validation passed: every toast shares the main-content horizontal center while selection-stack owns only intentional vertical collision spacing.");
+console.log("Toast positioning foundation validation passed: CSS owns main-content horizontal centering and selection-stack retains only its dedicated selection positioning.");
