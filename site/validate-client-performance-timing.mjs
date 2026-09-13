@@ -48,6 +48,11 @@ for (const token of [
   '"route-loader-quick-filters-complete"',
   '"route-loader-apply-filters-start"',
   '"route-loader-apply-filters-complete"',
+  '"route-loader-tail-loading-start"',
+  '"route-loader-tail-loading-complete"',
+  '"route-loader-tail-navigation-complete"',
+  '"route-loader-tail-scroll-complete"',
+  '"route-loader-tail-home-sync-complete"',
 ]) {
   invariant(sharedCore.includes(token), `SPA route-stage timing is missing: ${token}`);
 }
@@ -104,6 +109,9 @@ for (const token of [
   "applyFiltersTotalMs:",
   "tableBuildMs:",
   "tableDomCommitMs:",
+  "tailLoadingMs:",
+  "tailContinuationMs:",
+  "Cached renderPage tail breakdown (median / observed slowest)",
 ]) {
   invariant(baselineHarness.includes(token), `Performance baseline route-stage reporting is missing: ${token}`);
 }
