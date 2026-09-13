@@ -180,7 +180,8 @@ for (const code of [source, generatedTable]) {
   invariant(
     code.includes("function currentPlayerTableActionRenderSignature(")
       && code.includes("function restorePlayerTableActionMenuAfterRender(renderSignature)")
-      && code.includes('const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"')
+      && code.includes('let preservedPlayerTableActionRenderSignature = "";')
+      && code.includes('preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"')
       && code.includes("restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);")
       && !code.includes('function renderTable() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n  if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;\n  closePlayerTableActionMenu();'),
     "Passive table rerenders must preserve and re-anchor an open Player action menu instead of unconditionally closing it.",

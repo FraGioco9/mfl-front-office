@@ -40,6 +40,19 @@
   let lastRoutePage = "";
   let lastRouteView = "";
 
+  function recordStaticRouteStage(phase, state = {}) {
+    const owner = Reflect.get(window, "__mflClientPerformance");
+    const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
+    if (typeof recordInternal !== "function") return null;
+    return recordInternal(phase, {
+      kind: "page",
+      path: `${window.location.pathname}${window.location.search}`,
+      traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
+      page: String(state.page || ""),
+      view: String(state.view || ""),
+    });
+  }
+
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
     return configured && typeof configured === "object" ? configured : {};
@@ -277,16 +290,40 @@
     });
   }
 
+  function canPreserveRenderedTableRows(state, identity) {
+    const body = document.getElementById("tableBody");
+    if (!(body instanceof HTMLTableSectionElement)) return false;
+    if (body.dataset.staticLoading === "true") return false;
+    if (String(body.dataset.mflRenderedRouteIdentity || "") !== identity) return false;
+    const cache = Reflect.get(window, "__mflRouteDataCache");
+    const isReady = cache && typeof cache === "object" ? Reflect.get(cache, "isReady") : null;
+    if (typeof isReady !== "function") return false;
+    const requestOptions = state.request?.options && typeof state.request.options === "object"
+      ? state.request.options
+      : {};
+    return Boolean(isReady(state.page, {
+      ...requestOptions,
+      view: state.view || requestOptions.view || "",
+    }));
+  }
+
   function primeDestinationRouteShell(state, target) {
     const identity = routeIdentity(state);
     if (target.id === "progressionPage") {
-      if (identity !== lastPrimedRouteIdentity) {
+      const preserveRenderedRows = canPreserveRenderedTableRows(state, identity);
+      if (preserveRenderedRows) {
+        document.documentElement.dataset.mflPreservedTableRouteIdentity = identity;
+      } else {
+        delete document.documentElement.dataset.mflPreservedTableRouteIdentity;
+      }
+      if (identity !== lastPrimedRouteIdentity && !preserveRenderedRows) {
         const primeRows = Reflect.get(window, "__mflPrimeTableRows");
         if (typeof primeRows === "function") primeRows(true);
       }
       lastPrimedRouteIdentity = identity;
       return;
     }
+    delete document.documentElement.dataset.mflPreservedTableRouteIdentity;
     if (identity === lastPrimedRouteIdentity) return;
     const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");
     if (typeof prime === "function") prime(target);
@@ -295,20 +332,31 @@
   }
 
   function showRouteShell(state, options = {}) {
+    recordStaticRouteStage("route-shell-show-start", state);
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) {
       document.querySelectorAll("main > .pageView").forEach((page) => {
         if (page instanceof HTMLElement) page.hidden = true;
       });
+      recordStaticRouteStage("route-shell-show-complete", state);
       return;
     }
     if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
+    recordStaticRouteStage("route-shell-table-chrome-complete", state);
     if (target.id !== "notFoundPage") primeDestinationRouteShell(state, target);
+    recordStaticRouteStage("route-shell-prime-complete", state);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    recordStaticRouteStage("route-shell-visibility-complete", state);
+    if (target.id === "progressionPage") {
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalStructureNow?.();
+    } else {
+      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
+    }
+    recordStaticRouteStage("route-shell-horizontal-cues-complete", state);
+    recordStaticRouteStage("route-shell-show-complete", state);
   }
 
   function showNotFound(kind = "Page") {
@@ -350,10 +398,15 @@
     }
 
     if (state.page === "notfound") document.body.dataset.page = "notfound";
+    recordStaticRouteStage("route-shell-static-start", state);
     syncFooter();
+    recordStaticRouteStage("route-shell-footer-complete", state);
     setActiveNavigation(state.page);
+    recordStaticRouteStage("route-shell-navigation-complete", state);
     syncTableViews(state.page, state.view);
+    recordStaticRouteStage("route-shell-views-complete", state);
     showRouteShell(state, { resetFilters });
+    recordStaticRouteStage("route-shell-static-complete", state);
     return state;
   }
 

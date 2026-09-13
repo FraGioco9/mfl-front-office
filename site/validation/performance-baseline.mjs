@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 6;
+const BASELINE_SCHEMA_VERSION = 9;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -556,7 +556,8 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   );
   const shellSyncStartAt = firstStageAt("route-shell-sync-start");
   const shellSyncCompleteAt = firstStageAt("route-shell-sync-complete");
-  const preloaderPaintAt = firstStageAt("route-preloader-paint-complete");
+  const preloaderPaintEntry = timeline.find((entry) => entry?.phase === "route-preloader-paint-complete") || null;
+  const preloaderPaintAt = Number.isFinite(Number(preloaderPaintEntry?.at)) ? Number(preloaderPaintEntry.at) : null;
   const loaderCompleteAt = firstStageAt("route-loader-complete");
   const postloaderPaintAt = firstStageAt("route-postloader-paint-complete");
   const contentCommitAt = Number.isFinite(Number(contentCommit?.at)) ? Number(contentCommit.at) : null;
@@ -567,10 +568,49 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         commitPrepMs: stageDelta(startAt, shellSyncStartAt),
         shellSyncMs: stageDelta(shellSyncStartAt, shellSyncCompleteAt),
         revealPaintMs: stageDelta(shellSyncCompleteAt, preloaderPaintAt),
+        preloaderPaintSkipped: preloaderPaintEntry?.detail?.skipped === true ? 1 : 0,
         loaderMs: stageDelta(preloaderPaintAt, loaderCompleteAt),
         postloaderPaintMs: stageDelta(loaderCompleteAt, postloaderPaintAt),
         releaseMs: stageDelta(releaseStartAt, contentCommitAt),
         settlePaintMs: stageDelta(contentCommitAt, settledAt),
+      }
+    : null;
+
+  const shellStaticStartAt = firstStageAt("route-shell-static-start");
+  const shellFooterCompleteAt = firstStageAt("route-shell-footer-complete");
+  const shellNavigationCompleteAt = firstStageAt("route-shell-navigation-complete");
+  const shellViewsCompleteAt = firstStageAt("route-shell-views-complete");
+  const shellShowStartAt = firstStageAt("route-shell-show-start");
+  const shellTableChromeCompleteAt = firstStageAt("route-shell-table-chrome-complete");
+  const shellPrimeCompleteAt = firstStageAt("route-shell-prime-complete");
+  const shellVisibilityCompleteAt = firstStageAt("route-shell-visibility-complete");
+  const shellHorizontalCuesCompleteAt = firstStageAt("route-shell-horizontal-cues-complete");
+  const shellShowCompleteAt = firstStageAt("route-shell-show-complete");
+  const shellStaticCompleteAt = firstStageAt("route-shell-static-complete");
+  const horizontalStartAt = firstStageAt("route-shell-horizontal-start");
+  const horizontalWatchlistCompleteAt = firstStageAt("route-shell-horizontal-watchlist-complete");
+  const horizontalEnsureViewsCompleteAt = firstStageAt("route-shell-horizontal-ensure-views-complete");
+  const horizontalViewSyncCompleteAt = firstStageAt("route-shell-horizontal-view-sync-complete");
+  const horizontalPlayerSyncCompleteAt = firstStageAt("route-shell-horizontal-player-sync-complete");
+  const shellStages = phase === "cached"
+    ? {
+        footerMs: stageDelta(shellStaticStartAt, shellFooterCompleteAt),
+        navigationMs: stageDelta(shellFooterCompleteAt, shellNavigationCompleteAt),
+        viewsMs: stageDelta(shellNavigationCompleteAt, shellViewsCompleteAt),
+        showPreludeMs: stageDelta(shellViewsCompleteAt, shellShowStartAt),
+        tableChromeMs: stageDelta(shellShowStartAt, shellTableChromeCompleteAt),
+        primeMs: stageDelta(shellTableChromeCompleteAt, shellPrimeCompleteAt),
+        visibilityMs: stageDelta(shellPrimeCompleteAt, shellVisibilityCompleteAt),
+        horizontalCuesMs: stageDelta(shellVisibilityCompleteAt, shellHorizontalCuesCompleteAt),
+        horizontalWatchlistMs: stageDelta(horizontalStartAt, horizontalWatchlistCompleteAt),
+        horizontalEnsureViewsMs: stageDelta(horizontalWatchlistCompleteAt, horizontalEnsureViewsCompleteAt),
+        horizontalViewSyncMs: stageDelta(horizontalEnsureViewsCompleteAt, horizontalViewSyncCompleteAt),
+        horizontalPlayerSyncMs: stageDelta(horizontalViewSyncCompleteAt, horizontalPlayerSyncCompleteAt),
+        horizontalMeasuredTotalMs: stageDelta(horizontalStartAt, horizontalPlayerSyncCompleteAt),
+        showTailMs: stageDelta(shellHorizontalCuesCompleteAt, shellShowCompleteAt),
+        staticTailMs: stageDelta(shellShowCompleteAt, shellStaticCompleteAt),
+        showTotalMs: stageDelta(shellShowStartAt, shellShowCompleteAt),
+        staticTotalMs: stageDelta(shellStaticStartAt, shellStaticCompleteAt),
       }
     : null;
 
@@ -606,6 +646,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const filterRowsCompleteAt = loaderStageAt("route-loader-filter-rows-complete");
   const filterUiCompleteAt = loaderStageAt("route-loader-filter-ui-complete");
   const tableRenderStartAt = loaderStageAt("route-loader-table-render-start");
+  const tableBuildCompleteEntry = loaderStageEntry("route-loader-table-build-complete");
   const tableBuildCompleteAt = loaderStageAt("route-loader-table-build-complete");
   const tableDomCommitCompleteAt = loaderStageAt("route-loader-table-dom-commit-complete");
   const tableRenderCompleteAt = loaderStageAt("route-loader-table-render-complete");
@@ -630,6 +671,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         rowFilterMs: stageDelta(filterSourceCompleteAt, filterRowsCompleteAt),
         filterUiMs: stageDelta(filterRowsCompleteAt, filterUiCompleteAt),
         tableBuildMs: stageDelta(tableRenderStartAt, tableBuildCompleteAt),
+        tableReused: tableBuildCompleteEntry?.detail?.reused === true ? 1 : 0,
         tableDomCommitMs: stageDelta(tableBuildCompleteAt, tableDomCommitCompleteAt),
         tablePostMs: stageDelta(tableDomCommitCompleteAt, tableRenderCompleteAt),
         applyFiltersTailMs: stageDelta(tableRenderCompleteAt, applyFiltersCompleteAt),
@@ -667,6 +709,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     longestTaskMs: longTaskDurations.length ? Math.max(...longTaskDurations) : 0,
     cls: layoutShifts.reduce((total, entry) => total + Math.max(0, Number(entry?.value) || 0), 0),
     routeStages,
+    shellStages,
     loaderStages,
     dataSources: dataResponses.reduce((counts, entry) => {
       const source = String(entry?.detail?.source || "unknown");
@@ -893,10 +936,30 @@ function summarizePhase(runs) {
       commitPrepMs: summarizeMetric(runs, (run) => run.routeStages?.commitPrepMs),
       shellSyncMs: summarizeMetric(runs, (run) => run.routeStages?.shellSyncMs),
       revealPaintMs: summarizeMetric(runs, (run) => run.routeStages?.revealPaintMs),
+      preloaderPaintSkipped: summarizeMetric(runs, (run) => run.routeStages?.preloaderPaintSkipped),
       loaderMs: summarizeMetric(runs, (run) => run.routeStages?.loaderMs),
       postloaderPaintMs: summarizeMetric(runs, (run) => run.routeStages?.postloaderPaintMs),
       releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
       settlePaintMs: summarizeMetric(runs, (run) => run.routeStages?.settlePaintMs),
+    },
+    shellStages: {
+      footerMs: summarizeMetric(runs, (run) => run.shellStages?.footerMs),
+      navigationMs: summarizeMetric(runs, (run) => run.shellStages?.navigationMs),
+      viewsMs: summarizeMetric(runs, (run) => run.shellStages?.viewsMs),
+      showPreludeMs: summarizeMetric(runs, (run) => run.shellStages?.showPreludeMs),
+      tableChromeMs: summarizeMetric(runs, (run) => run.shellStages?.tableChromeMs),
+      primeMs: summarizeMetric(runs, (run) => run.shellStages?.primeMs),
+      visibilityMs: summarizeMetric(runs, (run) => run.shellStages?.visibilityMs),
+      horizontalCuesMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalCuesMs),
+      horizontalWatchlistMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalWatchlistMs),
+      horizontalEnsureViewsMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalEnsureViewsMs),
+      horizontalViewSyncMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalViewSyncMs),
+      horizontalPlayerSyncMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalPlayerSyncMs),
+      horizontalMeasuredTotalMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalMeasuredTotalMs),
+      showTailMs: summarizeMetric(runs, (run) => run.shellStages?.showTailMs),
+      staticTailMs: summarizeMetric(runs, (run) => run.shellStages?.staticTailMs),
+      showTotalMs: summarizeMetric(runs, (run) => run.shellStages?.showTotalMs),
+      staticTotalMs: summarizeMetric(runs, (run) => run.shellStages?.staticTotalMs),
     },
     loaderStages: {
       requestMs: summarizeMetric(runs, (run) => run.loaderStages?.requestMs),
@@ -909,6 +972,7 @@ function summarizePhase(runs) {
       rowFilterMs: summarizeMetric(runs, (run) => run.loaderStages?.rowFilterMs),
       filterUiMs: summarizeMetric(runs, (run) => run.loaderStages?.filterUiMs),
       tableBuildMs: summarizeMetric(runs, (run) => run.loaderStages?.tableBuildMs),
+      tableReused: summarizeMetric(runs, (run) => run.loaderStages?.tableReused),
       tableDomCommitMs: summarizeMetric(runs, (run) => run.loaderStages?.tableDomCommitMs),
       tablePostMs: summarizeMetric(runs, (run) => run.loaderStages?.tablePostMs),
       applyFiltersTailMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTailMs),
@@ -956,14 +1020,41 @@ function printSummary(summary) {
   }
 
   console.log("\nCached SPA stage breakdown (median / observed slowest)");
-  console.log("| Profile | Journey | Commit prep ms | Shell sync ms | Reveal paint ms | Loader ms | Loading paint ms | Release ms | Settle paint ms |");
-  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  console.log("| Profile | Journey | Commit prep ms | Shell sync ms | Reveal wait ms | Preloader wait skipped | Loader ms | Loading paint ms | Release ms | Settle paint ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |");
   for (const profile of Object.keys(summary)) {
     for (const journey of Object.keys(summary[profile])) {
       const stages = summary[profile][journey].cached.routeStages;
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      const preloaderSkipped = stages.preloaderPaintSkipped.median >= 0.5 ? "yes" : "no";
       console.log(
-        `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+        `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${preloaderSkipped} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached shell sync breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Footer ms | Navigation ms | Views ms | Table chrome ms | Prime ms | Visibility ms | Horizontal cues ms | Show total ms | Static total ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.shellStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.footerMs)} | ${pair(stages.navigationMs)} | ${pair(stages.viewsMs)} | ${pair(stages.tableChromeMs)} | ${pair(stages.primeMs)} | ${pair(stages.visibilityMs)} | ${pair(stages.horizontalCuesMs)} | ${pair(stages.showTotalMs)} | ${pair(stages.staticTotalMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached horizontal cue breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Watchlist ms | Ensure views ms | View sync ms | Player sync ms | Measured total ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.shellStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.horizontalWatchlistMs)} | ${pair(stages.horizontalEnsureViewsMs)} | ${pair(stages.horizontalViewSyncMs)} | ${pair(stages.horizontalPlayerSyncMs)} | ${pair(stages.horizontalMeasuredTotalMs)} |`,
       );
     }
   }
@@ -982,14 +1073,15 @@ function printSummary(summary) {
   }
 
   console.log("\nCached filter/render breakdown (median / observed slowest)");
-  console.log("| Profile | Journey | ApplyFilters total ms | Filter prep ms | Row filter ms | Filter UI ms | Table render total ms | Table build ms | DOM commit ms | Table post ms | Apply tail ms | Page tail ms |");
-  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  console.log("| Profile | Journey | ApplyFilters total ms | Filter prep ms | Row filter ms | Filter UI ms | Table render total ms | Table build ms | Body reused | DOM commit ms | Table post ms | Apply tail ms | Page tail ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |");
   for (const profile of Object.keys(summary)) {
     for (const journey of Object.keys(summary[profile])) {
       const stages = summary[profile][journey].cached.loaderStages;
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      const reused = stages.tableReused.median >= 0.5 ? "yes" : "no";
       console.log(
-        `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
+        `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${reused} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
       );
     }
   }

@@ -100,7 +100,14 @@ for (const [key, count] of Object.entries(counts)) {
   if (count > allowed) regressions.push(`${key}: ${count} > ${allowed}`);
 }
 if (regressions.length) {
-  throw new Error(`Canonical core TypeScript diagnostic baseline regressed:\n${regressions.join("\n")}`);
+  const regressedKeys = new Set(regressions.map((entry) => entry.split(": ", 1)[0]));
+  const regressionDiagnostics = output.split(/\r?\n/).map((line) => line.trim()).filter((line) => {
+    const match = /^(modules\/core-sources\/[^(:]+\.js)\(\d+,\d+\): error TS(\d+):/.exec(line);
+    return Boolean(match && regressedKeys.has(`${match[1]}:TS${match[2]}`));
+  });
+  throw new Error(
+    `Canonical core TypeScript diagnostic baseline regressed:\n${regressions.join("\n")}\n\n${regressionDiagnostics.join("\n")}`,
+  );
 }
 
 const baselineTotal = Object.values(BASELINE).reduce((sum, count) => sum + count, 0);

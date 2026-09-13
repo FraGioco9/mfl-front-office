@@ -170,6 +170,12 @@ function waitForViewTransitionPaint() {
   });
 }
 
+function preservedTableTransitionIdentity(transition) {
+  if (!transition || !transition.pageName || !transition.targetPath) return "";
+  const identity = `${transition.pageName}|${transition.viewName || ""}|${transition.targetPath}`;
+  return document.documentElement.dataset.mflPreservedTableRouteIdentity === identity ? identity : "";
+}
+
 function recordPageTransitionStage(phase, detail = {}) {
   const owner = Reflect.get(window, "__mflClientPerformance");
   const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
@@ -258,11 +264,17 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
     };
     document.documentElement.classList.add("mflInitialRouteSuperseded");
     loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
-    await waitForViewTransitionPaint();
+    const preservedTableIdentity = typeof loader === "function"
+      ? preservedTableTransitionIdentity(transition)
+      : "";
+    if (!preservedTableIdentity) {
+      await waitForViewTransitionPaint();
+    }
     recordPageTransitionStage("route-preloader-paint-complete", {
       page: transition.pageName,
       view: transition.viewName,
       loading: Boolean(loadingToken),
+      skipped: Boolean(preservedTableIdentity),
     });
     if (!pageTransitionIsCurrent(transition)) return null;
     const result = typeof loader === "function" ? await loader(transition) : transition;
@@ -282,6 +294,7 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
     }
     return result;
   } finally {
+    delete document.documentElement.dataset.mflPreservedTableRouteIdentity;
     if (loadingToken) loadingController?.end?.(loadingToken);
     if (navigationToken) navigation?.end?.(navigationToken);
   }

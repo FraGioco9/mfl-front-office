@@ -92,29 +92,46 @@ const pageTransitionSource = sharedCore.slice(pageTransitionStart, pageTransitio
 const preloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-preloader-paint-complete"');
 const loaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-loader-complete"');
 const postloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-postloader-paint-complete"');
+const preservedTableFastPath = pageTransitionSource.indexOf("preservedTableTransitionIdentity(transition)");
+const conditionalPreloaderPaint = pageTransitionSource.indexOf("if (!preservedTableIdentity) {");
 invariant(
   pageTransitionStart >= 0
-    && preloaderStage > pageTransitionSource.indexOf("await waitForViewTransitionPaint();")
+    && preservedTableFastPath >= 0
+    && conditionalPreloaderPaint > preservedTableFastPath
+    && preloaderStage > pageTransitionSource.indexOf("await waitForViewTransitionPaint();", conditionalPreloaderPaint)
     && loaderStage > pageTransitionSource.indexOf('typeof loader === "function" ? await loader(transition) : transition')
-    && postloaderStage > loaderStage,
-  "SPA stage timing must follow the actual paint and loader boundaries without changing their ownership.",
+    && postloaderStage > loaderStage
+    && pageTransitionSource.includes("skipped: Boolean(preservedTableIdentity),"),
+  "SPA stage timing must record whether the exact cached-Table preloader paint wait was skipped while retaining loader/postloader boundaries.",
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 6;",
+  "const BASELINE_SCHEMA_VERSION = 9;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
-  'firstStageAt("route-preloader-paint-complete")',
+  'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
   "commitPrepMs:",
   "shellSyncMs:",
+  "shellStages:",
+  "horizontalCuesMs:",
+  "horizontalWatchlistMs:",
+  "horizontalEnsureViewsMs:",
+  "horizontalViewSyncMs:",
+  "horizontalPlayerSyncMs:",
+  "horizontalMeasuredTotalMs:",
+  "staticTotalMs:",
   "revealPaintMs:",
+  "preloaderPaintSkipped:",
   "loaderMs:",
   "postloaderPaintMs:",
   "releaseMs:",
   "settlePaintMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Preloader wait skipped",
+  "Cached shell sync breakdown (median / observed slowest)",
+  "Cached horizontal cue breakdown (median / observed slowest)",
   "Cached loader overview (median / observed slowest)",
   "Cached filter/render breakdown (median / observed slowest)",
   'loaderStageAt("route-loader-request-start")',

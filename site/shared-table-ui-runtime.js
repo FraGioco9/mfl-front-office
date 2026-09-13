@@ -31,6 +31,17 @@
   let boundPlayerScroller = null;
   let boundPlayerScrollHandler = null;
   const pendingViewScrollers = new Set();
+
+  function recordSharedTableUiStage(phase) {
+    const owner = Reflect.get(window, "__mflClientPerformance");
+    const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
+    if (typeof recordInternal !== "function") return null;
+    return recordInternal(phase, {
+      kind: "page",
+      path: `${window.location.pathname}${window.location.search}`,
+      traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
+    });
+  }
   const boundViewScrollers = new Map();
   const scrollContainer = document.querySelector("main");
 
@@ -781,26 +792,11 @@
     return button;
   }
 
-  function renderedViewItems(views) {
-    return Array.from(views.children).filter((child) => {
-      if (!(child instanceof HTMLElement) || child.hidden) return false;
-      const style = getComputedStyle(child);
-      return style.display !== "none" && style.position !== "absolute" && child.getClientRects().length > 0;
-    });
-  }
-
-  function viewContentWidth(views) {
-    const items = renderedViewItems(views);
-    if (!items.length) return 0;
-    const viewStyle = getComputedStyle(views);
-    const gap = Number.parseFloat(viewStyle.columnGap || viewStyle.gap) || 0;
-    const itemWidth = items.reduce((total, item) => {
-      const style = getComputedStyle(item);
-      return total + item.getBoundingClientRect().width
-        + (Number.parseFloat(style.marginLeft) || 0)
-        + (Number.parseFloat(style.marginRight) || 0);
-    }, 0);
-    return itemWidth + gap * Math.max(0, items.length - 1);
+  function hasViewItems(views) {
+    for (const child of views.children) {
+      if (child instanceof HTMLElement && !child.hidden) return true;
+    }
+    return false;
   }
 
   function viewMaxScroll(views) {
@@ -841,11 +837,12 @@
       return;
     }
     if (views.getClientRects().length === 0) return;
-    if (!renderedViewItems(views).length) return;
+    if (!hasViewItems(views)) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
-    const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;
+    const maxScroll = viewMaxScroll(views);
+    const overflowing = maxScroll > VIEW_SCROLL_EPSILON;
     views.classList.toggle(VIEW_SCROLL_CLASS, overflowing);
     if (!overflowing) {
       setViewScrollButtonVisible(button, false);
@@ -854,7 +851,6 @@
       if (views.scrollLeft) views.scrollLeft = 0;
       return;
     }
-    const maxScroll = viewMaxScroll(views);
     const scrollLeft = clampViewScroll(views, maxScroll);
     const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;
     const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;
@@ -950,12 +946,22 @@
     schedulePlayerTableSync();
   }
 
-  function syncRouteHorizontalCuesNow() {
+  function syncRouteHorizontalStructureNow() {
     if (destroyed) return;
     syncWatchlistSwitcherPlacement();
+  }
+
+  function syncRouteHorizontalCuesNow() {
+    if (destroyed) return;
+    recordSharedTableUiStage("route-shell-horizontal-start");
+    syncWatchlistSwitcherPlacement();
+    recordSharedTableUiStage("route-shell-horizontal-watchlist-complete");
     ensureViewScrollers();
+    recordSharedTableUiStage("route-shell-horizontal-ensure-views-complete");
     tableHorizontalScrollers().forEach(syncViewScroller);
+    recordSharedTableUiStage("route-shell-horizontal-view-sync-complete");
     syncPlayerTableScroller();
+    recordSharedTableUiStage("route-shell-horizontal-player-sync-complete");
   }
 
   function scheduleViewScrollerSync(views = null) {
@@ -1142,5 +1148,5 @@
   TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
 
   sync();
-  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalCuesNow, destroy });
+  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalStructureNow, syncRouteHorizontalCuesNow, destroy });
 })();

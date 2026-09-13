@@ -20,10 +20,12 @@ const coreSource = await Promise.all([
 const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
+const tableCore = String(artifacts.routeChunks?.table || readCanonicalCoreSource("table") || "");
 
-invariant(sharedCore && playerCore, "Shared and Player application cores must exist.");
+invariant(sharedCore && playerCore && tableCore, "Shared, Player, and Table application cores must exist.");
 new Function(sharedCore);
 new Function(playerCore);
+new Function(tableCore);
 
 includes(sharedCore, "function createRenderReuseGuard() {", "Heavy-route reuse must use one shared source-owned render guard.");
 const guardMatch = sharedCore.match(/function createRenderReuseGuard\(\) \{[\s\S]*?\n\}/);
@@ -39,7 +41,7 @@ guard.invalidate();
 invariant(!guard.matches("alpha"), "Explicit invalidation must clear the committed render signature.");
 
 const reuseOwnerCount = (coreSource.match(/= createRenderReuseGuard\(\);/g) || []).length;
-invariant(reuseOwnerCount === 2, `Only the two measured heavy routes should own render guards; found ${reuseOwnerCount}.`);
+invariant(reuseOwnerCount === 3, `The three measured heavy renderers should own render guards; found ${reuseOwnerCount}.`);
 
 includes(playerCore, "const playerDetailRenderReuse = createRenderReuseGuard();", "Player must consume the shared render-reuse guard.");
 includes(playerCore, "function playerDetailRenderSignature(row, playerId, attributeView, attributeViewLoading) {", "Player must derive a domain-owned render signature.");
@@ -65,6 +67,35 @@ const playerReplaceIndex = playerRenderer.indexOf("playerDetail.innerHTML = `");
 const playerCommitIndex = playerRenderer.lastIndexOf("playerDetailRenderReuse.commit(renderSignature);");
 invariant(playerReuseIndex >= 0 && playerReplaceIndex > playerReuseIndex && playerCommitIndex > playerReplaceIndex, "Player reuse must be checked before full subtree replacement and committed only after rebuild.");
 invariant((playerRenderer.match(/playerDetail\.innerHTML = `/g) || []).length === 1, "Player must retain exactly one canonical full-subtree rebuild site.");
+
+
+includes(tableCore, "const tableBodyRenderReuse = createRenderReuseGuard();", "Table must consume the shared render-reuse guard.");
+includes(tableCore, "function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, compactJoinedAgencyLayout) {", "Table must derive a domain-owned render signature.");
+for (const input of [
+  "state.columns,", "presentationRows,", "state.currentPage,", "state.view,", "state.page,", "state.pageSize,",
+  "state.sortKey,", "state.sortDirection,", "renderColumns.map(({ column }) => column),",
+  "Boolean(compactTableLayout),", "Boolean(compactJoinedAgencyLayout),", "state.settingsDateFormat,",
+  "state.settingsTimeFormat,", "Boolean(hasWalletOptIn()),", "normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),",
+  "Boolean(state.walletPermissionAllowed),", "state.trainingAdjustments,",
+]) includes(tableCore, input, `Table render signature must include ${input}`);
+includes(tableCore, "state.selectedPlayerIds.has(playerId),\n      playerNote(playerId),", "Table reuse must invalidate for row selection or note presentation changes.");
+includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must verify that the existing tbody structure is still canonical.");
+includes(tableCore, "const reusableTableBody = tableBodyRenderReuse.matches(", "Table must check reusable tbody state before rebuilding rows.");
+includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table must commit its signature only after a completed tbody rebuild.");
+includes(tableCore, "function currentTableBodyRouteIdentity() {", "Table must stamp reusable DOM with an exact destination route identity.");
+includes(tableCore, 'tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());', "Every completed Table render or reuse must publish its exact route identity for the shell handoff.");
+includes(tableCore, "function showTableBusyState() {\n  tableBodyRenderReuse.invalidate();", "Table busy state must invalidate reusable tbody state.");
+includes(tableCore, "tableBodyRenderReuse.invalidate();\n  tableBody.replaceChildren();\n  window.__mflTableLoadingRuntime?.show?.();", "Explicit Table loading-shell replacement must invalidate reuse before clearing rows.");
+
+const tableRendererStart = tableCore.indexOf("function tableRenderTableOwner() {");
+const tableBusyStart = tableCore.indexOf("\nfunction showTableBusyState()", tableRendererStart);
+const tableRenderer = tableRendererStart >= 0 && tableBusyStart > tableRendererStart ? tableCore.slice(tableRendererStart, tableBusyStart) : "";
+invariant(tableRenderer, "The Table renderer owner must remain available.");
+const tableReuseIndex = tableRenderer.indexOf("tableBodyRenderReuse.matches(");
+const tableBodyReplaceIndex = tableRenderer.indexOf("tableBody.replaceChildren(fragment);");
+const tableCommitIndex = tableRenderer.indexOf("tableBodyRenderReuse.commit(renderSignature);");
+invariant(tableReuseIndex >= 0 && tableBodyReplaceIndex > tableReuseIndex && tableCommitIndex > tableBodyReplaceIndex, "Table reuse must be checked before tbody replacement and committed only after rebuilding rows.");
+invariant((tableRenderer.match(/tableBody\.replaceChildren\(fragment\);/g) || []).length === 1, "Table must retain exactly one canonical tbody rebuild site.");
 
 const evaluationCore = String(artifacts.routeChunks.evaluation);
 includes(evaluationCore, "const evaluationTableRenderReuse = createRenderReuseGuard();", "Evaluation must consume the shared render-reuse guard.");
@@ -93,4 +124,4 @@ const evaluationCommitIndex = evaluationRenderer.lastIndexOf("evaluationTableRen
 invariant(evaluationReuseIndex >= 0 && summaryReplaceIndex > evaluationReuseIndex && tableReplaceIndex > summaryReplaceIndex && evaluationCommitIndex > tableReplaceIndex, "Evaluation reuse must be checked before both subtree replacements and committed only after rebuilding them.");
 
 excludes(playerCore, '"Player not-found route surface"', "Retired splitter compatibility markers must not leak into canonical Player source.");
-console.log("Shared heavy-route render reuse validation passed: unchanged Player and Evaluation DOM can be reused with domain-owned invalidation signatures.");
+console.log("Shared heavy-route render reuse validation passed: unchanged Player, Evaluation, and Table DOM can be reused with domain-owned invalidation signatures.");

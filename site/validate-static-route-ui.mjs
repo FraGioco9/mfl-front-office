@@ -179,6 +179,12 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableHeaderSignature", first
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);', "Bootstrap must own static table-header rendering.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
+includes(staticUi, "function canPreserveRenderedTableRows(state, identity) {", "Static route shell must own the exact cached-table preservation decision.");
+includes(staticUi, 'String(body.dataset.mflRenderedRouteIdentity || "") !== identity', "Cached Table preservation must require the exact destination route identity.");
+includes(staticUi, 'Reflect.get(window, "__mflRouteDataCache")', "Cached Table preservation must require canonical route-data cache readiness.");
+includes(staticUi, "identity !== lastPrimedRouteIdentity && !preserveRenderedRows", "Static Table priming must not destroy exact cached destination rows before the loader can reuse them.");
+includes(staticUi, "document.documentElement.dataset.mflPreservedTableRouteIdentity = identity;", "Exact cached Table preservation must publish the destination identity to the transition owner.");
+includes(staticUi, "delete document.documentElement.dataset.mflPreservedTableRouteIdentity;", "Non-preserved routes must clear the cached-Table transition signal.");
 includes(bootstrap, 'if (target.id === "myClubsPage") {', "My Clubs route priming must synchronously clear stale cards before the destination shell becomes visible.");
 includes(bootstrap, 'grid.replaceChildren();', "My Clubs route priming must show zero guessed or stale club boxes until ownership data resolves.");
 
@@ -189,6 +195,9 @@ includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPre
 includes(tableLoading, 'Reflect.get(window, "__mflPrimeTableRows")', "Table loading must reuse the bootstrap skeleton renderer.");
 includes(tableLoading, "primeRows(true);", "Table loading must request the canonical bootstrap skeleton when replacing rows.");
 excludes(tableLoading, "BLANK_ROW_OPACITIES", "Table loading must not duplicate bootstrap loading-row data.");
+
+includes(coreSource, "function preservedTableTransitionIdentity(transition) {", "Global page transitions must own the exact cached-Table paint fast-path decision.");
+includes(coreSource, 'document.documentElement.dataset.mflPreservedTableRouteIdentity === identity ? identity : "";', "Cached-Table paint skipping must require exact page/view/path identity.");
 
 for (const marker of [
   'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);',
@@ -225,12 +234,20 @@ const pageRunnerStart = coreSource.indexOf("async function runPageTransition(pag
 const pageRunnerEnd = coreSource.indexOf("async function runViewTransition", pageRunnerStart);
 const pageRunner = coreSource.slice(pageRunnerStart, pageRunnerEnd);
 const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
-const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
+const preservedIdentityIndex = pageRunner.indexOf("preservedTableTransitionIdentity(transition)");
+const conditionalPaintIndex = pageRunner.indexOf("if (!preservedTableIdentity) {");
+const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();", conditionalPaintIndex);
 const pageLoadIndex = pageRunner.indexOf('const result = typeof loader === "function" ? await loader(transition) : transition;');
 invariant(
-  pageCommitIndex >= 0 && pagePaintIndex > pageCommitIndex && pageLoadIndex > pagePaintIndex,
-  "Global page transitions must commit, paint, then load.",
+  pageCommitIndex >= 0
+    && preservedIdentityIndex > pageCommitIndex
+    && conditionalPaintIndex > preservedIdentityIndex
+    && pagePaintIndex > conditionalPaintIndex
+    && pageLoadIndex > pagePaintIndex,
+  "Global page transitions must commit, skip only an exact cached-Table preloader paint, otherwise paint, then load.",
 );
+includes(pageRunner, 'typeof loader === "function"\n      ? preservedTableTransitionIdentity(transition)', "Cached-Table paint skipping must require a real destination loader.");
+includes(pageRunner, "delete document.documentElement.dataset.mflPreservedTableRouteIdentity;", "Page transition completion must clear the one-shot cached-Table paint signal.");
 
 const viewRunnerStart = coreSource.indexOf("async function runViewTransition(pageName, viewName, options = {}, loader = null) {");
 const viewRunnerEnd = coreSource.indexOf('Reflect.set(window, "__mflCommitViewTransition"', viewRunnerStart);

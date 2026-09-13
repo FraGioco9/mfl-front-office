@@ -246,7 +246,11 @@ for (const required of [
   'document.querySelector("#playerDetail .playerAttributeViews")',
   'return [tableViews(), tableQuickFilters(), playerAttributeViews()]',
   'if (views.matches("#playerDetail .playerAttributeViews")) return "attribute views";',
-  'ensureViewScrollers();\n    tableHorizontalScrollers().forEach(syncViewScroller);',
+  'function syncRouteHorizontalCuesNow() {',
+  'ensureViewScrollers();',
+  'tableHorizontalScrollers().forEach(syncViewScroller);',
+  'const maxScroll = viewMaxScroll(views);',
+  'const overflowing = maxScroll > VIEW_SCROLL_EPSILON;',
   'target.matches("#progressionPage .views, #progressionPage .quickFilters, #playerDetail .playerAttributeViews")',
   'target.closest("#progressionPage .views, #progressionPage .quickFilters, #playerDetail .playerAttributeViews")',
   'if (scroller.isConnected) return;',
@@ -258,6 +262,8 @@ for (const required of [
   ".views::-webkit-scrollbar,\n  .quickFilters::-webkit-scrollbar,\n  .playerAttributeViews::-webkit-scrollbar,",
 ]) includes(scrollbars, required, "Player Attribute views must hide native scrollbar chrome through scrollbars.css: " + required);
 
+invariant(!sharedTableUi.includes("function renderedViewItems("), "Horizontal cue overflow detection must not reintroduce per-child rendered-item layout scans.");
+invariant(!sharedTableUi.includes("function viewContentWidth("), "Horizontal cue overflow detection must use native scroll geometry instead of per-child width measurement.");
 invariant(responsiveDomain.includes('"validate-player-mobile-scaling.mjs"'), "Player mobile regression must live in the responsive validator domain.");
 invariant(!routeDomain.includes('"validate-player-mobile-scaling.mjs"'), "Player mobile regression must not remain in the route-feature domain.");
 invariant(!player.includes("!important"), "Player mobile scaling must not use !important.");

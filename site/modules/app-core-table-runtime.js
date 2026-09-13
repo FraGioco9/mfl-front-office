@@ -298,6 +298,7 @@ function renderTableLoadingShell(pageName) {
   }
   emptyState.hidden = true;
   emptyState.textContent = "";
+  tableBodyRenderReuse.invalidate();
   tableBody.replaceChildren();
   window.__mflTableLoadingRuntime?.show?.();
 }
@@ -2749,17 +2750,61 @@ function tableCenterCellContents(cell) {
   return cell;
 }
 
+const tableBodyRenderReuse = createRenderReuseGuard();
+
+function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, compactJoinedAgencyLayout) {
+  const presentationRows = pageRows.map((row) => {
+    const playerId = String(getValue(row, "player_id") || "");
+    return [
+      row,
+      state.selectedPlayerIds.has(playerId),
+      playerNote(playerId),
+    ];
+  });
+  return JSON.stringify([
+    state.columns,
+    presentationRows,
+    state.currentPage,
+    state.view,
+    state.page,
+    state.pageSize,
+    state.sortKey,
+    state.sortDirection,
+    renderColumns.map(({ column }) => column),
+    Boolean(compactTableLayout),
+    Boolean(compactJoinedAgencyLayout),
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+    Boolean(hasWalletOptIn()),
+    normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),
+    Boolean(state.walletPermissionAllowed),
+    state.trainingAdjustments,
+  ]);
+}
+
+function currentTableBodyRouteIdentity() {
+  return `${state.currentPage}|${state.view}|${window.location.pathname}${window.location.search}`;
+}
+
+function tableBodyStructureReusable(pageRows) {
+  if (tableBody.getAttribute("data-static-loading") === "true") return false;
+  if (tableBody.children.length !== pageRows.length) return false;
+  if (!pageRows.length) return true;
+  const firstRow = tableBody.firstElementChild;
+  const lastRow = tableBody.lastElementChild;
+  const firstPlayerId = String(getValue(pageRows[0], "player_id") || "");
+  const lastPlayerId = String(getValue(pageRows[pageRows.length - 1], "player_id") || "");
+  return firstRow instanceof HTMLTableRowElement
+    && lastRow instanceof HTMLTableRowElement
+    && String(firstRow.dataset.playerId || "") === firstPlayerId
+    && String(lastRow.dataset.playerId || "") === lastPlayerId;
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
   const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
   if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-render-start", { page: state.currentPage });
-  const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
-    && playerTableActionRenderSignature
-    && playerTableActionRenderSignature === currentPlayerTableActionRenderSignature()
-    ? playerTableActionRenderSignature
-    : "";
-  if (!preservedPlayerTableActionRenderSignature) closePlayerTableActionMenu();
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -2768,7 +2813,6 @@ function tableRenderTableOwner() {
   }
 
   const pageRows = currentPageRows();
-  const fragment = document.createDocumentFragment();
   const currentPage = state.currentPage;
   const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;
   const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;
@@ -2779,8 +2823,29 @@ function tableRenderTableOwner() {
     column,
     className: tableColumnClass(column),
   }));
+  const renderSignature = tableBodyRenderSignature(
+    pageRows,
+    renderColumns,
+    compactTableLayout,
+    compactJoinedAgencyLayout,
+  );
+  const reusableTableBody = tableBodyRenderReuse.matches(
+    renderSignature,
+    tableBodyStructureReusable(pageRows),
+  );
+  let preservedPlayerTableActionRenderSignature = "";
 
-  for (const row of pageRows) {
+  if (!reusableTableBody) {
+    preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
+      && playerTableActionRenderSignature
+      && playerTableActionRenderSignature === currentPlayerTableActionRenderSignature()
+      ? playerTableActionRenderSignature
+      : "";
+    if (!preservedPlayerTableActionRenderSignature) closePlayerTableActionMenu();
+
+    const fragment = document.createDocumentFragment();
+
+    for (const row of pageRows) {
     const tableRow = document.createElement("tr");
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
@@ -2961,12 +3026,18 @@ function tableRenderTableOwner() {
       tableRow.appendChild(tableCenterCellContents(cell));
     }
 
-    fragment.appendChild(tableRow);
-  }
+      fragment.appendChild(tableRow);
+    }
 
-  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage });
-  tableBody.replaceChildren(fragment);
-  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-dom-commit-complete", { page: state.currentPage });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage, reused: false });
+    tableBody.replaceChildren(fragment);
+    tableBodyRenderReuse.commit(renderSignature);
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-dom-commit-complete", { page: state.currentPage, reused: false });
+  } else {
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage, reused: true });
+    if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-dom-commit-complete", { page: state.currentPage, reused: true });
+  }
+  tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
@@ -2983,6 +3054,7 @@ function tableRenderTableOwner() {
 }
 
 function showTableBusyState() {
+  tableBodyRenderReuse.invalidate();
   if (window.__mflTableLoadingRuntime?.show?.()) return;
   emptyState.hidden = true;
   emptyState.textContent = "";
