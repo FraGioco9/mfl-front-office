@@ -872,6 +872,9 @@ function openPlayerTableActionMenu(trigger, playerId) {
   return true;
 }
 
+const playerTableActionsButtonIconTemplate = document.createElement("template");
+playerTableActionsButtonIconTemplate.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
+
 function createPlayerTableActionsButton(playerId) {
   const button = document.createElement("button");
   button.type = "button";
@@ -880,13 +883,7 @@ function createPlayerTableActionsButton(playerId) {
   button.setAttribute("aria-label", `Actions for player ${playerId}`);
   button.setAttribute("aria-haspopup", "menu");
   button.setAttribute("aria-expanded", "false");
-  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.25"></circle><circle cx="12" cy="12" r="1.25"></circle><circle cx="19" cy="12" r="1.25"></circle></svg>';
-  button.addEventListener("pointerdown", (event) => event.stopPropagation());
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openPlayerTableActionMenu(button, playerId);
-  });
+  button.appendChild(playerTableActionsButtonIconTemplate.content.cloneNode(true));
   return button;
 }
 
@@ -2752,6 +2749,41 @@ function tableCenterCellContents(cell) {
   return cell;
 }
 
+function createTableListingContent(row, compactTableLayout) {
+  const rawValue = getValue(row, "listing_price");
+  const numericValue = rawValue === null || rawValue === undefined || rawValue === "" ? NaN : Number(rawValue);
+  if (!Number.isFinite(numericValue)) return null;
+
+  const priceText = `${listingPriceFormatter.format(numericValue)}`;
+  const host = document.createElement("span");
+  const badge = document.createElement("span");
+  const icon = document.createElement("img");
+  host.className = "listingCellTableHost";
+  badge.className = "listingCellContent";
+  icon.className = "listingCellIcon";
+  icon.src = "/listing-shopping-bag.svg";
+  icon.width = 12;
+  icon.height = 12;
+  icon.alt = "";
+  icon.setAttribute("aria-hidden", "true");
+  badge.appendChild(icon);
+
+  if (compactTableLayout) {
+    badge.dataset.tooltip = priceText;
+    badge.setAttribute("aria-label", priceText);
+    badge.tabIndex = 0;
+  } else {
+    const price = document.createElement("span");
+    badge.setAttribute("aria-label", `For Sale at ${priceText}`);
+    price.className = "listingCellPrice";
+    price.textContent = priceText;
+    badge.appendChild(price);
+  }
+
+  host.appendChild(badge);
+  return host;
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
@@ -2861,29 +2893,9 @@ function tableRenderTableOwner() {
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
       } else if (column === "listing_price") {
-        const listingBadge = listingPriceBadgeHtml(row);
-        if (listingBadge) {
-          if (!compactTableLayout) {
-            cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;
-          } else {
-            const template = document.createElement("template");
-            template.innerHTML = listingBadge.trim();
-            const badge = template.content.firstElementChild;
-            const price = badge instanceof HTMLElement ? badge.querySelector(".listingCellPrice") : null;
-            const priceText = String(price?.textContent || "").trim();
-            if (badge instanceof HTMLElement) {
-              price?.remove();
-              if (priceText) {
-                badge.dataset.tooltip = priceText;
-                badge.setAttribute("aria-label", priceText);
-                badge.tabIndex = 0;
-              }
-              const host = document.createElement("span");
-              host.className = "listingCellTableHost";
-              host.appendChild(badge);
-              cell.appendChild(host);
-            }
-          }
+        const listingContent = createTableListingContent(row, compactTableLayout);
+        if (listingContent) {
+          cell.appendChild(listingContent);
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }
@@ -3059,6 +3071,11 @@ function copyDelegatedPlayerId(button, event) {
 
 tableBody?.addEventListener("pointerdown", (event) => {
   if (event.isPrimary === false || event.button !== 0 || !(event.target instanceof Element)) return;
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.stopPropagation();
+    return;
+  }
   const button = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (!(button instanceof HTMLButtonElement) || !tableBody.contains(button)) return;
   copyDelegatedPlayerId(button, event);
@@ -3066,6 +3083,14 @@ tableBody?.addEventListener("pointerdown", (event) => {
 
 tableBody?.addEventListener("click", (event) => {
   if (!(event.target instanceof Element)) return;
+
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.preventDefault();
+    event.stopPropagation();
+    openPlayerTableActionMenu(actionButton, actionButton.dataset.playerId || "");
+    return;
+  }
 
   const copyButton = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (copyButton instanceof HTMLButtonElement && tableBody.contains(copyButton)) {
