@@ -2775,7 +2775,7 @@ function tableBodyRenderSignature(pageRows) {
 }
 
 function tableBodyStructureReusable(pageRows) {
-  if (tableBody.dataset.staticLoading === "true") return false;
+  if (tableBody.getAttribute("data-static-loading") === "true") return false;
   const renderedRows = Array.from(tableBody.children);
   if (renderedRows.length !== pageRows.length) return false;
   return renderedRows.every((renderedRow, index) => (
