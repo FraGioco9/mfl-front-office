@@ -792,6 +792,13 @@
     return button;
   }
 
+  function hasViewItems(views) {
+    for (const child of views.children) {
+      if (child instanceof HTMLElement && !child.hidden) return true;
+    }
+    return false;
+  }
+
   function viewMaxScroll(views) {
     return Math.max(0, views.scrollWidth - views.clientWidth);
   }
@@ -829,6 +836,8 @@
       clearViewScrollerCues(views);
       return;
     }
+    if (views.getClientRects().length === 0) return;
+    if (!hasViewItems(views)) return;
     const button = viewScrollButton(views);
     const leftButton = viewScrollLeftButton(views);
     if (!(button instanceof HTMLButtonElement) || !(leftButton instanceof HTMLButtonElement)) return;
