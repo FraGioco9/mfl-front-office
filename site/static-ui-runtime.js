@@ -311,6 +311,11 @@
     const identity = routeIdentity(state);
     if (target.id === "progressionPage") {
       const preserveRenderedRows = canPreserveRenderedTableRows(state, identity);
+      if (preserveRenderedRows) {
+        document.documentElement.dataset.mflPreservedTableRouteIdentity = identity;
+      } else {
+        delete document.documentElement.dataset.mflPreservedTableRouteIdentity;
+      }
       if (identity !== lastPrimedRouteIdentity && !preserveRenderedRows) {
         const primeRows = Reflect.get(window, "__mflPrimeTableRows");
         if (typeof primeRows === "function") primeRows(true);
@@ -318,6 +323,7 @@
       lastPrimedRouteIdentity = identity;
       return;
     }
+    delete document.documentElement.dataset.mflPreservedTableRouteIdentity;
     if (identity === lastPrimedRouteIdentity) return;
     const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");
     if (typeof prime === "function") prime(target);
