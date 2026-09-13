@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 6;
+const BASELINE_SCHEMA_VERSION = 7;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -574,6 +574,34 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
       }
     : null;
 
+  const shellStaticStartAt = firstStageAt("route-shell-static-start");
+  const shellFooterCompleteAt = firstStageAt("route-shell-footer-complete");
+  const shellNavigationCompleteAt = firstStageAt("route-shell-navigation-complete");
+  const shellViewsCompleteAt = firstStageAt("route-shell-views-complete");
+  const shellShowStartAt = firstStageAt("route-shell-show-start");
+  const shellTableChromeCompleteAt = firstStageAt("route-shell-table-chrome-complete");
+  const shellPrimeCompleteAt = firstStageAt("route-shell-prime-complete");
+  const shellVisibilityCompleteAt = firstStageAt("route-shell-visibility-complete");
+  const shellHorizontalCuesCompleteAt = firstStageAt("route-shell-horizontal-cues-complete");
+  const shellShowCompleteAt = firstStageAt("route-shell-show-complete");
+  const shellStaticCompleteAt = firstStageAt("route-shell-static-complete");
+  const shellStages = phase === "cached"
+    ? {
+        footerMs: stageDelta(shellStaticStartAt, shellFooterCompleteAt),
+        navigationMs: stageDelta(shellFooterCompleteAt, shellNavigationCompleteAt),
+        viewsMs: stageDelta(shellNavigationCompleteAt, shellViewsCompleteAt),
+        showPreludeMs: stageDelta(shellViewsCompleteAt, shellShowStartAt),
+        tableChromeMs: stageDelta(shellShowStartAt, shellTableChromeCompleteAt),
+        primeMs: stageDelta(shellTableChromeCompleteAt, shellPrimeCompleteAt),
+        visibilityMs: stageDelta(shellPrimeCompleteAt, shellVisibilityCompleteAt),
+        horizontalCuesMs: stageDelta(shellVisibilityCompleteAt, shellHorizontalCuesCompleteAt),
+        showTailMs: stageDelta(shellHorizontalCuesCompleteAt, shellShowCompleteAt),
+        staticTailMs: stageDelta(shellShowCompleteAt, shellStaticCompleteAt),
+        showTotalMs: stageDelta(shellShowStartAt, shellShowCompleteAt),
+        staticTotalMs: stageDelta(shellStaticStartAt, shellStaticCompleteAt),
+      }
+    : null;
+
   const loaderTraceEntry = phase === "cached"
     ? timeline.find((entry) => entry?.phase === "route-loader-request-start")
     : null;
@@ -667,6 +695,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     longestTaskMs: longTaskDurations.length ? Math.max(...longTaskDurations) : 0,
     cls: layoutShifts.reduce((total, entry) => total + Math.max(0, Number(entry?.value) || 0), 0),
     routeStages,
+    shellStages,
     loaderStages,
     dataSources: dataResponses.reduce((counts, entry) => {
       const source = String(entry?.detail?.source || "unknown");
@@ -898,6 +927,20 @@ function summarizePhase(runs) {
       releaseMs: summarizeMetric(runs, (run) => run.routeStages?.releaseMs),
       settlePaintMs: summarizeMetric(runs, (run) => run.routeStages?.settlePaintMs),
     },
+    shellStages: {
+      footerMs: summarizeMetric(runs, (run) => run.shellStages?.footerMs),
+      navigationMs: summarizeMetric(runs, (run) => run.shellStages?.navigationMs),
+      viewsMs: summarizeMetric(runs, (run) => run.shellStages?.viewsMs),
+      showPreludeMs: summarizeMetric(runs, (run) => run.shellStages?.showPreludeMs),
+      tableChromeMs: summarizeMetric(runs, (run) => run.shellStages?.tableChromeMs),
+      primeMs: summarizeMetric(runs, (run) => run.shellStages?.primeMs),
+      visibilityMs: summarizeMetric(runs, (run) => run.shellStages?.visibilityMs),
+      horizontalCuesMs: summarizeMetric(runs, (run) => run.shellStages?.horizontalCuesMs),
+      showTailMs: summarizeMetric(runs, (run) => run.shellStages?.showTailMs),
+      staticTailMs: summarizeMetric(runs, (run) => run.shellStages?.staticTailMs),
+      showTotalMs: summarizeMetric(runs, (run) => run.shellStages?.showTotalMs),
+      staticTotalMs: summarizeMetric(runs, (run) => run.shellStages?.staticTotalMs),
+    },
     loaderStages: {
       requestMs: summarizeMetric(runs, (run) => run.loaderStages?.requestMs),
       outerRestoreMs: summarizeMetric(runs, (run) => run.loaderStages?.outerRestoreMs),
@@ -964,6 +1007,19 @@ function printSummary(summary) {
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.commitPrepMs)} | ${pair(stages.shellSyncMs)} | ${pair(stages.revealPaintMs)} | ${pair(stages.loaderMs)} | ${pair(stages.postloaderPaintMs)} | ${pair(stages.releaseMs)} | ${pair(stages.settlePaintMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached shell sync breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Footer ms | Navigation ms | Views ms | Table chrome ms | Prime ms | Visibility ms | Horizontal cues ms | Show total ms | Static total ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.shellStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.footerMs)} | ${pair(stages.navigationMs)} | ${pair(stages.viewsMs)} | ${pair(stages.tableChromeMs)} | ${pair(stages.primeMs)} | ${pair(stages.visibilityMs)} | ${pair(stages.horizontalCuesMs)} | ${pair(stages.showTotalMs)} | ${pair(stages.staticTotalMs)} |`,
       );
     }
   }
