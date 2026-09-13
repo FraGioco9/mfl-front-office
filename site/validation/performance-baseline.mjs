@@ -596,6 +596,11 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const tableDomCommitCompleteAt = loaderStageAt("route-loader-table-dom-commit-complete");
   const tableRenderCompleteAt = loaderStageAt("route-loader-table-render-complete");
   const applyFiltersCompleteAt = loaderStageAt("route-loader-apply-filters-complete");
+  const tailLoadingStartAt = loaderStageAt("route-loader-tail-loading-start");
+  const tailLoadingCompleteAt = loaderStageAt("route-loader-tail-loading-complete");
+  const tailNavigationCompleteAt = loaderStageAt("route-loader-tail-navigation-complete");
+  const tailScrollCompleteAt = loaderStageAt("route-loader-tail-scroll-complete");
+  const tailHomeSyncCompleteAt = loaderStageAt("route-loader-tail-home-sync-complete");
   const renderPageCompleteAt = loaderStageAt("route-loader-render-page-complete");
   const loaderStages = phase === "cached"
     ? {
@@ -612,6 +617,11 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         tableDomCommitMs: stageDelta(tableBuildCompleteAt, tableDomCommitCompleteAt),
         tablePostMs: stageDelta(tableDomCommitCompleteAt, tableRenderCompleteAt),
         applyFiltersTailMs: stageDelta(tableRenderCompleteAt, applyFiltersCompleteAt),
+        tailLoadingMs: stageDelta(tailLoadingStartAt, tailLoadingCompleteAt),
+        tailNavigationMs: stageDelta(tailLoadingCompleteAt, tailNavigationCompleteAt),
+        tailScrollMs: stageDelta(tailNavigationCompleteAt, tailScrollCompleteAt),
+        tailHomeSyncMs: stageDelta(tailScrollCompleteAt, tailHomeSyncCompleteAt),
+        tailContinuationMs: stageDelta(tailHomeSyncCompleteAt, renderPageCompleteAt),
         renderPageTailMs: stageDelta(applyFiltersCompleteAt, renderPageCompleteAt),
         renderPageTotalMs: stageDelta(renderPageStartAt, renderPageCompleteAt),
         applyFiltersTotalMs: stageDelta(applyFiltersStartAt, applyFiltersCompleteAt),
@@ -885,6 +895,11 @@ function summarizePhase(runs) {
       tableDomCommitMs: summarizeMetric(runs, (run) => run.loaderStages?.tableDomCommitMs),
       tablePostMs: summarizeMetric(runs, (run) => run.loaderStages?.tablePostMs),
       applyFiltersTailMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTailMs),
+      tailLoadingMs: summarizeMetric(runs, (run) => run.loaderStages?.tailLoadingMs),
+      tailNavigationMs: summarizeMetric(runs, (run) => run.loaderStages?.tailNavigationMs),
+      tailScrollMs: summarizeMetric(runs, (run) => run.loaderStages?.tailScrollMs),
+      tailHomeSyncMs: summarizeMetric(runs, (run) => run.loaderStages?.tailHomeSyncMs),
+      tailContinuationMs: summarizeMetric(runs, (run) => run.loaderStages?.tailContinuationMs),
       renderPageTailMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTailMs),
       renderPageTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.renderPageTotalMs),
       applyFiltersTotalMs: summarizeMetric(runs, (run) => run.loaderStages?.applyFiltersTotalMs),
@@ -957,6 +972,19 @@ function printSummary(summary) {
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.applyFiltersTotalMs)} | ${pair(stages.filterPrepMs)} | ${pair(stages.rowFilterMs)} | ${pair(stages.filterUiMs)} | ${pair(stages.tableRenderTotalMs)} | ${pair(stages.tableBuildMs)} | ${pair(stages.tableDomCommitMs)} | ${pair(stages.tablePostMs)} | ${pair(stages.applyFiltersTailMs)} | ${pair(stages.renderPageTailMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached renderPage tail breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | Loading finish ms | Navigation guard ms | Scroll reset ms | Home sync ms | Async continuation ms |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.loaderStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.tailLoadingMs)} | ${pair(stages.tailNavigationMs)} | ${pair(stages.tailScrollMs)} | ${pair(stages.tailHomeSyncMs)} | ${pair(stages.tailContinuationMs)} |`,
       );
     }
   }
