@@ -946,6 +946,11 @@
     schedulePlayerTableSync();
   }
 
+  function syncRouteHorizontalStructureNow() {
+    if (destroyed) return;
+    syncWatchlistSwitcherPlacement();
+  }
+
   function syncRouteHorizontalCuesNow() {
     if (destroyed) return;
     recordSharedTableUiStage("route-shell-horizontal-start");
@@ -1143,5 +1148,5 @@
   TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
 
   sync();
-  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalCuesNow, destroy });
+  window.__mflSharedTableUiRuntime = Object.freeze({ sync, syncRouteHorizontalStructureNow, syncRouteHorizontalCuesNow, destroy });
 })();
