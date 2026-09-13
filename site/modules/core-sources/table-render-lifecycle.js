@@ -28,6 +28,8 @@ function tableCenterCellContents(cell) {
 }
 
 function tableRenderTableOwner() {
+  const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-render-start", { page: state.currentPage });
   if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
   const preservedPlayerTableActionRenderSignature = playerTableActionMenu?.dataset.open === "true"
@@ -231,7 +233,9 @@ function tableRenderTableOwner() {
     fragment.appendChild(tableRow);
   });
 
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage });
   tableBody.replaceChildren(fragment);
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-dom-commit-complete", { page: state.currentPage });
   emptyState.textContent = tableEmptyStateMessage();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
@@ -244,6 +248,7 @@ function tableRenderTableOwner() {
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
   updateSelectionBar(pageRows, { rendered: true });
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-render-complete", { page: state.currentPage });
 }
 
 function showTableBusyState() {
