@@ -295,9 +295,10 @@ assert.ok(
 );
 
 assert.ok(
-  !shared.includes("function renderedViewItems(views) {")
+  shared.includes("function hasViewItems(views) {")
+    && !shared.includes("function renderedViewItems(views) {")
     && !shared.includes("function viewContentWidth(views) {"),
-  "Player view overflow must not reintroduce per-control style/layout scans or synthetic width reconstruction.",
+  "Player view overflow must retain a cheap content-presence guard without reintroducing per-control style/layout scans or synthetic width reconstruction.",
 );
 assert.ok(
   shared.includes("function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }"),
