@@ -31,6 +31,17 @@
   let boundPlayerScroller = null;
   let boundPlayerScrollHandler = null;
   const pendingViewScrollers = new Set();
+
+  function recordSharedTableUiStage(phase) {
+    const owner = Reflect.get(window, "__mflClientPerformance");
+    const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
+    if (typeof recordInternal !== "function") return null;
+    return recordInternal(phase, {
+      kind: "page",
+      path: `${window.location.pathname}${window.location.search}`,
+      traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
+    });
+  }
   const boundViewScrollers = new Map();
   const scrollContainer = document.querySelector("main");
 
@@ -952,10 +963,15 @@
 
   function syncRouteHorizontalCuesNow() {
     if (destroyed) return;
+    recordSharedTableUiStage("route-shell-horizontal-start");
     syncWatchlistSwitcherPlacement();
+    recordSharedTableUiStage("route-shell-horizontal-watchlist-complete");
     ensureViewScrollers();
+    recordSharedTableUiStage("route-shell-horizontal-ensure-views-complete");
     tableHorizontalScrollers().forEach(syncViewScroller);
+    recordSharedTableUiStage("route-shell-horizontal-view-sync-complete");
     syncPlayerTableScroller();
+    recordSharedTableUiStage("route-shell-horizontal-player-sync-complete");
   }
 
   function scheduleViewScrollerSync(views = null) {
