@@ -499,16 +499,24 @@ if (pageName === "my-clubs") {
     if (typeof recordRouteStage === "function") recordRouteStage("route-loader-apply-filters-complete", { page: pageName });
   }
 
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-loading-start", { page: pageName });
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-loading-complete", { page: pageName });
   if (!pageNavigationIsCurrent(options)) return null;
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-navigation-complete", { page: pageName });
 
   if (shouldResetScroll) {
     resetPageScroll();
   }
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-scroll-complete", {
+    page: pageName,
+    reset: shouldResetScroll,
+  });
 
   syncHomeLoginButton();
+  if (typeof recordRouteStage === "function") recordRouteStage("route-loader-tail-home-sync-complete", { page: pageName });
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
