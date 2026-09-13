@@ -487,7 +487,9 @@ if (pageName === "my-clubs") {
   }
   if (tablePage) {
     state.page = 1;
-    applyFilters({ save: false });
+    if (options.reuseRetainedTableDom !== true) {
+      applyFilters({ save: false });
+    }
   }
 
   if (document.body.classList.contains("loading")) {
