@@ -52,7 +52,7 @@ for (const input of [
   'window.matchMedia("(max-width: 520px)").matches,',
 ]) includes(tableCore, input, `Table render signature must include ${input}`);
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must validate the retained row structure.");
-includes(tableCore, 'tableBody.dataset.staticLoading === "true"', "Table reuse must reject parser/loading skeleton rows.");
+includes(tableCore, 'tableBody.getAttribute("data-static-loading") === "true"', "Table reuse must reject parser/loading skeleton rows.");
 includes(tableCore, "if (tableBodyRenderReuse.matches(renderSignature, tableBodyStructureReusable(pageRows))) {", "Table renderer must test reuse before rebuilding rows.");
 includes(tableCore, "syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);\n    return;", "Table reuse must still synchronize count, pager, loading, actions, and selection chrome.");
 includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table renderer must commit reuse only after replacing the body.");
