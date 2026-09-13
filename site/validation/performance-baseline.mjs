@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 10;
+const BASELINE_SCHEMA_VERSION = 11;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -314,6 +314,7 @@ async function evaluate(cdp, expression) {
 
 const observerBootstrap = `(() => {
   window.__mflBaselineLongTasks = [];
+  window.__mflBaselineLongAnimationFrames = [];
   window.__mflBaselineLayoutShifts = [];
   try {
     new PerformanceObserver((list) => {
@@ -321,6 +322,26 @@ const observerBootstrap = `(() => {
         window.__mflBaselineLongTasks.push({ startTime: entry.startTime, duration: entry.duration });
       }
     }).observe({ type: "longtask", buffered: true });
+  } catch {}
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.__mflBaselineLongAnimationFrames.push({
+          startTime: entry.startTime,
+          duration: entry.duration,
+          blockingDuration: Number(entry.blockingDuration) || 0,
+          renderStart: Number(entry.renderStart) || 0,
+          styleAndLayoutStart: Number(entry.styleAndLayoutStart) || 0,
+          scripts: Array.from(entry.scripts || []).map((script) => ({
+            duration: Number(script.duration) || 0,
+            forcedStyleAndLayoutDuration: Number(script.forcedStyleAndLayoutDuration) || 0,
+            sourceFunctionName: String(script.sourceFunctionName || ""),
+            sourceURL: String(script.sourceURL || ""),
+            invoker: String(script.invoker || ""),
+          })),
+        });
+      }
+    }).observe({ type: "long-animation-frame", buffered: true });
   } catch {}
   try {
     new PerformanceObserver((list) => {
@@ -518,6 +539,7 @@ async function waitForDocumentNavigation(cdp, previousTimeOrigin, timeoutMs = DE
 async function resetBrowserObservers(cdp) {
   await evaluate(cdp, `(() => {
     window.__mflBaselineLongTasks = [];
+    window.__mflBaselineLongAnimationFrames = [];
     window.__mflBaselineLayoutShifts = [];
     return window.__mflClientPerformance?.snapshot?.().at(-1)?.sequence || 0;
   })()`);
@@ -527,6 +549,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const value = await evaluate(cdp, `(() => ({
     timeline: window.__mflClientPerformance?.snapshot?.() || [],
     longTasks: window.__mflBaselineLongTasks || [],
+    longAnimationFrames: window.__mflBaselineLongAnimationFrames || [],
     layoutShifts: window.__mflBaselineLayoutShifts || []
   }))()`);
   const timeline = Array.isArray(value?.timeline)
@@ -585,6 +608,46 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         return total + Math.max(0, overlapEnd - overlapStart);
       }, 0)
     : null;
+  const settlementLoafs = Number.isFinite(contentCommitAt) && Number.isFinite(settledAt)
+    ? (Array.isArray(value?.longAnimationFrames) ? value.longAnimationFrames : []).filter((entry) => {
+        const startTime = Number(entry?.startTime);
+        const duration = Math.max(0, Number(entry?.duration) || 0);
+        return Number.isFinite(startTime)
+          && duration > 0
+          && startTime < settledAt
+          && startTime + duration > contentCommitAt;
+      })
+    : [];
+  const settlementLoaf = settlementLoafs.reduce((slowest, entry) => (
+    !slowest || Number(entry?.duration || 0) > Number(slowest?.duration || 0) ? entry : slowest
+  ), null);
+  const settlementLoafScripts = Array.isArray(settlementLoaf?.scripts) ? settlementLoaf.scripts : [];
+  const settlementLoafScriptMs = settlementLoafScripts.reduce(
+    (total, script) => total + Math.max(0, Number(script?.duration) || 0),
+    0,
+  );
+  const settlementLoafForcedStyleLayoutMs = settlementLoafScripts.reduce(
+    (total, script) => total + Math.max(0, Number(script?.forcedStyleAndLayoutDuration) || 0),
+    0,
+  );
+  const settlementLoafTopScript = settlementLoafScripts.reduce((slowest, script) => (
+    !slowest || Number(script?.duration || 0) > Number(slowest?.duration || 0) ? script : slowest
+  ), null);
+  const settlementLoafEndAt = settlementLoaf
+    ? Number(settlementLoaf.startTime || 0) + Math.max(0, Number(settlementLoaf.duration) || 0)
+    : null;
+  const settlementLoafRenderStart = Number(settlementLoaf?.renderStart);
+  const settlementLoafStyleLayoutStart = Number(settlementLoaf?.styleAndLayoutStart);
+  const settlementLoafRenderPhaseMs = Number.isFinite(settlementLoafEndAt)
+    && Number.isFinite(settlementLoafRenderStart)
+    && settlementLoafRenderStart > 0
+    ? Math.max(0, settlementLoafEndAt - settlementLoafRenderStart)
+    : null;
+  const settlementLoafStyleLayoutPhaseMs = Number.isFinite(settlementLoafEndAt)
+    && Number.isFinite(settlementLoafStyleLayoutStart)
+    && settlementLoafStyleLayoutStart > 0
+    ? Math.max(0, settlementLoafEndAt - settlementLoafStyleLayoutStart)
+    : null;
   const releaseStartAt = Number.isFinite(postloaderPaintAt) ? postloaderPaintAt : loaderCompleteAt;
   const routeStages = phase === "cached"
     ? {
@@ -599,6 +662,21 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
         settleFirstFrameMs: stageDelta(contentCommitAt, settleFrameOneAt),
         settleSecondFrameMs: stageDelta(settleFrameOneAt, settledAt),
         settlementLongTaskMs,
+        settlementLoafDurationMs: settlementLoaf ? Math.max(0, Number(settlementLoaf.duration) || 0) : null,
+        settlementLoafBlockingMs: settlementLoaf ? Math.max(0, Number(settlementLoaf.blockingDuration) || 0) : null,
+        settlementLoafScriptMs: settlementLoaf ? settlementLoafScriptMs : null,
+        settlementLoafForcedStyleLayoutMs: settlementLoaf ? settlementLoafForcedStyleLayoutMs : null,
+        settlementLoafRenderPhaseMs,
+        settlementLoafStyleLayoutPhaseMs,
+        settlementLoafTopScriptMs: settlementLoafTopScript ? Math.max(0, Number(settlementLoafTopScript.duration) || 0) : null,
+        settlementLoafTopScriptLabel: settlementLoafTopScript
+          ? String(
+              settlementLoafTopScript.sourceFunctionName
+              || settlementLoafTopScript.invoker
+              || settlementLoafTopScript.sourceURL
+              || "(anonymous)"
+            )
+          : "",
         settlePlayerImmediateMs: summedStageDurationInWindow("route-settle-player-immediate-complete", contentCommitAt, settledAt),
         settleViewFrameMs: summedStageDurationInWindow("route-settle-view-frame-complete", contentCommitAt, settledAt),
         settlePlayerFrameMs: summedStageDurationInWindow("route-settle-player-frame-complete", contentCommitAt, settledAt),
@@ -972,6 +1050,16 @@ function summarizePhase(runs) {
       settleFirstFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleFirstFrameMs),
       settleSecondFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleSecondFrameMs),
       settlementLongTaskMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLongTaskMs),
+      settlementLoafDurationMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafDurationMs),
+      settlementLoafBlockingMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafBlockingMs),
+      settlementLoafScriptMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafScriptMs),
+      settlementLoafForcedStyleLayoutMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafForcedStyleLayoutMs),
+      settlementLoafRenderPhaseMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafRenderPhaseMs),
+      settlementLoafStyleLayoutPhaseMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafStyleLayoutPhaseMs),
+      settlementLoafTopScriptMs: summarizeMetric(runs, (run) => run.routeStages?.settlementLoafTopScriptMs),
+      settlementLoafTopScriptLabel: runs
+        .map((run) => String(run.routeStages?.settlementLoafTopScriptLabel || ""))
+        .find(Boolean) || "",
       settlePlayerImmediateMs: summarizeMetric(runs, (run) => run.routeStages?.settlePlayerImmediateMs),
       settleViewFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settleViewFrameMs),
       settlePlayerFrameMs: summarizeMetric(runs, (run) => run.routeStages?.settlePlayerFrameMs),
@@ -1076,6 +1164,19 @@ function printSummary(summary) {
       const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
       console.log(
         `| ${profile} | ${journey} | ${pair(stages.settleFirstFrameMs)} | ${pair(stages.settleSecondFrameMs)} | ${pair(stages.settlementLongTaskMs)} | ${pair(stages.settlePlayerImmediateMs)} | ${pair(stages.settleViewFrameMs)} | ${pair(stages.settlePlayerFrameMs)} |`,
+      );
+    }
+  }
+
+  console.log("\nCached settlement long-animation-frame breakdown (median / observed slowest)");
+  console.log("| Profile | Journey | LoAF ms | Blocking ms | Script ms | Forced style/layout ms | Render phase ms | Style/layout→end ms | Top script ms | Top script |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const stages = summary[profile][journey].cached.routeStages;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(stages.settlementLoafDurationMs)} | ${pair(stages.settlementLoafBlockingMs)} | ${pair(stages.settlementLoafScriptMs)} | ${pair(stages.settlementLoafForcedStyleLayoutMs)} | ${pair(stages.settlementLoafRenderPhaseMs)} | ${pair(stages.settlementLoafStyleLayoutPhaseMs)} | ${pair(stages.settlementLoafTopScriptMs)} | ${stages.settlementLoafTopScriptLabel || "-"} |`,
       );
     }
   }
