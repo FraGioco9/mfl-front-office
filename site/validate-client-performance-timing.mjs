@@ -109,7 +109,7 @@ for (const token of [
   "const BASELINE_SCHEMA_VERSION = 9;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
-  'firstStageAt("route-preloader-paint-complete")',
+  'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
   "commitPrepMs:",
