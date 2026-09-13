@@ -28,8 +28,7 @@ function tableCenterCellContents(cell) {
 }
 
 const tableBodyRenderReuse = createRenderReuseGuard();
-let tableBodyCommittedRenderSignature = "";
-let tableBodyCommittedRenderParts = null;
+const TABLE_BODY_RENDER_SIGNATURE_KEY = "__mflTableBodyRenderSignature";
 
 function tableBodyRenderSignatureParts(pageRows) {
   const rowUiState = pageRows.map((row) => {
@@ -58,6 +57,21 @@ function tableBodyRenderSignatureParts(pageRows) {
 
 function tableBodyRenderSignature(pageRows) {
   return JSON.stringify(tableBodyRenderSignatureParts(pageRows));
+}
+
+function retainedTableBodyRenderSignature() {
+  return String(Reflect.get(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY) || "");
+}
+
+function commitTableBodyRenderSignature(renderSignature) {
+  const signature = String(renderSignature || "");
+  tableBodyRenderReuse.commit(signature);
+  Reflect.set(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY, signature);
+}
+
+function invalidateTableBodyRenderSignature() {
+  tableBodyRenderReuse.invalidate();
+  Reflect.deleteProperty(tableBody, TABLE_BODY_RENDER_SIGNATURE_KEY);
 }
 
 function tableBodyStructureReusable(pageRows) {
@@ -103,19 +117,12 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const renderSignature = tableBodyRenderSignature(pageRows);
-  const previousCommittedSignature = tableBodyCommittedRenderSignature;
-  const previousCommittedParts = tableBodyCommittedRenderParts;
   const reusableStructure = tableBodyStructureReusable(pageRows);
-  const reusableBody = tableBodyRenderReuse.matches(renderSignature, reusableStructure);
-  Reflect.set(window, "__mflTableRenderReuseDebug", Object.freeze({
-    reused: reusableBody,
-    structure: reusableStructure,
-    signature: renderSignature,
-    parts: tableBodyRenderSignatureParts(pageRows),
-    previousSignature: previousCommittedSignature,
-    previousParts: previousCommittedParts,
-  }));
-  if (reusableBody) {
+  const guardMatches = tableBodyRenderReuse.matches(renderSignature, reusableStructure);
+  const retainedSignatureMatches = reusableStructure
+    && retainedTableBodyRenderSignature() === renderSignature;
+  if (guardMatches || retainedSignatureMatches) {
+    if (!guardMatches) tableBodyRenderReuse.commit(renderSignature);
     syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
     return;
   }
@@ -308,26 +315,13 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
-  tableBodyRenderReuse.commit(renderSignature);
-  tableBodyCommittedRenderSignature = renderSignature;
-  tableBodyCommittedRenderParts = tableBodyRenderSignatureParts(pageRows);
-  Reflect.set(window, "__mflTableRenderReuseDebug", Object.freeze({
-    reused: false,
-    structure: true,
-    signature: renderSignature,
-    parts: tableBodyRenderSignatureParts(pageRows),
-    previousSignature: previousCommittedSignature,
-    previousParts: previousCommittedParts,
-    committed: true,
-  }));
+  commitTableBodyRenderSignature(renderSignature);
   syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
 }
 
 function showTableBusyState() {
   if (window.__mflTableLoadingRuntime?.show?.()) return;
-  tableBodyRenderReuse.invalidate();
-  tableBodyCommittedRenderSignature = "";
-  tableBodyCommittedRenderParts = null;
+  invalidateTableBodyRenderSignature();
   emptyState.hidden = true;
   emptyState.textContent = "";
   tableBody.replaceChildren();
