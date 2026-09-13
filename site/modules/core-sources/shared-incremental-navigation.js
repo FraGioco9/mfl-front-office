@@ -168,8 +168,35 @@
     syncHomeLoginButton();
   }
 
-  async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {}) {
+  function retainedDatabaseReentryReady(route) {
+  if (route?.scope !== "database" || !state.dataLoaded || !state.incrementalMode) return false;
+  if (!incrementalRouteIsCached(route, 1)) return false;
+
+  const requestKey = incrementalRequestDetails(route, 1).requestKey;
+  if (!requestKey || String(state.incrementalLastKey || "") !== requestKey) return false;
+
+  const body = document.getElementById("tableBody");
+  if (!(body instanceof HTMLTableSectionElement)) return false;
+  if (body.getAttribute("data-static-loading") === "true") return false;
+  if (!String(Reflect.get(body, "__mflTableBodyRenderSignature") || "")) return false;
+
+  const retainedIdentity = String(Reflect.get(body, "__mflRenderedTableRouteIdentity") || "");
+  const expectedIdentity = `database|${route.view || state.view}|${window.location.pathname}${window.location.search}`;
+  return retainedIdentity === expectedIdentity;
+}
+
+async function renderLoadedIncrementalRoute(pageName, updateHash, options, route, requestOptions = {}) {
   if (!pageNavigationIsCurrent(options)) return false;
+  const reuseRetainedDatabase = pageName === "database" && retainedDatabaseReentryReady(route);
+  if (reuseRetainedDatabase) {
+    state.dataAccess = currentDataAccess(pageName);
+    return renderPage.call(this, pageName, false, {
+      ...options,
+      replaceUrl: "",
+      skipNavigationLoading: true,
+      reuseRetainedTableDom: true,
+    });
+  }
   const inheritedTableLoadingRequestToken = Number(requestOptions.tableLoadingRequestToken || 0);
   const renderLoadingRequestToken = inheritedTableLoadingRequestToken
     || (!incrementalRouteIsCached(route, 1) || window.__mflTableLoadingRuntime?.requestActive?.()
