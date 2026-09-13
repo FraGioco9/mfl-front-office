@@ -16,7 +16,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
-  "const BASELINE_SCHEMA_VERSION = 3;",
+  "const BASELINE_SCHEMA_VERSION = 4;",
   "const NETWORK_IDLE_GRACE_MS = 250;",
   '"desktop"',
   '"mobile-slow"',
@@ -83,6 +83,17 @@ for (const token of [
   'firstStageAt("route-loader-complete")',
   'firstStageAt("route-postloader-paint-complete")',
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Cached loader overview (median / observed slowest)",
+  "Cached filter/render breakdown (median / observed slowest)",
+  'loaderStageAt("route-loader-request-start")',
+  'loaderStageAt("route-loader-request-complete")',
+  'loaderStageAt("route-loader-render-page-start")',
+  'loaderStageAt("route-loader-render-page-complete")',
+  'loaderStageAt("route-loader-table-render-start")',
+  'loaderStageAt("route-loader-table-build-complete")',
+  'loaderStageAt("route-loader-table-dom-commit-complete")',
+  'loaderStageAt("route-loader-table-render-complete")',
+  "loaderStages,",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }
