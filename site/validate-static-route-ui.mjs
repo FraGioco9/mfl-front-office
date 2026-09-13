@@ -122,6 +122,15 @@ excludes(staticUi, "notFoundMessage", "The not-found page must not render a seco
 excludes(staticUi, "notFoundResource", "The not-found page must not render a resource card or label.");
 includes(staticUi, 'window.location.assign("/");', "The not-found page must provide a direct homepage action.");
 excludes(staticUi, "not-found.css", "The not-found page must not load a standalone stylesheet or cache-busting asset.");
+includes(staticUi, "function retainedTableDestinationReady(state, identity) {", "Static route chrome must explicitly detect an exact cached retained table destination.");
+includes(staticUi, 'Reflect.get(body, "__mflRenderedTableRouteIdentity")', "Retained table priming must require the exact authoritative page/view/URL identity.");
+includes(staticUi, 'const dataCache = Reflect.get(window, "__mflRouteDataCache");', "Retained table priming must consume canonical route-data cache readiness.");
+includes(staticUi, 'const isReady = dataCache && typeof dataCache === "object"', "Retained table priming must safely resolve the canonical cache readiness owner.");
+includes(staticUi, 'Reflect.get(dataCache, "isReady")', "Retained table priming must not duplicate cache ownership.");
+includes(staticUi, "return isReady(state.page, {", "Retained table priming must validate the target route before preserving rows.");
+includes(staticUi, "view: state.view,", "Retained table priming must include the target view in cache readiness.");
+includes(staticUi, 'path: `${url.pathname}${url.search}`,', "Retained table priming must include the exact target path and query in cache readiness.");
+includes(staticUi, 'identity !== lastPrimedRouteIdentity && !retainedTableDestinationReady(state, identity)', "Static route chrome must skip skeleton-row priming only for the exact cached retained table destination.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
