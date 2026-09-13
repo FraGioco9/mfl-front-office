@@ -117,9 +117,10 @@ export function validateResponsiveTables(context) {
   includes(sharedTableUi, "shell.appendChild(button);", "Both arrows must remain outside each horizontal scroller so they cannot extend scrollWidth.");
   excludes(sharedTableUi, "views.appendChild(button);", "Neither arrow may be appended to horizontal scrolling content itself.");
   excludes(sharedTableUi, 'button.style.left =', "Pinned arrows must never be repositioned horizontally during scrolling.");
-  includes(sharedTableUi, "function renderedViewItems(views) {", "Horizontal overflow must be measured from rendered direct controls.");
+  excludes(sharedTableUi, "function renderedViewItems(views) {", "Horizontal overflow must not force per-control style/layout scans.");
+  excludes(sharedTableUi, "function viewContentWidth(views) {", "Horizontal overflow must use the browser's native scroll extent instead of recomputing child widths.");
   includes(sharedTableUi, "function viewMaxScroll(views) {\n    return Math.max(0, views.scrollWidth - views.clientWidth);\n  }", "The browser's native scroll extent must define the canonical right boundary once overlay chrome is outside the scroller.");
-  includes(sharedTableUi, "const overflowing = viewContentWidth(views) - views.clientWidth > VIEW_SCROLL_EPSILON;", "Horizontal scrolling must remain enabled only when visible contents exceed the strip width.");
+  includes(sharedTableUi, "const maxScroll = viewMaxScroll(views);\n    const overflowing = maxScroll > VIEW_SCROLL_EPSILON;", "Horizontal scrolling must remain enabled only when the browser reports content beyond the strip width.");
   includes(sharedTableUi, "const scrollLeft = clampViewScroll(views, maxScroll);", "Horizontal scrolling must retain a defensive clamp at the native scroll boundary.");
   includes(sharedTableUi, "const target = Math.min(maxScroll, views.scrollLeft + distance);\n      views.scrollTo({ left: target, behavior: \"smooth\" });", "Right-arrow clicks must stop at the browser's exact right boundary rather than scrolling into empty space.");
   includes(sharedTableUi, "const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;\n    const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;", "Each edge cue must appear only when additional content exists in its direction.");
