@@ -87,9 +87,13 @@ function incrementalDataQuery(route, page = 1) {
       ? 1
       : route.scope === "club"
         ? 5000
-        : state.pageSize),
-    sortKey: route.scope === "club" ? "positions" : state.sortKey,
-    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,
+        : Number(route.requestPageSize || state.pageSize)),
+    sortKey: route.scope === "club"
+      ? "positions"
+      : String(route.requestSortKey || state.sortKey),
+    sortDirection: route.scope === "club"
+      ? "asc"
+      : String(route.requestSortDirection || state.sortDirection),
   });
 
   if (route.access === "owned") query.set("access", "owned-progression");
@@ -188,6 +192,45 @@ function incrementalRouteIsCached(route, page = 1) {
   return Boolean(cachedIncrementalPayload(route, page));
 }
 
+function databaseTableRouteForCacheReadiness(options = {}) {
+  const pageName = "database";
+  const storedState = state.tablePageStates?.[pageName] || defaultTablePageState(pageName);
+  const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+  const fallbackState = resetFilters
+    ? tableStateWithoutPageFilters(pageName, storedState)
+    : storedState;
+  const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);
+  const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+  const routePath = String(options.path || options.replaceUrl || "");
+  const routeSearch = routePath.includes("?")
+    ? routePath.slice(routePath.indexOf("?"))
+    : routePath
+      ? ""
+      : window.location.search;
+  const resolvedState = typeof tableUrlState?.resolve === "function"
+    ? tableUrlState.resolve(pageName, requestedView, routeSearch, fallbackState)?.state || fallbackState
+    : fallbackState;
+  const route = incrementalRouteTarget(pageName, {
+    ...options,
+    view: resolvedState.view || requestedView,
+  });
+  if (!route) return null;
+
+  route.filterRules = filterRulesForLoading(pageName, resolvedState, route.view);
+  Reflect.set(route, "tableFilters", {
+    hideRetired: resolvedState.hideRetired !== false,
+    hideRetiring: Boolean(resolvedState.hideRetiring),
+    hideMflPlayers: resolvedState.hideMflPlayers !== false,
+    mflPackable: false,
+    newMints: Boolean(resolvedState.newMints),
+  });
+  const sortState = defaultSortStateForView(route.view, pageName);
+  route.requestPageSize = Number(resolvedState.pageSize || defaultTablePageState(pageName).pageSize);
+  route.requestSortKey = sortState.sortKey;
+  route.requestSortDirection = sortState.sortDirection;
+  return route;
+}
+
 function databaseStatsDataCacheReady() {
   const total = document.getElementById("databaseStatsTotalPlayers");
   if (!(total instanceof HTMLElement)) return false;
@@ -208,6 +251,10 @@ function routeDataCacheReady(pageName, options = {}) {
   if (page === "settings") return settingsDataCacheReady();
   if (page === "database" && normalizeViewForPage(routeOptions.view, "database") === "stats") {
     return databaseStatsDataCacheReady();
+  }
+  if (page === "database") {
+    const databaseRoute = databaseTableRouteForCacheReadiness(routeOptions);
+    return Boolean(databaseRoute && incrementalRouteIsCached(databaseRoute, 1));
   }
 
   const route = incrementalRouteTarget(page, routeOptions);
