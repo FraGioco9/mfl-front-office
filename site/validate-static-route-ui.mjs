@@ -179,6 +179,10 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableHeaderSignature", first
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);', "Bootstrap must own static table-header rendering.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
+includes(staticUi, "function canPreserveRenderedTableRows(state, identity) {", "Static route shell must own the exact cached-table preservation decision.");
+includes(staticUi, 'String(body.dataset.mflRenderedRouteIdentity || "") !== identity', "Cached Table preservation must require the exact destination route identity.");
+includes(staticUi, 'Reflect.get(window, "__mflRouteDataCache")', "Cached Table preservation must require canonical route-data cache readiness.");
+includes(staticUi, "identity !== lastPrimedRouteIdentity && !preserveRenderedRows", "Static Table priming must not destroy exact cached destination rows before the loader can reuse them.");
 includes(bootstrap, 'if (target.id === "myClubsPage") {', "My Clubs route priming must synchronously clear stale cards before the destination shell becomes visible.");
 includes(bootstrap, 'grid.replaceChildren();', "My Clubs route priming must show zero guessed or stale club boxes until ownership data resolves.");
 
