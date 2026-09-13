@@ -170,13 +170,20 @@
         kind: transition.kind,
         path: `${window.location.pathname}${window.location.search}`,
       });
-      requestAnimationFrame(() => requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         if (transition.sequence !== transitionSequence) return;
-        clientPerformance.record("route-visually-settled", {
+        clientPerformance.recordInternal("route-settle-frame-one", {
           kind: transition.kind,
           path: `${window.location.pathname}${window.location.search}`,
         });
-      }));
+        requestAnimationFrame(() => {
+          if (transition.sequence !== transitionSequence) return;
+          clientPerformance.record("route-visually-settled", {
+            kind: transition.kind,
+            path: `${window.location.pathname}${window.location.search}`,
+          });
+        });
+      });
     }
 
     function begin(reason = "navigation") {
