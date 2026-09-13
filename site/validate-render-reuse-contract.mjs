@@ -82,6 +82,8 @@ includes(tableCore, "state.selectedPlayerIds.has(playerId),\n      playerNote(pl
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must verify that the existing tbody structure is still canonical.");
 includes(tableCore, "const reusableTableBody = tableBodyRenderReuse.matches(", "Table must check reusable tbody state before rebuilding rows.");
 includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table must commit its signature only after a completed tbody rebuild.");
+includes(tableCore, "function currentTableBodyRouteIdentity() {", "Table must stamp reusable DOM with an exact destination route identity.");
+includes(tableCore, 'tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());', "Every completed Table render or reuse must publish its exact route identity for the shell handoff.");
 includes(tableCore, "function showTableBusyState() {\n  tableBodyRenderReuse.invalidate();", "Table busy state must invalidate reusable tbody state.");
 includes(tableCore, "tableBodyRenderReuse.invalidate();\n  tableBody.replaceChildren();\n  window.__mflTableLoadingRuntime?.show?.();", "Explicit Table loading-shell replacement must invalidate reuse before clearing rows.");
 
