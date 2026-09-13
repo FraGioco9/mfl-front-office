@@ -2772,22 +2772,34 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const fragment = document.createDocumentFragment();
+  const currentPage = state.currentPage;
+  const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;
+  const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;
+  const agentLinksEnabled = currentPage !== "myplayers" && currentPage !== "agents" && currentPage !== "mfl";
+  const clubLinksEnabled = currentPage !== "club";
+  const statColumnSet = new Set(statColumns);
+  const renderColumns = currentViewColumns().map((column) => ({
+    column,
+    className: tableColumnClass(column),
+  }));
 
-  pageRows.forEach((row) => {
+  for (const row of pageRows) {
     const tableRow = document.createElement("tr");
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
     const playerId = getValue(row, "player_id");
-    tableRow.dataset.playerId = String(playerId);
-    if (state.hoveredTablePlayerId && String(playerId) === state.hoveredTablePlayerId) {
+    const playerIdText = String(playerId);
+    const playerName = formatCellValue(row, "name");
+    tableRow.dataset.playerId = playerIdText;
+    if (state.hoveredTablePlayerId && playerIdText === state.hoveredTablePlayerId) {
       tableRow.classList.add("tableRowHovered");
     }
 
     selectionCell.className = "selectionCell";
     selectionInput.type = "checkbox";
-    selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
-    selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
-    selectionInput.dataset.playerId = String(playerId);
+    selectionInput.checked = state.selectedPlayerIds.has(playerIdText);
+    selectionInput.setAttribute("aria-label", `Select ${playerName || `player ${playerId}`}`);
+    selectionInput.dataset.playerId = playerIdText;
     const selectionContent = document.createElement("span");
     selectionContent.className = "tableControlCellContent tableControlCellContentCentered";
     selectionContent.appendChild(selectionInput);
@@ -2802,12 +2814,9 @@ function tableRenderTableOwner() {
     actionsCell.appendChild(actionsContent);
     tableRow.appendChild(tableCenterCellContents(actionsCell));
 
-    currentViewColumns().forEach((column) => {
+    for (const { column, className } of renderColumns) {
       const cell = document.createElement("td");
-      const columnClass = tableColumnClass(column);
-      if (columnClass) {
-        cell.classList.add(...columnClass.split(" "));
-      }
+      if (className) cell.className = className;
 
       if (column === "name") {
         cell.classList.add("nameCell");
@@ -2817,12 +2826,12 @@ function tableRenderTableOwner() {
         nameLink.href = playerRoute(playerId);
         nameLink.className = "playerNameLink";
         markTableInteractiveHover(nameLink, "name", playerId);
-        const fullPlayerName = formatCellValue(row, column);
-        nameLink.textContent = window.matchMedia("(max-width: 900px)").matches
+        const fullPlayerName = playerName;
+        nameLink.textContent = compactTableLayout
           ? compactMobilePlayerName(fullPlayerName)
           : fullPlayerName;
         if (fullPlayerName) nameLink.setAttribute("aria-label", fullPlayerName);
-        nameLink.dataset.playerId = String(playerId);
+        nameLink.dataset.playerId = playerIdText;
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");
         markerWrap.className = "playerNameMarkers";
@@ -2854,7 +2863,7 @@ function tableRenderTableOwner() {
       } else if (column === "listing_price") {
         const listingBadge = listingPriceBadgeHtml(row);
         if (listingBadge) {
-          if (!window.matchMedia("(max-width: 900px)").matches) {
+          if (!compactTableLayout) {
             cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;
           } else {
             const template = document.createElement("template");
@@ -2894,7 +2903,7 @@ function tableRenderTableOwner() {
         cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
         const joinedAgencyValue = formatCellValue(row, column);
-        cell.textContent = window.matchMedia("(max-width: 520px)").matches
+        cell.textContent = compactJoinedAgencyLayout
           ? compactMobileJoinedAgency(joinedAgencyValue)
           : joinedAgencyValue;
       } else if (column === "active_contract_club_division") {
@@ -2909,7 +2918,7 @@ function tableRenderTableOwner() {
           cell.textContent = "";
         }
       } else if (column === agentColumn) {
-        if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
+        if (agentLinksEnabled) {
           const walletAddress = getValue(row, "wallet_address");
           const agentLabel = formatCellValue(row, column);
           const link = document.createElement("a");
@@ -2928,7 +2937,7 @@ function tableRenderTableOwner() {
       } else if (column === "active_contract_club_name") {
         const clubId = String(getValue(row, "active_contract_club_id") || "").trim();
         const clubName = formatContractClubName(row);
-        if (state.currentPage !== "club" && clubId && rowHasActiveContract(row)) {
+        if (clubLinksEnabled && clubId && rowHasActiveContract(row)) {
           const clubLink = document.createElement("a");
           clubLink.href = `/clubs/${encodeURIComponent(clubId)}/squad`;
           clubLink.className = "agentTableLink";
@@ -2946,17 +2955,17 @@ function tableRenderTableOwner() {
         link.rel = "noopener noreferrer";
         link.textContent = "Link";
         cell.appendChild(link);
-      } else if (statColumns.includes(column)) {
+      } else if (statColumnSet.has(column)) {
         appendStatValue(cell, row, column);
       } else {
         cell.textContent = formatCellValue(row, column);
       }
 
       tableRow.appendChild(tableCenterCellContents(cell));
-    });
+    }
 
     fragment.appendChild(tableRow);
-  });
+  }
 
   if (typeof recordRouteStage === "function") recordRouteStage("route-loader-table-build-complete", { page: state.currentPage });
   tableBody.replaceChildren(fragment);
