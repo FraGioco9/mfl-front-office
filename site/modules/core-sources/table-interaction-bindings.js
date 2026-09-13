@@ -10,6 +10,11 @@ function copyDelegatedPlayerId(button, event) {
 
 tableBody?.addEventListener("pointerdown", (event) => {
   if (event.isPrimary === false || event.button !== 0 || !(event.target instanceof Element)) return;
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.stopPropagation();
+    return;
+  }
   const button = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (!(button instanceof HTMLButtonElement) || !tableBody.contains(button)) return;
   copyDelegatedPlayerId(button, event);
@@ -17,6 +22,14 @@ tableBody?.addEventListener("pointerdown", (event) => {
 
 tableBody?.addEventListener("click", (event) => {
   if (!(event.target instanceof Element)) return;
+
+  const actionButton = event.target.closest(".playerTableActionsButton[data-player-id]");
+  if (actionButton instanceof HTMLButtonElement && tableBody.contains(actionButton)) {
+    event.preventDefault();
+    event.stopPropagation();
+    openPlayerTableActionMenu(actionButton, actionButton.dataset.playerId || "");
+    return;
+  }
 
   const copyButton = event.target.closest(".copyPlayerIdButton[data-player-id]");
   if (copyButton instanceof HTMLButtonElement && tableBody.contains(copyButton)) {
