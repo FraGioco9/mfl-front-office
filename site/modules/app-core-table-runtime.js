@@ -2747,6 +2747,58 @@ function tableCenterCellContents(cell) {
   return cell;
 }
 
+const tableBodyRenderReuse = createRenderReuseGuard();
+
+function tableBodyRenderSignature(pageRows) {
+  const rowUiState = pageRows.map((row) => {
+    const playerId = String(getValue(row, "player_id"));
+    return [
+      playerId,
+      Boolean(state.selectedPlayerIds.has(playerId)),
+      playerNote(playerId),
+    ];
+  });
+  return JSON.stringify([
+    state.currentPage,
+    state.view,
+    state.page,
+    state.pageSize,
+    state.columns,
+    pageRows,
+    rowUiState,
+    state.hoveredTablePlayerId,
+    state.settingsDateFormat,
+    state.settingsTimeFormat,
+    window.matchMedia("(max-width: 900px)").matches,
+    window.matchMedia("(max-width: 520px)").matches,
+  ]);
+}
+
+function tableBodyStructureReusable(pageRows) {
+  if (tableBody.dataset.staticLoading === "true") return false;
+  const renderedRows = Array.from(tableBody.children);
+  if (renderedRows.length !== pageRows.length) return false;
+  return renderedRows.every((renderedRow, index) => (
+    renderedRow instanceof HTMLTableRowElement
+    && String(renderedRow.dataset.playerId || "") === String(getValue(pageRows[index], "player_id"))
+  ));
+}
+
+function syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature = "") {
+  emptyState.textContent = tableEmptyStateMessage();
+  emptyState.hidden = pageRows.length > 0;
+  updateTablePlayerCount({ authoritative: true });
+  const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
+  if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
+  if (preservedPlayerTableActionRenderSignature) {
+    restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
+  }
+  syncPagerCurrentPage(state.page, totalPages);
+  prevButton.disabled = state.page <= 1;
+  nextButton.disabled = state.page >= totalPages;
+  updateSelectionBar(pageRows, { rendered: true });
+}
+
 function tableRenderTableOwner() {
   if (window.__mflTableLoadingRuntime?.requestActive?.() && !state.incrementalApplying) return;
   if (tableBody.dataset.staticLoading === "true" && !state.dataLoaded) return;
@@ -2764,6 +2816,12 @@ function tableRenderTableOwner() {
   }
 
   const pageRows = currentPageRows();
+  const renderSignature = tableBodyRenderSignature(pageRows);
+  if (tableBodyRenderReuse.matches(renderSignature, tableBodyStructureReusable(pageRows))) {
+    syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
 
   pageRows.forEach((row) => {
@@ -2952,22 +3010,13 @@ function tableRenderTableOwner() {
   });
 
   tableBody.replaceChildren(fragment);
-  emptyState.textContent = tableEmptyStateMessage();
-  emptyState.hidden = pageRows.length > 0;
-  updateTablePlayerCount({ authoritative: true });
-  const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
-  if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();
-  if (preservedPlayerTableActionRenderSignature) {
-    restorePlayerTableActionMenuAfterRender(preservedPlayerTableActionRenderSignature);
-  }
-  syncPagerCurrentPage(state.page, totalPages);
-  prevButton.disabled = state.page <= 1;
-  nextButton.disabled = state.page >= totalPages;
-  updateSelectionBar(pageRows, { rendered: true });
+  tableBodyRenderReuse.commit(renderSignature);
+  syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
 }
 
 function showTableBusyState() {
   if (window.__mflTableLoadingRuntime?.show?.()) return;
+  tableBodyRenderReuse.invalidate();
   emptyState.hidden = true;
   emptyState.textContent = "";
   tableBody.replaceChildren();
