@@ -290,10 +290,28 @@
     });
   }
 
+  function canPreserveRenderedTableRows(state, identity) {
+    const body = document.getElementById("tableBody");
+    if (!(body instanceof HTMLTableSectionElement)) return false;
+    if (body.dataset.staticLoading === "true") return false;
+    if (String(body.dataset.mflRenderedRouteIdentity || "") !== identity) return false;
+    const cache = Reflect.get(window, "__mflRouteDataCache");
+    const isReady = cache && typeof cache === "object" ? Reflect.get(cache, "isReady") : null;
+    if (typeof isReady !== "function") return false;
+    const requestOptions = state.request?.options && typeof state.request.options === "object"
+      ? state.request.options
+      : {};
+    return Boolean(isReady(state.page, {
+      ...requestOptions,
+      view: state.view || requestOptions.view || "",
+    }));
+  }
+
   function primeDestinationRouteShell(state, target) {
     const identity = routeIdentity(state);
     if (target.id === "progressionPage") {
-      if (identity !== lastPrimedRouteIdentity) {
+      const preserveRenderedRows = canPreserveRenderedTableRows(state, identity);
+      if (identity !== lastPrimedRouteIdentity && !preserveRenderedRows) {
         const primeRows = Reflect.get(window, "__mflPrimeTableRows");
         if (typeof primeRows === "function") primeRows(true);
       }
