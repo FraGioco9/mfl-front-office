@@ -16,7 +16,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
-  "const BASELINE_SCHEMA_VERSION = 2;",
+  "const BASELINE_SCHEMA_VERSION = 3;",
   "const NETWORK_IDLE_GRACE_MS = 250;",
   '"desktop"',
   '"mobile-slow"',
@@ -77,6 +77,12 @@ for (const token of [
   "heartbeat.unref?.();",
   "clearInterval(heartbeat);",
   "const progressLabel = `${profile.id} / ${journey.id}`;",
+  'firstStageAt("route-shell-sync-start")',
+  'firstStageAt("route-shell-sync-complete")',
+  'firstStageAt("route-preloader-paint-complete")',
+  'firstStageAt("route-loader-complete")',
+  'firstStageAt("route-postloader-paint-complete")',
+  "Cached SPA stage breakdown (median / observed slowest)",
 ]) {
   includes(harness, token, `Performance baseline harness contract is missing: ${token}`);
 }

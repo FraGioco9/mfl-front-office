@@ -85,7 +85,15 @@ if (protectedOptOutRoute(routePageName)) {
   renderProtectedOptOutShell(routePageName);
 }
 
+  recordPageTransitionStage("route-shell-sync-start", {
+    page: routePageName,
+    view: nextView,
+  });
   window.__mflStaticUiRuntime?.sync?.();
+  recordPageTransitionStage("route-shell-sync-complete", {
+    page: routePageName,
+    view: nextView,
+  });
   return { pageName: routePageName, viewName: nextView, targetPath };
 }
 
@@ -159,6 +167,17 @@ function takeStagedViewTransition(pageName, viewName) {
 function waitForViewTransitionPaint() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
+function recordPageTransitionStage(phase, detail = {}) {
+  const owner = Reflect.get(window, "__mflClientPerformance");
+  const record = owner && typeof owner === "object" ? Reflect.get(owner, "record") : null;
+  if (typeof record !== "function") return null;
+  return record(phase, {
+    kind: "page",
+    path: currentNavigationPath(),
+    ...detail,
   });
 }
 
@@ -239,10 +258,27 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
     document.documentElement.classList.add("mflInitialRouteSuperseded");
     loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
     await waitForViewTransitionPaint();
+    recordPageTransitionStage("route-preloader-paint-complete", {
+      page: transition.pageName,
+      view: transition.viewName,
+      loading: Boolean(loadingToken),
+    });
     if (!pageTransitionIsCurrent(transition)) return null;
     const result = typeof loader === "function" ? await loader(transition) : transition;
+    recordPageTransitionStage("route-loader-complete", {
+      page: transition.pageName,
+      view: transition.viewName,
+      loading: Boolean(loadingToken),
+    });
     if (!pageTransitionIsCurrent(transition)) return null;
-    if (loadingToken) await waitForViewTransitionPaint();
+    if (loadingToken) {
+      await waitForViewTransitionPaint();
+      recordPageTransitionStage("route-postloader-paint-complete", {
+        page: transition.pageName,
+        view: transition.viewName,
+        loading: true,
+      });
+    }
     return result;
   } finally {
     if (loadingToken) loadingController?.end?.(loadingToken);
