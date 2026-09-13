@@ -101,7 +101,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 7;",
+  "const BASELINE_SCHEMA_VERSION = 8;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
@@ -111,6 +111,11 @@ for (const token of [
   "shellSyncMs:",
   "shellStages:",
   "horizontalCuesMs:",
+  "horizontalWatchlistMs:",
+  "horizontalEnsureViewsMs:",
+  "horizontalViewSyncMs:",
+  "horizontalPlayerSyncMs:",
+  "horizontalMeasuredTotalMs:",
   "staticTotalMs:",
   "revealPaintMs:",
   "loaderMs:",
@@ -119,6 +124,7 @@ for (const token of [
   "settlePaintMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
   "Cached shell sync breakdown (median / observed slowest)",
+  "Cached horizontal cue breakdown (median / observed slowest)",
   "Cached loader overview (median / observed slowest)",
   "Cached filter/render breakdown (median / observed slowest)",
   'loaderStageAt("route-loader-request-start")',
