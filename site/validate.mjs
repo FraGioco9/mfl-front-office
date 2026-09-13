@@ -161,9 +161,10 @@ excludes(canonicalSharedCore, 'tableBody?.addEventListener("pointermove", (event
 includes(canonicalTableCore, 'tableBody?.addEventListener("pointermove", (event) => {', "The lazy Table core must delegate table hover state.");
 includes(canonicalTableCore, 'tableBody?.addEventListener("pointerleave", () => {', "The lazy Table core must own delegated table hover cleanup.");
 excludes(canonicalSharedCore, 'selectionInput.dataset.playerId = String(playerId);', "Selection identity assignment must not be represented by Shared compatibility markers.");
-includes(canonicalTableCore, 'selectionInput.dataset.playerId = String(playerId);', "Rendered selection controls must carry player identity instead of row closures.");
+includes(canonicalTableCore, 'const playerIdText = String(playerId);', "Rendered table rows must normalize player identity once per row.");
+includes(canonicalTableCore, 'selectionInput.dataset.playerId = playerIdText;', "Rendered selection controls must carry player identity instead of row closures.");
 excludes(canonicalSharedCore, 'nameLink.dataset.playerId = String(playerId);', "Player-link identity assignment must not be represented by Shared compatibility markers.");
-includes(canonicalTableCore, 'nameLink.dataset.playerId = String(playerId);', "Rendered player links must carry player identity instead of row closures.");
+includes(canonicalTableCore, 'nameLink.dataset.playerId = playerIdText;', "Rendered player links must reuse the row-normalized player identity instead of row closures.");
 excludes(canonicalSharedCore, 'link.dataset.walletAddress = String(walletAddress || "");', "Agent-link identity assignment must not be represented by Shared compatibility markers.");
 includes(canonicalTableCore, 'link.dataset.walletAddress = String(walletAddress || "");', "Rendered agent links must carry wallet identity instead of row closures.");
 excludes(canonicalSharedCore, "clubLink.dataset.clubId = clubId;", "Club-link identity assignment must not be represented by Shared compatibility markers.");

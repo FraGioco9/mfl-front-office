@@ -149,6 +149,27 @@ for (const required of [
   includes(tableCore, required, `Canonical Table source must own control-cell behavior through ${required}`);
 }
 excludes(tableCore, 'appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");', "NEW must not return to the Name-cell marker slot.");
+
+for (const optimizedRenderContract of [
+  'const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;',
+  'const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;',
+  'const renderColumns = currentViewColumns().map((column) => ({',
+  'for (const row of pageRows) {',
+  'for (const { column, className } of renderColumns) {',
+  'const playerIdText = String(playerId);',
+  'const playerName = formatCellValue(row, "name");',
+  'const statColumnSet = new Set(statColumns);',
+]) {
+  includes(tableCore, optimizedRenderContract, `Table rendering must hoist row-invariant work through ${optimizedRenderContract}`);
+}
+const tableRenderStart = tableCore.indexOf("function tableRenderTableOwner() {");
+const tableRenderEnd = tableCore.indexOf("function showTableBusyState() {", tableRenderStart);
+invariant(tableRenderStart >= 0 && tableRenderEnd > tableRenderStart, "Canonical Table source must expose a bounded render-table owner section.");
+const tableRenderSection = tableCore.slice(tableRenderStart, tableRenderEnd);
+excludes(tableRenderSection, "currentViewColumns().forEach((column) => {", "Table rendering must not recompute mapped view columns once per row.");
+excludes(tableRenderSection, 'nameLink.textContent = window.matchMedia("(max-width: 900px)").matches', "Table rendering must not repeat the 900px media query inside each Name cell.");
+excludes(tableRenderSection, 'cell.textContent = window.matchMedia("(max-width: 520px)").matches', "Table rendering must not repeat the 520px media query inside each Joined Agency cell.");
+
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route cell formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
 
