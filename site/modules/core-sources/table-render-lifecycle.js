@@ -29,7 +29,7 @@ function tableCenterCellContents(cell) {
 
 const tableBodyRenderReuse = createRenderReuseGuard();
 
-function tableBodyRenderSignature(pageRows) {
+function tableBodyRenderSignatureParts(pageRows) {
   const rowUiState = pageRows.map((row) => {
     const playerId = String(getValue(row, "player_id"));
     return [
@@ -38,7 +38,7 @@ function tableBodyRenderSignature(pageRows) {
       playerNote(playerId),
     ];
   });
-  return JSON.stringify([
+  return [
     state.currentPage,
     state.view,
     state.page,
@@ -51,7 +51,11 @@ function tableBodyRenderSignature(pageRows) {
     state.settingsTimeFormat,
     window.matchMedia("(max-width: 900px)").matches,
     window.matchMedia("(max-width: 520px)").matches,
-  ]);
+  ];
+}
+
+function tableBodyRenderSignature(pageRows) {
+  return JSON.stringify(tableBodyRenderSignatureParts(pageRows));
 }
 
 function tableBodyStructureReusable(pageRows) {
@@ -97,7 +101,15 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const renderSignature = tableBodyRenderSignature(pageRows);
-  if (tableBodyRenderReuse.matches(renderSignature, tableBodyStructureReusable(pageRows))) {
+  const reusableStructure = tableBodyStructureReusable(pageRows);
+  const reusableBody = tableBodyRenderReuse.matches(renderSignature, reusableStructure);
+  window.__mflTableRenderReuseDebug = Object.freeze({
+    reused: reusableBody,
+    structure: reusableStructure,
+    signature: renderSignature,
+    parts: tableBodyRenderSignatureParts(pageRows),
+  });
+  if (reusableBody) {
     syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
     return;
   }
@@ -291,6 +303,13 @@ function tableRenderTableOwner() {
 
   tableBody.replaceChildren(fragment);
   tableBodyRenderReuse.commit(renderSignature);
+  window.__mflTableRenderReuseDebug = Object.freeze({
+    reused: false,
+    structure: true,
+    signature: renderSignature,
+    parts: tableBodyRenderSignatureParts(pageRows),
+    committed: true,
+  });
   syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);
 }
 
