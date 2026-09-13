@@ -92,12 +92,17 @@ const pageTransitionSource = sharedCore.slice(pageTransitionStart, pageTransitio
 const preloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-preloader-paint-complete"');
 const loaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-loader-complete"');
 const postloaderStage = pageTransitionSource.indexOf('recordPageTransitionStage("route-postloader-paint-complete"');
+const preservedTableFastPath = pageTransitionSource.indexOf("preservedTableTransitionIdentity(transition)");
+const conditionalPreloaderPaint = pageTransitionSource.indexOf("if (!preservedTableIdentity) {");
 invariant(
   pageTransitionStart >= 0
-    && preloaderStage > pageTransitionSource.indexOf("await waitForViewTransitionPaint();")
+    && preservedTableFastPath >= 0
+    && conditionalPreloaderPaint > preservedTableFastPath
+    && preloaderStage > pageTransitionSource.indexOf("await waitForViewTransitionPaint();", conditionalPreloaderPaint)
     && loaderStage > pageTransitionSource.indexOf('typeof loader === "function" ? await loader(transition) : transition')
-    && postloaderStage > loaderStage,
-  "SPA stage timing must follow the actual paint and loader boundaries without changing their ownership.",
+    && postloaderStage > loaderStage
+    && pageTransitionSource.includes("skipped: Boolean(preservedTableIdentity),"),
+  "SPA stage timing must record whether the exact cached-Table preloader paint wait was skipped while retaining loader/postloader boundaries.",
 );
 
 for (const token of [
