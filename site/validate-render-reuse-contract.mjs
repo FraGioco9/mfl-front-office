@@ -53,7 +53,8 @@ for (const input of [
 ]) includes(tableCore, input, `Table render signature must include ${input}`);
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must validate the retained row structure.");
 includes(tableCore, 'tableBody.getAttribute("data-static-loading") === "true"', "Table reuse must reject parser/loading skeleton rows.");
-includes(tableCore, "if (tableBodyRenderReuse.matches(renderSignature, tableBodyStructureReusable(pageRows))) {", "Table renderer must test reuse before rebuilding rows.");
+includes(tableCore, "const reusableBody = tableBodyRenderReuse.matches(renderSignature, reusableStructure);", "Table renderer must test reuse before rebuilding rows.");
+includes(tableCore, "if (reusableBody) {", "Table renderer must enter the retained-DOM path only after the shared reuse guard accepts the signature and structure.");
 includes(tableCore, "syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);\n    return;", "Table reuse must still synchronize count, pager, loading, actions, and selection chrome.");
 includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table renderer must commit reuse only after replacing the body.");
 includes(tableCore, "tableBodyRenderReuse.invalidate();\n  emptyState.hidden = true;", "Explicit blank loading must invalidate retained table DOM reuse.");
