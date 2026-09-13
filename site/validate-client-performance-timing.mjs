@@ -2,10 +2,11 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 
-const [bootstrapCore, appEntry, sharedCore, baselineHarness] = await Promise.all([
+const [bootstrapCore, appEntry, sharedCore, tableCore, baselineHarness] = await Promise.all([
   readValidationText("./bootstrap-core.js", import.meta.url),
   readValidationText("./modules/app-entry.js", import.meta.url),
   Promise.resolve(readCanonicalCoreSource("shared")),
+  Promise.resolve(readCanonicalCoreSource("table")),
   readValidationText("./validation/performance-baseline.mjs", import.meta.url),
 ]);
 
@@ -32,8 +33,36 @@ for (const token of [
   'recordPageTransitionStage("route-preloader-paint-complete"',
   'recordPageTransitionStage("route-loader-complete"',
   'recordPageTransitionStage("route-postloader-paint-complete"',
+  'Reflect.set(window, "__mflRecordRoutePerformanceStage", recordPageTransitionStage);',
+  '"route-loader-request-start"',
+  '"route-loader-request-complete"',
+  '"route-loader-outer-restore-start"',
+  '"route-loader-outer-restore-complete"',
+  '"route-loader-render-page-start"',
+  '"route-loader-render-page-complete"',
+  '"route-loader-page-chrome-start"',
+  '"route-loader-page-chrome-complete"',
+  '"route-loader-table-controls-start"',
+  '"route-loader-table-controls-complete"',
+  '"route-loader-quick-filters-start"',
+  '"route-loader-quick-filters-complete"',
+  '"route-loader-apply-filters-start"',
+  '"route-loader-apply-filters-complete"',
 ]) {
   invariant(sharedCore.includes(token), `SPA route-stage timing is missing: ${token}`);
+}
+
+for (const token of [
+  '"route-loader-filter-prep-start"',
+  '"route-loader-filter-source-complete"',
+  '"route-loader-filter-rows-complete"',
+  '"route-loader-filter-ui-complete"',
+  '"route-loader-table-render-start"',
+  '"route-loader-table-build-complete"',
+  '"route-loader-table-dom-commit-complete"',
+  '"route-loader-table-render-complete"',
+]) {
+  invariant(tableCore.includes(token), `Table loader-stage timing is missing: ${token}`);
 }
 
 const pageTransitionStart = sharedCore.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
@@ -51,7 +80,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 3;",
+  "const BASELINE_SCHEMA_VERSION = 4;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'firstStageAt("route-preloader-paint-complete")',
@@ -65,6 +94,16 @@ for (const token of [
   "releaseMs:",
   "settlePaintMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
+  "Cached loader overview (median / observed slowest)",
+  "Cached filter/render breakdown (median / observed slowest)",
+  'loaderStageAt("route-loader-request-start")',
+  'loaderStageAt("route-loader-render-page-start")',
+  'loaderStageAt("route-loader-table-render-start")',
+  "requestMs:",
+  "tableControlsMs:",
+  "applyFiltersTotalMs:",
+  "tableBuildMs:",
+  "tableDomCommitMs:",
 ]) {
   invariant(baselineHarness.includes(token), `Performance baseline route-stage reporting is missing: ${token}`);
 }
@@ -121,4 +160,4 @@ invariant(
   "Route performance timing must be emitted from canonical navigation ownership rather than inferred from DOM mutation state.",
 );
 
-console.log("Canonical client performance timing covers bootstrap, core/runtime readiness, data transport sources, initial and SPA content commit, and route visual settlement without changing loading ownership.");
+console.log("Canonical client performance timing covers bootstrap, core/runtime readiness, data transport, SPA reveal and cached-loader internals without changing loading ownership.");
