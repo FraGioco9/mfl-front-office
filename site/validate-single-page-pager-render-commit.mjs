@@ -14,12 +14,19 @@ const [loadingRuntime, tableCore, generatedTableRuntime, index, firstPaint, tabl
   read("./build-app-core.mjs"),
 ]);
 
+const syncMarker = 'function syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature = "") {';
+const syncStart = tableCore.indexOf(syncMarker);
 const renderStart = tableCore.indexOf("function tableRenderTableOwner() {");
 const renderEnd = tableCore.indexOf("\nfunction showTableBusyState() {", renderStart);
-invariant(renderStart >= 0 && renderEnd > renderStart, "Table core must expose the canonical table render owner.");
+invariant(
+  syncStart >= 0 && renderStart > syncStart && renderEnd > renderStart,
+  "Table core must expose the canonical table render-commit helper and render owner.",
+);
+const syncSource = tableCore.slice(syncStart, renderStart);
 const renderSource = tableCore.slice(renderStart, renderEnd);
 
 const rowCommitMarker = "tableBody.replaceChildren(fragment);";
+const renderSyncMarker = "syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);";
 const pagerRuntimeMarker = 'const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");';
 const pagerCommitMarker = 'if (tableLoadingRuntime && typeof tableLoadingRuntime.sync === "function") tableLoadingRuntime.sync();';
 const pagerStateMarker = "syncPagerCurrentPage(state.page, totalPages);";
@@ -35,20 +42,27 @@ invariant(
     && loadingRuntime.includes("const renderedRowsPresent = syncRenderedRows();"),
   "Table loading sync must retain route-aware pager reconciliation for committed rows.",
 );
+const renderSyncCallCount = renderSource.split(renderSyncMarker).length - 1;
+invariant(
+  syncSource.includes(pagerRuntimeMarker)
+    && syncSource.includes(pagerCommitMarker)
+    && syncSource.indexOf(pagerCommitMarker) > syncSource.indexOf(pagerRuntimeMarker)
+    && syncSource.indexOf(pagerCommitMarker) < syncSource.indexOf(pagerStateMarker),
+  "The canonical table render-commit helper must reconcile pager visibility before synchronizing pager state.",
+);
 invariant(
   renderSource.includes(rowCommitMarker)
-    && renderSource.includes(pagerRuntimeMarker)
-    && renderSource.includes(pagerCommitMarker)
-    && renderSource.indexOf(pagerRuntimeMarker) > renderSource.indexOf(rowCommitMarker)
-    && renderSource.indexOf(pagerCommitMarker) > renderSource.indexOf(pagerRuntimeMarker)
-    && renderSource.indexOf(pagerCommitMarker) < renderSource.indexOf(pagerStateMarker),
-  "A populated table render must reconcile pager visibility in the same synchronous commit as its rows, before the render owner returns.",
+    && renderSyncCallCount === 2
+    && renderSource.lastIndexOf(renderSyncMarker) > renderSource.indexOf(rowCommitMarker),
+  "Both retained and rebuilt table bodies must synchronously run the canonical render-commit helper before the render owner returns.",
 );
 invariant(
   generatedTableRuntime.includes(rowCommitMarker)
+    && generatedTableRuntime.includes(syncMarker)
     && generatedTableRuntime.includes(pagerRuntimeMarker)
-    && generatedTableRuntime.includes(pagerCommitMarker),
-  "Generated Table runtime must preserve same-commit pager visibility for populated single-page tables.",
+    && generatedTableRuntime.includes(pagerCommitMarker)
+    && generatedTableRuntime.includes(renderSyncMarker),
+  "Generated Table runtime must preserve same-commit pager visibility for retained and rebuilt single-page tables.",
 );
 invariant(
   tablesSource.includes(parserHiddenPager)
