@@ -57,7 +57,8 @@ includes(tableCore, "const reusableBody = tableBodyRenderReuse.matches(renderSig
 includes(tableCore, "if (reusableBody) {", "Table renderer must enter the retained-DOM path only after the shared reuse guard accepts the signature and structure.");
 includes(tableCore, "syncTableRenderCommit(pageRows, totalPages, preservedPlayerTableActionRenderSignature);\n    return;", "Table reuse must still synchronize count, pager, loading, actions, and selection chrome.");
 includes(tableCore, "tableBodyRenderReuse.commit(renderSignature);", "Table renderer must commit reuse only after replacing the body.");
-includes(tableCore, "tableBodyRenderReuse.invalidate();\n  emptyState.hidden = true;", "Explicit blank loading must invalidate retained table DOM reuse.");
+includes(tableCore, "tableBodyRenderReuse.invalidate();", "Explicit blank loading must invalidate retained table DOM reuse.");
+includes(tableCore, 'tableBodyCommittedRenderSignature = "";\n  tableBodyCommittedRenderParts = null;\n  emptyState.hidden = true;', "Blank loading must clear retained table reuse diagnostics before hiding the empty state.");
 
 const tableRendererStart = tableCore.indexOf("function tableRenderTableOwner() {");
 const tableBusyStart = tableCore.indexOf("\nfunction showTableBusyState() {", tableRendererStart);
