@@ -1,7 +1,7 @@
 import { includes, excludes, invariant } from "./assertions.mjs";
 
 export function validateResponsiveTables(context) {
-  const { indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, appCore, bootstrap } = context;
+  const { indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, staticUi, appCore, bootstrap } = context;
   includes(responsive, "  button:active:not(:disabled) {\n    filter: brightness(0.9);\n  }", "Mobile button press feedback must act on the rendered button itself so every border radius and shape is preserved.");
   includes(stylesBase, ".advancedPlayerTable th,\n.advancedPlayerTable td {\n  height: 32px;\n  vertical-align: middle;", "Advanced Settings table cells must vertically center their contents.");
   includes(indexHtml, '<button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter" hidden aria-hidden="true" tabindex="-1"></button>', "The legacy Add Filter plus control must be inert and hidden in canonical first-paint markup.");
@@ -128,6 +128,8 @@ export function validateResponsiveTables(context) {
   includes(sharedTableUi, "const canScrollLeft = scrollLeft > VIEW_SCROLL_EPSILON;\n    const canScrollRight = maxScroll - scrollLeft > VIEW_SCROLL_EPSILON;", "Each edge cue must appear only when additional content exists in its direction.");
   includes(sharedTableUi, "setViewScrollButtonVisible(leftButton, canScrollLeft);\n    setViewScrollButtonVisible(button, canScrollRight);", "Left and right cue transitions must track the actual scroll position independently.");
   includes(sharedTableUi, "viewResizeObserver = new ResizeObserver", "Horizontal overflow must stay correct when responsive widths or visible controls change.");
+  includes(sharedTableUi, "function syncRouteHorizontalStructureNow() {\n    if (destroyed) return;\n    syncWatchlistSwitcherPlacement();\n  }", "Table-route reveal must have a lightweight structural cue path that performs no synchronous geometry reads.");
+  includes(staticUi, 'if (target.id === "progressionPage") {\n      window.__mflSharedTableUiRuntime?.syncRouteHorizontalStructureNow?.();\n    } else {\n      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();\n    }', "Table-route shell reveal must defer measured horizontal cue synchronization to the observer/render lifecycle.");
   excludes(sharedTableUi, "MutationObserver", "Horizontal scrolling and mobile page-size ownership must remain event/resize-driven rather than DOM-repair driven.");
   includes(sharedTableUi, "(shell || views).insertAdjacentElement(\"afterend\", switcher);", "Mobile Watchlist must keep its selector outside both the clipped strip and its overlay shell.");
   includes(sharedTableUi, "if (switcher.parentElement !== views) views.appendChild(switcher);", "Leaving mobile Watchlist must restore the selector to its canonical desktop container.");
