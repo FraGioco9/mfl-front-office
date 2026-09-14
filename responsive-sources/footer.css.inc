@@ -1,5 +1,16 @@
 
 
+@media (min-width: 901px) and (max-width: 1100px) {
+  .siteFooterDetailsInner {
+    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 1.1fr);
+    gap: 18px;
+  }
+
+  .siteFooterDetailsNavigation {
+    gap: 12px;
+  }
+}
+
 /* Issue #603: intentional responsive footer presentation. */
 @media (max-width: 900px) {
   .siteFooterDetails {

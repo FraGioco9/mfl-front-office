@@ -16,22 +16,238 @@ html:not(.mflInitialRouteResolved):is(
   display: none;
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 901px) and (max-width: 1444px) {
   .topbar {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.35fr) auto;
-    gap: 12px;
-    padding-inline: 18px;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;
+    gap: 10px;
+    padding-inline: 14px;
   }
 
+  .topbar > :first-child,
+  .headerControls,
+  .stats,
   .searchButton {
     min-width: 0;
   }
 
+  .topbar h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .headerControls {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .searchButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .stats {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
   .stats div {
-    min-width: 96px;
+    width: 72px;
+    min-width: 72px;
+    padding-inline: 6px;
+  }
+
+  .stats > div > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .themeButton {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .accountMenu {
+    flex: 0 0 96px;
+    width: 96px;
+  }
+
+  .accountMenu .compactButton {
+    width: 100%;
+    height: 42px;
+    padding-inline: 10px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .searchShortcut {
+    display: none;
+  }
+
+  .searchButton {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1040px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) 44px max-content;
+    gap: 8px;
     padding-inline: 12px;
   }
 
+  .topbar .searchButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 42px;
+    padding: 0;
+  }
+
+  .topbar .searchButton .searchLabel {
+    gap: 0;
+  }
+
+  .topbar .searchButton .searchLabelText,
+  #accountButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .accountMenu {
+    flex-basis: 44px;
+    width: 44px;
+  }
+
+  #accountButton {
+    width: 44px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .stats div {
+    width: 68px;
+    min-width: 68px;
+    padding-inline: 5px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1366px) {
+  :root {
+    --mfl-player-hero-overall-size: 84px;
+    --mfl-player-portrait-height: 96px;
+    --mfl-player-portrait-width: calc(var(--mfl-player-portrait-height) * 1.824);
+    --mfl-player-hero-brand-size: 79px;
+    --mfl-player-hero-media-gap: 6px;
+    --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
+    --mfl-player-hero-identity-width: 270px;
+    --mfl-player-hero-identity-action-gap: 10px;
+    --mfl-player-hero-action-menu-width: 160px;
+    --mfl-player-hero-primary-action-width: 126px;
+    --mfl-player-hero-action-chevron-width: 30px;
+    --mfl-player-hero-action-font-size: 14px;
+  }
+
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) auto;
+    padding-inline: 14px;
+  }
+
+  .headerControls {
+    gap: 8px;
+  }
+
+  .stats div {
+    width: 76px;
+    min-width: 76px;
+    padding-inline: 6px;
+  }
+
+  .accountMenu {
+    flex-basis: 106px;
+    width: 106px;
+  }
+
+  .playerGrid {
+    grid-template-columns: minmax(0, 1fr) 350px;
+  }
+
+  .pitch {
+    width: 330px;
+    height: auto;
+    aspect-ratio: 360 / 498;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1366px) {
+  .playerPage {
+    --mfl-player-hero-identity-width: 100%;
+    --mfl-player-hero-identity-action-gap: 0px;
+    --mfl-player-hero-actions-align-self: stretch;
+    --mfl-player-hero-actions-margin-left: 0px;
+    --mfl-player-hero-action-menu-width: 100%;
+    --mfl-player-hero-primary-action-width: calc(100% - 34px);
+    --mfl-player-hero-action-chevron-width: 30px;
+  }
+
+  .playerHero {
+    display: grid;
+    grid-template-columns: var(--mfl-player-hero-media-width) minmax(0, 1fr);
+    grid-template-areas:
+      "media identity"
+      "actions actions";
+    grid-template-rows: auto var(--mfl-player-hero-action-height);
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    box-sizing: border-box;
+    align-items: center;
+    row-gap: var(--mfl-player-hero-section-gap);
+  }
+
+  .playerHeroMedia {
+    grid-area: media;
+  }
+
+  .playerHeroIdentity {
+    grid-area: identity;
+    justify-self: start;
+    width: 100%;
+    max-width: none;
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .playerHeroActions {
+    grid-area: actions;
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .playerGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pitch {
+    width: min(100%, 330px);
+  }
+}
+
+@media (max-width: 1100px) {
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4114,6 +4330,17 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 
+@media (min-width: 901px) and (max-width: 1100px) {
+  .siteFooterDetailsInner {
+    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 1.1fr);
+    gap: 18px;
+  }
+
+  .siteFooterDetailsNavigation {
+    gap: 12px;
+  }
+}
+
 /* Issue #603: intentional responsive footer presentation. */
 @media (max-width: 900px) {
   .siteFooterDetails {
@@ -4233,14 +4460,18 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-/* Desktop Player title controls align to the existing Player-name line without changing its geometry. */
-@media (min-width: 901px) {
+/* Wide-desktop Player identity sizing stays out of the intermediate responsive hero. */
+@media (min-width: 1367px) {
   .playerHeroIdentity {
     flex: 1 1 360px;
     width: auto;
     max-width: 600px;
   }
 
+}
+
+/* Desktop Player title controls align to the existing Player-name line without changing its geometry. */
+@media (min-width: 901px) {
   .playerHeroIdentity .playerTitle {
     align-items: baseline;
     flex-wrap: nowrap;

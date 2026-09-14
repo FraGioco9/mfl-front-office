@@ -90,7 +90,8 @@ for (const required of [
   "max-width: 100%;",
 ]) includes(responsive, required, "Unified Player mobile geometry is missing " + required);
 
-const mobileHeroStart = responsive.indexOf(".playerHero {");
+const mobileViewportStart = responsive.indexOf("@media (max-width: 900px)");
+const mobileHeroStart = mobileViewportStart >= 0 ? responsive.indexOf(".playerHero {", mobileViewportStart) : -1;
 const mobileHeroEnd = mobileHeroStart >= 0 ? responsive.indexOf("}", mobileHeroStart) : -1;
 invariant(mobileHeroStart >= 0 && mobileHeroEnd > mobileHeroStart, "Mobile Player hero geometry block is missing.");
 const mobileHeroBlock = responsive.slice(mobileHeroStart, mobileHeroEnd + 1);

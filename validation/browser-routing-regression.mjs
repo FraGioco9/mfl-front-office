@@ -249,6 +249,184 @@ const browserTestSource = String.raw`(() => {
     return !(element instanceof HTMLElement) || element.hidden || getComputedStyle(element).display === "none";
   };
 
+  function assertElementWithinViewport(selector, viewportWidth) {
+    const element = document.querySelector(selector);
+    assert(element instanceof HTMLElement, selector + " is missing from the shared layout.");
+    const rect = element.getBoundingClientRect();
+    assert(rect.width > 0, selector + " has no visible width.");
+    assert(
+      rect.left >= -0.5 && rect.right <= viewportWidth + 0.5,
+      selector + " overflows the viewport: " + JSON.stringify({ left: rect.left, right: rect.right, width: rect.width, viewportWidth }),
+    );
+  }
+
+  function assertVisibleElementInside(selector, ancestorSelector) {
+    const element = document.querySelector(selector);
+    const ancestor = document.querySelector(ancestorSelector);
+    assert(element instanceof Element, selector + " is missing.");
+    assert(ancestor instanceof HTMLElement, ancestorSelector + " is missing.");
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    if (
+      style.display === "none"
+      || style.visibility === "hidden"
+      || Number(style.opacity || "1") === 0
+      || (rect.width <= 1.5 && rect.height <= 1.5)
+    ) return;
+
+    const ancestorRect = ancestor.getBoundingClientRect();
+    assert(
+      rect.left >= ancestorRect.left - 0.5
+        && rect.right <= ancestorRect.right + 0.5,
+      selector + " is horizontally clipped by " + ancestorSelector + ": " + JSON.stringify({
+        element: { left: rect.left, right: rect.right, width: rect.width },
+        ancestor: { left: ancestorRect.left, right: ancestorRect.right, width: ancestorRect.width },
+      }),
+    );
+  }
+
+  function assertSharedChromeGeometry() {
+    const viewportWidth = document.documentElement.clientWidth;
+    assert(
+      document.documentElement.scrollWidth <= viewportWidth + 1,
+      "The document is wider than the viewport: " + JSON.stringify({
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth,
+      }),
+    );
+
+    for (const selector of [
+      ".topbar",
+      "#openSearchButton",
+      ".headerControls",
+      ".stats",
+      ".stats > div:first-child",
+      ".stats > div:last-child",
+      "#themeButton",
+      "#accountMenu",
+      "#accountButton",
+      "#appShell > main",
+      ".siteFooterDetails",
+      ".siteFooterDetailsInner",
+    ]) {
+      assertElementWithinViewport(selector, viewportWidth);
+    }
+
+    for (const [selector, ancestorSelector] of [
+      [".brandLink", ".topbar > :first-child"],
+      [".searchLabel", "#openSearchButton"],
+      [".searchLabelText", "#openSearchButton"],
+      [".searchShortcut", "#openSearchButton"],
+      [".stats > div:first-child > span", ".stats > div:first-child"],
+      [".stats > div:first-child > label", ".stats > div:first-child"],
+      [".stats > div:last-child > span", ".stats > div:last-child"],
+      [".stats > div:last-child > label", ".stats > div:last-child"],
+      ["#themeButton .themeModeIcon:not([hidden])", "#themeButton"],
+      ["#accountButton .accountButtonIcon", "#accountButton"],
+      ["#accountButton > span", "#accountButton"],
+    ]) {
+      assertVisibleElementInside(selector, ancestorSelector);
+    }
+
+    if (scenario === "player") {
+      const main = document.querySelector("#appShell > main");
+      assert(main instanceof HTMLElement, "Player main shell is missing.");
+      const playerGeometrySelectors = [
+        ".playerPage",
+        ".playerDetail",
+        ".playerHero",
+        ".playerHeroMedia",
+        ".playerHeroIdentity",
+        ".playerHeroActions",
+        ".playerHeroActionMenu",
+        ".playerGrid",
+        ".playerStack",
+        ".playerPanel",
+        ".pitchPanel",
+        ".pitch",
+      ];
+      if (main.scrollWidth > main.clientWidth + 1) {
+        const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
+          const element = document.querySelector(selector);
+          if (!(element instanceof HTMLElement)) return [selector, null];
+          const rect = element.getBoundingClientRect();
+          return [selector, {
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+            display: getComputedStyle(element).display,
+            gridTemplateColumns: getComputedStyle(element).gridTemplateColumns,
+          }];
+        }));
+        throw new Error("Player route overflows the main viewport: " + JSON.stringify({
+          scrollWidth: main.scrollWidth,
+          clientWidth: main.clientWidth,
+          geometry,
+        }));
+      }
+      for (const selector of playerGeometrySelectors) {
+        assertElementWithinViewport(selector, viewportWidth);
+      }
+
+      if (viewportWidth >= 901 && viewportWidth <= 1366) {
+        const hero = document.querySelector(".playerHero");
+        const grid = document.querySelector(".playerGrid");
+        assert(hero instanceof HTMLElement, "Intermediate Player hero is missing.");
+        assert(grid instanceof HTMLElement, "Intermediate Player grid is missing.");
+        const heroStyle = getComputedStyle(hero);
+        const gridStyle = getComputedStyle(grid);
+        assert(
+          heroStyle.display === "grid",
+          "Intermediate Player hero must use the two-row responsive layout: " + JSON.stringify({
+            viewportWidth,
+            display: heroStyle.display,
+            gridTemplateAreas: heroStyle.gridTemplateAreas,
+          }),
+        );
+        const gridColumns = gridStyle.gridTemplateColumns
+          .split(" ")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        assert(
+          gridColumns.length === 1,
+          "Intermediate Player profile/pitch must use one content column: " + JSON.stringify({
+            viewportWidth,
+            gridTemplateColumns: gridStyle.gridTemplateColumns,
+          }),
+        );
+
+        const media = document.querySelector(".playerHeroMedia");
+        const identity = document.querySelector(".playerHeroIdentity");
+        const titleName = document.querySelector(".playerHeroIdentity .playerTitleName");
+        assert(media instanceof HTMLElement, "Intermediate Player media is missing.");
+        assert(identity instanceof HTMLElement, "Intermediate Player identity is missing.");
+        assert(titleName instanceof HTMLElement, "Intermediate Player title is missing.");
+        const mediaRect = media.getBoundingClientRect();
+        const identityRect = identity.getBoundingClientRect();
+        const titleRect = titleName.getBoundingClientRect();
+        assert(
+          identityRect.left - mediaRect.right <= 16,
+          "Intermediate Player identity is pushed too far right of the media: " + JSON.stringify({
+            viewportWidth,
+            mediaRight: mediaRect.right,
+            identityLeft: identityRect.left,
+            gap: identityRect.left - mediaRect.right,
+          }),
+        );
+        assert(
+          Math.abs(titleRect.left - identityRect.left) <= 2,
+          "Intermediate Player name must align to the identity left edge: " + JSON.stringify({
+            viewportWidth,
+            titleLeft: titleRect.left,
+            identityLeft: identityRect.left,
+          }),
+        );
+      }
+    }
+  }
+
   async function waitFor(predicate, message, timeoutMs = 5000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -657,6 +835,7 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    assertSharedChromeGeometry();
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
         && entry.detail?.url === "/api/data?mode=my-clubs");
@@ -692,6 +871,7 @@ const browserTestSource = String.raw`(() => {
     }
 
     await navigateBackToScenario(setPage, timeline);
+    assertSharedChromeGeometry();
     const spaState = routeState();
     assertRouteState(spaState);
     assert(
@@ -1162,7 +1342,7 @@ async function waitForBrowserRegression(cdp) {
   throw new Error("Browser routing regression did not publish a result before timeout.");
 }
 
-async function runChromeRegression(executable, url) {
+async function runChromeRegression(executable, url, width = 1280, height = 900) {
   const debuggingPort = await reserveTcpPort();
   const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-browser-routing-"));
   const child = spawn(executable, [
@@ -1170,7 +1350,7 @@ async function runChromeRegression(executable, url) {
     "--no-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
-    "--window-size=1280,900",
+    `--window-size=${width},${height}`,
     `--remote-debugging-port=${debuggingPort}`,
     "--remote-debugging-address=127.0.0.1",
     `--user-data-dir=${userDataDirectory}`,
@@ -1205,6 +1385,17 @@ const regressionScenarios = Object.freeze([
   ["database", "/database/attributes"],
   ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
+  ["player-1444", "/players/1", 1444, 900],
+  ["player-1363", "/players/1", 1363, 900],
+  ["player-1200", "/players/1", 1200, 900],
+  ["player-1181", "/players/1", 1181, 900],
+  ["player-1180", "/players/1", 1180, 900],
+  ["player-1101", "/players/1", 1101, 900],
+  ["player-1090", "/players/1", 1090, 900],
+  ["player-1041", "/players/1", 1041, 900],
+  ["player-1040", "/players/1", 1040, 900],
+  ["player-980", "/players/1", 980, 900],
+  ["player-901", "/players/1", 901, 900],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
   ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
   ["myclubs-out", "/my-clubs"],
@@ -1220,9 +1411,9 @@ try {
   assert(address && typeof address === "object", "Browser regression server did not expose a TCP address.");
   const executable = browserExecutable();
 
-  for (const [scenario, path] of regressionScenarios) {
+  for (const [scenario, path, width = 1280, height = 900] of regressionScenarios) {
     const url = `http://127.0.0.1:${address.port}${path}`;
-    const result = await runChromeRegression(executable, url);
+    const result = await runChromeRegression(executable, url, width, height);
     assert.equal(result.status, "passed");
     console.log(`Browser routing regression passed: ${scenario}: ${result.detail}`);
   }
