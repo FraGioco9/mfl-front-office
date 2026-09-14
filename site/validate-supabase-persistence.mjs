@@ -188,6 +188,8 @@ for (const table of [
   "wallet_opt_ins",
   "wallet_permissions",
   "wallet_preferences",
+  "wallet_auth_consumed_challenges",
+  "wallet_auth_sessions",
   "evaluation_saves",
   "evaluation_shares",
   "mfl_season_ratios",
