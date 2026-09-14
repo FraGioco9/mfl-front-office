@@ -16,8 +16,11 @@ for every deployed environment that supports wallet opt-in. Do not reuse the Sup
 or another application secret. The endpoint fails closed with 503 if the challenge service cannot be
 created.
 
-The application origin is derived server-side from the deployed request host/protocol. Challenges are
-bound to that exact origin. HTTPS is required outside localhost/loopback development.
+The challenge origin is server-configured. `WALLET_CHALLENGE_ORIGIN` may explicitly set the exact
+public application origin; otherwise Vercel deployments use `VERCEL_URL`. Request Host/forwarded-host
+metadata is not trusted for deployed origins. Only localhost/loopback development may derive the origin
+from the incoming request. If production is served from a custom domain different from `VERCEL_URL`,
+set `WALLET_CHALLENGE_ORIGIN` to that exact HTTPS origin.
 
 ## Verified identity boundary
 
