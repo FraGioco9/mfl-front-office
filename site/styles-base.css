@@ -703,13 +703,14 @@ body.filtersOpen .navButton:hover {
 }
 
 #progressionPage.mflCachedTablePageParked {
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
+  block-size: 0;
+  min-block-size: 0;
+  max-block-size: 0;
+  overflow: clip;
   visibility: hidden;
   pointer-events: none;
   content-visibility: hidden;
-  contain-intrinsic-size: 0 0;
+  contain-intrinsic-block-size: 0;
 }
 
 main > .pageView {
