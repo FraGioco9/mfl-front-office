@@ -139,8 +139,8 @@ invariant(
   "Mobile page changes must reset player-table horizontal scroll through the existing shared owner.",
 );
 invariant(
-  interactions.includes("playerAttributeViewScrollLeft = views.scrollLeft;")
-    && interactions.includes("applyPlayerAttributeViewScroll()"),
+  playerInteractions.includes("playerAttributeViewScrollLeft = views.scrollLeft;")
+    && playerInteractions.includes("applyPlayerAttributeViewScroll()"),
   "Player same-route view changes must preserve their horizontal control-strip position.",
 );
 
