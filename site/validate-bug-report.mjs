@@ -46,15 +46,29 @@ for (const forbidden of [
 }
 excludes(bootstrapCore, "window.open", "Bootstrap must never open an external window for bug reports.");
 
-const staticUiIndex = appEntry.indexOf('"/static-ui-runtime.js"');
-const bugRuntimeIndex = appEntry.indexOf('"/bug-report-runtime.js"');
-const controlIndex = appEntry.indexOf('"/control-interactions-runtime.js"');
-if (staticUiIndex < 0 || bugRuntimeIndex <= staticUiIndex || controlIndex <= bugRuntimeIndex) {
-  throw new Error("Bug report runtime must load after static UI but before global control interactions so its capture owner is installed first.");
+const universalRuntimeStart = appEntry.indexOf("const UNIVERSAL_RUNTIME_SCRIPTS");
+const universalRuntimeEnd = appEntry.indexOf("]);", universalRuntimeStart);
+const universalRuntimeSource = universalRuntimeStart >= 0 && universalRuntimeEnd > universalRuntimeStart
+  ? appEntry.slice(universalRuntimeStart, universalRuntimeEnd)
+  : "";
+excludes(universalRuntimeSource, '"/bug-report-runtime.js"', "Bug report runtime must not remain in universal startup scripts.");
+
+for (const token of [
+  'const BUG_REPORT_CONTROL_SELECTOR = \' .siteFooterDetails [data-bug-report-control="true"]\';'.replace("' .", "'."),
+  "function bugReportControlFromTarget(target)",
+  "function ensureBugReportRuntime()",
+  'loadClassicScript("/bug-report-runtime.js")',
+  "async function openBugReportForm()",
+  "function installBugReportBootstrap()",
+  'document.addEventListener("click", (event) => {',
+  'document.addEventListener("keydown", (event) => {',
+  "void openBugReportForm();",
+  "installBugReportBootstrap();",
+]) {
+  includes(appEntry, token, `App entry lazy bug-report ownership is missing: ${token}`);
 }
 
 for (const token of [
-  'const REPORT_CONTROL_SELECTOR = \' .siteFooterDetails [data-bug-report-control="true"]\';'.replace("' .", "'."),
   'function ensureModal()',
   '<span id="bugReportTitleLabel">Title</span>',
   'id="bugReportTitleInput" type="text" maxlength="120" autocomplete="off" required aria-labelledby="bugReportTitleLabel"',
@@ -73,17 +87,7 @@ for (const token of [
   'Reflect.get(window, "__mflDataClient")',
   'dataClientFetch("/api/bug-reports", {',
   'Reflect.get(window, "walletProofHeaders")',
-  'function reportControlFromTarget(target)',
-  'function prepareReportControl(control)',
-  'control.dataset.bugReportControl = "true";',
-  'control.setAttribute("aria-haspopup", "dialog");',
-  'control.setAttribute("aria-controls", "bugReportModal");',
-  'function handleDocumentClick(event)',
-  'function handleDocumentKeyDown(event)',
-  'document.addEventListener("click", handleDocumentClick, true);',
-  'document.addEventListener("keydown", handleDocumentKeyDown, true);',
   'window.addEventListener("keydown", handleEscape, true);',
-  'prepareReportControl(document.querySelector(REPORT_CONTROL_SELECTOR));',
   'event.stopImmediatePropagation();',
   'target.classList.remove("modalClosing");',
   'target.hidden = false;',
@@ -138,6 +142,13 @@ if (
 }
 
 for (const forbidden of [
+  'REPORT_CONTROL_SELECTOR',
+  'PRIVACY_LINK_SELECTOR',
+  'function reportControlFromTarget(',
+  'function handleDocumentClick(',
+  'function handleDocumentKeyDown(',
+  'document.addEventListener("click"',
+  'document.addEventListener("keydown"',
   'reportLink.addEventListener("click"',
   'registerEscapeHandler?.(',
   'window.open',
@@ -247,4 +258,4 @@ for (const forbidden of [
 }
 if (footer.includes("!important")) throw new Error("Bug report styling must not introduce !important overrides.");
 
-console.log("Bug report popup validation passed with canonical data-client submission, footer-owned direct-action support alignment/color, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");
+console.log("Bug report popup validation passed with lazy first-use loading, canonical data-client submission, feature-scoped modal ownership, footer-owned direct-action support alignment/color, reset-on-close behavior, drag-safe backdrop closing, canonical box highlighting/backgrounds, compact Description typography/padding, click-only field focus, and no external fallback path.");
