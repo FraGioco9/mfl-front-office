@@ -167,9 +167,9 @@ invariant(
   "Initial refresh must publish explicit route readiness.",
 );
 invariant(
-  appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));')
-    < appEntry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();"),
-  "Background Global Search warm-up must not delay visible route readiness.",
+  !appEntry.includes("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+    && !appEntry.includes("initialGlobalSearchWarmupPromise"),
+  "Visible/application readiness must not start or wait for unused Global Search warm-up.",
 );
 invariant(
   appEntry.includes('const transitionIsCurrent = Reflect.get(runtimeWindow, "__mflNavigationTransitionIsCurrent");')
