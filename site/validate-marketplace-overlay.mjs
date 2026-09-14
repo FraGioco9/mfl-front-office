@@ -1,11 +1,12 @@
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [dataPage, marketplaceApi, overlayRuntime, tableLoadingRuntime] = await Promise.all([
+const [dataPage, marketplaceApi, overlayRuntime, tableLoadingRuntime, appConfig] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/marketplace.js"),
   read("./marketplace-overlay-runtime.js"),
   read("./table-loading-runtime.js"),
+  read("./modules/app-config.js"),
 ]);
 
 function invariant(condition, message) {
@@ -21,12 +22,9 @@ invariant(
   "Ordinary table pages must not await marketplace state, while authoritative listing reads may measure the canonical marketplace owner.",
 );
 invariant(
-  dataPage.includes('String(scope || "").toLowerCase() === "player"'),
-  "Player routes must keep authoritative marketplace data for their visible listing badge.",
-);
-invariant(
-  !dataPage.includes('["player", "evaluation"].includes(String(scope || "").toLowerCase())'),
-  "Evaluation core data must not block on marketplace state because Evaluation does not consume listing presentation.",
+  !dataPage.includes('String(scope || "").toLowerCase() === "player"')
+    && !dataPage.includes('["player", "evaluation"].includes(String(scope || "").toLowerCase())'),
+  "Player and Evaluation core data must not block on marketplace state; entity listing presentation is enriched separately.",
 );
 invariant(
   dataPage.includes("String(sortKey || \"\").toLowerCase() === LISTING_COLUMN"),
@@ -58,8 +56,20 @@ invariant(
   "Marketplace overlay must reject stale route completions.",
 );
 invariant(
-  overlayRuntime.includes("listingSensitiveRequest(url.searchParams)"),
-  "Marketplace overlay must not rewrite Listing sort/filter or entity-authoritative requests.",
+  overlayRuntime.includes("listingSensitiveRequest(url.searchParams)")
+    && !overlayRuntime.includes('scope === "player"')
+    && !overlayRuntime.includes('scope === "evaluation"'),
+  "Marketplace overlay must leave Listing sort/filter authoritative while allowing ordinary Player/Evaluation page data to be enriched asynchronously.",
+);
+invariant(
+  appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
+  "Player routes must preload the canonical marketplace overlay so listing enrichment can run in parallel with core Player data.",
+);
+invariant(
+  overlayRuntime.includes('currentPage === "player" && currentScope === "player"')
+    && overlayRuntime.includes('Reflect.get(window, "__mflRenderPlayerPageOwner")')
+    && overlayRuntime.includes("renderPlayer(playerId);"),
+  "Marketplace overlay must rerender only the current Player surface after stale-safe row enrichment.",
 );
 invariant(
   tableLoadingRuntime.includes('resources.load("/marketplace-overlay-runtime.js")'),
