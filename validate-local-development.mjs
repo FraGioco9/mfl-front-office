@@ -20,14 +20,20 @@ const packageJson = JSON.parse(packageSource);
 invariant(packageJson.private === true, "Root package.json must remain private.");
 invariant(packageJson.engines?.node === "22.x", "Next runtime must remain on the supported Node 22 line.");
 invariant(packageJson.dependencies?.next === "16.3.4", "MFL Front Office must use the pinned Next.js runtime.");
-invariant(packageJson.dependencies?.react === "18.3.1" && packageJson.dependencies?.["react-dom"] === "18.3.1", "Next runtime must use the wallet-compatible pinned React pair.");
+invariant(packageJson.dependencies?.react === "19.2.6" && packageJson.dependencies?.["react-dom"] === "19.2.6", "Next runtime must use the shared React 19.2.6 runtime pair.");
+invariant(packageJson.overrides?.["use-sync-external-store"] === "1.6.0", "WalletConnect compatibility must use the React-19-capable external-store shim.");
 invariant(packageJson.scripts?.dev === "node prepare-next-runtime.mjs && next dev --webpack -p 4000", "npm run dev must start Next.js Webpack development mode on port 4000 so native node:sqlite remains Node-owned on Windows.");
 invariant(packageJson.scripts?.start === "next start -p 4000", "npm run start must own the production Next server.");
 invariant(String(packageJson.scripts?.build || "").endsWith("next build"), "npm run build must finish with next build.");
 invariant(!packageSource.includes("local-dev-server.mjs") && !packageSource.includes("vercel dev"), "Local startup must not use the retired custom/Vercel dev servers.");
 
 invariant(nextConfig.includes('fallback: [{ source: "/:path*", destination: "/index.html" }]'), "Next must preserve SPA deep-link fallback.");
-invariant(nextConfig.includes('{ source: "/evaluation", destination: "/api/evaluation-preview" }'), "Next must preserve Evaluation preview routing.");
+invariant(
+  nextConfig.includes('source: "/evaluation"')
+    && nextConfig.includes('has: [{ type: "query", key: "share" }]')
+    && nextConfig.includes('destination: "/api/evaluation-preview"'),
+  "Next must preserve shared Evaluation preview routing while ordinary Evaluation remains Next-rendered.",
+);
 invariant(nextConfig.includes('"/api/data": ["./api/data-files/mfl_database.db"]'), "Next tracing must retain the SQLite database for the data API.");
 invariant(prepareRuntime.includes('await rm(publicRoot, { recursive: true, force: true })'), "Next public compatibility projection must be rebuilt deterministically.");
 invariant(prepareRuntime.includes('name.endsWith("-runtime.js")'), "Next public projection must include runtime browser assets.");

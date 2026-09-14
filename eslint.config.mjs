@@ -102,7 +102,7 @@ export default [
     },
   },
   {
-    files: ["pages/api/**/*.js"],
+    files: ["pages/*.js", "pages/api/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
