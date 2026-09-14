@@ -124,7 +124,7 @@ includes(staticUi, 'window.location.assign("/");', "The not-found page must prov
 excludes(staticUi, "not-found.css", "The not-found page must not load a standalone stylesheet or cache-busting asset.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
-includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
+includes(staticUi, "setRoutePageVisibility(page, target);", "Committed page state must reveal the destination shell through the shared cached-Table-aware visibility owner.");
 includes(staticUi, 'if (!(target instanceof HTMLElement)) {', "Missing route-shell integration must fail closed.");
 includes(staticUi, 'page.hidden = true;', "Missing route-shell integration must hide every stale page rather than reveal Home.");
 includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");
@@ -180,6 +180,12 @@ includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitia
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
 includes(staticUi, "function canPreserveRenderedTableRows(state, identity) {", "Static route shell must own the exact cached-table preservation decision.");
+includes(staticUi, "function renderedTablePageCanPark(page) {", "Static route shell must own cached Table off-layout parking.");
+includes(staticUi, 'if (body.dataset.staticLoading === "true") return false;', "Static route shell must never park Table loading rows as reusable rendered content.");
+includes(staticUi, 'Boolean(String(body.dataset.mflRenderedRouteIdentity || ""))', "Only a rendered Table route identity may be parked between page visits.");
+includes(staticUi, 'page.classList.add("mflCachedTablePageParked");', "Cached Table pages must preserve browser rendering state when hidden behind another page.");
+includes(staticUi, 'page.setAttribute("aria-hidden", "true");', "Parked cached Table pages must remain hidden from accessibility navigation.");
+includes(staticUi, 'page.classList.remove("mflCachedTablePageParked");', "Revealing or fully hiding a page must clear the cached Table parked state.");
 includes(staticUi, 'String(body.dataset.mflRenderedRouteIdentity || "") !== identity', "Cached Table preservation must require the exact destination route identity.");
 includes(staticUi, 'Reflect.get(window, "__mflRouteDataCache")', "Cached Table preservation must require canonical route-data cache readiness.");
 includes(staticUi, "identity !== lastPrimedRouteIdentity && !preserveRenderedRows", "Static Table priming must not destroy exact cached destination rows before the loader can reuse them.");
