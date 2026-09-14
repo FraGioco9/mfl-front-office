@@ -47,7 +47,7 @@ python -m scripts.database.prepare_runtime_database site\api\data-files\mfl_data
 npm run dev
 ```
 
-`npm run dev` is owned by the root `package.json` and wraps Vercel development mode on port **4000**. It intentionally does **not** rebuild the database or regenerate tracked site artifacts. Keep the Vercel CLI available in your PATH.
+`npm run dev` is owned by the root `package.json` and runs Vercel development mode against the `site` project directory on port **4000**. Using Vercel's explicit `--cwd site` avoids recursively rediscovering the root `dev` script. It intentionally does **not** rebuild the database or regenerate tracked site artifacts. Keep the Vercel CLI available in your PATH.
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
