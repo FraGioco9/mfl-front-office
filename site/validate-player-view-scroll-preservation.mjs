@@ -166,12 +166,18 @@ assert.ok(
   "Parser-first-paint Player overflow must use the same rendered-item width contract as shared runtime so the fade class cannot flip during hydration.",
 );
 
-const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
-const activeControlIndex = interactions.indexOf("if (consumeActivePageViewFilterEvent(event)) return;", captureIndex);
-assert.ok(captureIndex >= 0 && activeControlIndex > captureIndex, "Player view scroll must be captured in click capture before the Player view handler rerenders its strip.");
+const playerCaptureHandlerStart = interactions.indexOf("function onClick(event) {");
+const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);", playerCaptureHandlerStart);
+const playerCaptureHandlerEnd = interactions.indexOf("\n  }", captureIndex);
+assert.ok(
+  playerCaptureHandlerStart >= 0
+    && captureIndex > playerCaptureHandlerStart
+    && playerCaptureHandlerEnd > captureIndex,
+  "Player view scroll must remain owned by the Player capture-phase click handler.",
+);
 assert.ok(
   interactions.includes('document.addEventListener("click", onClick, true);'),
-  "Player view selection must still be captured before the synchronous Player view handler runs.",
+  "Player view selection must still be captured in the DOM capture phase before the synchronous Player view bubble handler rerenders its strip.",
 );
 assert.ok(
   !player.includes("scheduleReadyControlsAfterLoading")
