@@ -4180,6 +4180,11 @@ async function loadWalletPreferences(options = {}) {
       headers: walletProofHeaders(true),
     });
 
+    if (response.status === 401) {
+      optOutWallet({ toastMessage: "Dapper opt-in expired. Opt in again." });
+      return false;
+    }
+
     if (response.ok) {
       const data = await response.json();
       const watchlistsHaveContent = (value) => {
