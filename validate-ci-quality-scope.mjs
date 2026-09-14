@@ -5,7 +5,7 @@ import { classifyChangedFiles, workflowDiffHasSubstantiveChanges } from "./ci-qu
 invariant(!workflowDiffHasSubstantiveChanges('@@ -1 +1 @@\n-name: Old\n+name: New\n'), "Workflow display-name-only edits must not trigger substantive workflow validation.");
 invariant(workflowDiffHasSubstantiveChanges('@@ -1 +1 @@\n-run: echo old\n+run: echo new\n'), "Workflow behavior edits must trigger workflow validation.");
 
-const siteScope = classifyChangedFiles(["site/styles.css"]);
+const siteScope = classifyChangedFiles(["styles.css"]);
 invariant(siteScope.site && siteScope.quality && !siteScope.builder, "Site files must trigger site quality checks.");
 const builderScope = classifyChangedFiles(["scripts/database/rebuild_database.py"]);
 invariant(builderScope.builder && builderScope.quality && !builderScope.site, "Python builder files must trigger builder checks.");

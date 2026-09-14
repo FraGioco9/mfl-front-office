@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const shareApi = await fs.readFile(resolve(siteRoot, "api/evaluation-share.js"), "utf8");
 const saveApi = await fs.readFile(resolve(siteRoot, "api/evaluation-save.js"), "utf8");
-const persistenceDoc = await fs.readFile(resolve(siteRoot, "../SUPABASE_PERSISTENCE.md"), "utf8");
+const persistenceDoc = await fs.readFile(resolve(siteRoot, "./SUPABASE_PERSISTENCE.md"), "utf8");
 const expiryMigration = await fs.readFile(
-  resolve(siteRoot, "../supabase/migrations/20260904165225_extend_evaluation_share_expiry_to_one_year.sql"),
+  resolve(siteRoot, "./supabase/migrations/20260904165225_extend_evaluation_share_expiry_to_one_year.sql"),
   "utf8",
 );
 

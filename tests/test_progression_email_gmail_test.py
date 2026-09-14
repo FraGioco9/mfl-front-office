@@ -159,7 +159,7 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         self.assertNotIn("notification_jobs", sender)
 
         renderer = Path(
-            "site/render-progression-email-test-portraits.mjs"
+            "render-progression-email-test-portraits.mjs"
         ).read_text(encoding="utf-8")
         self.assertIn("renderProgressionEmailPortraitPng", renderer)
         self.assertIn("writeFile", renderer)

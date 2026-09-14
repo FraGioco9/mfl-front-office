@@ -21,7 +21,7 @@ async function sourceFiles(directory = siteRoot) {
 
 for (const url of await sourceFiles()) {
   const source = await readFile(url, "utf8");
-  const path = decodeURIComponent(url.pathname).split("/site/").at(-1) || url.pathname;
+  const path = decodeURIComponent(url.pathname).split("/").at(-1) || url.pathname;
   if (source.includes("!important")) {
     throw new Error(`${path} must not inject !important styling; move presentation to canonical CSS ownership.`);
   }

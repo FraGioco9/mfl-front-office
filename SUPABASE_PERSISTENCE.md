@@ -4,15 +4,15 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 ## Access model
 
-`site/api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `site/api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned private endpoints authenticate through the server-issued wallet session cookie before accessing a wallet row; replayable legacy proof headers are no longer an authorization fallback.
+`api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned private endpoints authenticate through the server-issued wallet session cookie before accessing a wallet row; replayable legacy proof headers are no longer an authorization fallback.
 
-`bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `site/api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
+`bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
 
 ## Tables and owners
 
 ### `wallet_opt_ins`
 
-Canonical write owner: `site/api/_wallet-presence.js`. Callers are `site/api/wallet-opt-ins.js` for the opt-in flow and `site/api/wallet-preferences.js` for authenticated visit tracking.
+Canonical write owner: `api/_wallet-presence.js`. Callers are `api/wallet-opt-ins.js` for the opt-in flow and `api/wallet-preferences.js` for authenticated visit tracking.
 
 Stored values:
 - `wallet_address`: the opted-in wallet identity.
@@ -26,7 +26,7 @@ This table is retained as the explicit opt-in/audit and last-seen record. It is 
 
 ### `wallet_permissions`
 
-Owners/readers: `site/api/_data-auth.js` and `site/api/wallet-permissions-version.js`.
+Owners/readers: `api/_data-auth.js` and `api/wallet-permissions-version.js`.
 
 Stored values:
 - `wallet_address`: permission subject.
@@ -37,7 +37,7 @@ These values are server-side access-control data and are not UI preferences.
 
 ### `wallet_preferences`
 
-Owner: `site/api/wallet-preferences.js`. Server-side progression email reads are performed by `scripts/email/send_progression_emails.py`; `.github/workflows/full-database-refresh.yml` only supplies that script with the Supabase credentials.
+Owner: `api/wallet-preferences.js`. Server-side progression email reads are performed by `scripts/email/send_progression_emails.py`; `.github/workflows/full-database-refresh.yml` only supplies that script with the Supabase credentials.
 
 Stored values:
 - `wallet_address`: row identity / ownership key.
@@ -53,17 +53,17 @@ Canonical `table_state` intentionally does **not** persist:
 - `linkedWalletAddress`, because the `wallet_preferences` row is already keyed by `wallet_address`.
 - `recentSearchPlayerIds` or `recentSearchAgentWallets`, because `recentSearchItems` is the canonical mixed global-search history and can represent players, agents, and clubs in one ordered list.
 
-For compatibility, `site/api/wallet-preferences.js` still accepts legacy player/agent recent-search arrays, folds them into `recentSearchItems`, and derives the legacy arrays in API responses. The duplicate arrays are compatibility output, not cloud storage.
+For compatibility, `api/wallet-preferences.js` still accepts legacy player/agent recent-search arrays, folds them into `recentSearchItems`, and derives the legacy arrays in API responses. The duplicate arrays are compatibility output, not cloud storage.
 
 `recentEvaluationPlayerIds` remains separate because it belongs to Evaluation history rather than global search.
 
-All authenticated preference PUT writes are normalized by `site/api/wallet-preferences.js` and sent as one supplied-domain patch to the atomic database RPC `public.patch_wallet_preferences_atomic`. The RPC creates the wallet row when needed, locks the row with `FOR UPDATE`, merges `recentSearchItems` and `recentEvaluationPlayerIds` inside the same database transaction while preserving incoming-first order, de-duplicating values and keeping the five-item cap, then replaces only the other preference domains explicitly present in that request. This removes the previous table-state read → Node merge → REST PATCH race, so overlapping server requests cannot both read the same stale recent-history snapshot and overwrite one another.
+All authenticated preference PUT writes are normalized by `api/wallet-preferences.js` and sent as one supplied-domain patch to the atomic database RPC `public.patch_wallet_preferences_atomic`. The RPC creates the wallet row when needed, locks the row with `FOR UPDATE`, merges `recentSearchItems` and `recentEvaluationPlayerIds` inside the same database transaction while preserving incoming-first order, de-duplicating values and keeping the five-item cap, then replaces only the other preference domains explicitly present in that request. This removes the previous table-state read → Node merge → REST PATCH race, so overlapping server requests cannot both read the same stale recent-history snapshot and overwrite one another.
 
 The atomic database RPC is `SECURITY INVOKER`, pins an empty `search_path`, and is service-role-only: `PUBLIC`, `anon`, and `authenticated` have no execute privilege. Browser clients therefore cannot call it directly; the signed-wallet API remains the ownership/authentication boundary. Schema ownership is recorded in `supabase/migrations/20260908131924_atomic_wallet_preferences.sql` and mirrored in `supabase-schema.sql`.
 
 ### `wallet_auth_consumed_challenges` and `wallet_auth_sessions`
 
-Owner: `site/api/_wallet-session.js`. Schema/transaction owner:
+Owner: `api/_wallet-session.js`. Schema/transaction owner:
 `supabase/migrations/20260914150000_wallet_auth_sessions.sql`, mirrored in
 `supabase-schema.sql`.
 
@@ -91,7 +91,7 @@ service-role-only. Browser clients never call these tables/functions directly.
 
 ### `evaluation_saves`
 
-Owner: `site/api/evaluation-save.js`.
+Owner: `api/evaluation-save.js`.
 
 Stored values:
 - `id`: saved Evaluation identifier.
@@ -106,7 +106,7 @@ The API permits up to 100 saved Evaluations per wallet. Overwriting an existing 
 
 ### `evaluation_shares`
 
-Write/lifecycle owner: `site/api/evaluation-share.js`. Active-share lookup owner: `site/api/_evaluation-share-preview.js`, reused by `site/api/evaluation-share.js`, the public shared-link metadata endpoint `site/api/evaluation-preview.js`, and the dynamic social-card endpoint `site/api/evaluation-preview-image.js`.
+Write/lifecycle owner: `api/evaluation-share.js`. Active-share lookup owner: `api/_evaluation-share-preview.js`, reused by `api/evaluation-share.js`, the public shared-link metadata endpoint `api/evaluation-preview.js`, and the dynamic social-card endpoint `api/evaluation-preview-image.js`.
 
 Stored values:
 - `id`: share identifier.
@@ -126,7 +126,7 @@ All persisted fields have direct sharing/lifecycle ownership and are retained.
 
 ### `bug_reports`
 
-Owner: `site/api/bug-reports.js`. The browser-side form owner is `site/bug-report-runtime.js`; it sends reports only to the same-origin API endpoint and never receives Supabase credentials.
+Owner: `api/bug-reports.js`. The browser-side form owner is `bug-report-runtime.js`; it sends reports only to the same-origin API endpoint and never receives Supabase credentials.
 
 Stored values:
 - `id`: generated report identifier.
@@ -151,7 +151,7 @@ The GitHub issue URL remains in the footer as a no-JavaScript/modifier-click fal
 
 ### `mfl_season_ratios`
 
-Owner/reader: `site/api/mfl-season-ratios-v2.js`. Schema/seed owner: `supabase/migrations/20260730160100_create_mfl_season_ratios.sql`.
+Owner/reader: `api/mfl-season-ratios-v2.js`. Schema/seed owner: `supabase/migrations/20260730160100_create_mfl_season_ratios.sql`.
 
 Stored values:
 - `season`: MFL season identifier.
@@ -163,7 +163,7 @@ This is read-only reference data for the application, not user persistence.
 
 The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. Wallet authentication is now represented locally only by a non-authorizing session marker; Flow signatures and challenge material are not persisted after exchange. Request/loading state, route payload caches, guest watchlists, and legacy per-entity recent-search arrays do not need independent Supabase copies. Server-issued wallet sessions are the deliberate exception: only their one-way token hashes and replay/expiry metadata live in the dedicated private auth tables above.
 
-The wallet presence data is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `site/api/_wallet-presence.js` resolves the current runtime agent name and writes it with the server timestamp into `wallet_opt_ins`.
+The wallet presence data is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `api/_wallet-presence.js` resolves the current runtime agent name and writes it with the server timestamp into `wallet_opt_ins`.
 
 ## Issue #200 cleanup
 

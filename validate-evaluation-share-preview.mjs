@@ -94,7 +94,7 @@ const previewOwner = readText("api/_evaluation-share-preview.js");
 const shareApi = readText("api/evaluation-share.js");
 const evaluationRuntime = readText("modules/app-core-evaluation-runtime.js");
 const siteStyles = readText("styles-base.css");
-const persistenceDoc = readText("../SUPABASE_PERSISTENCE.md");
+const persistenceDoc = readText("./SUPABASE_PERSISTENCE.md");
 const packageJson = JSON.parse(readText("package.json"));
 const configs = ["vercel.json", "vercel.production.json"].map((path) => [path, JSON.parse(readText(path))]);
 
@@ -348,7 +348,7 @@ assert(
 );
 
 assert(
-  persistenceDoc.includes("site/api/_evaluation-share-preview.js")
+  persistenceDoc.includes("api/_evaluation-share-preview.js")
     && persistenceDoc.includes("never exposes or selects the creator wallet")
     && persistenceDoc.includes("saved `overallValues` array")
     && persistenceDoc.includes("2400x1260")

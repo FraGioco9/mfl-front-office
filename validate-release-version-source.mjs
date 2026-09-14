@@ -17,9 +17,9 @@ const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore,
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./table-width-runtime.js"),
-  read("../.github/workflows/site-quality.yml"),
-  read("../.github/workflows/cleanup-unused-branches.yml"),
-  access(new URL("../.github/workflows/release-projection-sync.yml", import.meta.url)).then(() => true, () => false),
+  read("./.github/workflows/site-quality.yml"),
+  read("./.github/workflows/cleanup-unused-branches.yml"),
+  access(new URL("./.github/workflows/release-projection-sync.yml", import.meta.url)).then(() => true, () => false),
 ]);
 
 const release = JSON.parse(releaseSource);
@@ -46,13 +46,13 @@ invariant(
 );
 invariant(
   siteQualityWorkflow.includes("run: npm run build")
-    && siteQualityWorkflow.includes("site/bootstrap.js")
-    && siteQualityWorkflow.includes("site/bootstrap-core.js")
-    && siteQualityWorkflow.includes("site/index.html")
-    && siteQualityWorkflow.includes("site/responsive.css")
-    && siteQualityWorkflow.includes("site/vercel.production.json")
-    && siteQualityWorkflow.includes("site/styles-runtime.css")
-    && siteQualityWorkflow.includes("site/modules/app-core-*-runtime.js")
+    && siteQualityWorkflow.includes("bootstrap.js")
+    && siteQualityWorkflow.includes("bootstrap-core.js")
+    && siteQualityWorkflow.includes("index.html")
+    && siteQualityWorkflow.includes("responsive.css")
+    && siteQualityWorkflow.includes("vercel.production.json")
+    && siteQualityWorkflow.includes("styles-runtime.css")
+    && siteQualityWorkflow.includes("modules/app-core-*-runtime.js")
     && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
   "Site Quality must own one ordered build-and-commit path for release projections and every tracked generated site artifact.",
 );
@@ -68,7 +68,7 @@ invariant(
   "The retired Release projection sync workflow must stay deleted so no second workflow can race Site Quality writes.",
 );
 invariant(
-  cleanupWorkflow.includes("- site/release.json")
+  cleanupWorkflow.includes("- release.json")
     && cleanupWorkflow.includes("branches:\n      - main")
     && cleanupWorkflow.includes('gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100"'),
   "Release metadata changes on main must automatically trigger open-PR-safe unused-branch cleanup.",

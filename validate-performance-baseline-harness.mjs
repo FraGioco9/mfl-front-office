@@ -4,14 +4,14 @@ import { readValidationText } from "./validation-text.mjs";
 const [packageJson, harness, performanceDocs, siteQuality] = await Promise.all([
   readValidationText("./package.json", import.meta.url),
   readValidationText("./validation/performance-baseline.mjs", import.meta.url),
-  readValidationText("../docs/performance-923.md", import.meta.url),
-  readValidationText("../.github/workflows/site-quality.yml", import.meta.url),
+  readValidationText("./docs/performance-923.md", import.meta.url),
+  readValidationText("./.github/workflows/site-quality.yml", import.meta.url),
 ]);
 
 includes(
   packageJson,
   '"performance:baseline": "node validation/performance-baseline.mjs"',
-  "site/package.json must expose the canonical opt-in performance baseline command.",
+  "package.json must expose the canonical opt-in performance baseline command.",
 );
 
 for (const token of [

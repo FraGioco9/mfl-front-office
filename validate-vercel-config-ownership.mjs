@@ -8,8 +8,8 @@ const [development, production, packageJson, vercelIgnore, siteUpdateWorkflow] =
   read("./vercel.json"),
   read("./vercel.production.json"),
   read("./package.json"),
-  read("../.vercelignore"),
-  read("../.github/workflows/vercel-site-update.yml"),
+  read("./.vercelignore"),
+  read("./.github/workflows/vercel-site-update.yml"),
 ]);
 
 invariant(development === serializeVercelConfig(), "vercel.json must be generated exactly from the canonical Vercel config source.");
@@ -17,6 +17,7 @@ invariant(production === serializeVercelConfig({ production: true }), "vercel.pr
 
 const devConfig = JSON.parse(development);
 const prodConfig = JSON.parse(production);
+invariant(!devConfig.devCommand && !prodConfig.devCommand, "Vercel configs must not own local startup; npm run dev uses the repository-owned native development server.");
 invariant(JSON.stringify(devConfig.functions) === JSON.stringify(prodConfig.functions), "Development and production Vercel configs must share one function packaging contract.");
 invariant(JSON.stringify(devConfig.rewrites) === JSON.stringify(prodConfig.rewrites), "Development and production Vercel configs must share one rewrite contract.");
 invariant(
@@ -36,14 +37,14 @@ invariant(
   "Package scripts must generate and verify both Vercel configs from the canonical owner.",
 );
 invariant(
-  vercelIgnore.includes("site/build-vercel-config.mjs")
-    && vercelIgnore.includes("site/vercel-config-source.mjs")
-    && vercelIgnore.includes("site/vercel.production.json"),
+  vercelIgnore.includes("build-vercel-config.mjs")
+    && vercelIgnore.includes("vercel-config-source.mjs")
+    && vercelIgnore.includes("vercel.production.json"),
   "Vercel config compiler/source and deployment-only production config must stay out of the production artifact.",
 );
 invariant(
-  siteUpdateWorkflow.includes("node site/build-vercel-config.mjs")
-    && siteUpdateWorkflow.includes("--local-config site/vercel.production.json"),
+  siteUpdateWorkflow.includes("node build-vercel-config.mjs")
+    && siteUpdateWorkflow.includes("--local-config vercel.production.json"),
   "Explicit site deployments must regenerate the canonical configs before using the production projection.",
 );
 

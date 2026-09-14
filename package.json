@@ -4,7 +4,32 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "vercel dev --cwd site --listen 4000",
-    "check": "npm --prefix site run check"
-  }
+    "dev": "node local-dev-server.mjs",
+    "build:config": "node build-vercel-config.mjs",
+    "build:core": "node build-app-core.mjs",
+    "build:styles": "node build-styles.mjs",
+    "build": "npm run build:html && npm run build:responsive && npm run build:config && npm run build:core && npm run build:styles",
+    "lint": "eslint bootstrap.js bootstrap-core.js local-dev-server.mjs build-*.mjs style-bundle.mjs validation-text.mjs vercel-config-source.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api *-runtime.js validate*.mjs validation/*.mjs",
+    "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
+    "verify:generated": "git diff --exit-code -- vercel.json vercel.production.json styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
+    "validate": "node validate-all.mjs",
+    "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
+    "build:html": "node build-html.mjs",
+    "build:responsive": "node build-responsive.mjs",
+    "performance:baseline": "node validation/performance-baseline.mjs"
+  },
+  "dependencies": {
+    "@expo-google-fonts/titillium-web": "0.4.1",
+    "@onflow/fcl": "1.21.11",
+    "pureimage": "0.4.20",
+    "webp-wasm": "1.0.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript/typescript6": "^6.0.2",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "typescript": "^7.0.2"
+  },
+  "name": "mfl-front-office"
 }

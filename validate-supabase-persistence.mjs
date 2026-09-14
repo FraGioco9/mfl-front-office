@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(siteRoot, "..");
+const repoRoot = siteRoot;
 const apiRoot = resolve(siteRoot, "api");
 
 const read = (path) => fs.readFile(path, "utf8");
@@ -231,8 +231,8 @@ for (const filename of apiFiles.filter((name) => name.endsWith(".js") && name !=
   }
   includes(
     documentation,
-    `\`site/api/${filename}\``,
-    `Every Supabase API owner must be documented; missing site/api/${filename}.`,
+    `\`api/${filename}\``,
+    `Every Supabase API owner must be documented; missing api/${filename}.`,
   );
 }
 

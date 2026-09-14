@@ -13,7 +13,7 @@ Do not use byte count alone as a proxy for good ownership inside a route/domain 
 ### Universal shared-core ceiling — keep
 
 - **Threshold:** the manifest-assembled Shared domain may not exceed **355,000 UTF-8 bytes**.
-- **Enforced by:** `site/modules/core-source-manifest.js`, `site/build-app-core.mjs`, and `site/validate-core-source-ownership.mjs`.
+- **Enforced by:** `modules/core-source-manifest.js`, `build-app-core.mjs`, and `validate-core-source-ownership.mjs`.
 - **Reason:** the assembled Shared domain is universal code. Growth anywhere in its manifest-owned fragments affects every route and can silently pull route-specific responsibilities back into the common runtime.
 - **Why 355,000:** this is the explicit post-decomposition upper boundary already recognized by the ownership validator. It is intentionally a stable architectural ceiling, not a moving snapshot of the current file size.
 - **Recommendation:** keep. If the ceiling is reached, first move non-universal behavior to the owning route/domain. Raise it only for behavior that is demonstrably universal and cannot be owned elsewhere without increasing coupling.
@@ -40,27 +40,27 @@ These values were useful immediately after splitting the old application-core mo
 
 ### Canonical source → generated runtime equality — keep
 
-- **Threshold:** generated `site/modules/app-core-*-runtime.js` files must exactly equal their canonical `site/modules/core-sources/*` owner plus the generated banner.
+- **Threshold:** generated `modules/app-core-*-runtime.js` files must exactly equal their canonical `modules/core-sources/*` owner plus the generated banner.
 - **Enforced by:** application-core build and ownership validation.
 - **Reason:** prevents hand-edited generated code, source/runtime drift, and nondeterministic releases.
 - **Recommendation:** keep.
 
 ### Canonical HTML fragments — keep
 
-- **Constraint:** edit `site/html-sources/*`; `site/index.html` is generated.
+- **Constraint:** edit `html-sources/*`; `index.html` is generated.
 - **Reason:** route shells and parser-time first-paint logic need deterministic source ownership while preserving inline execution order and zero-request first paint.
 - **Recommendation:** keep.
 
 ### Canonical responsive fragments and cascade order — keep, revisit only with a cascade redesign
 
-- **Constraint:** `site/responsive-sources/manifest.json` defines lexical fragment order; `.css.inc` fragments may participate in media blocks that cross fragment boundaries.
+- **Constraint:** `responsive-sources/manifest.json` defines lexical fragment order; `.css.inc` fragments may participate in media blocks that cross fragment boundaries.
 - **Reason:** preserves the production cascade exactly while allowing ownership to be split by responsive domain.
 - **Risk:** changing fragment order casually can alter specificity/cascade behavior without changing individual rules.
 - **Recommendation:** keep for the current CSS architecture. Replace only as part of an intentional cascade/layer redesign.
 
 ### Flattened production stylesheet — keep
 
-- **Constraint:** generated `site/styles-runtime.css` must match the canonical CSS graph and contain zero nested `@import` rules.
+- **Constraint:** generated `styles-runtime.css` must match the canonical CSS graph and contain zero nested `@import` rules.
 - **Reason:** production serves one primary stylesheet and avoids extra dependency requests/order races.
 - **Recommendation:** keep.
 
@@ -72,7 +72,7 @@ These values were useful immediately after splitting the old application-core mo
 
 ### Node.js 22 runtime — keep while `node:sqlite` is required
 
-- **Threshold:** `site/package.json` requires Node `22.x`.
+- **Threshold:** `package.json` requires Node `22.x`.
 - **Reason:** the runtime database path depends on the supported Node SQLite runtime/API used by the application.
 - **Recommendation:** keep until the runtime/database implementation changes or a later Node line is deliberately adopted and validated.
 
@@ -86,14 +86,14 @@ These values were useful immediately after splitting the old application-core mo
 
 - **Constraint:** normal Site Quality enforces deterministic performance architecture, not browser wall-clock milliseconds.
 - **Reason:** cache ownership, request ordering, route/runtime scoping and nonblocking dependency rules are stable source/runtime contracts; elapsed browser timings vary with hardware, scheduling, fixture latency and throttling.
-- **Owner:** `site/validate-performance-foundations.mjs` plus focused browser-routing regressions.
-- **Timing evidence:** use the opt-in `npm --prefix site run performance:baseline` harness for measured runtime changes; do not add it to the ordinary PR quality workflow.
+- **Owner:** `validate-performance-foundations.mjs` plus focused browser-routing regressions.
+- **Timing evidence:** use the opt-in `npm run performance:baseline` harness for measured runtime changes; do not add it to the ordinary PR quality workflow.
 - **Recommendation:** add a CI invariant only when the behavior is deterministic enough to distinguish an architectural regression from environmental noise.
 
 ### Root local-development entry point — keep
 
-- **Constraint:** root `package.json` owns `npm run dev` as the canonical local startup command and delegates directly to `vercel dev --cwd site --listen 4000` so Vercel resolves the actual site project instead of recursively rediscovering the root npm script.
-- **Reason:** developers should not need to remember platform-specific `vercel.cmd` syntax or a site subdirectory command, while Vercel remains the one local runtime owner.
+- **Constraint:** root `package.json` owns `npm run dev` as the canonical local startup command and delegates directly to `node local-dev-server.mjs`. The native local server owns static SPA delivery, root `.env.local` loading, and the minimal Vercel-compatible request/response adapter required by the existing `api/*.js` handlers; Vercel CLI is not part of the local startup chain.
+- **Reason:** the deployable application, dependencies, environment file, API handlers, and local command share one repository root, matching the other front-office projects while avoiding Vercel CLI dev-command recursion.
 - **Boundary:** local startup does not rebuild the SQLite database and does not regenerate tracked site artifacts. Database preparation remains explicit; Site Quality remains the generated-artifact writer.
 - **Recommendation:** keep the wrapper thin. Add behavior only when it is genuinely required for every local startup.
 

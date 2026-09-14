@@ -28,11 +28,15 @@ export function classifyChangedFiles(files, workflowDiffForFile = () => "") {
   let workflow = false;
 
   for (const file of files) {
+    const rootApplicationFile = !file.includes("/") && !["DATABASE_REFRESH_SCHEDULER.md", "MARKETPLACE_SCHEDULER.md"].includes(file);
     if (
-      file.startsWith("site/")
-      || file === ".gitattributes"
-      || file === "package.json"
-      || file === "README.md"
+      rootApplicationFile
+      || file.startsWith("api/")
+      || file.startsWith("html-sources/")
+      || file.startsWith("modules/")
+      || file.startsWith("responsive-sources/")
+      || file.startsWith("types/")
+      || file.startsWith("validation/")
       || file === "docs/ownership.md"
       || file === "docs/architecture-guardrails.md"
       || file === "docs/foundations-audit-923.md"

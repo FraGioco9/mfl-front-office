@@ -2,8 +2,8 @@ import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const pageSource = String(await readFile(new URL("./api/_data-page.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const rebuildSource = String(await readFile(new URL("../scripts/database/run_flow_rebuild_paged.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const runnerSource = String(await readFile(new URL("../scripts/database/rebuild_database_runner.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const rebuildSource = String(await readFile(new URL("./scripts/database/run_flow_rebuild_paged.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const runnerSource = String(await readFile(new URL("./scripts/database/rebuild_database_runner.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
 invariant(
   pageSource.includes('.map((column) => `coalesce(${quoteIdentifier(`${column}_${suffix}`)}, 0) > 0`)\n    .join(" OR ")})`;'),

@@ -39,7 +39,7 @@ const [
   read("./responsive-sources/tables-phone.css.inc"),
   read("./responsive-sources/static-phone.css.inc"),
   read("./responsive-sources/compact.css.inc"),
-  read("../docs/ui-foundations.md"),
+  read("./docs/ui-foundations.md"),
 ]);
 
 for (const token of [

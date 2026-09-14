@@ -42,7 +42,7 @@ const [
   Promise.resolve(readCanonicalCoreSource("shared")),
   read("./global-search-runtime.js"),
   read("./scrollbars.css"),
-  read("../docs/ui-behavior-foundations.md"),
+  read("./docs/ui-behavior-foundations.md"),
 ]);
 
 const { mobileMaxPx, phoneMaxPx, compactPhoneMaxPx } = manifest.breakpoints || {};

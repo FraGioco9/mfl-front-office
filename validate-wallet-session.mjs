@@ -9,10 +9,10 @@ const {
 } = require("./api/_wallet-session.js");
 
 const migration = await readFile(
-  new URL("../supabase/migrations/20260914150000_wallet_auth_sessions.sql", import.meta.url),
+  new URL("./supabase/migrations/20260914150000_wallet_auth_sessions.sql", import.meta.url),
   "utf8",
 );
-const schema = await readFile(new URL("../supabase-schema.sql", import.meta.url), "utf8");
+const schema = await readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8");
 
 const wallet = "0x1111111111111111";
 const issuedAt = Date.UTC(2026, 8, 14, 14);

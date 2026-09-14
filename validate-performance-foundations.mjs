@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(siteRoot, "..");
+const repositoryRoot = siteRoot;
 const readSite = (path) => readFile(resolve(siteRoot, path), "utf8");
 const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8");
 

@@ -6,7 +6,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-database_path = Path("production-site/site/api/data-files/mfl_database.db")
+database_path = Path("production-site/api/data-files/mfl_database.db")
 with sqlite3.connect(database_path) as connection:
     player_count = int(connection.execute("SELECT count(*) FROM players").fetchone()[0])
     wallet_count = int(connection.execute("SELECT count(*) FROM wallets").fetchone()[0])

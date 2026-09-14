@@ -7,7 +7,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFileSync(resolve(root, path), "utf8").replace(/\r\n?/g, "\n");
 const styles = read("styles.css");
 const base = read("styles-base.css");
-const docs = read("../docs/ui-foundations.md");
+const docs = read("./docs/ui-foundations.md");
 
 // Table visual semantics and standard desktop geometry stay Table-owned; responsive/specialist geometry remains independent.
 for (const token of [

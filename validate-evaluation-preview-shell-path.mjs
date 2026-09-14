@@ -48,7 +48,7 @@ function createResponseRecorder() {
 const expectedShellPath = resolve(siteRoot, "index.html");
 assert(
   evaluationShellPath() === expectedShellPath,
-  "Evaluation preview must resolve the SPA shell relative to site/api, not the serverless runtime working directory.",
+  "Evaluation preview must resolve the SPA shell relative to api, not the serverless runtime working directory.",
 );
 assert(
   browserTitleForMetadata({}) === "Evaluation - MFL Front Office",

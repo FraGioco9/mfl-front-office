@@ -12,7 +12,7 @@ import {
 } from "./modules/app-config.js";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(root, "..");
+const repositoryRoot = root;
 const read = (path) => readFileSync(resolve(repositoryRoot, path), "utf8");
 
 assert.equal(TABLE_BASE_COLUMNS[TABLE_BASE_COLUMNS.indexOf("name") + 1], "listing_price");
@@ -41,7 +41,7 @@ assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
 assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
 
-const bootstrap = read("site/bootstrap.js");
+const bootstrap = read("bootstrap.js");
 assert.match(bootstrap, /function firstPaintTableColumnLabel\(page, column\)/);
 assert.match(bootstrap, /const fullLabel = String\(FIRST_PAINT_COLUMN_LABELS\[column\] \|\| ""\);/);
 assert.match(bootstrap, /const compactLabel = String\(FIRST_PAINT_COMPACT_COLUMN_LABELS\[column\] \|\| fullLabel\);/);
@@ -52,7 +52,7 @@ assert.match(bootstrap, /label\.dataset\.mflCompactTableLabel = compactLabel;/);
 assert.match(bootstrap, /label\.textContent = firstPaintTableColumnLabel\(normalizedPage, column\);/);
 assert.doesNotMatch(bootstrap, /label\.textContent = FIRST_PAINT_COLUMN_LABELS\[column\] \|\| "";/);
 
-const dataPage = read("site/api/_data-page.js");
+const dataPage = read("api/_data-page.js");
 assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
 assert.ok(dataPage.includes('AS "${LISTING_COLUMN}"'));
 assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
@@ -64,14 +64,14 @@ assert.match(dataPage, /value === "for_sale"/);
 assert.match(dataPage, /value === "not_for_sale"/);
 assert.match(dataPage, /requestedKey === LISTING_COLUMN/);
 
-const marketplaceState = read("site/api/_marketplace-state.js");
+const marketplaceState = read("api/_marketplace-state.js");
 assert.match(marketplaceState, /MARKETPLACE_CACHE_TTL_MS = 5_000/);
 assert.match(marketplaceState, /MARKETPLACE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
 assert.match(marketplaceState, /MARKETPLACE_FETCH_TIMEOUT_MS = 3_000/);
 assert.match(marketplaceState, /signal: AbortSignal\.timeout\(MARKETPLACE_FETCH_TIMEOUT_MS\)/);
 assert.match(marketplaceState, /cache: "no-store"/);
 
-const styles = read("site/styles.css");
+const styles = read("styles.css");
 const width = (name) => {
   const match = styles.match(new RegExp(`--mfl-table-col-${name}: ([0-9.]+)%`));
   assert.ok(match, `Missing Uniform Width variable: ${name}`);
@@ -100,7 +100,7 @@ assert.match(styles, /\.playerTitle > :is\(\.playerTitleName, \.listingCellConte
 assert.match(styles, /\.playerTitle > \.listingCellContent \{[\s\S]*height: 22px;[\s\S]*font-size: 16px;/);
 assert.match(styles, /\.playerTitle > \.listingCellContent \.listingCellIcon \{[\s\S]*width: 14px;[\s\S]*height: 14px;/);
 
-const svg = read("site/listing-shopping-bag.svg");
+const svg = read("listing-shopping-bag.svg");
 assert.match(svg, /width="12" height="12" viewBox="0 0 24 24"/);
 assert.match(svg, /stroke="#3bfb52"/);
 assert.match(svg, /M16 10a4 4 0 0 1-8 0/);

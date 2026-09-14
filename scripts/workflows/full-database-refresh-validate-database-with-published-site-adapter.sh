@@ -3,7 +3,7 @@ set -euo pipefail
 node - <<'NODE'
 const path = require("node:path");
 
-const publishedDatabase = require(path.resolve("production-site/site/api/_database.js"));
+const publishedDatabase = require(path.resolve("production-site/api/_database.js"));
 const database = publishedDatabase.getDatabase();
 const playerCount = Number(database.prepare("SELECT count(*) AS count FROM players").get()?.count ?? -1);
 const walletCount = Number(database.prepare("SELECT count(*) AS count FROM wallets").get()?.count ?? -1);
