@@ -81,20 +81,23 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
 
     def test_intermediate_checkpoints_require_corresponding_fetch(self) -> None:
         core_condition = (
-            "if: ${{ inputs.fetch_players && "
+            "if: ${{ steps.resume.outputs.core_done != 'true' && "
+            "inputs.fetch_players && "
             "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
         )
         season_condition = (
-            "if: ${{ inputs.fetch_player_seasons && "
+            "if: ${{ steps.resume.outputs.player_seasons_done != 'true' && "
+            "inputs.fetch_player_seasons && "
             "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
         )
         progression_condition = (
-            "if: ${{ inputs.fetch_progressions && "
+            "if: ${{ steps.resume.outputs.player_data_done != 'true' && "
+            "inputs.fetch_progressions && "
             "hashFiles('builder/previous-database/mfl_database.db') != '' }}"
         )
-        self.assertEqual(self.workflow.count(core_condition), 3)
-        self.assertEqual(self.workflow.count(season_condition), 3)
-        self.assertEqual(self.workflow.count(progression_condition), 3)
+        self.assertEqual(self.workflow.count(core_condition), 5)
+        self.assertEqual(self.workflow.count(season_condition), 5)
+        self.assertEqual(self.workflow.count(progression_condition), 5)
         for stage in ("core", "player_seasons", "player_data"):
             self.assertIn(f"--stage {stage}", self.workflow)
         self.assertIn("--previous previous-database/mfl_database.db", self.workflow)
@@ -105,9 +108,27 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         for checkpoint in ("core", "player-seasons", "player-data", "final"):
             self.assertIn(f"{publisher} {checkpoint} ", self.workflow)
 
-    def test_successful_checkpoints_replace_retry_baseline_artifact(self) -> None:
-        self.assertEqual(self.workflow.count("\n          name: mfl_database\n"), 4)
-        self.assertEqual(self.workflow.count("overwrite: true"), 4)
+    def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
+        for checkpoint_path in (
+            "core",
+            "player-seasons",
+            "player-data",
+            "final",
+        ):
+            self.assertIn(
+                "name: mfl_database\n"
+                f"          path: builder/checkpoints/{checkpoint_path}/mfl_database.db\n"
+                "          overwrite: true",
+                self.workflow,
+            )
+        self.assertIn(
+            "name: full-database-refresh-baseline-${{ github.run_id }}",
+            self.workflow,
+        )
+        self.assertIn(
+            "name: full-database-refresh-resume-${{ github.run_id }}",
+            self.workflow,
+        )
         self.assertLess(
             self.workflow.index("- name: Save player-data checkpoint for retries"),
             self.workflow.index("- name: Send progression emails"),
