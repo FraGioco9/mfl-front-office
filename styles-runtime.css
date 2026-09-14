@@ -8934,9 +8934,6 @@ html:not(.mflInitialRouteResolved):is(
 
   .playerHeroIdentity {
     grid-area: identity;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-right: 0 !important;
   }
 
   .playerHeroActions {
@@ -8944,13 +8941,9 @@ html:not(.mflInitialRouteResolved):is(
     display: block;
     width: 100%;
     min-width: 0;
-    margin-left: 0 !important;
   }
 
   .playerHeroActionMenu {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
   }
 
   .playerGrid {
