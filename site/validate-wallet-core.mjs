@@ -41,22 +41,27 @@ includes(sharedCore, 'await window.__mflEnsureRouteCore("wallet");', "linkWallet
 excludes(sharedCore, 'accountEmail.title = walletLinked ? "Open My Players" : "";', "The account dropdown name must not expose a native Open My Players tooltip.");
 
 for (const forbidden of [
-  "function walletAccessNonce() {",
-  "function walletAccountProofFromUser(user, accountProof) {",
+  "async function issueWalletChallenge() {",
+  "async function exchangeWalletChallenge(challengeToken, proof) {",
+  "async function logoutWalletSession() {",
+  "function walletAccountProofFromUser(user, accountProof, message = walletAccessMessage()) {",
   "function configureFlowWallet(",
   "async function ensureFlowWallet() {",
   "async function dapperAuthnService(fcl) {",
-  "async function authenticateWithDapper(fcl) {",
+  "async function authenticateWithDapper(fcl, challenge) {",
   "function walletLinkErrorMessage(error) {",
 ]) excludes(sharedCore, forbidden, `Wallet-only ownership leaked into shared startup core: ${forbidden}`);
 
 for (const required of [
-  "function walletAccessNonce() {",
-  "function walletAccountProofFromUser(user, accountProof) {",
+  "async function issueWalletChallenge() {",
+  "async function exchangeWalletChallenge(challengeToken, proof) {",
+  "async function logoutWalletSession() {",
+  "function walletAccountProofFromUser(user, accountProof, message = walletAccessMessage()) {",
   "function configureFlowWallet(",
   "async function ensureFlowWallet() {",
   "async function dapperAuthnService(fcl) {",
-  "async function authenticateWithDapper(fcl) {",
+  "async function authenticateWithDapper(fcl, challenge) {",
+  'type: "session",',
   "async function walletLinkOwner() {",
   "__mflWalletLinkOwner = walletLinkOwner;",
 ]) includes(walletCore, required, `Canonical Wallet core is missing ${required}`);
