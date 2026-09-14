@@ -837,17 +837,26 @@
     }, 80);
   }
 
+  function prepareOpenedSearchModal() {
+    const modal = searchModal();
+    const input = searchInput();
+    if (destroyed || !modal || modal.hidden || !input) return false;
+
+    syncClearButton();
+    if (!input.value.trim()) {
+      void preloadRecentResults();
+      void renderEmptySearchResults();
+    }
+    focusAndSelectSearch();
+    return true;
+  }
+
   function observeSearchModal() {
     const modal = searchModal();
     if (!modal) return;
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
-      if (modal.hidden) return;
-
-      const input = searchInput();
-      syncClearButton();
-      if (input && !input.value.trim()) void renderEmptySearchResults();
-      focusAndSelectSearch();
+      if (!modal.hidden) prepareOpenedSearchModal();
     });
     modalObserver.observe(modal, { attributes: true, attributeFilter: ["hidden"] });
   }
@@ -858,12 +867,8 @@
     installCoreSearchMatching();
     flushPendingPayload();
     flushPendingEvaluationPayload();
-    const input = searchInput();
     syncClearButton();
-    void preloadRecentResults().then(() => {
-      const modal = searchModal();
-      if (modal && !modal.hidden && input && !input.value.trim()) void renderEmptySearchResults();
-    });
+    prepareOpenedSearchModal();
   }
 
   installSupabaseOnlyRecentStorage();
