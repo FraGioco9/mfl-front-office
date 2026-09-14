@@ -90,12 +90,12 @@ These values were useful immediately after splitting the old application-core mo
 - **Timing evidence:** use the opt-in `npm run performance:baseline` harness for measured runtime changes; do not add it to the ordinary PR quality workflow.
 - **Recommendation:** add a CI invariant only when the behavior is deterministic enough to distinguish an architectural regression from environmental noise.
 
-### Root local-development entry point — keep
+### Next.js runtime ownership — keep
 
-- **Constraint:** root `package.json` owns `npm run dev` as the canonical local startup command and delegates directly to `node local-dev-server.mjs`. The native local server owns static SPA delivery, root `.env.local` loading, and the minimal Vercel-compatible request/response adapter required by the existing `api/*.js` handlers; Vercel CLI is not part of the local startup chain.
-- **Reason:** the deployable application, dependencies, environment file, API handlers, and local command share one repository root, matching the other front-office projects while avoiding Vercel CLI dev-command recursion.
-- **Boundary:** local startup does not rebuild the SQLite database and does not regenerate tracked site artifacts. Database preparation remains explicit; Site Quality remains the generated-artifact writer.
-- **Recommendation:** keep the wrapper thin. Add behavior only when it is genuinely required for every local startup.
+- **Constraint:** root `package.json` owns `npm run dev` as `prepare-next-runtime.mjs && next dev --webpack -p 4000`, production builds end with `next build`, and `npm run start` runs `next start -p 4000`.
+- **Reason:** MFL Front Office now uses the same framework/runtime model as the other front-office projects instead of maintaining a bespoke HTTP/Vercel-dev server. The supported `--webpack` dev opt-out is intentional on Windows so `node:sqlite` remains a native Node builtin rather than a Turbopack CommonJS external.
+- **Compatibility boundary:** the current SPA is temporarily projected into Next `public/`, and thin `pages/api/*` adapters delegate to canonical `api/*.js` handlers. This layer must shrink as routes move to native React/App Router ownership; it must not become a second business-logic owner.
+- **Boundary:** local startup does not rebuild SQLite or rewrite tracked generated source artifacts. Site Quality remains the tracked generated-artifact writer.
 
 ### Workflow YAML / script ownership boundary — keep
 

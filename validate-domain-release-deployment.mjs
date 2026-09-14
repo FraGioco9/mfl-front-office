@@ -4,7 +4,7 @@ const validators = [
   "validate-release-runtime-ownership.mjs",
   "validate-runtime-data-identity.mjs",
   "validate-generated-styles.mjs",
-  "validate-vercel-config-ownership.mjs",
+  "validate-next-deployment-ownership.mjs",
   "validate-database-refresh-deployment.mjs",
 ];
 

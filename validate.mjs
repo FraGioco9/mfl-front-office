@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
+import { createNextHeaders, createNextRewrites } from "./next.config.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = siteRoot;
@@ -300,27 +301,37 @@ const staticWidthIndex = indexHtml.indexOf(staticWidthScript);
 const bootstrapIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
 invariant(staticWidthIndex >= 0 && bootstrapIndex > staticWidthIndex, "Uniform Width must load from static HTML before bootstrap.");
 
-const vercelLocal = JSON.parse(await readSite("vercel.json"));
-const vercelProduction = JSON.parse(await readSite("vercel.production.json"));
-const localConfigSource = JSON.stringify(vercelLocal);
-invariant(!localConfigSource.includes('"has"') && !localConfigSource.includes('"missing"'), "Local Vercel config must not contain unsupported has/missing request conditions.");
-const localJsRule = (vercelLocal.headers || []).find((rule) => rule.source === "/(.*\\.js)");
-invariant(localJsRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Local JavaScript must use the no-store cache policy.");
-const productionJsNoStoreRule = (vercelProduction.headers || []).find((rule) => rule.source === "/(.*\\.js)" && rule.missing?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
-invariant(productionJsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Production unversioned JavaScript must retain the no-store cache policy.");
-const productionCoreCacheRule = (vercelProduction.headers || []).find((rule) => rule.source === "/modules/app-core-runtime.js" && rule.has?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
-invariant(productionCoreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "Production versioned application core must retain immutable browser caching.");
-await mustNotExist(resolve(siteRoot, "vercel.mjs"), "Programmatic Vercel config must stay removed so local development uses the static safe config.");
+const localHeaders = createNextHeaders({ production: false });
+const productionHeaders = createNextHeaders({ production: true });
+const cacheValue = (rule) => rule?.headers?.find((header) => header.key === "Cache-Control")?.value || "";
+const localJsRule = localHeaders.find((rule) => rule.source === "/:path*.js");
+invariant(cacheValue(localJsRule) === "no-store, max-age=0", "Local JavaScript must use the no-store cache policy.");
+const productionJsNoStoreRule = productionHeaders.find((rule) => (
+  rule.source === "/:path*.js"
+    && rule.missing?.some((condition) => condition.type === "query" && condition.key === "mfl_core")
+));
+invariant(cacheValue(productionJsNoStoreRule) === "no-store, max-age=0", "Production unversioned JavaScript must retain the no-store cache policy.");
+const productionCoreCacheRule = productionHeaders.find((rule) => (
+  rule.source === "/modules/app-core-runtime.js"
+    && rule.has?.some((condition) => condition.type === "query" && condition.key === "mfl_core")
+));
+invariant(cacheValue(productionCoreCacheRule) === "public, max-age=31536000, immutable", "Production versioned application core must retain immutable browser caching.");
+const nextRewrites = createNextRewrites();
+invariant(
+  nextRewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html"),
+  "Next must preserve SPA fallback routing.",
+);
 
 const databaseRefresh = await readWorkflowSource(new URL("./.github/workflows/full-database-refresh.yml", import.meta.url));
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
 excludes(databaseRefresh, "--workflow site-quality.yml", "Database refreshes must not publish the latest quality-check commit.");
 
 const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
-includes(siteDeploy, "node build-app-core.mjs", "Vercel deployment must generate the canonical application core before upload.");
-includes(siteDeploy, "test -s modules/app-core-runtime.js", "Vercel deployment must refuse to upload without the generated core.");
-includes(siteDeploy, "vercel deploy --prod --yes --force", "Site deployment must force the explicit production release.");
-includes(siteDeploy, "--local-config vercel.production.json", "Production deployment must use the dedicated production Vercel config.");
+includes(siteDeploy, "npm ci --no-audit --no-fund", "Vercel deployment must install the locked Next application dependencies.");
+includes(siteDeploy, "vercel pull --yes --environment=production", "Vercel deployment must pull the production project environment.");
+includes(siteDeploy, "vercel build --prod", "Vercel deployment must build the protected Next application.");
+includes(siteDeploy, "vercel deploy --prebuilt --prod --yes --force", "Site deployment must publish the exact prebuilt production release.");
+excludes(siteDeploy, "vercel.production.json", "Production deployment must not use the retired static Vercel config.");
 
 const siteQuality = await readRepository(".github/workflows/site-quality.yml");
 includes(siteQuality, "npm run build", "Site quality must execute the canonical site build used by deployment asset generation.");

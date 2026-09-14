@@ -3,8 +3,10 @@ __pycache__/
 *.db
 *.sqlite*
 node_modules/
-site/api/data-files/*
-!site/api/data-files/.gitignore
+api/data-files/*
+!api/data-files/.gitignore
 .env*
 !.env.example
 .vercel/
+.next/
+public/

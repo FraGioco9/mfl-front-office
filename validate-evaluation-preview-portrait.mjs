@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { outputFileTracingIncludes } from "./next.config.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const readText = (path) => readFileSync(resolve(siteRoot, path), "utf8");
@@ -31,7 +32,6 @@ const packageJson = JSON.parse(readText("package.json"));
 const previewCard = readText("api/_evaluation-preview-card.js");
 const portraitOwner = readText("api/_player-portrait.js");
 const previewOwner = readText("api/_evaluation-share-preview.js");
-const configs = ["vercel.json", "vercel.production.json"].map((path) => [path, JSON.parse(readText(path))]);
 
 assert(packageJson.dependencies?.["webp-wasm"] === "1.0.6", "Evaluation portrait rendering must pin the portable WebP decoder.");
 assert(!packageJson.dependencies?.sharp && !packageJson.dependencies?.["@napi-rs/canvas"], "Evaluation portraits must not introduce native image dependencies.");
@@ -48,13 +48,11 @@ assert(
 assert(playerPortraitUrl("../80000") === "", "Player portrait URL construction must reject non-numeric player identifiers.");
 assert(previewOwner.includes("portraitUrl: playerPortraitUrl(playerId)"), "Shared Evaluation metadata must derive its portrait from the canonical player ID.");
 
-for (const [path, config] of configs) {
-  const includeFiles = String(config.functions?.["api/evaluation-preview-image.js"]?.includeFiles || "");
-  assert(
-    includeFiles.includes("node_modules/webp-wasm/webp_node_dec.wasm"),
-    `${path} must bundle the WebP decoder WASM with the Evaluation preview-image function.`,
-  );
-}
+const previewImageIncludes = outputFileTracingIncludes["/api/evaluation-preview-image"] || [];
+assert(
+  previewImageIncludes.some((value) => String(value).includes("node_modules/webp-wasm/webp_node_dec.wasm")),
+  "Next tracing must bundle the WebP decoder WASM with the Evaluation preview-image route.",
+);
 
 assert(
   PLAYER_PORTRAIT_BOUNDS.width === 600

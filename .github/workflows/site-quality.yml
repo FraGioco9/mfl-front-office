@@ -70,9 +70,82 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm ci --no-audit --no-fund
 
+      - name: Next development runtime smoke test
+        if: steps.changes.outputs.site == 'true'
+        shell: bash
+        env:
+          WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4000
+          MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-dev-smoke.db
+        run: |
+          set -euo pipefail
+          node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
+          npm run dev > /tmp/mfl-next-dev.log 2>&1 &
+          NEXT_DEV_PID=$!
+          cleanup() {
+            kill "$NEXT_DEV_PID" >/dev/null 2>&1 || true
+            wait "$NEXT_DEV_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:4000/modules/app-entry.js > /tmp/mfl-dev-app-entry.js; then
+              break
+            fi
+            if ! kill -0 "$NEXT_DEV_PID" >/dev/null 2>&1; then
+              cat /tmp/mfl-next-dev.log >&2
+              exit 1
+            fi
+            sleep 0.5
+          done
+          grep -q "PREBUILT_CORE_PATH" /tmp/mfl-dev-app-entry.js
+          if ! curl --fail --silent --show-error "http://127.0.0.1:4000/api/identity" > /tmp/mfl-dev-identity.json; then
+            cat /tmp/mfl-next-dev.log >&2
+            exit 1
+          fi
+          jq -e '.runtime.version and .database.generatedAt' /tmp/mfl-dev-identity.json >/dev/null
+          curl --fail --silent --show-error --cookie-jar /tmp/mfl-wallet-cookies.txt http://127.0.0.1:4000/api/wallet-session > /tmp/mfl-wallet-challenge.json
+          CHALLENGE_TOKEN="$(jq -r '.token' /tmp/mfl-wallet-challenge.json)"
+          EXCHANGE_BODY="$(jq -nc --arg token "$CHALLENGE_TOKEN" '{challengeToken:$token,proof:{}}')"
+          EXCHANGE_STATUS="$(curl --silent --show-error --output /tmp/mfl-wallet-exchange.json --write-out '%{http_code}' --cookie /tmp/mfl-wallet-cookies.txt --header 'Origin: http://127.0.0.1:4000' --header 'Content-Type: application/json' --data "$EXCHANGE_BODY" http://127.0.0.1:4000/api/wallet-session)"
+          test "$EXCHANGE_STATUS" = "401"
+          jq -e '.error == "Invalid wallet proof."' /tmp/mfl-wallet-exchange.json >/dev/null
+
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
         run: npm run build
+
+      - name: Next runtime smoke test
+        if: steps.changes.outputs.site == 'true'
+        shell: bash
+        env:
+          WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4010
+        run: |
+          set -euo pipefail
+          npx next start -p 4010 > /tmp/mfl-next-start.log 2>&1 &
+          NEXT_PID=$!
+          cleanup() {
+            kill "$NEXT_PID" >/dev/null 2>&1 || true
+            wait "$NEXT_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --show-error http://127.0.0.1:4010/ > /tmp/mfl-root.html; then
+              break
+            fi
+            if ! kill -0 "$NEXT_PID" >/dev/null 2>&1; then
+              cat /tmp/mfl-next-start.log >&2
+              exit 1
+            fi
+            sleep 0.5
+          done
+          grep -q "MFL Front Office" /tmp/mfl-root.html
+          curl --fail --silent --show-error http://127.0.0.1:4010/modules/app-entry.js > /tmp/mfl-app-entry.js
+          grep -q "PREBUILT_CORE_PATH" /tmp/mfl-app-entry.js
+          curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
+          grep -q "MFL Front Office" /tmp/mfl-deep-route.html
+          curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
+          jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'
@@ -107,8 +180,6 @@ jobs:
             bootstrap-core.js \
             index.html \
             responsive.css \
-            vercel.json \
-            vercel.production.json \
             styles-runtime.css \
             table-width-runtime.js \
             modules/app-core-runtime.js \
@@ -155,3 +226,81 @@ jobs:
               }
             }' \
             | gh api --method POST "repos/${GITHUB_REPOSITORY}/check-runs" --input -
+
+
+  windows-next-dev-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Smoke-test exact Next dev command with native SQLite
+        shell: powershell
+        env:
+          MFL_DATABASE_PATH: ${{ runner.temp }}\mfl-next-dev-smoke.db
+          WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4000
+        run: |
+          node scripts/ci/create-next-sqlite-smoke-fixture.cjs $env:MFL_DATABASE_PATH
+          $stdout = Join-Path $env:RUNNER_TEMP "mfl-next-dev.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "mfl-next-dev.stderr.log"
+          $process = Start-Process -FilePath "npm.cmd" -ArgumentList "run","dev" -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          try {
+            $ready = $false
+            for ($attempt = 1; $attempt -le 60; $attempt++) {
+              try {
+                $entry = Invoke-WebRequest "http://127.0.0.1:4000/modules/app-entry.js" -UseBasicParsing
+                if ($entry.StatusCode -eq 200 -and $entry.Content -match "PREBUILT_CORE_PATH") {
+                  $ready = $true
+                  break
+                }
+              } catch {}
+              if ($process.HasExited) {
+                Get-Content $stdout -ErrorAction SilentlyContinue
+                Get-Content $stderr -ErrorAction SilentlyContinue
+                throw "Next development server exited before becoming ready."
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $ready) {
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw "Next development server did not become ready."
+            }
+            try {
+              $identity = Invoke-RestMethod "http://127.0.0.1:4000/api/identity"
+            } catch {
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw
+            }
+            if (-not $identity.runtime.version -or -not $identity.database.generatedAt) {
+              throw "Windows Next development identity API did not return the SQLite-backed payload."
+            }
+            $cookieJar = Join-Path $env:RUNNER_TEMP "mfl-wallet-cookies.txt"
+            $exchangePath = Join-Path $env:RUNNER_TEMP "mfl-wallet-exchange.json"
+            $challengeRaw = & curl.exe --fail --silent --show-error --cookie-jar $cookieJar "http://127.0.0.1:4000/api/wallet-session"
+            if ($LASTEXITCODE -ne 0) { throw "Could not issue Windows wallet challenge." }
+            $challenge = $challengeRaw | ConvertFrom-Json
+            $exchangeBody = @{ challengeToken = $challenge.token; proof = @{} } | ConvertTo-Json -Compress
+            $exchangeBodyPath = Join-Path $env:RUNNER_TEMP "mfl-wallet-exchange-body.json"
+            [System.IO.File]::WriteAllText($exchangeBodyPath, $exchangeBody, (New-Object System.Text.UTF8Encoding($false)))
+            $exchangeStatus = & curl.exe --silent --show-error --output $exchangePath --write-out "%{http_code}" --cookie $cookieJar --header "Origin: http://127.0.0.1:4000" --header "Content-Type: application/json" --data-binary "@$exchangeBodyPath" "http://127.0.0.1:4000/api/wallet-session"
+            if ($LASTEXITCODE -ne 0) { throw "Could not exchange Windows wallet challenge." }
+            $exchangeJson = Get-Content $exchangePath -Raw | ConvertFrom-Json
+            if ($exchangeStatus.Trim() -ne "401" -or $exchangeJson.error -ne "Invalid wallet proof.") {
+              throw "Windows Next development challenge exchange returned status $($exchangeStatus.Trim()) and error '$($exchangeJson.error)'."
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              taskkill /PID $process.Id /T /F | Out-Null
+            }
+          }

@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 import { inflateSync } from "node:zlib";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
@@ -96,30 +97,28 @@ const evaluationRuntime = readText("modules/app-core-evaluation-runtime.js");
 const siteStyles = readText("styles-base.css");
 const persistenceDoc = readText("./SUPABASE_PERSISTENCE.md");
 const packageJson = JSON.parse(readText("package.json"));
-const configs = ["vercel.json", "vercel.production.json"].map((path) => [path, JSON.parse(readText(path))]);
-
-for (const [path, config] of configs) {
-  const previewIncludeFiles = String(config.functions?.["api/evaluation-preview.js"]?.includeFiles || "");
-  const imageIncludeFiles = String(config.functions?.["api/evaluation-preview-image.js"]?.includeFiles || "");
-  assert(
-    previewIncludeFiles.includes("index.html") && previewIncludeFiles.includes("api/data-files/mfl_database.db"),
-    `${path} must bundle index.html and the public player database with the Evaluation preview function.`,
-  );
-  assert(
-    imageIncludeFiles.includes("api/data-files/mfl_database.db")
-      && imageIncludeFiles.includes("node_modules/@expo-google-fonts/titillium-web")
-      && imageIncludeFiles.includes(".ttf"),
-    `${path} must bundle the public player database and Titillium Web TTF assets with the Evaluation preview-image function.`,
-  );
-
-  const previewRewriteIndex = config.rewrites?.findIndex((rewrite) => (
-    rewrite.source === "/evaluation"
-    && rewrite.destination === "/api/evaluation-preview"
-  ));
-  const catchAllIndex = config.rewrites?.findIndex((rewrite) => rewrite.source === "/(.*)");
-  assert(previewRewriteIndex >= 0, `${path} must route direct Evaluation URLs through the preview-aware SPA endpoint.`);
-  assert(catchAllIndex < 0 || previewRewriteIndex < catchAllIndex, `${path} must resolve the Evaluation preview route before the SPA catch-all.`);
-}
+const previewIncludeFiles = outputFileTracingIncludes["/api/evaluation-preview"] || [];
+const imageIncludeFiles = outputFileTracingIncludes["/api/evaluation-preview-image"] || [];
+assert(
+  previewIncludeFiles.some((value) => String(value).includes("index.html"))
+    && previewIncludeFiles.some((value) => String(value).includes("api/data-files/mfl_database.db")),
+  "Next tracing must bundle index.html and the public player database with the Evaluation preview route.",
+);
+assert(
+  imageIncludeFiles.some((value) => String(value).includes("api/data-files/mfl_database.db"))
+    && imageIncludeFiles.some((value) => String(value).includes("node_modules/@expo-google-fonts/titillium-web"))
+    && imageIncludeFiles.some((value) => String(value).includes(".ttf")),
+  "Next tracing must bundle the public player database and Titillium Web TTF assets with the Evaluation preview-image route.",
+);
+const nextRewrites = createNextRewrites();
+const previewRewriteIndex = nextRewrites.beforeFiles?.findIndex((rewrite) => (
+  rewrite.source === "/evaluation" && rewrite.destination === "/api/evaluation-preview"
+)) ?? -1;
+assert(previewRewriteIndex >= 0, "Next must route direct Evaluation URLs through the preview-aware SPA endpoint.");
+assert(
+  nextRewrites.fallback?.some((rewrite) => rewrite.source === "/:path*" && rewrite.destination === "/index.html"),
+  "Next must preserve the SPA fallback after the Evaluation-specific rewrite.",
+);
 
 assert(
   previewOwner.includes("select=id,player_id,payload,expires_at"),

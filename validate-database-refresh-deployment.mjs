@@ -67,8 +67,20 @@ includes(
   "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
 );
 includes(
-  "--local-config vercel.production.json",
-  "Database-only refreshes must use the same production Vercel configuration as explicit site releases.",
+  "vercel pull --yes --environment=production",
+  "Database-only refreshes must load the production Vercel project environment before rebuilding.",
+);
+includes(
+  "vercel build --prod",
+  "Database-only refreshes must rebuild the published Next runtime around each checkpoint database.",
+);
+includes(
+  "vercel deploy --prebuilt --prod",
+  "Database-only refreshes must deploy the exact prebuilt Next checkpoint artifact.",
+);
+excludes(
+  "vercel.production.json",
+  "Database-only refreshes must not use the retired static Vercel config projection.",
 );
 includes(
   "full-database-refresh-verify-live-production-database.sh",

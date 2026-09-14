@@ -1,4 +1,5 @@
 const { PassThrough, Readable } = require("node:stream");
+const path = require("node:path");
 const PImage = require("pureimage");
 const { formatEvaluationPreviewCurrency } = require("./_evaluation-preview-value");
 const { loadPlayerPortraitBitmap } = require("./_player-portrait");
@@ -60,10 +61,11 @@ const FLAG_CODE_BY_NATIONALITY = Object.freeze({
   USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e0074-e007f",
 });
 
+const FONT_PACKAGE_ROOT = path.dirname(require.resolve("@expo-google-fonts/titillium-web/package.json"));
 const FONT_PATHS = Object.freeze([
-  [400, require.resolve("@expo-google-fonts/titillium-web/400Regular/TitilliumWeb_400Regular.ttf")],
-  [600, require.resolve("@expo-google-fonts/titillium-web/600SemiBold/TitilliumWeb_600SemiBold.ttf")],
-  [700, require.resolve("@expo-google-fonts/titillium-web/700Bold/TitilliumWeb_700Bold.ttf")],
+  [400, path.join(FONT_PACKAGE_ROOT, "400Regular", "TitilliumWeb_400Regular.ttf")],
+  [600, path.join(FONT_PACKAGE_ROOT, "600SemiBold", "TitilliumWeb_600SemiBold.ttf")],
+  [700, path.join(FONT_PACKAGE_ROOT, "700Bold", "TitilliumWeb_700Bold.ttf")],
 ]);
 
 let fontsRegistered = false;

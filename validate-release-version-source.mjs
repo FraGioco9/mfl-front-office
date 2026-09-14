@@ -50,7 +50,6 @@ invariant(
     && siteQualityWorkflow.includes("bootstrap-core.js")
     && siteQualityWorkflow.includes("index.html")
     && siteQualityWorkflow.includes("responsive.css")
-    && siteQualityWorkflow.includes("vercel.production.json")
     && siteQualityWorkflow.includes("styles-runtime.css")
     && siteQualityWorkflow.includes("modules/app-core-*-runtime.js")
     && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),

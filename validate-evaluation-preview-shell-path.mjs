@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -88,22 +89,20 @@ assert(
   "Direct Evaluation HTML must keep browser-title ownership separate from social preview metadata while accepting earlier public identity.",
 );
 
-for (const configPath of ["vercel.json", "vercel.production.json"]) {
-  const config = JSON.parse(readText(configPath));
-  const previewFunction = config.functions?.["api/evaluation-preview.js"];
-  assert(
-    String(previewFunction?.includeFiles || "").includes("index.html"),
-    `${configPath} must bundle index.html with the Evaluation preview function.`,
-  );
-  assert(
-    String(previewFunction?.includeFiles || "").includes("api/data-files/mfl_database.db"),
-    `${configPath} must keep the packaged public database available for early Evaluation Player titles.`,
-  );
-  assert(
-    config.rewrites?.some((rewrite) => rewrite.source === "/evaluation" && rewrite.destination === "/api/evaluation-preview"),
-    `${configPath} must route every direct /evaluation request through the preview-aware SPA shell handler.`,
-  );
-}
+const previewIncludes = outputFileTracingIncludes["/api/evaluation-preview"] || [];
+assert(
+  previewIncludes.some((value) => String(value).includes("index.html")),
+  "Next tracing must bundle index.html with the Evaluation preview route.",
+);
+assert(
+  previewIncludes.some((value) => String(value).includes("api/data-files/mfl_database.db")),
+  "Next tracing must keep the packaged public database available for early Evaluation Player titles.",
+);
+const nextRewrites = createNextRewrites();
+assert(
+  nextRewrites.beforeFiles?.some((rewrite) => rewrite.source === "/evaluation" && rewrite.destination === "/api/evaluation-preview"),
+  "Next must route every direct /evaluation request through the preview-aware SPA shell handler.",
+);
 
 const envKeys = [
   "SUPABASE_URL",

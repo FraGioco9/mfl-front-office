@@ -24,9 +24,7 @@ recursively flattens that dependency graph into the tracked
 `styles-runtime.css`. Production therefore serves one primary generated
 stylesheet with no nested `@import` requests.
 
-`vercel-config-source.mjs` owns the common Vercel configuration. The build
-projects it into the tracked development and production JSON configs, preserving
-the production-only immutable cache rule for versioned application-core requests.
+Next.js owns local development, production builds, routing, cache headers, and Vercel runtime packaging. During the migration, `prepare-next-runtime.mjs` projects the existing generated browser assets into `public/`, while `pages/api/*` forwards to the canonical handlers under `api/`. This keeps current SPA behavior stable while Next becomes the real runtime owner.
 
 Supabase remains responsible for wallet permissions, preferences, watchlists,
 notes, saved/shared evaluations, and bug reports because those records are not
@@ -47,7 +45,7 @@ python -m scripts.database.prepare_runtime_database api\data-files\mfl_database.
 npm run dev
 ```
 
-`npm run dev` is owned by the root `package.json` and starts `local-dev-server.mjs` directly from the repository root on port **4000**. The local server loads the root `.env.local`, serves the SPA, and executes the existing `api/*.js` handlers with the small Vercel-compatible request/response surface they use. Vercel remains the production/deployment runtime and is not involved in local startup. Local startup intentionally does **not** rebuild the database or regenerate tracked site artifacts.
+`npm run dev` is owned by the root `package.json`, prepares the compatibility `public/` projection, and starts `next dev --webpack -p 4000`. Next.js serves the existing SPA shell and the `pages/api/*` compatibility routes, while the canonical business logic remains under `api/`. Local development uses Next's supported Webpack mode because the Windows Turbopack/CommonJS path does not currently preserve native `node:sqlite` loading correctly. Root `.env.local` is loaded by Next.js in the same way as the other projects. Local startup intentionally does **not** rebuild the SQLite database or regenerate tracked source artifacts.
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
@@ -58,8 +56,7 @@ npm install
 npm run check
 ```
 
-The check path regenerates canonical Vercel configuration, application-core
-artifacts, and the production stylesheet before verifying tracked projections.
+The check path regenerates canonical HTML/application-core/style artifacts, prepares the Next compatibility `public/` projection, runs a production `next build`, and verifies tracked projections.
 
 ## GitHub Actions
 

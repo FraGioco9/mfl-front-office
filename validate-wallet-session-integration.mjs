@@ -21,6 +21,7 @@ const [
   sharedPersonalStateSource,
   bootstrapCoreSource,
   appEntrySource,
+  walletSessionAmbiguityMigration,
 ] = await Promise.all([
   read("./api/_wallet-auth.js"),
   read("./api/wallet-session.js"),
@@ -36,6 +37,7 @@ const [
   read("./modules/core-sources/shared-personal-state.js"),
   read("./bootstrap-core.js"),
   read("./modules/app-entry.js"),
+  read("./supabase/migrations/20260914230251_fix_wallet_auth_session_expiry_ambiguity.sql"),
 ]);
 
 const wallet = "0x1111111111111111";
@@ -309,6 +311,11 @@ assert.ok(endpointSource.includes('consumeChallengeAndCreateSession'));
 assert.ok(endpointSource.includes('response.status(429)'));
 assert.ok(endpointSource.includes('HttpOnly; SameSite=Strict'));
 assert.ok(endpointSource.includes('response.status(204).end();'));
+assert.ok(walletSessionAmbiguityMigration.includes("delete from public.wallet_auth_sessions as sessions"));
+assert.ok(walletSessionAmbiguityMigration.includes("sessions.expires_at <= v_now"));
+assert.ok(walletSessionAmbiguityMigration.includes("sessions.revoked_at is not null"));
+assert.ok(!walletSessionAmbiguityMigration.includes("where expires_at <= v_now"));
+
 
 for (const [label, source] of [
   ["data auth", dataAuthSource],

@@ -3,16 +3,16 @@ import { readValidationText } from "./validation-text.mjs";
 import vm from "node:vm";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
+import { createNextRewrites } from "./next.config.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [entry, routeCoreLoader, releaseSource, vercelConfig, productionVercelConfig] = await Promise.all([
+const [entry, routeCoreLoader, releaseSource] = await Promise.all([
   read("./modules/app-entry.js"),
   read("./route-core-loader-runtime.js"),
   read("./release.json"),
-  read("./vercel.json"),
-  read("./vercel.production.json"),
 ]);
+const nextRewrites = createNextRewrites();
 
 const release = JSON.parse(releaseSource);
 const sandbox = {
@@ -257,14 +257,10 @@ for (const [path, expectedPage, expectedView, expectedCanonicalPath, expectedNot
   }
 }
 
-for (const configSource of [vercelConfig, productionVercelConfig]) {
-  const config = JSON.parse(configSource);
-  invariant(!Array.isArray(config.redirects) || config.redirects.length === 0, "Vercel must not duplicate application route redirects.");
-  invariant(
-    config.rewrites?.some((rule) => rule.source === "/(.*)" && rule.destination === "/"),
-    "Vercel must keep the SPA-shell catch-all rewrite for direct canonical, alias, and not-found URLs.",
-  );
-}
+invariant(
+  nextRewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html"),
+  "Next must keep the SPA-shell fallback rewrite for direct canonical, alias, and not-found URLs.",
+);
 
 includes(
   routeCoreLoader,
