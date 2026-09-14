@@ -3,13 +3,16 @@ from __future__ import annotations
 import json
 import sqlite3
 import tempfile
+import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.database import clubs
 from scripts.database import rebuild_database as rebuild
 from scripts.database import rebuild_database_runner as runner
 from scripts.database import run_flow_rebuild as pipeline
+from scripts.database import staged_rebuild
 from tests.workflow_sources import read_workflow
 
 
@@ -50,6 +53,52 @@ class DatabaseRefreshControlTests(unittest.TestCase):
             runner.FETCH_PLAYER_SEASONS_ENVIRONMENT_VARIABLE,
             "MFL_FETCH_PLAYER_SEASONS",
         )
+
+    def test_core_wallet_and_player_fetches_overlap_with_shared_limiter(self) -> None:
+        player_started = threading.Event()
+        wallet_started = threading.Event()
+        shared_limiter = object()
+        source_results = {
+            "general": [],
+            "retired": [],
+            "mfl": [],
+            "mfl_trade": [],
+        }
+
+        def fetch_players(limiter):
+            self.assertIs(limiter, shared_limiter)
+            player_started.set()
+            self.assertTrue(
+                wallet_started.wait(1),
+                "Player fetching should overlap the independent wallet fetch.",
+            )
+            return source_results
+
+        def refresh_wallets(connection, limiter):
+            del connection
+            self.assertIs(limiter, shared_limiter)
+            wallet_started.set()
+            self.assertTrue(
+                player_started.wait(1),
+                "Wallet fetching should start while player fetching is already in flight.",
+            )
+            return 1
+
+        connection = sqlite3.connect(":memory:")
+        try:
+            with (
+                patch.object(pipeline, "fetch_all_player_sources", fetch_players),
+                patch.object(pipeline, "refresh_wallets", refresh_wallets),
+            ):
+                result = staged_rebuild._load_core_sources(
+                    connection,
+                    shared_limiter,
+                    fetch_wallets=True,
+                    fetch_players=True,
+                )
+            self.assertIs(result, source_results)
+        finally:
+            connection.close()
 
     def test_wallet_reuse_copies_previous_rows_and_canonical_special_wallets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
