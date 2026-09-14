@@ -40,3 +40,50 @@ Manual testing should cover fresh Dapper opt-in, restoring an existing valid
 session, private preferences/watchlists/evaluations, and opting out and back in.
 Persisted sessions whose claimed wallet differs from their proof must be linked
 again with the correct account; they must not receive a compatibility bypass.
+
+## Server challenge foundation
+
+`site/api/_wallet-challenge.js` owns the next login challenge format. It is an
+internal helper, not an API endpoint, and is not yet connected to the browser
+or the current proof verifier. Deploying this foundation alone does not change
+login, require environment setup, or add replay protection.
+
+The service requires an explicit dedicated random 32-byte hexadecimal signing
+secret and a trusted application origin supplied by server configuration.
+Do not reuse the Supabase service-role key or accept a secret/origin from request
+headers. HTTPS is required except for localhost/loopback development origins.
+
+Issuance generates a 32-byte nonce and a separate 32-byte browser-binding secret.
+The challenge has a fixed five-minute lifetime. Its HMAC-authenticated envelope
+contains the application origin, purpose/version, nonce, issue/expiry times,
+and a digest of the browser binding. Only the binding digest is in the token.
+Both Flow account proof metadata and a nonce-specific user-signature message
+are returned, so either supported wallet proof can use the same challenge.
+
+Verification rejects altered tokens, another origin/key/browser binding, invalid
+envelopes, future issuance, and expired challenges. It works across server
+instances and makes no persistence or network calls. Tests exercise actual Node
+cryptography, expiry boundaries, token tampering, and instance separation.
+
+### Required integration before activation
+
+1. Add issuance with no-store responses and a Secure (HTTPS), HttpOnly,
+   SameSite browser-binding cookie. Return only the public token/proof metadata
+   in JSON; never serialize the helper's raw `browserBinding` field there.
+   Include request-origin checks and bounded issuance/verification abuse controls.
+2. Verify both the envelope/browser binding and the actual Flow wallet proof,
+   using the nonce and application identifier or message from the verified
+   challenge. The current static signed-message path must not remain an
+   alternative session-creation path.
+3. Atomically consume the nonce and establish the session in shared durable
+   storage. Check expiry again at that transaction, including after slow proof
+   verification. Concurrent exchanges on different instances must produce at
+   most one successful session. An in-memory Map is not sufficient.
+4. Add expiring/revocable sessions, authenticated request transport, logout,
+   and existing-session migration/relink behavior; then switch all consumers.
+5. Test the complete Dapper exchange, concurrent reuse, expiry during verification,
+   wrong browser/origin, restoration, and logout before removing legacy proofs.
+
+Validating the same envelope twice succeeds until expiry by design at this
+layer. The helper cannot establish single use; only the durable atomic exchange
+can do so. Do not mark the #969 replay-protection acceptance item complete yet.
