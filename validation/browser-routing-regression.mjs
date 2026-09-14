@@ -260,6 +260,33 @@ const browserTestSource = String.raw`(() => {
     );
   }
 
+  function assertVisibleElementInside(selector, ancestorSelector) {
+    const element = document.querySelector(selector);
+    const ancestor = document.querySelector(ancestorSelector);
+    assert(element instanceof Element, selector + " is missing.");
+    assert(ancestor instanceof HTMLElement, ancestorSelector + " is missing.");
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    if (
+      style.display === "none"
+      || style.visibility === "hidden"
+      || Number(style.opacity || "1") === 0
+      || (rect.width <= 1.5 && rect.height <= 1.5)
+    ) return;
+
+    const ancestorRect = ancestor.getBoundingClientRect();
+    assert(
+      rect.left >= ancestorRect.left - 0.5
+        && rect.right <= ancestorRect.right + 0.5
+        && rect.top >= ancestorRect.top - 0.5
+        && rect.bottom <= ancestorRect.bottom + 0.5,
+      selector + " is clipped by " + ancestorSelector + ": " + JSON.stringify({
+        element: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
+        ancestor: { left: ancestorRect.left, right: ancestorRect.right, top: ancestorRect.top, bottom: ancestorRect.bottom },
+      }),
+    );
+  }
+
   function assertSharedChromeGeometry() {
     const viewportWidth = document.documentElement.clientWidth;
     assert(
@@ -285,6 +312,22 @@ const browserTestSource = String.raw`(() => {
       ".siteFooterDetailsInner",
     ]) {
       assertElementWithinViewport(selector, viewportWidth);
+    }
+
+    for (const [selector, ancestorSelector] of [
+      [".brandLink", ".topbar > :first-child"],
+      [".searchLabel", "#openSearchButton"],
+      [".searchLabelText", "#openSearchButton"],
+      [".searchShortcut", "#openSearchButton"],
+      [".stats > div:first-child > span", ".stats > div:first-child"],
+      [".stats > div:first-child > label", ".stats > div:first-child"],
+      [".stats > div:last-child > span", ".stats > div:last-child"],
+      [".stats > div:last-child > label", ".stats > div:last-child"],
+      ["#themeButton .themeModeIcon:not([hidden])", "#themeButton"],
+      ["#accountButton .accountButtonIcon", "#accountButton"],
+      ["#accountButton > span", "#accountButton"],
+    ]) {
+      assertVisibleElementInside(selector, ancestorSelector);
     }
 
     if (scenario === "player") {
@@ -1292,7 +1335,13 @@ const regressionScenarios = Object.freeze([
   ["player-1444", "/players/1", 1444, 900],
   ["player-1363", "/players/1", 1363, 900],
   ["player-1200", "/players/1", 1200, 900],
+  ["player-1181", "/players/1", 1181, 900],
+  ["player-1180", "/players/1", 1180, 900],
   ["player-1101", "/players/1", 1101, 900],
+  ["player-1090", "/players/1", 1090, 900],
+  ["player-1041", "/players/1", 1041, 900],
+  ["player-1040", "/players/1", 1040, 900],
+  ["player-980", "/players/1", 980, 900],
   ["player-901", "/players/1", 901, 900],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
   ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
