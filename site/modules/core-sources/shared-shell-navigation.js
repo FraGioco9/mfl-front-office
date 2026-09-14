@@ -3,13 +3,18 @@
   window.__mflFooterSpaNavigationBound = true;
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
-    const footer = event.target.closest('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]');
-    if (!footer || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const footer = event.target.closest(
+      '.siteFooterDetails a[data-page="changelog"], .siteFooterDetails a[data-page="privacy"]',
+    );
+    if (!(footer instanceof HTMLAnchorElement)
+      || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const pageName = String(footer.dataset.page || "");
+    if (!["changelog", "privacy"].includes(pageName)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (window.location.pathname === "/changelog") return;
+    if (window.location.pathname === `/${pageName}`) return;
     if (typeof setPage === "function") {
-      void Promise.resolve(setPage("changelog", true));
+      void Promise.resolve(setPage(pageName, true));
     }
   }, true);
 
