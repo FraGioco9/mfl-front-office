@@ -8800,13 +8800,17 @@ html:not(.mflInitialRouteResolved):is(
   display: none;
 }
 
-@media (min-width: 1101px) and (max-width: 1444px) {
+@media (min-width: 901px) and (max-width: 1444px) {
   .topbar {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px) auto;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 360px) auto;
+    gap: 12px;
+    padding-inline: clamp(16px, 2vw, 24px);
   }
 
-  .topbar > :first-child {
+  .topbar > :first-child,
+  .headerControls,
+  .stats,
+  .searchButton {
     min-width: 0;
   }
 
@@ -8816,32 +8820,87 @@ html:not(.mflInitialRouteResolved):is(
     white-space: nowrap;
   }
 
+  .headerControls {
+    gap: 10px;
+  }
+
   .searchButton {
-    min-width: 0;
+    width: 100%;
+  }
+
+  .stats {
+    gap: 8px;
   }
 
   .stats div {
-    min-width: 96px;
-    padding-inline: 12px;
+    width: 82px;
+    min-width: 82px;
+    padding-inline: 8px;
+  }
+
+  .themeButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .accountMenu {
+    flex: 0 0 112px;
+    width: 112px;
+  }
+
+  .accountMenu .compactButton {
+    height: 44px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) auto;
+    padding-inline: 14px;
+  }
+
+  .headerControls {
+    gap: 8px;
+  }
+
+  .stats div {
+    width: 76px;
+    min-width: 76px;
+    padding-inline: 6px;
+  }
+
+  .accountMenu {
+    flex-basis: 106px;
+    width: 106px;
+  }
+
+  .playerPage {
+    --mfl-player-hero-overall-size: 84px;
+    --mfl-player-portrait-height: 96px;
+    --mfl-player-portrait-width: calc(var(--mfl-player-portrait-height) * 1.824);
+    --mfl-player-hero-brand-size: 79px;
+    --mfl-player-hero-media-gap: 6px;
+    --mfl-player-hero-media-width: calc(var(--mfl-player-hero-overall-size) + var(--mfl-player-hero-media-gap) + var(--mfl-player-portrait-width));
+    --mfl-player-hero-identity-width: 270px;
+    --mfl-player-hero-identity-action-gap: 10px;
+    --mfl-player-hero-action-menu-width: 160px;
+    --mfl-player-hero-primary-action-width: 126px;
+    --mfl-player-hero-action-chevron-width: 30px;
+    --mfl-player-hero-action-font-size: 14px;
+  }
+
+  .playerGrid {
+    grid-template-columns: minmax(0, 1fr) 350px;
+  }
+
+  .pitch {
+    width: 330px;
+    height: auto;
+    aspect-ratio: 360 / 498;
   }
 }
 
 @media (max-width: 1100px) {
-  .topbar {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.35fr) auto;
-    gap: 12px;
-    padding-inline: 18px;
-  }
-
-  .searchButton {
-    min-width: 0;
-  }
-
-  .stats div {
-    min-width: 96px;
-    padding-inline: 12px;
-  }
-
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
