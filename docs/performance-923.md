@@ -385,8 +385,8 @@ Those Player-only responsibilities now load with the Player route:
 
 Deterministic raw-source effect:
 
-- universal `control-interactions-runtime.js`: **24,857 → 15,099 raw chars**;
-- non-Player startup therefore avoids **9,758 raw source chars (~39%)** from that universal runtime;
+- universal `control-interactions-runtime.js`: **24,857 → 15,047 raw chars**;
+- non-Player startup therefore avoids **9,810 raw source chars (~39%)** from that universal runtime;
 - Player loads the extracted ~10.1k route-scoped runtime, intentionally trading one Player-only request
   for removing that code from every other route.
 
