@@ -396,6 +396,33 @@ const browserTestSource = String.raw`(() => {
             gridTemplateColumns: gridStyle.gridTemplateColumns,
           }),
         );
+
+        const media = document.querySelector(".playerHeroMedia");
+        const identity = document.querySelector(".playerHeroIdentity");
+        const titleName = document.querySelector(".playerHeroIdentity .playerTitleName");
+        assert(media instanceof HTMLElement, "Intermediate Player media is missing.");
+        assert(identity instanceof HTMLElement, "Intermediate Player identity is missing.");
+        assert(titleName instanceof HTMLElement, "Intermediate Player title is missing.");
+        const mediaRect = media.getBoundingClientRect();
+        const identityRect = identity.getBoundingClientRect();
+        const titleRect = titleName.getBoundingClientRect();
+        assert(
+          identityRect.left - mediaRect.right <= 16,
+          "Intermediate Player identity is pushed too far right of the media: " + JSON.stringify({
+            viewportWidth,
+            mediaRight: mediaRect.right,
+            identityLeft: identityRect.left,
+            gap: identityRect.left - mediaRect.right,
+          }),
+        );
+        assert(
+          Math.abs(titleRect.left - identityRect.left) <= 2,
+          "Intermediate Player name must align to the identity left edge: " + JSON.stringify({
+            viewportWidth,
+            titleLeft: titleRect.left,
+            identityLeft: identityRect.left,
+          }),
+        );
       }
     }
   }
