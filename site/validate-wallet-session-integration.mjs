@@ -17,6 +17,10 @@ const [
   saveSource,
   shareSource,
   bugReportSource,
+  sharedSessionSource,
+  sharedPersonalStateSource,
+  bootstrapCoreSource,
+  appEntrySource,
 ] = await Promise.all([
   read("./api/_wallet-auth.js"),
   read("./api/wallet-session.js"),
@@ -28,6 +32,10 @@ const [
   read("./api/evaluation-save.js"),
   read("./api/evaluation-share.js"),
   read("./api/bug-reports.js"),
+  read("./modules/core-sources/shared-session.js"),
+  read("./modules/core-sources/shared-personal-state.js"),
+  read("./bootstrap-core.js"),
+  read("./modules/app-entry.js"),
 ]);
 
 const wallet = "0x1111111111111111";
@@ -45,7 +53,6 @@ function load(source, dependencies) {
   return module.exports;
 }
 
-let legacyCalls = 0;
 let resolveCalls = 0;
 let resolvedSession = { walletAddress: wallet };
 const auth = load(authSource, {
@@ -53,10 +60,6 @@ const auth = load(authSource, {
     normalizeWalletAddress(value) {
       const normalized = String(value || "").trim().toLowerCase();
       return normalized ? (normalized.startsWith("0x") ? normalized : `0x${normalized}`) : "";
-    },
-    async signedWalletFromRequest() {
-      legacyCalls += 1;
-      return wallet;
     },
   },
   "./_wallet-session": {
@@ -77,7 +80,6 @@ assert.equal(
   wallet,
 );
 assert.equal(resolveCalls, 1);
-assert.equal(legacyCalls, 0, "A valid server session must not re-run legacy proof verification.");
 
 resolvedSession = null;
 assert.equal(
@@ -85,20 +87,27 @@ assert.equal(
     headers: {
       cookie: "mfl_wallet_session=session-token",
       "x-dapper-wallet-address": wallet,
+      "x-wallet-message": "legacy replay attempt",
     },
   }),
   "",
-  "A present but invalid/revoked session must fail closed instead of falling back to legacy proof headers.",
+  "A present but invalid/revoked session must fail closed.",
 );
-assert.equal(legacyCalls, 0);
+assert.equal(resolveCalls, 2);
 
-assert.equal(await auth.signedWalletFromRequest({ headers: {} }), wallet);
-assert.equal(legacyCalls, 1, "Legacy proof transport remains a temporary migration fallback only when no session cookie exists.");
 assert.equal(
-  await auth.signedWalletFromRequest({ headers: {} }, { allowLegacyProof: false }),
+  await auth.signedWalletFromRequest({
+    headers: {
+      "x-dapper-wallet-address": wallet,
+      "x-wallet-message": "legacy replay attempt",
+      "x-wallet-signatures": "[]",
+    },
+  }),
   "",
+  "Authenticated APIs must reject legacy proof headers when no durable session cookie exists.",
 );
-assert.equal(legacyCalls, 1);
+assert.equal(resolveCalls, 2, "Missing session cookies must be rejected before storage work.");
+assert.ok(!authSource.includes("signedWalletFromLegacyProof"), "Legacy proof headers must not remain an authorization fallback.");
 
 const { createWalletSessionHandler } = require("./api/wallet-session.js");
 const now = Date.UTC(2026, 8, 14, 15, 0, 0);
@@ -125,8 +134,12 @@ function challengeFactory({ secret, origin }) {
     },
     verify(token, suppliedBinding) {
       if (token !== challenge.token || suppliedBinding !== binding) return null;
-      const { browserBinding: _private, token: _token, ...verified } = challenge;
-      return verified;
+      return {
+        nonce: challenge.nonce,
+        appIdentifier: challenge.appIdentifier,
+        message: challenge.message,
+        expiresAt: challenge.expiresAt,
+      };
     },
   };
 }
@@ -295,6 +308,31 @@ assert.ok(walletSource.includes('type: "session",'));
 assert.ok(!walletSource.includes("function walletAccessNonce() {"), "Browser-generated login nonces must be retired.");
 assert.ok(walletSource.includes("await logoutWalletSession();\n    optOutWallet();"), "Explicit opt-out must revoke the server session before clearing local state.");
 
+assert.ok(
+  sharedSessionSource.includes('proof?.type === "session"')
+    && sharedSessionSource.includes("function walletProofHeaders() {\n  return {};\n}"),
+  "Shared client state must recognize only session markers and must not emit legacy proof headers.",
+);
+assert.ok(
+  sharedSessionSource.includes("Legacy or malformed wallet state is cleared below.")
+    && sharedSessionSource.includes("localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);"),
+  "Legacy saved proofs must be cleared instead of restored as authenticated state.",
+);
+assert.ok(
+  sharedPersonalStateSource.includes('if (response.status === 401) {\n      optOutWallet({ toastMessage: "Dapper opt-in expired. Opt in again." });'),
+  "Startup preference hydration must invalidate a stale or revoked server session.",
+);
+assert.ok(
+  bootstrapCoreSource.includes('proof?.type === "session"')
+    && !bootstrapCoreSource.includes("proof.signatures.length"),
+  "Parser-time access flags must accept only the non-authorizing session marker.",
+);
+assert.ok(
+  appEntrySource.includes('proof?.type !== "session"')
+    && !appEntrySource.includes('"x-wallet-signatures": JSON.stringify(proof.signatures)'),
+  "Initial My Clubs ownership prefetch must use the session cookie without replayable proof headers.",
+);
+
 const walletBanner = "// Generated Wallet core from modules/core-sources/wallet.js. Do not edit directly.\n";
 assert.equal(
   generatedWallet.slice(walletBanner.length).replace(/\s*$/, ""),
@@ -302,4 +340,4 @@ assert.equal(
   "Generated Wallet runtime must match the secure-session source.",
 );
 
-console.log("Wallet session integration validation passed: challenge exchange, cookie authority, replay rejection, consumer migration, and logout are covered.");
+console.log("Wallet session integration validation passed: challenge exchange, cookie authority, legacy-proof retirement, replay rejection, restoration invalidation, consumer migration, and logout are covered.");
