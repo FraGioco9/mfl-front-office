@@ -40,12 +40,14 @@ Place the database at:
 site/api/data-files/mfl_database.db
 ```
 
-Prepare it and start Vercel development mode:
+Prepare the existing database explicitly, then start the canonical root development command:
 
 ```powershell
 python -m scripts.database.prepare_runtime_database site\api\data-files\mfl_database.db
-vercel.cmd dev --listen 4000
+npm run dev
 ```
+
+`npm run dev` is owned by the root `package.json` and wraps Vercel development mode on port **4000**. It intentionally does **not** rebuild the database or regenerate tracked site artifacts. Keep the Vercel CLI available in your PATH.
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
@@ -53,7 +55,7 @@ For repository checks:
 
 ```powershell
 npm --prefix site install
-npm --prefix site run check
+npm run check
 ```
 
 The check path regenerates canonical Vercel configuration, application-core
