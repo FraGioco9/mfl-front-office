@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "vercel dev --listen 4000",
+    "check": "npm --prefix site run check"
+  }
+}
