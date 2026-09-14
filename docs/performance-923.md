@@ -213,6 +213,31 @@ VM work of the equivalent deep OFFSET query on the deterministic fixture. Produc
 supports arbitrary page jumps and arbitrary sorts/filters, so cursor pagination requires a
 separate contract rather than replacing OFFSET opportunistically.
 
+## Nonblocking Evaluation marketplace dependency
+
+Owner: `marketplaceRequiredForPage()` in `site/api/_data-page.js`.
+
+Evaluation calculations and rendering consume SQLite player attributes/progression but do not consume
+`listing_price`. The Evaluation page request nevertheless previously shared Player's marketplace
+classification, so every uncached Evaluation `mode=page` response awaited the canonical marketplace
+snapshot before it could return core player data.
+
+Evaluation now remains SQLite-only unless a request explicitly sorts or filters by Listing. Player
+pages keep marketplace embedding because the Player hero visibly renders the live listing badge, and
+Listing sort/filter requests remain marketplace-authoritative.
+
+Deterministic dependency effect for a normal Evaluation player request:
+
+- before: SQLite page work + awaited marketplace snapshot dependency;
+- after: SQLite page work only, with no awaited marketplace dependency;
+- the response is now eligible for database-generation ETag/revalidation through the existing public
+  page cache policy;
+- the marketplace endpoint, Player listing badge, and Listing sort/filter semantics are unchanged.
+
+This removes blocking work by ownership rather than hiding marketplace failures or changing Evaluation
+results. Wall-clock improvement remains environment-dependent and must not be presented as production
+latency without runtime evidence.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.
