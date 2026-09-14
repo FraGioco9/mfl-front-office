@@ -49,10 +49,13 @@ invariant(
 );
 
 const routeReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready"');
-const searchWarmupIndex = appEntry.indexOf("const globalSearchPreloadPromise", routeReadyIndex);
+const appReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:ready"');
 invariant(
-  routeReadyIndex >= 0 && searchWarmupIndex > routeReadyIndex,
-  "Route readiness must remain published before Global Search/recent-search warm-up begins.",
+  routeReadyIndex >= 0
+    && appReadyIndex > routeReadyIndex
+    && !appEntry.includes("globalSearchPreloadPromise")
+    && !appEntry.includes("initialGlobalSearchWarmupPromise"),
+  "Route and app readiness must remain independent of unused Global Search/recent-search warm-up.",
 );
 
 invariant(
