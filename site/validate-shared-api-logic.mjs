@@ -7,6 +7,9 @@ const occurrences = (source, value) => source.split(value).length - 1;
 
 const paths = [
   "./api/_wallet-proof.js",
+  "./api/_wallet-auth.js",
+  "./api/_wallet-session.js",
+  "./api/wallet-session.js",
   "./api/_supabase.js",
   "./api/_request-body.js",
   "./api/_evaluation-payload.js",
@@ -24,6 +27,9 @@ const source = (path) => sources[path];
 const combined = Object.values(sources).join("\n");
 
 const walletProof = source("./api/_wallet-proof.js");
+const walletAuth = source("./api/_wallet-auth.js");
+const walletSessionStore = source("./api/_wallet-session.js");
+const walletSessionEndpoint = source("./api/wallet-session.js");
 const supabase = source("./api/_supabase.js");
 const requestBody = source("./api/_request-body.js");
 const evaluationPayload = source("./api/_evaluation-payload.js");
@@ -36,7 +42,12 @@ const evaluationShare = source("./api/evaluation-share.js");
 const permissionsVersion = source("./api/wallet-permissions-version.js");
 const seasonRatios = source("./api/mfl-season-ratios-v2.js");
 
-includes(walletProof, "async function signedWalletFromRequest(request, options = {})", "Wallet proof verification must have one configurable canonical owner.");
+includes(walletProof, "async function verifyWalletProof(proof = {}, options = {})", "Wallet proof verification must expose one canonical challenge-aware owner.");
+includes(walletProof, "async function signedWalletFromRequest(request, options = {})", "Legacy wallet-proof header parsing must remain centralized.");
+includes(walletAuth, "async function signedWalletFromRequest(request, options = {})", "Wallet session/proof request authentication must have one canonical owner.");
+includes(walletAuth, 'require("./_wallet-session")', "Wallet auth must resolve durable server sessions through the canonical session store.");
+includes(walletSessionEndpoint, 'require("./_wallet-challenge")', "Wallet session exchange must use the canonical signed challenge owner.");
+includes(walletSessionEndpoint, 'require("./_wallet-session")', "Wallet session exchange must use the canonical durable session owner.");
 excludes(combined, "allowAccountProofFallback", "No API caller may enable acceptance after wallet verification fails.");
 invariant(occurrences(combined, "function normalizeWalletAddress(") === 1, "API wallet-address normalization must have exactly one owner.");
 invariant(occurrences(combined, "function signatureWalletAddresses(") === 1, "API signature-wallet extraction must have exactly one owner.");
@@ -62,10 +73,13 @@ invariant(occurrences(combined, "function generateEvaluationId(") === 1, "Evalua
 invariant(occurrences(combined, "function normalizeLateSeasonRewardRates(") === 1, "Evaluation reward-rate normalization must not be duplicated.");
 invariant(occurrences(combined, "function normalizeEvaluationPayload(") === 1, "Evaluation payload normalization must not be duplicated.");
 
-includes(dataAuth, 'require("./_wallet-proof")', "Data auth must reuse the canonical wallet-proof owner.");
+includes(dataAuth, 'require("./_wallet-auth")', "Data auth must reuse canonical wallet session authentication.");
 includes(dataAuth, 'require("./_supabase")', "Data auth must reuse the canonical Supabase owner.");
 includes(walletAccess, 'require("./_data-auth")', "Wallet access must reuse shared signed-wallet and permission ownership.");
-includes(walletOptIns, 'require("./_wallet-proof")', "Wallet opt-ins must reuse canonical wallet proof verification.");
+includes(walletOptIns, 'require("./_wallet-auth")', "Wallet opt-ins must reuse canonical wallet session authentication.");
+includes(walletPreferences, 'require("./_wallet-auth")', "Wallet preferences must reuse canonical wallet session authentication.");
+includes(evaluationSave, 'require("./_wallet-auth")', "Saved Evaluations must reuse canonical wallet session authentication.");
+includes(evaluationShare, 'require("./_wallet-auth")', "Shared Evaluations must reuse canonical wallet session authentication.");
 includes(walletPreferences, 'require("./_request-body")', "Wallet preferences must reuse canonical request-body parsing.");
 includes(walletPreferences, 'require("./_evaluation-payload")', "Wallet preferences must reuse canonical Evaluation reward-rate normalization.");
 includes(evaluationSave, 'require("./_evaluation-payload")', "Saved Evaluations must reuse canonical Evaluation payload normalization.");
