@@ -14,7 +14,7 @@ const [foundations, stylesBase, styles, dropdowns, mobileChrome, docs] = await P
   read("./styles.css"),
   read("./dropdowns.css"),
   read("./responsive-sources/chrome-tablet.css.inc"),
-  read("../docs/ui-foundations.md"),
+  read("./docs/ui-foundations.md"),
 ]);
 
 const shadowFoundations = [

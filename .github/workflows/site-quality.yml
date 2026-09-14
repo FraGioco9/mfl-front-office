@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: site
+        working-directory: .
     steps:
       - uses: actions/checkout@v7
         with:
@@ -39,7 +39,7 @@ jobs:
           CURRENT_SHA: ${{ github.sha }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node site/ci-quality-scope.mjs
+        run: node ci-quality-scope.mjs
 
       - uses: actions/setup-python@v7
         if: steps.changes.outputs.builder == 'true' || steps.changes.outputs.workflow == 'true'
@@ -103,16 +103,16 @@ jobs:
         run: |
           set -euo pipefail
           git add -- \
-            site/bootstrap.js \
-            site/bootstrap-core.js \
-            site/index.html \
-            site/responsive.css \
-            site/vercel.json \
-            site/vercel.production.json \
-            site/styles-runtime.css \
-            site/table-width-runtime.js \
-            site/modules/app-core-runtime.js \
-            site/modules/app-core-*-runtime.js
+            bootstrap.js \
+            bootstrap-core.js \
+            index.html \
+            responsive.css \
+            vercel.json \
+            vercel.production.json \
+            styles-runtime.css \
+            table-width-runtime.js \
+            modules/app-core-runtime.js \
+            modules/app-core-*-runtime.js
           if git diff --cached --quiet; then
             echo "Generated site artifacts are current."
             echo "committed=false" >> "$GITHUB_OUTPUT"

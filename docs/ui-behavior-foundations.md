@@ -1,8 +1,8 @@
 # MFL Front Office UI behavior foundations
 
-This document supplements `docs/ui-foundations.md`. The visual token layer stays in `site/ui-foundations.css`; this document defines cross-site behavioral contracts that must be shared without flattening intentional domain-specific geometry.
+This document supplements `docs/ui-foundations.md`. The visual token layer stays in `ui-foundations.css`; this document defines cross-site behavioral contracts that must be shared without flattening intentional domain-specific geometry.
 
-The machine-readable contract is `site/ui-behavior-foundations.json`, and `site/validate-behavior-foundations.mjs` prevents the implementations below from drifting away from it.
+The machine-readable contract is `ui-behavior-foundations.json`, and `validate-behavior-foundations.mjs` prevents the implementations below from drifting away from it.
 
 ## Responsive breakpoint foundation
 
@@ -64,13 +64,13 @@ First paint and hydrated runtime must converge on the same overflow meaning. Ind
 
 ## Reduced-motion and accessibility foundation
 
-`site/motion.css` is the semantic motion owner. Under `prefers-reduced-motion: reduce`, all shared motion-duration tokens resolve to `0ms`, so controls and runtime timers consuming them become immediate. Specialist animations using direct/local timings remain responsible for an explicit reduced-motion branch.
+`motion.css` is the semantic motion owner. Under `prefers-reduced-motion: reduce`, all shared motion-duration tokens resolve to `0ms`, so controls and runtime timers consuming them become immediate. Specialist animations using direct/local timings remain responsible for an explicit reduced-motion branch.
 
 Keyboard focus continues to use the global focus-ring tokens. Touch behavior must not remove keyboard semantics, accessible names, or focus visibility. Escape behavior, focus ownership, touch press feedback, and pointer behavior are complementary interaction modes rather than replacements for one another.
 
 ## Responsive validation matrix
 
-`site/ui-behavior-foundations.json` defines the canonical viewport matrix. It covers desktop, the 901/900 boundary, 520px phone, 380px compact phone, and a smaller compact-phone viewport.
+`ui-behavior-foundations.json` defines the canonical viewport matrix. It covers desktop, the 901/900 boundary, 520px phone, 380px compact phone, and a smaller compact-phone viewport.
 
 The matrix intentionally includes the **same 1280×900 desktop viewport with and without a vertical scrollbar**. This protects the page-padding foundation: left/right page content alignment must not change because scrollbar chrome is present or absent.
 

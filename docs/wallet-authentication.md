@@ -3,11 +3,11 @@
 Part of #969.
 
 The active authentication boundary is split across:
-- `site/api/_wallet-challenge.js` — signed five-minute server challenges;
-- `site/api/_wallet-proof.js` — Flow account-proof/user-signature verification;
-- `site/api/_wallet-session.js` — durable one-time nonce consumption and seven-day sessions;
-- `site/api/_wallet-auth.js` — session-cookie authentication for protected API consumers;
-- `site/api/wallet-session.js` — browser challenge issuance, proof exchange, and logout.
+- `api/_wallet-challenge.js` — signed five-minute server challenges;
+- `api/_wallet-proof.js` — Flow account-proof/user-signature verification;
+- `api/_wallet-session.js` — durable one-time nonce consumption and seven-day sessions;
+- `api/_wallet-auth.js` — session-cookie authentication for protected API consumers;
+- `api/wallet-session.js` — browser challenge issuance, proof exchange, and logout.
 
 ## Deployment configuration
 
@@ -70,7 +70,7 @@ timestamps, and revocation state.
 
 ## Protected API authentication
 
-Protected wallet consumers authenticate only through `site/api/_wallet-auth.js`, which resolves the
+Protected wallet consumers authenticate only through `api/_wallet-auth.js`, which resolves the
 session cookie server-side. Legacy `x-wallet-*` / `x-dapper-wallet-address` proof headers are no
 longer an authorization fallback.
 

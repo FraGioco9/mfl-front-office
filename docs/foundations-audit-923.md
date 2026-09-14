@@ -14,15 +14,15 @@ stack. Current implementation details remain documented in `ui-foundations.md`,
 
 | Concern | Canonical owner |
 | --- | --- |
-| Shared visual tokens | `site/ui-foundations.css` |
-| Responsive behavior/breakpoints | `site/ui-behavior-foundations.json` and responsive source manifest |
+| Shared visual tokens | `ui-foundations.css` |
+| Responsive behavior/breakpoints | `ui-behavior-foundations.json` and responsive source manifest |
 | Page shell/start spacing | shared shell/base CSS; route-specific margins must not create a second page-start owner |
 | Tables and table loading | shared table UI/runtime + table loading owner |
 | Skeleton geometry | real component geometry remains authoritative; loading styles mask rather than invent layout |
 | Route parsing/navigation | canonical app config + Shared routing/navigation owners |
 | Completed route data cache | `shared-incremental-routing.js` |
-| SQLite connection/query metadata | `site/api/_database.js` |
-| Page projection/filter/sort SQL | `site/api/_data-page.js` |
+| SQLite connection/query metadata | `api/_database.js` |
+| Page projection/filter/sort SQL | `api/_data-page.js` |
 | Optional marketplace enrichment | canonical marketplace overlay; core Player/Evaluation data remains nonblocking |
 | Global Search | first-use runtime, with Evaluation-specific preloading |
 | Player-only responsive/view interactions | Player route runtime |

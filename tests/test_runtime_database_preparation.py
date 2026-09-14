@@ -279,11 +279,11 @@ class RuntimeDatabasePreparationTests(unittest.TestCase):
             full_refresh,
         )
         self.assertIn(
-            "python -m scripts.database.prepare_runtime_database site/api/data-files/mfl_database.db --validate-only",
+            "python -m scripts.database.prepare_runtime_database api/data-files/mfl_database.db --validate-only",
             site_update,
         )
         self.assertNotIn(
-            "python -m scripts.database.prepare_runtime_database site/api/data-files/mfl_database.db\n",
+            "python -m scripts.database.prepare_runtime_database api/data-files/mfl_database.db\n",
             site_update,
         )
 

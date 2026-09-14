@@ -8,7 +8,7 @@ const [runtimeStyles, index, packageJson, vercelIgnore] = await Promise.all([
   read("./styles-runtime.css"),
   read("./index.html"),
   read("./package.json"),
-  read("../.vercelignore"),
+  read("./.vercelignore"),
 ]);
 const expected = await createStyleBundle((name) => read(`./${name}`));
 
@@ -26,7 +26,7 @@ invariant(
   "The normal build and generated verification paths must own styles-runtime.css.",
 );
 invariant(
-  vercelIgnore.includes("site/build-styles.mjs") && vercelIgnore.includes("site/style-bundle.mjs"),
+  vercelIgnore.includes("build-styles.mjs") && vercelIgnore.includes("style-bundle.mjs"),
   "The stylesheet compiler and recursive bundling helper must remain build-only in the Vercel artifact.",
 );
 

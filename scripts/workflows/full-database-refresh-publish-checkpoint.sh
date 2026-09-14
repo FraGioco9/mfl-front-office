@@ -16,8 +16,8 @@ fi
 export DATABASE_SOURCE_PATH
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"
 
-node production-site/site/build-app-core.mjs
-test -s production-site/site/modules/app-core-runtime.js
+node production-site/build-app-core.mjs
+test -s production-site/modules/app-core-runtime.js
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-validate-database-with-published-site-adapter.sh"
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-expected-database-summary.sh"
 
@@ -25,15 +25,15 @@ ACTUAL_SHA="$(git -C production-site rev-parse HEAD)"
 EXPECTED_SHA="${PUBLISHED_SITE_SHA:?published site SHA is required}"
 test "$ACTUAL_SHA" = "$EXPECTED_SHA"
 
-PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
-CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"
+PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:api/_database.js)"
+CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object api/_database.js)"
 test "$CURRENT_ADAPTER_BLOB" = "$PUBLISHED_ADAPTER_BLOB"
 
 UNEXPECTED_TRACKED_CHANGES="$(
   git -C production-site diff --name-only -- . \
-    ':(exclude)site/api/data-files/**' \
-    ':(exclude)site/modules/app-core-runtime.js' \
-    ':(exclude)site/modules/app-core-*-runtime.js'
+    ':(exclude)api/data-files/**' \
+    ':(exclude)modules/app-core-runtime.js' \
+    ':(exclude)modules/app-core-*-runtime.js'
 )"
 if [ -n "$UNEXPECTED_TRACKED_CHANGES" ]; then
   echo "Database checkpoint changed published site source files:" >&2
@@ -50,7 +50,7 @@ printf '{"orgId":"%s","projectId":"%s"}' \
 (
   cd production-site
   vercel deploy --prod --yes --force \
-    --local-config site/vercel.production.json \
+    --local-config vercel.production.json \
     --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
 )

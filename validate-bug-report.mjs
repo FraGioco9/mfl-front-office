@@ -17,8 +17,8 @@ const [indexHtml, footer, controls, bootstrapCore, runtime, controlInteractions,
   read("./control-interactions-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/bug-reports.js"),
-  read("../supabase-schema.sql"),
-  read("../supabase/migrations/20260904231420_create_bug_reports.sql"),
+  read("./supabase-schema.sql"),
+  read("./supabase/migrations/20260904231420_create_bug_reports.sql"),
 ]);
 
 includes(

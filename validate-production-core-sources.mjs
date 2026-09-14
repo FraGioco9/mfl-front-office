@@ -1,7 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 
 const [ignoreSource, canonicalConfigSource, productionConfigSource] = await Promise.all([
-  readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
+  readFile(new URL("./.vercelignore", import.meta.url), "utf8"),
   readFile(new URL("./vercel.json", import.meta.url), "utf8"),
   readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
 ]);
@@ -16,17 +16,17 @@ const productionConfig = JSON.parse(productionConfigSource);
 
 const requiredProductionIgnoredPaths = [
   ".gitignore",
-  "site/validate*.mjs",
-  "site/eslint.config.mjs",
-  "site/jsconfig.json",
-  "site/types",
-  "site/vercel.production.json",
-  "site/build-app-core.mjs",
-  "site/sync-release-projections.mjs",
-  "site/modules/app-config.js",
-  "site/modules/pre-bootstrap-route-state.js",
-  "site/modules/package.json",
-  "site/modules/core-sources",
+  "validate*.mjs",
+  "eslint.config.mjs",
+  "jsconfig.json",
+  "types",
+  "vercel.production.json",
+  "build-app-core.mjs",
+  "sync-release-projections.mjs",
+  "modules/app-config.js",
+  "modules/pre-bootstrap-route-state.js",
+  "modules/package.json",
+  "modules/core-sources",
 ];
 
 for (const path of requiredProductionIgnoredPaths) {
@@ -62,7 +62,7 @@ const retiredApplicationCorePaths = [
   "modules/app-core-table-state-normalizer.js",
 ];
 for (const path of retiredApplicationCorePaths) {
-  const productionPath = `site/${path}`;
+  const productionPath = `${path}`;
   if (ignoredPaths.has(productionPath)) {
     throw new Error(`Retired application-core source must not leave a stale deployment-ignore entry: ${productionPath}`);
   }
@@ -74,20 +74,20 @@ for (const path of retiredApplicationCorePaths) {
   }
 }
 
-if (ignoredPaths.has("site/vercel.json")) {
-  throw new Error("Canonical site/vercel.json must ship from the configured Vercel project root so production routing rules are applied.");
+if (ignoredPaths.has("vercel.json")) {
+  throw new Error("Canonical vercel.json must ship from the configured Vercel project root so production routing rules are applied.");
 }
 
 for (const runtimePath of [
-  "site/modules/app-core-runtime.js",
-  "site/modules/app-core-evaluation-runtime.js",
-  "site/modules/app-core-mfl-stats-runtime.js",
-  "site/modules/app-core-club-runtime.js",
-  "site/modules/app-core-settings-runtime.js",
-  "site/modules/app-core-player-runtime.js",
-  "site/modules/app-core-table-runtime.js",
-  "site/modules/app-core-wallet-runtime.js",
-  "site/modules/app-core-watchlist-runtime.js",
+  "modules/app-core-runtime.js",
+  "modules/app-core-evaluation-runtime.js",
+  "modules/app-core-mfl-stats-runtime.js",
+  "modules/app-core-club-runtime.js",
+  "modules/app-core-settings-runtime.js",
+  "modules/app-core-player-runtime.js",
+  "modules/app-core-table-runtime.js",
+  "modules/app-core-wallet-runtime.js",
+  "modules/app-core-watchlist-runtime.js",
 ]) {
   if (ignoredPaths.has(runtimePath)) {
     throw new Error(`Generated application-core runtime must remain deployable: ${runtimePath}`);

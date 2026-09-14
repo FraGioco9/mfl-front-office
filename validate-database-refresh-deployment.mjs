@@ -4,11 +4,11 @@ import { fileURLToPath } from "node:url";
 import { readWorkflowSource } from "./validation/workflow-source.mjs";
 
 const siteRoot = fileURLToPath(new URL(".", import.meta.url));
-const repositoryRoot = resolve(siteRoot, "..");
+const repositoryRoot = siteRoot;
 const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8");
 
 const workflow = await readWorkflowSource(
-  new URL("../.github/workflows/full-database-refresh.yml", import.meta.url),
+  new URL("./.github/workflows/full-database-refresh.yml", import.meta.url),
 );
 const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter] = await Promise.all([
   readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
@@ -43,31 +43,31 @@ includes(
   "Database-only refreshes must support an explicit immutable checkpoint database source.",
 );
 includes(
-  'cp "$DATABASE_SOURCE_PATH" production-site/site/api/data-files/mfl_database.db',
+  'cp "$DATABASE_SOURCE_PATH" production-site/api/data-files/mfl_database.db',
   "Database-only refreshes must replace SQLite data from the selected checkpoint snapshot.",
 );
 excludes(
-  "cp builder/site/api/_database.js production-site/site/api/_database.js",
+  "cp builder/api/_database.js production-site/api/_database.js",
   "Database-only refreshes must never mix the current database adapter into an older published site runtime.",
 );
 includes(
-  'PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"',
+  'PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:api/_database.js)"',
   "Database-only refreshes must pin the published database adapter before replacing data.",
 );
 includes(
-  'CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"',
+  'CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object api/_database.js)"',
   "Database-only refreshes must verify that the published database adapter stayed byte-identical.",
 );
 includes(
-  "node production-site/site/build-app-core.mjs",
+  "node production-site/build-app-core.mjs",
   "Database-only refreshes must rebuild generated application-core artifacts from the published site source before redeploying it.",
 );
 includes(
-  'require(path.resolve("production-site/site/api/_database.js"))',
+  'require(path.resolve("production-site/api/_database.js"))',
   "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
 );
 includes(
-  "--local-config site/vercel.production.json",
+  "--local-config vercel.production.json",
   "Database-only refreshes must use the same production Vercel configuration as explicit site releases.",
 );
 includes(

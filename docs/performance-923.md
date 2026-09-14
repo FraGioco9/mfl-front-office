@@ -5,7 +5,7 @@ production measurements remain separate because CI fixture latency is not repres
 
 ## Paged COUNT reuse
 
-Owner: `site/api/_data-page.js`.
+Owner: `api/_data-page.js`.
 
 Before the count-cache change, every `pagedData` request executed:
 
@@ -29,7 +29,7 @@ Therefore, after the first request for a result set, subsequent page/sort reques
 
 ## Prepared-statement reuse
 
-Owner: `site/api/_database.js`.
+Owner: `api/_database.js`.
 
 Before this change, every `queryRows(sql, parameters)` and `queryOne(sql, parameters)`
 execution called `DatabaseSync.prepare(sql)`, even when the SQL text was identical to a
@@ -51,7 +51,7 @@ separate runtime baseline.
 ## Precomputed bootstrap manifest counts
 
 Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
-`site/api/_database.js` / `site/api/_data-query.js` for reads.
+`api/_database.js` / `api/_data-query.js` for reads.
 
 Before this change, each uncached bootstrap manifest built `row_count` and `wallet_count`
 with live `COUNT(*)` queries against `players` and `wallets`.
@@ -68,7 +68,7 @@ Deterministic request-work effect on a rebuilt snapshot:
 
 ## Paged MFL Stats source-count reuse
 
-Owner: `pagedData()` in `site/api/_data-page.js`.
+Owner: `pagedData()` in `api/_data-page.js`.
 
 The primary MFL Stats table route uses `scope=mflstats`. Its unfiltered source population is
 the same canonical normalized MFL-wallet population precomputed for `mfl-stats-all`.
@@ -105,7 +105,7 @@ Deterministic request-work effect for `mfl-stats-all` on rebuilt snapshots:
 
 ## MFL Stats redundant-count removal
 
-Owner: `mflStatsData()` in `site/api/_data-views.js`.
+Owner: `mflStatsData()` in `api/_data-views.js`.
 
 The normal `mfl-stats` mode already loads its complete matching player population in one
 ordered query. It previously issued a separate `COUNT(*)` over the identical predicate before
@@ -122,7 +122,7 @@ Deterministic request-work effect for normal MFL Stats:
 
 ## Loaded table-catalog reuse
 
-Owner: `site/api/_database.js`.
+Owner: `api/_database.js`.
 
 Opening the read-only SQLite snapshot already reads every table name from `sqlite_master` to
 validate the database contract. Previously, each distinct later `tableExists(name)` check
@@ -139,7 +139,7 @@ Deterministic request-work effect per process/snapshot:
 
 ## Cached Club table schema
 
-Owner: `site/api/_database.js`.
+Owner: `api/_database.js`.
 
 My Clubs and individual Club profile reads previously executed `PRAGMA table_info(...)` at
 request time to rediscover columns in `runtime_clubs` and, when needed, `clubs`.
@@ -155,12 +155,12 @@ Deterministic request-work effect:
 
 ## Database Stats read-path reuse
 
-Owner: `site/api/_database-stats.js`.
+Owner: `api/_database-stats.js`.
 
 The prepared Database Stats path already reads the compact `runtime_database_stats` table, but
 it still queried `runtime_metadata` three times per request for the contract, total-player,
 and active-player values. Those metadata rows are now supplied by the process-local metadata
-map loaded once by `site/api/_database.js`.
+map loaded once by `api/_database.js`.
 
 The older-snapshot live fallback also previously ran a separate retired-player aggregate after
 already computing total and active players. Retired players are now derived as
@@ -173,7 +173,7 @@ Deterministic request-work effect:
 
 ## Shared summary/manifest counts
 
-Owner: `manifestPayload()` in `site/api/_data-query.js`.
+Owner: `manifestPayload()` in `api/_data-query.js`.
 
 The public `mode=summary` endpoint previously duplicated the bootstrap manifest's player and
 wallet `COUNT(*)` queries. It now reads the same manifest payload used by bootstrap.
@@ -189,7 +189,7 @@ Deterministic request-work effect for `mode=summary` on a rebuilt snapshot:
 ## Precomputed MFL Stats summary
 
 Owner: `scripts/database/prepare_runtime_database.py` for snapshot preparation and
-`site/api/_mfl-stats-summary.js` for reads.
+`api/_mfl-stats-summary.js` for reads.
 
 Before this change, every MFL Stats summary request grouped the full MFL-owned subset of
 `players` by derived overall, age and category at request time. Those values are stable for
@@ -215,7 +215,7 @@ separate contract rather than replacing OFFSET opportunistically.
 
 ## Nonblocking Evaluation marketplace dependency
 
-Owner: `marketplaceRequiredForPage()` in `site/api/_data-page.js`.
+Owner: `marketplaceRequiredForPage()` in `api/_data-page.js`.
 
 Evaluation calculations and rendering consume SQLite player attributes/progression but do not consume
 `listing_price`. The Evaluation page request nevertheless previously shared Player's marketplace
@@ -241,9 +241,9 @@ latency without runtime evidence.
 
 ## Asynchronous Player marketplace enrichment
 
-Owners: `marketplaceRequiredForPage()` in `site/api/_data-page.js`,
-`site/marketplace-overlay-runtime.js`, and Player pre-core runtime ordering in
-`site/modules/app-config.js`.
+Owners: `marketplaceRequiredForPage()` in `api/_data-page.js`,
+`marketplace-overlay-runtime.js`, and Player pre-core runtime ordering in
+`modules/app-config.js`.
 
 Player visibly consumes `listing_price` in the hero, so unlike Evaluation the listing state cannot
 simply disappear. Previously the normal Player `mode=page` response awaited the marketplace snapshot
@@ -272,8 +272,8 @@ presented as production latency without runtime evidence.
 
 ## Lazy bug-report runtime
 
-Owners: `site/modules/app-entry.js` for the first-use feature gate,
-`site/bug-report-runtime.js` for modal/submission behavior, and
+Owners: `modules/app-entry.js` for the first-use feature gate,
+`bug-report-runtime.js` for modal/submission behavior, and
 `shared-shell-navigation.js` for footer SPA links.
 
 The bug-report runtime was previously part of the universal pre-core script group on every route even
@@ -300,8 +300,8 @@ This is asset/request evidence rather than a production-latency claim.
 
 ## First-use Global Search recent hydration
 
-Owners: `site/modules/core-sources/shared-startup-lifecycle.js` for application startup,
-`site/global-search-runtime.js` for recent-search hydration, and `site/modules/app-entry.js`
+Owners: `modules/core-sources/shared-startup-lifecycle.js` for application startup,
+`global-search-runtime.js` for recent-search hydration, and `modules/app-entry.js`
 for route/application readiness publication.
 
 Global Search recent state was previously warmed on every application startup even when the user never
@@ -335,9 +335,9 @@ This is request-ownership evidence rather than a production-latency claim.
 
 ## Lazy Global Search runtime
 
-Owners: `site/modules/app-entry.js` for the first-use loader,
+Owners: `modules/app-entry.js` for the first-use loader,
 `shared-global-search.js` for the canonical open lifecycle, and
-`site/modules/app-config.js` for Evaluation route dependencies.
+`modules/app-config.js` for Evaluation route dependencies.
 
 After recent-data hydration became first-use work, the full `global-search-runtime.js` still remained
 in the universal pre-core runtime group. Ordinary Database, Player, Club, My Clubs and other routes
@@ -366,9 +366,9 @@ evidence, not a production-latency claim.
 
 ## Player-scoped interaction runtime
 
-Owners: `site/control-interactions-runtime.js` for universal control behavior,
-`site/player-interactions-runtime.js` for Player-only responsive/view-scroll behavior, and
-`site/modules/app-config.js` for Player route dependency ordering.
+Owners: `control-interactions-runtime.js` for universal control behavior,
+`player-interactions-runtime.js` for Player-only responsive/view-scroll behavior, and
+`modules/app-config.js` for Player route dependency ordering.
 
 The universal control interaction runtime previously mixed site-wide pointer/navigation/Escape/filter
 behavior with Player-only responsibilities: compact mobile names, listing-badge accessibility,
@@ -449,12 +449,12 @@ This is dependency/critical-path evidence, not a production-latency claim.
 
 ## Repeatable browser/runtime baseline harness
 
-Owner: `site/validation/performance-baseline.mjs`.
+Owner: `validation/performance-baseline.mjs`.
 
 Run the real application in local Vercel development mode (port 4000 by default), then execute:
 
 ```powershell
-npm --prefix site run performance:baseline
+npm run performance:baseline
 ```
 
 The harness discovers a representative Player and contracted Club from the live database before
@@ -497,7 +497,7 @@ $env:MFL_BASELINE_PROFILES="desktop,mobile-slow"
 $env:MFL_BASELINE_JOURNEYS="database,player,club,my-clubs,evaluation,stats"
 $env:MFL_BASELINE_LABEL="local-main"
 $env:MFL_BASELINE_OUTPUT="performance-baseline.local.json"
-npm --prefix site run performance:baseline
+npm run performance:baseline
 ```
 
 Omit `MFL_BASELINE_JOURNEYS` to run all six journeys. For a focused smoke test, provide a

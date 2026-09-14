@@ -8,16 +8,16 @@ The goal is **shared ownership, not forced sameness**. Responsive geometry, Play
 
 | Foundation | Canonical owner |
 | --- | --- |
-| Cross-site shared control/surface/page-layout tokens | `site/ui-foundations.css` |
-| Theme palette and desktop shell geometry | `site/styles-base.css` |
-| Table visual foundations, geometry, and Uniform Width | `site/styles.css` |
-| Motion timings | `site/motion.css` |
-| Dropdown mechanics | `site/dropdowns.css` |
-| Scrollbars | `site/scrollbars.css` |
-| Cross-site stacking | `site/stacking.css` |
-| Responsive scaling | `site/responsive-sources/*.css.inc` -> generated `responsive.css` |
+| Cross-site shared control/surface/page-layout tokens | `ui-foundations.css` |
+| Theme palette and desktop shell geometry | `styles-base.css` |
+| Table visual foundations, geometry, and Uniform Width | `styles.css` |
+| Motion timings | `motion.css` |
+| Dropdown mechanics | `dropdowns.css` |
+| Scrollbars | `scrollbars.css` |
+| Cross-site stacking | `stacking.css` |
+| Responsive scaling | `responsive-sources/*.css.inc` -> generated `responsive.css` |
 
-Generated `site/styles-runtime.css`, `site/responsive.css`, and `site/index.html` are projections. Edit their canonical sources instead.
+Generated `styles-runtime.css`, `responsive.css`, and `index.html` are projections. Edit their canonical sources instead.
 
 ## Colors and theme
 
@@ -211,7 +211,7 @@ Identity geometry stays domain-owned, but loaded and loading states must consume
 
 ## Tables
 
-Table visual foundations and standard desktop cell geometry are specialist Table-domain contracts owned by `site/styles.css`; they do not collapse tables into the ordinary panel/control surface language.
+Table visual foundations and standard desktop cell geometry are specialist Table-domain contracts owned by `styles.css`; they do not collapse tables into the ordinary panel/control surface language.
 
 - Table surface: `var(--surface)` (`--mfl-table-surface`)
 - Table border/divider color: `var(--border)` (`--mfl-table-border-color`)

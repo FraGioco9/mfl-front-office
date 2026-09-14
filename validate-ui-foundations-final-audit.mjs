@@ -13,7 +13,7 @@ const [styles, phone, foundations, statsValidator, docs] = await Promise.all([
   read("./responsive-sources/evaluation-phone.css.inc"),
   read("./ui-foundations.css"),
   read("./validate-database-stats-lazy-runtime.mjs"),
-  read("../docs/ui-foundations.md"),
+  read("./docs/ui-foundations.md"),
 ]);
 
 for (const token of [

@@ -6,25 +6,25 @@ Management, scouting, progression, and evaluation tools for MFL.
 
 The MFL player, agent, club, and marketplace dataset is stored in `mfl_database.db`.
 Every page, filter, sort, search, summary, and Stats request executes a parameterized SQLite query
-through `site/api/data.js` while the site is running.
+through `api/data.js` while the site is running.
 
 The historical full-dataset JSON loader, browser dataset snapshots, download
 progress bar, and full-screen page-navigation loading overlay have been removed.
 Uncached SQLite requests use only the destination-specific placeholder and wait
 cursor; completed route payloads are reused for the current browser session.
 
-Application-core behavior is source-owned under `site/modules/core-sources/` and
-mapped by `site/modules/core-source-manifest.js`. GitHub Actions generates the
+Application-core behavior is source-owned under `modules/core-sources/` and
+mapped by `modules/core-source-manifest.js`. GitHub Actions generates the
 tracked `app-core-*-runtime.js` projections. Only the universal shared core has a
 hard size ceiling; route/domain sources are constrained by ownership and lazy
 loading rather than arbitrary byte counts.
 
-CSS remains modular in its canonical source files, while `site/build-styles.mjs`
+CSS remains modular in its canonical source files, while `build-styles.mjs`
 recursively flattens that dependency graph into the tracked
-`site/styles-runtime.css`. Production therefore serves one primary generated
+`styles-runtime.css`. Production therefore serves one primary generated
 stylesheet with no nested `@import` requests.
 
-`site/vercel-config-source.mjs` owns the common Vercel configuration. The build
+`vercel-config-source.mjs` owns the common Vercel configuration. The build
 projects it into the tracked development and production JSON configs, preserving
 the production-only immutable cache rule for versioned application-core requests.
 
@@ -37,24 +37,24 @@ part of the MFL SQLite database.
 Place the database at:
 
 ```text
-site/api/data-files/mfl_database.db
+api/data-files/mfl_database.db
 ```
 
 Prepare the existing database explicitly, then start the canonical root development command:
 
 ```powershell
-python -m scripts.database.prepare_runtime_database site\api\data-files\mfl_database.db
+python -m scripts.database.prepare_runtime_database api\data-files\mfl_database.db
 npm run dev
 ```
 
-`npm run dev` is owned by the root `package.json` and runs Vercel development mode against the `site` project directory on port **4000**. Using Vercel's explicit `--cwd site` avoids recursively rediscovering the root `dev` script. It intentionally does **not** rebuild the database or regenerate tracked site artifacts. Keep the Vercel CLI available in your PATH.
+`npm run dev` is owned by the root `package.json` and starts `local-dev-server.mjs` directly from the repository root on port **4000**. The local server loads the root `.env.local`, serves the SPA, and executes the existing `api/*.js` handlers with the small Vercel-compatible request/response surface they use. Vercel remains the production/deployment runtime and is not involved in local startup. Local startup intentionally does **not** rebuild the database or regenerate tracked site artifacts.
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
 For repository checks:
 
 ```powershell
-npm --prefix site install
+npm install
 npm run check
 ```
 

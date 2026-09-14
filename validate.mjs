@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(siteRoot, "..");
+const repositoryRoot = siteRoot;
 const readSite = (path) => readFile(resolve(siteRoot, path), "utf8");
 const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8");
 
@@ -312,15 +312,15 @@ const productionCoreCacheRule = (vercelProduction.headers || []).find((rule) => 
 invariant(productionCoreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "Production versioned application core must retain immutable browser caching.");
 await mustNotExist(resolve(siteRoot, "vercel.mjs"), "Programmatic Vercel config must stay removed so local development uses the static safe config.");
 
-const databaseRefresh = await readWorkflowSource(new URL("../.github/workflows/full-database-refresh.yml", import.meta.url));
+const databaseRefresh = await readWorkflowSource(new URL("./.github/workflows/full-database-refresh.yml", import.meta.url));
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
 excludes(databaseRefresh, "--workflow site-quality.yml", "Database refreshes must not publish the latest quality-check commit.");
 
 const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
-includes(siteDeploy, "node site/build-app-core.mjs", "Vercel deployment must generate the canonical application core before upload.");
-includes(siteDeploy, "test -s site/modules/app-core-runtime.js", "Vercel deployment must refuse to upload without the generated core.");
+includes(siteDeploy, "node build-app-core.mjs", "Vercel deployment must generate the canonical application core before upload.");
+includes(siteDeploy, "test -s modules/app-core-runtime.js", "Vercel deployment must refuse to upload without the generated core.");
 includes(siteDeploy, "vercel deploy --prod --yes --force", "Site deployment must force the explicit production release.");
-includes(siteDeploy, "--local-config site/vercel.production.json", "Production deployment must use the dedicated production Vercel config.");
+includes(siteDeploy, "--local-config vercel.production.json", "Production deployment must use the dedicated production Vercel config.");
 
 const siteQuality = await readRepository(".github/workflows/site-quality.yml");
 includes(siteQuality, "npm run build", "Site quality must execute the canonical site build used by deployment asset generation.");

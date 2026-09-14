@@ -11,7 +11,7 @@ const excludes = (source, token, message) => {
 const [foundations, dropdowns, docs] = await Promise.all([
   read("./ui-foundations.css"),
   read("./dropdowns.css"),
-  read("../docs/ui-foundations.md"),
+  read("./docs/ui-foundations.md"),
 ]);
 
 for (const token of [
