@@ -828,7 +828,9 @@ function currentDataAccess(pageName = state.currentPage) {
   return "public";
 }
 
-function walletProofHeaders() {
+function walletProofHeaders(force = false, options = null) {
+  void force;
+  void options;
   return {};
 }
 
