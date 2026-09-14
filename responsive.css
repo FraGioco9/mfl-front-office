@@ -190,7 +190,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-@media (min-width: 901px) and (max-width: 1000px) {
+@media (min-width: 901px) and (max-width: 1366px) {
   .playerPage {
     --mfl-player-hero-identity-width: 100%;
     --mfl-player-hero-identity-action-gap: 0px;
