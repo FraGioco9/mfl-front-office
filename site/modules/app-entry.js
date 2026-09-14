@@ -367,19 +367,10 @@ function primeInitialMyClubsOwnership() {
   try {
     const wallet = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim().toLowerCase();
     const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
-    if (!wallet || String(proof?.address || "").trim().toLowerCase() !== wallet
-        || proof?.message !== "MFL Front Office Dapper Opt-In"
-        || !Array.isArray(proof?.signatures) || !proof.signatures.length) return;
-    const headers = {
-      Accept: "application/json",
-      "x-dapper-wallet-address": wallet,
-      "x-wallet-signing-address": proof.signingAddress || wallet,
-      "x-wallet-message": proof.message,
-      "x-wallet-proof-type": proof.type || "user-signature",
-      "x-wallet-app-identifier": proof.appIdentifier || "MFL Front Office Dapper Opt-In",
-      "x-wallet-nonce": proof.nonce || "",
-      "x-wallet-signatures": JSON.stringify(proof.signatures),
-    };
+    if (!wallet || proof?.type !== "session"
+        || String(proof?.address || "").trim().toLowerCase() !== wallet
+        || proof?.message !== "MFL Front Office Dapper Opt-In") return;
+    const headers = { Accept: "application/json" };
     const key = canonicalRequestKey(path, {}, new Headers(headers));
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 10_000);
@@ -410,7 +401,7 @@ function primeInitialMyClubsOwnership() {
       },
     }));
   } catch {
-    // Unavailable or invalid stored proof falls back to the normal route request.
+    // Unavailable or invalid stored session state falls back to the normal route request.
   }
 }
 
