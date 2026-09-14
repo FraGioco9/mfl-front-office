@@ -49,13 +49,12 @@ async function showUnauthorizedProgressionRedirect() {
 
 function hasWalletProof() {
   const proof = state.linkedWalletProof;
+  const linkedWallet = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase();
   return Boolean(
-    state.linkedWalletAddress
-    && proof?.address === state.linkedWalletAddress
-    && proof?.message === walletAccessMessage(state.linkedWalletAddress, proof?.signingAddress)
-    && Array.isArray(proof?.signatures)
-    && proof.signatures.length
-    && (proof.type !== "account-proof" || (proof.appIdentifier && proof.nonce))
+    linkedWallet
+    && proof?.type === "session"
+    && normalizeWalletAddress(proof?.address).toLowerCase() === linkedWallet
+    && proof?.message === walletAccessMessage()
   );
 }
 
@@ -343,20 +342,8 @@ function currentDataAccess(pageName = state.currentPage) {
   return "public";
 }
 
-function walletProofHeaders(force = false) {
-  if ((!force && ["public", "mfl"].includes(currentDataAccess())) || !hasWalletProof()) {
-    return {};
-  }
-
-  return {
-    "x-dapper-wallet-address": state.linkedWalletAddress,
-    "x-wallet-signing-address": state.linkedWalletProof.signingAddress || state.linkedWalletAddress,
-    "x-wallet-message": state.linkedWalletProof.message,
-    "x-wallet-proof-type": state.linkedWalletProof.type || "user-signature",
-    "x-wallet-app-identifier": state.linkedWalletProof.appIdentifier || walletAccessMessage(),
-    "x-wallet-nonce": state.linkedWalletProof.nonce || "",
-    "x-wallet-signatures": JSON.stringify(state.linkedWalletProof.signatures),
-  };
+function walletProofHeaders() {
+  return {};
 }
 
 
@@ -597,21 +584,39 @@ async function linkWallet() {
 }
 
 function restoreLinkedWalletProof() {
+  const storedWallet = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase();
+
   try {
     const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
-    if (proof?.address && proof?.message && Array.isArray(proof?.signatures)) {
+    const proofWallet = normalizeWalletAddress(proof?.address).toLowerCase();
+    if (storedWallet
+        && proof?.type === "session"
+        && proofWallet === storedWallet
+        && proof?.message === walletAccessMessage()) {
       state.linkedWalletProof = {
-        type: proof.type || "user-signature",
-        address: normalizeWalletAddress(proof.address),
-        message: proof.message,
-        appIdentifier: proof.appIdentifier || walletAccessMessage(),
-        nonce: proof.nonce || "",
-        signingAddress: normalizeWalletAddress(proof.signingAddress || proof.address),
-        signatures: proof.signatures,
+        type: "session",
+        address: proofWallet,
+        signingAddress: proofWallet,
+        message: walletAccessMessage(),
+        appIdentifier: walletAccessMessage(),
+        nonce: "",
+        signatures: [],
       };
+      return;
     }
   } catch {
-    state.linkedWalletProof = null;
+    // Legacy or malformed wallet state is cleared below.
+  }
+
+  state.linkedWalletAddress = "";
+  state.linkedWalletProof = null;
+  clearWalletPermissionCache(storedWallet);
+  try {
+    localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
+    localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
+    localStorage.removeItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY);
+  } catch {
+    // Runtime state is still safely opted out if browser storage is unavailable.
   }
 }
 function openAccountMenu() {
