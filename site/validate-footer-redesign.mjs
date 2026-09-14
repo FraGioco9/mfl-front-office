@@ -212,10 +212,15 @@ for (const token of [
   invariant(responsive.includes(token), `Responsive single-footer contract is missing: ${token}`);
 }
 
-for (const owner of [staticUi, bootstrap, shared]) {
+for (const owner of [staticUi, bootstrap]) {
   invariant(owner.includes('.siteFooterDetails a[href="/changelog"], .siteFooterDetails a[data-page="changelog"]'), "Version/Changelog behavior must target the sole footer.");
   invariant(!owner.includes('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]'), "Legacy compact-footer behavior must be removed.");
 }
+invariant(
+  shared.includes('.siteFooterDetails a[data-page="changelog"], .siteFooterDetails a[data-page="privacy"]'),
+  "Shared footer SPA navigation must target the sole Changelog/Privacy footer links.",
+);
+invariant(!shared.includes('.siteFooter a[data-page="changelog"]'), "Shared footer navigation must not restore the legacy compact footer owner.");
 invariant(selectionStack.includes('document.querySelector(".siteFooterDetails")'), "Selection overlays must avoid the sole footer when it enters the viewport.");
 invariant(!selectionStack.includes('document.querySelector(".siteFooter")'), "Selection overlays must not retain the removed footer owner.");
 

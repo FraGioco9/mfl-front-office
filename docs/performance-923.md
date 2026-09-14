@@ -270,6 +270,34 @@ load. The optimization target is removal of marketplace network latency from the
 not reducing request count. Wall-clock improvement remains environment-dependent and must not be
 presented as production latency without runtime evidence.
 
+## Lazy bug-report runtime
+
+Owners: `site/modules/app-entry.js` for the first-use feature gate,
+`site/bug-report-runtime.js` for modal/submission behavior, and
+`shared-shell-navigation.js` for footer SPA links.
+
+The bug-report runtime was previously part of the universal pre-core script group on every route even
+when the user never opened the form. Its footer listener also owned Privacy navigation, which prevented
+the feature runtime from being deferred independently.
+
+The startup split is now:
+
+- normal route startup does not request or execute `bug-report-runtime.js`;
+- `app-entry.js` keeps only delegated click/keyboard activation and loads the feature runtime on the
+  first Report-a-bug interaction;
+- the deferred runtime owns only modal/submission/escape behavior;
+- Privacy joins Changelog under the existing shared footer SPA-navigation owner.
+
+Deterministic raw-source effect for the affected startup slice:
+
+- before: `app-entry.js` 24,897 chars + universally loaded `bug-report-runtime.js` 11,517 chars
+  = 36,414 chars across two startup resources;
+- after: `app-entry.js` 26,860 chars, with the 8,762-char feature runtime deferred until first use;
+- normal startup therefore removes one script request and **9,554 raw source characters (~26%)** from
+  this slice before compression, while preserving the feature on demand.
+
+This is asset/request evidence rather than a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.

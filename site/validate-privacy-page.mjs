@@ -4,13 +4,12 @@ import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const includes = (source, token, message) => { if (!source.includes(token)) throw new Error(message); };
 
-const [indexHtml, appConfig, club, bootstrap, staticUi, bugReportRuntime, titles, styles, footer] = await Promise.all([
+const [indexHtml, appConfig, club, bootstrap, staticUi, titles, styles, footer] = await Promise.all([
   read("./index.html"),
   read("./modules/app-config.js"),
   read("./modules/core-sources/club.js"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
-  read("./bug-report-runtime.js"),
   read("./document-title-runtime.js"),
   read("./styles-base.css"),
   read("./footer.css"),
@@ -47,16 +46,12 @@ includes(footer, 'cursor: default;', "Active Privacy footer link must not show t
 includes(footer, 'pointer-events: none;', "Active Privacy footer link must not accept pointer clicks.");
 
 for (const token of [
-  'const PRIVACY_LINK_SELECTOR = \' .siteFooterDetails a[href="/privacy"][data-page="privacy"]\';'.replace("' .", "'."),
-  'function privacyLinkFromTarget(target)',
-  'function handlePrivacyNavigation(event)',
-  'event.preventDefault();',
-  'event.stopImmediatePropagation();',
-  'const setPage = Reflect.get(window, "setPage");',
-  'void Promise.resolve(setPage("privacy", true));',
-  'document.addEventListener("click", handlePrivacyNavigation, true);',
-  'document.removeEventListener("click", handlePrivacyNavigation, true);',
-]) includes(bugReportRuntime, token, `Privacy footer SPA navigation is missing: ${token}`);
+  '.siteFooterDetails a[data-page="changelog"], .siteFooterDetails a[data-page="privacy"]',
+  'const pageName = String(footer.dataset.page || "");',
+  'if (!["changelog", "privacy"].includes(pageName)) return;',
+  'if (window.location.pathname === `/${pageName}`) return;',
+  'void Promise.resolve(setPage(pageName, true));',
+]) includes(shared, token, `Shared footer SPA navigation is missing Privacy ownership: ${token}`);
 
 if (styles.includes('.privacyPage.privacyPage') || styles.includes('!important')) throw new Error("Privacy styling must not use specificity overrides or !important.");
 

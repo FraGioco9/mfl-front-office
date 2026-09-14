@@ -297,7 +297,7 @@ invariant(
 );
 invariant(
   sharedShellNavigation.startsWith(";(() => {\n  if (window.__mflFooterSpaNavigationBound) return;")
-    && sharedShellNavigation.includes('.siteFooterDetails a[href="/changelog"]')
+    && sharedShellNavigation.includes('.siteFooterDetails a[data-page="changelog"], .siteFooterDetails a[data-page="privacy"]')
     && sharedShellNavigation.includes(".changelogMinorToggle")
     && sharedShellNavigation.includes('.brandLink[href="/"]')
     && !sharedShellNavigation.includes("__mflUniversalClubSearch")
@@ -307,7 +307,7 @@ invariant(
     && !sharedShellNavigation.includes("function csvEscape")
     && !sharedShellNavigation.includes("function mflChunkFromPublicData")
     && !sharedShellNavigation.includes("function progressionDataColumns"),
-  "Shared shell navigation must own footer Changelog navigation/toggling and brand Home navigation after application startup publication.",
+  "Shared shell navigation must own footer Changelog/Privacy navigation, Changelog toggling, and brand Home navigation after application startup publication.",
 );
 invariant(
   !sharedFoundations.includes("function normalizeSettingsTheme")

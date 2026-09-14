@@ -198,10 +198,68 @@ function preloadClassicScript(path) {
 }
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
-  "/bug-report-runtime.js",
   "/control-interactions-runtime.js",
   "/global-search-runtime.js",
 ]);
+
+const BUG_REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"]';
+let bugReportRuntimePromise = null;
+
+function bugReportControlFromTarget(target) {
+  if (!(target instanceof Element)) return null;
+  const control = target.closest(BUG_REPORT_CONTROL_SELECTOR);
+  return control instanceof HTMLButtonElement ? control : null;
+}
+
+function ensureBugReportRuntime() {
+  const existing = Reflect.get(window, "__mflBugReportRuntime");
+  if (existing && typeof existing.open === "function") return Promise.resolve(existing);
+  if (bugReportRuntimePromise) return bugReportRuntimePromise;
+
+  bugReportRuntimePromise = loadClassicScript("/bug-report-runtime.js")
+    .then(() => {
+      const runtime = Reflect.get(window, "__mflBugReportRuntime");
+      if (!runtime || typeof runtime.open !== "function") {
+        throw new Error("Bug report runtime loaded without an open owner.");
+      }
+      return runtime;
+    })
+    .catch((error) => {
+      bugReportRuntimePromise = null;
+      throw error;
+    });
+  return bugReportRuntimePromise;
+}
+
+async function openBugReportForm() {
+  try {
+    const runtime = await ensureBugReportRuntime();
+    runtime.open();
+  } catch (error) {
+    console.error("Could not load the bug report form.", error);
+  }
+}
+
+function installBugReportBootstrap() {
+  document.addEventListener("click", (event) => {
+    const control = bugReportControlFromTarget(event.target);
+    if (!control || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void openBugReportForm();
+  }, true);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const control = bugReportControlFromTarget(event.target);
+    if (!control) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void openBugReportForm();
+  }, true);
+}
+
+installBugReportBootstrap();
 
 const initialPathname = String(window.location.pathname || "/");
 
