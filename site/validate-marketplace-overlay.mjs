@@ -21,8 +21,12 @@ invariant(
   "Ordinary table pages must not await marketplace state, while authoritative listing reads may measure the canonical marketplace owner.",
 );
 invariant(
-  dataPage.includes('["player", "evaluation"].includes(String(scope || "").toLowerCase())'),
-  "Player and Evaluation routes must keep authoritative marketplace data for first paint.",
+  dataPage.includes('String(scope || "").toLowerCase() === "player"'),
+  "Player routes must keep authoritative marketplace data for their visible listing badge.",
+);
+invariant(
+  !dataPage.includes('["player", "evaluation"].includes(String(scope || "").toLowerCase())'),
+  "Evaluation core data must not block on marketplace state because Evaluation does not consume listing presentation.",
 );
 invariant(
   dataPage.includes("String(sortKey || \"\").toLowerCase() === LISTING_COLUMN"),
