@@ -97,7 +97,7 @@ for (const phrase of [
   assert.ok(docs.includes(phrase), `UI foundation documentation is missing the Table-domain boundary: ${phrase}`);
 }
 
-invariant(
+assert(
   base.includes("#progressionPage.mflCachedTablePageParked {")
     && base.includes("position: absolute;")
     && base.includes("visibility: hidden;")
