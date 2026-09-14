@@ -331,6 +331,33 @@
     lastPrimedRouteIdentity = identity;
   }
 
+  function renderedTablePageCanPark(page) {
+    if (!(page instanceof HTMLElement) || page.id !== "progressionPage") return false;
+    const body = document.getElementById("tableBody");
+    if (!(body instanceof HTMLTableSectionElement)) return false;
+    if (body.dataset.staticLoading === "true") return false;
+    return Boolean(String(body.dataset.mflRenderedRouteIdentity || ""));
+  }
+
+  function setRoutePageVisibility(page, target) {
+    if (!(page instanceof HTMLElement)) return;
+    if (page === target) {
+      page.classList.remove("mflCachedTablePageParked");
+      page.removeAttribute("aria-hidden");
+      page.hidden = false;
+      return;
+    }
+    if (renderedTablePageCanPark(page)) {
+      page.hidden = false;
+      page.classList.add("mflCachedTablePageParked");
+      page.setAttribute("aria-hidden", "true");
+      return;
+    }
+    page.classList.remove("mflCachedTablePageParked");
+    page.removeAttribute("aria-hidden");
+    page.hidden = true;
+  }
+
   function showRouteShell(state, options = {}) {
     recordStaticRouteStage("route-shell-show-start", state);
     const target = shellForRoute(state);
@@ -347,7 +374,7 @@
     recordStaticRouteStage("route-shell-prime-complete", state);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page !== target;
+      setRoutePageVisibility(page, target);
     });
     recordStaticRouteStage("route-shell-visibility-complete", state);
     if (target.id === "progressionPage") {

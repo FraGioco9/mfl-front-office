@@ -97,4 +97,17 @@ for (const phrase of [
   assert.ok(docs.includes(phrase), `UI foundation documentation is missing the Table-domain boundary: ${phrase}`);
 }
 
+assert(
+  base.includes("#progressionPage.mflCachedTablePageParked {")
+    && base.includes("block-size: 0;")
+    && base.includes("min-block-size: 0;")
+    && base.includes("max-block-size: 0;")
+    && base.includes("overflow: clip;")
+    && base.includes("visibility: hidden;")
+    && base.includes("pointer-events: none;")
+    && base.includes("content-visibility: hidden;")
+    && base.includes("contain-intrinsic-block-size: 0;"),
+  "Cached Table routes must retain rendering state in zero-height normal flow without exposing stale content or interaction.",
+);
+
 console.log("Shared table surfaces, standard desktop cell geometry, headers, dividers, hover states, typography, and loading inheritance use canonical Table-domain foundations while responsive/specialist geometry remains independent.");

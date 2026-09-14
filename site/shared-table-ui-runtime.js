@@ -32,7 +32,7 @@
   let boundPlayerScrollHandler = null;
   const pendingViewScrollers = new Set();
 
-  function recordSharedTableUiStage(phase) {
+  function recordSharedTableUiStage(phase, detail = {}) {
     const owner = Reflect.get(window, "__mflClientPerformance");
     const recordInternal = owner && typeof owner === "object" ? Reflect.get(owner, "recordInternal") : null;
     if (typeof recordInternal !== "function") return null;
@@ -40,6 +40,7 @@
       kind: "page",
       path: `${window.location.pathname}${window.location.search}`,
       traceId: String(Reflect.get(window, "__mflRoutePerformanceTraceId") || ""),
+      ...detail,
     });
   }
   const boundViewScrollers = new Map();
@@ -905,13 +906,23 @@
 
   function schedulePlayerTableSync() {
     if (destroyed) return;
+    const immediateStartedAt = performance.now();
+    recordSharedTableUiStage("route-settle-player-immediate-start");
     syncPlayerTableFadeState();
     const evaluationScroller = evaluationTableScroller();
     if (evaluationScroller instanceof HTMLElement) syncPlayerTableFadeState(evaluationScroller);
+    recordSharedTableUiStage("route-settle-player-immediate-complete", {
+      durationMs: performance.now() - immediateStartedAt,
+    });
     if (playerSyncFrame) return;
     playerSyncFrame = requestAnimationFrame(() => {
       playerSyncFrame = 0;
+      const startedAt = performance.now();
+      recordSharedTableUiStage("route-settle-player-frame-start");
       syncPlayerTableScroller();
+      recordSharedTableUiStage("route-settle-player-frame-complete", {
+        durationMs: performance.now() - startedAt,
+      });
     });
   }
 
@@ -972,9 +983,15 @@
     if (viewSyncFrame) return;
     viewSyncFrame = requestAnimationFrame(() => {
       viewSyncFrame = 0;
+      const startedAt = performance.now();
+      recordSharedTableUiStage("route-settle-view-frame-start");
       const scrollers = Array.from(pendingViewScrollers);
       pendingViewScrollers.clear();
       scrollers.forEach(syncViewScroller);
+      recordSharedTableUiStage("route-settle-view-frame-complete", {
+        durationMs: performance.now() - startedAt,
+        scrollers: scrollers.length,
+      });
     });
   }
 

@@ -22,6 +22,7 @@ for (const token of [
   'clientPerformance.record("route-transition-start"',
   'clientPerformance.record("content-commit"',
   'clientPerformance.record("route-transition-complete"',
+  'clientPerformance.recordInternal("route-settle-frame-one"',
   'clientPerformance.record("route-visually-settled"',
 ]) {
   invariant(bootstrapCore.includes(token), `Canonical bootstrap client timing ownership is missing: ${token}`);
@@ -106,7 +107,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 9;",
+  "const BASELINE_SCHEMA_VERSION = 11;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
@@ -128,6 +129,18 @@ for (const token of [
   "postloaderPaintMs:",
   "releaseMs:",
   "settlePaintMs:",
+  "settleFirstFrameMs:",
+  "settleSecondFrameMs:",
+  "settlementLongTaskMs:",
+  "settlePlayerImmediateMs:",
+  "settleViewFrameMs:",
+  "settlePlayerFrameMs:",
+  "Cached settlement breakdown (median / observed slowest)",
+  "Cached settlement long-animation-frame breakdown (median / observed slowest)",
+  "settlementLoafDurationMs:",
+  "settlementLoafScriptMs:",
+  "settlementLoafForcedStyleLayoutMs:",
+  "settlementLoafRenderPhaseMs:",
   "Cached SPA stage breakdown (median / observed slowest)",
   "Preloader wait skipped",
   "Cached shell sync breakdown (median / observed slowest)",

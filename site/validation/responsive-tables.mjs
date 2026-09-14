@@ -129,6 +129,9 @@ export function validateResponsiveTables(context) {
   includes(sharedTableUi, "setViewScrollButtonVisible(leftButton, canScrollLeft);\n    setViewScrollButtonVisible(button, canScrollRight);", "Left and right cue transitions must track the actual scroll position independently.");
   includes(sharedTableUi, "viewResizeObserver = new ResizeObserver", "Horizontal overflow must stay correct when responsive widths or visible controls change.");
   includes(sharedTableUi, "function syncRouteHorizontalStructureNow() {\n    if (destroyed) return;\n    syncWatchlistSwitcherPlacement();\n  }", "Table-route reveal must have a lightweight structural cue path that performs no synchronous geometry reads.");
+  includes(sharedTableUi, 'recordSharedTableUiStage("route-settle-player-immediate-complete"', "Deferred Player-table geometry work must expose passive settlement timing.");
+  includes(sharedTableUi, 'recordSharedTableUiStage("route-settle-view-frame-complete"', "Deferred view-strip geometry work must expose passive settlement timing.");
+  includes(sharedTableUi, 'recordSharedTableUiStage("route-settle-player-frame-complete"', "Deferred Player-table frame work must expose passive settlement timing.");
   includes(staticUi, 'if (target.id === "progressionPage") {\n      window.__mflSharedTableUiRuntime?.syncRouteHorizontalStructureNow?.();\n    } else {\n      window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();\n    }', "Table-route shell reveal must defer measured horizontal cue synchronization to the observer/render lifecycle.");
   excludes(sharedTableUi, "MutationObserver", "Horizontal scrolling and mobile page-size ownership must remain event/resize-driven rather than DOM-repair driven.");
   includes(sharedTableUi, "(shell || views).insertAdjacentElement(\"afterend\", switcher);", "Mobile Watchlist must keep its selector outside both the clipped strip and its overlay shell.");
