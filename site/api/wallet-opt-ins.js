@@ -28,7 +28,6 @@ module.exports = async function handler(request, response) {
   }
 
   const wallet = await signedWalletFromRequest(request, {
-    allowAccountProofFallback: true,
     warning: "Could not verify Dapper wallet opt-in proof.",
   });
 

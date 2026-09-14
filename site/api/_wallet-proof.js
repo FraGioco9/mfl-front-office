@@ -42,7 +42,6 @@ async function signedWalletFromRequest(request, options = {}) {
   const proofType = String(headers["x-wallet-proof-type"] || "user-signature");
   const appIdentifier = String(headers["x-wallet-app-identifier"] || walletAccessMessage());
   const nonce = String(headers["x-wallet-nonce"] || "");
-  const allowAccountProofFallback = options.allowAccountProofFallback === true;
   const warning = options.warning === false
     ? ""
     : String(options.warning || "Could not verify Dapper wallet proof.");
@@ -54,11 +53,26 @@ async function signedWalletFromRequest(request, options = {}) {
     return "";
   }
 
-  if (!wallet
-      || !signingWallet
+  if (!/^0x[0-9a-f]{16}$/.test(wallet)
+      || signingWallet !== wallet
       || message !== walletAccessMessage()
+      || !["account-proof", "user-signature"].includes(proofType)
       || !Array.isArray(signatures)
       || !signatures.length) {
+    return "";
+  }
+
+  if (proofType === "account-proof"
+      && (appIdentifier !== walletAccessMessage() || !/^[0-9a-f]{64}$/i.test(nonce))) {
+    return "";
+  }
+
+  // FCL derives a user-signature's verification address from the first entry.
+  // Account proofs instead verify every key against the explicit wallet below.
+  if (proofType === "user-signature" && signatures.some((signature) => !signature
+      || typeof signature !== "object"
+      || Array.isArray(signature)
+      || normalizeWalletAddress(signature.addr || signature.address) !== wallet)) {
     return "";
   }
 
@@ -68,34 +82,19 @@ async function signedWalletFromRequest(request, options = {}) {
   try {
     if (proofType === "account-proof") {
       const verified = await flow.AppUtils.verifyAccountProof(appIdentifier, {
-        address: signingWallet,
+        address: wallet,
         nonce,
         signatures,
       });
-      if (verified) return wallet;
-
-      if (signingWallet !== wallet) {
-        return await flow.AppUtils.verifyAccountProof(appIdentifier, {
-          address: wallet,
-          nonce,
-          signatures,
-        }) ? wallet : "";
-      }
-      return "";
+      return verified === true ? wallet : "";
     }
 
     if (!signatureWalletAddresses(signatures).has(signingWallet)) return "";
-    return await flow.AppUtils.verifyUserSignatures(stringToHex(message), signatures)
-      ? wallet
-      : "";
+    const verified = await flow.AppUtils.verifyUserSignatures(stringToHex(message), signatures);
+    return verified === true ? wallet : "";
   } catch (error) {
     if (warning) console.warn(warning, error);
-    return allowAccountProofFallback
-      && proofType === "account-proof"
-      && nonce
-      && signatures.length
-      ? wallet
-      : "";
+    return "";
   }
 }
 

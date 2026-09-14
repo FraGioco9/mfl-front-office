@@ -39,9 +39,7 @@ async function walletAllowed(wallet) {
 }
 
 async function signedWalletFromRequest(request) {
-  return verifySignedWalletFromRequest(request, {
-    allowAccountProofFallback: true,
-  });
+  return verifySignedWalletFromRequest(request);
 }
 
 function serverTimingHeader(startedAt, timings = {}) {

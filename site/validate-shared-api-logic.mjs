@@ -37,7 +37,7 @@ const permissionsVersion = source("./api/wallet-permissions-version.js");
 const seasonRatios = source("./api/mfl-season-ratios-v2.js");
 
 includes(walletProof, "async function signedWalletFromRequest(request, options = {})", "Wallet proof verification must have one configurable canonical owner.");
-includes(walletProof, "allowAccountProofFallback", "Wallet proof fallback behavior must be explicit rather than copied into endpoints.");
+excludes(combined, "allowAccountProofFallback", "No API caller may enable acceptance after wallet verification fails.");
 invariant(occurrences(combined, "function normalizeWalletAddress(") === 1, "API wallet-address normalization must have exactly one owner.");
 invariant(occurrences(combined, "function signatureWalletAddresses(") === 1, "API signature-wallet extraction must have exactly one owner.");
 invariant(occurrences(combined, "function walletAccessMessage(") === 1, "API wallet proof message logic must have exactly one owner.");
@@ -66,7 +66,6 @@ includes(dataAuth, 'require("./_wallet-proof")', "Data auth must reuse the canon
 includes(dataAuth, 'require("./_supabase")', "Data auth must reuse the canonical Supabase owner.");
 includes(walletAccess, 'require("./_data-auth")', "Wallet access must reuse shared signed-wallet and permission ownership.");
 includes(walletOptIns, 'require("./_wallet-proof")', "Wallet opt-ins must reuse canonical wallet proof verification.");
-includes(walletOptIns, "allowAccountProofFallback: true", "Wallet opt-ins must preserve their account-proof fallback explicitly.");
 includes(walletPreferences, 'require("./_request-body")', "Wallet preferences must reuse canonical request-body parsing.");
 includes(walletPreferences, 'require("./_evaluation-payload")', "Wallet preferences must reuse canonical Evaluation reward-rate normalization.");
 includes(evaluationSave, 'require("./_evaluation-payload")', "Saved Evaluations must reuse canonical Evaluation payload normalization.");
