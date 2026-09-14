@@ -288,23 +288,42 @@ const browserTestSource = String.raw`(() => {
     if (scenario === "player") {
       const main = document.querySelector("#appShell > main");
       assert(main instanceof HTMLElement, "Player main shell is missing.");
-      assert(
-        main.scrollWidth <= main.clientWidth + 1,
-        "Player route overflows the main viewport: " + JSON.stringify({
-          scrollWidth: main.scrollWidth,
-          clientWidth: main.clientWidth,
-        }),
-      );
-      for (const selector of [
+      const playerGeometrySelectors = [
         ".playerPage",
+        ".playerDetail",
         ".playerHero",
         ".playerHeroMedia",
         ".playerHeroIdentity",
         ".playerHeroActions",
+        ".playerHeroActionMenu",
         ".playerGrid",
+        ".playerStack",
+        ".playerPanel",
         ".pitchPanel",
         ".pitch",
-      ]) {
+      ];
+      if (main.scrollWidth > main.clientWidth + 1) {
+        const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
+          const element = document.querySelector(selector);
+          if (!(element instanceof HTMLElement)) return [selector, null];
+          const rect = element.getBoundingClientRect();
+          return [selector, {
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+            display: getComputedStyle(element).display,
+            gridTemplateColumns: getComputedStyle(element).gridTemplateColumns,
+          }];
+        }));
+        throw new Error("Player route overflows the main viewport: " + JSON.stringify({
+          scrollWidth: main.scrollWidth,
+          clientWidth: main.clientWidth,
+          geometry,
+        }));
+      }
+      for (const selector of playerGeometrySelectors) {
         assertElementWithinViewport(selector, viewportWidth);
       }
     }
