@@ -18,9 +18,9 @@ html:not(.mflInitialRouteResolved):is(
 
 @media (min-width: 901px) and (max-width: 1444px) {
   .topbar {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 360px) auto;
-    gap: 12px;
-    padding-inline: clamp(16px, 2vw, 24px);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;
+    gap: 10px;
+    padding-inline: 14px;
   }
 
   .topbar > :first-child,
@@ -37,35 +37,109 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .headerControls {
-    gap: 10px;
+    flex: 0 0 auto;
+    gap: 8px;
   }
 
   .searchButton {
     width: 100%;
+    min-width: 0;
   }
 
   .stats {
-    gap: 8px;
+    flex: 0 0 auto;
+    gap: 6px;
   }
 
   .stats div {
-    width: 82px;
-    min-width: 82px;
-    padding-inline: 8px;
+    width: 72px;
+    min-width: 72px;
+    padding-inline: 6px;
+  }
+
+  .stats > div > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .themeButton {
-    width: 44px;
-    height: 44px;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
   }
 
   .accountMenu {
-    flex: 0 0 112px;
-    width: 112px;
+    flex: 0 0 96px;
+    width: 96px;
   }
 
   .accountMenu .compactButton {
-    height: 44px;
+    width: 100%;
+    height: 42px;
+    padding-inline: 10px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .searchShortcut {
+    display: none;
+  }
+
+  .searchButton {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1040px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) 44px max-content;
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .topbar .searchButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 42px;
+    padding: 0;
+  }
+
+  .topbar .searchButton .searchLabel {
+    gap: 0;
+  }
+
+  .topbar .searchButton .searchLabelText,
+  #accountButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .accountMenu {
+    flex-basis: 44px;
+    width: 44px;
+  }
+
+  #accountButton {
+    width: 44px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .stats div {
+    width: 68px;
+    min-width: 68px;
+    padding-inline: 5px;
   }
 }
 
@@ -157,9 +231,6 @@ html:not(.mflInitialRouteResolved):is(
     display: block;
     width: 100%;
     min-width: 0;
-  }
-
-  .playerHeroActionMenu {
   }
 
   .playerGrid {
