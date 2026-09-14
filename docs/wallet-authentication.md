@@ -27,19 +27,19 @@ There is no caller option to accept a proof after a verification error.
 actual data-auth/opt-in consumers without network calls or database writes.
 It runs in the API/persistence validation domain.
 
-## Remaining session work
+## Authentication progress
 
-This first PR fixes identity binding and fail-open verification. It does not add
-proof expiry or replay protection: the current account-proof nonce is generated
-in the browser and signed-message proofs use a static message. Server-issued,
-expiring challenges and replay-safe session establishment remain the next
-authentication step in #969. Do not describe the existing nonce-format check as
-proof freshness or replay prevention.
+Identity binding and fail-closed Flow verification are active. The browser still sends the
+legacy proof envelope on authenticated requests until the challenge/session exchange is explicitly
+activated in a later PR.
 
-Manual testing should cover fresh Dapper opt-in, restoring an existing valid
-session, private preferences/watchlists/evaluations, and opting out and back in.
-Persisted sessions whose claimed wallet differs from their proof must be linked
-again with the correct account; they must not receive a compatibility bypass.
+The server challenge format and durable session store now exist as internal foundations. They do not
+change browser login by themselves. Do not describe legacy browser-generated nonces as fresh/replay-safe,
+and do not describe challenge verification alone as authentication: only an exchange that verifies the
+Flow proof and successfully consumes the challenge nonce in durable storage may establish a session.
+
+Persisted legacy proofs whose claimed wallet differs from their verified identity must reauthenticate;
+they must not receive a compatibility bypass.
 
 ## Server challenge foundation
 
@@ -65,25 +65,45 @@ envelopes, future issuance, and expired challenges. It works across server
 instances and makes no persistence or network calls. Tests exercise actual Node
 cryptography, expiry boundaries, token tampering, and instance separation.
 
+## Durable wallet session foundation
+
+`site/api/_wallet-session.js` owns server session-token generation and the durable session-store
+contract. `supabase/migrations/20260914150000_wallet_auth_sessions.sql` owns storage and atomic
+single-use semantics.
+
+A successful internal exchange creates a random 32-byte session token and sends only its SHA-256 hash
+to Supabase. The raw bearer token is returned only to the future server endpoint so it can be placed in
+an HttpOnly cookie; it is never persisted. Sessions have a fixed seven-day application lifetime.
+
+`public.consume_wallet_challenge_and_create_session` performs nonce consumption and session insertion
+in one database transaction. The nonce has a unique key, so two server instances racing the same
+challenge can produce at most one session. The RPC rechecks challenge expiry against the database clock,
+which covers a challenge expiring while Flow verification is in flight. The same transaction prunes
+expired challenge/session rows. Active session resolution and revocation are separate service-role-only
+RPCs.
+
+The consumed-challenge and session tables have RLS enabled and no public/anon/authenticated privileges.
+Only the server service role can call the RPCs. The database stores a token hash, wallet, timestamps and
+revocation state; it never stores the raw session bearer token.
+
+This foundation is still **inactive**: no public API endpoint issues a challenge, exchanges a proof,
+sets a session cookie, resolves sessions for existing endpoints, or logs out a browser yet.
+
 ### Required integration before activation
 
-1. Add issuance with no-store responses and a Secure (HTTPS), HttpOnly,
-   SameSite browser-binding cookie. Return only the public token/proof metadata
-   in JSON; never serialize the helper's raw `browserBinding` field there.
-   Include request-origin checks and bounded issuance/verification abuse controls.
-2. Verify both the envelope/browser binding and the actual Flow wallet proof,
-   using the nonce and application identifier or message from the verified
-   challenge. The current static signed-message path must not remain an
+1. Add challenge issuance with no-store responses and a Secure (HTTPS), HttpOnly, SameSite
+   browser-binding cookie. Return only public challenge/proof metadata; never serialize the raw
+   `browserBinding`. Include request-origin checks and bounded issuance/exchange abuse controls.
+2. Add the exchange endpoint: verify the challenge/browser binding and actual Flow wallet proof using
+   the challenge nonce/application identifier or message, then call the durable
+   `consumeChallengeAndCreateSession` owner. The legacy static-message path must not remain an
    alternative session-creation path.
-3. Atomically consume the nonce and establish the session in shared durable
-   storage. Check expiry again at that transaction, including after slow proof
-   verification. Concurrent exchanges on different instances must produce at
-   most one successful session. An in-memory Map is not sufficient.
-4. Add expiring/revocable sessions, authenticated request transport, logout,
-   and existing-session migration/relink behavior; then switch all consumers.
-5. Test the complete Dapper exchange, concurrent reuse, expiry during verification,
-   wrong browser/origin, restoration, and logout before removing legacy proofs.
+3. Put the returned raw session token in a Secure, HttpOnly, SameSite session cookie. Resolve that
+   cookie server-side for authenticated consumers, add logout/revocation, and define legacy-proof
+   migration/relink behavior before removing header-proof transport.
+4. Test the complete Dapper exchange, concurrent challenge reuse, expiry during verification, wrong
+   browser/origin, session restoration, revocation/logout and migration before switching all consumers.
 
-Validating the same envelope twice succeeds until expiry by design at this
-layer. The helper cannot establish single use; only the durable atomic exchange
-can do so. Do not mark the #969 replay-protection acceptance item complete yet.
+The durable store now provides replay prevention **when used by the exchange**, but the active site
+has not switched to that exchange yet. Do not mark the #969 replay/expiry acceptance item complete
+until the endpoint/session transport is activated and tested.

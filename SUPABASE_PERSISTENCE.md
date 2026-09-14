@@ -61,6 +61,34 @@ All authenticated preference PUT writes are normalized by `site/api/wallet-prefe
 
 The atomic database RPC is `SECURITY INVOKER`, pins an empty `search_path`, and is service-role-only: `PUBLIC`, `anon`, and `authenticated` have no execute privilege. Browser clients therefore cannot call it directly; the signed-wallet API remains the ownership/authentication boundary. Schema ownership is recorded in `supabase/migrations/20260908131924_atomic_wallet_preferences.sql` and mirrored in `supabase-schema.sql`.
 
+### `wallet_auth_consumed_challenges` and `wallet_auth_sessions`
+
+Owner: `site/api/_wallet-session.js`. Schema/transaction owner:
+`supabase/migrations/20260914150000_wallet_auth_sessions.sql`, mirrored in
+`supabase-schema.sql`.
+
+These tables are the durable server-side foundation for challenge replay protection and expiring
+wallet sessions. They are not active browser persistence yet; the current login flow still uses the
+legacy proof headers until the challenge/session endpoints are integrated.
+
+`wallet_auth_consumed_challenges` stores only the challenge nonce, verified wallet, challenge expiry
+and consumption timestamp. The nonce is unique, so the service-role-only
+`public.consume_wallet_challenge_and_create_session` RPC can atomically claim it once across server
+instances.
+
+`wallet_auth_sessions` stores only a SHA-256 session-token hash, wallet, creation/expiry timestamps
+and optional revocation time. Raw session bearer tokens are never persisted. Application-generated
+sessions use a seven-day lifetime; the RPC rejects invalid or already-expired challenge deadlines and
+rechecks challenge expiry using the database clock before inserting the session.
+
+The consume RPC inserts the nonce and session in the same transaction, so a session-insert failure
+cannot permanently consume the challenge. A duplicate nonce returns no session. The resolve RPC returns
+only unexpired, unrevoked sessions; the revoke RPC marks an active session revoked. Expired challenges
+and sessions are pruned during successful exchange attempts.
+
+Both tables have RLS enabled, no `PUBLIC`, `anon`, or `authenticated` privileges, and their RPCs are
+service-role-only. Browser clients never call these tables/functions directly.
+
 ### `evaluation_saves`
 
 Owner: `site/api/evaluation-save.js`.
@@ -133,7 +161,7 @@ This is read-only reference data for the application, not user persistence.
 
 ## Local/session/cache-only state
 
-The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. In particular, wallet proof/session material, request/loading state, route payload caches, guest watchlists, and the legacy per-entity recent-search arrays do not need independent Supabase copies.
+The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. In particular, legacy browser wallet-proof material, request/loading state, route payload caches, guest watchlists, and the legacy per-entity recent-search arrays do not need independent Supabase copies. Server-issued wallet sessions are the deliberate exception: only their one-way token hashes and replay/expiry metadata live in the dedicated private auth tables above.
 
 The wallet presence data is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `site/api/_wallet-presence.js` resolves the current runtime agent name and writes it with the server timestamp into `wallet_opt_ins`.
 
