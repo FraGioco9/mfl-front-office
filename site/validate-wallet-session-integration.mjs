@@ -310,7 +310,8 @@ assert.ok(walletSource.includes("await logoutWalletSession();\n    optOutWallet(
 
 assert.ok(
   sharedSessionSource.includes('proof?.type === "session"')
-    && sharedSessionSource.includes("function walletProofHeaders() {\n  return {};\n}"),
+    && sharedSessionSource.includes("function walletProofHeaders(force = false, options = null) {")
+    && sharedSessionSource.includes("void force;\n  void options;\n  return {};"),
   "Shared client state must recognize only session markers and must not emit legacy proof headers.",
 );
 assert.ok(
