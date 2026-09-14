@@ -67,9 +67,9 @@ const restoreRecentSection = runtime.slice(
   runtime.indexOf("async function restoreSupabaseRecentResults()"),
   runtime.indexOf("async function renderEmptySearchResults()"),
 );
-const modalOpenSection = runtime.slice(
+const openedModalSection = runtime.slice(
+  runtime.indexOf("function prepareOpenedSearchModal()"),
   runtime.indexOf("function observeSearchModal()"),
-  runtime.indexOf("function onReady()"),
 );
 
 invariant(
@@ -89,27 +89,25 @@ invariant(
     && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
     && runtime.includes("if (!recentLoadedForSession && pendingRecentLoad) await pendingRecentLoad;")
     && !restoreRecentSection.includes("hydrateSupabaseRecentResults(")
-    && !modalOpenSection.includes("hydrateSupabaseRecentResults(")
+    && openedModalSection.includes("void preloadRecentResults();")
+    && openedModalSection.includes("void renderEmptySearchResults();")
     && !runtime.includes("recentLoadedForOpen")
     && !runtime.includes("options.force")
     && !runtime.includes("renderEmptySearchResults({ force: true })"),
-  "Global Search must preload its Supabase recent state during page startup; opening the popup may only consume an existing preload and must never initiate the recent-history fetch.",
+  "Global Search must hydrate Supabase recent state on first modal use, reuse the session result afterward, and avoid startup recent-history fetches.",
 );
 
 const routeReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
-const backgroundPreloadIndex = appEntry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
 const appReadyIndex = appEntry.indexOf('document.documentElement.dataset.mflReady = "true";');
 invariant(
   appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
-    && appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
-    && appEntry.includes("initialGlobalSearchWarmupPromise")
     && appEntry.includes("function installCoreBridges() {")
-    && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();") < routeReadyIndex
+    && !appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+    && !appEntry.includes("initialGlobalSearchWarmupPromise")
+    && !appEntry.includes("globalSearchPreloadPromise")
     && routeReadyIndex >= 0
-    && backgroundPreloadIndex > routeReadyIndex
-    && appEntry.includes("await Promise.allSettled([\n    initialGlobalSearchWarmupPromise,\n    globalSearchPreloadPromise,\n  ]);")
-    && appReadyIndex > backgroundPreloadIndex,
-  "Application startup must launch Global Search recent preloading early, release the visible route independently, and still settle Global Search warm-up before application-wide readiness.",
+    && appReadyIndex > routeReadyIndex,
+  "Application startup must publish app-wide readiness without starting or waiting for unused Global Search recent hydration.",
 );
 
 invariant(
@@ -126,7 +124,7 @@ invariant(
     && dataViews.includes("const playerIds = integerIds(request.query?.playerIds, 50);")
     && dataViews.includes("const walletAddresses = csvValues(request.query?.walletAddresses, 50)")
     && dataViews.includes("const clubIds = csvValues(request.query?.clubIds, 50);"),
-  "Initial Global Search recent hydration must resolve every Supabase recent entity and publish the complete canonical payload into the hidden search state before first open.",
+  "First-open Global Search recent hydration must resolve every Supabase recent entity and publish the complete canonical payload before rendering recents.",
 );
 
 invariant(
