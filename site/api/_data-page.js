@@ -94,7 +94,7 @@ function safeRules(value) {
 }
 
 function marketplaceRequiredForPage(scope, sortKey, rules) {
-  if (["player", "evaluation"].includes(String(scope || "").toLowerCase())) return true;
+  if (String(scope || "").toLowerCase() === "player") return true;
   if (String(sortKey || "").toLowerCase() === LISTING_COLUMN) return true;
   return rules.some((rule) => String(rule?.column || "").toLowerCase() === LISTING_COLUMN);
 }
