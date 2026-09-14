@@ -1,4 +1,4 @@
-const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-proof");
+const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody } = require("./_request-body");
 const { normalizeLateSeasonRewardRates } = require("./_evaluation-payload");

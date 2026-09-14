@@ -142,7 +142,7 @@ const browserTestSource = String.raw`(() => {
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (scenario !== "myclubs-competition-fail") return originalFetch(input, init);
+    if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
     return originalFetch(input, { ...init, headers });
@@ -157,19 +157,13 @@ const browserTestSource = String.raw`(() => {
 
   if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
     const proof = {
-      type: "user-signature",
+      type: "session",
       address: testWallet,
       message: "MFL Front Office Dapper Opt-In",
+      appIdentifier: "MFL Front Office Dapper Opt-In",
       signingAddress: testWallet,
-      signatures: [{
-        keyId: 0,
-        addr: testWallet,
-        signature: scenario === "myclubs-stale"
-          ? "invalid-browser-regression"
-          : scenario === "myclubs-competition-fail"
-            ? "competition-fail-browser-regression"
-            : "browser-regression",
-      }],
+      nonce: "",
+      signatures: [],
     };
     localStorage.setItem("mfl-linked-wallet-v1", testWallet);
     localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify(proof));
@@ -1014,7 +1008,7 @@ async function createRegressionServer() {
       const myClubsMode = String(url.searchParams.get("mode") || "");
       const myClubsRequest = myClubsMode === "my-clubs" || myClubsMode === "my-clubs-competitions";
       const invalidMyClubsProof = myClubsRequest
-        && String(request.headers["x-wallet-signatures"] || "").includes("invalid-browser-regression");
+        && String(request.headers["x-browser-regression-scenario"] || "") === "myclubs-stale";
       const competitionBatchFailure = myClubsMode === "my-clubs-competitions"
         && String(request.headers["x-browser-regression-scenario"] || "") === "myclubs-competition-fail";
       if (myClubsMode === "my-clubs" && !invalidMyClubsProof) {

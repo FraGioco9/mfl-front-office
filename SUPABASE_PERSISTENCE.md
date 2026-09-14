@@ -4,7 +4,7 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 ## Access model
 
-`site/api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `site/api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned preference endpoints still require the existing signed-wallet proof before accessing a wallet row.
+`site/api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `site/api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned private endpoints authenticate through the server-issued wallet session cookie before accessing a wallet row; replayable legacy proof headers are no longer an authorization fallback.
 
 `bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `site/api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
 
@@ -161,7 +161,7 @@ This is read-only reference data for the application, not user persistence.
 
 ## Local/session/cache-only state
 
-The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. In particular, legacy browser wallet-proof material, request/loading state, route payload caches, guest watchlists, and the legacy per-entity recent-search arrays do not need independent Supabase copies. Server-issued wallet sessions are the deliberate exception: only their one-way token hashes and replay/expiry metadata live in the dedicated private auth tables above.
+The browser may keep local compatibility/preferences and runtime caches for fast first paint and guest behavior. Those are distinct from Supabase ownership. Wallet authentication is now represented locally only by a non-authorizing session marker; Flow signatures and challenge material are not persisted after exchange. Request/loading state, route payload caches, guest watchlists, and legacy per-entity recent-search arrays do not need independent Supabase copies. Server-issued wallet sessions are the deliberate exception: only their one-way token hashes and replay/expiry metadata live in the dedicated private auth tables above.
 
 The wallet presence data is intentionally server-owned rather than stored in the browser: the site proves the wallet to the API, and `site/api/_wallet-presence.js` resolves the current runtime agent name and writes it with the server timestamp into `wallet_opt_ins`.
 

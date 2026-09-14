@@ -251,10 +251,9 @@
           const proofWallet = normalize(proof?.address);
           const optedIn = Boolean(
             linkedWallet
+            && proof?.type === "session"
             && proofWallet === linkedWallet
-            && proof?.message
-            && Array.isArray(proof?.signatures)
-            && proof.signatures.length
+            && proof?.message === "MFL Front Office Dapper Opt-In"
           );
           const permission = linkedWallet
             ? JSON.parse(localStorage.getItem(`mfl-wallet-permission-cache-v1:${linkedWallet}`) || "null")

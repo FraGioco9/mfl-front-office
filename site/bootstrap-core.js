@@ -70,10 +70,9 @@
       if (!linkedWallet) return "";
       const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
       const proofWallet = normalizeWalletAddress(proof?.address);
-      return proofWallet === linkedWallet
-        && Boolean(proof?.message)
-        && Array.isArray(proof?.signatures)
-        && proof.signatures.length
+      return proof?.type === "session"
+        && proofWallet === linkedWallet
+        && proof?.message === "MFL Front Office Dapper Opt-In"
         ? linkedWallet
         : "";
     } catch {

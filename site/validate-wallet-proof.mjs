@@ -127,17 +127,55 @@ for (const signatures of [[{ ...signature, addr: otherWallet }],
   assert.equal(denied.calls.length, 0);
 }
 
+// Challenge exchanges bind both proof variants to the exact server-issued message and nonce.
+const challengeMessage = `${message}\nOrigin: https://wallet-test.example\nNonce: ${"ef".repeat(32)}`;
+const challengeNonce = "ef".repeat(32);
+for (const type of ["account-proof", "user-signature"]) {
+  const valid = harness();
+  assert.equal(await valid.proof.verifyWalletProof({
+    walletAddress: wallet,
+    signingAddress: wallet,
+    message: challengeMessage,
+    proofType: type,
+    appIdentifier: message,
+    nonce: challengeNonce,
+    signatures: [signature],
+  }, {
+    expectedMessage: challengeMessage,
+    expectedAppIdentifier: message,
+    expectedNonce: challengeNonce,
+  }), wallet);
+  assert.equal(valid.calls.length, 1);
+
+  for (const [expectedMessage, expectedNonce] of [
+    ["wrong message", challengeNonce],
+    [challengeMessage, "aa".repeat(32)],
+  ]) {
+    const denied = harness();
+    assert.equal(await denied.proof.verifyWalletProof({
+      walletAddress: wallet,
+      signingAddress: wallet,
+      message: challengeMessage,
+      proofType: type,
+      appIdentifier: message,
+      nonce: challengeNonce,
+      signatures: [signature],
+    }, { expectedMessage, expectedAppIdentifier: message, expectedNonce }), "");
+    assert.equal(denied.calls.length, 0);
+  }
+}
+
 // Exercise the former fail-open consumers using the real canonical verifier.
 for (const result of [true, false, new Error("Verifier unavailable")]) {
   const { proof } = harness(result);
   let writes = 0;
   const supabase = { supabaseConfig: () => ({ configured: true }) };
   const auth = load(authSource, {
-    "node:perf_hooks": { performance }, "./_wallet-proof": proof, "./_supabase": supabase,
+    "node:perf_hooks": { performance }, "./_wallet-auth": proof, "./_supabase": supabase,
   });
   assert.equal(await auth.signedWalletFromRequest(request()), result === true ? wallet : "");
   const handler = load(optInSource, {
-    "./_wallet-proof": proof, "./_supabase": supabase,
+    "./_wallet-auth": proof, "./_supabase": supabase,
     "./_wallet-presence": { async touchWalletLastSeen(address) {
       assert.equal(address, wallet);
       writes += 1;

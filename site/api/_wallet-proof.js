@@ -34,36 +34,37 @@ function stringToHex(value) {
   return Buffer.from(value, "utf8").toString("hex");
 }
 
-async function signedWalletFromRequest(request, options = {}) {
-  const headers = request?.headers || {};
-  const wallet = normalizeWalletAddress(headers["x-dapper-wallet-address"]);
-  const signingWallet = normalizeWalletAddress(headers["x-wallet-signing-address"] || wallet);
-  const message = String(headers["x-wallet-message"] || "");
-  const proofType = String(headers["x-wallet-proof-type"] || "user-signature");
-  const appIdentifier = String(headers["x-wallet-app-identifier"] || walletAccessMessage());
-  const nonce = String(headers["x-wallet-nonce"] || "");
+async function verifyWalletProof(proof = {}, options = {}) {
+  const wallet = normalizeWalletAddress(proof.walletAddress || proof.address);
+  const signingWallet = normalizeWalletAddress(proof.signingAddress || wallet);
+  const message = String(proof.message || "");
+  const proofType = String(proof.proofType || proof.type || "user-signature");
+  const appIdentifier = String(proof.appIdentifier || walletAccessMessage());
+  const nonce = String(proof.nonce || "");
+  const signatures = Array.isArray(proof.signatures) ? proof.signatures : [];
+  const expectedMessage = String(options.expectedMessage ?? walletAccessMessage());
+  const expectedAppIdentifier = String(options.expectedAppIdentifier ?? walletAccessMessage());
+  const expectedNonce = options.expectedNonce === undefined ? null : String(options.expectedNonce);
   const warning = options.warning === false
     ? ""
     : String(options.warning || "Could not verify Dapper wallet proof.");
-  let signatures;
-
-  try {
-    signatures = JSON.parse(String(headers["x-wallet-signatures"] || "[]"));
-  } catch {
-    return "";
-  }
 
   if (!/^0x[0-9a-f]{16}$/.test(wallet)
       || signingWallet !== wallet
-      || message !== walletAccessMessage()
+      || message !== expectedMessage
+      || appIdentifier !== expectedAppIdentifier
       || !["account-proof", "user-signature"].includes(proofType)
-      || !Array.isArray(signatures)
       || !signatures.length) {
     return "";
   }
 
-  if (proofType === "account-proof"
-      && (appIdentifier !== walletAccessMessage() || !/^[0-9a-f]{64}$/i.test(nonce))) {
+  if (expectedNonce !== null
+      && (!/^[0-9a-f]{64}$/i.test(nonce)
+        || nonce.toLowerCase() !== expectedNonce.toLowerCase())) {
+    return "";
+  }
+
+  if (proofType === "account-proof" && !/^[0-9a-f]{64}$/i.test(nonce)) {
     return "";
   }
 
@@ -98,8 +99,29 @@ async function signedWalletFromRequest(request, options = {}) {
   }
 }
 
+async function signedWalletFromRequest(request, options = {}) {
+  const headers = request?.headers || {};
+  let signatures;
+  try {
+    signatures = JSON.parse(String(headers["x-wallet-signatures"] || "[]"));
+  } catch {
+    return "";
+  }
+
+  return verifyWalletProof({
+    walletAddress: headers["x-dapper-wallet-address"],
+    signingAddress: headers["x-wallet-signing-address"],
+    message: headers["x-wallet-message"],
+    proofType: headers["x-wallet-proof-type"],
+    appIdentifier: headers["x-wallet-app-identifier"],
+    nonce: headers["x-wallet-nonce"],
+    signatures,
+  }, options);
+}
+
 module.exports = {
   normalizeWalletAddress,
   walletAccessMessage,
+  verifyWalletProof,
   signedWalletFromRequest,
 };
