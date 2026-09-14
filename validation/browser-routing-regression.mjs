@@ -249,6 +249,19 @@ const browserTestSource = String.raw`(() => {
     return !(element instanceof HTMLElement) || element.hidden || getComputedStyle(element).display === "none";
   };
 
+  function assertSharedChromeGeometry() {
+    const viewportWidth = document.documentElement.clientWidth;
+    for (const selector of [".topbar", "#openSearchButton", ".headerControls", "#accountMenu", "#appShell > main"]) {
+      const element = document.querySelector(selector);
+      assert(element instanceof HTMLElement, selector + " is missing from the shared layout.");
+      const rect = element.getBoundingClientRect();
+      assert(
+        rect.left >= -0.5 && rect.right <= viewportWidth + 0.5,
+        selector + " overflows the viewport: " + JSON.stringify({ left: rect.left, right: rect.right, viewportWidth }),
+      );
+    }
+  }
+
   async function waitFor(predicate, message, timeoutMs = 5000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -657,6 +670,7 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    assertSharedChromeGeometry();
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
         && entry.detail?.url === "/api/data?mode=my-clubs");
@@ -692,6 +706,7 @@ const browserTestSource = String.raw`(() => {
     }
 
     await navigateBackToScenario(setPage, timeline);
+    assertSharedChromeGeometry();
     const spaState = routeState();
     assertRouteState(spaState);
     assert(
@@ -1162,7 +1177,7 @@ async function waitForBrowserRegression(cdp) {
   throw new Error("Browser routing regression did not publish a result before timeout.");
 }
 
-async function runChromeRegression(executable, url) {
+async function runChromeRegression(executable, url, width = 1280, height = 900) {
   const debuggingPort = await reserveTcpPort();
   const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-browser-routing-"));
   const child = spawn(executable, [
@@ -1170,7 +1185,7 @@ async function runChromeRegression(executable, url) {
     "--no-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
-    "--window-size=1280,900",
+    `--window-size=${width},${height}`,
     `--remote-debugging-port=${debuggingPort}`,
     "--remote-debugging-address=127.0.0.1",
     `--user-data-dir=${userDataDirectory}`,
@@ -1205,6 +1220,7 @@ const regressionScenarios = Object.freeze([
   ["database", "/database/attributes"],
   ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
+  ["player-intermediate", "/players/1", 1363, 900],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
   ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
   ["myclubs-out", "/my-clubs"],
@@ -1220,9 +1236,9 @@ try {
   assert(address && typeof address === "object", "Browser regression server did not expose a TCP address.");
   const executable = browserExecutable();
 
-  for (const [scenario, path] of regressionScenarios) {
+  for (const [scenario, path, width = 1280, height = 900] of regressionScenarios) {
     const url = `http://127.0.0.1:${address.port}${path}`;
-    const result = await runChromeRegression(executable, url);
+    const result = await runChromeRegression(executable, url, width, height);
     assert.equal(result.status, "passed");
     console.log(`Browser routing regression passed: ${scenario}: ${result.detail}`);
   }
