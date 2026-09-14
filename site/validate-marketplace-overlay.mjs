@@ -1,12 +1,13 @@
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [dataPage, marketplaceApi, overlayRuntime, tableLoadingRuntime, appConfig] = await Promise.all([
+const [dataPage, marketplaceApi, overlayRuntime, tableLoadingRuntime, appConfig, incrementalRouting] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/marketplace.js"),
   read("./marketplace-overlay-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./modules/app-config.js"),
+  read("./modules/core-sources/shared-incremental-routing.js"),
 ]);
 
 function invariant(condition, message) {
@@ -64,6 +65,12 @@ invariant(
 invariant(
   appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
   "Player routes must preload the canonical marketplace overlay so listing enrichment can run in parallel with core Player data.",
+);
+invariant(
+  incrementalRouting.includes('const entityRoute = ["player", "evaluation"].includes(route.scope);')
+    && incrementalRouting.includes('sortKey: route.scope === "club" ? "positions" : entityRoute ? "overall" : state.sortKey,')
+    && incrementalRouting.includes('sortDirection: route.scope === "club" ? "asc" : entityRoute ? "desc" : state.sortDirection,'),
+  "Player/Evaluation entity requests must not inherit irrelevant table sorting that could reintroduce marketplace blocking or fragment entity cache keys.",
 );
 invariant(
   overlayRuntime.includes('currentPage === "player" && currentScope === "player"')
