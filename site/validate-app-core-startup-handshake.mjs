@@ -24,12 +24,10 @@ const sourceMarkerIndex = coreSource.indexOf("window.__mflMarkApplicationCoreLoa
 const sourceStartupPromiseIndex = coreSource.indexOf("window.__mflAppStartPromise = (async () => {");
 invariant(sourceMarkerIndex >= 0 && sourceStartupPromiseIndex > sourceMarkerIndex, "Canonical app-core source must place the application-core marker immediately before startup begins.");
 
-includes(entry, "function detachInitialGlobalSearchWarmupFromRoute()", "app-entry must detach shared Global Search warm-up from visible route startup.");
-includes(entry, 'Reflect.get(runtimeWindow, "primeGlobalSearchIndexes")', "The startup bridge must capture the canonical Global Search primer before startApp runs.");
-includes(entry, 'Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", primeGlobalSearchIndexes);', "The detached startup bridge must restore the canonical Global Search primer after its one startup interception.");
-includes(entry, "initialGlobalSearchWarmupPromise = Promise.resolve()", "Detached Global Search startup must continue as tracked background work.");
-includes(entry, "return Promise.resolve();", "The initial route dependency barrier must receive an already-settled Global Search placeholder.");
-includes(entry, "detachInitialGlobalSearchWarmupFromRoute();", "The application-core marker must install the background warm-up bridge before startup begins.");
+excludes(entry, "function detachInitialGlobalSearchWarmupFromRoute()", "app-entry must not retain a startup Global Search warm-up bridge.");
+excludes(entry, "initialGlobalSearchWarmupPromise", "Application startup must not track unused Global Search background work.");
+excludes(coreSource, "const earlyGlobalSearch = primeGlobalSearchIndexes();", "Canonical startup must not start Global Search indexes before first use.");
+includes(coreSource, "const startupDependencies = [];", "Canonical startup dependencies must begin with route-required work only.");
 
 includes(entry, "function assertApplicationCoreInitialized(sourceLabel)", "app-entry must verify that a loaded core actually initialized.");
 includes(entry, "if (applicationCoreLoaded && runtimeWindow.__mflAppStartPromise) return;", "Core initialization must require both the explicit marker and startup promise.");
@@ -121,15 +119,13 @@ invariant(
 );
 const routePaintIndex = entry.indexOf("await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();");
 const routeReadyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
-const globalSearchPreloadIndex = entry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
 const appReadyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));');
 invariant(
   appStartAwaitIndex >= 0
     && routePaintIndex > appStartAwaitIndex
     && routeReadyIndex > routePaintIndex
-    && globalSearchPreloadIndex > routeReadyIndex
-    && appReadyIndex > globalSearchPreloadIndex,
-  "Refresh startup must finish its route, paint it, publish route readiness, then finish shared background warm-up before app-wide readiness.",
+    && appReadyIndex > routeReadyIndex,
+  "Refresh startup must finish its route, paint it, publish route readiness, then publish app-wide readiness without unused Global Search warm-up.",
 );
 
-console.log("Prebuilt application-core startup handshake, unified refresh/SPA navigation ownership, and route-ready background warm-up validation passed.");
+console.log("Prebuilt application-core startup handshake, unified refresh/SPA navigation ownership, and first-use Global Search startup validation passed.");
