@@ -421,30 +421,8 @@ runtimeWindow.__mflInitialRouteRuntimeReadyPromise = initialRouteRuntimeReadyPro
 const routeRuntimeEnsurePromises = new Map();
 const routeRuntimeReadyKeys = new Set();
 let evaluationRecentStateBridgeInstalled = false;
-/** @type {Promise<unknown>} */
-let initialGlobalSearchWarmupPromise = Promise.resolve();
-
-function detachInitialGlobalSearchWarmupFromRoute() {
-  const primeGlobalSearchIndexes = Reflect.get(runtimeWindow, "primeGlobalSearchIndexes");
-  if (typeof primeGlobalSearchIndexes !== "function" || primeGlobalSearchIndexes.__mflInitialRouteDetached) return false;
-
-  const detachedPrime = function (...args) {
-    Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", primeGlobalSearchIndexes);
-    initialGlobalSearchWarmupPromise = Promise.resolve()
-      .then(() => primeGlobalSearchIndexes.apply(runtimeWindow, args))
-      .catch((error) => {
-        console.warn("Initial Global Search warm-up failed after route loading was released.", error);
-        return false;
-      });
-    return Promise.resolve();
-  };
-  Object.defineProperty(detachedPrime, "__mflInitialRouteDetached", { value: true });
-  return Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", detachedPrime);
-}
-
 function markApplicationCoreLoaded() {
   if (applicationCoreLoaded) return;
-  detachInitialGlobalSearchWarmupFromRoute();
   applicationCoreLoaded = true;
   applicationCoreLoadedResolve();
   recordClientTiming("core-ready", {
@@ -491,7 +469,6 @@ function installCoreBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.installCoreBridge?.();
   runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
-  void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
   installClubRouteRuntimeGate();
 }
@@ -669,12 +646,6 @@ async function start() {
   });
   document.documentElement.dataset.mflRouteReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));
-
-  const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
-  await Promise.allSettled([
-    initialGlobalSearchWarmupPromise,
-    globalSearchPreloadPromise,
-  ]);
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
