@@ -63,7 +63,7 @@ invariant(
   "Marketplace overlay must leave Listing sort/filter authoritative while allowing ordinary Player/Evaluation page data to be enriched asynchronously.",
 );
 invariant(
-  appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
+  appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/player-interactions-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
   "Player routes must preload the canonical marketplace overlay so listing enrichment can run in parallel with core Player data.",
 );
 invariant(

@@ -8,7 +8,7 @@ import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, staticUi, controlInteractions, bootstrap] = await Promise.all([
+const [indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, staticUi, controlInteractions, playerInteractions, bootstrap] = await Promise.all([
   read("./index.html"),
   read("./responsive.css"),
   read("./styles-base.css"),
@@ -17,11 +17,12 @@ const [indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, s
   read("./shared-table-ui-runtime.js"),
   read("./static-ui-runtime.js"),
   read("./control-interactions-runtime.js"),
+  read("./player-interactions-runtime.js"),
   read("./bootstrap.js"),
 ]);
 const appCore = readCombinedCanonicalCoreSource();
 
-const context = { indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, staticUi, controlInteractions, appCore, bootstrap };
+const context = { indexHtml, responsive, stylesBase, controls, scrollbars, sharedTableUi, staticUi, controlInteractions, playerInteractions, appCore, bootstrap };
 validateResponsiveChrome(context);
 validateResponsiveTables(context);
 validateResponsivePlayer(context);

@@ -5,7 +5,9 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").repl
 const buildAppCore = read("./build-app-core.mjs");
 const bootstrap = read("./bootstrap.js");
 const bootstrapCore = read("./bootstrap-core.js");
-const interactions = read("./control-interactions-runtime.js");
+const interactions = read("./player-interactions-runtime.js");
+const globalInteractions = read("./control-interactions-runtime.js");
+const appConfig = read("./modules/app-config.js");
 const shared = read("./shared-table-ui-runtime.js");
 const player = read("./modules/core-sources/player.js");
 const appEntry = read("./modules/app-entry.js");
@@ -54,6 +56,19 @@ for (const token of [
   'observePlayerAttributeViewRenders();',
 ]) {
   assert.ok(interactions.includes(token), `Player view lateral-scroll lifecycle is missing: ${token}`);
+}
+
+assert.ok(
+  appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/player-interactions-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
+  "Player interaction behavior must load only through the Player pre-core dependency group.",
+);
+for (const token of [
+  "function currentPlayerPathname() {",
+  "function syncPlayerPageDetails() {",
+  "function rememberPlayerAttributeViewScroll(",
+  'document.addEventListener("scroll", onPlayerAttributeViewScroll, true);',
+]) {
+  assert.ok(!globalInteractions.includes(token), `Universal control interactions must not retain Player-only work: ${token}`);
 }
 
 for (const token of [
@@ -151,12 +166,18 @@ assert.ok(
   "Parser-first-paint Player overflow must use the same rendered-item width contract as shared runtime so the fade class cannot flip during hydration.",
 );
 
-const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);");
-const activeControlIndex = interactions.indexOf("if (consumeActivePageViewFilterEvent(event)) return;", captureIndex);
-assert.ok(captureIndex >= 0 && activeControlIndex > captureIndex, "Player view scroll must be captured in click capture before the Player view handler rerenders its strip.");
+const playerCaptureHandlerStart = interactions.indexOf("function onClick(event) {");
+const captureIndex = interactions.indexOf("capturePlayerAttributeViewScroll(event.target);", playerCaptureHandlerStart);
+const playerCaptureHandlerEnd = interactions.indexOf("\n  }", captureIndex);
+assert.ok(
+  playerCaptureHandlerStart >= 0
+    && captureIndex > playerCaptureHandlerStart
+    && playerCaptureHandlerEnd > captureIndex,
+  "Player view scroll must remain owned by the Player capture-phase click handler.",
+);
 assert.ok(
   interactions.includes('document.addEventListener("click", onClick, true);'),
-  "Player view selection must still be captured before the synchronous Player view handler runs.",
+  "Player view selection must still be captured in the DOM capture phase before the synchronous Player view bubble handler rerenders its strip.",
 );
 assert.ok(
   !player.includes("scheduleReadyControlsAfterLoading")

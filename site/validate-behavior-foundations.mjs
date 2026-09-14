@@ -18,6 +18,7 @@ const [
   sharedTableUi,
   statsMobileUi,
   interactions,
+  playerInteractions,
   staticUi,
   sharedCore,
   globalSearch,
@@ -36,6 +37,7 @@ const [
   read("./shared-table-ui-runtime.js"),
   read("./stats-mobile-ui-runtime.js"),
   read("./control-interactions-runtime.js"),
+  read("./player-interactions-runtime.js"),
   read("./static-ui-runtime.js"),
   Promise.resolve(readCanonicalCoreSource("shared")),
   read("./global-search-runtime.js"),
@@ -61,8 +63,9 @@ invariant(
 );
 invariant(
   statsMobileUi.includes(`window.matchMedia("(max-width: ${mobileMaxPx}px)")`)
-    && interactions.includes(`window.matchMedia("(max-width: ${mobileMaxPx}px)")`),
-  "Cross-site responsive runtimes must use the canonical mobile breakpoint.",
+    && playerInteractions.includes(`window.matchMedia("(max-width: ${mobileMaxPx}px)")`)
+    && !interactions.includes("PLAYER_VIEW_SCROLL_MEDIA"),
+  "Responsive route runtimes must use the canonical mobile breakpoint without keeping Player-only media ownership universal.",
 );
 
 const matrix = Array.isArray(manifest.validationMatrix) ? manifest.validationMatrix : [];
@@ -136,8 +139,8 @@ invariant(
   "Mobile page changes must reset player-table horizontal scroll through the existing shared owner.",
 );
 invariant(
-  interactions.includes("playerAttributeViewScrollLeft = views.scrollLeft;")
-    && interactions.includes("applyPlayerAttributeViewScroll()"),
+  playerInteractions.includes("playerAttributeViewScrollLeft = views.scrollLeft;")
+    && playerInteractions.includes("applyPlayerAttributeViewScroll()"),
   "Player same-route view changes must preserve their horizontal control-strip position.",
 );
 
@@ -175,9 +178,9 @@ invariant(
   "Horizontal overflow affordances must use one shared tolerance and state language.",
 );
 invariant(
-  interactions.includes(`views.scrollWidth - views.clientWidth > ${overflowTolerance}`)
-    && interactions.includes('views.classList.contains("mflViewsOverflowing")'),
-  "Hydrated control-strip overflow detection must match the shared affordance contract.",
+  playerInteractions.includes(`views.scrollWidth - views.clientWidth > ${overflowTolerance}`)
+    && playerInteractions.includes('views.classList.contains("mflViewsOverflowing")'),
+  "Hydrated Player control-strip overflow detection must match the shared affordance contract.",
 );
 
 for (const token of [

@@ -364,6 +364,34 @@ Deterministic raw-source effect for an ordinary non-Evaluation startup:
 Evaluation intentionally keeps the runtime in its route dependency set. This is request/source
 evidence, not a production-latency claim.
 
+## Player-scoped interaction runtime
+
+Owners: `site/control-interactions-runtime.js` for universal control behavior,
+`site/player-interactions-runtime.js` for Player-only responsive/view-scroll behavior, and
+`site/modules/app-config.js` for Player route dependency ordering.
+
+The universal control interaction runtime previously mixed site-wide pointer/navigation/Escape/filter
+behavior with Player-only responsibilities: compact mobile names, listing-badge accessibility,
+Attribute-view scroll preservation, Player first-paint cue synchronization, and the Player DOM observer.
+
+Those Player-only responsibilities now load with the Player route:
+
+- universal control interactions retain shared gesture suppression, navigation intent, modal keyboard,
+  filter/select normalization, and Escape registration;
+- Player routes load `player-interactions-runtime.js` after shared table UI and before the Player core;
+- direct Player loads and SPA Player navigation therefore install the same observer/scroll owner before
+  authoritative Player rendering;
+- non-Player routes no longer parse or execute Player-specific responsive/scroll code.
+
+Deterministic raw-source effect:
+
+- universal `control-interactions-runtime.js`: **24,857 → 15,047 raw chars**;
+- non-Player startup therefore avoids **9,810 raw source chars (~39%)** from that universal runtime;
+- Player loads the extracted ~10.1k route-scoped runtime, intentionally trading one Player-only request
+  for removing that code from every other route.
+
+This is source/ownership evidence, not a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.
