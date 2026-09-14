@@ -4,25 +4,30 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "node local-dev-server.mjs",
-    "build:config": "node build-vercel-config.mjs",
+    "dev": "node prepare-next-runtime.mjs && next dev --webpack -p 4000",
     "build:core": "node build-app-core.mjs",
     "build:styles": "node build-styles.mjs",
-    "build": "npm run build:html && npm run build:responsive && npm run build:config && npm run build:core && npm run build:styles",
-    "lint": "eslint bootstrap.js bootstrap-core.js local-dev-server.mjs build-*.mjs style-bundle.mjs validation-text.mjs vercel-config-source.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api *-runtime.js validate*.mjs validation/*.mjs",
-    "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
-    "verify:generated": "git diff --exit-code -- vercel.json vercel.production.json styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
-    "validate": "node validate-all.mjs",
-    "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
     "build:html": "node build-html.mjs",
     "build:responsive": "node build-responsive.mjs",
+    "build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles",
+    "build:public": "node prepare-next-runtime.mjs",
+    "build": "npm run build:legacy && npm run build:public && next build",
+    "start": "next start -p 4000",
+    "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next.config.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages/api *-runtime.js validate*.mjs validation/*.mjs",
+    "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
+    "verify:generated": "git diff --exit-code -- styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
+    "validate": "node validate-all.mjs",
+    "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
     "performance:baseline": "node validation/performance-baseline.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
     "@onflow/fcl": "1.21.11",
     "pureimage": "0.4.20",
-    "webp-wasm": "1.0.6"
+    "webp-wasm": "1.0.6",
+    "next": "16.3.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

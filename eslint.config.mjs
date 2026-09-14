@@ -102,11 +102,21 @@ export default [
     },
   },
   {
+    files: ["pages/api/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: nodeWebGlobals,
+    },
+    rules: recommendedRules,
+  },
+  {
     files: [
       "build-*.mjs",
       "style-bundle.mjs",
       "validation-text.mjs",
-      "vercel-config-source.mjs",
+      "next.config.mjs",
+      "prepare-next-runtime.mjs",
       "ci-quality-scope.mjs",
       "validate*.mjs",
       "validation/*.mjs",

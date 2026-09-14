@@ -49,9 +49,14 @@ printf '{"orgId":"%s","projectId":"%s"}' \
 
 (
   cd production-site
-  vercel deploy --prod --yes --force \
-    --local-config vercel.production.json \
-    --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 \
+  if [ ! -d node_modules ]; then
+    npm ci --no-audit --no-fund
+  fi
+  vercel pull --yes --environment=production \
+    --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
+    --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  vercel deploy --prebuilt --prod --yes --force \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
 )
 

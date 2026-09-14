@@ -126,15 +126,15 @@ function normalizeWalletName(value) {
 }
 
 function resolveDatabasePath() {
-  if (databasePath && fs.existsSync(databasePath)) return databasePath;
+  if (databasePath && fs.existsSync(/* turbopackIgnore: true */ databasePath)) return databasePath;
   const configuredPath = String(process.env.MFL_DATABASE_PATH || "").trim();
   if (configuredPath) {
     const resolvedPath = path.resolve(configuredPath);
-    if (!fs.existsSync(resolvedPath)) throw new Error(`Configured database not found: ${resolvedPath}`);
+    if (!fs.existsSync(/* turbopackIgnore: true */ resolvedPath)) throw new Error(`Configured database not found: ${resolvedPath}`);
     databasePath = resolvedPath;
     return databasePath;
   }
-  databasePath = DATABASE_CANDIDATES.find((candidate) => fs.existsSync(candidate)) || "";
+  databasePath = DATABASE_CANDIDATES.find((candidate) => fs.existsSync(/* turbopackIgnore: true */ candidate)) || "";
   if (!databasePath) {
     throw new Error(`Database not found. Expected ${DATABASE_FILE} in api/data-files.`);
   }

@@ -34,6 +34,7 @@ export function classifyChangedFiles(files, workflowDiffForFile = () => "") {
       || file.startsWith("api/")
       || file.startsWith("html-sources/")
       || file.startsWith("modules/")
+      || file.startsWith("pages/")
       || file.startsWith("responsive-sources/")
       || file.startsWith("types/")
       || file.startsWith("validation/")

@@ -97,16 +97,8 @@ jobs:
           fi
           ls -lh api/data-files/mfl_database.db
 
-      - name: Build canonical deployment assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          node build-vercel-config.mjs
-          node build-app-core.mjs
-          node build-styles.mjs
-          test -s vercel.production.json
-          test -s modules/app-core-runtime.js
-          test -s styles-runtime.css
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Show released site commit
         shell: bash
@@ -138,7 +130,18 @@ jobs:
           mkdir -p .vercel
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
+      - name: Pull production Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+
+      - name: Build protected Next.js deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ALLOW_VERCEL_ACTION_DEPLOY: "1"
+        run: vercel build --prod --yes --token "$VERCEL_TOKEN"
+
       - name: Deploy protected site to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel deploy --prod --yes --force --local-config vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
+        run: vercel deploy --prebuilt --prod --yes --force --token "$VERCEL_TOKEN"

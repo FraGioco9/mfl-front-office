@@ -1,37 +1,29 @@
 import { access, readFile } from "node:fs/promises";
+import { createNextRewrites } from "./next.config.mjs";
 
-const [ignoreSource, canonicalConfigSource, productionConfigSource] = await Promise.all([
+const [ignoreSource, packageSource, prepareSource] = await Promise.all([
   readFile(new URL("./.vercelignore", import.meta.url), "utf8"),
-  readFile(new URL("./vercel.json", import.meta.url), "utf8"),
-  readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
+  readFile(new URL("./package.json", import.meta.url), "utf8"),
+  readFile(new URL("./prepare-next-runtime.mjs", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
-  ignoreSource
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#")),
+  ignoreSource.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")),
 );
-const canonicalConfig = JSON.parse(canonicalConfigSource);
-const productionConfig = JSON.parse(productionConfigSource);
+const packageJson = JSON.parse(packageSource);
 
-const requiredProductionIgnoredPaths = [
-  ".gitignore",
-  "validate*.mjs",
-  "eslint.config.mjs",
-  "jsconfig.json",
-  "types",
-  "vercel.production.json",
-  "build-app-core.mjs",
-  "sync-release-projections.mjs",
-  "modules/app-config.js",
-  "modules/pre-bootstrap-route-state.js",
-  "modules/package.json",
+for (const requiredBuildSource of [
+  "html-sources",
+  "responsive-sources",
   "modules/core-sources",
-];
-
-for (const path of requiredProductionIgnoredPaths) {
-  if (!ignoredPaths.has(path)) {
-    throw new Error(`Development-only source must not ship in production: ${path}`);
+  "build-app-core.mjs",
+  "build-html.mjs",
+  "build-responsive.mjs",
+  "build-styles.mjs",
+  "prepare-next-runtime.mjs",
+  "next.config.mjs",
+]) {
+  if (ignoredPaths.has(requiredBuildSource)) {
+    throw new Error(`Next production build source must remain available to Vercel: ${requiredBuildSource}`);
   }
 }
 
@@ -62,20 +54,12 @@ const retiredApplicationCorePaths = [
   "modules/app-core-table-state-normalizer.js",
 ];
 for (const path of retiredApplicationCorePaths) {
-  const productionPath = `${path}`;
-  if (ignoredPaths.has(productionPath)) {
-    throw new Error(`Retired application-core source must not leave a stale deployment-ignore entry: ${productionPath}`);
-  }
   try {
     await access(new URL(`./${path}`, import.meta.url));
     throw new Error(`Retired application-core source must stay deleted: ${path}`);
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-}
-
-if (ignoredPaths.has("vercel.json")) {
-  throw new Error("Canonical vercel.json must ship from the configured Vercel project root so production routing rules are applied.");
 }
 
 for (const runtimePath of [
@@ -89,47 +73,23 @@ for (const runtimePath of [
   "modules/app-core-wallet-runtime.js",
   "modules/app-core-watchlist-runtime.js",
 ]) {
-  if (ignoredPaths.has(runtimePath)) {
-    throw new Error(`Generated application-core runtime must remain deployable: ${runtimePath}`);
-  }
+  await access(new URL(`./${runtimePath}`, import.meta.url));
 }
 
-function validatePrebuiltBuild(config, label) {
-  const buildCommand = String(config.buildCommand || "").trim();
-  if (!buildCommand) {
-    throw new Error(`${label} Vercel config must explicitly override the package build script because compiler sources are excluded from deployment.`);
-  }
-  if (/build-app-core|npm\s+(?:run\s+)?build\b/i.test(buildCommand)) {
-    throw new Error(`${label} Vercel build must deploy the prebuilt application core instead of invoking an excluded compiler source.`);
-  }
+if (!String(packageJson.scripts?.build || "").endsWith("next build")) {
+  throw new Error("Production build must finish with next build.");
+}
+if (!prepareSource.includes('name.endsWith("-runtime.js")')
+    || !prepareSource.includes('join("modules", entry.name)')) {
+  throw new Error("Next public compatibility projection must include legacy runtime assets and generated application-core runtimes.");
 }
 
-function validateSpaRouting(config, label) {
-  const rewrites = Array.isArray(config.rewrites) ? config.rewrites : [];
-  const releaseRewrite = rewrites.find((rule) => rule?.source === "/releases.json");
-  if (releaseRewrite?.destination !== "/api/releases") {
-    throw new Error(`${label} Vercel config must preserve the /releases.json API rewrite before the SPA fallback.`);
-  }
-
-  const spaFallbackIndex = rewrites.findIndex(
-    (rule) => rule?.source === "/(.*)" && rule?.destination === "/",
-  );
-  if (spaFallbackIndex < 0) {
-    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to the known-working root shell.`);
-  }
-  if (spaFallbackIndex !== rewrites.length - 1) {
-    throw new Error(`${label} Vercel SPA catch-all must be the final rewrite rule.`);
-  }
-
-  const redirects = Array.isArray(config.redirects) ? config.redirects : [];
-  if (redirects.length > 0) {
-    throw new Error(`${label} Vercel config must not duplicate application route canonicalization through deployment redirects.`);
-  }
+const rewrites = createNextRewrites();
+if (!rewrites.beforeFiles?.some((rule) => rule.source === "/releases.json" && rule.destination === "/api/releases")) {
+  throw new Error("Next must preserve the /releases.json API rewrite before SPA fallback.");
+}
+if (!rewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html")) {
+  throw new Error("Next must rewrite every unmatched SPA route to the compatibility index shell.");
 }
 
-validatePrebuiltBuild(canonicalConfig, "Canonical");
-validatePrebuiltBuild(productionConfig, "Production");
-validateSpaRouting(canonicalConfig, "Canonical");
-validateSpaRouting(productionConfig, "Production");
-
-console.log("Canonical build-only source exclusions, retired application-core cleanup, prebuilt deployment, SPA routing, and generated runtime deployment validation passed.");
+console.log("Next production build-source availability, retired-core cleanup, SPA routing, and compatibility projection validation passed.");

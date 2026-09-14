@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { outputFileTracingIncludes } from "./next.config.mjs";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const readText = (path) => readFileSync(resolve(siteRoot, path), "utf8");
@@ -48,7 +49,6 @@ function dominantChannel(pixel) {
 
 const rendererSource = readText("api/_progression-email-portrait.js");
 const endpointSource = readText("api/progression-email-portrait.js");
-const configs = ["vercel.json", "vercel.production.json"].map((path) => [path, JSON.parse(readText(path))]);
 
 assert(PORTRAIT_CROP_HEIGHT_PX === 400, "Progression email portraits must crop exactly the top 400 source pixels.");
 assert(PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX === 216, "Progression email portraits must render at 216px high for high-density displays.");
@@ -85,13 +85,11 @@ assert(
     && endpointSource.includes('response.setHeader("Content-Type", "image/png")'),
   "The progression email portrait endpoint must return the preprocessed PNG renderer output.",
 );
-for (const [path, config] of configs) {
-  const includeFiles = String(config.functions?.["api/progression-email-portrait.js"]?.includeFiles || "");
-  assert(
-    includeFiles.includes("node_modules/webp-wasm/webp_node_dec.wasm"),
-    `${path} must bundle the WebP decoder WASM with the progression-email portrait function.`,
-  );
-}
+const progressionPortraitIncludes = outputFileTracingIncludes["/api/progression-email-portrait"] || [];
+assert(
+  progressionPortraitIncludes.some((value) => String(value).includes("node_modules/webp-wasm/webp_node_dec.wasm")),
+  "Next tracing must bundle the WebP decoder WASM with the progression-email portrait route.",
+);
 
 // Use an opaque neutral background to verify that Gmail portrait preprocessing
 // actually cuts out the player instead of merely preserving existing alpha.

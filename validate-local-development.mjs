@@ -1,128 +1,59 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createLocalDevelopmentServer } from "./local-dev-server.mjs";
 
-const repositoryRoot = dirname(fileURLToPath(import.meta.url));
-const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8");
+const root = dirname(fileURLToPath(import.meta.url));
+const read = (path) => readFile(resolve(root, path), "utf8");
+const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-function invariant(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-const [packageSource, readme, ownership, guardrails, qualityScope, vercelSource, devServer] = await Promise.all([
-  readRepository("package.json"),
-  readRepository("README.md"),
-  readRepository("docs/ownership.md"),
-  readRepository("docs/architecture-guardrails.md"),
-  readRepository("ci-quality-scope.mjs"),
-  readRepository("vercel.json"),
-  readRepository("local-dev-server.mjs"),
+const [packageSource, nextConfig, prepareRuntime, readme, ownership, guardrails, qualityWorkflow] = await Promise.all([
+  read("package.json"),
+  read("next.config.mjs"),
+  read("prepare-next-runtime.mjs"),
+  read("README.md"),
+  read("docs/ownership.md"),
+  read("docs/architecture-guardrails.md"),
+  read(".github/workflows/site-quality.yml"),
 ]);
 
 const packageJson = JSON.parse(packageSource);
-const vercelConfig = JSON.parse(vercelSource);
 invariant(packageJson.private === true, "Root package.json must remain private.");
-invariant(packageJson.name === "mfl-front-office", "Root package.json must own the application package identity.");
-invariant(packageJson.engines?.node === "22.x", "Root local development must use the canonical Node 22 runtime.");
-invariant(
-  packageJson.scripts?.dev === "node local-dev-server.mjs",
-  "Root npm run dev must start the repository-owned local development server directly.",
-);
-invariant(
-  packageJson.scripts?.check === "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
-  "Root npm run check must own the complete canonical application quality path.",
-);
-invariant(!vercelConfig.devCommand, "Local startup must not be delegated back to Vercel.");
-invariant(
-  devServer.includes("createLocalDevelopmentServer")
-    && devServer.includes("request.query = queryObject")
-    && devServer.includes("response.status =")
-    && devServer.includes("response.json =")
-    && devServer.includes("response.send =")
-    && devServer.includes('resolve(root, "api"')
-    && devServer.includes('process.loadEnvFile(path)'),
-  "The local development server must own SPA assets, Vercel-compatible API dispatch, and root .env.local loading.",
-);
+invariant(packageJson.engines?.node === "22.x", "Next runtime must remain on the supported Node 22 line.");
+invariant(packageJson.dependencies?.next === "16.3.4", "MFL Front Office must use the pinned Next.js runtime.");
+invariant(packageJson.dependencies?.react === "18.3.1" && packageJson.dependencies?.["react-dom"] === "18.3.1", "Next runtime must use the wallet-compatible pinned React pair.");
+invariant(packageJson.scripts?.dev === "node prepare-next-runtime.mjs && next dev --webpack -p 4000", "npm run dev must start Next.js Webpack development mode on port 4000 so native node:sqlite remains Node-owned on Windows.");
+invariant(packageJson.scripts?.start === "next start -p 4000", "npm run start must own the production Next server.");
+invariant(String(packageJson.scripts?.build || "").endsWith("next build"), "npm run build must finish with next build.");
+invariant(!packageSource.includes("local-dev-server.mjs") && !packageSource.includes("vercel dev"), "Local startup must not use the retired custom/Vercel dev servers.");
 
-for (const forbidden of ["vercel dev", "--cwd site", "prepare_runtime_database", "npm run build"]) {
-  invariant(
-    !String(packageJson.scripts?.dev || "").includes(forbidden),
-    `Root npm run dev must stay an independent local-runtime entry point: ${forbidden}`,
-  );
-}
+invariant(nextConfig.includes('fallback: [{ source: "/:path*", destination: "/index.html" }]'), "Next must preserve SPA deep-link fallback.");
+invariant(nextConfig.includes('{ source: "/evaluation", destination: "/api/evaluation-preview" }'), "Next must preserve Evaluation preview routing.");
+invariant(nextConfig.includes('"/api/data": ["./api/data-files/mfl_database.db"]'), "Next tracing must retain the SQLite database for the data API.");
+invariant(prepareRuntime.includes('await rm(publicRoot, { recursive: true, force: true })'), "Next public compatibility projection must be rebuilt deterministically.");
+invariant(prepareRuntime.includes('name.endsWith("-runtime.js")'), "Next public projection must include runtime browser assets.");
+invariant(prepareRuntime.includes('entry.name === "app-entry.js"'), "Next public projection must include the browser application entry module.");
+invariant(prepareRuntime.includes('join("modules", entry.name)'), "Next public projection must include generated application-core runtimes.");
 
-const previousSecret = process.env.WALLET_CHALLENGE_SECRET;
-const previousOrigin = process.env.WALLET_CHALLENGE_ORIGIN;
-const previousVercelUrl = process.env.VERCEL_URL;
-process.env.WALLET_CHALLENGE_SECRET = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-delete process.env.WALLET_CHALLENGE_ORIGIN;
-delete process.env.VERCEL_URL;
-
-const server = createLocalDevelopmentServer();
-try {
-  await new Promise((resolvePromise, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolvePromise);
-  });
-  const address = server.address();
-  invariant(address && typeof address === "object", "Local development server must expose its test port.");
-  const rootResponse = await fetch(`http://127.0.0.1:${address.port}/`);
-  const rootHtml = await rootResponse.text();
-  invariant(
-    rootResponse.status === 200 && rootHtml.includes("<title>") && rootHtml.includes("MFL Front Office"),
-    "Local development root must serve the real SPA shell.",
-  );
-  const deepRouteResponse = await fetch(`http://127.0.0.1:${address.port}/database/attributes`);
-  const deepRouteHtml = await deepRouteResponse.text();
-  invariant(
-    deepRouteResponse.status === 200 && deepRouteHtml.includes("MFL Front Office"),
-    "Local development deep links must fall back to the SPA shell.",
-  );
-
-  const response = await fetch(`http://127.0.0.1:${address.port}/api/wallet-session`);
-  const payload = await response.json();
-  invariant(response.status === 200, "Local wallet-session GET must execute through the real API handler.");
-  invariant(
-    typeof payload.token === "string"
-      && /^[0-9a-f]{64}$/.test(String(payload.nonce || ""))
-      && String(payload.message || "").includes(`Origin: http://127.0.0.1:${address.port}`),
-    "Local wallet-session challenge must preserve the request-derived localhost origin.",
-  );
-} finally {
-  await new Promise((resolvePromise) => server.close(resolvePromise));
-  if (previousSecret === undefined) delete process.env.WALLET_CHALLENGE_SECRET;
-  else process.env.WALLET_CHALLENGE_SECRET = previousSecret;
-  if (previousOrigin === undefined) delete process.env.WALLET_CHALLENGE_ORIGIN;
-  else process.env.WALLET_CHALLENGE_ORIGIN = previousOrigin;
-  if (previousVercelUrl === undefined) delete process.env.VERCEL_URL;
-  else process.env.VERCEL_URL = previousVercelUrl;
+for (const route of ["data", "wallet-session", "evaluation-preview", "wallet-preferences"]) {
+  const wrapper = await read(`pages/api/${route}.js`);
+  invariant(wrapper.includes(`../../api/${route}.js`), `Next API wrapper missing canonical ${route} handler.`);
+  invariant(wrapper.includes("export default handler;"), `Next API wrapper must expose the canonical ${route} handler as a Pages API default export.`);
+  invariant(wrapper.includes("bodyParser: false"), `Next API wrapper must preserve the canonical raw request-body contract for ${route}.`);
 }
 
 invariant(
-  readme.includes("npm run dev")
-    && readme.includes("local-dev-server.mjs")
-    && readme.includes("port **4000**")
-    && readme.includes("does **not** rebuild the database or regenerate tracked site artifacts"),
-  "README must document the canonical root dev command and its ownership boundaries.",
+  qualityWorkflow.includes("Next runtime smoke test")
+    && qualityWorkflow.includes("npx next start -p 4010")
+    && qualityWorkflow.includes("/database/attributes")
+    && qualityWorkflow.includes("/api/wallet-session")
+    && qualityWorkflow.includes("windows-next-dev-smoke:")
+    && qualityWorkflow.includes("runs-on: windows-latest")
+    && qualityWorkflow.includes("/api/identity")
+    && qualityWorkflow.includes('Invalid wallet proof.'),
+  "Site Quality must smoke-test the real built Next runtime and the exact Windows development SQLite path through a deterministic fixture.",
 );
-invariant(
-  ownership.includes("single application package")
-    && ownership.includes("node local-dev-server.mjs")
-    && ownership.includes("Vercel remains the production/deployment runtime"),
-  "Ownership documentation must identify the flattened root application and local runtime owner.",
-);
-invariant(
-  guardrails.includes("### Root local-development entry point — keep")
-    && guardrails.includes("one repository root")
-    && guardrails.includes("Site Quality remains the generated-artifact writer"),
-  "Architectural guardrails must retain the root dev/generated-artifact boundary.",
-);
-invariant(
-  qualityScope.includes('file.startsWith("api/")')
-    && qualityScope.includes('file.startsWith("modules/")')
-    && qualityScope.includes('rootApplicationFile'),
-  "CI scope detection must validate the flattened application root.",
-);
+invariant(readme.includes("Next.js") && readme.includes("next dev --webpack -p 4000"), "README must document Next runtime ownership.");
+invariant(ownership.includes("Next.js") && ownership.includes("public/"), "Ownership docs must describe the Next compatibility boundary.");
+invariant(guardrails.includes("Next.js runtime"), "Architecture guardrails must retain Next runtime ownership.");
 
-console.log("Canonical flattened root npm development workflow, real API dispatch, and ownership validation passed.");
+console.log("Canonical Next.js local/build/runtime ownership validation passed.");

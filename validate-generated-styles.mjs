@@ -21,13 +21,14 @@ invariant(
 );
 invariant(
   packageJson.includes('"build:styles": "node build-styles.mjs"')
-    && packageJson.includes('"build": "npm run build:html && npm run build:responsive && npm run build:config && npm run build:core && npm run build:styles"')
+    && packageJson.includes('"build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles"')
+    && packageJson.includes('"build": "npm run build:legacy && npm run build:public && next build"')
     && packageJson.includes("styles-runtime.css table-width-runtime.js"),
   "The normal build and generated verification paths must own styles-runtime.css.",
 );
 invariant(
-  vercelIgnore.includes("build-styles.mjs") && vercelIgnore.includes("style-bundle.mjs"),
-  "The stylesheet compiler and recursive bundling helper must remain build-only in the Vercel artifact.",
+  !vercelIgnore.includes("build-styles.mjs") && !vercelIgnore.includes("style-bundle.mjs"),
+  "The stylesheet compiler and recursive bundling helper must remain available to the Vercel Next build.",
 );
 
 console.log("Generated production stylesheet validation passed with a fully flattened CSS dependency graph.");
