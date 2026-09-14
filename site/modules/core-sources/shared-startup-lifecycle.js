@@ -86,7 +86,6 @@ async function startApp() {
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   commitPageTransition(initialTarget.pageName, false, initialTarget.options);
   const startupNavigationSequence = navigationTransitionSequence;
-  const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
   window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
@@ -103,7 +102,7 @@ async function startApp() {
   updateMenuVisibility();
   showAppShell();
 
-  const startupDependencies = [earlyGlobalSearch];
+  const startupDependencies = [];
   if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);
   if (initialTarget.pageName === "home") startupDependencies.push(startupSummaryPromise);
   if (["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)) {
