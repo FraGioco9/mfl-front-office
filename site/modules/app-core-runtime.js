@@ -6455,6 +6455,10 @@ function setupBackdropClickClose(modal, closeCallback) {
 }
 
 async function openSearch() {
+  const ensureGlobalSearchRuntime = Reflect.get(window, "__mflEnsureGlobalSearchRuntime");
+  if (typeof ensureGlobalSearchRuntime === "function") {
+    await ensureGlobalSearchRuntime();
+  }
   showModal(searchModal);
   playerSearchInput.value = "";
 

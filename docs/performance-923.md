@@ -333,6 +333,37 @@ Deterministic request-work effect before the Search modal is used:
 
 This is request-ownership evidence rather than a production-latency claim.
 
+## Lazy Global Search runtime
+
+Owners: `site/modules/app-entry.js` for the first-use loader,
+`shared-global-search.js` for the canonical open lifecycle, and
+`site/modules/app-config.js` for Evaluation route dependencies.
+
+After recent-data hydration became first-use work, the full `global-search-runtime.js` still remained
+in the universal pre-core runtime group. Ordinary Database, Player, Club, My Clubs and other routes
+therefore still downloaded and executed the entire Search bridge even when Search was never opened.
+
+The runtime is now scoped by actual use:
+
+- ordinary routes do not request `global-search-runtime.js` during startup;
+- `app-entry.js` publishes one deduplicated first-use loader;
+- canonical `openSearch()` awaits that loader before revealing the modal, so the first click and
+  Ctrl/Cmd+K use the same authoritative runtime with no legacy-render race;
+- Evaluation includes the Search runtime in `evaluationPre`, preserving its immediately interactive
+  player-search field on direct loads and SPA navigation;
+- once loaded, the runtime remains session-resident exactly as before.
+
+Deterministic raw-source effect for an ordinary non-Evaluation startup:
+
+- before: `app-entry.js` 25,575 chars + universal `global-search-runtime.js` 34,027 chars
+  = **59,602 chars across the affected startup slice**;
+- after: `app-entry.js` 26,525 chars, while the 34,027-char Search runtime is deferred;
+- normal startup removes **one script request** and **33,077 raw source chars (~55%)** from this
+  affected slice before compression.
+
+Evaluation intentionally keeps the runtime in its route dependency set. This is request/source
+evidence, not a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.

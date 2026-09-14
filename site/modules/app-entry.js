@@ -196,10 +196,33 @@ function loadScriptGroup(paths) {
 function preloadClassicScript(path) {
   runtimeResources().preload(path);
 }
+let globalSearchRuntimePromise = null;
+
+function ensureGlobalSearchRuntime() {
+  const existing = Reflect.get(window, "__mflGlobalSearchRuntime");
+  if (existing && typeof existing.search === "function") return Promise.resolve(existing);
+  if (globalSearchRuntimePromise) return globalSearchRuntimePromise;
+
+  globalSearchRuntimePromise = loadClassicScript("/global-search-runtime.js")
+    .then(() => {
+      const runtime = Reflect.get(window, "__mflGlobalSearchRuntime");
+      if (!runtime || typeof runtime.search !== "function") {
+        throw new Error("Global Search runtime loaded without its canonical owner.");
+      }
+      return runtime;
+    })
+    .catch((error) => {
+      globalSearchRuntimePromise = null;
+      throw error;
+    });
+  return globalSearchRuntimePromise;
+}
+
+Reflect.set(window, "__mflEnsureGlobalSearchRuntime", ensureGlobalSearchRuntime);
+
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
-  "/global-search-runtime.js",
 ]);
 
 const BUG_REPORT_CONTROL_SELECTOR = '.siteFooterDetails [data-bug-report-control="true"]';
@@ -314,7 +337,8 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflDatabaseStatsRuntime?: { sync?: () => void },
- * __mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void },
+ * __mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void, search?: (query: string) => Promise<boolean> },
+ * __mflEnsureGlobalSearchRuntime?: () => Promise<unknown>,
  * __mflEvaluationLayoutRuntime?: { sync?: () => void },
  * __mflEvaluationSearchStateRuntime?: { sync?: () => void, restoreEmptyRecentResults?: (force?: boolean) => Promise<boolean>, destroy?: () => void },
  * __mflSelectionStartupResetRuntime?: { rebind?: () => void },

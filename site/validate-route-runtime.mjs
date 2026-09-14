@@ -44,7 +44,15 @@ includes(entry, "return routeConfig().routeDependencyPlan(pageName, options);", 
 includes(entry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime", "SPA navigation must expose the route-runtime gate.");
 includes(entry, "runtimeWindow.__mflIsRouteRuntimeReady = routeRuntimeReady", "SPA navigation must expose settled route-runtime readiness.");
 includes(entry, "const routeRuntimeReadyKeys = new Set();", "Route-runtime readiness must be explicit and cacheable.");
-includes(entry, "global-search-runtime.js", "Global Search must remain early/universal.");
+const universalRuntimeStart = entry.indexOf("const UNIVERSAL_RUNTIME_SCRIPTS");
+const universalRuntimeEnd = entry.indexOf("]);", universalRuntimeStart);
+const universalRuntimeSource = universalRuntimeStart >= 0 && universalRuntimeEnd > universalRuntimeStart
+  ? entry.slice(universalRuntimeStart, universalRuntimeEnd)
+  : "";
+excludes(universalRuntimeSource, '"/global-search-runtime.js"', "Global Search must not remain universal after first-use route scoping.");
+includes(entry, "function ensureGlobalSearchRuntime() {", "app-entry must own the first-use Global Search runtime gate.");
+includes(entry, 'loadClassicScript("/global-search-runtime.js")', "The first-use Global Search gate must load the canonical runtime.");
+includes(appConfig, 'evaluationPre: Object.freeze([\n    "/global-search-runtime.js",', "Evaluation must preload Global Search because its search input is immediately interactive.");
 for (const retiredLocalOwner of [
   "TABLE_PRE_CORE_RUNTIME_SCRIPTS",
   "TABLE_POST_CORE_RUNTIME_SCRIPTS",
