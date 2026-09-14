@@ -5,7 +5,9 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").repl
 const buildAppCore = read("./build-app-core.mjs");
 const bootstrap = read("./bootstrap.js");
 const bootstrapCore = read("./bootstrap-core.js");
-const interactions = read("./control-interactions-runtime.js");
+const interactions = read("./player-interactions-runtime.js");
+const globalInteractions = read("./control-interactions-runtime.js");
+const appConfig = read("./modules/app-config.js");
 const shared = read("./shared-table-ui-runtime.js");
 const player = read("./modules/core-sources/player.js");
 const appEntry = read("./modules/app-entry.js");
@@ -54,6 +56,19 @@ for (const token of [
   'observePlayerAttributeViewRenders();',
 ]) {
   assert.ok(interactions.includes(token), `Player view lateral-scroll lifecycle is missing: ${token}`);
+}
+
+assert.ok(
+  appConfig.includes('playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/player-interactions-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ])'),
+  "Player interaction behavior must load only through the Player pre-core dependency group.",
+);
+for (const token of [
+  "function currentPlayerPathname() {",
+  "function syncPlayerPageDetails() {",
+  "function rememberPlayerAttributeViewScroll(",
+  'document.addEventListener("scroll", onPlayerAttributeViewScroll, true);',
+]) {
+  assert.ok(!globalInteractions.includes(token), `Universal control interactions must not retain Player-only work: ${token}`);
 }
 
 for (const token of [
