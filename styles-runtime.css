@@ -8901,6 +8901,58 @@ html:not(.mflInitialRouteResolved):is(
 }
 
 @media (min-width: 901px) and (max-width: 1000px) {
+  .playerPage {
+    --mfl-player-hero-identity-width: 100%;
+    --mfl-player-hero-identity-action-gap: 0px;
+    --mfl-player-hero-actions-align-self: stretch;
+    --mfl-player-hero-actions-margin-left: 0px;
+    --mfl-player-hero-action-menu-width: 100%;
+    --mfl-player-hero-primary-action-width: calc(100% - 34px);
+    --mfl-player-hero-action-chevron-width: 30px;
+  }
+
+  .playerHero {
+    display: grid;
+    grid-template-columns: var(--mfl-player-hero-media-width) minmax(0, 1fr);
+    grid-template-areas:
+      "media identity"
+      "actions actions";
+    grid-template-rows: auto var(--mfl-player-hero-action-height);
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    box-sizing: border-box;
+    align-items: center;
+    row-gap: var(--mfl-player-hero-section-gap);
+  }
+
+  .playerHeroMedia {
+    grid-area: media;
+  }
+
+  .playerHeroIdentity {
+    grid-area: identity;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+  }
+
+  .playerHeroActions {
+    grid-area: actions;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0 !important;
+  }
+
+  .playerHeroActionMenu {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
   .playerGrid {
     grid-template-columns: minmax(0, 1fr);
   }
