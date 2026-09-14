@@ -237,9 +237,9 @@ for (const required of [
 ]) includes(player, required, "Canonical Player runtime must consume fluid CSS geometry, Profile structure, and refresh shared Attribute-view cues after every render: " + required);
 
 for (const required of [
-  'playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n  ]),',
+  'playerPre: Object.freeze([\n    "/shared-table-ui-runtime.js",\n    "/marketplace-overlay-runtime.js",\n  ]),',
   'if (page === "player") preCore.push(...data.routes.runtimeScripts.playerPre);',
-]) includes(appConfig, required, "Player routes must actually load the shared horizontal-cue runtime before the Player core: " + required);
+]) includes(appConfig, required, "Player routes must actually load shared pre-core horizontal-cue and marketplace runtimes before the Player core: " + required);
 
 for (const required of [
   'function playerAttributeViews() {',
