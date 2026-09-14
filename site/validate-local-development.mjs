@@ -22,8 +22,8 @@ const rootPackage = JSON.parse(rootPackageSource);
 invariant(rootPackage.private === true, "Root package.json must remain private.");
 invariant(rootPackage.engines?.node === "22.x", "Root local development must use the canonical Node 22 runtime.");
 invariant(
-  rootPackage.scripts?.dev === "vercel dev --listen 4000",
-  "Root npm run dev must remain a thin Vercel port-4000 wrapper.",
+  rootPackage.scripts?.dev === "vercel dev --cwd site --listen 4000",
+  "Root npm run dev must target the site Vercel project on port 4000 without recursively resolving the root dev script.",
 );
 invariant(
   rootPackage.scripts?.check === "npm --prefix site run check",
@@ -49,7 +49,7 @@ invariant(
 );
 invariant(
   ownership.includes("Root `package.json` owns the canonical local-development entry point.")
-    && ownership.includes("`npm run dev` is a thin wrapper around `vercel dev --listen 4000`"),
+    && ownership.includes("`npm run dev` is a thin wrapper around `vercel dev --cwd site --listen 4000`"),
   "Ownership documentation must identify the root dev command owner.",
 );
 invariant(
