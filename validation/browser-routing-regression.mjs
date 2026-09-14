@@ -249,16 +249,64 @@ const browserTestSource = String.raw`(() => {
     return !(element instanceof HTMLElement) || element.hidden || getComputedStyle(element).display === "none";
   };
 
+  function assertElementWithinViewport(selector, viewportWidth) {
+    const element = document.querySelector(selector);
+    assert(element instanceof HTMLElement, selector + " is missing from the shared layout.");
+    const rect = element.getBoundingClientRect();
+    assert(rect.width > 0, selector + " has no visible width.");
+    assert(
+      rect.left >= -0.5 && rect.right <= viewportWidth + 0.5,
+      selector + " overflows the viewport: " + JSON.stringify({ left: rect.left, right: rect.right, width: rect.width, viewportWidth }),
+    );
+  }
+
   function assertSharedChromeGeometry() {
     const viewportWidth = document.documentElement.clientWidth;
-    for (const selector of [".topbar", "#openSearchButton", ".headerControls", "#accountMenu", "#appShell > main"]) {
-      const element = document.querySelector(selector);
-      assert(element instanceof HTMLElement, selector + " is missing from the shared layout.");
-      const rect = element.getBoundingClientRect();
+    assert(
+      document.documentElement.scrollWidth <= viewportWidth + 1,
+      "The document is wider than the viewport: " + JSON.stringify({
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth,
+      }),
+    );
+
+    for (const selector of [
+      ".topbar",
+      "#openSearchButton",
+      ".headerControls",
+      ".stats",
+      ".stats > div:first-child",
+      ".stats > div:last-child",
+      "#themeButton",
+      "#accountMenu",
+      "#accountButton",
+      "#appShell > main",
+    ]) {
+      assertElementWithinViewport(selector, viewportWidth);
+    }
+
+    if (scenario === "player") {
+      const main = document.querySelector("#appShell > main");
+      assert(main instanceof HTMLElement, "Player main shell is missing.");
       assert(
-        rect.left >= -0.5 && rect.right <= viewportWidth + 0.5,
-        selector + " overflows the viewport: " + JSON.stringify({ left: rect.left, right: rect.right, viewportWidth }),
+        main.scrollWidth <= main.clientWidth + 1,
+        "Player route overflows the main viewport: " + JSON.stringify({
+          scrollWidth: main.scrollWidth,
+          clientWidth: main.clientWidth,
+        }),
       );
+      for (const selector of [
+        ".playerPage",
+        ".playerHero",
+        ".playerHeroMedia",
+        ".playerHeroIdentity",
+        ".playerHeroActions",
+        ".playerGrid",
+        ".pitchPanel",
+        ".pitch",
+      ]) {
+        assertElementWithinViewport(selector, viewportWidth);
+      }
     }
   }
 
@@ -1220,7 +1268,11 @@ const regressionScenarios = Object.freeze([
   ["database", "/database/attributes"],
   ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
-  ["player-intermediate", "/players/1", 1363, 900],
+  ["player-1444", "/players/1", 1444, 900],
+  ["player-1363", "/players/1", 1363, 900],
+  ["player-1200", "/players/1", 1200, 900],
+  ["player-1101", "/players/1", 1101, 900],
+  ["player-901", "/players/1", 901, 900],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
   ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
   ["myclubs-out", "/my-clubs"],
