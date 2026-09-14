@@ -222,9 +222,10 @@ Evaluation calculations and rendering consume SQLite player attributes/progressi
 classification, so every uncached Evaluation `mode=page` response awaited the canonical marketplace
 snapshot before it could return core player data.
 
-Evaluation now remains SQLite-only unless a request explicitly sorts or filters by Listing. Player
-pages keep marketplace embedding because the Player hero visibly renders the live listing badge, and
-Listing sort/filter requests remain marketplace-authoritative.
+Evaluation remains SQLite-only unless a request explicitly sorts or filters by Listing. Player core
+data now follows the same nonblocking ownership: the SQLite Player payload can return independently,
+while the existing marketplace overlay is preloaded for Player and applies the visible listing badge
+asynchronous to core data. Listing sort/filter requests remain marketplace-authoritative.
 
 Deterministic dependency effect for a normal Evaluation player request:
 
@@ -237,6 +238,37 @@ Deterministic dependency effect for a normal Evaluation player request:
 This removes blocking work by ownership rather than hiding marketplace failures or changing Evaluation
 results. Wall-clock improvement remains environment-dependent and must not be presented as production
 latency without runtime evidence.
+
+## Asynchronous Player marketplace enrichment
+
+Owners: `marketplaceRequiredForPage()` in `site/api/_data-page.js`,
+`site/marketplace-overlay-runtime.js`, and Player pre-core runtime ordering in
+`site/modules/app-config.js`.
+
+Player visibly consumes `listing_price` in the hero, so unlike Evaluation the listing state cannot
+simply disappear. Previously the normal Player `mode=page` response awaited the marketplace snapshot
+before returning any core Player data.
+
+Player now separates the two responsibilities:
+
+- the core Player page response is SQLite-only and eligible for database-generation ETag/revalidation;
+- the canonical marketplace overlay starts in Player pre-core loading, in parallel with core data;
+- after the current Player request commits, the overlay patches `listing_price` only when the same
+  incremental request key is still active and rerenders the current Player owner;
+- Listing sort/filter requests still embed marketplace state on the backend because their result set
+  depends on it;
+- marketplace failure remains fail-closed: no stale positive listing price is shown.
+
+Deterministic critical-path effect for a normal uncached Player request:
+
+- before: core Player response = SQLite work + awaited marketplace snapshot;
+- after: core Player response = SQLite work only; marketplace enrichment is an independent parallel
+  request/presentation update.
+
+This intentionally may add one independent browser `/api/marketplace` request on a cold direct Player
+load. The optimization target is removal of marketplace network latency from the core Player response,
+not reducing request count. Wall-clock improvement remains environment-dependent and must not be
+presented as production latency without runtime evidence.
 
 ## Repeatable browser/runtime baseline harness
 

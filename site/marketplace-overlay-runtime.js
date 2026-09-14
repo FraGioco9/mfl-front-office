@@ -66,8 +66,6 @@
   }
 
   function listingSensitiveRequest(parameters) {
-    const scope = String(parameters.get("scope") || "").toLowerCase();
-    if (scope === "player" || scope === "evaluation") return true;
     if (String(parameters.get("sortKey") || "").toLowerCase() === "listing_price") return true;
 
     try {
@@ -106,6 +104,17 @@
         : null;
     });
     state.rowSortCache = new WeakMap();
+
+    const currentPage = String(document.body?.dataset.page || state.currentPage || "").toLowerCase();
+    const currentScope = String(state.incrementalRoute?.scope || "").toLowerCase();
+    if (currentPage === "player" && currentScope === "player") {
+      const playerId = String(state.incrementalRoute?.playerId || "").trim();
+      const renderPlayer = Reflect.get(window, "__mflRenderPlayerPageOwner");
+      if (playerId && typeof renderPlayer === "function") {
+        renderPlayer(playerId);
+        return true;
+      }
+    }
 
     const progressionPage = document.getElementById("progressionPage");
     if (progressionPage?.hidden === false && typeof renderTable === "function") {

@@ -6836,18 +6836,19 @@ function incrementalDataQuery(route, page = 1) {
     return new URLSearchParams({ mode: "mfl-stats-summary" });
   }
 
+  const entityRoute = ["player", "evaluation"].includes(route.scope);
   const query = new URLSearchParams({
     mode: "page",
     scope: route.scope,
     view: route.view || "attributes",
     page: String(page),
-    pageSize: String(["player", "evaluation"].includes(route.scope)
+    pageSize: String(entityRoute
       ? 1
       : route.scope === "club"
         ? 5000
         : state.pageSize),
-    sortKey: route.scope === "club" ? "positions" : state.sortKey,
-    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,
+    sortKey: route.scope === "club" ? "positions" : entityRoute ? "overall" : state.sortKey,
+    sortDirection: route.scope === "club" ? "asc" : entityRoute ? "desc" : state.sortDirection,
   });
 
   if (route.access === "owned") query.set("access", "owned-progression");

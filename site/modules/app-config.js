@@ -128,6 +128,7 @@ export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
   ]),
   playerPre: Object.freeze([
     "/shared-table-ui-runtime.js",
+    "/marketplace-overlay-runtime.js",
   ]),
   watchlistMyPlayersPost: Object.freeze([
     "/watchlist-myplayers-route-runtime.js",
