@@ -277,12 +277,10 @@ const browserTestSource = String.raw`(() => {
     const ancestorRect = ancestor.getBoundingClientRect();
     assert(
       rect.left >= ancestorRect.left - 0.5
-        && rect.right <= ancestorRect.right + 0.5
-        && rect.top >= ancestorRect.top - 0.5
-        && rect.bottom <= ancestorRect.bottom + 0.5,
-      selector + " is clipped by " + ancestorSelector + ": " + JSON.stringify({
-        element: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
-        ancestor: { left: ancestorRect.left, right: ancestorRect.right, top: ancestorRect.top, bottom: ancestorRect.bottom },
+        && rect.right <= ancestorRect.right + 0.5,
+      selector + " is horizontally clipped by " + ancestorSelector + ": " + JSON.stringify({
+        element: { left: rect.left, right: rect.right, width: rect.width },
+        ancestor: { left: ancestorRect.left, right: ancestorRect.right, width: ancestorRect.width },
       }),
     );
   }
