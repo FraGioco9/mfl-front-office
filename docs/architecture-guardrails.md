@@ -82,6 +82,14 @@ These values were useful immediately after splitting the old application-core mo
 - **Reason:** separates the large read-heavy game dataset from authenticated user state and avoids duplicating authoritative ownership.
 - **Recommendation:** keep unless the storage architecture itself is redesigned.
 
+### Performance enforcement boundary — keep
+
+- **Constraint:** normal Site Quality enforces deterministic performance architecture, not browser wall-clock milliseconds.
+- **Reason:** cache ownership, request ordering, route/runtime scoping and nonblocking dependency rules are stable source/runtime contracts; elapsed browser timings vary with hardware, scheduling, fixture latency and throttling.
+- **Owner:** `site/validate-performance-foundations.mjs` plus focused browser-routing regressions.
+- **Timing evidence:** use the opt-in `npm --prefix site run performance:baseline` harness for measured runtime changes; do not add it to the ordinary PR quality workflow.
+- **Recommendation:** add a CI invariant only when the behavior is deterministic enough to distinguish an architectural regression from environmental noise.
+
 ### Root local-development entry point — keep
 
 - **Constraint:** root `package.json` owns `npm run dev` as the canonical local startup command and delegates directly to `vercel dev --cwd site --listen 4000` so Vercel resolves the actual site project instead of recursively rediscovering the root npm script.
