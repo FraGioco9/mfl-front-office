@@ -4,7 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "vercel dev --listen 4000",
+    "dev": "vercel dev --cwd site --listen 4000",
     "check": "npm --prefix site run check"
   }
 }
