@@ -8900,6 +8900,16 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
+@media (min-width: 901px) and (max-width: 1000px) {
+  .playerGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pitch {
+    width: min(100%, 330px);
+  }
+}
+
 @media (max-width: 1100px) {
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
