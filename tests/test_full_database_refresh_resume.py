@@ -75,7 +75,7 @@ class FullDatabaseRefreshResumeTests(unittest.TestCase):
                 f"full-database-refresh-write-resume-checkpoint.sh {stage} ",
                 self.workflow,
             )
-            self.assertIn(f"{stage}|", self.writer)
+        self.assertIn("core|player_seasons|player_data|final", self.writer)
 
     def test_player_data_resume_is_recorded_after_email_side_effect(self) -> None:
         self.assertLess(
