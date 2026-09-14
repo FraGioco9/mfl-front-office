@@ -1,6 +1,6 @@
 const crypto = require("node:crypto");
 const { readJsonBody } = require("./_request-body");
-const { signedWalletFromRequest } = require("./_wallet-proof");
+const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
 const MAX_BODY_BYTES = 32 * 1024;
@@ -75,12 +75,6 @@ async function enforceRateLimit(hash) {
 }
 
 async function verifiedWallet(request) {
-  const hasProofHeaders = Boolean(
-    request?.headers?.["x-dapper-wallet-address"]
-    && request?.headers?.["x-wallet-message"]
-    && request?.headers?.["x-wallet-signatures"],
-  );
-  if (!hasProofHeaders) return "";
   return signedWalletFromRequest(request, { warning: false });
 }
 
