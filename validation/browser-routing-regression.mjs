@@ -369,6 +369,34 @@ const browserTestSource = String.raw`(() => {
       for (const selector of playerGeometrySelectors) {
         assertElementWithinViewport(selector, viewportWidth);
       }
+
+      if (viewportWidth >= 901 && viewportWidth <= 1366) {
+        const hero = document.querySelector(".playerHero");
+        const grid = document.querySelector(".playerGrid");
+        assert(hero instanceof HTMLElement, "Intermediate Player hero is missing.");
+        assert(grid instanceof HTMLElement, "Intermediate Player grid is missing.");
+        const heroStyle = getComputedStyle(hero);
+        const gridStyle = getComputedStyle(grid);
+        assert(
+          heroStyle.display === "grid",
+          "Intermediate Player hero must use the two-row responsive layout: " + JSON.stringify({
+            viewportWidth,
+            display: heroStyle.display,
+            gridTemplateAreas: heroStyle.gridTemplateAreas,
+          }),
+        );
+        const gridColumns = gridStyle.gridTemplateColumns
+          .split(" ")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        assert(
+          gridColumns.length === 1,
+          "Intermediate Player profile/pitch must use one content column: " + JSON.stringify({
+            viewportWidth,
+            gridTemplateColumns: gridStyle.gridTemplateColumns,
+          }),
+        );
+      }
     }
   }
 
