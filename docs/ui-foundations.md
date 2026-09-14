@@ -102,6 +102,7 @@ This contract is intentionally narrow. It covers ordinary form/status feedback s
 
 - Desktop pinned sidebar: `190px`
 - Desktop topbar: `102px`
+- Intermediate desktop (`1101px–1444px`) topbar geometry must compress Search/Stats within the viewport; shared chrome must never widen the document beyond the viewport.
 - Mobile navigation: `58px`
 - Desktop page gutter: `28px` (`--mfl-page-gutter-inline`)
 - Tablet/mobile page gutter at `<=900px`: `12px`, expressed by overriding the same token
