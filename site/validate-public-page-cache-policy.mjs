@@ -18,12 +18,13 @@ invariant(eligible({ scope: "mflstats", view: "stats" }), "MFL Stats page data m
 invariant(!eligible({ scope: "myplayers", view: "attributes" }, true), "Wallet-owned page data must never use the public page cache policy.");
 invariant(!eligible({ scope: "progression", view: "all", access: "full-progression" }, true), "Private full-progression page data must never use the public page cache policy.");
 invariant(!eligible({ scope: "database", view: "attributes", access: "owned-progression" }, true), "Owned-progression page data must never use the public page cache policy.");
-invariant(!eligible({ scope: "player", playerId: "1" }), "Player pages must stay outside database-only revalidation because their server response embeds marketplace state.");
+invariant(eligible({ scope: "player", playerId: "1" }), "Player core page data must use database-generation revalidation now that marketplace listing state is enriched separately.");
 invariant(eligible({ scope: "evaluation", playerId: "1" }), "Evaluation core page data must use database-generation revalidation now that marketplace is not embedded.");
 invariant(!eligible({ scope: "database", sortKey: "listing_price" }), "Listing-sorted pages must stay outside database-only revalidation.");
 invariant(!eligible({ scope: "database", filters: JSON.stringify([{ column: "listing_price", operator: "=", value: "for_sale" }]) }), "Listing-filtered pages must stay outside database-only revalidation.");
 invariant(pageRequestEmbedsMarketplace({ scope: "database", sortKey: "listing_price" }), "Listing sort must be classified as marketplace-dependent by the canonical page policy.");
 invariant(!pageRequestEmbedsMarketplace({ scope: "database", sortKey: "overall" }), "Ordinary Overall sort must remain SQLite-only.");
+invariant(!pageRequestEmbedsMarketplace({ scope: "player", playerId: "1" }), "Player core page data must remain SQLite-only.");
 invariant(!pageRequestEmbedsMarketplace({ scope: "evaluation", playerId: "1" }), "Evaluation core page data must remain SQLite-only.");
 
 console.log("Safe public paged-data revalidation policy validation passed.");
