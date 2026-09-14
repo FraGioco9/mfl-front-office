@@ -195,15 +195,69 @@ function walletAddressFromUser(user) {
   return walletAddressCandidatesFromValue(user)[0] || "";
 }
 
-function walletAccessNonce() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+async function issueWalletChallenge() {
+  const response = await window.__mflDataClient.fetch("/api/wallet-session", {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  });
+  const challenge = await response.json().catch(() => ({}));
+  if (!response.ok
+      || typeof challenge?.token !== "string"
+      || !/^[0-9a-f]{64}$/i.test(String(challenge?.nonce || ""))
+      || typeof challenge?.appIdentifier !== "string"
+      || typeof challenge?.message !== "string"
+      || !Number.isFinite(Number(challenge?.expiresAt))) {
+    throw new Error(challenge?.error || "Could not start secure Dapper authentication.");
+  }
+  return challenge;
 }
 
-function walletAccountProofFromUser(user, accountProof) {
+async function exchangeWalletChallenge(challengeToken, proof) {
+  const response = await window.__mflDataClient.fetch("/api/wallet-session", {
+    method: "POST",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      challengeToken,
+      proof: {
+        walletAddress: proof.address,
+        signingAddress: proof.signingAddress || proof.address,
+        message: proof.message,
+        proofType: proof.type || "user-signature",
+        appIdentifier: proof.appIdentifier,
+        nonce: proof.nonce || "",
+        signatures: proof.signatures,
+      },
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || normalizeWalletAddress(data?.wallet) !== normalizeWalletAddress(proof.address)) {
+    throw new Error(data?.error || "Secure Dapper session could not be established.");
+  }
+  return data;
+}
+
+async function logoutWalletSession() {
+  try {
+    await window.__mflDataClient.fetch("/api/wallet-session", {
+      method: "DELETE",
+      cache: "no-store",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { Accept: "application/json" },
+    });
+  } catch (error) {
+    console.warn("Could not revoke Dapper wallet session.", error);
+  }
+}
+
+function walletAccountProofFromUser(user, accountProof, message = walletAccessMessage()) {
   const services = Array.isArray(user?.services) ? user.services : [];
   const accountProofService = services.find((service) => service?.type === "account-proof");
   const proofData = accountProofService?.data || accountProofService;
@@ -226,7 +280,7 @@ function walletAccountProofFromUser(user, accountProof) {
     type: "account-proof",
     address,
     signingAddress: address,
-    message: walletAccessMessage(),
+    message,
     appIdentifier: accountProof.appIdentifier,
     nonce: accountProof.nonce,
     signatures,
@@ -428,10 +482,10 @@ async function dapperAuthnService(fcl) {
   return null;
 }
 
-async function authenticateWithDapper(fcl) {
+async function authenticateWithDapper(fcl, challenge) {
   const accountProof = {
-    appIdentifier: walletAccessMessage(),
-    nonce: walletAccessNonce(),
+    appIdentifier: challenge.appIdentifier,
+    nonce: challenge.nonce,
   };
 
   if (fcl?.config?.put) {
@@ -485,6 +539,7 @@ async function walletLinkOwner() {
   }
 
   if (state.linkedWalletAddress && hasWalletProof()) {
+    await logoutWalletSession();
     optOutWallet();
     return;
   }
@@ -516,14 +571,18 @@ async function walletLinkOwner() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const authenticated = await authenticateWithDapper(fcl);
+    const challenge = await issueWalletChallenge();
+    const authenticated = await authenticateWithDapper(fcl, challenge);
     const authenticatedUser = await authenticatedWalletUser(fcl, authenticated.user);
-    let linkedWalletProof = walletAccountProofFromUser(authenticatedUser, authenticated.accountProof);
+    let linkedWalletProof = walletAccountProofFromUser(
+      authenticatedUser,
+      authenticated.accountProof,
+      challenge.message,
+    );
     let dapperAddress = linkedWalletProof?.address || walletAddressFromUser(authenticatedUser);
 
     if (!linkedWalletProof) {
-      const message = walletAccessMessage();
-      const signatures = await signWalletMessage(fcl, message);
+      const signatures = await signWalletMessage(fcl, challenge.message);
       dapperAddress = signatureWalletAddress(signatures);
 
       if (dapperAddress) {
@@ -531,9 +590,9 @@ async function walletLinkOwner() {
           type: "user-signature",
           address: dapperAddress,
           signingAddress: dapperAddress,
-          message,
-          appIdentifier: walletAccessMessage(),
-          nonce: "",
+          message: challenge.message,
+          appIdentifier: challenge.appIdentifier,
+          nonce: challenge.nonce,
           signatures,
         };
       }
@@ -543,6 +602,8 @@ async function walletLinkOwner() {
       console.warn("Dapper opt-in did not include a wallet address or proof.", { authenticatedUser });
       throw new Error("Dapper did not return a wallet address.");
     }
+
+    await exchangeWalletChallenge(challenge.token, linkedWalletProof);
 
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = linkedWalletProof;
