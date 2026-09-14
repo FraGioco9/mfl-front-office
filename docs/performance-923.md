@@ -298,6 +298,41 @@ Deterministic raw-source effect for the affected startup slice:
 
 This is asset/request evidence rather than a production-latency claim.
 
+## First-use Global Search recent hydration
+
+Owners: `site/modules/core-sources/shared-startup-lifecycle.js` for application startup,
+`site/global-search-runtime.js` for recent-search hydration, and `site/modules/app-entry.js`
+for route/application readiness publication.
+
+Global Search recent state was previously warmed on every application startup even when the user never
+opened Search. Two independent owners contributed work:
+
+- core startup always invoked `primeGlobalSearchIndexes()`, which starts an empty/recent
+  `/api/data?mode=search...` request;
+- the Global Search runtime also preloaded Supabase recent state at application readiness, which for
+  an opted-in session reads `/api/wallet-preferences` and then resolves the stored recent entities
+  through another recent-search `/api/data` request.
+
+The new lifecycle keeps the runtime available for Global/Evaluation search interactions but moves
+Global Search recent hydration behind the actual Search modal opening:
+
+- normal application startup does not call `primeGlobalSearchIndexes()`;
+- app-entry no longer carries a background Global Search warm-up bridge or waits for Search preload
+  before `mfl:ready`;
+- opening the Search modal starts the existing deduplicated session recent-load promise and renders the
+  loading/recent state from that same owner;
+- subsequent Search openings reuse the session result;
+- Evaluation retains its own explicit route/readiness calls where Search data is actually required.
+
+Deterministic request-work effect before the Search modal is used:
+
+- every normal startup: **1 fewer recent-search API request** from the removed core primer;
+- opted-in sessions: Global Search additionally defers its `/api/wallet-preferences` + recent-entity
+  request pair until Search is opened;
+- guest sessions perform no Supabase recent-search fetch on first open, as before.
+
+This is request-ownership evidence rather than a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.
