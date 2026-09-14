@@ -423,6 +423,30 @@ artifact; it no longer has to encode retry-stage semantics implicitly.
 
 This is refresh-reliability/work-avoidance evidence rather than a production-latency claim.
 
+## Core refresh upstream overlap
+
+Owner: `scripts/database/staged_rebuild.py`.
+
+The core refresh stage previously completed the leaderboard-wallet refresh before starting the
+current-player source fetch. Those upstream domains are independent: player fetching does not need
+wallet rows, while club loading only begins after both domains have completed.
+
+The stage now starts player-source fetching in exactly one background worker while the main thread
+performs the existing wallet refresh/reuse path:
+
+- concurrency is bounded to one worker plus the main thread;
+- both network domains keep the existing shared MFL limiter, so request-start limits are unchanged;
+- the background task performs upstream player fetching only;
+- SQLite writes remain on the main thread;
+- player merge/insertion still waits for both upstream domains;
+- club/roster loading, derived values, commit and checkpoint publication retain their existing order.
+
+The core-stage upstream critical path therefore changes from approximately
+`wallet domain + player-source domain` to `max(wallet domain, player-source domain)`, subject to
+the existing shared rate limiter and actual upstream response times.
+
+This is dependency/critical-path evidence, not a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.
