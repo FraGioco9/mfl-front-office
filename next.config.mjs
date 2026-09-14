@@ -37,7 +37,11 @@ export function createNextRewrites() {
   return {
     beforeFiles: [
       { source: "/releases.json", destination: "/api/releases" },
-      { source: "/evaluation", destination: "/api/evaluation-preview" },
+      {
+        source: "/evaluation",
+        has: [{ type: "query", key: "share" }],
+        destination: "/api/evaluation-preview",
+      },
     ],
     afterFiles: [],
     fallback: [{ source: "/:path*", destination: "/index.html" }],
@@ -45,6 +49,7 @@ export function createNextRewrites() {
 }
 
 const nextConfig = {
+  devIndicators: { position: "bottom-left" },
   outputFileTracingIncludes,
   headers() {
     return createNextHeaders();
