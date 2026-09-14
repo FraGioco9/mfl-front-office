@@ -605,10 +605,13 @@ async function walletLinkOwner() {
     await exchangeWalletChallenge(challenge.token, linkedWalletProof);
 
     linkedWalletProof = {
-      ...linkedWalletProof,
       type: "session",
+      address: dapperAddress,
+      signingAddress: dapperAddress,
       message: walletAccessMessage(),
+      appIdentifier: walletAccessMessage(),
       nonce: "",
+      signatures: [],
     };
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = linkedWalletProof;
