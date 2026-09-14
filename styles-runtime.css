@@ -8800,6 +8800,32 @@ html:not(.mflInitialRouteResolved):is(
   display: none;
 }
 
+@media (min-width: 1101px) and (max-width: 1444px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px) auto;
+    gap: 16px;
+  }
+
+  .topbar > :first-child {
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .searchButton {
+    min-width: 0;
+  }
+
+  .stats div {
+    min-width: 96px;
+    padding-inline: 12px;
+  }
+}
+
 @media (max-width: 1100px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 1.35fr) auto;
