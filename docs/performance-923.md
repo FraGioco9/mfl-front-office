@@ -392,6 +392,37 @@ Deterministic raw-source effect:
 
 This is source/ownership evidence, not a production-latency claim.
 
+## Full database refresh retry/resume ownership
+
+Owners: `.github/workflows/full-database-refresh.yml` for stage ordering/artifact boundaries and
+`scripts/workflows/full-database-refresh-restore-baseline.sh`,
+`full-database-refresh-restore-resume-checkpoint.sh`, and
+`full-database-refresh-write-resume-checkpoint.sh` for retry state.
+
+The staged refresh already published coherent core, player-season, player-data and final snapshots, but
+the canonical `mfl_database` artifact also acted as the previous-production comparison source. A rerun
+could therefore recover a valid database artifact without knowing which same-run stage was safe to skip,
+so earlier API-heavy stages were repeated.
+
+Retry state is now split into two explicit artifact roles:
+
+- `full-database-refresh-baseline-<run id>` is the immutable previous-production database for the
+  entire workflow run, including progression-email comparisons;
+- `full-database-refresh-resume-<run id>` contains the latest validated same-run checkpoint plus
+  `resume-state.json`;
+- resume state is accepted only when its embedded `runId` matches the current GitHub run and the
+  database passes the canonical runtime validation;
+- completed core, player-season and player-data stages are skipped on a rerun;
+- the player-data resume marker is advanced only after progression-email handling completes, preventing
+  a later-stage retry from sending the same progression notifications again;
+- once the final snapshot is materialized and validated, a publish failure can resume directly from that
+  final database without repeating competition fetching.
+
+The existing `mfl_database` artifact remains the canonical externally consumable latest database
+artifact; it no longer has to encode retry-stage semantics implicitly.
+
+This is refresh-reliability/work-avoidance evidence rather than a production-latency claim.
+
 ## Repeatable browser/runtime baseline harness
 
 Owner: `site/validation/performance-baseline.mjs`.
