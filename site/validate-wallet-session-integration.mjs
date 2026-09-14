@@ -109,7 +109,26 @@ assert.equal(
 assert.equal(resolveCalls, 2, "Missing session cookies must be rejected before storage work.");
 assert.ok(!authSource.includes("signedWalletFromLegacyProof"), "Legacy proof headers must not remain an authorization fallback.");
 
-const { createWalletSessionHandler } = require("./api/wallet-session.js");
+const {
+  createWalletSessionHandler,
+  requestOrigin,
+} = require("./api/wallet-session.js");
+
+assert.equal(
+  requestOrigin({ headers: { host: "127.0.0.1:4000", "x-forwarded-proto": "http" } }, "", ""),
+  "http://127.0.0.1:4000",
+  "Local development may derive its loopback origin from the request.",
+);
+assert.throws(
+  () => requestOrigin({ headers: { host: "attacker.example", "x-forwarded-proto": "https" } }, "", ""),
+  /configured trusted deployment origin/,
+  "A remote Host header must never become the trusted wallet challenge origin without server configuration.",
+);
+assert.equal(
+  requestOrigin({ headers: { host: "attacker.example" } }, "https://wallet-test.example", ""),
+  "https://wallet-test.example",
+  "Explicit server origin configuration must override request metadata.",
+);
 const now = Date.UTC(2026, 8, 14, 15, 0, 0);
 const nonce = "ab".repeat(32);
 const binding = "cd".repeat(32);
@@ -176,6 +195,7 @@ async function verifyProof(proof, options) {
 
 const handler = createWalletSessionHandler({
   secret: "12".repeat(32),
+  origin: "https://wallet-test.example",
   now: () => now,
   challengeFactory,
   sessionStoreFactory,
