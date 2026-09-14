@@ -2,7 +2,7 @@ const { performance } = require("node:perf_hooks");
 const {
   normalizeWalletAddress,
   signedWalletFromRequest: verifySignedWalletFromRequest,
-} = require("./_wallet-proof");
+} = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
 const WALLET_PERMISSION_CACHE = new Map();
