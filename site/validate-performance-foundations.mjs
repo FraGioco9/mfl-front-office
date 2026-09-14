@@ -20,6 +20,8 @@ const [
   sitePackageSource,
   siteQuality,
   performanceDocs,
+  architectureGuardrails,
+  qualityScope,
 ] = await Promise.all([
   readSite("modules/core-sources/shared-incremental-routing.js"),
   readSite("modules/app-entry.js"),
@@ -29,6 +31,8 @@ const [
   readSite("package.json"),
   readRepository(".github/workflows/site-quality.yml"),
   readRepository("docs/performance-923.md"),
+  readRepository("docs/architecture-guardrails.md"),
+  readSite("ci-quality-scope.mjs"),
 ]);
 
 const sitePackage = JSON.parse(sitePackageSource);
@@ -98,6 +102,16 @@ invariant(
   performanceDocs.includes("CI performance enforcement")
     && performanceDocs.includes("do not enforce wall-clock millisecond thresholds in normal Site Quality"),
   "Performance documentation must explain the stable CI enforcement boundary.",
+);
+invariant(
+  architectureGuardrails.includes("### Performance enforcement boundary — keep")
+    && architectureGuardrails.includes("normal Site Quality enforces deterministic performance architecture"),
+  "Architecture guardrails must preserve the deterministic-vs-timing performance boundary.",
+);
+invariant(
+  qualityScope.includes('file === "docs/foundations-audit-923.md"')
+    && qualityScope.includes('file === "docs/performance-923.md"'),
+  "Final foundations/performance documentation changes must trigger Site Quality validation.",
 );
 
 console.log("Stable performance foundations and opt-in timing enforcement validation passed.");
