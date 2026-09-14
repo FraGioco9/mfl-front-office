@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import time
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 
 from scripts.database import clubs
 from scripts.database import competitions
@@ -24,6 +25,53 @@ def _open_existing_database() -> sqlite3.Connection:
     return sqlite3.connect(database_path)
 
 
+def _load_core_sources(
+    connection: sqlite3.Connection,
+    limiter: pipeline.RateLimiter,
+    *,
+    fetch_wallets: bool,
+    fetch_players: bool,
+) -> dict[str, list[dict[str, object]]] | None:
+    """Overlap independent wallet and player upstream work without concurrent SQLite writes."""
+    player_executor = (
+        ThreadPoolExecutor(max_workers=1, thread_name_prefix="core-player-fetch")
+        if fetch_players
+        else None
+    )
+    player_future = None
+    try:
+        if player_executor is not None:
+            player_future = player_executor.submit(
+                pipeline.timed,
+                "All players",
+                pipeline.fetch_all_player_sources,
+                limiter,
+            )
+
+        if fetch_wallets:
+            pipeline.timed(
+                "Leaderboard wallets",
+                pipeline.refresh_wallets,
+                connection,
+                limiter,
+            )
+        else:
+            pipeline.timed(
+                "Reuse previous wallets",
+                rebuild.restore_previous_wallets,
+                connection,
+                paged.PREVIOUS_DATABASE_PATH,
+            )
+
+        if player_future is None:
+            return None
+        source_results, _ = player_future.result()
+        return source_results
+    finally:
+        if player_executor is not None:
+            player_executor.shutdown(wait=True, cancel_futures=True)
+
+
 def _run_core(
     *,
     fetch_wallets: bool,
@@ -38,23 +86,17 @@ def _run_core(
     connection = sqlite3.connect(database_path)
     try:
         pipeline.timed("Create fresh database", pipeline.create_schema, connection)
-        if fetch_wallets:
-            pipeline.timed("Leaderboard wallets", pipeline.refresh_wallets, connection, limiter)
-        else:
-            pipeline.timed(
-                "Reuse previous wallets",
-                rebuild.restore_previous_wallets,
-                connection,
-                paged.PREVIOUS_DATABASE_PATH,
-            )
+        source_results = _load_core_sources(
+            connection,
+            limiter,
+            fetch_wallets=fetch_wallets,
+            fetch_players=fetch_players,
+        )
 
         contract_players: Iterable[dict[str, object]] = ()
         if fetch_players:
-            source_results, _ = pipeline.timed(
-                "All players",
-                pipeline.fetch_all_player_sources,
-                limiter,
-            )
+            if source_results is None:
+                raise RuntimeError("Player source fetch completed without source data")
             players = pipeline.merge_players(
                 source_results["general"],
                 source_results["retired"],
