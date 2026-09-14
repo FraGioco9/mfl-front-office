@@ -4455,14 +4455,18 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-/* Desktop Player title controls align to the existing Player-name line without changing its geometry. */
-@media (min-width: 901px) {
+/* Wide-desktop Player identity sizing stays out of the intermediate responsive hero. */
+@media (min-width: 1367px) {
   .playerHeroIdentity {
     flex: 1 1 360px;
     width: auto;
     max-width: 600px;
   }
 
+}
+
+/* Desktop Player title controls align to the existing Player-name line without changing its geometry. */
+@media (min-width: 901px) {
   .playerHeroIdentity .playerTitle {
     align-items: baseline;
     flex-wrap: nowrap;
