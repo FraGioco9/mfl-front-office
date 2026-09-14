@@ -21,6 +21,7 @@ const validators = [
   "validate-contract-clauses.mjs",
   "validate-data-client-runtime-ownership.mjs",
   "validate-site-date-picker.mjs",
+  "validate-local-development.mjs",
 ];
 
 const requestedConcurrency = Number.parseInt(process.env.MFL_VALIDATION_CONCURRENCY || "4", 10);

@@ -82,6 +82,13 @@ These values were useful immediately after splitting the old application-core mo
 - **Reason:** separates the large read-heavy game dataset from authenticated user state and avoids duplicating authoritative ownership.
 - **Recommendation:** keep unless the storage architecture itself is redesigned.
 
+### Root local-development entry point — keep
+
+- **Constraint:** root `package.json` owns `npm run dev` as the canonical local startup command and delegates directly to `vercel dev --cwd site --listen 4000` so Vercel resolves the actual site project instead of recursively rediscovering the root npm script.
+- **Reason:** developers should not need to remember platform-specific `vercel.cmd` syntax or a site subdirectory command, while Vercel remains the one local runtime owner.
+- **Boundary:** local startup does not rebuild the SQLite database and does not regenerate tracked site artifacts. Database preparation remains explicit; Site Quality remains the generated-artifact writer.
+- **Recommendation:** keep the wrapper thin. Add behavior only when it is genuinely required for every local startup.
+
 ### Workflow YAML / script ownership boundary — keep
 
 - **Constraint:** workflow YAML owns triggers, permissions, credentials, environment and artifact boundaries; reusable implementation belongs under `scripts/workflows` and domain scripts.
