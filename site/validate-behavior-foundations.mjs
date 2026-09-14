@@ -178,9 +178,9 @@ invariant(
   "Horizontal overflow affordances must use one shared tolerance and state language.",
 );
 invariant(
-  interactions.includes(`views.scrollWidth - views.clientWidth > ${overflowTolerance}`)
-    && interactions.includes('views.classList.contains("mflViewsOverflowing")'),
-  "Hydrated control-strip overflow detection must match the shared affordance contract.",
+  playerInteractions.includes(`views.scrollWidth - views.clientWidth > ${overflowTolerance}`)
+    && playerInteractions.includes('views.classList.contains("mflViewsOverflowing")'),
+  "Hydrated Player control-strip overflow detection must match the shared affordance contract.",
 );
 
 for (const token of [
