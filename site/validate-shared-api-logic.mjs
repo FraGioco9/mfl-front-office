@@ -46,6 +46,7 @@ includes(walletProof, "async function verifyWalletProof(proof = {}, options = {}
 includes(walletProof, "async function signedWalletFromRequest(request, options = {})", "Legacy wallet-proof header parsing must remain centralized.");
 includes(walletAuth, "async function signedWalletFromRequest(request, options = {})", "Wallet session/proof request authentication must have one canonical owner.");
 includes(walletAuth, 'require("./_wallet-session")', "Wallet auth must resolve durable server sessions through the canonical session store.");
+includes(walletSessionStore, "function createWalletSessionStore(", "Durable wallet sessions must have one canonical store owner.");
 includes(walletSessionEndpoint, 'require("./_wallet-challenge")', "Wallet session exchange must use the canonical signed challenge owner.");
 includes(walletSessionEndpoint, 'require("./_wallet-session")', "Wallet session exchange must use the canonical durable session owner.");
 excludes(combined, "allowAccountProofFallback", "No API caller may enable acceptance after wallet verification fails.");
