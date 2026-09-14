@@ -134,6 +134,7 @@ export const ROUTE_RUNTIME_SCRIPTS = Object.freeze({
     "/watchlist-myplayers-route-runtime.js",
   ]),
   evaluationPre: Object.freeze([
+    "/global-search-runtime.js",
     "/evaluation-layout-runtime.js",
     "/evaluation-mfl-usd-input-runtime.js",
     "/evaluation-discount-rate-runtime.js",
