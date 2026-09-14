@@ -58,9 +58,13 @@ async function verifyWalletProof(proof = {}, options = {}) {
     return "";
   }
 
-  if (proofType === "account-proof"
+  if (expectedNonce !== null
       && (!/^[0-9a-f]{64}$/i.test(nonce)
-        || (expectedNonce !== null && nonce.toLowerCase() !== expectedNonce.toLowerCase()))) {
+        || nonce.toLowerCase() !== expectedNonce.toLowerCase())) {
+    return "";
+  }
+
+  if (proofType === "account-proof" && !/^[0-9a-f]{64}$/i.test(nonce)) {
     return "";
   }
 
