@@ -587,28 +587,42 @@ Configuration:
 | mobile-slow | stats | refresh | 111638.8 / 112054.8 | 111669.1 / 112088.8 | 35 / 35 | 5 / 5 | 21230.4 / 21230.4 | 21224.0 / 21224.0 | 1177.0 / 1216.0 | 0.0362 / 0.0362 |
 | mobile-slow | stats | cached | 111774.9 / 112349.3 | 111807.1 / 112395.9 | 3 / 3 | 2 / 2 | 21220.2 / 21220.2 | 21219.9 / 21219.9 | 751.0 / 1077.0 | 0.0000 / 0.0000 |
 
-### Baseline findings and first optimization targets
+### Reference findings and resolution status
 
-- **Cached navigation works correctly for every representative journey except MFL Stats.** Database,
-  Player, Club, My Clubs and Evaluation cached revisits issue zero API requests in both profiles.
-- **MFL Stats transfers about 20.7 MiB of API payload per full load.** Desktop is therefore still
-  usable on the local reference environment (~3.1 s median), while the fixed 200 KB/s slow-mobile
-  profile is transfer-bound at roughly 112–114 s.
-- **MFL Stats cached re-entry is incorrect under the slow profile.** It issues two API requests and
-  retransfers essentially the entire 20.7 MiB payload (~111.8 s median), despite
-  `shared-incremental-routing.js` owning a session cache with no time-based expiry. This is a
-  measured cache-key/namespace/re-entry defect and is the highest-priority cache investigation for
-  the next performance PR.
-- **Database rendering is the next browser-main-thread hotspot on constrained hardware.** Its
-  slow-mobile cold median records about 5.46 s of long-task time, and even the network-free cached
-  revisit records about 0.86 s.
-- **Layout stability is generally strong.** The largest reference CLS is MFL Stats slow-mobile
-  cold/refresh at 0.0362; Database and most entity routes are effectively zero. My Clubs retains a
-  small refresh shift (0.0110 slow-mobile median).
-- **The baseline harness itself is now validated.** Refreshes carry real timings, network accounting
-  is phase-isolated, missing metrics are rejected rather than rendered as zero, and the focused
-  Database/Club slow-profile smoke test plus the full capture both completed successfully.
+This table is the **historical 2026-09-12 reference capture**, not a statement of current route
+performance after the later #923 optimization stack.
 
-The repeatable baseline portion of #923 is therefore complete. Subsequent performance PRs should
-use these values as before/after evidence and should not reinterpret the synthetic slow-mobile
-numbers as production latency.
+It identified three main targets:
+
+- MFL Stats cached re-entry retransferred the large Stats payload;
+- cached Database revisits spent excessive constrained-device time in browser rendering rather than
+  application JavaScript;
+- several optional/network dependencies still sat on ordinary startup or entity critical paths.
+
+Subsequent #923 PRs addressed those targets by fixing cached route ownership, reusing exact cached
+table/body identity, preserving hidden cached table rendering state, moving Player/Evaluation
+marketplace work off the core critical path, making Bug Report and Global Search first-use work,
+scoping Player-only interactions, and reducing repeated backend/refresh work.
+
+The reference values remain useful as historical before-evidence. Do not compare later synthetic
+measurements to them unless the harness profile, dataset/access context and journey semantics are
+compatible, and never describe the synthetic slow-mobile figures as production latency.
+
+## CI performance enforcement
+
+Normal Site Quality enforces only deterministic, low-noise performance foundations:
+
+- completed incremental route cache hits resolve before the network fetch branch;
+- the completed route cache remains bounded and namespaced by dataset generation plus linked wallet;
+- Player/Evaluation core data does not block on marketplace state except when Listing sort/filter
+  semantics explicitly require it;
+- optional Global Search and Bug Report runtimes stay out of universal startup;
+- Player-only interaction code remains Player route-scoped;
+- browser-routing regression keeps explicit no-repeat request assertions for cached MFL Stats and
+  My Clubs behavior;
+- the repeatable browser baseline remains available through `performance:baseline` but stays opt-in.
+
+We **do not enforce wall-clock millisecond thresholds in normal Site Quality**. Browser timings depend
+on hardware, Chrome scheduling, fixture/network characteristics and throttling. Timing regressions are
+investigated with the repeatable harness when a PR changes a measured runtime path, using focused
+candidate runs and a multi-run confirmation only when needed.
