@@ -224,6 +224,11 @@ html:not(.mflInitialRouteResolved):is(
 
   .playerHeroIdentity {
     grid-area: identity;
+    justify-self: start;
+    width: 100%;
+    max-width: none;
+    margin-right: 0;
+    text-align: left;
   }
 
   .playerHeroActions {
