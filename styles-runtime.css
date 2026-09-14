@@ -8927,7 +8927,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-@media (min-width: 901px) and (max-width: 1200px) {
+@media (min-width: 901px) and (max-width: 1366px) {
   :root {
     --mfl-player-hero-overall-size: 84px;
     --mfl-player-portrait-height: 96px;
