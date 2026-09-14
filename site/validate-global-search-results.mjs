@@ -4,12 +4,13 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [runtime, styles, responsive, controls, appEntry, walletPreferencesApi, dataViews] = await Promise.all([
+const [runtime, styles, responsive, controls, appEntry, appConfig, walletPreferencesApi, dataViews] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
   read("./responsive.css"),
   read("./controls.css"),
   read("./modules/app-entry.js"),
+  read("./modules/app-config.js"),
   read("./api/wallet-preferences.js"),
   read("./api/_data-views.js"),
 ]);
@@ -99,15 +100,24 @@ invariant(
 
 const routeReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
 const appReadyIndex = appEntry.indexOf('document.documentElement.dataset.mflReady = "true";');
+const universalRuntimeStart = appEntry.indexOf("const UNIVERSAL_RUNTIME_SCRIPTS");
+const universalRuntimeEnd = appEntry.indexOf("]);", universalRuntimeStart);
+const universalRuntimeSource = universalRuntimeStart >= 0 && universalRuntimeEnd > universalRuntimeStart
+  ? appEntry.slice(universalRuntimeStart, universalRuntimeEnd)
+  : "";
 invariant(
-  appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
+  appEntry.includes("function ensureGlobalSearchRuntime() {")
+    && appEntry.includes('loadClassicScript("/global-search-runtime.js")')
+    && appEntry.includes('Reflect.set(window, "__mflEnsureGlobalSearchRuntime", ensureGlobalSearchRuntime);')
+    && !universalRuntimeSource.includes('"/global-search-runtime.js"')
+    && appConfig.includes('evaluationPre: Object.freeze([\n    "/global-search-runtime.js",')
     && appEntry.includes("function installCoreBridges() {")
     && !appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
     && !appEntry.includes("initialGlobalSearchWarmupPromise")
     && !appEntry.includes("globalSearchPreloadPromise")
     && routeReadyIndex >= 0
     && appReadyIndex > routeReadyIndex,
-  "Application startup must publish app-wide readiness without starting or waiting for unused Global Search recent hydration.",
+  "Global Search runtime must be first-use lazy on ordinary routes, Evaluation-preloaded where authoritative evaluation search needs it, and absent from application-readiness barriers.",
 );
 
 invariant(
@@ -229,6 +239,8 @@ invariant(
 
 invariant(
   core.includes("async function openSearch() {")
+    && core.includes('const ensureGlobalSearchRuntime = Reflect.get(window, "__mflEnsureGlobalSearchRuntime");')
+    && core.includes('if (typeof ensureGlobalSearchRuntime === "function") {\n    await ensureGlobalSearchRuntime();\n  }')
     && core.includes("const renderAuthoritativeRecentSearches = async () => {")
     && core.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
     && core.includes("await ensureSearchIndexes();\n  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();"),
