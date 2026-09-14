@@ -280,13 +280,13 @@
       && bugReportModal.contains(target);
   }
 
-  function currentPlayerPathname() {
-    const pathname = String(window.location.pathname || "").replace(/\/+$/, "") || "/";
-    return /^\/players\/\d{1,20}$/i.test(pathname) ? pathname : "";
-  }
+  function onClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#openFiltersButton, #filtersModal")) {
+      scheduleAddFilterNormalization();
+    }
 
-  function compactPlayerPageName(value) {
-    const fullName = String(value || "").trim().replace(/\s+Event(event)) return;
+    if (consumeActivePageViewFilterEvent(event)) return;
     if (suppressDraggedClick(event)) {
       endNavigationIntent();
       return;
