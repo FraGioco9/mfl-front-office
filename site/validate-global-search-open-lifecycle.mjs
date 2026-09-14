@@ -4,6 +4,13 @@ import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 const sourceCore = readCombinedCanonicalCoreSource();
 
 invariant(
+  sourceCore.includes('const ensureGlobalSearchRuntime = Reflect.get(window, "__mflEnsureGlobalSearchRuntime");')
+    && sourceCore.includes('if (typeof ensureGlobalSearchRuntime === "function") {\n    await ensureGlobalSearchRuntime();\n  }')
+    && sourceCore.indexOf('await ensureGlobalSearchRuntime();') < sourceCore.indexOf("showModal(searchModal);"),
+  "Global Search first open must load the authoritative runtime before revealing or hydrating the modal.",
+);
+
+invariant(
   sourceCore.includes("const renderAuthoritativeRecentSearches = async () => {")
     && sourceCore.includes("const renderRecent = window.__mflGlobalSearchRuntime?.recent;")
     && sourceCore.includes("return Boolean(await renderRecent());")
