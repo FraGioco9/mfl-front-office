@@ -281,6 +281,8 @@ const browserTestSource = String.raw`(() => {
       "#accountMenu",
       "#accountButton",
       "#appShell > main",
+      ".siteFooterDetails",
+      ".siteFooterDetailsInner",
     ]) {
       assertElementWithinViewport(selector, viewportWidth);
     }
