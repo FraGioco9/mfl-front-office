@@ -1,4 +1,4 @@
-const { signedWalletFromRequest } = require("./_wallet-proof");
+const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig } = require("./_supabase");
 const { touchWalletLastSeen } = require("./_wallet-presence");
 
