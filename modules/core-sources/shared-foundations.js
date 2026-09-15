@@ -374,9 +374,11 @@ const accountSettingsButton = document.querySelector("#accountSettingsButton");
 const linkWalletButton = document.querySelector("#linkWalletButton");
 const homeOptInButton = document.querySelector("#homeOptInButton");
 const themeButton = document.querySelector("#themeButton");
+/** @type {HTMLButtonElement | null} */
 const openFiltersButton = document.querySelector("#openFiltersButton");
 const quickClearFiltersButton = document.querySelector("#quickClearFiltersButton");
 const filterSummary = document.querySelector("#filterSummary");
+/** @type {HTMLElement | null} */
 const filtersModal = document.querySelector("#filtersModal");
 const closeFiltersButton = document.querySelector("#closeFiltersButton");
 const applyFiltersButton = document.querySelector("#applyFiltersButton");
@@ -386,7 +388,9 @@ const addFilterSelect = /** @type {HTMLSelectElement} */ (document.querySelector
 const filterRules = document.querySelector("#filterRules");
 const hideRetiredInput = /** @type {HTMLInputElement} */ (document.querySelector("#hideRetiredInput"));
 const hideRetiringInput = /** @type {HTMLInputElement} */ (document.querySelector("#hideRetiringInput"));
+/** @type {HTMLElement | null} */
 const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
+/** @type {HTMLElement | null} */
 const packablePlayersFilter = document.querySelector("#packablePlayersFilter");
 const hideMflPlayersInput = /** @type {HTMLInputElement} */ (document.querySelector("#hideMflPlayersInput"));
 const packablePlayersInput = /** @type {HTMLInputElement} */ (document.querySelector("#packablePlayersInput"));
@@ -396,6 +400,7 @@ const pageSizeSelect = /** @type {HTMLSelectElement} */ (document.querySelector(
 const tableColGroup = document.querySelector("#tableColGroup");
 const tableHead = document.querySelector("#tableHead");
 const tableBody = document.querySelector("#tableBody");
+/** @type {HTMLElement | null} */
 const emptyState = document.querySelector("#emptyState");
 const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
@@ -487,6 +492,8 @@ const evaluationLoadList = document.querySelector("#evaluationLoadList");
 const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
+/** @type {HTMLButtonElement | null} */
 const addToWatchlistButton = document.querySelector("#addToWatchlistButton");
+/** @type {HTMLButtonElement | null} */
 const moveToWatchlistButton = document.querySelector("#moveToWatchlistButton");
 const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton");
