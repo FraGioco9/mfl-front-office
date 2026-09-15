@@ -778,7 +778,22 @@ const browserTestSource = String.raw`(() => {
       scroller.dispatchEvent(new Event("scroll"));
       await delay(80);
       const stuck = scroller.classList.contains("mflPlayerTableNameStuck");
-      assert(stuck === expected, "Name stuck state is wrong at scrollLeft=" + scroller.scrollLeft);
+      if (stuck !== expected) {
+        const runtime = Reflect.get(window, "__mflSharedTableUiRuntime");
+        const beforeDirectSync = {
+          scrollLeft: scroller.scrollLeft,
+          rectCount: scroller.getClientRects().length,
+          runtimeSync: typeof runtime?.syncRouteHorizontalCuesNow,
+        };
+        runtime?.syncRouteHorizontalCuesNow?.();
+        await delay(0);
+        throw new Error("Name stuck state is wrong: " + JSON.stringify({
+          expected,
+          beforeDirectSync,
+          afterDirectSync: scroller.classList.contains("mflPlayerTableNameStuck"),
+          sameScroller: document.querySelector("#progressionPage .playerTableScroller") === scroller,
+        }));
+      }
       if (expected) {
         const separator = getComputedStyle(name, "::before");
         assert(separator.content === '\"\"' && parseFloat(separator.borderRightWidth) > 0,
