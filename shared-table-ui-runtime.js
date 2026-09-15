@@ -943,7 +943,7 @@
     return playerResizeObserver;
   }
 
-  function ensurePlayerScroller() {
+  function ensurePlayerScroller({ schedule = true } = {}) {
     const scroller = playerTableScroller();
     if (!(scroller instanceof HTMLElement)) return;
     if (boundPlayerScroller !== scroller) {
@@ -965,7 +965,8 @@
     const body = document.getElementById("tableBody");
     if (head instanceof HTMLElement) observer?.observe(head);
     if (body instanceof HTMLElement) observer?.observe(body);
-    schedulePlayerTableSync();
+    if (schedule) schedulePlayerTableSync();
+    return scroller;
   }
 
   function syncRouteHorizontalStructureNow() {
@@ -982,6 +983,7 @@
     recordSharedTableUiStage("route-shell-horizontal-ensure-views-complete");
     tableHorizontalScrollers().forEach(syncViewScroller);
     recordSharedTableUiStage("route-shell-horizontal-view-sync-complete");
+    ensurePlayerScroller({ schedule: false });
     syncPlayerTableScroller();
     recordSharedTableUiStage("route-shell-horizontal-player-sync-complete");
   }
