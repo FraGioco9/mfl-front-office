@@ -1,9 +1,6 @@
 name: Performance baseline
 
 on:
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       runs:
@@ -150,9 +147,9 @@ jobs:
           MFL_BASELINE_LABEL: github-actions-local-next-production
           MFL_BASELINE_SOURCE_REF: ${{ github.head_ref || github.ref_name }}
           MFL_BASELINE_ACCESS_CONTEXT: guest/public-database
-          INPUT_RUNS: ${{ github.event_name == 'pull_request' && '5' || inputs.runs }}
-          INPUT_PROFILES: ${{ github.event_name == 'pull_request' && 'desktop,mobile-slow' || inputs.profiles }}
-          INPUT_JOURNEYS: ${{ github.event_name == 'pull_request' && 'database' || inputs.journeys }}
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_PROFILES: ${{ inputs.profiles }}
+          INPUT_JOURNEYS: ${{ inputs.journeys }}
         run: |
           set -euo pipefail
           export MFL_BASELINE_SOURCE_COMMIT="$(git rev-parse HEAD)"
