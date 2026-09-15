@@ -1958,18 +1958,18 @@ th {
 }
 
 th.sortable {
-  padding: 0;
-  cursor: default;
+  cursor: pointer;
 }
 
 .tableSortButton {
   display: flex;
   align-items: center;
   width: 100%;
-  height: var(--mfl-table-header-height);
+  height: 100%;
   min-width: 0;
-  padding: 0 var(--mfl-table-cell-padding-inline);
+  padding: 0;
   border: 0;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -1979,6 +1979,12 @@ th.sortable {
   text-transform: inherit;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.tableSortButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
 }
 
 .tableSortButton > span:first-child {
@@ -1993,6 +1999,11 @@ th.sortable:hover {
 
 th.sortable:has(.tableSortButton:focus-visible) {
   background: var(--mfl-table-sort-hover-background);
+}
+
+.tableSortButton:focus-visible {
+  outline: var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color);
+  outline-offset: calc(-1 * var(--mfl-focus-ring-width));
 }
 
 .mflA11yStatus {
