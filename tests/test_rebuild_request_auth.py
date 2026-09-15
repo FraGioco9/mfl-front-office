@@ -24,8 +24,8 @@ class RebuildRequestAuthenticationTests(unittest.TestCase):
         pipeline.configure_mfl_api_token(" secret-token ")
 
         for url in (
-            "https://api.playmfl.com/prod/players?limit=1",
-            "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players",
+            "https://api.playmfl.com/players?limit=1",
+            "https://api.playmfl.com/players/progressions?playersIds=42",
         ):
             with self.subTest(url=url):
                 headers = pipeline.request_headers(url)
@@ -35,12 +35,12 @@ class RebuildRequestAuthenticationTests(unittest.TestCase):
 
     def test_configured_token_is_not_sent_to_unrelated_hosts(self) -> None:
         pipeline.configure_mfl_api_token("secret-token")
-        headers = pipeline.request_headers("https://example.com/prod/players")
+        headers = pipeline.request_headers("https://example.com/players")
         self.assertNotIn(pipeline.MFL_API_TOKEN_HEADER, headers)
 
     def test_http_404_is_not_retried(self) -> None:
         error = HTTPError(
-            "https://api.playmfl.com/prod/missing",
+            "https://api.playmfl.com/missing",
             404,
             "Not Found",
             hdrs=None,
@@ -50,7 +50,7 @@ class RebuildRequestAuthenticationTests(unittest.TestCase):
             with patch.object(pipeline.time, "sleep") as sleep:
                 with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
                     pipeline.request_json(
-                        "https://api.playmfl.com/prod/missing",
+                        "https://api.playmfl.com/missing",
                         "Missing resource",
                     )
 

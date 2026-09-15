@@ -131,7 +131,7 @@ async function fetchLiveAgentNameForWallet(address) {
   }
 
   try {
-    const response = await fetch("https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global", { cache: "no-store" });
+    const response = await fetch("https://api.playmfl.com/leaderboards/users/global", { cache: "no-store" });
     if (!response.ok) {
       return "";
     }

@@ -19,8 +19,8 @@ DATABASE_PATH = (Path(__file__).resolve().parents[2] / "mfl_progression.db")
 CANDIDATE_PATH = (Path(__file__).resolve().parents[2] / "mfl_progression_candidate.db")
 REPORT_PATH = (Path(__file__).resolve().parents[2] / "mfl_rebuild_report.json")
 
-LEADERBOARD_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
-PLAYERS_URL = "https://api.playmfl.com/prod/players"
+LEADERBOARD_URL = "https://api.playmfl.com/leaderboards/users/global"
+PLAYERS_URL = "https://api.playmfl.com/players"
 PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
 PLAYER_EXPERIENCE_HISTORY_URL = "https://api.playmfl.com/players/{player_id}/experiences/history"
 
@@ -38,10 +38,7 @@ REQUEST_TIMEOUT_SECONDS = 60
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 90.0
 MFL_API_TOKEN_HEADER = "X-MFL-Api-Token"
-MFL_API_HOSTS = frozenset({
-    "api.playmfl.com",
-    "z519wdyajg.execute-api.us-east-1.amazonaws.com",
-})
+MFL_API_HOSTS = frozenset({"api.playmfl.com"})
 _mfl_api_token = ""
 
 flow_module.FLOW_STATIC_PLAYER_BATCH_SIZE = FLOW_BATCH_SIZE
