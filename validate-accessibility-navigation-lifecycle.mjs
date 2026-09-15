@@ -91,8 +91,11 @@ for (const required of [
 }
 
 for (const required of [
+  "th.sortable {\n  cursor: pointer;",
   ".tableSortButton {",
+  ".tableSortButton:hover:not(:disabled) {\n  border-color: transparent;\n  background: transparent;\n  color: inherit;",
   "th.sortable:has(.tableSortButton:focus-visible)",
+  ".tableSortButton:focus-visible {",
   ".mflA11yStatus {",
 ]) {
   assert.ok(styles.includes(required), `Accessibility presentation is missing: ${required}`);
