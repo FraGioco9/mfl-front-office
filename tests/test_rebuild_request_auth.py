@@ -50,7 +50,7 @@ class RebuildRequestAuthenticationTests(unittest.TestCase):
             with patch.object(pipeline.time, "sleep") as sleep:
                 with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
                     pipeline.request_json(
-                        "https://api.playmfl.com/prod/missing",
+                        "https://api.playmfl.com/missing",
                         "Missing resource",
                     )
 
