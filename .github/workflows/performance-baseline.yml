@@ -1,0 +1,214 @@
+name: Performance baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Repetitions per journey/profile.
+        required: false
+        default: "5"
+        type: string
+      profiles:
+        description: Comma-separated baseline profiles.
+        required: false
+        default: desktop,mobile-slow
+        type: string
+      journeys:
+        description: Optional comma-separated journey subset; empty runs all journeys.
+        required: false
+        default: ""
+        type: string
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/performance-baseline.yml
+      - validation/performance-baseline.mjs
+      - validate-performance-baseline-harness.mjs
+      - docs/performance-923.md
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  capture:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'perf/969-current-performance-baseline'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Download latest validated runtime database
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          LATEST_RUN_ID=""
+          LATEST_ARTIFACT_ID=""
+          LATEST_CREATED_AT=""
+
+          while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
+            [ -n "$ARTIFACT_ID" ] || continue
+            [ -n "$RUN_ID" ] || continue
+
+            rm -f mfl_database.db
+            echo "Checking mfl_database artifact $ARTIFACT_ID from run $RUN_ID ($CREATED_AT)."
+
+            if ! gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .; then
+              echo "Artifact $ARTIFACT_ID could not be downloaded; trying the next candidate."
+              continue
+            fi
+
+            if python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only; then
+              LATEST_RUN_ID="$RUN_ID"
+              LATEST_ARTIFACT_ID="$ARTIFACT_ID"
+              LATEST_CREATED_AT="$CREATED_AT"
+              break
+            fi
+
+            rm -f mfl_database.db
+            echo "Artifact $ARTIFACT_ID is not a valid prepared database; trying the next candidate."
+          done < <(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
+              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.id | tostring), (.workflow_run.id | tostring)] | @tsv' \
+              | sort -r
+          )
+
+          if [ -z "$LATEST_RUN_ID" ]; then
+            echo "No valid non-expired mfl_database artifact was found." >&2
+            exit 1
+          fi
+
+          mkdir -p api/data-files
+          mv mfl_database.db api/data-files/mfl_database.db
+          python -m scripts.database.prepare_runtime_database api/data-files/mfl_database.db --validate-only
+
+          DATASET_GENERATED_AT="$(python - <<'PY'
+          import sqlite3
+          value = sqlite3.connect("api/data-files/mfl_database.db").execute(
+              "SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1"
+          ).fetchone()
+          print(str(value[0] if value else "").strip())
+          PY
+          )"
+
+          {
+            echo "database_artifact_id=$LATEST_ARTIFACT_ID"
+            echo "database_run_id=$LATEST_RUN_ID"
+            echo "database_artifact_created_at=$LATEST_CREATED_AT"
+            echo "dataset_generated_at=$DATASET_GENERATED_AT"
+          } >> "$GITHUB_ENV"
+
+          echo "Using database artifact $LATEST_ARTIFACT_ID from run $LATEST_RUN_ID."
+          echo "Dataset generated_at: $DATASET_GENERATED_AT"
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build current site
+        run: npm run build
+
+      - name: Start production Next server
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx next start -p 4000 > performance-next.log 2>&1 &
+          echo "next_pid=$!" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 80); do
+            if curl --fail --silent --show-error http://127.0.0.1:4000/api/data?mode=summary >/tmp/mfl-baseline-summary.json; then
+              exit 0
+            fi
+            if ! kill -0 "$!" >/dev/null 2>&1; then
+              cat performance-next.log >&2
+              exit 1
+            fi
+            sleep 0.5
+          done
+          cat performance-next.log >&2
+          exit 1
+
+      - name: Capture browser performance baseline
+        shell: bash
+        env:
+          MFL_BASE_URL: http://127.0.0.1:4000
+          MFL_BASELINE_OUTPUT: performance-baseline-current.json
+          MFL_BASELINE_LABEL: github-actions-local-next-production
+          MFL_BASELINE_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          MFL_BASELINE_SOURCE_REF: ${{ github.head_ref || github.ref_name }}
+          MFL_BASELINE_ACCESS_CONTEXT: guest/public-database
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_PROFILES: ${{ inputs.profiles }}
+          INPUT_JOURNEYS: ${{ inputs.journeys }}
+        run: |
+          set -euo pipefail
+          export MFL_BASELINE_RUNS="${INPUT_RUNS:-5}"
+          export MFL_BASELINE_PROFILES="${INPUT_PROFILES:-desktop,mobile-slow}"
+          export MFL_BASELINE_JOURNEYS="${INPUT_JOURNEYS:-}"
+          npm run performance:baseline 2>&1 | tee performance-baseline-current.log
+
+      - name: Verify complete capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.metadata.complete == true' performance-baseline-current.json >/dev/null
+          jq -e '.metadata.targetContext.datasetGeneratedAt == env.dataset_generated_at' performance-baseline-current.json >/dev/null
+          jq -e '.metadata.targetContext.sourceCommit != ""' performance-baseline-current.json >/dev/null
+          jq -e '.metadata.targetContext.browserVersion != ""' performance-baseline-current.json >/dev/null
+
+      - name: Publish baseline context
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### Performance baseline capture"
+            echo
+            echo "| Context | Value |"
+            echo "| --- | --- |"
+            echo "| Source commit | `$(jq -r '.metadata.targetContext.sourceCommit' performance-baseline-current.json)` |"
+            echo "| Source ref | `$(jq -r '.metadata.targetContext.sourceRef' performance-baseline-current.json)` |"
+            echo "| Dataset generated | `$(jq -r '.metadata.targetContext.datasetGeneratedAt' performance-baseline-current.json)` |"
+            echo "| Database artifact | `$database_artifact_id` (run `$database_run_id`) |"
+            echo "| Access context | `$(jq -r '.metadata.targetContext.accessContext' performance-baseline-current.json)` |"
+            echo "| Browser | `$(jq -r '.metadata.targetContext.browserVersion' performance-baseline-current.json)` |"
+            echo "| Profiles | `$(jq -r '.metadata.profiles | join(",")' performance-baseline-current.json)` |"
+            echo "| Repetitions | `$(jq -r '.metadata.repetitions' performance-baseline-current.json)` |"
+            echo
+            echo "Synthetic client throttling and GitHub-hosted runner timing are evidence for comparison only; they are not production latency."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-baseline-${{ github.run_id }}
+          path: |
+            performance-baseline-current.json
+            performance-baseline-current.log
+            performance-next.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Stop production Next server
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${next_pid:-}" ]; then
+            kill "$next_pid" >/dev/null 2>&1 || true
+            wait "$next_pid" >/dev/null 2>&1 || true
+          fi
