@@ -708,6 +708,11 @@ const browserTestSource = String.raw`(() => {
     assert(nameHeader instanceof HTMLTableCellElement, "Database Name header is missing.");
     assert(nameButton instanceof HTMLButtonElement, "Sortable Name header must expose a native button.");
     assert(nameButton.getAttribute("aria-label") === "Sort by Name", "Sortable Name button has the wrong accessible name.");
+    const loadedHeaderColor = getComputedStyle(nameButton).color;
+    nameButton.disabled = true;
+    assert(getComputedStyle(nameButton).opacity === "1", "Loading sort headers must retain full opacity despite generic disabled-button styling.");
+    assert(getComputedStyle(nameButton).color === loadedHeaderColor, "Loading sort headers must retain their loaded text color.");
+    nameButton.disabled = false;
     nameButton.focus();
     assert(document.activeElement === nameButton, "Sortable Name button is not keyboard focusable.");
     nameButton.click();

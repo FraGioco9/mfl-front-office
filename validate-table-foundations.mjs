@@ -34,7 +34,7 @@ for (const expected of [
   "td {\n  font-size: var(--mfl-table-row-font-size);\n}",
   "th {\n  background: var(--mfl-table-header-background);\n  color: var(--mfl-table-header-text-color);\n  font-size: var(--mfl-table-header-font-size);",
   "th.sortable:hover {\n  background: var(--mfl-table-sort-hover-background);\n}",
-  ".tableSortButton:disabled {\n  opacity: 1;\n  cursor: default;\n}",
+  "button.tableSortButton:disabled {\n  opacity: 1;\n  cursor: default;\n}",
   "th.sortable:has(.tableSortButton:disabled):hover {\n  background: var(--mfl-table-header-background);\n}",
   "#tableBody tr.tableRowHovered > td,\n#tableBody tr.tableRowHovered > th {\n  background: var(--mfl-table-row-hover-background);\n  background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
 ]) {
