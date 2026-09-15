@@ -22,6 +22,16 @@ function elementProps(tagName, rawAttributes) {
   return props;
 }
 
+function legacyHeadChildren(markup) {
+  return React.Children.toArray(parse(markup)).filter((node) => {
+    if (!React.isValidElement(node) || typeof node.type !== "string") return true;
+    const tagName = node.type.toLowerCase();
+    if (tagName === "title") return false;
+    if (tagName !== "meta") return true;
+    return String(node.props?.name || "").trim().toLowerCase() !== "viewport";
+  });
+}
+
 function legacyDocumentSnapshot() {
   const source = readFileSync(INDEX_PATH, "utf8");
   const html = requiredMatch(source, /<html([^>]*)>/i, "html attributes");
@@ -30,7 +40,7 @@ function legacyDocumentSnapshot() {
   return Object.freeze({
     htmlProps: elementProps("html", html[1]),
     headProps: elementProps("head", head[1]),
-    headChildren: parse(head[2]),
+    headChildren: legacyHeadChildren(head[2]),
     bodyProps: elementProps("body", body[1]),
     bodyChildren: parse(body[2]),
   });
