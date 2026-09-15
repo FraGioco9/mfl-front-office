@@ -1644,7 +1644,7 @@ function showPlayerNoteTooltip(icon) {
     state.playerNoteTooltipHideTimer = null;
   }
 
-  let tooltip = document.querySelector(".playerNoteFloatingTooltip");
+  let tooltip = /** @type {HTMLElement | null} */ (document.querySelector(".playerNoteFloatingTooltip"));
   if (!tooltip || state.playerNoteTooltipText !== note) {
     removePlayerNoteTooltip();
     tooltip = document.createElement("div");
@@ -2243,7 +2243,8 @@ function renderPlayerPageOwner(playerId) {
   window.__mflPlayerFirstPaintRuntime?.bindHeroActionMenu?.(playerDetail);
   window.__mflPlayerFirstPaintRuntime?.animateReadyControls?.(playerDetail);
   window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
-  const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
+  const evaluateButton = /** @type {HTMLButtonElement | null} */ (playerDetail.querySelector("#playerEvaluateButton"));
+  /** @param {MouseEvent} event */
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });
 
@@ -2276,16 +2277,16 @@ function renderPlayerPageOwner(playerId) {
       openEvaluationForPlayer(event);
     }
   });
-  const playerIdButton = playerDetail.querySelector("#copyPlayerIdButton");
+  const playerIdButton = /** @type {HTMLButtonElement | null} */ (playerDetail.querySelector("#copyPlayerIdButton"));
   playerIdButton.addEventListener("mouseenter", () => showPlayerNoteTooltip(playerIdButton));
   playerIdButton.addEventListener("focus", () => showPlayerNoteTooltip(playerIdButton));
   playerIdButton.addEventListener("mouseleave", hidePlayerNoteTooltip);
   playerIdButton.addEventListener("blur", hidePlayerNoteTooltip);
   playerIdButton.addEventListener("click", (event) => {
     copyPlayerId(id);
-    event.currentTarget.blur();
+    if (event.currentTarget instanceof HTMLElement) event.currentTarget.blur();
   });
-  const playerAgentLink = playerDetail.querySelector(".playerAgentLink");
+  const playerAgentLink = /** @type {HTMLElement | null} */ (playerDetail.querySelector(".playerAgentLink"));
   if (playerAgentLink) {
     if (playerAgentLink.dataset.tooltip) {
       playerAgentLink.addEventListener("mouseenter", () => showPlayerNoteTooltip(playerAgentLink));
@@ -2299,8 +2300,9 @@ function renderPlayerPageOwner(playerId) {
     });
   }
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextView = button.dataset.playerAttributeView;
+    const control = /** @type {HTMLElement} */ (button);
+    control.addEventListener("click", () => {
+      const nextView = control.dataset.playerAttributeView;
       if (!nextView || nextView === state.playerAttributeView) return;
       state.playerAttributeView = nextView;
       saveTableState();
@@ -2308,23 +2310,27 @@ function renderPlayerPageOwner(playerId) {
     });
   });
   playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const stat = button.dataset.trainingStat;
-      const delta = Number(button.dataset.trainingDelta || 0);
+    const control = /** @type {HTMLElement} */ (button);
+    control.addEventListener("click", () => {
+      const stat = control.dataset.trainingStat;
+      const delta = Number(control.dataset.trainingDelta || 0);
       adjustTrainingStat(id, stat, delta);
-      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
-        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
-      );
+      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) => {
+        const controlCandidate = /** @type {HTMLElement} */ (candidate);
+        return controlCandidate.dataset.trainingStat === stat
+          && Number(controlCandidate.dataset.trainingDelta || 0) === delta;
+      });
       replayTrainingControlHover(replacement);
     });
   });
   playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
-    button.addEventListener("click", () => {
+    const control = /** @type {HTMLElement} */ (button);
+    control.addEventListener("click", () => {
       resetTrainingStats(id);
       replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
     });
   });
-  const notesInput = playerDetail.querySelector("#playerNotesInput");
+  const notesInput = /** @type {HTMLTextAreaElement | null} */ (playerDetail.querySelector("#playerNotesInput"));
   if (notesInput) {
     notesInput.addEventListener("input", () => {
       updatePlayerNoteCount(notesInput);
