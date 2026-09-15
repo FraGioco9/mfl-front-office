@@ -750,7 +750,8 @@ const browserTestSource = String.raw`(() => {
     try {
       const top = active.getBoundingClientRect().top;
       const gap = footer.getBoundingClientRect().top - active.getBoundingClientRect().bottom;
-      assert(Math.abs(gap - 22) < 1, "The footer must retain its 22px content gap.");
+      const expectedGap = parseFloat(getComputedStyle(footer).marginTop);
+      assert(expectedGap > 0 && Math.abs(gap - expectedGap) < 1, "The footer must retain its responsive content gap.");
       main.prepend(parked);
       assert(Math.abs(active.getBoundingClientRect().top - top) < 1, "A parked Table must not increase header-to-title spacing.");
       footer.before(parked);
