@@ -4,6 +4,8 @@ import parse from "html-react-parser";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import legacyDevWatchToken from "../legacy-dev-watch-token.js";
+
 const INDEX_PATH = resolve(process.cwd(), "index.html");
 
 function requiredMatch(source, expression, label) {
@@ -40,7 +42,11 @@ export default class MflDocument extends Document {
   render() {
     return React.createElement(
       Html,
-      { ...legacy.htmlProps, suppressHydrationWarning: true },
+      {
+        ...legacy.htmlProps,
+        suppressHydrationWarning: true,
+        "data-mfl-dev-assets": process.env.NODE_ENV === "development" ? legacyDevWatchToken : undefined,
+      },
       React.createElement(
         Head,
         legacy.headProps,

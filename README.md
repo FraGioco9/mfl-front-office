@@ -45,7 +45,7 @@ python -m scripts.database.prepare_runtime_database api\data-files\mfl_database.
 npm run dev
 ```
 
-`npm run dev` is owned by the root `package.json`, prepares the compatibility `public/` projection, and starts `next dev --webpack -p 4000`. Next.js serves the existing SPA shell and the `pages/api/*` compatibility routes, while the canonical business logic remains under `api/`. Local development uses Next's supported Webpack mode because the Windows Turbopack/CommonJS path does not currently preserve native `node:sqlite` loading correctly. Root `.env.local` is loaded by Next.js in the same way as the other projects. Local startup intentionally does **not** rebuild the SQLite database or regenerate tracked source artifacts.
+`npm run dev` follows the same lifecycle as the sibling Next projects: npm runs `predev` once to prepare the temporary compatibility `public/` projection, then `dev` starts `next dev --webpack -p 4000` directly. While the legacy bridge still exists, its projected CSS/JS/HTML assets are explicit Webpack dependencies; changing branches or resetting to a PR resyncs `public/` and triggers Next Fast Refresh/full reload automatically. Next.js serves the existing SPA shell and the `pages/api/*` compatibility routes, while the canonical business logic remains under `api/`. Local development uses Next's supported Webpack mode because the Windows Turbopack/CommonJS path does not currently preserve native `node:sqlite` loading correctly. Root `.env.local` is loaded by Next.js in the same way as the other projects. Local startup intentionally does **not** rebuild the SQLite database or regenerate tracked source artifacts.
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 

@@ -4,7 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "node prepare-next-runtime.mjs && next dev --webpack -p 4000",
+    "dev": "next dev --webpack -p 4000",
     "build:core": "node build-app-core.mjs",
     "build:styles": "node build-styles.mjs",
     "build:html": "node build-html.mjs",
@@ -13,12 +13,13 @@
     "build:public": "node prepare-next-runtime.mjs",
     "build": "npm run build:legacy && npm run build:public && next build",
     "start": "next start -p 4000",
-    "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next.config.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages *-runtime.js validate*.mjs validation/*.mjs",
+    "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next-dev-legacy-bridge.mjs next.config.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages *-runtime.js validate*.mjs validation/*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
     "verify:generated": "git diff --exit-code -- styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
     "validate": "node validate-all.mjs",
     "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
-    "performance:baseline": "node validation/performance-baseline.mjs"
+    "performance:baseline": "node validation/performance-baseline.mjs",
+    "predev": "node prepare-next-runtime.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
