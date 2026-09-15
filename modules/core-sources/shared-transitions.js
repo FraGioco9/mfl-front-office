@@ -210,10 +210,7 @@ function syncMobileTablePageTransitionChrome(pageName) {
 
   if (targetPage && currentPage && targetPage !== currentPage) {
     const scroller = document.querySelector("#progressionPage .playerTableScroller");
-    if (scroller instanceof HTMLElement) {
-      scroller.scrollLeft = 0;
-      Reflect.get(window, "__mflSharedTableUiRuntime")?.syncRouteHorizontalCuesNow?.();
-    }
+    if (scroller instanceof HTMLElement) scroller.scrollLeft = 0;
   }
 
   const views = document.querySelector("#progressionPage .views");
