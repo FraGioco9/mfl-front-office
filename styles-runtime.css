@@ -8208,17 +8208,15 @@ table :is(th, td) > :is(button, img, input, select, svg) {
     position: static;
   }
 
-  @container mfl-sticky-name scroll-state(stuck: left) {
-    #progressionPage #tableBody .playerNameCell::before {
-      content: "";
-      position: absolute;
-      z-index: 2;
-      top: -1px;
-      right: 0;
-      bottom: -1px;
-      border-right: 1px solid var(--border-strong);
-      pointer-events: none;
-    }
+  #progressionPage .playerTableScroller.mflPlayerTableNameStuck #tableBody .playerNameCell::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: -1px;
+    right: 0;
+    bottom: -1px;
+    border-right: 1px solid var(--border-strong);
+    pointer-events: none;
   }
 
   #progressionPage .playerTableScroller th.col-name {
@@ -8232,8 +8230,6 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   ) {
     z-index: 5;
     isolation: isolate;
-    container-type: scroll-state;
-    container-name: mfl-sticky-name;
     background: var(--mfl-table-surface);
     background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
     background-clip: border-box;
