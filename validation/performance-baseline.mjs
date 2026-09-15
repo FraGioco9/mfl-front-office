@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 12;
+const BASELINE_SCHEMA_VERSION = 13;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -200,6 +200,40 @@ function journeysFor({ playerId, clubId }) {
       options: Object.freeze({ view: "attributes" }),
     }),
     Object.freeze({
+      id: "database-100",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      profileOnly: true,
+    }),
+    Object.freeze({
+      id: "database-250",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 250,
+      profileOnly: true,
+    }),
+    Object.freeze({
+      id: "database-100-no-paint",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      cachedProbe: "table-body-invisible",
+      profileOnly: true,
+    }),
+    Object.freeze({
+      id: "database-100-no-layout",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      cachedProbe: "table-display-none",
+      profileOnly: true,
+    }),
+    Object.freeze({
       id: "player",
       path: `/players/${encodeURIComponent(playerId)}`,
       page: "player",
@@ -234,7 +268,7 @@ function journeysFor({ playerId, clubId }) {
 }
 
 function selectedJourneys(journeys) {
-  if (!requestedJourneyIds.length) return journeys;
+  if (!requestedJourneyIds.length) return Object.freeze(journeys.filter((journey) => journey.profileOnly !== true));
   const byId = new Map(journeys.map((journey) => [journey.id, journey]));
   return Object.freeze(requestedJourneyIds.map((id) => {
     const journey = byId.get(id);
@@ -581,12 +615,31 @@ async function resetBrowserObservers(cdp) {
 }
 
 async function collectBrowserMetrics(cdp, minimumSequence, phase) {
-  const value = await evaluate(cdp, `(() => ({
-    timeline: window.__mflClientPerformance?.snapshot?.() || [],
-    longTasks: window.__mflBaselineLongTasks || [],
-    longAnimationFrames: window.__mflBaselineLongAnimationFrames || [],
-    layoutShifts: window.__mflBaselineLayoutShifts || []
-  }))()`);
+  const value = await evaluate(cdp, `(() => {
+    const table = document.querySelector("#databasePage .playerTableScroller table");
+    const body = document.getElementById("tableBody");
+    const scroller = document.querySelector("#databasePage .playerTableScroller");
+    const tableRect = table instanceof HTMLElement ? table.getBoundingClientRect() : null;
+    const scrollerRect = scroller instanceof HTMLElement ? scroller.getBoundingClientRect() : null;
+    return {
+      timeline: window.__mflClientPerformance?.snapshot?.() || [],
+      longTasks: window.__mflBaselineLongTasks || [],
+      longAnimationFrames: window.__mflBaselineLongAnimationFrames || [],
+      layoutShifts: window.__mflBaselineLayoutShifts || [],
+      tableDiagnostics: {
+        renderedRows: body instanceof HTMLTableSectionElement ? body.rows.length : 0,
+        renderedCells: body instanceof HTMLTableSectionElement
+          ? Array.from(body.rows).reduce((total, row) => total + row.cells.length, 0)
+          : 0,
+        tableWidth: tableRect ? tableRect.width : 0,
+        tableHeight: tableRect ? tableRect.height : 0,
+        scrollerWidth: scrollerRect ? scrollerRect.width : 0,
+        scrollerHeight: scrollerRect ? scrollerRect.height : 0,
+        tableScrollWidth: table instanceof HTMLElement ? table.scrollWidth : 0,
+        tableScrollHeight: table instanceof HTMLElement ? table.scrollHeight : 0,
+      },
+    };
+  })()`);
   const timeline = Array.isArray(value?.timeline)
     ? value.timeline.filter((entry) => Number(entry?.sequence || 0) > minimumSequence)
     : [];
@@ -852,6 +905,7 @@ async function collectBrowserMetrics(cdp, minimumSequence, phase) {
     routeStages,
     shellStages,
     loaderStages,
+    tableDiagnostics: phase === "cached" ? (value?.tableDiagnostics || null) : null,
     dataSources: dataResponses.reduce((counts, entry) => {
       const source = String(entry?.detail?.source || "unknown");
       counts[source] = (counts[source] || 0) + 1;
@@ -940,6 +994,55 @@ async function navigateSpa(cdp, page, options) {
   await evaluate(cdp, expression);
 }
 
+function journeyBootstrapSource(journey) {
+  const pageSize = Number(journey?.pageSize);
+  if (!Number.isFinite(pageSize) || pageSize <= 0) return "";
+  return `(() => {
+    try {
+      const key = "mfl-table-filters-v1";
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      const pages = saved && typeof saved === "object" && !Array.isArray(saved)
+        && saved.pages && typeof saved.pages === "object" && !Array.isArray(saved.pages)
+        ? saved.pages
+        : {};
+      const database = pages.database && typeof pages.database === "object" && !Array.isArray(pages.database)
+        ? pages.database
+        : {};
+      localStorage.setItem(key, JSON.stringify({
+        ...(saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {}),
+        pages: {
+          ...pages,
+          database: {
+            ...database,
+            pageSize: ${JSON.stringify(pageSize)},
+            view: "attributes",
+          },
+        },
+      }));
+    } catch {}
+  })();`;
+}
+
+async function applyCachedRenderProbe(cdp, probe) {
+  const normalized = String(probe || "");
+  await evaluate(cdp, `(() => {
+    document.getElementById("mflBaselineRenderProbe")?.remove();
+    const probe = ${JSON.stringify(normalized)};
+    if (!probe) return true;
+    const style = document.createElement("style");
+    style.id = "mflBaselineRenderProbe";
+    if (probe === "table-body-invisible") {
+      style.textContent = "#tableBody { visibility: hidden !important; }";
+    } else if (probe === "table-display-none") {
+      style.textContent = ".playerTableScroller table { display: none !important; }";
+    } else {
+      throw new Error("Unknown baseline cached render probe: " + probe);
+    }
+    document.head.appendChild(style);
+    return true;
+  })()`);
+}
+
 async function runJourney(executable, profile, journey) {
   const debuggingPort = await reserveTcpPort();
   const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-performance-baseline-"));
@@ -968,6 +1071,10 @@ async function runJourney(executable, profile, journey) {
       cdp.send("Network.enable"),
     ]);
     await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: observerBootstrap });
+    const bootstrapSource = journeyBootstrapSource(journey);
+    if (bootstrapSource) {
+      await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: bootstrapSource });
+    }
     await applyProfile(cdp, profile);
     const network = createNetworkCollector(cdp);
     const targetUrl = `${baseUrl}${journey.path}`;
@@ -999,6 +1106,7 @@ async function runJourney(executable, profile, journey) {
     await waitForSpaNavigationReady(cdp, routeTimeoutMs);
     await navigateSpa(cdp, "home", {});
     await waitForRouteReady(cdp, "/", routeTimeoutMs);
+    await applyCachedRenderProbe(cdp, journey.cachedProbe);
     const cached = await runMeasuredPhase(
       cdp,
       network,
@@ -1073,6 +1181,14 @@ function summarizePhase(runs) {
     longTaskMs: summarizeMetric(runs, (run) => run.longTaskMs),
     longestTaskMs: summarizeMetric(runs, (run) => run.longestTaskMs),
     cls: summarizeMetric(runs, (run) => run.cls),
+    tableDiagnostics: {
+      renderedRows: summarizeMetric(runs, (run) => run.tableDiagnostics?.renderedRows),
+      renderedCells: summarizeMetric(runs, (run) => run.tableDiagnostics?.renderedCells),
+      tableWidth: summarizeMetric(runs, (run) => run.tableDiagnostics?.tableWidth),
+      tableHeight: summarizeMetric(runs, (run) => run.tableDiagnostics?.tableHeight),
+      tableScrollWidth: summarizeMetric(runs, (run) => run.tableDiagnostics?.tableScrollWidth),
+      tableScrollHeight: summarizeMetric(runs, (run) => run.tableDiagnostics?.tableScrollHeight),
+    },
     routeStages: {
       commitPrepMs: summarizeMetric(runs, (run) => run.routeStages?.commitPrepMs),
       shellSyncMs: summarizeMetric(runs, (run) => run.routeStages?.shellSyncMs),
@@ -1350,7 +1466,13 @@ function baselineResumeKey(entities, journeys, targetContext) {
     environmentLabel,
     repetitions,
     profiles: profiles.map((profile) => profile.id),
-    journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
+    journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "" }) => ({
+      id,
+      path,
+      expectedPath,
+      pageSize,
+      cachedProbe,
+    })),
     representativeEntities: entities,
     targetContext,
   });
@@ -1365,7 +1487,13 @@ function buildReport(raw, entities, journeys, targetContext, complete) {
       environmentLabel,
       repetitions,
       profiles: profiles.map((profile) => profile.id),
-      journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
+      journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "" }) => ({
+      id,
+      path,
+      expectedPath,
+      pageSize,
+      cachedProbe,
+    })),
       representativeEntities: entities,
       targetContext,
       completedRuns: completedRunCount(raw, journeys),
