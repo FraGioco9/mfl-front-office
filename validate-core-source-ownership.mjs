@@ -199,7 +199,10 @@ invariant(
   "Shared Player action facades must own cross-route Player ID copying and the stable Player render delegate.",
 );
 invariant(
-  sharedModalLifecycle.startsWith("function showModal(modal) {")
+  sharedModalLifecycle.startsWith("const modalReturnFocus = new WeakMap();")
+    && sharedModalLifecycle.includes("function showModal(modal) {")
+    && sharedModalLifecycle.includes("function hideModal(modal, afterClose) {")
+    && sharedModalLifecycle.includes("function bindModalFocusTrap(modal) {")
     && sharedModalLifecycle.replace(/\s*$/, "").endsWith("  pointerStartedOnBackdrop = false;\n  });\n}"),
   "Shared modal lifecycle must own generic show/hide transitions and drag-safe backdrop closing.",
 );
