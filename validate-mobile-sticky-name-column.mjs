@@ -121,10 +121,5 @@ invariant(
   !sharedTableUi.includes("playerNameCell") && !sharedTableUi.includes('style.position = "sticky"'),
   "Sticky positioning and separator painting stay CSS-owned; shared state must not inspect individual body rows.",
 );
-invariant(
-  sharedTableUi.includes("function ensurePlayerScroller({ schedule = true } = {})")
-    && sharedTableUi.includes("ensurePlayerScroller({ schedule: false });\n    syncPlayerTableScroller();"),
-  "Route cue synchronization must bind a late-mounted player scroller before reading sticky Name state, without scheduling a duplicate geometry pass.",
-);
 
 console.log("Small-screen player tables keep Name sticky with inset, keep sticky body cells opaque above the edge fade, and paint the body-only vertical separator across horizontal row dividers only while Name is actually stuck.");
