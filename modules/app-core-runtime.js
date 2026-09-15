@@ -344,6 +344,7 @@ const optInLockedMessage = document.querySelector("#optInLockedMessage");
 const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
+/** @type {HTMLDivElement | null} */
 const playerDetail = document.querySelector("#playerDetail");
 const settingsPage = document.querySelector("#settingsPage");
 const settingsAgentName = document.querySelector("#settingsAgentName");
@@ -428,9 +429,13 @@ const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchClearButton = document.querySelector("#evaluationSearchClearButton");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
+/** @type {HTMLElement | null} */
 const evaluationButtons = document.querySelector("#evaluationButtons");
+/** @type {HTMLButtonElement | null} */
 const evaluationResetButton = document.querySelector("#evaluationResetButton");
+/** @type {HTMLButtonElement | null} */
 const evaluationLoadButton = document.querySelector("#evaluationLoadButton");
+/** @type {HTMLButtonElement | null} */
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationSaveButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationSaveButton"));
 const evaluationShareButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationShareButton"));

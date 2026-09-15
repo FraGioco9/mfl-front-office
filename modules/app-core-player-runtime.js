@@ -2245,6 +2245,7 @@ function renderPlayerPageOwner(playerId) {
   window.__mflPlayerFirstPaintRuntime?.animateReadyControls?.(playerDetail);
   window.__mflSharedTableUiRuntime?.syncRouteHorizontalCuesNow?.();
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
+  /** @param {MouseEvent} event */
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });
 
@@ -2284,7 +2285,7 @@ function renderPlayerPageOwner(playerId) {
   playerIdButton.addEventListener("blur", hidePlayerNoteTooltip);
   playerIdButton.addEventListener("click", (event) => {
     copyPlayerId(id);
-    event.currentTarget.blur();
+    if (event.currentTarget instanceof HTMLElement) event.currentTarget.blur();
   });
   const playerAgentLink = playerDetail.querySelector(".playerAgentLink");
   if (playerAgentLink) {
