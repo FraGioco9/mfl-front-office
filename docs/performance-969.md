@@ -65,10 +65,17 @@ The isolation is strong enough to select the next implementation target:
 - keeping parked layout and disabling scroll-state containers are mostly non-additive on the cached return, because preserving layout already avoids repeating much of the scroll-state/layout work;
 - the synthetic `database-250` attempt rendered 100 rows in every sample because production mobile intentionally fixes the hidden Rows control to 100. It is **not** valid 250-row mobile evidence. The 250-row acceptance check remains open and should be measured separately in a context where 250 rows are actually supported.
 
-The next production PR should preserve the cached Table layout while parked and replace the per-row
-scroll-state container query with the existing shared horizontal-scroll state/class ownership, while
-preserving the sticky Name column and its separator. It should then capture focused before/after
-evidence and manually test Database/table navigation and horizontal scrolling.
+The first production optimization now preserves the cached Table layout while parked. It uses the exact
+measured probe semantics: the parked shared Table page remains zero-height, clipped, invisible and
+non-interactive, but no longer applies `content-visibility: hidden` to its descendants. The focused probe
+measured 230.2 ms cached settlement versus 397.8 ms for the normal 100-row slow-mobile case. Treat that
+as the profiling evidence that selected this implementation, not as an independent measurement of the
+final production commit.
+
+The next measured candidate after this PR is replacing the per-row scroll-state container query with
+the existing shared horizontal-scroll state/class ownership while preserving the sticky Name column
+and its separator. Because the two probes were mostly non-additive on cached return, that change should
+remain a separate PR and must earn its own evidence before merge.
 
 The historical [2026-09-12 baseline](performance-923.md#reference-browserruntime-baseline--2026-09-12)
 used a local Vercel runtime and lacks equivalent recorded build/dataset/browser provenance. The journey
