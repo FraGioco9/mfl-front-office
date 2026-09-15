@@ -7,11 +7,12 @@ const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher] = await Promise.all([
+const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage] = await Promise.all([
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
+  read("pages/[...path].js"),
 ]);
 
 const developmentHeaders = createNextHeaders({ production: false });
@@ -30,6 +31,11 @@ invariant(
   rewrites.beforeFiles?.some((rule) => rule.source === "/evaluation" && rule.destination === "/api/evaluation-preview")
     && rewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html"),
   "Next config must own Evaluation routing and SPA fallback.",
+);
+invariant(
+  deepRoutePage.includes("export function getServerSideProps()")
+    && deepRoutePage.includes("return { props: {} };"),
+  "Production deep routes must stay server-resolved so Vercel can match arbitrary direct app URLs.",
 );
 invariant(!packageSource.includes("build-vercel-config.mjs") && !packageSource.includes("vercel.production.json"), "Package scripts must not retain the legacy generated Vercel config model.");
 invariant(!vercelIgnore.includes("html-sources") && !vercelIgnore.includes("modules/core-sources"), "Vercel uploads must retain sources required by next build.");
