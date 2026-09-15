@@ -143,6 +143,27 @@ interface MflPlayerFirstPaintRuntime {
   heroBrandingSignature?: (playerId: unknown) => string;
 }
 
+interface MflSavedEvaluationPayload extends Record<string, unknown> {
+  playerId?: unknown;
+}
+
+interface MflSavedEvaluationCacheEntry extends Record<string, unknown> {
+  id?: unknown;
+  playerId?: unknown;
+  playerName?: unknown;
+  presentValue?: unknown;
+  payload?: MflSavedEvaluationPayload;
+}
+
+interface MflEvaluationSearchStateRuntime {
+  sync?: () => void;
+  restoreEmptyRecentResults?: (force?: boolean, stateOnly?: boolean) => Promise<boolean>;
+  selectEmptySearch?: () => unknown;
+  shouldShowTypedResults?: () => boolean;
+  ownsEmptyRecentResults?: () => boolean;
+  destroy?: () => void;
+}
+
 interface Window {
   __mflReleaseVersion?: string;
   __mflRelease?: Readonly<{ version: string; description: string }>;
@@ -158,6 +179,11 @@ interface Window {
   __mflSharedTableUiRuntime?: MflSharedTableUiRuntime;
   __mflPlayerFirstPaintRuntime?: MflPlayerFirstPaintRuntime;
   __mflGlobalSearchReadyPromise?: Promise<boolean>;
+  __mflRestoringSavedEvaluation?: boolean;
+  __mflSavedEvaluationsSessionCacheWallet?: string;
+  __mflSavedEvaluationsSessionCache?: MflSavedEvaluationCacheEntry[] | null;
+  __mflSavedEvaluationPayloadCache?: Record<string, MflSavedEvaluationCacheEntry>;
+  __mflEvaluationSearchStateRuntime?: MflEvaluationSearchStateRuntime;
   __mflTooltipHeight?: number;
   __mflCancelIncrementalRouteRequest?: () => number;
   __mflBuildPlayerFirstPaintContext?: (playerId: unknown) => MflPlayerFirstPaintContext;
@@ -180,6 +206,7 @@ interface ParentNode {
   querySelector(selectors: "[data-filter-operator]" | "[data-filter-connector]" | "[data-filter-column-select]"): HTMLSelectElement | null;
   querySelector(selectors: "[data-filter-value]"): HTMLInputElement | HTMLSelectElement | null;
   querySelector(selectors: "#selectVisiblePlayersInput"): HTMLInputElement | null;
+  querySelectorAll(selectors: "[data-evaluation-summary-position]"): NodeListOf<HTMLSelectElement>;
   querySelectorAll(
     selectors: ".mflStatsFilterButton" | "[data-player-attribute-view]" | "[data-training-stat]" | "[data-training-reset]" | ".filterRule" | "#progressionPage .pager, #progressionPage nav.pager",
   ): NodeListOf<HTMLElement>;
