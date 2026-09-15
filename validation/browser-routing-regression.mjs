@@ -777,9 +777,14 @@ const browserTestSource = String.raw`(() => {
       scroller.scrollLeft = left;
       scroller.dispatchEvent(new Event("scroll"));
       await delay(80);
-      const painted = getComputedStyle(name, "::before").content === '""';
-      assert(painted === expected, "Name separator state is wrong at scrollLeft=" + scroller.scrollLeft);
-      if (expected) assert(Math.abs(cell.getBoundingClientRect().left - edge) < 1, "Name must stay pinned at the scroller edge.");
+      const stuck = scroller.classList.contains("mflPlayerTableNameStuck");
+      assert(stuck === expected, "Name stuck state is wrong at scrollLeft=" + scroller.scrollLeft);
+      if (expected) {
+        const separator = getComputedStyle(name, "::before");
+        assert(separator.content === '\"\"' && parseFloat(separator.borderRightWidth) > 0,
+          "Name separator must be painted while the Name column is stuck.");
+        assert(Math.abs(cell.getBoundingClientRect().left - edge) < 1, "Name must stay pinned at the scroller edge.");
+      }
     };
     await checkScroll(0, false);
     await checkScroll(Math.max(0, threshold - 2), false);
