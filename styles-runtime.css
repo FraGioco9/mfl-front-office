@@ -1988,7 +1988,8 @@ th.sortable {
   color: inherit;
 }
 
-.tableSortButton:disabled {
+/* Match the generic disabled-button specificity so headers retain full contrast. */
+button.tableSortButton:disabled {
   opacity: 1;
   cursor: default;
 }
