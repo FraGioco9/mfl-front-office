@@ -970,6 +970,7 @@ function tableBuildHeaderOwner() {
     cell.appendChild(label);
 
     if (clubPositionSort) {
+      cell.setAttribute("aria-sort", "ascending");
       const arrow = document.createElement("span");
       arrow.className = "sortArrow asc";
       arrow.setAttribute("aria-hidden", "true");
@@ -978,15 +979,24 @@ function tableBuildHeaderOwner() {
 
     if (state.currentPage !== "club" && sortableColumns.has(column)) {
       cell.classList.add("sortable");
+      if (isSorted) {
+        cell.setAttribute("aria-sort", state.sortDirection === "asc" ? "ascending" : "descending");
+      }
 
+      const sortButton = document.createElement("button");
+      sortButton.type = "button";
+      sortButton.className = "tableSortButton";
+      sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);
+      sortButton.appendChild(label);
       if (isSorted) {
         const arrow = document.createElement("span");
         arrow.className = `sortArrow ${state.sortDirection}`;
         arrow.setAttribute("aria-hidden", "true");
-        cell.appendChild(arrow);
+        sortButton.appendChild(arrow);
       }
+      cell.replaceChildren(sortButton);
 
-      cell.addEventListener("click", () => {
+      sortButton.addEventListener("click", () => {
         const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
         const resetDirection = "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";

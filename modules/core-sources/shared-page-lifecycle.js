@@ -6,6 +6,29 @@ function resetPageScroll() {
   }
 }
 
+function syncPageAccessibilityState() {
+  document.querySelectorAll("#appShell main > .pageView").forEach((page) => {
+    if (!(page instanceof HTMLElement)) return;
+    const inactive = page.hidden === true;
+    page.inert = inactive;
+    if (inactive) page.setAttribute("aria-hidden", "true");
+    else page.removeAttribute("aria-hidden");
+  });
+}
+
+const pageAccessibilityObserver = new MutationObserver((mutations) => {
+  if (mutations.some((mutation) => mutation.type === "attributes" && mutation.attributeName === "hidden")) {
+    syncPageAccessibilityState();
+  }
+});
+document.querySelectorAll("#appShell main > .pageView").forEach((page) => {
+  if (page instanceof HTMLElement) {
+    pageAccessibilityObserver.observe(page, { attributes: true, attributeFilter: ["hidden"] });
+  }
+});
+syncPageAccessibilityState();
+Reflect.set(window, "__mflSyncPageAccessibilityState", syncPageAccessibilityState);
+
 let evaluationPageCacheReady = false;
 
 function preparePlainEvaluationReentry() {

@@ -526,6 +526,8 @@ const browserTestSource = String.raw`(() => {
         pageHidden: hidden("#playerPage"),
         selectedPlayerView: typeof state !== "undefined" ? String(state.playerAttributeView || "") : "",
         activePlayerViews: activeViews,
+        pressedPlayerViews: Array.from(document.querySelectorAll('#playerDetail .playerAttributeViewButton[aria-pressed="true"]'))
+          .map((button) => String(button.dataset.playerAttributeView || button.dataset.view || "")),
       };
     }
     if (scenario === "watchlist" || scenario === "watchlist-empty") {
@@ -604,6 +606,10 @@ const browserTestSource = String.raw`(() => {
         stateValue.activePlayerViews[0] === stateValue.selectedPlayerView,
         "Player active view does not match the selected Player view after loading completes.",
       );
+      assert(
+        stateValue.pressedPlayerViews.length === 1 && stateValue.pressedPlayerViews[0] === stateValue.selectedPlayerView,
+        "Player aria-pressed state does not match the selected Player view after loading completes.",
+      );
     } else if (scenario === "watchlist") {
       assert(
         stateValue.path === "/watchlist/" + testWatchlistId + "/current-season",
@@ -677,7 +683,106 @@ const browserTestSource = String.raw`(() => {
     }
   }
 
+  function assertPageAccessibilityState() {
+    const pages = Array.from(document.querySelectorAll("#appShell main > .pageView"))
+      .filter((page) => page instanceof HTMLElement);
+    const visiblePages = pages.filter((page) => !page.hidden);
+    assert(visiblePages.length === 1, "Exactly one top-level page must remain visible/accessibility-active: " + JSON.stringify(
+      visiblePages.map((page) => page.id),
+    ));
+    pages.forEach((page) => {
+      if (page.hidden) {
+        assert(page.inert === true, page.id + " hidden route is not inert.");
+        assert(page.getAttribute("aria-hidden") === "true", page.id + " hidden route is not aria-hidden.");
+      } else {
+        assert(page.inert === false, page.id + " active route remained inert.");
+        assert(!page.hasAttribute("aria-hidden"), page.id + " active route remained aria-hidden.");
+      }
+    });
+  }
+
+  async function assertDatabaseSortAccessibility() {
+    if (scenario !== "database") return;
+    const nameHeader = document.querySelector('#tableHead th[data-table-column="name"]');
+    const nameButton = nameHeader?.querySelector(":scope > .tableSortButton");
+    assert(nameHeader instanceof HTMLTableCellElement, "Database Name header is missing.");
+    assert(nameButton instanceof HTMLButtonElement, "Sortable Name header must expose a native button.");
+    assert(nameButton.getAttribute("aria-label") === "Sort by Name", "Sortable Name button has the wrong accessible name.");
+    nameButton.focus();
+    assert(document.activeElement === nameButton, "Sortable Name button is not keyboard focusable.");
+    nameButton.click();
+    await waitFor(
+      () => document.querySelector('#tableHead th[data-table-column="name"]')?.getAttribute("aria-sort") === "ascending",
+      "Database Name sort did not expose aria-sort=ascending.",
+    );
+    const overallButton = document.querySelector('#tableHead th[data-table-column="overall"] > .tableSortButton');
+    assert(overallButton instanceof HTMLButtonElement, "Overall sort button is missing after Name sorting.");
+    overallButton.click();
+    await waitFor(
+      () => document.querySelector('#tableHead th[data-table-column="overall"]')?.getAttribute("aria-sort") === "descending",
+      "Database sort did not restore Overall descending semantics.",
+    );
+  }
+
+  async function assertSharedModalFocusLifecycle() {
+    if (scenario !== "database") return;
+    const trigger = document.getElementById("openSearchButton");
+    const modal = document.getElementById("searchModal");
+    const closeButton = document.getElementById("closeSearchButton");
+    const shell = document.getElementById("appShell");
+    assert(trigger instanceof HTMLButtonElement && modal instanceof HTMLElement && closeButton instanceof HTMLButtonElement,
+      "Shared Search modal controls are unavailable.");
+    trigger.focus();
+    trigger.click();
+    await waitFor(() => modal.hidden === false && modal.contains(document.activeElement), "Search modal did not receive focus after opening.");
+    assert(shell instanceof HTMLElement && shell.inert === true, "Application shell did not become inert while Search was open.");
+    assert(shell.getAttribute("aria-hidden") === "true", "Application shell did not leave the accessibility tree while Search was open.");
+
+    const focusable = Array.from(modal.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )).filter((element) => element instanceof HTMLElement && !element.hidden && element.getClientRects().length > 0);
+    assert(focusable.length > 1, "Search modal does not expose enough focusable controls to test focus containment.");
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    last.focus();
+    last.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
+    assert(document.activeElement === first, "Tab did not wrap from the final Search control to the first control.");
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    assert(document.activeElement === last, "Shift+Tab did not wrap from the first Search control to the final control.");
+
+    closeButton.click();
+    await waitFor(() => modal.hidden === true, "Search modal did not close.");
+    assert(shell.inert === false && !shell.hasAttribute("aria-hidden"), "Application shell remained inaccessible after Search closed.");
+    assert(document.activeElement === trigger, "Search modal did not restore focus to its opening control.");
+  }
+
+  function assertLoadingAccessibility() {
+    if (scenario !== "database") return;
+    const controller = window.__mflInteractionBusy;
+    const main = document.querySelector("#appShell > main");
+    assert(controller && typeof controller.begin === "function" && typeof controller.end === "function", "Shared loading controller is unavailable.");
+    assert(main instanceof HTMLElement, "Canonical main region is unavailable.");
+    const token = controller.begin("table-filter-loading");
+    assert(main.getAttribute("aria-busy") === "true", "Main region did not expose aria-busy during data loading.");
+    assert(text("#mflLoadingAnnouncement") === "Loading content.", "Loading status did not announce loading.");
+    controller.end(token);
+    assert(main.getAttribute("aria-busy") === "false", "Main region remained aria-busy after data loading.");
+    assert(text("#mflLoadingAnnouncement") === "Content loaded.", "Loading status did not announce completion.");
+  }
+
   async function navigateBackToScenario(setPage, timeline) {
+    if (scenario === "player") {
+      await setPage("evaluation", true, { plain: true });
+      await waitFor(() => window.location.pathname === "/evaluation" && document.getElementById("evaluationPage")?.hidden === false,
+        "Player could not navigate to Evaluation for accessibility cleanup.");
+      const playerPage = document.getElementById("playerPage");
+      assert(playerPage instanceof HTMLElement && playerPage.hidden && playerPage.inert,
+        "Player route remained accessibility-active after navigating to Evaluation.");
+      assert(playerPage.getAttribute("aria-hidden") === "true",
+        "Player route remained in the accessibility tree after navigating to Evaluation.");
+      assertPageAccessibilityState();
+    }
     await setPage("privacy", true);
     await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
@@ -836,6 +941,10 @@ const browserTestSource = String.raw`(() => {
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
     assertSharedChromeGeometry();
+    assertPageAccessibilityState();
+    assertLoadingAccessibility();
+    await assertDatabaseSortAccessibility();
+    await assertSharedModalFocusLifecycle();
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
         && entry.detail?.url === "/api/data?mode=my-clubs");
@@ -872,6 +981,7 @@ const browserTestSource = String.raw`(() => {
 
     await navigateBackToScenario(setPage, timeline);
     assertSharedChromeGeometry();
+    assertPageAccessibilityState();
     const spaState = routeState();
     assertRouteState(spaState);
     assert(
@@ -1211,6 +1321,18 @@ async function createRegressionServer() {
             : dataStub(url),
         invalidMyClubsProof ? 401 : competitionBatchFailure ? 500 : 200,
       );
+      return;
+    }
+    if (url.pathname === "/api/mfl-season-ratios-v2") {
+      writeJson(response, {
+        ratios: [
+          { season: 12, ratio: 320 },
+          { season: 13, ratio: 340 },
+          { season: 14, ratio: 360 },
+          { season: 15, ratio: 380 },
+        ],
+        requestedAt: generatedAt,
+      });
       return;
     }
     if (url.pathname === "/api/marketplace") {

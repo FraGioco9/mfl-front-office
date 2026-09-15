@@ -133,11 +133,22 @@
     const cells = Array.from(head.rows[0].cells);
     cells.forEach((cell) => {
       cell.classList.remove("sortable");
+      cell.removeAttribute("aria-sort");
+      const sortButton = cell.querySelector(":scope > .tableSortButton");
+      if (sortButton instanceof HTMLButtonElement) {
+        const label = sortButton.querySelector(":scope > span:first-child");
+        if (label instanceof HTMLElement) cell.replaceChildren(label);
+        else sortButton.remove();
+      }
       cell.querySelectorAll(":scope > .sortArrow").forEach((arrow) => arrow.remove());
     });
 
-    const positionsCell = cells.find((cell) => cell.querySelector(":scope > span")?.textContent === "Positions");
+    const positionsCell = cells.find((cell) => {
+      const label = cell.querySelector(":scope > span:first-child");
+      return label?.textContent === "Positions";
+    });
     if (positionsCell) {
+      positionsCell.setAttribute("aria-sort", "ascending");
       const arrow = document.createElement("span");
       arrow.className = "sortArrow asc";
       arrow.setAttribute("aria-hidden", "true");

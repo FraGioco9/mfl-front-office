@@ -1961,8 +1961,61 @@ th.sortable {
   cursor: pointer;
 }
 
+.tableSortButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+  text-transform: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tableSortButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+.tableSortButton > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 th.sortable:hover {
   background: var(--mfl-table-sort-hover-background);
+}
+
+th.sortable:has(.tableSortButton:focus-visible) {
+  background: var(--mfl-table-sort-hover-background);
+}
+
+.tableSortButton:focus-visible {
+  outline: var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color);
+  outline-offset: calc(-1 * var(--mfl-focus-ring-width));
+}
+
+.mflA11yStatus {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .sortArrow {

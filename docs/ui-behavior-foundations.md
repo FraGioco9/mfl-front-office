@@ -47,7 +47,8 @@ Ordinary modal behavior is layered on top of the existing `.modalBackdrop` / `.m
 - Escape handling has one global priority registry; feature modals register with it rather than adding competing global Escape listeners.
 - Visible modal backdrops lock the canonical main scroller without changing its geometry.
 - Backdrop-click dismissal remains feature-owned where the feature supports dismissal and must require a genuine backdrop pointer interaction rather than an inside-dialog drag ending outside.
-- Initial focus, focus restoration, and feature-specific keyboard ownership remain with the modal runtime that owns the interactive contents; they must not be implemented by page-level CSS.
+- The shared modal lifecycle provides fallback initial focus, traps Tab/Shift+Tab inside the visible dialog, makes the application shell inert while a modal is open, and restores focus to the opening control after dismissal.
+- Feature runtimes may still choose a more specific initial focus target after opening; the shared fallback must not override focus already inside the dialog.
 - Nested/critical modal priority uses the existing semantic stacking and Escape priority systems rather than another z-index or keyboard layer.
 
 ## Empty, no-data, and error-state foundation
@@ -67,6 +68,12 @@ First paint and hydrated runtime must converge on the same overflow meaning. Ind
 `motion.css` is the semantic motion owner. Under `prefers-reduced-motion: reduce`, all shared motion-duration tokens resolve to `0ms`, so controls and runtime timers consuming them become immediate. Specialist animations using direct/local timings remain responsible for an explicit reduced-motion branch.
 
 Keyboard focus continues to use the global focus-ring tokens. Touch behavior must not remove keyboard semantics, accessible names, or focus visibility. Escape behavior, focus ownership, touch press feedback, and pointer behavior are complementary interaction modes rather than replacements for one another.
+
+Sortable table columns expose a native button inside the column header so pointer, Enter, and Space activation share one sort path. The currently sorted header owns `aria-sort`; loading/first-paint headers preserve the same semantics without exposing inactive sorting as operable.
+
+Only the active `.pageView` may remain in the accessibility tree. Inactive route shells are `hidden`, `inert`, and `aria-hidden`; route owners share one observer-backed synchronizer so stale Player/Evaluation content cannot remain keyboard- or accessibility-reachable after navigation.
+
+Selected Player attribute views expose `aria-pressed` in lockstep with the existing active visual state. The shared loading controller marks the canonical main region `aria-busy` and publishes a polite status announcement when data loading begins and settles.
 
 ## Responsive validation matrix
 
