@@ -122,7 +122,12 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build current site
-        run: npm run build
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build:legacy
+          npm run build:public
+          npx next build --webpack
 
       - name: Start production Next server
         shell: bash
