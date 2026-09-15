@@ -23,6 +23,7 @@ const validators = [
   "validate-site-date-picker.mjs",
   "validate-local-development.mjs",
   "validate-performance-foundations.mjs",
+  "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",
 ];
 
