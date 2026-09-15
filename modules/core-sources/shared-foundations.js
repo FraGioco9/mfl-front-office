@@ -360,6 +360,7 @@ const brandLinks = document.querySelectorAll(".brandLink");
 const openSearchButton = document.querySelector("#openSearchButton");
 const searchModal = document.querySelector("#searchModal");
 const closeSearchButton = document.querySelector("#closeSearchButton");
+/** @type {HTMLInputElement | null} */
 const playerSearchInput = document.querySelector("#playerSearchInput");
 const playerSearchClearButton = document.querySelector("#playerSearchClearButton");
 const playerSearchResults = document.querySelector("#playerSearchResults");
@@ -422,6 +423,7 @@ const confirmDeleteWatchlistButton = document.querySelector("#confirmDeleteWatch
 const closeDeleteWatchlistButton = document.querySelector("#closeDeleteWatchlistButton");
 const closeAddWatchlistButton = document.querySelector("#closeAddWatchlistButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
+/** @type {HTMLInputElement | null} */
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchClearButton = document.querySelector("#evaluationSearchClearButton");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
