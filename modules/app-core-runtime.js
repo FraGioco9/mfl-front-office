@@ -433,6 +433,7 @@ const tablePageTitle = document.querySelector("#tablePageTitle");
 /** @type {HTMLInputElement | null} */
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchClearButton = document.querySelector("#evaluationSearchClearButton");
+/** @type {HTMLElement | null} */
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
 /** @type {HTMLElement | null} */
 const evaluationButtons = document.querySelector("#evaluationButtons");
@@ -445,9 +446,13 @@ const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPage
 const evaluationSaveButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationSaveButton"));
 const evaluationShareButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationShareButton"));
 const evaluationDeleteButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationDeleteButton"));
+/** @type {HTMLElement | null} */
 const evaluationOptionFilters = document.querySelector("#evaluationOptionFilters");
+/** @type {HTMLInputElement | null} */
 const ignoreDiscountRateInput = document.querySelector("#ignoreDiscountRateInput");
+/** @type {HTMLInputElement | null} */
 const ignoreFirstSeasonInput = document.querySelector("#ignoreFirstSeasonInput");
+/** @type {HTMLElement | null} */
 const evaluationPanel = document.querySelector("#evaluationPanel");
 const evaluationDiscountRate = document.querySelector("#evaluationDiscountRate");
 const evaluationMflUsd = document.querySelector("#evaluationMflUsd");
@@ -485,7 +490,9 @@ const advancedFinalRewardDecreaseButton = document.querySelector("#advancedFinal
 const advancedFinalRewardResetButton = document.querySelector("#advancedFinalRewardResetButton");
 const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
+/** @type {HTMLTableSectionElement | null} */
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
+/** @type {HTMLTableSectionElement | null} */
 const evaluationTableBody = document.querySelector("#evaluationTableBody");
 const evaluationLoadModal = /** @type {HTMLElement} */ (document.querySelector("#evaluationLoadModal"));
 const closeEvaluationLoadButton = document.querySelector("#closeEvaluationLoadButton");
