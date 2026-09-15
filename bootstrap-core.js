@@ -264,6 +264,7 @@
     const activeTokens = new Map();
     const subscribers = new Set();
     let sequence = 0;
+    let announcedDataLoading = false;
     let currentSnapshot = Object.freeze({
       busy: false,
       dataLoading: false,
@@ -295,9 +296,37 @@
       window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));
     }
 
+    function loadingAnnouncement() {
+      let status = document.getElementById("mflLoadingAnnouncement");
+      if (status instanceof HTMLElement) return status;
+      status = document.createElement("p");
+      status.id = "mflLoadingAnnouncement";
+      status.className = "mflA11yStatus";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      status.setAttribute("aria-atomic", "true");
+      document.querySelector("#appShell > main")?.prepend(status);
+      return status;
+    }
+
+    function syncLoadingAccessibility(snapshot) {
+      const main = document.querySelector("#appShell > main");
+      if (main instanceof HTMLElement) main.setAttribute("aria-busy", snapshot.dataLoading ? "true" : "false");
+      const status = loadingAnnouncement();
+      if (!(status instanceof HTMLElement)) return;
+      if (snapshot.dataLoading) {
+        status.textContent = "Loading content.";
+        announcedDataLoading = true;
+      } else if (announcedDataLoading) {
+        status.textContent = "Content loaded.";
+        announcedDataLoading = false;
+      }
+    }
+
     function applyState() {
       currentSnapshot = makeSnapshot();
       document.documentElement.classList.toggle(DATA_LOADING_CLASS, currentSnapshot.dataLoading);
+      syncLoadingAccessibility(currentSnapshot);
       notifySubscribers(currentSnapshot);
     }
 
