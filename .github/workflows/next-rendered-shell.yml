@@ -53,6 +53,21 @@ jobs:
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
 
+      - name: Verify Document Head warnings are gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Fq "viewport meta tags should not be used in _document.js's <Head>" /tmp/mfl-next-rendered-shell.log; then
+            cat /tmp/mfl-next-rendered-shell.log >&2
+            echo "Unexpected _document viewport warning." >&2
+            exit 1
+          fi
+          if grep -Fq "<title> should not be used in _document.js's <Head>" /tmp/mfl-next-rendered-shell.log; then
+            cat /tmp/mfl-next-rendered-shell.log >&2
+            echo "Unexpected _document title warning." >&2
+            exit 1
+          fi
+
       - name: Print development server log on failure
         if: failure()
         shell: bash
