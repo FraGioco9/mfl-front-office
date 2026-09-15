@@ -107,7 +107,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 11;",
+  "const BASELINE_SCHEMA_VERSION = 12;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',
