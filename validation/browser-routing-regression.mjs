@@ -1016,6 +1016,27 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    const compactDatabaseStickyRegression = scenario === "database"
+      && document.documentElement.clientWidth <= 900;
+    if (compactDatabaseStickyRegression) {
+      const waitForStableDatabaseRows = (label) => waitFor(
+        () => text("#tableBody").includes(expectedPlayerName)
+          && !window.__mflTableLoadingRuntime?.requestActive?.(),
+        label,
+      );
+      await waitForStableDatabaseRows("Compact Database direct refresh did not settle its fixture row.");
+      assertSharedChromeGeometry();
+      assertPageAccessibilityState();
+      await assertStickyNameSeparator();
+      await navigateBackToScenario(setPage, timeline);
+      await waitForStableDatabaseRows("Compact Database cached return did not settle its fixture row.");
+      await assertStickyNameSeparator();
+      assertSharedChromeGeometry();
+      assertPageAccessibilityState();
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", "database: compact sticky Name behavior remained canonical across direct and cached routes.");
+      return;
+    }
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     assertLoadingAccessibility();
