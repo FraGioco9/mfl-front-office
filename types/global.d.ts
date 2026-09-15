@@ -176,7 +176,17 @@ interface ParentNode {
   querySelector(selectors: "#playerEvaluateButton" | "#copyPlayerIdButton"): HTMLButtonElement | null;
   querySelector(selectors: ".playerAgentLink"): HTMLElement | null;
   querySelector(selectors: "#playerNotesInput"): HTMLTextAreaElement | null;
+  querySelector(selectors: "#progressionPage .quickFilters" | "#progressionPage .controlsBar"): HTMLElement | null;
+  querySelector(selectors: "[data-filter-operator]" | "[data-filter-connector]" | "[data-filter-column-select]"): HTMLSelectElement | null;
+  querySelector(selectors: "[data-filter-value]"): HTMLInputElement | HTMLSelectElement | null;
+  querySelector(selectors: "#selectVisiblePlayersInput"): HTMLInputElement | null;
   querySelectorAll(
-    selectors: ".mflStatsFilterButton" | "[data-player-attribute-view]" | "[data-training-stat]" | "[data-training-reset]",
+    selectors: ".mflStatsFilterButton" | "[data-player-attribute-view]" | "[data-training-stat]" | "[data-training-reset]" | ".filterRule" | "#progressionPage .pager, #progressionPage nav.pager",
   ): NodeListOf<HTMLElement>;
+  querySelectorAll(selectors: "[data-filter-value]"): NodeListOf<HTMLInputElement | HTMLSelectElement>;
+}
+
+interface Document {
+  getElementById(elementId: "pagerCurrentPageInput"): HTMLInputElement | null;
+  getElementById(elementId: "pagerTotalPages"): HTMLElement | null;
 }
