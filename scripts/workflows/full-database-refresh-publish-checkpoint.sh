@@ -54,6 +54,7 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   fi
   vercel pull --yes --environment=production \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"
   ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
   vercel deploy --prebuilt --prod --yes --force \
