@@ -74,7 +74,7 @@ if (appEntry.includes("installDataClientCompatibilityBridge")
 }
 
 const walletCore = coreSources.get("wallet.js") || "";
-if (!walletCore.includes('fetch("https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"')
+if (!walletCore.includes('fetch("https://api.playmfl.com/leaderboards/users/global"')
     || !walletCore.includes("fetch(`${FLOW_DISCOVERY_AUTHN_ENDPOINT}?${query.toString()}`")) {
   throw new Error("Wallet external MFL/Flow transport must remain native fetch rather than being routed through the same-origin API client.");
 }
