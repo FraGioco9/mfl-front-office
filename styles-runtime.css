@@ -7559,7 +7559,7 @@ main {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  row-gap: 22px;
+  row-gap: 0;
 }
 
 /* Every application route shell contributes its full rendered block height. */
@@ -7568,11 +7568,11 @@ main > .pageView {
   min-height: var(--mfl-footer-page-floor);
 }
 
-/* The sole footer lives at the end of the main scroll surface. */
+/* The footer owns its spacing: zero-height parked routes must not add flex gaps. */
 .siteFooterDetails {
   flex: 0 0 auto;
   width: 100%;
-  margin-top: 0;
+  margin-top: 22px;
   padding: 18px 0 14px;
   border-top: 1px solid var(--border);
   color: var(--text);
