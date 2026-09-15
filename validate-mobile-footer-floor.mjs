@@ -14,7 +14,7 @@ const mainFlow = `main {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  row-gap: 22px;
+  row-gap: 0;
 }`;
 const pageFlow = `main > .pageView {
   flex: 0 0 auto;
