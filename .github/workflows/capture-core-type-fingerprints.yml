@@ -1,0 +1,67 @@
+name: Capture core type fingerprints
+
+on:
+  push:
+    branches:
+      - chore/969-core-type-fingerprints
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Capture exact current diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc -p jsconfig.core.json --noEmit --pretty false > core-types-current.txt 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Expected the current core baseline to contain diagnostics." >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require("node:fs");
+          const output = fs.readFileSync("core-types-current.txt", "utf8");
+          const entries = new Map();
+          let total = 0;
+          for (const line of output.split(/\r?\n/)) {
+            const trimmed = line.trim();
+            const match = /^(modules\/core-sources\/[^(:]+\.js)\((\d+),(\d+)\): error TS(\d+): (.*)$/.exec(trimmed);
+            if (!match) continue;
+            const [, file, lineNumber, columnNumber, code, message] = match;
+            const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
+            const source = (lines[Number(lineNumber) - 1] || "").trim().replace(/\s+/g, " ");
+            const key = JSON.stringify({ file, code: `TS${code}`, message, source });
+            entries.set(key, (entries.get(key) || 0) + 1);
+            total += 1;
+          }
+          const diagnostics = [...entries.entries()]
+            .map(([key, count]) => ({ ...JSON.parse(key), count }))
+            .sort((a, b) =>
+              a.file.localeCompare(b.file) ||
+              a.code.localeCompare(b.code) ||
+              a.message.localeCompare(b.message) ||
+              a.source.localeCompare(b.source)
+            );
+          fs.writeFileSync(
+            "core-types-baseline.json",
+            JSON.stringify({ version: 1, total, diagnostics }, null, 2) + "\n",
+          );
+          console.log(`Captured ${total} diagnostics across ${diagnostics.length} stable fingerprints.`);
+          NODE
+      - uses: actions/upload-artifact@v7
+        with:
+          name: core-type-fingerprints-${{ github.run_id }}
+          path: |
+            core-types-baseline.json
+            core-types-current.txt
+          retention-days: 7
