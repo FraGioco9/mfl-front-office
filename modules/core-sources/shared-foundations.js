@@ -368,6 +368,7 @@ const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
 const accountEmail = document.querySelector("#accountEmail");
 const accountSettingsButton = document.querySelector("#accountSettingsButton");
+/** @type {HTMLButtonElement | null} */
 const linkWalletButton = document.querySelector("#linkWalletButton");
 const homeOptInButton = document.querySelector("#homeOptInButton");
 const themeButton = document.querySelector("#themeButton");
