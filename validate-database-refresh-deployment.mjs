@@ -10,7 +10,7 @@ const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8")
 const workflow = await readWorkflowSource(
   new URL("./.github/workflows/full-database-refresh.yml", import.meta.url),
 );
-const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter] = await Promise.all([
+const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer] = await Promise.all([
   readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
@@ -18,6 +18,7 @@ const [resolver, installer, publisher, adapterValidator, baselineRestore, resume
   readRepository("scripts/workflows/full-database-refresh-restore-baseline.sh"),
   readRepository("scripts/workflows/full-database-refresh-restore-resume-checkpoint.sh"),
   readRepository("scripts/workflows/full-database-refresh-write-resume-checkpoint.sh"),
+  readRepository("scripts/workflows/normalize-vercel-project-root.mjs"),
 ]);
 const deploymentSource = [
   workflow,
@@ -28,6 +29,7 @@ const deploymentSource = [
   baselineRestore,
   resumeRestore,
   resumeWriter,
+  vercelRootNormalizer,
 ].join("\n");
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -69,6 +71,21 @@ includes(
 includes(
   "vercel pull --yes --environment=production",
   "Database-only refreshes must load the production Vercel project environment before rebuilding.",
+);
+includes(
+  'node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"',
+  "Database-only refreshes must clear stale remote Root Directory settings before rebuilding.",
+);
+invariant(
+  publisher.indexOf("vercel pull --yes --environment=production")
+    < publisher.indexOf('node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"')
+    && publisher.indexOf('node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"')
+      < publisher.indexOf("vercel build --prod"),
+  "Database checkpoint deployment must normalize the Vercel project root after pull and before build.",
+);
+includes(
+  "project.settings.rootDirectory = null",
+  "Database checkpoint deployment must normalize Vercel to the repository root.",
 );
 includes(
   "vercel build --prod",
