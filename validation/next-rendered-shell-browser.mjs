@@ -120,6 +120,9 @@ async function waitForRenderedShell(cdp) {
           nextVersion: String(window.next?.version || ""),
           nextRouterReady: Boolean(window.next?.router),
           readyState: document.readyState,
+          documentTitle: document.title,
+          viewportMetaCount: document.querySelectorAll('meta[name="viewport"]').length,
+          viewportContent: String(document.querySelector('meta[name="viewport"]')?.getAttribute("content") || ""),
           devAssetToken: String(document.documentElement.dataset.mflDevAssets || ""),
           nextScripts: Array.from(document.scripts)
             .map((script) => String(script.src || ""))
@@ -213,6 +216,13 @@ try {
   const state = await waitForRenderedShell(cdp);
   initialDevAssetToken = state.devAssetToken;
   assert(initialDevAssetToken && initialDevAssetToken !== "production-static", "Development document did not receive the Webpack legacy-asset watch token.");
+  assert.equal(state.documentTitle, "MFL Front Office", "Next-rendered root document title is incorrect.");
+  assert.equal(state.viewportMetaCount, 1, "Next-rendered shell must expose exactly one viewport meta tag.");
+  assert.equal(
+    state.viewportContent,
+    "width=device-width, initial-scale=1, viewport-fit=cover",
+    "Next-rendered viewport metadata does not match the legacy responsive contract.",
+  );
 
   responsiveSource = await readFile(responsivePath, "utf8");
   await writeFile(responsivePath, `${responsiveSource.trimEnd()}\n${refreshMarker}\n`, "utf8");
