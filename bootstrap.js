@@ -1482,7 +1482,10 @@
     const target = initialShellTarget(routeState);
     if (!(target instanceof HTMLElement)) {
       document.querySelectorAll("main > .pageView").forEach((page) => {
-        if (page instanceof HTMLElement) page.hidden = true;
+        if (!(page instanceof HTMLElement)) return;
+        page.hidden = true;
+        page.inert = true;
+        page.setAttribute("aria-hidden", "true");
       });
       return;
     }
@@ -1503,7 +1506,12 @@
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page !== target;
+      if (!(page instanceof HTMLElement)) return;
+      const inactive = page !== target;
+      page.hidden = inactive;
+      page.inert = inactive;
+      if (inactive) page.setAttribute("aria-hidden", "true");
+      else page.removeAttribute("aria-hidden");
     });
     if (target.id === "progressionPage") primeFirstPaintHorizontalOverflow();
     if (target.id === "playerPage") primeFirstPaintHorizontalOverflow();
