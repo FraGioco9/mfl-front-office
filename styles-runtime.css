@@ -1988,6 +1988,19 @@ th.sortable {
   color: inherit;
 }
 
+.tableSortButton:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+th.sortable:has(.tableSortButton:disabled) {
+  cursor: default;
+}
+
+th.sortable:has(.tableSortButton:disabled):hover {
+  background: var(--mfl-table-header-background);
+}
+
 .tableSortButton > span:first-child {
   min-width: 0;
   overflow: hidden;
