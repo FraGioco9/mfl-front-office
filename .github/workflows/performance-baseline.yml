@@ -159,7 +159,7 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             export MFL_BASELINE_RUNS="5"
             export MFL_BASELINE_PROFILES="mobile-slow"
-            export MFL_BASELINE_JOURNEYS="database-100-no-scroll-state,database-100-no-sticky-name"
+            export MFL_BASELINE_JOURNEYS="database-100-keep-parked-layout,database-100-keep-layout-no-scroll-state"
           else
             export MFL_BASELINE_RUNS="${INPUT_RUNS:-5}"
             export MFL_BASELINE_PROFILES="${INPUT_PROFILES:-desktop,mobile-slow}"
@@ -189,8 +189,8 @@ jobs:
 
           profile = report["summary"]["mobile-slow"]
           names = [
-              "database-100-no-scroll-state",
-              "database-100-no-sticky-name",
+              "database-100-keep-parked-layout",
+              "database-100-keep-layout-no-scroll-state",
           ]
           print("Focused Database cached render profile")
           print("| Journey | Settled ms | Long-task ms | Render phase ms | Rows | Cells |")

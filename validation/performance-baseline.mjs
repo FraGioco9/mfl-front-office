@@ -252,6 +252,24 @@ function journeysFor({ playerId, clubId }) {
       profileOnly: true,
     }),
     Object.freeze({
+      id: "database-100-keep-parked-layout",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      preParkProbe: "keep-table-layout",
+      profileOnly: true,
+    }),
+    Object.freeze({
+      id: "database-100-keep-layout-no-scroll-state",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      preParkProbe: "keep-layout-no-scroll-state",
+      profileOnly: true,
+    }),
+    Object.freeze({
       id: "player",
       path: `/players/${encodeURIComponent(playerId)}`,
       page: "player",
@@ -1041,6 +1059,26 @@ function journeyBootstrapSource(journey) {
   })();`;
 }
 
+async function applyPreParkRenderProbe(cdp, probe) {
+  const normalized = String(probe || "");
+  await evaluate(cdp, `(() => {
+    document.getElementById("mflBaselinePreParkProbe")?.remove();
+    const probe = ${JSON.stringify(normalized)};
+    if (!probe) return true;
+    const style = document.createElement("style");
+    style.id = "mflBaselinePreParkProbe";
+    if (probe === "keep-table-layout") {
+      style.textContent = "#progressionPage.mflCachedTablePageParked { content-visibility: visible !important; }";
+    } else if (probe === "keep-layout-no-scroll-state") {
+      style.textContent = "#progressionPage.mflCachedTablePageParked { content-visibility: visible !important; } #progressionPage .playerTableScroller td.col-name, #progressionPage .playerTableScroller td:has(> .playerNameCell) { container-type: normal !important; container-name: none !important; }";
+    } else {
+      throw new Error("Unknown baseline pre-park render probe: " + probe);
+    }
+    document.head.appendChild(style);
+    return true;
+  })()`);
+}
+
 async function applyCachedRenderProbe(cdp, probe) {
   const normalized = String(probe || "");
   await evaluate(cdp, `(() => {
@@ -1126,6 +1164,7 @@ async function runJourney(executable, profile, journey) {
     );
 
     await waitForSpaNavigationReady(cdp, routeTimeoutMs);
+    await applyPreParkRenderProbe(cdp, journey.preParkProbe);
     await navigateSpa(cdp, "home", {});
     await waitForRouteReady(cdp, "/", routeTimeoutMs);
     await applyCachedRenderProbe(cdp, journey.cachedProbe);
@@ -1501,12 +1540,13 @@ function baselineResumeKey(entities, journeys, targetContext) {
     environmentLabel,
     repetitions,
     profiles: profiles.map((profile) => profile.id),
-    journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "" }) => ({
+    journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "", preParkProbe = "" }) => ({
       id,
       path,
       expectedPath,
       pageSize,
       cachedProbe,
+      preParkProbe,
     })),
     representativeEntities: entities,
     targetContext,
@@ -1522,12 +1562,13 @@ function buildReport(raw, entities, journeys, targetContext, complete) {
       environmentLabel,
       repetitions,
       profiles: profiles.map((profile) => profile.id),
-      journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "" }) => ({
+      journeys: journeys.map(({ id, path, expectedPath = path, pageSize = null, cachedProbe = "", preParkProbe = "" }) => ({
       id,
       path,
       expectedPath,
       pageSize,
       cachedProbe,
+      preParkProbe,
     })),
       representativeEntities: entities,
       targetContext,
