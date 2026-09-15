@@ -105,9 +105,9 @@ assert(
     && base.includes("overflow: clip;")
     && base.includes("visibility: hidden;")
     && base.includes("pointer-events: none;")
-    && base.includes("content-visibility: hidden;")
-    && base.includes("contain-intrinsic-block-size: 0;"),
-  "Cached Table routes must retain rendering state in zero-height normal flow without exposing stale content or interaction.",
+    && base.includes("content-visibility: visible;")
+    && !base.includes("contain-intrinsic-block-size: 0;"),
+  "Cached Table routes must preserve descendant layout while staying zero-height, clipped, invisible, and non-interactive.",
 );
 
 console.log("Shared table surfaces, standard desktop cell geometry, headers, dividers, hover states, typography, and loading inheritance use canonical Table-domain foundations while responsive/specialist geometry remains independent.");
