@@ -34,6 +34,8 @@ for (const expected of [
   "td {\n  font-size: var(--mfl-table-row-font-size);\n}",
   "th {\n  background: var(--mfl-table-header-background);\n  color: var(--mfl-table-header-text-color);\n  font-size: var(--mfl-table-header-font-size);",
   "th.sortable:hover {\n  background: var(--mfl-table-sort-hover-background);\n}",
+  "button.tableSortButton:disabled {\n  opacity: 1;\n  cursor: default;\n}",
+  "th.sortable:has(.tableSortButton:disabled):hover {\n  background: var(--mfl-table-header-background);\n}",
   "#tableBody tr.tableRowHovered > td,\n#tableBody tr.tableRowHovered > th {\n  background: var(--mfl-table-row-hover-background);\n  background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
 ]) {
   assert.ok(base.includes(expected), `Shared table styling must consume its Table-domain foundation: ${expected}`);
@@ -105,9 +107,9 @@ assert(
     && base.includes("overflow: clip;")
     && base.includes("visibility: hidden;")
     && base.includes("pointer-events: none;")
-    && base.includes("content-visibility: hidden;")
-    && base.includes("contain-intrinsic-block-size: 0;"),
-  "Cached Table routes must retain rendering state in zero-height normal flow without exposing stale content or interaction.",
+    && base.includes("content-visibility: visible;")
+    && !base.includes("contain-intrinsic-block-size: 0;"),
+  "Cached Table routes must preserve descendant layout while staying zero-height, clipped, invisible, and non-interactive.",
 );
 
 console.log("Shared table surfaces, standard desktop cell geometry, headers, dividers, hover states, typography, and loading inheritance use canonical Table-domain foundations while responsive/specialist geometry remains independent.");

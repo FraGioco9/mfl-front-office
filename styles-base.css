@@ -709,8 +709,9 @@ body.filtersOpen .navButton:hover {
   overflow: clip;
   visibility: hidden;
   pointer-events: none;
-  content-visibility: hidden;
-  contain-intrinsic-block-size: 0;
+  /* Keep cached table descendants laid out while parked so a cached revisit
+   * can reuse browser layout work instead of rebuilding the full table. */
+  content-visibility: visible;
 }
 
 main > .pageView {
@@ -1815,6 +1816,20 @@ th.sortable {
   border-color: transparent;
   background: transparent;
   color: inherit;
+}
+
+/* Match the generic disabled-button specificity so headers retain full contrast. */
+button.tableSortButton:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+th.sortable:has(.tableSortButton:disabled) {
+  cursor: default;
+}
+
+th.sortable:has(.tableSortButton:disabled):hover {
+  background: var(--mfl-table-header-background);
 }
 
 .tableSortButton > span:first-child {
