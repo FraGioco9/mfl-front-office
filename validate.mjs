@@ -327,8 +327,18 @@ includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refresh
 excludes(databaseRefresh, "--workflow site-quality.yml", "Database refreshes must not publish the latest quality-check commit.");
 
 const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
+const vercelRootNormalizer = await readRepository("scripts/workflows/normalize-vercel-project-root.mjs");
 includes(siteDeploy, "npm ci --no-audit --no-fund", "Vercel deployment must install the locked Next application dependencies.");
 includes(siteDeploy, "vercel pull --yes --environment=production", "Vercel deployment must pull the production project environment.");
+includes(siteDeploy, "node scripts/workflows/normalize-vercel-project-root.mjs", "Vercel deployment must clear stale remote Root Directory settings before building.");
+invariant(
+  siteDeploy.indexOf("vercel pull --yes --environment=production")
+    < siteDeploy.indexOf("node scripts/workflows/normalize-vercel-project-root.mjs")
+    && siteDeploy.indexOf("node scripts/workflows/normalize-vercel-project-root.mjs")
+      < siteDeploy.indexOf("vercel build --prod"),
+  "Vercel deployment must normalize the project root after pull and before build.",
+);
+includes(vercelRootNormalizer, "project.settings.rootDirectory = null", "Vercel root normalization must explicitly select the repository root.");
 includes(siteDeploy, "vercel build --prod", "Vercel deployment must build the protected Next application.");
 includes(siteDeploy, "vercel deploy --prebuilt --prod --yes --force", "Site deployment must publish the exact prebuilt production release.");
 excludes(siteDeploy, "vercel.production.json", "Production deployment must not use the retired static Vercel config.");
