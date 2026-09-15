@@ -18,14 +18,6 @@ on:
         required: false
         default: ""
         type: string
-  pull_request:
-    branches:
-      - main
-    paths:
-      - .github/workflows/performance-baseline.yml
-      - validation/performance-baseline.mjs
-      - validate-performance-baseline-harness.mjs
-      - docs/performance-923.md
 
 permissions:
   contents: read
@@ -33,7 +25,6 @@ permissions:
 
 jobs:
   capture:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'perf/969-current-performance-baseline'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -154,7 +145,6 @@ jobs:
           MFL_BASE_URL: http://127.0.0.1:4000
           MFL_BASELINE_OUTPUT: performance-baseline-current.json
           MFL_BASELINE_LABEL: github-actions-local-next-production
-          MFL_BASELINE_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           MFL_BASELINE_SOURCE_REF: ${{ github.head_ref || github.ref_name }}
           MFL_BASELINE_ACCESS_CONTEXT: guest/public-database
           INPUT_RUNS: ${{ inputs.runs }}
@@ -162,6 +152,7 @@ jobs:
           INPUT_JOURNEYS: ${{ inputs.journeys }}
         run: |
           set -euo pipefail
+          export MFL_BASELINE_SOURCE_COMMIT="$(git rev-parse HEAD)"
           export MFL_BASELINE_RUNS="${INPUT_RUNS:-5}"
           export MFL_BASELINE_PROFILES="${INPUT_PROFILES:-desktop,mobile-slow}"
           export MFL_BASELINE_JOURNEYS="${INPUT_JOURNEYS:-}"
@@ -180,22 +171,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          {
-            echo "### Performance baseline capture"
-            echo
-            echo "| Context | Value |"
-            echo "| --- | --- |"
-            echo "| Source commit | `$(jq -r '.metadata.targetContext.sourceCommit' performance-baseline-current.json)` |"
-            echo "| Source ref | `$(jq -r '.metadata.targetContext.sourceRef' performance-baseline-current.json)` |"
-            echo "| Dataset generated | `$(jq -r '.metadata.targetContext.datasetGeneratedAt' performance-baseline-current.json)` |"
-            echo "| Database artifact | `$database_artifact_id` (run `$database_run_id`) |"
-            echo "| Access context | `$(jq -r '.metadata.targetContext.accessContext' performance-baseline-current.json)` |"
-            echo "| Browser | `$(jq -r '.metadata.targetContext.browserVersion' performance-baseline-current.json)` |"
-            echo "| Profiles | `$(jq -r '.metadata.profiles | join(",")' performance-baseline-current.json)` |"
-            echo "| Repetitions | `$(jq -r '.metadata.repetitions' performance-baseline-current.json)` |"
-            echo
-            echo "Synthetic client throttling and GitHub-hosted runner timing are evidence for comparison only; they are not production latency."
-          } >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PYTHON'
+          import json
+          import os
+
+          with open("performance-baseline-current.json") as stream:
+              report = json.load(stream)
+          metadata = report["metadata"]
+          context = metadata["targetContext"]
+          rows = [
+              ("Source commit", context["sourceCommit"]),
+              ("Source ref", context["sourceRef"]),
+              ("Dataset generated", context["datasetGeneratedAt"]),
+              ("Database artifact", os.environ["database_artifact_id"]),
+              ("Database run", os.environ["database_run_id"]),
+              ("Access context", context["accessContext"]),
+              ("Browser", context["browserVersion"]),
+              ("Profiles", ", ".join(metadata["profiles"])),
+              ("Repetitions", metadata["repetitions"]),
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("### Performance baseline capture\n\n| Context | Value |\n| --- | --- |\n")
+              for name, value in rows:
+                  summary.write(f"| {name} | `{value}` |\n")
+              summary.write("\nSynthetic client throttling and GitHub-hosted runner timing are evidence for comparison only; they are not production latency.\n")
+          PYTHON
 
       - name: Upload baseline evidence
         if: always()

@@ -75,13 +75,13 @@ for (const token of [
   "await waitForSpaNavigationReady(cdp, routeTimeoutMs);",
   "const SLOW_ROUTE_TIMEOUT_MS = 240_000;",
   "routeTimeoutMs: SLOW_ROUTE_TIMEOUT_MS",
-  "async function writeCheckpoint(raw, entities, journeys, complete = false)",
-  "async function loadCheckpoint(entities, journeys)",
-  "resumeKey: baselineResumeKey(entities, journeys)",
+  "async function writeCheckpoint(raw, entities, journeys, targetContext, complete = false)",
+  "async function loadCheckpoint(entities, journeys, targetContext)",
+  "resumeKey: baselineResumeKey(entities, journeys, targetContext)",
   "schemaVersion: BASELINE_SCHEMA_VERSION",
   'value !== null && value !== undefined && value !== ""',
   "refusing to record a partial baseline sample",
-  "await writeCheckpoint(raw, entities, journeys, false);",
+  "await writeCheckpoint(raw, entities, journeys, targetContext, false);",
   "const heartbeat = setInterval(() => {",
   "still running (",
   "heartbeat.unref?.();",
@@ -187,5 +187,10 @@ for (const token of [
 ]) {
   includes(baselineWorkflow, token, `Performance baseline workflow contract is missing: ${token}`);
 }
+
+invariant(
+  !baselineWorkflow.includes("  pull_request:") && !baselineWorkflow.includes("  push:"),
+  "Performance capture must be manual-only after recording the baseline.",
+);
 
 console.log("Repeatable browser/runtime performance baseline ownership, target identity, journeys, metrics, profiles, and opt-in capture contract are canonical.");

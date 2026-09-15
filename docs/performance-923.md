@@ -626,3 +626,15 @@ We **do not enforce wall-clock millisecond thresholds in normal Site Quality**. 
 on hardware, Chrome scheduling, fixture/network characteristics and throttling. Timing regressions are
 investigated with the repeatable harness when a PR changes a measured runtime path, using focused
 candidate runs and a multi-run confirmation only when needed.
+
+## Current post-foundations reference — #969
+
+The [2026-09-15 capture](performance-969.md) records the production Next runtime, source/checkout
+identity, dataset, browser, five-repeat measurements and next profiling targets. Its complete raw
+JSON is retained in the repository. The 2026-09-12 table above remains unchanged historical evidence;
+runtime and context differences prevent treating it as a controlled before/after timing comparison.
+
+Future GitHub captures use the manual **Performance baseline** workflow. Locally, supply
+`MFL_BASELINE_SOURCE_COMMIT` and `MFL_BASELINE_SOURCE_REF` for the server being measured (not an
+unrelated local checkout), alongside `MFL_BASELINE_OUTPUT` and `MFL_BASELINE_LABEL`. Checkpoints
+include source/dataset/browser/access identity and cannot resume across a changed target context.
