@@ -757,6 +757,32 @@ const browserTestSource = String.raw`(() => {
     }
   }
 
+  async function assertStickyNameSeparator() {
+    if (scenario !== "database" || !matchMedia("(max-width: 900px)").matches) return;
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
+    const name = document.querySelector("#tableBody .playerNameCell");
+    const cell = name?.closest("td");
+    const preceding = document.querySelector("#tableHead th.col-name")?.previousElementSibling;
+    assert(scroller instanceof HTMLElement && name instanceof HTMLElement && cell instanceof HTMLElement
+      && preceding instanceof HTMLElement, "Mobile sticky Name fixture is missing.");
+    assert(getComputedStyle(cell).containerType === "normal", "Name rows must not create scroll-state query containers.");
+    const edge = scroller.getBoundingClientRect().left + scroller.clientLeft;
+    const threshold = preceding.getBoundingClientRect().right - edge + scroller.scrollLeft;
+    const checkScroll = async (left, expected) => {
+      scroller.scrollLeft = left;
+      scroller.dispatchEvent(new Event("scroll"));
+      await delay(80);
+      const painted = getComputedStyle(name, "::before").content === '""';
+      assert(painted === expected, "Name separator state is wrong at scrollLeft=" + scroller.scrollLeft);
+      if (expected) assert(Math.abs(cell.getBoundingClientRect().left - edge) < 1, "Name must stay pinned at the scroller edge.");
+    };
+    await checkScroll(0, false);
+    await checkScroll(Math.max(0, threshold - 2), false);
+    await checkScroll(threshold + 4, true);
+    await checkScroll(scroller.scrollWidth - scroller.clientWidth, true);
+    await checkScroll(0, false);
+  }
+
   async function assertSharedModalFocusLifecycle() {
     if (scenario !== "database") return;
     const trigger = document.getElementById("openSearchButton");
@@ -978,6 +1004,7 @@ const browserTestSource = String.raw`(() => {
     assertLoadingAccessibility();
     assertParkedTableSpacing();
     await assertDatabaseSortAccessibility();
+    await assertStickyNameSeparator();
     await assertSharedModalFocusLifecycle();
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
@@ -1014,6 +1041,7 @@ const browserTestSource = String.raw`(() => {
     }
 
     await navigateBackToScenario(setPage, timeline);
+    await assertStickyNameSeparator();
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     const spaState = routeState();
@@ -1539,6 +1567,8 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
 const regressionScenarios = Object.freeze([
   ["stale", "/privacy"],
   ["database", "/database/attributes"],
+  ["database-tablet", "/database/attributes", 800, 900],
+  ["database-phone", "/database/attributes", 520, 900],
   ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
   ["player-1444", "/players/1", 1444, 900],

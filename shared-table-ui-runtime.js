@@ -12,6 +12,7 @@
   const QUICK_FILTERS_SHELL_CLASS = "quickFiltersScrollerShell";
   const PLAYER_TABLE_FADE_LEFT_CLASS = "mflPlayerTableCanScrollLeft";
   const PLAYER_TABLE_FADE_RIGHT_CLASS = "mflPlayerTableCanScrollRight";
+  const PLAYER_TABLE_NAME_STUCK_CLASS = "mflPlayerTableNameStuck";
   const VIEW_SCROLL_EPSILON = 2;
   const PLAYER_TABLE_SCROLL_EPSILON = 2;
   const MOBILE_STYLE_ID = "mflInitialMobileTableStyle";
@@ -884,6 +885,7 @@
     syncEvaluationTableFadeBodyTop(scroller);
     scroller.style.removeProperty("box-shadow");
     if (!MOBILE_TABLE_MEDIA.matches) {
+      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);
       setPlayerTableFadeDirections(scroller, false, false);
       return;
     }
@@ -893,6 +895,12 @@
     const overflowing = maxScroll > PLAYER_TABLE_SCROLL_EPSILON;
     const canScrollLeft = overflowing && scrollLeft > PLAYER_TABLE_SCROLL_EPSILON;
     const canScrollRight = overflowing && maxScroll - scrollLeft > PLAYER_TABLE_SCROLL_EPSILON;
+    // The non-sticky cell before Name marks its natural leading edge, even
+    // after Name itself is stuck. Read one header, never every body row.
+    const precedingCell = scroller.querySelector("th.col-name")?.previousElementSibling;
+    const nameStuck = overflowing && scrollLeft > 0 && precedingCell instanceof HTMLElement
+      && precedingCell.getBoundingClientRect().right < scroller.getBoundingClientRect().left + scroller.clientLeft;
+    scroller.classList.toggle(PLAYER_TABLE_NAME_STUCK_CLASS, nameStuck);
     setPlayerTableFadeDirections(scroller, canScrollLeft, canScrollRight);
   }
 
@@ -1149,6 +1157,7 @@
     });
     const player = playerTableScroller();
     if (player) {
+      player.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);
       player.style.removeProperty("box-shadow");
       setPlayerTableFadeDirections(player, false, false);
     }

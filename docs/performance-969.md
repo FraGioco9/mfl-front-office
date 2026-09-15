@@ -72,10 +72,19 @@ measured 230.2 ms cached settlement versus 397.8 ms for the normal 100-row slow-
 as the profiling evidence that selected this implementation, not as an independent measurement of the
 final production commit.
 
-The next measured candidate after this PR is replacing the per-row scroll-state container query with
-the existing shared horizontal-scroll state/class ownership while preserving the sticky Name column
-and its separator. Because the two probes were mostly non-additive on cached return, that change should
-remain a separate PR and must earn its own evidence before merge.
+The next production slice removes the per-row scroll-state containers. The shared horizontal-scroll
+owner now reads the trailing edge of the non-sticky header cell before Name and compares it with the
+scroller edge, then toggles one scroller class. This preserves the actual sticky threshold rather than
+showing the separator as soon as any horizontal scrolling begins. CSS still owns sticky positioning,
+opaque backgrounds, and the body-only separator. Existing scroll, resize, route and render callbacks
+synchronize the class; no row-level listeners or measurements are added.
+
+Structural evidence: a 100-row mobile table now creates zero scroll-state query containers instead of
+100, with two header/scroller geometry reads per synchronization independent of row count. Browser
+regressions cover tablet/phone scrolling before and after the sticky threshold, both extremes and
+cached route returns. The profiling table above selected this change; it is not a fresh timing capture
+of the final implementation. A comparable opt-in performance capture remains required before merging
+this slice, especially because the parked-layout and scroll-state probes were mostly non-additive.
 
 The historical [2026-09-12 baseline](performance-923.md#reference-browserruntime-baseline--2026-09-12)
 used a local Vercel runtime and lacks equivalent recorded build/dataset/browser provenance. The journey
