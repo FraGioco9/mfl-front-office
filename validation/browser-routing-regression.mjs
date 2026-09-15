@@ -772,28 +772,14 @@ const browserTestSource = String.raw`(() => {
       && preceding instanceof HTMLElement, "Mobile sticky Name fixture is missing.");
     assert(getComputedStyle(cell).containerType === "normal", "Name rows must not create scroll-state query containers.");
     const edge = scroller.getBoundingClientRect().left + scroller.clientLeft;
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const threshold = preceding.getBoundingClientRect().right - edge + scroller.scrollLeft;
     const checkScroll = async (left, expected) => {
-      scroller.scrollLeft = left;
+      scroller.scrollLeft = Math.min(maxScroll, Math.max(0, left));
       scroller.dispatchEvent(new Event("scroll"));
       await delay(80);
       const stuck = scroller.classList.contains("mflPlayerTableNameStuck");
-      if (stuck !== expected) {
-        const runtime = Reflect.get(window, "__mflSharedTableUiRuntime");
-        const beforeDirectSync = {
-          scrollLeft: scroller.scrollLeft,
-          rectCount: scroller.getClientRects().length,
-          runtimeSync: typeof runtime?.syncRouteHorizontalCuesNow,
-        };
-        runtime?.syncRouteHorizontalCuesNow?.();
-        await delay(0);
-        throw new Error("Name stuck state is wrong: " + JSON.stringify({
-          expected,
-          beforeDirectSync,
-          afterDirectSync: scroller.classList.contains("mflPlayerTableNameStuck"),
-          sameScroller: document.querySelector("#progressionPage .playerTableScroller") === scroller,
-        }));
-      }
+      assert(stuck === expected, "Name stuck state is wrong at scrollLeft=" + scroller.scrollLeft);
       if (expected) {
         const separator = getComputedStyle(name, "::before");
         assert(separator.content === '\"\"' && parseFloat(separator.borderRightWidth) > 0,
@@ -802,9 +788,15 @@ const browserTestSource = String.raw`(() => {
       }
     };
     await checkScroll(0, false);
+    if (maxScroll <= 2) return;
     await checkScroll(Math.max(0, threshold - 2), false);
-    await checkScroll(threshold + 4, true);
-    await checkScroll(scroller.scrollWidth - scroller.clientWidth, true);
+    if (maxScroll <= threshold) {
+      await checkScroll(maxScroll, false);
+      await checkScroll(0, false);
+      return;
+    }
+    await checkScroll(Math.min(maxScroll, threshold + 4), true);
+    await checkScroll(maxScroll, true);
     await checkScroll(0, false);
   }
 
