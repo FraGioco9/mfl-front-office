@@ -35,6 +35,11 @@ invariant(
   "Home must be a concrete Next page so development tooling has a canonical root route.",
 );
 invariant(
+  pageSource.includes("export function getServerSideProps()")
+    && pageSource.includes("return { props: {} };"),
+  "Deep-route catch-all must remain server-resolved so direct production requests cannot be statically optimized into Vercel 404s.",
+);
+invariant(
   pageSource.includes("export default function MflLegacyShellRoutePage()")
     && pageSource.includes("return null;"),
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
