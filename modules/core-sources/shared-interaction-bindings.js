@@ -155,7 +155,7 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
-  } else if (event.key === "Enter" && !advancedSettingsModal.hidden && [advancedMflUsdInput, advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].includes(document.activeElement)) {
+  } else if (event.key === "Enter" && !advancedSettingsModal.hidden && /** @type {(Element | null)[]} */ ([advancedMflUsdInput, advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput]).includes(document.activeElement)) {
     event.preventDefault();
     applyAdvancedSettings();
   }
