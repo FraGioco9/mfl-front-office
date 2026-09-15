@@ -102,6 +102,13 @@ interface MflStaticUiRuntime {
   hideTooltips?: (options?: { immediate?: boolean; restore?: boolean }) => void;
 }
 
+interface MflSharedTableUiRuntime {
+  sync?: () => unknown;
+  syncRouteHorizontalStructureNow?: () => unknown;
+  syncRouteHorizontalCuesNow?: () => unknown;
+  destroy?: () => void;
+}
+
 interface MflTableLoadingRuntime {
   beginRequest?: (routeScope?: string, options?: { loadingMode?: unknown }) => number;
   finishRequest?: (token?: number) => boolean;
@@ -148,13 +155,17 @@ interface Window {
   __mflDataClient?: MflDataClient;
   __mflAppConfig: MflAppConfig;
   __mflTableLoadingRuntime?: MflTableLoadingRuntime;
+  __mflSharedTableUiRuntime?: MflSharedTableUiRuntime;
   __mflPlayerFirstPaintRuntime?: MflPlayerFirstPaintRuntime;
   __mflGlobalSearchReadyPromise?: Promise<boolean>;
+  __mflTooltipHeight?: number;
   __mflCancelIncrementalRouteRequest?: () => number;
   __mflBuildPlayerFirstPaintContext?: (playerId: unknown) => MflPlayerFirstPaintContext;
   __mflPlayerFirstPaintPendingContext?: MflPlayerFirstPaintContext | null;
   mflLoadIncrementalRoutePage?: (pageName: string, options?: Record<string, unknown>) => Promise<boolean>;
   mflReloadIncrementalPage?: (page?: number, options?: Record<string, unknown>) => Promise<boolean>;
+  mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean };
+  __mflRenderPlayerPageOwner?: (playerId?: unknown) => unknown;
   onflowFcl?: MflFlowWalletModule;
   fcl?: MflFlowWalletModule;
 }
