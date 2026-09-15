@@ -202,7 +202,9 @@ function settingsDataCacheReady() {
 
 function routeDataCacheReady(pageName, options = {}) {
   const page = String(pageName || "home");
-  const routeOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const routeOptions = /** @type {Record<string, unknown> & { view?: string }} */ (
+    options && typeof options === "object" && !Array.isArray(options) ? options : {}
+  );
 
   if (page === "home") return homeSummaryCacheReady();
   if (page === "notfound" || page === "changelog") return true;
@@ -424,7 +426,9 @@ function finishOwnedTableLoadingRequest() {
 }
 }
 
-async function withInteractionBusy(callback) { return callback(); }
+async function withInteractionBusy(callback, _reason = "") {
+  return callback();
+}
 
 async function reloadIncrementalPage(page = state.page, options = {}) {
   const route = incrementalRouteTarget(state.currentPage, {

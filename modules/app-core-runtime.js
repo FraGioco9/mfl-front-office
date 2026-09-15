@@ -361,6 +361,7 @@ const brandLinks = document.querySelectorAll(".brandLink");
 const openSearchButton = document.querySelector("#openSearchButton");
 const searchModal = document.querySelector("#searchModal");
 const closeSearchButton = document.querySelector("#closeSearchButton");
+/** @type {HTMLInputElement | null} */
 const playerSearchInput = document.querySelector("#playerSearchInput");
 const playerSearchClearButton = document.querySelector("#playerSearchClearButton");
 const playerSearchResults = document.querySelector("#playerSearchResults");
@@ -423,6 +424,7 @@ const confirmDeleteWatchlistButton = document.querySelector("#confirmDeleteWatch
 const closeDeleteWatchlistButton = document.querySelector("#closeDeleteWatchlistButton");
 const closeAddWatchlistButton = document.querySelector("#closeAddWatchlistButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
+/** @type {HTMLInputElement | null} */
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchClearButton = document.querySelector("#evaluationSearchClearButton");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
@@ -7096,7 +7098,9 @@ function settingsDataCacheReady() {
 
 function routeDataCacheReady(pageName, options = {}) {
   const page = String(pageName || "home");
-  const routeOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const routeOptions = /** @type {Record<string, unknown> & { view?: string }} */ (
+    options && typeof options === "object" && !Array.isArray(options) ? options : {}
+  );
 
   if (page === "home") return homeSummaryCacheReady();
   if (page === "notfound" || page === "changelog") return true;
@@ -7318,7 +7322,9 @@ function finishOwnedTableLoadingRequest() {
 }
 }
 
-async function withInteractionBusy(callback) { return callback(); }
+async function withInteractionBusy(callback, _reason = "") {
+  return callback();
+}
 
 async function reloadIncrementalPage(page = state.page, options = {}) {
   const route = incrementalRouteTarget(state.currentPage, {
