@@ -164,6 +164,7 @@ interface Window {
   __mflPlayerFirstPaintPendingContext?: MflPlayerFirstPaintContext | null;
   mflLoadIncrementalRoutePage?: (pageName: string, options?: Record<string, unknown>) => Promise<boolean>;
   mflReloadIncrementalPage?: (page?: number, options?: Record<string, unknown>) => Promise<boolean>;
+  __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown;
   mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean };
   __mflRenderPlayerPageOwner?: (playerId?: unknown) => unknown;
   onflowFcl?: MflFlowWalletModule;
