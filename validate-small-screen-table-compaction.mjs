@@ -41,8 +41,8 @@ assert.doesNotMatch(
   "A temporarily hidden table must not clear an already-valid first-paint/hydrated fade direction.",
 );
 assert.ok(
-  shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.getClientRects().length === 0) return;'),
-  "Fade ownership must clear only when leaving mobile and preserve the previous cue while the table is temporarily non-renderable.",
+  shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.scrollLeft <= PLAYER_TABLE_SCROLL_EPSILON) {\n      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);\n    }\n    if (scroller.getClientRects().length === 0) return;'),
+  "Fade ownership must preserve the previous cue while a table is temporarily non-renderable, while stale sticky-Name state clears immediately at the left edge.",
 );
 assert.ok(
   shared.includes('function clearViewScrollerCues(views) {')
