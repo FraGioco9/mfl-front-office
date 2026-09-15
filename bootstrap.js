@@ -934,14 +934,32 @@
       label.dataset.mflCompactTableLabel = compactLabel;
       label.textContent = firstPaintTableColumnLabel(normalizedPage, column);
       header.appendChild(label);
-      if (FIRST_PAINT_SORTABLE_COLUMNS.has(column)) {
+      const clubPositionSort = normalizedPage === "club" && column === "positions";
+      const sortable = normalizedPage !== "club" && FIRST_PAINT_SORTABLE_COLUMNS.has(column);
+      if (clubPositionSort) {
+        header.setAttribute("aria-sort", "ascending");
+        const arrow = document.createElement("span");
+        arrow.className = "sortArrow asc";
+        arrow.setAttribute("aria-hidden", "true");
+        header.appendChild(arrow);
+      } else if (sortable) {
         header.classList.add("sortable");
+        if (sort.sortKey === column) {
+          header.setAttribute("aria-sort", sort.sortDirection === "asc" ? "ascending" : "descending");
+        }
+        const sortButton = document.createElement("button");
+        sortButton.type = "button";
+        sortButton.className = "tableSortButton";
+        sortButton.disabled = true;
+        sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);
+        sortButton.appendChild(label);
         if (sort.sortKey === column) {
           const arrow = document.createElement("span");
           arrow.className = `sortArrow ${sort.sortDirection}`;
           arrow.setAttribute("aria-hidden", "true");
-          header.appendChild(arrow);
+          sortButton.appendChild(arrow);
         }
+        header.replaceChildren(sortButton);
       }
       row.appendChild(header);
     });
