@@ -889,6 +889,9 @@
       setPlayerTableFadeDirections(scroller, false, false);
       return;
     }
+    if (scroller.scrollLeft <= PLAYER_TABLE_SCROLL_EPSILON) {
+      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);
+    }
     if (scroller.getClientRects().length === 0) return;
     const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const scrollLeft = Math.min(maxScroll, Math.max(0, scroller.scrollLeft));
