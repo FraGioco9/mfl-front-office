@@ -247,7 +247,7 @@ function evaluationRenderTableOwner(row) {
     if (typeof value === "string" && (value.includes("data-evaluation-summary-position") || value.includes("evaluationPlayerName"))) {
       cell.innerHTML = value;
     } else {
-      cell.textContent = value;
+      cell.textContent = String(value);
     }
 
     summaryRow.appendChild(cell);
