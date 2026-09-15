@@ -23,6 +23,7 @@ const validators = [
   "validate-site-date-picker.mjs",
   "validate-local-development.mjs",
   "validate-performance-foundations.mjs",
+  "validate-accessibility-navigation-lifecycle.mjs",
 ];
 
 const requestedConcurrency = Number.parseInt(process.env.MFL_VALIDATION_CONCURRENCY || "4", 10);
