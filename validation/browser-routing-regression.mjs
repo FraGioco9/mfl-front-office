@@ -1323,6 +1323,18 @@ async function createRegressionServer() {
       );
       return;
     }
+    if (url.pathname === "/api/mfl-season-ratios-v2") {
+      writeJson(response, {
+        ratios: [
+          { season: 12, ratio: 320 },
+          { season: 13, ratio: 340 },
+          { season: 14, ratio: 360 },
+          { season: 15, ratio: 380 },
+        ],
+        requestedAt: generatedAt,
+      });
+      return;
+    }
     if (url.pathname === "/api/marketplace") {
       writeJson(response, { generatedAt, prices: {}, flowBlockHeight: 0 });
       return;
