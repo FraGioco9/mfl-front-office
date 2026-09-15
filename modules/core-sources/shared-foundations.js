@@ -453,41 +453,77 @@ const ignoreDiscountRateInput = document.querySelector("#ignoreDiscountRateInput
 const ignoreFirstSeasonInput = document.querySelector("#ignoreFirstSeasonInput");
 /** @type {HTMLElement | null} */
 const evaluationPanel = document.querySelector("#evaluationPanel");
+/** @type {HTMLElement | null} */
 const evaluationDiscountRate = document.querySelector("#evaluationDiscountRate");
+/** @type {HTMLElement | null} */
 const evaluationMflUsd = document.querySelector("#evaluationMflUsd");
+/** @type {HTMLElement | null} */
 const evaluationMflUsdEditor = document.querySelector("#evaluationMflUsdEditor");
+/** @type {HTMLInputElement | null} */
 const evaluationMflUsdInput = document.querySelector("#evaluationMflUsdInput");
+/** @type {HTMLButtonElement | null} */
 const evaluationMflUsdIncreaseButton = document.querySelector("#evaluationMflUsdIncreaseButton");
+/** @type {HTMLButtonElement | null} */
 const evaluationMflUsdDecreaseButton = document.querySelector("#evaluationMflUsdDecreaseButton");
+/** @type {HTMLButtonElement | null} */
 const evaluationMflUsdEditButton = document.querySelector("#evaluationMflUsdEditButton");
+/** @type {HTMLButtonElement | null} */
 const evaluationMflUsdResetButton = document.querySelector("#evaluationMflUsdResetButton");
+/** @type {HTMLButtonElement | null} */
 const advancedSettingsButton = document.querySelector(".advancedSettingsButton");
+/** @type {HTMLElement | null} */
 const advancedSettingsModal = document.querySelector("#advancedSettingsModal");
+/** @type {HTMLElement | null} */
 const advancedSettingsBody = document.querySelector(".advancedSettingsBody");
+/** @type {HTMLButtonElement | null} */
 const closeAdvancedSettingsButton = document.querySelector("#closeAdvancedSettingsButton");
+/** @type {HTMLInputElement | null} */
 const advancedMflUsdInput = document.querySelector("#advancedMflUsdInput");
+/** @type {HTMLButtonElement | null} */
 const advancedMflUsdIncreaseButton = document.querySelector("#advancedMflUsdIncreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedMflUsdDecreaseButton = document.querySelector("#advancedMflUsdDecreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetButton");
+/** @type {HTMLButtonElement | null} */
 const resetAdvancedSettingsButton = document.querySelector("#resetAdvancedSettingsButton");
+/** @type {HTMLButtonElement | null} */
 const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
+/** @type {HTMLButtonElement | null} */
 const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
+/** @type {HTMLElement | null} */
 const advancedDiscountRateValue = document.querySelector("#advancedDiscountRateValue");
+/** @type {HTMLElement | null} */
 const advancedLateSeasonRewardsSection = document.querySelector(".advancedLateSeasonRewardsSection");
+/** @type {HTMLButtonElement | null} */
 const advancedLateSeasonRewardsToggle = document.querySelector("#advancedLateSeasonRewardsToggle");
+/** @type {HTMLInputElement | null} */
 const advancedThirdLastRewardInput = document.querySelector("#advancedThirdLastRewardInput");
+/** @type {HTMLInputElement | null} */
 const advancedSecondLastRewardInput = document.querySelector("#advancedSecondLastRewardInput");
+/** @type {HTMLInputElement | null} */
 const advancedFinalRewardInput = document.querySelector("#advancedFinalRewardInput");
+/** @type {HTMLButtonElement | null} */
 const advancedThirdLastRewardIncreaseButton = document.querySelector("#advancedThirdLastRewardIncreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedThirdLastRewardDecreaseButton = document.querySelector("#advancedThirdLastRewardDecreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedThirdLastRewardResetButton = document.querySelector("#advancedThirdLastRewardResetButton");
+/** @type {HTMLButtonElement | null} */
 const advancedSecondLastRewardIncreaseButton = document.querySelector("#advancedSecondLastRewardIncreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedSecondLastRewardDecreaseButton = document.querySelector("#advancedSecondLastRewardDecreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedSecondLastRewardResetButton = document.querySelector("#advancedSecondLastRewardResetButton");
+/** @type {HTMLButtonElement | null} */
 const advancedFinalRewardIncreaseButton = document.querySelector("#advancedFinalRewardIncreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedFinalRewardDecreaseButton = document.querySelector("#advancedFinalRewardDecreaseButton");
+/** @type {HTMLButtonElement | null} */
 const advancedFinalRewardResetButton = document.querySelector("#advancedFinalRewardResetButton");
+/** @type {HTMLTableSectionElement | null} */
 const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
+/** @type {HTMLTableSectionElement | null} */
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 /** @type {HTMLTableSectionElement | null} */
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");

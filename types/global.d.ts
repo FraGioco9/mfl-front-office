@@ -192,6 +192,7 @@ interface Window {
   __mflSavedEvaluationPayloadCache?: Record<string, MflSavedEvaluationCacheEntry>;
   __mflEvaluationSearchStateRuntime?: MflEvaluationSearchStateRuntime;
   __mflEvaluationDiscountRateRuntime?: MflEvaluationDiscountRateRuntime;
+  __mflSupabaseDiscountRateFunction?: () => number | null;
   __mflTooltipHeight?: number;
   __mflCancelIncrementalRouteRequest?: () => number;
   __mflBuildPlayerFirstPaintContext?: (playerId: unknown) => MflPlayerFirstPaintContext;
@@ -224,4 +225,8 @@ interface ParentNode {
 interface Document {
   getElementById(elementId: "pagerCurrentPageInput"): HTMLInputElement | null;
   getElementById(elementId: "pagerTotalPages"): HTMLElement | null;
+}
+
+interface CSSStyleDeclaration {
+  webkitClipPath: string;
 }
