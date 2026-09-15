@@ -92,9 +92,9 @@ These values were useful immediately after splitting the old application-core mo
 
 ### Next.js runtime ownership — keep
 
-- **Constraint:** root `package.json` owns `npm run dev` as `prepare-next-runtime.mjs && next dev --webpack -p 4000`, production builds end with `next build`, and `npm run start` runs `next start -p 4000`.
-- **Reason:** MFL Front Office now uses the same framework/runtime model as the other front-office projects instead of maintaining a bespoke HTTP/Vercel-dev server. The supported `--webpack` dev opt-out is intentional on Windows so `node:sqlite` remains a native Node builtin rather than a Turbopack CommonJS external.
-- **Compatibility boundary:** the current SPA is temporarily projected into Next `public/`, and thin `pages/api/*` adapters delegate to canonical `api/*.js` handlers. This layer must shrink as routes move to native React/App Router ownership; it must not become a second business-logic owner.
+- **Constraint:** root `package.json` uses the normal Next npm lifecycle: `predev` prepares the temporary compatibility projection and `npm run dev` directly runs `next dev --webpack -p 4000`; production builds end with `next build`, and `npm run start` runs `next start -p 4000`.
+- **Reason:** MFL Front Office uses the same framework/runtime model and developer experience as the other front-office projects instead of maintaining a bespoke HTTP/Vercel-dev server. The supported `--webpack` dev opt-out is intentional on Windows so `node:sqlite` remains a native Node builtin rather than a Turbopack CommonJS external.
+- **Compatibility boundary:** the current SPA is temporarily projected into Next `public/`, and thin `pages/api/*` adapters delegate to canonical `api/*.js` handlers. During development, the same projection sources are Webpack dependencies so a branch switch/reset automatically re-syncs the compatibility assets and refreshes the browser. This layer must shrink as routes move to native React/App Router ownership; it must not become a second business-logic owner.
 - **Boundary:** local startup does not rebuild SQLite or rewrite tracked generated source artifacts. Site Quality remains the tracked generated-artifact writer.
 
 ### Workflow YAML / script ownership boundary — keep

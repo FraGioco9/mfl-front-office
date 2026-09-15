@@ -1,3 +1,10 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { MflLegacyDevBridgePlugin } from "./next-dev-legacy-bridge.mjs";
+
+const root = dirname(fileURLToPath(import.meta.url));
+
 const noStore = [{ key: "Cache-Control", value: "no-store, max-age=0" }];
 const immutable = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
 
@@ -48,8 +55,22 @@ export function createNextRewrites() {
   };
 }
 
+const developmentWebpack = process.env.NODE_ENV !== "production"
+  ? {
+      webpack(config) {
+        config.module.rules.push({
+          test: /legacy-dev-watch-token\.js$/,
+          use: [{ loader: resolve(root, "dev-legacy-watch-loader.cjs") }],
+        });
+        config.plugins.push(new MflLegacyDevBridgePlugin({ root }));
+        return config;
+      },
+    }
+  : {};
+
 const nextConfig = {
   devIndicators: { position: "bottom-left" },
+  ...developmentWebpack,
   outputFileTracingIncludes,
   headers() {
     return createNextHeaders();

@@ -1,37 +1,29 @@
-import { cp, mkdir, readdir, rm } from "node:fs/promises";
-import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { cp, mkdir, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const require = createRequire(import.meta.url);
+const { listLegacyPublicAssetPaths } = require("./legacy-public-assets.cjs");
 
 const root = dirname(fileURLToPath(import.meta.url));
-const publicRoot = join(root, "public");
-const PUBLIC_JSON = new Set(["release-history-overrides.json", "release.json", "ui-behavior-foundations.json"]);
+const publicRoot = resolve(root, "public");
 
-function rootAsset(name) {
-  if (name === "index.html" || name === "bootstrap.js" || name === "bootstrap-core.js") return true;
-  if (name.endsWith("-runtime.js")) return true;
-  if (PUBLIC_JSON.has(name)) return true;
-  return [".css", ".svg", ".png", ".webp", ".ico", ".woff", ".woff2"].includes(extname(name).toLowerCase());
-}
+export async function prepareNextRuntime() {
+  await rm(publicRoot, { recursive: true, force: true });
+  await mkdir(publicRoot, { recursive: true });
 
-async function copyFile(relativePath) {
-  const source = resolve(root, relativePath);
-  const destination = resolve(publicRoot, relativePath);
-  await mkdir(dirname(destination), { recursive: true });
-  await cp(source, destination);
-}
+  for (const relativePath of listLegacyPublicAssetPaths(root)) {
+    const source = resolve(root, relativePath);
+    const destination = resolve(publicRoot, relativePath);
+    await mkdir(dirname(destination), { recursive: true });
+    await cp(source, destination);
+  }
 
-const rootEntries = await readdir(root, { withFileTypes: true });
-await rm(publicRoot, { recursive: true, force: true });
-await mkdir(publicRoot, { recursive: true });
-for (const entry of rootEntries) {
-  if (entry.isFile() && rootAsset(entry.name)) await copyFile(entry.name);
-}
-
-for (const entry of await readdir(join(root, "modules"), { withFileTypes: true })) {
-  if (!entry.isFile()) continue;
-  if (entry.name === "app-entry.js" || /^app-core(?:-[a-z0-9-]+)?-runtime\.js$/i.test(entry.name)) {
-    await copyFile(join("modules", entry.name));
+  if (process.env.MFL_BUILD_VERBOSE === "1") {
+    console.log("Prepared Next.js public compatibility assets.");
   }
 }
 
-if (process.env.MFL_BUILD_VERBOSE === "1") console.log("Prepared Next.js public compatibility assets.");
+const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
+if (invokedPath === import.meta.url) await prepareNextRuntime();

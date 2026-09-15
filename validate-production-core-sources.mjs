@@ -1,10 +1,11 @@
 import { access, readFile } from "node:fs/promises";
 import { createNextRewrites } from "./next.config.mjs";
 
-const [ignoreSource, packageSource, prepareSource] = await Promise.all([
+const [ignoreSource, packageSource, prepareSource, legacyPublicAssetsSource] = await Promise.all([
   readFile(new URL("./.vercelignore", import.meta.url), "utf8"),
   readFile(new URL("./package.json", import.meta.url), "utf8"),
   readFile(new URL("./prepare-next-runtime.mjs", import.meta.url), "utf8"),
+  readFile(new URL("./legacy-public-assets.cjs", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
   ignoreSource.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")),
@@ -20,6 +21,8 @@ for (const requiredBuildSource of [
   "build-responsive.mjs",
   "build-styles.mjs",
   "prepare-next-runtime.mjs",
+  "legacy-public-assets.cjs",
+  "next-dev-legacy-bridge.mjs",
   "next.config.mjs",
 ]) {
   if (ignoredPaths.has(requiredBuildSource)) {
@@ -79,9 +82,10 @@ for (const runtimePath of [
 if (!String(packageJson.scripts?.build || "").endsWith("next build")) {
   throw new Error("Production build must finish with next build.");
 }
-if (!prepareSource.includes('name.endsWith("-runtime.js")')
-    || !prepareSource.includes('join("modules", entry.name)')) {
-  throw new Error("Next public compatibility projection must include legacy runtime assets and generated application-core runtimes.");
+if (!prepareSource.includes("listLegacyPublicAssetPaths(root)")
+    || !legacyPublicAssetsSource.includes('name.endsWith("-runtime.js")')
+    || !legacyPublicAssetsSource.includes('join("modules", entry.name)')) {
+  throw new Error("Next public compatibility projection must use the shared legacy asset owner for runtime assets and generated application-core runtimes.");
 }
 
 const rewrites = createNextRewrites();

@@ -116,6 +116,7 @@ export default [
       "style-bundle.mjs",
       "validation-text.mjs",
       "next.config.mjs",
+      "next-dev-legacy-bridge.mjs",
       "prepare-next-runtime.mjs",
       "ci-quality-scope.mjs",
       "validate*.mjs",
