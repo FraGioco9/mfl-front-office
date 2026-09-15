@@ -334,3 +334,5 @@ When a new value is genuinely global, add it to the appropriate canonical owner 
 The main scroller owns the complete **10px header-to-content gap** on desktop and mobile. First title rows and static page roots add no leading margin. Measure the gap from the topbar bottom border to the first title/content block border at scroll position zero, not to font glyphs. Home and locked/opt-in feedback keep their intentional centered compositions inside the shell. Player starts with its hero; Evaluation retains its responsive title/action grid.
 
 Mobile consumes the same inset token and preserves safe-area gutters and navigation clearance. Reading widths, Player/Evaluation widths, footer floors and component-internal spacing remain with their existing owners. The sidebar top offset consumes the existing header-height token.
+
+The footer owns its 22px leading margin. The main route container has no inter-item gap: a zero-height parked Table page must not shift the active page title or add another footer gap.

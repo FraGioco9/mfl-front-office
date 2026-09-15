@@ -729,6 +729,34 @@ const browserTestSource = String.raw`(() => {
     );
   }
 
+  function assertParkedTableSpacing() {
+    if (scenario !== "database") return;
+    // Exercise the real stylesheet with a parked Table before and after the active
+    // route: neither route order may move the title or duplicate footer spacing.
+    const main = document.createElement("main");
+    const parked = document.createElement("section");
+    parked.id = "progressionPage";
+    parked.className = "pageView mflCachedTablePageParked";
+    const active = document.createElement("section");
+    active.className = "pageView";
+    const footer = document.createElement("footer");
+    footer.className = "siteFooterDetails";
+    main.append(active, footer);
+    document.getElementById("appShell").appendChild(main);
+    try {
+      const top = active.getBoundingClientRect().top;
+      const gap = footer.getBoundingClientRect().top - active.getBoundingClientRect().bottom;
+      assert(Math.abs(gap - 22) < 1, "The footer must retain its 22px content gap.");
+      main.prepend(parked);
+      assert(Math.abs(active.getBoundingClientRect().top - top) < 1, "A parked Table must not increase header-to-title spacing.");
+      footer.before(parked);
+      assert(Math.abs(footer.getBoundingClientRect().top - active.getBoundingClientRect().bottom - gap) < 1,
+        "A parked Table must not add another footer gap.");
+    } finally {
+      main.remove();
+    }
+  }
+
   async function assertSharedModalFocusLifecycle() {
     if (scenario !== "database") return;
     const trigger = document.getElementById("openSearchButton");
@@ -948,6 +976,7 @@ const browserTestSource = String.raw`(() => {
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     assertLoadingAccessibility();
+    assertParkedTableSpacing();
     await assertDatabaseSortAccessibility();
     await assertSharedModalFocusLifecycle();
     if (scenario === "myclubs-in") {

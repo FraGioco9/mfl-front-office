@@ -45,7 +45,7 @@ for (const token of [
   "--mfl-footer-page-floor: 800px;",
   "display: flex;",
   "flex-direction: column;",
-  "row-gap: 22px;",
+  "row-gap: 0;",
   "main > .pageView {\n  flex: 0 0 auto;\n  min-height: var(--mfl-footer-page-floor);",
   `${unresolvedFallbackOwner} body > #appShell > main {`,
   "grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;",

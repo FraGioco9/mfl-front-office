@@ -67,11 +67,11 @@ for (const token of [
   'display: flex;',
   'flex-direction: column;',
   'align-items: stretch;',
-  'row-gap: 22px;',
+  'row-gap: 0;',
   'main > .pageView {',
   'min-height: var(--mfl-footer-page-floor);',
   '.siteFooterDetails {',
-  'margin-top: 0;',
+  'margin-top: 22px;',
   'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main {',
   'grid-template-rows: minmax(var(--mfl-footer-page-floor), max-content) max-content;',
   'html:not(.mflInitialRouteResolved):not([data-initial-entity-route="player"]):not([data-stored-wallet-opt-in="false"][data-initial-locked-page]) body > #appShell > main > .siteFooterDetails {',
@@ -134,7 +134,7 @@ invariant(
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  row-gap: 22px;
+  row-gap: 0;
 }`),
   "The footer must follow actual page content in normal flow while every route shares the responsive floor.",
 );
@@ -149,7 +149,7 @@ invariant(
   footer.includes(`.siteFooterDetails {
   flex: 0 0 auto;
   width: 100%;
-  margin-top: 0;`),
+  margin-top: 22px;`),
   "The footer must remain a normal-flow item after the visible route content.",
 );
 invariant(
