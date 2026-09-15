@@ -1385,6 +1385,19 @@ function printSummary(summary) {
     }
   }
 
+  console.log("\nCached table diagnostics (median / observed slowest)");
+  console.log("| Profile | Journey | Rows | Cells | Table width | Table height | Scroll width | Scroll height |");
+  console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |");
+  for (const profile of Object.keys(summary)) {
+    for (const journey of Object.keys(summary[profile])) {
+      const diagnostics = summary[profile][journey].cached.tableDiagnostics;
+      const pair = (metric) => `${round(metric.median)} / ${round(metric.slowest)}`;
+      console.log(
+        `| ${profile} | ${journey} | ${pair(diagnostics.renderedRows)} | ${pair(diagnostics.renderedCells)} | ${pair(diagnostics.tableWidth)} | ${pair(diagnostics.tableHeight)} | ${pair(diagnostics.tableScrollWidth)} | ${pair(diagnostics.tableScrollHeight)} |`,
+      );
+    }
+  }
+
   console.log("\nCached renderPage tail breakdown (median / observed slowest)");
   console.log("| Profile | Journey | Loading finish ms | Navigation guard ms | Scroll reset ms | Home sync ms | Async continuation ms |");
   console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
