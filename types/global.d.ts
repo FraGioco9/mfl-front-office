@@ -157,10 +157,17 @@ interface MflSavedEvaluationCacheEntry extends Record<string, unknown> {
 
 interface MflEvaluationSearchStateRuntime {
   sync?: () => void;
-  restoreEmptyRecentResults?: (force?: boolean, stateOnly?: boolean) => Promise<boolean>;
+  restoreEmptyRecentResults?: (force?: boolean, showLoading?: boolean, refreshSupabase?: boolean) => Promise<boolean>;
   selectEmptySearch?: () => unknown;
   shouldShowTypedResults?: () => boolean;
   ownsEmptyRecentResults?: () => boolean;
+  destroy?: () => void;
+}
+
+interface MflEvaluationDiscountRateRuntime {
+  version?: string;
+  sync?: () => void;
+  refresh?: () => Promise<unknown>;
   destroy?: () => void;
 }
 
@@ -184,6 +191,7 @@ interface Window {
   __mflSavedEvaluationsSessionCache?: MflSavedEvaluationCacheEntry[] | null;
   __mflSavedEvaluationPayloadCache?: Record<string, MflSavedEvaluationCacheEntry>;
   __mflEvaluationSearchStateRuntime?: MflEvaluationSearchStateRuntime;
+  __mflEvaluationDiscountRateRuntime?: MflEvaluationDiscountRateRuntime;
   __mflTooltipHeight?: number;
   __mflCancelIncrementalRouteRequest?: () => number;
   __mflBuildPlayerFirstPaintContext?: (playerId: unknown) => MflPlayerFirstPaintContext;
