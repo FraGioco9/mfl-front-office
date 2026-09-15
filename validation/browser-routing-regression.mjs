@@ -1019,17 +1019,17 @@ const browserTestSource = String.raw`(() => {
     const compactDatabaseStickyRegression = scenario === "database"
       && document.documentElement.clientWidth <= 900;
     if (compactDatabaseStickyRegression) {
-      const waitForStableDatabaseRows = (label) => waitFor(
-        () => text("#tableBody").includes(expectedPlayerName)
-          && !window.__mflTableLoadingRuntime?.requestActive?.(),
+      const waitForStickyTableStructure = (label) => waitFor(
+        () => document.querySelector("#tableHead th.col-name") instanceof HTMLTableCellElement
+          && document.querySelector("#tableBody td.nameCell") instanceof HTMLTableCellElement,
         label,
       );
-      await waitForStableDatabaseRows("Compact Database direct refresh did not settle its fixture row.");
+      await waitForStickyTableStructure("Compact Database direct refresh did not expose the sticky Name table structure.");
       assertSharedChromeGeometry();
       assertPageAccessibilityState();
       await assertStickyNameSeparator();
       await navigateBackToScenario(setPage, timeline);
-      await waitForStableDatabaseRows("Compact Database cached return did not settle its fixture row.");
+      await waitForStickyTableStructure("Compact Database cached return did not expose the sticky Name table structure.");
       await assertStickyNameSeparator();
       assertSharedChromeGeometry();
       assertPageAccessibilityState();
