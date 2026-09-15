@@ -1,0 +1,22 @@
+name: One-shot Vercel site update dispatch
+
+on:
+  push:
+    branches:
+      - ops/dispatch-site-update-20260916
+    paths:
+      - .github/workflows/one-shot-site-update.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Vercel site update on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api             --method POST             -H "Accept: application/vnd.github+json"             "repos/${GITHUB_REPOSITORY}/actions/workflows/vercel-site-update.yml/dispatches"             -f ref=main
