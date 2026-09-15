@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 
 from scripts.database import competition_storage as storage
 
-PLAYMFL_API_BASE_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod"
+PLAYMFL_API_BASE_URL = "https://api.playmfl.com"
 CURRENT_COMPETITIONS_URL = f"{PLAYMFL_API_BASE_URL}/competitions?upcoming=true"
 SEASON_HISTORY_URL = f"{PLAYMFL_API_BASE_URL}/competitions/seasonHistory"
 COMPETITION_DETAIL_URL = f"{PLAYMFL_API_BASE_URL}/competitions/{{competition_id}}"
