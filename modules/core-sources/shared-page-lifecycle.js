@@ -9,7 +9,7 @@ function resetPageScroll() {
 function syncPageAccessibilityState() {
   document.querySelectorAll("#appShell main > .pageView").forEach((page) => {
     if (!(page instanceof HTMLElement)) return;
-    const inactive = page.hidden;
+    const inactive = page.hidden === true;
     page.inert = inactive;
     if (inactive) page.setAttribute("aria-hidden", "true");
     else page.removeAttribute("aria-hidden");
