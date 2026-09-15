@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 11;
+const BASELINE_SCHEMA_VERSION = 12;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -39,6 +39,9 @@ const requestedJourneyIds = [...new Set(
     .filter(Boolean),
 )];
 const outputPath = String(process.env.MFL_BASELINE_OUTPUT || "").trim();
+const sourceCommit = String(process.env.MFL_BASELINE_SOURCE_COMMIT || "").trim();
+const sourceRef = String(process.env.MFL_BASELINE_SOURCE_REF || "").trim();
+const accessContext = String(process.env.MFL_BASELINE_ACCESS_CONTEXT || "guest/public-database").trim();
 
 const PROFILES = Object.freeze({
   desktop: Object.freeze({
@@ -104,6 +107,38 @@ function browserExecutable() {
     "Performance baseline could not find Chrome/Chromium/Edge. "
       + "Install a Chromium browser in its standard location or set CHROME_PATH to the browser executable.",
   );
+}
+
+function browserVersion(executable) {
+  const probe = spawnSync(executable, ["--version"], { encoding: "utf8" });
+  if (probe.error || probe.status !== 0) return "";
+  return String(probe.stdout || probe.stderr || "").trim();
+}
+
+async function baselineTargetContext(executable) {
+  const response = await fetch(new URL("/api/data?mode=bootstrap", baseUrl), {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`Could not capture baseline dataset context: HTTP ${response.status}.`);
+  }
+  const payload = await response.json();
+  const manifest = payload?.manifest && typeof payload.manifest === "object" ? payload.manifest : {};
+  const datasetGeneratedAt = String(manifest.generated_at || "").trim();
+  assert(datasetGeneratedAt && !Number.isNaN(Date.parse(datasetGeneratedAt)),
+    "Baseline target did not expose a valid manifest.generated_at.");
+  return Object.freeze({
+    sourceCommit,
+    sourceRef,
+    datasetGeneratedAt,
+    datasetRowCount: Number(manifest.row_count) || 0,
+    datasetWalletCount: Number(manifest.wallet_count) || 0,
+    datasetSource: String(manifest.source || "").trim(),
+    accessContext,
+    browserVersion: browserVersion(executable),
+    nodeVersion: process.version,
+    platform: `${process.platform}/${process.arch}`,
+  });
 }
 
 function delay(ms) {
@@ -1308,7 +1343,7 @@ function buildSummary(raw) {
   return summary;
 }
 
-function baselineResumeKey(entities, journeys) {
+function baselineResumeKey(entities, journeys, targetContext) {
   return JSON.stringify({
     schemaVersion: BASELINE_SCHEMA_VERSION,
     baseUrl,
@@ -1317,10 +1352,11 @@ function baselineResumeKey(entities, journeys) {
     profiles: profiles.map((profile) => profile.id),
     journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
     representativeEntities: entities,
+    targetContext,
   });
 }
 
-function buildReport(raw, entities, journeys, complete) {
+function buildReport(raw, entities, journeys, targetContext, complete) {
   return {
     metadata: {
       schemaVersion: BASELINE_SCHEMA_VERSION,
@@ -1331,27 +1367,28 @@ function buildReport(raw, entities, journeys, complete) {
       profiles: profiles.map((profile) => profile.id),
       journeys: journeys.map(({ id, path, expectedPath = path }) => ({ id, path, expectedPath })),
       representativeEntities: entities,
+      targetContext,
       completedRuns: completedRunCount(raw, journeys),
       complete,
-      resumeKey: baselineResumeKey(entities, journeys),
-      note: "Real browser measurements against the configured base URL. Throttled profiles simulate client constraints; do not describe fixture/CI latency as production latency.",
+      resumeKey: baselineResumeKey(entities, journeys, targetContext),
+      note: "Real browser measurements against the configured base URL. Throttled profiles simulate client constraints; local/CI fixture latency must not be described as production latency.",
     },
     summary: buildSummary(raw),
     raw,
   };
 }
 
-async function writeCheckpoint(raw, entities, journeys, complete = false) {
+async function writeCheckpoint(raw, entities, journeys, targetContext, complete = false) {
   if (!outputPath) return;
-  const report = buildReport(raw, entities, journeys, complete);
+  const report = buildReport(raw, entities, journeys, targetContext, complete);
   await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
-async function loadCheckpoint(entities, journeys) {
+async function loadCheckpoint(entities, journeys, targetContext) {
   if (!outputPath) return null;
   try {
     const parsed = JSON.parse(await readFile(outputPath, "utf8"));
-    if (parsed?.metadata?.resumeKey !== baselineResumeKey(entities, journeys)) {
+    if (parsed?.metadata?.resumeKey !== baselineResumeKey(entities, journeys, targetContext)) {
       console.log(`Existing ${outputPath} does not match this baseline configuration; starting a new capture.`);
       return null;
     }
@@ -1370,9 +1407,26 @@ async function loadCheckpoint(entities, journeys) {
 }
 
 const executable = browserExecutable();
+const targetContext = await baselineTargetContext(executable);
+console.log("Performance baseline context");
+console.log(JSON.stringify({
+  baseUrl,
+  environmentLabel,
+  repetitions,
+  profiles: profiles.map((profile) => profile.id),
+  sourceCommit: targetContext.sourceCommit,
+  sourceRef: targetContext.sourceRef,
+  datasetGeneratedAt: targetContext.datasetGeneratedAt,
+  datasetRowCount: targetContext.datasetRowCount,
+  datasetWalletCount: targetContext.datasetWalletCount,
+  accessContext: targetContext.accessContext,
+  browserVersion: targetContext.browserVersion,
+  nodeVersion: targetContext.nodeVersion,
+  platform: targetContext.platform,
+}, null, 2));
 const entities = await discoverRepresentativeEntities();
 const journeys = selectedJourneys(journeysFor(entities));
-const raw = (await loadCheckpoint(entities, journeys)) || emptyRaw(journeys);
+const raw = (await loadCheckpoint(entities, journeys, targetContext)) || emptyRaw(journeys);
 
 for (const profile of profiles) {
   for (const journey of journeys) {
@@ -1387,7 +1441,7 @@ for (const profile of profiles) {
       for (const phase of ["cold", "refresh", "cached"]) {
         raw[profile.id][journey.id][phase].push(result[phase]);
       }
-      await writeCheckpoint(raw, entities, journeys, false);
+      await writeCheckpoint(raw, entities, journeys, targetContext, false);
     }
   }
 }
@@ -1395,7 +1449,7 @@ for (const profile of profiles) {
 const summary = buildSummary(raw);
 printSummary(summary);
 if (outputPath) {
-  await writeCheckpoint(raw, entities, journeys, true);
+  await writeCheckpoint(raw, entities, journeys, targetContext, true);
   console.log(`\nWrote full baseline report to ${outputPath}`);
 } else {
   console.log("\nSet MFL_BASELINE_OUTPUT to persist and resume the full JSON report.");
