@@ -1,11 +1,12 @@
 import { includes, invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
-const [packageJson, harness, performanceDocs, siteQuality] = await Promise.all([
+const [packageJson, harness, performanceDocs, siteQuality, baselineWorkflow] = await Promise.all([
   readValidationText("./package.json", import.meta.url),
   readValidationText("./validation/performance-baseline.mjs", import.meta.url),
   readValidationText("./docs/performance-923.md", import.meta.url),
   readValidationText("./.github/workflows/site-quality.yml", import.meta.url),
+  readValidationText("./.github/workflows/performance-baseline.yml", import.meta.url),
 ]);
 
 includes(
@@ -16,7 +17,7 @@ includes(
 
 for (const token of [
   "const DEFAULT_RUNS = 5;",
-  "const BASELINE_SCHEMA_VERSION = 11;",
+  "const BASELINE_SCHEMA_VERSION = 12;",
   "const NETWORK_IDLE_GRACE_MS = 250;",
   '"desktop"',
   '"mobile-slow"',
@@ -45,6 +46,15 @@ for (const token of [
   "function median(values)",
   'process.env.MFL_BASELINE_OUTPUT',
   'process.env.MFL_BASELINE_JOURNEYS',
+  'process.env.MFL_BASELINE_SOURCE_COMMIT',
+  'process.env.MFL_BASELINE_SOURCE_REF',
+  'process.env.MFL_BASELINE_ACCESS_CONTEXT',
+  "async function baselineTargetContext(executable)",
+  "datasetGeneratedAt",
+  "datasetRowCount",
+  "datasetWalletCount",
+  "browserVersion:",
+  "targetContext,",
   "function selectedJourneys(journeys)",
   "const journeys = selectedJourneys(journeysFor(entities));",
   'process.env["PROGRAMFILES(X86)"]',
@@ -65,13 +75,13 @@ for (const token of [
   "await waitForSpaNavigationReady(cdp, routeTimeoutMs);",
   "const SLOW_ROUTE_TIMEOUT_MS = 240_000;",
   "routeTimeoutMs: SLOW_ROUTE_TIMEOUT_MS",
-  "async function writeCheckpoint(raw, entities, journeys, complete = false)",
-  "async function loadCheckpoint(entities, journeys)",
-  "resumeKey: baselineResumeKey(entities, journeys)",
+  "async function writeCheckpoint(raw, entities, journeys, targetContext, complete = false)",
+  "async function loadCheckpoint(entities, journeys, targetContext)",
+  "resumeKey: baselineResumeKey(entities, journeys, targetContext)",
   "schemaVersion: BASELINE_SCHEMA_VERSION",
   'value !== null && value !== undefined && value !== ""',
   "refusing to record a partial baseline sample",
-  "await writeCheckpoint(raw, entities, journeys, false);",
+  "await writeCheckpoint(raw, entities, journeys, targetContext, false);",
   "const heartbeat = setInterval(() => {",
   "still running (",
   "heartbeat.unref?.();",
@@ -166,4 +176,21 @@ invariant(
   "The wall-clock performance baseline must remain opt-in instead of slowing every Site Quality run.",
 );
 
-console.log("Repeatable browser/runtime performance baseline ownership, journeys, metrics, profiles, and opt-in CI contract are canonical.");
+for (const token of [
+  "name: Performance baseline",
+  "workflow_dispatch:",
+  "Download latest validated runtime database",
+  "github-actions-local-next-production",
+  "guest/public-database",
+  "performance-baseline-current.json",
+  "actions/upload-artifact@v7",
+]) {
+  includes(baselineWorkflow, token, `Performance baseline workflow contract is missing: ${token}`);
+}
+
+invariant(
+  !baselineWorkflow.includes("  pull_request:") && !baselineWorkflow.includes("  push:"),
+  "Performance capture must be manual-only after recording the baseline.",
+);
+
+console.log("Repeatable browser/runtime performance baseline ownership, target identity, journeys, metrics, profiles, and opt-in capture contract are canonical.");
