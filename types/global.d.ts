@@ -172,5 +172,11 @@ interface Window {
 }
 
 interface ParentNode {
-  querySelectorAll(selectors: ".mflStatsFilterButton"): NodeListOf<HTMLElement>;
+  querySelector(selectors: ".playerNoteFloatingTooltip"): HTMLElement | null;
+  querySelector(selectors: "#playerEvaluateButton" | "#copyPlayerIdButton"): HTMLButtonElement | null;
+  querySelector(selectors: ".playerAgentLink"): HTMLElement | null;
+  querySelector(selectors: "#playerNotesInput"): HTMLTextAreaElement | null;
+  querySelectorAll(
+    selectors: ".mflStatsFilterButton" | "[data-player-attribute-view]" | "[data-training-stat]" | "[data-training-reset]",
+  ): NodeListOf<HTMLElement>;
 }
