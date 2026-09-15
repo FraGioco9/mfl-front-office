@@ -712,7 +712,7 @@ const browserTestSource = String.raw`(() => {
     assert(document.activeElement === nameButton, "Sortable Name button is not keyboard focusable.");
     nameButton.click();
     await waitFor(
-      () => nameHeader.getAttribute("aria-sort") === "ascending",
+      () => document.querySelector('#tableHead th[data-table-column="name"]')?.getAttribute("aria-sort") === "ascending",
       "Database Name sort did not expose aria-sort=ascending.",
     );
     const overallButton = document.querySelector('#tableHead th[data-table-column="overall"] > .tableSortButton');
