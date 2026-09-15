@@ -8,6 +8,10 @@ interface MflDataClient {
   snapshot(): Readonly<{ inFlight: number; cached: number }>;
 }
 
+interface MflFlowWalletModule {
+  config(values?: Record<string, unknown>): unknown;
+}
+
 interface Window {
   __mflReleaseVersion?: string;
   __mflRelease?: Readonly<{ version: string; description: string }>;
@@ -18,6 +22,8 @@ interface Window {
   __mflSelectionStartupResetRuntime?: { rebind?: () => void; destroy?: () => void };
   __mflDatabaseStatsRuntime?: { sync?: () => void };
   __mflDataClient?: MflDataClient;
+  onflowFcl?: MflFlowWalletModule;
+  fcl?: MflFlowWalletModule;
 }
 
 interface ParentNode {
