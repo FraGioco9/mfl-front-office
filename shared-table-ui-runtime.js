@@ -889,9 +889,6 @@
       setPlayerTableFadeDirections(scroller, false, false);
       return;
     }
-    if (scroller.scrollLeft <= PLAYER_TABLE_SCROLL_EPSILON) {
-      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);
-    }
     if (scroller.getClientRects().length === 0) return;
     const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const scrollLeft = Math.min(maxScroll, Math.max(0, scroller.scrollLeft));
@@ -943,7 +940,7 @@
     return playerResizeObserver;
   }
 
-  function ensurePlayerScroller({ schedule = true } = {}) {
+  function ensurePlayerScroller() {
     const scroller = playerTableScroller();
     if (!(scroller instanceof HTMLElement)) return;
     if (boundPlayerScroller !== scroller) {
@@ -965,8 +962,7 @@
     const body = document.getElementById("tableBody");
     if (head instanceof HTMLElement) observer?.observe(head);
     if (body instanceof HTMLElement) observer?.observe(body);
-    if (schedule) schedulePlayerTableSync();
-    return scroller;
+    schedulePlayerTableSync();
   }
 
   function syncRouteHorizontalStructureNow() {
@@ -983,7 +979,6 @@
     recordSharedTableUiStage("route-shell-horizontal-ensure-views-complete");
     tableHorizontalScrollers().forEach(syncViewScroller);
     recordSharedTableUiStage("route-shell-horizontal-view-sync-complete");
-    ensurePlayerScroller({ schedule: false });
     syncPlayerTableScroller();
     recordSharedTableUiStage("route-shell-horizontal-player-sync-complete");
   }
