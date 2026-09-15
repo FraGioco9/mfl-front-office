@@ -709,8 +709,9 @@ body.filtersOpen .navButton:hover {
   overflow: clip;
   visibility: hidden;
   pointer-events: none;
-  content-visibility: hidden;
-  contain-intrinsic-block-size: 0;
+  /* Keep cached table descendants laid out while parked so a cached revisit
+   * can reuse browser layout work instead of rebuilding the full table. */
+  content-visibility: visible;
 }
 
 main > .pageView {
