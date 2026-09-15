@@ -234,6 +234,24 @@ function journeysFor({ playerId, clubId }) {
       profileOnly: true,
     }),
     Object.freeze({
+      id: "database-100-no-scroll-state",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      cachedProbe: "name-no-scroll-state",
+      profileOnly: true,
+    }),
+    Object.freeze({
+      id: "database-100-no-sticky-name",
+      path: "/database/attributes",
+      page: "database",
+      options: Object.freeze({ view: "attributes" }),
+      pageSize: 100,
+      cachedProbe: "name-no-sticky",
+      profileOnly: true,
+    }),
+    Object.freeze({
       id: "player",
       path: `/players/${encodeURIComponent(playerId)}`,
       page: "player",
@@ -1035,6 +1053,10 @@ async function applyCachedRenderProbe(cdp, probe) {
       style.textContent = "#tableBody { visibility: hidden !important; }";
     } else if (probe === "table-display-none") {
       style.textContent = ".playerTableScroller table { display: none !important; }";
+    } else if (probe === "name-no-scroll-state") {
+      style.textContent = "#progressionPage .playerTableScroller td.col-name, #progressionPage .playerTableScroller td:has(> .playerNameCell) { container-type: normal !important; container-name: none !important; }";
+    } else if (probe === "name-no-sticky") {
+      style.textContent = "#progressionPage .playerTableScroller :is(th.col-name, td.col-name, td:has(> .playerNameCell)) { position: static !important; left: auto !important; container-type: normal !important; container-name: none !important; }";
     } else {
       throw new Error("Unknown baseline cached render probe: " + probe);
     }
