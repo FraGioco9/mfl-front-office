@@ -1,9 +1,6 @@
 name: Performance baseline
 
 on:
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       runs:
@@ -156,15 +153,9 @@ jobs:
         run: |
           set -euo pipefail
           export MFL_BASELINE_SOURCE_COMMIT="$(git rev-parse HEAD)"
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            export MFL_BASELINE_RUNS="5"
-            export MFL_BASELINE_PROFILES="mobile-slow"
-            export MFL_BASELINE_JOURNEYS="database-100-keep-parked-layout,database-100-keep-layout-no-scroll-state"
-          else
-            export MFL_BASELINE_RUNS="${INPUT_RUNS:-5}"
-            export MFL_BASELINE_PROFILES="${INPUT_PROFILES:-desktop,mobile-slow}"
-            export MFL_BASELINE_JOURNEYS="${INPUT_JOURNEYS:-}"
-          fi
+          export MFL_BASELINE_RUNS="${INPUT_RUNS:-5}"
+          export MFL_BASELINE_PROFILES="${INPUT_PROFILES:-desktop,mobile-slow}"
+          export MFL_BASELINE_JOURNEYS="${INPUT_JOURNEYS:-}"
           npm run performance:baseline 2>&1 | tee performance-baseline-current.log
 
       - name: Verify complete capture
@@ -175,49 +166,6 @@ jobs:
           jq -e '.metadata.targetContext.datasetGeneratedAt == env.dataset_generated_at' performance-baseline-current.json >/dev/null
           jq -e '.metadata.targetContext.sourceCommit != ""' performance-baseline-current.json >/dev/null
           jq -e '.metadata.targetContext.browserVersion != ""' performance-baseline-current.json >/dev/null
-
-      - name: Publish focused Database render profile
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PYTHON'
-          import json
-
-          with open("performance-baseline-current.json") as stream:
-              report = json.load(stream)
-
-          profile = report["summary"]["mobile-slow"]
-          names = [
-              "database-100-keep-parked-layout",
-              "database-100-keep-layout-no-scroll-state",
-          ]
-          print("Focused Database cached render profile")
-          print("| Journey | Settled ms | Long-task ms | Render phase ms | Rows | Cells |")
-          print("| --- | ---: | ---: | ---: | ---: | ---: |")
-          rows = []
-          for name in names:
-              cached = profile[name]["cached"]
-              diagnostics = cached["tableDiagnostics"]
-              route = cached["routeStages"]
-              row = (
-                  name,
-                  cached["settledMs"]["median"],
-                  cached["longTaskMs"]["median"],
-                  route["settlementLoafRenderPhaseMs"]["median"],
-                  diagnostics["renderedRows"]["median"],
-                  diagnostics["renderedCells"]["median"],
-              )
-              rows.append(row)
-              print("| {} | {:.1f} | {:.1f} | {:.1f} | {:.0f} | {:.0f} |".format(*row))
-
-          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-              summary.write("### Focused Database cached render profile\n\n")
-              summary.write("| Journey | Settled ms | Long-task ms | Render phase ms | Rows | Cells |\n")
-              summary.write("| --- | ---: | ---: | ---: | ---: | ---: |\n")
-              for row in rows:
-                  summary.write("| {} | {:.1f} | {:.1f} | {:.1f} | {:.0f} | {:.0f} |\n".format(*row))
-          PYTHON
 
       - name: Publish baseline context
         shell: bash

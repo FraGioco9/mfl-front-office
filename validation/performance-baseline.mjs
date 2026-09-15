@@ -652,9 +652,9 @@ async function resetBrowserObservers(cdp) {
 
 async function collectBrowserMetrics(cdp, minimumSequence, phase) {
   const value = await evaluate(cdp, `(() => {
-    const table = document.querySelector("#databasePage .playerTableScroller table");
+    const table = document.querySelector("#progressionPage .playerTableScroller table");
     const body = document.getElementById("tableBody");
-    const scroller = document.querySelector("#databasePage .playerTableScroller");
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
     const tableRect = table instanceof HTMLElement ? table.getBoundingClientRect() : null;
     const scrollerRect = scroller instanceof HTMLElement ? scroller.getBoundingClientRect() : null;
     return {

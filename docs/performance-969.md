@@ -35,6 +35,41 @@ temporary PR trigger; future captures are manual-only and remain outside Site Qu
 - Next implementation should profile Database reveal/settlement at 100 and 250 rows, identify the expensive rendering owner, and capture focused before/after runs using the same runtime, dataset, browser, profiles and journey semantics. Preserve sorting/filtering, pagination and cache correctness.
 - This capture does not cover 250-row tables, search/deep pagination, authenticated flows, wallet changes, prolonged navigation or production network/server latency. Those acceptance items remain open in #969.
 
+### Focused cached Database rendering profile — 2026-09-15
+
+Follow-up profiling used the same validated dataset, Chrome version, guest/public-database access and
+slow-mobile client profile as the current baseline. These are synthetic GitHub-runner measurements,
+not production latency. No production UI behavior was changed for these probes.
+
+Evidence:
+- [layout/paint isolation run 34918989984](https://github.com/FraGioco9/mfl-front-office/actions/runs/34918989984)
+- [sticky Name isolation run 34919366020](https://github.com/FraGioco9/mfl-front-office/actions/runs/34919366020)
+- [parked-layout isolation run 34919644508](https://github.com/FraGioco9/mfl-front-office/actions/runs/34919644508)
+
+Cached slow-mobile medians:
+
+| Probe | Settled ms | Long-task ms | LoAF render phase ms | Rows |
+| --- | ---: | ---: | ---: | ---: |
+| Normal 100-row table | 397.8 | 368.0 | 296.9 | 100 |
+| Hide table-body paint only | 334.3 | 303.0 | 277.1 | 100 |
+| Remove table from layout | 50.9 | 0.0 | 17.6 | 100 |
+| Disable per-row scroll-state containers | 277.2 | 248.0 | 191.0 | 100 |
+| Disable sticky Name positioning too | 256.2 | 234.0 | 181.0 | 100 |
+| Keep cached table layout while parked | 230.2 | 197.0 | 153.9 | 100 |
+| Keep parked layout + disable scroll-state containers | 227.8 | 197.0 | 152.2 | 100 |
+
+The isolation is strong enough to select the next implementation target:
+- browser table **layout** dominates cached Database settlement; hiding paint alone removes little of the cost while removing the table from layout removes the long task;
+- the 100 per-row mobile `scroll-state` containers account for a substantial share of first layout work;
+- `content-visibility: hidden` on the parked cached Table page discards useful layout state and makes the next reveal pay much of that work again;
+- keeping parked layout and disabling scroll-state containers are mostly non-additive on the cached return, because preserving layout already avoids repeating much of the scroll-state/layout work;
+- the synthetic `database-250` attempt rendered 100 rows in every sample because production mobile intentionally fixes the hidden Rows control to 100. It is **not** valid 250-row mobile evidence. The 250-row acceptance check remains open and should be measured separately in a context where 250 rows are actually supported.
+
+The next production PR should preserve the cached Table layout while parked and replace the per-row
+scroll-state container query with the existing shared horizontal-scroll state/class ownership, while
+preserving the sticky Name column and its separator. It should then capture focused before/after
+evidence and manually test Database/table navigation and horizontal scrolling.
+
 The historical [2026-09-12 baseline](performance-923.md#reference-browserruntime-baseline--2026-09-12)
 used a local Vercel runtime and lacks equivalent recorded build/dataset/browser provenance. The journey
 method is retained, but runtime/compression, dataset and hardware differ. Do not calculate a causal
