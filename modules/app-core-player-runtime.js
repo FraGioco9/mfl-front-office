@@ -1252,6 +1252,7 @@ function animateReadyControls(container = document) {
       button.type = "button";
       button.disabled = true;
       button.dataset.playerAttributeView = view;
+      button.setAttribute("aria-pressed", "false");
       button.textContent = label;
       button.style.transition = PLAYER_READY_TRANSITION;
       views.appendChild(button);
@@ -1340,7 +1341,9 @@ function syncPlayerAttributeViewActiveState(containerValue, playerIdValue = play
   buttons.forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
     const buttonView = String(button.dataset.playerAttributeView || button.dataset.view || "");
-    button.classList.toggle("active", !loading && buttonView === selectedView);
+    const selected = !loading && buttonView === selectedView;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
   });
   return !loading && buttons.some((button) => button instanceof HTMLButtonElement && button.classList.contains("active"));
 }
@@ -2175,7 +2178,7 @@ function renderPlayerPageOwner(playerId) {
   state.playerAttributeView = normalizedAttributeView;
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
-    .map(([view, label]) => `<button class="playerAttributeViewButton ${!attributeViewLoading && state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
+    .map(([view, label]) => `<button class="playerAttributeViewButton ${!attributeViewLoading && state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}" aria-pressed="${!attributeViewLoading && state.playerAttributeView === view ? "true" : "false"}">${label}</button>`)
     .join("");
   const existingAttributeViews = playerDetail.querySelector(".playerAttributeViews");
   const existingAttributeViewsShell = existingAttributeViews?.closest(".viewsScrollerShell");
