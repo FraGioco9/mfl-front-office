@@ -33,8 +33,7 @@ for (const token of [
   "padding-left: 10px;",
   "background-clip: padding-box;",
   "#progressionPage #tableBody .playerNameCell {\n    position: static;\n  }",
-  "@container mfl-sticky-name scroll-state(stuck: left) {",
-  "#progressionPage #tableBody .playerNameCell::before {",
+  "#progressionPage .playerTableScroller.mflPlayerTableNameStuck #tableBody .playerNameCell::before {",
   'content: "";',
   "position: absolute;",
   "z-index: 2;",
@@ -44,7 +43,7 @@ for (const token of [
   "border-right: 1px solid var(--border-strong);",
   "pointer-events: none;",
   "#progressionPage .playerTableScroller th.col-name {\n    z-index: 6;\n    background: var(--mfl-table-header-background);",
-  "z-index: 5;\n    isolation: isolate;\n    container-type: scroll-state;\n    container-name: mfl-sticky-name;\n    background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));\n    background-clip: border-box;",
+  "z-index: 5;\n    isolation: isolate;\n    background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));\n    background-clip: border-box;",
   "#progressionPage #tableBody tr.tableRowHovered > :is(",
   "background: var(--mfl-table-row-hover-background);\n    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
   "#progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {",
@@ -60,8 +59,9 @@ invariant(
   "Sticky Name separator must stay hidden until the Name column is actually stuck to the left edge.",
 );
 invariant(
-  !stickyStyles.includes("mflPlayerTableCanScrollLeft"),
-  "Sticky separator visibility must use the Name column's actual stuck state rather than generic horizontal-scroll state.",
+  !stickyStyles.includes("mflPlayerTableCanScrollLeft") && !stickyStyles.includes("scroll-state")
+    && sharedTableUi.includes("precedingCell.getBoundingClientRect().right < scroller.getBoundingClientRect().left + scroller.clientLeft"),
+  "One shared measured Name boundary must control the separator without per-row scroll-state containers.",
 );
 invariant(
   !stickyStyles.includes("th.col-name > span:first-child::before")
@@ -118,8 +118,8 @@ invariant(
   "Existing mobile table edge fades must keep their local z-index contract below sticky Name cells.",
 );
 invariant(
-  !sharedTableUi.includes("col-name") && !sharedTableUi.includes("playerNameCell"),
-  "Sticky Name positioning and separator state must remain CSS-owned rather than being recreated by the shared table runtime.",
+  !sharedTableUi.includes("playerNameCell") && !sharedTableUi.includes('style.position = "sticky"'),
+  "Sticky positioning and separator painting stay CSS-owned; shared state must not inspect individual body rows.",
 );
 
 console.log("Small-screen player tables keep Name sticky with inset, keep sticky body cells opaque above the edge fade, and paint the body-only vertical separator across horizontal row dividers only while Name is actually stuck.");

@@ -72,10 +72,51 @@ measured 230.2 ms cached settlement versus 397.8 ms for the normal 100-row slow-
 as the profiling evidence that selected this implementation, not as an independent measurement of the
 final production commit.
 
-The next measured candidate after this PR is replacing the per-row scroll-state container query with
-the existing shared horizontal-scroll state/class ownership while preserving the sticky Name column
-and its separator. Because the two probes were mostly non-additive on cached return, that change should
-remain a separate PR and must earn its own evidence before merge.
+The next production slice removes the per-row scroll-state containers. The shared horizontal-scroll
+owner now reads the trailing edge of the non-sticky header cell before Name and compares it with the
+scroller edge, then toggles one scroller class. This preserves the actual sticky threshold rather than
+showing the separator as soon as any horizontal scrolling begins. CSS still owns sticky positioning,
+opaque backgrounds, and the body-only separator. Existing scroll, resize, route and render callbacks
+synchronize the class; no row-level listeners or measurements are added.
+
+Structural evidence: a 100-row mobile table now creates zero scroll-state query containers instead of
+100, with two header/scroller geometry reads per synchronization independent of row count. Browser
+regressions cover tablet/phone scrolling before and after the sticky threshold, both extremes and
+cached route returns.
+
+### Paired #982 -> #983 Database evidence — 2026-09-15
+
+The final performance gate uses [run 35013066530](https://github.com/FraGioco9/mfl-front-office/actions/runs/35013066530),
+which captured #982 and #983 sequentially in the same GitHub-hosted runner/job. Both sides used the same
+validated database artifact `10370002986` (dataset generated `2026-09-14T21:35:10.196Z`), Chrome
+152.0.7977.82, Node v22.23.2, guest/public-database access, five repetitions and the same desktop and
+slow-mobile profiles. The #982 checkout was `37d1992e9a101155ff4d9a527b58815650e04fe0`; the #983
+candidate checkout was the PR merge ref `ed0c7d48c886a379b648cd3a8af94973f0ac9d74`. The temporary
+workflow used only to launch this paired capture was removed immediately after the run started and is
+not part of the production change.
+
+Paired medians:
+
+| Profile | Phase | Useful ms #982 -> #983 | Settled ms #982 -> #983 | Long-task ms #982 -> #983 | CLS #982 -> #983 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| desktop | cold | 419.9 -> 373.0 (-11.2%) | 513.5 -> 467.7 (-8.9%) | 205 -> 162 (-21.0%) | 0.0000 -> 0.0000 |
+| desktop | refresh | 285.7 -> 278.6 (-2.5%) | 307.5 -> 299.3 (-2.7%) | 135 -> 133 (-1.5%) | 0.0000 -> 0.0000 |
+| desktop | cached | 6.3 -> 5.4 (-14.3%) | 78.4 -> 84.6 (+7.9%) | 72 -> 72 (+0.0%) | 0.0000 -> 0.0000 |
+| mobile-slow | cold | 2256.2 -> 2316.2 (+2.7%) | 2764.6 -> 2741.5 (-0.8%) | 1707 -> 1593 (-6.7%) | 0.0001 -> 0.0001 |
+| mobile-slow | refresh | 1618.2 -> 1682.2 (+4.0%) | 1699.5 -> 1761.5 (+3.6%) | 1032 -> 963 (-6.7%) | 0.0001 -> 0.0001 |
+| mobile-slow | cached | 23.3 -> 23.3 (+0.0%) | 333.7 -> 298.8 (-10.5%) | 305 -> 273 (-10.5%) | 0.0411 -> 0.0411 |
+
+The targeted cached slow-mobile rendering path also improves its median LoAF render phase from 236.7 ms
+to 212.4 ms (-10.3%) and frame-1-to-frame-2 settlement from 307.6 ms to 275.0 ms. This is the causal
+evidence for #983: cached table settlement and browser rendering work improve while useful-content time
+and CLS stay unchanged. Cold/refresh totals are mixed (roughly neutral to a few percent slower in some
+medians) while their long-task totals improve 6.7%; do not describe #983 as an across-the-board latency
+speedup. Desktop movement is retained as a guard but is not attributed to the mobile-only implementation.
+
+A separate candidate-only capture in [run 35012214509](https://github.com/FraGioco9/mfl-front-office/actions/runs/35012214509)
+completed successfully, but the paired run above supersedes cross-run timing comparisons because it
+removes GitHub-runner variation. The cached-mobile CLS value of 0.0411 was reproduced by the exact #982
+control, so #983 does not introduce that shift.
 
 The historical [2026-09-12 baseline](performance-923.md#reference-browserruntime-baseline--2026-09-12)
 used a local Vercel runtime and lacks equivalent recorded build/dataset/browser provenance. The journey

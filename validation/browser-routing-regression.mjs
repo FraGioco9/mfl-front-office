@@ -309,6 +309,10 @@ const browserTestSource = String.raw`(() => {
       ".siteFooterDetails",
       ".siteFooterDetailsInner",
     ]) {
+      if (viewportWidth <= 900 && selector.startsWith(".stats")) {
+        assert(hidden(".stats"), "Mobile header counters should use the compact hidden state.");
+        continue;
+      }
       assertElementWithinViewport(selector, viewportWidth);
     }
 
@@ -746,7 +750,8 @@ const browserTestSource = String.raw`(() => {
     try {
       const top = active.getBoundingClientRect().top;
       const gap = footer.getBoundingClientRect().top - active.getBoundingClientRect().bottom;
-      assert(Math.abs(gap - 22) < 1, "The footer must retain its 22px content gap.");
+      const expectedGap = parseFloat(getComputedStyle(footer).marginTop);
+      assert(expectedGap > 0 && Math.abs(gap - expectedGap) < 1, "The footer must retain its responsive content gap.");
       main.prepend(parked);
       assert(Math.abs(active.getBoundingClientRect().top - top) < 1, "A parked Table must not increase header-to-title spacing.");
       footer.before(parked);
@@ -755,6 +760,44 @@ const browserTestSource = String.raw`(() => {
     } finally {
       main.remove();
     }
+  }
+
+  async function assertStickyNameSeparator() {
+    if (scenario !== "database" || !matchMedia("(max-width: 900px)").matches) return;
+    const scroller = document.querySelector("#progressionPage .playerTableScroller");
+    const name = document.querySelector("#tableBody .playerNameCell");
+    const cell = name?.closest("td");
+    const preceding = document.querySelector("#tableHead th.col-name")?.previousElementSibling;
+    assert(scroller instanceof HTMLElement && name instanceof HTMLElement && cell instanceof HTMLElement
+      && preceding instanceof HTMLElement, "Mobile sticky Name fixture is missing.");
+    assert(getComputedStyle(cell).containerType === "normal", "Name rows must not create scroll-state query containers.");
+    const edge = scroller.getBoundingClientRect().left + scroller.clientLeft;
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const threshold = preceding.getBoundingClientRect().right - edge + scroller.scrollLeft;
+    const checkScroll = async (left, expected) => {
+      scroller.scrollLeft = Math.min(maxScroll, Math.max(0, left));
+      scroller.dispatchEvent(new Event("scroll"));
+      await delay(80);
+      const stuck = scroller.classList.contains("mflPlayerTableNameStuck");
+      assert(stuck === expected, "Name stuck state is wrong at scrollLeft=" + scroller.scrollLeft);
+      if (expected) {
+        const separator = getComputedStyle(name, "::before");
+        assert(separator.content === '\"\"' && parseFloat(separator.borderRightWidth) > 0,
+          "Name separator must be painted while the Name column is stuck.");
+        assert(Math.abs(cell.getBoundingClientRect().left - edge) < 1, "Name must stay pinned at the scroller edge.");
+      }
+    };
+    await checkScroll(0, false);
+    if (maxScroll <= 2) return;
+    await checkScroll(Math.max(0, threshold - 2), false);
+    if (maxScroll <= threshold) {
+      await checkScroll(maxScroll, false);
+      await checkScroll(0, false);
+      return;
+    }
+    await checkScroll(Math.min(maxScroll, threshold + 4), true);
+    await checkScroll(maxScroll, true);
+    await checkScroll(0, false);
   }
 
   async function assertSharedModalFocusLifecycle() {
@@ -973,11 +1016,33 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    const compactDatabaseStickyRegression = scenario === "database"
+      && document.documentElement.clientWidth <= 900;
+    if (compactDatabaseStickyRegression) {
+      const waitForStickyTableStructure = (label) => waitFor(
+        () => document.querySelector("#tableHead th.col-name") instanceof HTMLTableCellElement
+          && document.querySelector("#tableBody td.nameCell") instanceof HTMLTableCellElement,
+        label,
+      );
+      await waitForStickyTableStructure("Compact Database direct refresh did not expose the sticky Name table structure.");
+      assertSharedChromeGeometry();
+      assertPageAccessibilityState();
+      await assertStickyNameSeparator();
+      await navigateBackToScenario(setPage, timeline);
+      await waitForStickyTableStructure("Compact Database cached return did not expose the sticky Name table structure.");
+      await assertStickyNameSeparator();
+      assertSharedChromeGeometry();
+      assertPageAccessibilityState();
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", "database: compact sticky Name behavior remained canonical across direct and cached routes.");
+      return;
+    }
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     assertLoadingAccessibility();
     assertParkedTableSpacing();
     await assertDatabaseSortAccessibility();
+    await assertStickyNameSeparator();
     await assertSharedModalFocusLifecycle();
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
@@ -1014,6 +1079,7 @@ const browserTestSource = String.raw`(() => {
     }
 
     await navigateBackToScenario(setPage, timeline);
+    await assertStickyNameSeparator();
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     const spaState = routeState();
@@ -1539,6 +1605,8 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
 const regressionScenarios = Object.freeze([
   ["stale", "/privacy"],
   ["database", "/database/attributes"],
+  ["database-tablet", "/database/attributes", 800, 900],
+  ["database-phone", "/database/attributes", 520, 900],
   ["database-empty", "/database/attributes?overall.gte=99"],
   ["player", "/players/1"],
   ["player-1444", "/players/1", 1444, 900],

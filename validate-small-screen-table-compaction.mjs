@@ -41,7 +41,7 @@ assert.doesNotMatch(
   "A temporarily hidden table must not clear an already-valid first-paint/hydrated fade direction.",
 );
 assert.ok(
-  shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.getClientRects().length === 0) return;'),
+  shared.includes('if (!MOBILE_TABLE_MEDIA.matches) {\n      scroller.classList.remove(PLAYER_TABLE_NAME_STUCK_CLASS);\n      setPlayerTableFadeDirections(scroller, false, false);\n      return;\n    }\n    if (scroller.getClientRects().length === 0) return;'),
   "Fade ownership must clear only when leaving mobile and preserve the previous cue while the table is temporarily non-renderable.",
 );
 assert.ok(
