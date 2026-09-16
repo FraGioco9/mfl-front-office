@@ -196,6 +196,34 @@ function rememberTableSortState(
   return true;
 }
 
+function tableSortSearchForSessionEntry(options = {}) {
+  const routePath = String(options.path || options.replaceUrl || "");
+  if (routePath) {
+    const queryIndex = routePath.indexOf("?");
+    if (queryIndex < 0) return "";
+    const hashIndex = routePath.indexOf("#", queryIndex);
+    return routePath.slice(queryIndex, hashIndex >= 0 ? hashIndex : undefined);
+  }
+  return String(window.location.search || "");
+}
+
+function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {
+  const fallback = fallbackSortState || defaultSortStateForView(viewName, pageName);
+  const params = new URLSearchParams(tableSortSearchForSessionEntry(options).replace(/^\?/, ""));
+  const requestedSortKey = String(params.get("sort") || "");
+  const requestedSortDirection = String(params.get("direction") || "").toLowerCase();
+  if (
+    !sortKeySupportedByView(requestedSortKey, viewName, pageName)
+    || (requestedSortDirection !== "asc" && requestedSortDirection !== "desc")
+  ) {
+    return fallback;
+  }
+  return {
+    sortKey: requestedSortKey,
+    sortDirection: requestedSortDirection,
+  };
+}
+
 function resetTableSortSession(pageName, options = {}) {
   const nextSessionKey = tableSortSessionKey(pageName, options);
   if (nextSessionKey === state.tableSortSessionKey) return false;
@@ -206,9 +234,15 @@ function resetTableSortSession(pageName, options = {}) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
   const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
-  state.tableSortSessionSortState = defaultSortState;
-  state.sortKey = defaultSortState.sortKey;
-  state.sortDirection = defaultSortState.sortDirection;
+  const entrySortState = tableSortStateForSessionEntry(
+    normalizedPageName,
+    nextView,
+    options,
+    defaultSortState,
+  );
+  state.tableSortSessionSortState = entrySortState;
+  state.sortKey = entrySortState.sortKey;
+  state.sortDirection = entrySortState.sortDirection;
   return true;
 }
 
