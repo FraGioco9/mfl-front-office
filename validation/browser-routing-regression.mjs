@@ -619,8 +619,8 @@ const browserTestSource = String.raw`(() => {
     } else if (scenario === "database-linked-state") {
       assert(stateValue.path === "/database/attributes", "Linked Database canonical path is wrong: " + stateValue.path);
       assert(
-        stateValue.search === "?overall.gte=79&sort=age&direction=asc",
-        "Linked Database URL state was not preserved: " + stateValue.search,
+        stateValue.search === "?sort=age&direction=asc&overall.gte=79",
+        "Linked Database canonical URL state was not preserved: " + stateValue.search,
       );
       assert(stateValue.tableText.includes(expectedPlayerName), "Linked Database did not render the fixture player.");
       assert(stateValue.page === "database", "Linked Database body page owner is wrong: " + stateValue.page);
