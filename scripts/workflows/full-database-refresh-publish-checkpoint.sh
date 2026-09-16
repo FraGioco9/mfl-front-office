@@ -19,11 +19,13 @@ bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-install-
 node production-site/build-app-core.mjs
 test -s production-site/modules/app-core-runtime.js
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-validate-database-with-published-site-adapter.sh"
-bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-record-expected-database-summary.sh"
 
 ACTUAL_SHA="$(git -C production-site rev-parse HEAD)"
 EXPECTED_SHA="${PUBLISHED_SITE_SHA:?published site SHA is required}"
 test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+
+DEPLOYMENT_ROOT=production-site EXPECTED_SITE_SHA="$EXPECTED_SHA" \
+  bash "$GITHUB_WORKSPACE/builder/scripts/workflows/record-production-identity.sh"
 
 PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:api/_database.js)"
 CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object api/_database.js)"
@@ -57,16 +59,20 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   VERCEL_REMOTE_ROOT="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(".vercel/project.json","utf8")); process.stdout.write(String(p?.settings?.rootDirectory ?? p?.rootDirectory ?? ""));')"
   export VERCEL_REMOTE_ROOT
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"
-  ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
+  MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"
   vercel deploy --prebuilt --prod --yes --force \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
 )
 
-bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-verify-live-production-database.sh"
+bash "$GITHUB_WORKSPACE/builder/scripts/workflows/verify-live-production-deployment.sh"
 
 COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+IDENTITY_PATH="$RUNNER_TEMP/mfl-production-expected.json"
+VERSION="$(jq -r '.version' "$IDENTITY_PATH")"
+GENERATED_AT="$(jq -r '.database.generatedAt' "$IDENTITY_PATH")"
+
 case "$CHECKPOINT_NAME" in
   core)
     DOMAIN_STATUS='{"wallets":"current-stage","players":"current-stage","clubs":"current-stage","playerSeasons":"previous-production-fallback","progressions":"previous-production-fallback","derivedPlayerData":"current-stage","competitions":"previous-production-fallback"}'
@@ -93,14 +99,22 @@ jq -n \
   --arg runId "$GITHUB_RUN_ID" \
   --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
   --arg sourceSha "$EXPECTED_SHA" \
+  --arg version "$VERSION" \
+  --arg generatedAt "$GENERATED_AT" \
   --argjson domains "$DOMAIN_STATUS" \
-  '{checkpoint:$checkpoint,completedAt:$completedAt,runId:$runId,runAttempt:$runAttempt,publishedSiteSha:$sourceSha,domains:$domains}' \
+  '{checkpoint:$checkpoint,completedAt:$completedAt,runId:$runId,runAttempt:$runAttempt,publishedSiteSha:$sourceSha,deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt},domains:$domains}' \
   > "$METADATA_PATH"
 
 {
   echo "### Database checkpoint: $CHECKPOINT_NAME"
   echo
-  echo "Published at \`$COMPLETED_AT\` from run \`$GITHUB_RUN_ID\` attempt \`$GITHUB_RUN_ATTEMPT\`."
+  echo "Published at `$COMPLETED_AT` from run `$GITHUB_RUN_ID` attempt `$GITHUB_RUN_ATTEMPT`."
+  echo
+  echo '| Deployment identity | Value |'
+  echo '| --- | --- |'
+  echo "| Site commit | `$EXPECTED_SHA` |"
+  echo "| Application version | `$VERSION` |"
+  echo "| Database generated at | `$GENERATED_AT` |"
   echo
   echo '| Domain | Status |'
   echo '| --- | --- |'
