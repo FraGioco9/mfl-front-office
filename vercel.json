@@ -1,0 +1,27 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/evaluation",
+      "has": [
+        {
+          "type": "query",
+          "key": "share"
+        }
+      ],
+      "destination": "/api/evaluation-preview"
+    },
+    {
+      "source": "/home",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation)/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
