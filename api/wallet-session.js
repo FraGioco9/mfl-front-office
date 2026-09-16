@@ -1,7 +1,7 @@
 const { createWalletChallengeService } = require("./_wallet-challenge");
 const { verifyWalletProof } = require("./_wallet-proof");
 const { createWalletSessionStore, WALLET_SESSION_TTL_MS } = require("./_wallet-session");
-const { readJsonBody } = require("./_request-body");
+const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
   WALLET_SESSION_COOKIE,
   WALLET_CHALLENGE_COOKIE,
@@ -148,14 +148,8 @@ function createWalletSessionHandler({
     }
 
     if (method === "POST") {
-      const contentLength = Number(request?.headers?.["content-length"] || 0);
-      if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-        response.status(413).json({ error: "Wallet authentication request is too large." });
-        return;
-      }
-
       try {
-        const body = await readBody(request);
+        const body = await readBody(request, { maxBytes: MAX_BODY_BYTES });
         if (!body || typeof body !== "object" || Array.isArray(body)) {
           response.status(400).json({ error: "Malformed wallet authentication request." });
           return;
@@ -205,6 +199,7 @@ function createWalletSessionHandler({
           expiresAt: session.expiresAt,
         });
       } catch (error) {
+        if (sendRequestBodyError(response, error)) return;
         console.warn("Could not exchange wallet challenge.", error);
         response.status(503).json({ error: "Wallet authentication is temporarily unavailable." });
       }

@@ -61,8 +61,9 @@ invariant(occurrences(combined, "function supabaseConfig(") === 1, "API Supabase
 invariant(occurrences(combined, "function supabaseRequest(") === 1, "API Supabase REST transport must have exactly one owner.");
 includes(seasonRatios, "supabaseConfig({ allowAnonKey: true })", "MFL season ratios must retain service-role/anon-key fallback through the shared Supabase owner.");
 
-includes(requestBody, "async function readRequestBody(request)", "Request body streaming must have one canonical owner.");
-includes(requestBody, "async function readJsonBody(request)", "JSON request parsing must have one canonical owner.");
+includes(requestBody, "async function readRequestBody(request, options = {})", "Bounded request body streaming must have one canonical owner.");
+includes(requestBody, "async function readJsonBody(request, options = {})", "Bounded JSON request parsing must have one canonical owner.");
+includes(requestBody, "function sendRequestBodyError(response, error)", "Request-body client errors must have one canonical response owner.");
 invariant(occurrences(combined, "for await (const chunk of request)") === 1, "API request-body streaming must not be duplicated across endpoints.");
 
 includes(evaluationPayload, "function normalizeEvaluationId(value)", "Evaluation IDs must have one canonical normalizer.");

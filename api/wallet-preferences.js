@@ -1,6 +1,6 @@
 const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
-const { readJsonBody } = require("./_request-body");
+const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { normalizeLateSeasonRewardRates } = require("./_evaluation-payload");
 const { touchWalletLastSeen } = require("./_wallet-presence");
 
@@ -9,6 +9,7 @@ const WATCHLIST_ID_LENGTH = 8;
 const MAX_WATCHLISTS = 5;
 const MAX_WATCHLIST_PLAYERS = 250;
 const DEFAULT_WATCHLIST_NAME = "Default";
+const MAX_BODY_BYTES = 512 * 1024;
 
 function emptyPreferences() {
   return { watchlists: [], playerNotes: {}, tableState: null, evaluationSettings: null, settings: null };
@@ -333,13 +334,14 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "PUT") {
-      const body = await readJsonBody(request);
+      const body = await readJsonBody(request, { maxBytes: MAX_BODY_BYTES });
       response.status(200).json(await writePreferences(wallet, body));
       return;
     }
 
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
+    if (sendRequestBodyError(response, error)) return;
     console.warn("Could not handle wallet preferences.", error);
     response.status(500).json({ error: "Could not save wallet preferences." });
   }

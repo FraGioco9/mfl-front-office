@@ -1,5 +1,6 @@
 const validators = [
   "validate-shared-api-logic.mjs",
+  "validate-request-body-limits.mjs",
   "validate-wallet-proof.mjs",
   "validate-wallet-challenge.mjs",
   "validate-wallet-session.mjs",

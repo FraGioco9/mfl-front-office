@@ -1,6 +1,6 @@
 const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
-const { readJsonBody } = require("./_request-body");
+const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
   normalizeEvaluationId,
   generateEvaluationId,
@@ -9,6 +9,8 @@ const {
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
 const { readActiveEvaluationShare } = require("./_evaluation-share-preview");
 const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
+
+const MAX_BODY_BYTES = 256 * 1024;
 
 function evaluationShareExpiresAt(now = new Date()) {
   const expiresAt = new Date(now);
@@ -62,7 +64,7 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      const payload = normalizeEvaluationPayload(await readJsonBody(request), { includeSummaryMetrics: true });
+      const payload = normalizeEvaluationPayload(await readJsonBody(request, { maxBytes: MAX_BODY_BYTES }), { includeSummaryMetrics: true });
 
       if (!payload) {
         response.status(400).json({ error: "Invalid evaluation share payload." });
@@ -124,6 +126,7 @@ module.exports = async function handler(request, response) {
 
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
+    if (sendRequestBodyError(response, error)) return;
     console.warn("Could not handle evaluation share.", error);
     response.status(500).json({ error: "Could not handle evaluation share." });
   }
