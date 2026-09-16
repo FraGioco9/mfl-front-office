@@ -264,11 +264,13 @@ function syncMobileTablePageTransitionChrome(pageName) {
 
 async function prepareInteractiveRouteBeforeCommit(pageName, options = {}) {
   if (String(pageName || "") !== "evaluation") return;
-  const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
-    ? window.__mflEnsureRouteCore("evaluation", options)
+  const ensureRouteCore = Reflect.get(window, "__mflEnsureRouteCore");
+  const ensureRouteRuntime = Reflect.get(window, "__mflEnsureRouteRuntime");
+  const routeCorePromise = typeof ensureRouteCore === "function"
+    ? ensureRouteCore("evaluation", options)
     : null;
-  if (typeof window.__mflEnsureRouteRuntime === "function") {
-    await window.__mflEnsureRouteRuntime("evaluation", options);
+  if (typeof ensureRouteRuntime === "function") {
+    await ensureRouteRuntime("evaluation", options);
   }
   if (routeCorePromise) await routeCorePromise;
 }
