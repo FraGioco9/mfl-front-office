@@ -27,9 +27,13 @@ assert.match(core, /pageName === "club"[\s\S]{0,180}sortKey:\s*"positions"[\s\S]
 assert.match(core, /sortKey:\s*"overall",\s*\n\s*sortDirection:\s*"desc"/u, "Non-Club table views must default to Overall descending.");
 assert.doesNotMatch(core, /sortDirection:\s*viewName === "next" \? "asc" : "desc"/u, "Next Overall must not default ascending.");
 
-const resetSessionSource = sourceBetween(core, "function resetTableSortSession", "function defaultTablePageState");
+const resetSessionSource = sourceBetween(core, "function tableSortSearchForSessionEntry", "function defaultTablePageState");
+assert.match(resetSessionSource, /const routePath = String\(options\.path \|\| options\.replaceUrl \|\| ""\);/u, "A new page session must inspect the destination route before it paints.");
+assert.match(resetSessionSource, /const requestedSortKey = String\(params\.get\("sort"\) \|\| ""\);/u, "A new page session must read linked sort intent from the destination URL.");
+assert.match(resetSessionSource, /sortKeySupportedByView\(requestedSortKey, viewName, pageName\)/u, "Linked first-paint sorting must reject columns unsupported by the destination view.");
 assert.match(resetSessionSource, /state\.tableSortSessionSortState = null;/u, "Changing page/entity must clear the previous page sort intent.");
-assert.match(resetSessionSource, /state\.tableSortSessionSortState = defaultSortState;/u, "A new page session must start from its canonical default.");
+assert.match(resetSessionSource, /state\.tableSortSessionSortState = entrySortState;/u, "A new page session must seed valid linked sorting before any destination transition can paint.");
+assert.match(resetSessionSource, /fallbackSortState \|\| defaultSortStateForView/u, "A new page session without valid linked sorting must retain its canonical default.");
 
 const sortResolverSource = sourceBetween(core, "function tableSortStateForView", "function rememberTableSortState");
 assert.match(sortResolverSource, /sourceSortSupported = sortKeySupportedByView/u, "View sorting must detect whether the destination supports the active sort column.");
