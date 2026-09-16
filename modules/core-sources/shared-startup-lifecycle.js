@@ -78,12 +78,31 @@ function setupChangelogSections() {
   });
 }
 
+function canonicalizeInitialTableLink(target) {
+  const pageName = String(target?.pageName || "");
+  if (!pageName || !tablePages.has(pageName) || !location.search) return target;
+  const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+  if (!tableUrlState || typeof tableUrlState.resolve !== "function") return target;
+
+  const viewName = normalizeViewForPage(target?.options?.view || state.tablePageStates?.[pageName]?.view, pageName);
+  const fallbackState = state.tablePageStates?.[pageName] || defaultTablePageState(pageName);
+  const resolved = tableUrlState.resolve(pageName, viewName, location.search, fallbackState);
+  if (!resolved?.explicit) return target;
+
+  const canonicalSearch = String(resolved.canonicalSearch || "");
+  if (canonicalSearch === location.search) return target;
+  const canonicalLocation = `${location.pathname}${canonicalSearch}${location.hash || ""}`;
+  window.history.replaceState(window.history.state, "", canonicalLocation);
+  return pageTargetFromPath(`${location.pathname}${location.search}`);
+}
+
 async function startApp() {
   loadTheme();
   setupChangelogSections();
   loadSavedTableState();
   window.__mflCoreContracts?.installEvaluationRecentStateOwnership?.();
-  const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  let initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  initialTarget = canonicalizeInitialTableLink(initialTarget);
   commitPageTransition(initialTarget.pageName, false, initialTarget.options);
   const startupNavigationSequence = navigationTransitionSequence;
   const startupSummaryPromise = loadSummary();
