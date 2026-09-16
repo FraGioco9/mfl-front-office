@@ -245,6 +245,136 @@
           ...INITIAL_TABLE_FILTER_STAT_COLUMNS,
           "contract_status", "owned_since",
         ]);
+        const INITIAL_TABLE_URL_QUICK_FILTER_KEYS = new Set([
+          "hideRetired", "hideRetiring", "hideMfl", "packableOnly", "newMintsOnly",
+        ]);
+        const INITIAL_TABLE_URL_SORT_KEYS = new Set(["sort", "direction"]);
+        const INITIAL_TABLE_URL_OPERATORS_BY_TOKEN = Object.freeze({
+          primary: "primary_is",
+          canplay: "can_play",
+          after: "after",
+          before: "before",
+          during: "during",
+          is: "=",
+          contains: "contains",
+          gte: ">=",
+          lte: "<=",
+          between: "between",
+        });
+        const INITIAL_TABLE_FILTER_POSITION_VALUES = new Set(["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"]);
+        const INITIAL_TABLE_FILTER_CONTRACT_STATUS_VALUES = new Set(["under_contract", "free_agent", "development_center"]);
+        const INITIAL_TABLE_FILTER_LISTING_VALUES = new Set(["for_sale", "not_for_sale"]);
+        const INITIAL_TABLE_FILTER_NUMBER_COLUMNS = new Set([
+          "player_id", "listing_price", "age", "owned_since", "player_seasons", ...INITIAL_TABLE_FILTER_STAT_COLUMNS,
+        ]);
+
+        function initialTableFilterOperators(column) {
+          if (column === "positions") return new Set(["primary_is", "can_play"]);
+          if (column === "owned_since") return new Set(["after", "before", "during"]);
+          if (column === "contract_status" || column === "listing_price" || column === "nationality") return new Set(["="]);
+          if (column === "name" || column === "wallet_name") return new Set(["contains"]);
+          if (
+            INITIAL_TABLE_FILTER_NUMBER_COLUMNS.has(column)
+            || column.endsWith("_prog_current_season")
+            || column.endsWith("_prog_all")
+          ) {
+            return new Set([">=", "<=", "between", "="]);
+          }
+          return new Set(["contains"]);
+        }
+
+        function initialTableUrlRuleIsValid(column, operator, value, valueTo = "") {
+          if (!initialTableFilterOperators(column).has(operator) || !String(value || "").trim()) return false;
+          if ((operator === "between" || operator === "during") && !String(valueTo || "").trim()) return false;
+          if (column === "positions") return INITIAL_TABLE_FILTER_POSITION_VALUES.has(String(value));
+          if (column === "contract_status") return INITIAL_TABLE_FILTER_CONTRACT_STATUS_VALUES.has(String(value));
+          if (column === "listing_price") return INITIAL_TABLE_FILTER_LISTING_VALUES.has(String(value));
+          if (column === "owned_since") {
+            const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+            return isoDate.test(String(value)) && (operator !== "during" || isoDate.test(String(valueTo)));
+          }
+          if (
+            INITIAL_TABLE_FILTER_NUMBER_COLUMNS.has(column)
+            || column.endsWith("_prog_current_season")
+            || column.endsWith("_prog_all")
+          ) {
+            return Number.isFinite(Number(value))
+              && (operator !== "between" || Number.isFinite(Number(valueTo)));
+          }
+          return true;
+        }
+
+        function initialTableUrlRules(pageName, viewName, params) {
+          const entries = [];
+          for (const [key, rawValue] of params.entries()) {
+            if (INITIAL_TABLE_URL_QUICK_FILTER_KEYS.has(key) || INITIAL_TABLE_URL_SORT_KEYS.has(key)) continue;
+            const match = String(key || "").match(/^(or\.)?([^.]+)\.([a-z]+)(?:\.(from|to))?$/);
+            if (!match) continue;
+            const operator = INITIAL_TABLE_URL_OPERATORS_BY_TOKEN[match[3]] || "";
+            const column = match[2];
+            const connector = match[1] ? "or" : "and";
+            const rangeSide = match[4] || "";
+            if (!operator || !initialTableFilterColumnAllowed(pageName, viewName, column)) continue;
+
+            const rangeOperator = operator === "between" || operator === "during";
+            if (rangeOperator !== Boolean(rangeSide)) continue;
+            const value = String(rawValue || "");
+
+            if (rangeOperator) {
+              if (rangeSide === "from") {
+                entries.push({ column, connector, operator, value, valueTo: "" });
+                continue;
+              }
+              const openRange = [...entries].reverse().find((entry) => (
+                entry.column === column
+                && entry.connector === connector
+                && entry.operator === operator
+                && !entry.valueTo
+              ));
+              if (openRange) openRange.valueTo = value;
+              continue;
+            }
+
+            entries.push({ column, connector, operator, value, valueTo: "" });
+          }
+
+          return entries.filter((entry) => initialTableUrlRuleIsValid(
+            entry.column,
+            entry.operator,
+            entry.value,
+            entry.valueTo,
+          ));
+        }
+
+        function initialTableStateFromLocation(pageName, viewName, savedState = {}) {
+          const params = new URLSearchParams(window.location.search);
+          if (!Array.from(params.keys()).length) return savedState;
+
+          const state = {
+            ...savedState,
+            hideRetired: pageName !== "club",
+            hideRetiring: false,
+            hideMflPlayers: pageName === "database",
+            mflPackable: pageName === "mfl",
+            newMints: false,
+            rules: initialTableUrlRules(pageName, viewName, params),
+          };
+
+          for (const [key, value] of params.entries()) {
+            if (!INITIAL_TABLE_URL_QUICK_FILTER_KEYS.has(key)) continue;
+            const booleanValue = String(value || "").toLowerCase();
+            if (booleanValue !== "true" && booleanValue !== "false") continue;
+            const enabled = booleanValue === "true";
+            if (key === "hideRetired") state.hideRetired = enabled;
+            else if (key === "hideRetiring") state.hideRetiring = enabled;
+            else if (key === "hideMfl" && pageName === "database") state.hideMflPlayers = enabled;
+            else if (key === "packableOnly" && pageName === "mfl") state.mflPackable = enabled;
+            else if (key === "newMintsOnly") state.newMints = enabled;
+          }
+
+          if (pageName === "mfl" && state.newMints) state.mflPackable = false;
+          return state;
+        }
 
         function storedInitialTablePageState(pageName) {
           try {
@@ -340,10 +470,11 @@
           const activeView = tableConfig.order.includes(requestedView) ? requestedView : tableConfig.fallback;
           root.dataset.initialTablePage = tablePage;
           root.dataset.initialTableView = activeView;
+          const storedInitialState = storedInitialTablePageState(tablePage) || {};
           window.__mflInitialTableControlState = normalizeInitialTableControlState(
             tablePage,
             activeView,
-            storedInitialTablePageState(tablePage) || {},
+            initialTableStateFromLocation(tablePage, activeView, storedInitialState),
           );
 
           const routeSelector = `html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="${tablePage}"]`;
@@ -645,7 +776,25 @@
             </div>
           </section>
           <section class="views" aria-label="Table views">
-            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
+            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount" hidden></span></button>
+            <script>
+              (() => {
+                const state = window.__mflInitialTableControlState;
+                const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))
+                  ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
+                  : 0;
+                const filterSummary = document.getElementById("filterSummary");
+                const openFiltersButton = document.getElementById("openFiltersButton");
+                if (filterSummary instanceof HTMLElement) {
+                  filterSummary.textContent = String(activeRuleCount);
+                  filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                  filterSummary.hidden = false;
+                }
+                if (openFiltersButton instanceof HTMLElement) {
+                  openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                }
+              })();
+            </script>
             <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
@@ -730,18 +879,6 @@
                 newMintsLabel.textContent = state.pageName === "mfl" ? "Only aged players" : "Only new mints";
               }
 
-              const activeRuleCount = Number.isFinite(Number(state.activeRuleCount))
-                ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
-                : 0;
-              const filterSummary = document.getElementById("filterSummary");
-              const openFiltersButton = document.getElementById("openFiltersButton");
-              if (filterSummary instanceof HTMLElement) {
-                filterSummary.textContent = String(activeRuleCount);
-                filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
-              }
-              if (openFiltersButton instanceof HTMLElement) {
-                openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
-              }
             })();
           </script>
 

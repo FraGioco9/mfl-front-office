@@ -25,6 +25,55 @@
   const FIRST_PAINT_CONTRACT_COLUMNS = APP_CONFIG.table.contractColumns;
   const FIRST_PAINT_AGENT_PAGES = new Set(APP_CONFIG.table.joinedAgencyPages);
   const FIRST_PAINT_SORTABLE_COLUMNS = new Set(APP_CONFIG.table.sortableColumns);
+  const FIRST_PAINT_TABLE_URL_QUICK_FILTER_KEYS = new Set([
+    "hideRetired",
+    "hideRetiring",
+    "hideMfl",
+    "packableOnly",
+    "newMintsOnly",
+  ]);
+  const FIRST_PAINT_TABLE_URL_SORT_KEYS = new Set(["sort", "direction"]);
+  const FIRST_PAINT_TABLE_URL_OPERATORS_BY_TOKEN = Object.freeze({
+    primary: "primary_is",
+    canplay: "can_play",
+    after: "after",
+    before: "before",
+    during: "during",
+    is: "=",
+    contains: "contains",
+    gte: ">=",
+    lte: "<=",
+    between: "between",
+  });
+  const FIRST_PAINT_FILTER_POSITION_VALUES = new Set(["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"]);
+  const FIRST_PAINT_FILTER_CONTRACT_STATUS_VALUES = new Set(["under_contract", "free_agent", "development_center"]);
+  const FIRST_PAINT_FILTER_LISTING_VALUES = new Set(["for_sale", "not_for_sale"]);
+  const FIRST_PAINT_BASE_FILTER_COLUMNS = Object.freeze([
+    "player_id",
+    "wallet_name",
+    "name",
+    "listing_price",
+    "positions",
+    "age",
+    "player_seasons",
+    "nationality",
+    ...FIRST_PAINT_STAT_COLUMNS,
+    "contract_status",
+    "owned_since",
+  ]);
+  const FIRST_PAINT_NUMBER_FILTER_COLUMNS = new Set([
+    "player_id",
+    "listing_price",
+    "age",
+    "height",
+    "retirement_years",
+    "player_seasons",
+    "goalkeeping",
+    "owned_since",
+    "active_contract_revenue_share",
+    "active_contract_club_division",
+    ...FIRST_PAINT_STAT_COLUMNS,
+  ]);
   const FIRST_PAINT_COLUMN_CLASSES = APP_CONFIG.table.columnClasses;
   const FIRST_PAINT_COLUMN_LABELS = APP_CONFIG.table.columnLabels;
   const FIRST_PAINT_COMPACT_COLUMN_LABELS = Object.freeze({
@@ -483,6 +532,144 @@
     }
   }
 
+  function firstPaintTableUrlParams(urlLike = window.location.href) {
+    try {
+      return new URL(String(urlLike || window.location.href), window.location.href).searchParams;
+    } catch {
+      return new URLSearchParams();
+    }
+  }
+
+  function firstPaintTableAllowedFilterColumns(pageName, viewName) {
+    const normalizedPage = String(pageName || "").toLowerCase();
+    const normalizedView = String(viewName || "").toLowerCase();
+    const columns = (normalizedPage === "mfl" || normalizedPage === "agents")
+      ? FIRST_PAINT_BASE_FILTER_COLUMNS.filter((column) => (
+        column !== "wallet_name"
+        && (normalizedPage !== "mfl" || column !== "contract_status")
+      ))
+      : [...FIRST_PAINT_BASE_FILTER_COLUMNS];
+
+    if (normalizedView === "current") {
+      columns.push(...FIRST_PAINT_STAT_COLUMNS.map((column) => `${column}_prog_current_season`));
+    } else if (normalizedView === "all") {
+      columns.push(...FIRST_PAINT_STAT_COLUMNS.map((column) => `${column}_prog_all`));
+    }
+    return columns;
+  }
+
+  function firstPaintTableFilterOperators(column) {
+    if (column === "positions") return new Set(["primary_is", "can_play"]);
+    if (column === "owned_since") return new Set(["after", "before", "during"]);
+    if (column === "contract_status" || column === "listing_price" || column === "nationality") return new Set(["="]);
+    if (column === "name" || column === "wallet_name") return new Set(["contains"]);
+    if (
+      FIRST_PAINT_NUMBER_FILTER_COLUMNS.has(column)
+      || column.endsWith("_prog_all")
+      || column.endsWith("_prog_current_season")
+    ) {
+      return new Set([">=", "<=", "between", "="]);
+    }
+    return new Set(["contains"]);
+  }
+
+  function firstPaintTableUrlRuleIsValid(column, operator, value, valueTo = "") {
+    if (!firstPaintTableFilterOperators(column).has(operator) || !String(value || "").trim()) return false;
+    if ((operator === "between" || operator === "during") && !String(valueTo || "").trim()) return false;
+    if (column === "positions") return FIRST_PAINT_FILTER_POSITION_VALUES.has(String(value));
+    if (column === "contract_status") return FIRST_PAINT_FILTER_CONTRACT_STATUS_VALUES.has(String(value));
+    if (column === "listing_price") return FIRST_PAINT_FILTER_LISTING_VALUES.has(String(value));
+    if (column === "owned_since") {
+      const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+      return isoDate.test(String(value)) && (operator !== "during" || isoDate.test(String(valueTo)));
+    }
+    if (
+      FIRST_PAINT_NUMBER_FILTER_COLUMNS.has(column)
+      || column.endsWith("_prog_all")
+      || column.endsWith("_prog_current_season")
+    ) {
+      return Number.isFinite(Number(value))
+        && (operator !== "between" || Number.isFinite(Number(valueTo)));
+    }
+    return true;
+  }
+
+  function firstPaintTableUrlRules(pageName, viewName, params) {
+    const allowedColumns = new Set(firstPaintTableAllowedFilterColumns(pageName, viewName));
+    const entries = [];
+
+    for (const [key, rawValue] of params.entries()) {
+      if (FIRST_PAINT_TABLE_URL_QUICK_FILTER_KEYS.has(key) || FIRST_PAINT_TABLE_URL_SORT_KEYS.has(key)) continue;
+      const match = String(key || "").match(/^(or\.)?([^.]+)\.([a-z]+)(?:\.(from|to))?$/);
+      if (!match) continue;
+      const operator = FIRST_PAINT_TABLE_URL_OPERATORS_BY_TOKEN[match[3]] || "";
+      const column = match[2];
+      const connector = match[1] ? "or" : "and";
+      const rangeSide = match[4] || "";
+      if (!operator || !allowedColumns.has(column)) continue;
+
+      const rangeOperator = operator === "between" || operator === "during";
+      if (rangeOperator !== Boolean(rangeSide)) continue;
+      const value = String(rawValue || "");
+
+      if (rangeOperator) {
+        if (rangeSide === "from") {
+          entries.push({ column, connector, operator, value, valueTo: "" });
+          continue;
+        }
+        const openRange = [...entries].reverse().find((entry) => (
+          entry.column === column
+          && entry.connector === connector
+          && entry.operator === operator
+          && !entry.valueTo
+        ));
+        if (openRange) openRange.valueTo = value;
+        continue;
+      }
+
+      entries.push({ column, connector, operator, value, valueTo: "" });
+    }
+
+    return entries.filter((entry) => firstPaintTableUrlRuleIsValid(
+      entry.column,
+      entry.operator,
+      entry.value,
+      entry.valueTo,
+    ));
+  }
+
+  function firstPaintTableUrlControlState(pageName, viewName, urlLike, savedState = {}) {
+    const normalizedPage = String(pageName || "").toLowerCase();
+    const params = firstPaintTableUrlParams(urlLike);
+    const explicit = Array.from(params.keys()).length > 0;
+    if (!explicit) return { explicit: false, state: savedState };
+
+    const state = {
+      ...savedState,
+      hideRetired: normalizedPage !== "club",
+      hideRetiring: false,
+      hideMflPlayers: normalizedPage === "database",
+      mflPackable: normalizedPage === "mfl",
+      newMints: false,
+      rules: firstPaintTableUrlRules(normalizedPage, viewName, params),
+    };
+
+    for (const [key, value] of params.entries()) {
+      if (!FIRST_PAINT_TABLE_URL_QUICK_FILTER_KEYS.has(key)) continue;
+      const booleanValue = String(value || "").toLowerCase();
+      if (booleanValue !== "true" && booleanValue !== "false") continue;
+      const enabled = booleanValue === "true";
+      if (key === "hideRetired") state.hideRetired = enabled;
+      else if (key === "hideRetiring") state.hideRetiring = enabled;
+      else if (key === "hideMfl" && normalizedPage === "database") state.hideMflPlayers = enabled;
+      else if (key === "packableOnly" && normalizedPage === "mfl") state.mflPackable = enabled;
+      else if (key === "newMintsOnly") state.newMints = enabled;
+    }
+
+    if (normalizedPage === "mfl" && state.newMints) state.mflPackable = false;
+    return { explicit: true, state };
+  }
+
   function normalizedBootstrapTableControlState(pageName, viewName, savedState = {}) {
     const normalizer = Reflect.get(window, "__mflNormalizeInitialTableControlState");
     if (typeof normalizer === "function") {
@@ -628,13 +815,17 @@
     const clubPage = normalizedPage === "club";
     const resetFilters = Boolean(options.resetFilters);
     const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};
+    const urlControlState = resetFilters
+      ? { explicit: false, state: {} }
+      : firstPaintTableUrlControlState(normalizedPage, view, urlLike, savedState);
+    const initialControlState = urlControlState.state;
     const pageSizeSelect = document.getElementById("pageSizeSelect");
     const savedPageSize = Number(savedState.pageSize);
     if (pageSizeSelect instanceof HTMLSelectElement
       && Array.from(pageSizeSelect.options).some((option) => Number(option.value) === savedPageSize)) {
       pageSizeSelect.value = String(savedPageSize);
     }
-    const controlState = normalizedBootstrapTableControlState(normalizedPage, view, savedState);
+    const controlState = normalizedBootstrapTableControlState(normalizedPage, view, initialControlState);
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters instanceof HTMLElement) quickFilters.hidden = clubPage;
 
@@ -849,18 +1040,29 @@
     return compactLabel;
   }
 
-  function firstPaintTableSortState(page, view) {
-  const normalizedPage = String(page || "").toLowerCase();
-  void view;
-  if (normalizedPage === "club") return { sortKey: "positions", sortDirection: "asc" };
-  return { sortKey: "overall", sortDirection: "desc" };
-}
+  function firstPaintTableSortState(page, view, urlLike = window.location.href) {
+    const normalizedPage = String(page || "").toLowerCase();
+    const normalizedView = String(view || "").toLowerCase();
+    const defaultSort = normalizedPage === "club"
+      ? { sortKey: "positions", sortDirection: "asc" }
+      : { sortKey: "overall", sortDirection: "desc" };
+    if (normalizedPage === "club") return defaultSort;
 
-  function firstPaintTableHeaderSignature(page, view) {
+    const params = firstPaintTableUrlParams(urlLike);
+    const requestedSortKey = String(params.get("sort") || "");
+    const requestedSortDirection = String(params.get("direction") || "").toLowerCase();
+    const visibleColumns = firstPaintTableColumns(normalizedPage, normalizedView);
+    const supported = FIRST_PAINT_SORTABLE_COLUMNS.has(requestedSortKey)
+      && visibleColumns.includes(requestedSortKey);
+    if (!supported || (requestedSortDirection !== "asc" && requestedSortDirection !== "desc")) return defaultSort;
+    return { sortKey: requestedSortKey, sortDirection: requestedSortDirection };
+  }
+
+  function firstPaintTableHeaderSignature(page, view, urlLike = window.location.href) {
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
     const columns = firstPaintTableColumns(normalizedPage, normalizedView);
-    const sort = firstPaintTableSortState(normalizedPage, normalizedView);
+    const sort = firstPaintTableSortState(normalizedPage, normalizedView, urlLike);
     return [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");
   }
 

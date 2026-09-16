@@ -35,35 +35,47 @@ invariant(
 invariant(
   bootstrap.includes('function primeTableChrome(page, urlLike = window.location.href, options = {}) {')
     && bootstrap.includes('const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};')
-    && bootstrap.includes('const controlState = normalizedBootstrapTableControlState(normalizedPage, view, savedState);')
+    && bootstrap.includes('firstPaintTableUrlControlState(normalizedPage, view, urlLike, savedState)')
+    && bootstrap.includes('const initialControlState = urlControlState.state;')
+    && bootstrap.includes('const controlState = normalizedBootstrapTableControlState(normalizedPage, view, initialControlState);')
     && bootstrap.includes('const activeRuleCount = resetFilters ? 0 : controlState.activeRuleCount;')
     && bootstrap.includes('filterSummary.textContent = String(activeRuleCount);')
     && bootstrap.includes('filterRules.replaceChildren();')
     && !bootstrap.includes('filterSummary.textContent = "0 active";'),
-  "Destination table first paint must preserve saved controls and a count-only saved-rule summary while explicit page resets remain zeroed.",
+  "Destination table first paint must preserve saved controls without a query, prefer linked controls when URL state is explicit, and keep explicit page resets zeroed.",
 );
 invariant(
   bootstrap.includes('function normalizedBootstrapTableControlState(pageName, viewName, savedState = {}) {'),
   "Bootstrap must own a normalized fallback for saved first-paint table controls.",
 );
 const quickFiltersMarkup = await read("./index.html");
-const quickFiltersStart = quickFiltersMarkup.indexOf('<section class="quickFilters" aria-label="Quick filters">');
+const filtersButtonStart = quickFiltersMarkup.indexOf('id="openFiltersButton" class="filtersViewButton"');
+const filterSummaryStart = quickFiltersMarkup.indexOf('id="filterSummary" class="filtersViewCount" hidden', filtersButtonStart);
+const filterCountProjection = quickFiltersMarkup.indexOf('const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))', filterSummaryStart);
+const quickFiltersStart = quickFiltersMarkup.indexOf('<section class="quickFilters" aria-label="Quick filters">', filterCountProjection);
 const quickFiltersProjection = quickFiltersMarkup.indexOf('const state = window.__mflInitialTableControlState;', quickFiltersStart);
 const controlsBarStart = quickFiltersMarkup.indexOf('<section class="controlsBar" aria-label="Table controls">', quickFiltersStart);
 invariant(
   quickFiltersMarkup.includes('window.__mflNormalizeInitialTableControlState = normalizeInitialTableControlState;')
-    && quickFiltersMarkup.includes('window.__mflInitialTableControlState = normalizeInitialTableControlState(')
+    && quickFiltersMarkup.includes('function initialTableStateFromLocation(pageName, viewName, savedState = {}) {')
+    && quickFiltersMarkup.includes('rules: initialTableUrlRules(pageName, viewName, params),')
+    && quickFiltersMarkup.includes('const storedInitialState = storedInitialTablePageState(tablePage) || {};')
+    && quickFiltersMarkup.includes('initialTableStateFromLocation(tablePage, activeView, storedInitialState)')
     && quickFiltersMarkup.includes('const mflPackable = pageName === "mfl"\n            ? (newMints ? false')
-    && quickFiltersStart >= 0
+    && filtersButtonStart >= 0
+    && filterSummaryStart > filtersButtonStart
+    && filterCountProjection > filterSummaryStart
+    && quickFiltersStart > filterCountProjection
     && quickFiltersProjection > quickFiltersStart
     && controlsBarStart > quickFiltersProjection
+    && quickFiltersMarkup.includes('filterSummary.textContent = String(activeRuleCount);')
+    && quickFiltersMarkup.includes('filterSummary.hidden = false;')
     && quickFiltersMarkup.includes('setChecked("hideRetiredInput", state.hideRetired);')
     && quickFiltersMarkup.includes('setChecked("hideRetiringInput", state.hideRetiring);')
     && quickFiltersMarkup.includes('setChecked("hideMflPlayersInput", state.hideMflPlayers);')
     && quickFiltersMarkup.includes('setChecked("packablePlayersInput", state.mflPackable);')
-    && quickFiltersMarkup.includes('setChecked("newMintsInput", state.newMints);')
-    && quickFiltersMarkup.includes('filterSummary.textContent = String(activeRuleCount);'),
-  "Parser-time first paint must apply saved Quick Filters, MFL exclusivity, and the valid saved-rule count before later table chrome is parsed.",
+    && quickFiltersMarkup.includes('setChecked("newMintsInput", state.newMints);'),
+  "Parser-time refresh must never expose a static zero filter count: linked count projection must run immediately after the hidden count node, before later table controls are parsed.",
 );
 invariant(
   appCore.includes('function tableStateWithoutPageFilters(pageName, savedState) {')

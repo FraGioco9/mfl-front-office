@@ -1788,10 +1788,33 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   state.currentPage = statePageName;
   if (nextView) state.view = nextView;
   state.page = 1;
-  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
-  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+
+  const tableTransition = tablePages.has(statePageName) || statePageName === "club";
+  if (tableTransition && nextView) {
+    const explicitSortState = Object.prototype.hasOwnProperty.call(options, "sortKey")
+      && Object.prototype.hasOwnProperty.call(options, "sortDirection")
+      ? normalizedViewSortState(
+          { sortKey: options.sortKey, sortDirection: options.sortDirection },
+          nextView,
+          routePageName,
+        )
+      : null;
+    const transitionSortState = explicitSortState || tableSortStateForSessionEntry(
+      routePageName,
+      nextView,
+      { ...options, useCurrentLocation: false },
+      defaultSortStateForView(nextView, routePageName),
+    );
+    state.sortKey = transitionSortState.sortKey;
+    state.sortDirection = transitionSortState.sortDirection;
+    if (state.tableSortSessionKey) state.tableSortSessionSortState = transitionSortState;
+  } else {
+    if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+    if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+  }
+
   document.body.dataset.page = routePageName;
-  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
+  if (tableTransition) buildHeader();
 
   const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
     ...options,
@@ -2881,6 +2904,36 @@ function rememberTableSortState(
   return true;
 }
 
+function tableSortSearchForSessionEntry(options = {}) {
+  const routePath = String(options.path || options.replaceUrl || "");
+  if (routePath) {
+    const queryIndex = routePath.indexOf("?");
+    if (queryIndex < 0) return "";
+    const hashIndex = routePath.indexOf("#", queryIndex);
+    return routePath.slice(queryIndex, hashIndex >= 0 ? hashIndex : undefined);
+  }
+  if (options.useCurrentLocation === false) return "";
+  return String(window.location.search || "");
+}
+
+function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {
+  const fallback = fallbackSortState || defaultSortStateForView(viewName, pageName);
+  if (pageName === "club") return fallback;
+  const params = new URLSearchParams(tableSortSearchForSessionEntry(options).replace(/^\?/, ""));
+  const requestedSortKey = String(params.get("sort") || "");
+  const requestedSortDirection = String(params.get("direction") || "").toLowerCase();
+  if (
+    !sortKeySupportedByView(requestedSortKey, viewName, pageName)
+    || (requestedSortDirection !== "asc" && requestedSortDirection !== "desc")
+  ) {
+    return fallback;
+  }
+  return {
+    sortKey: requestedSortKey,
+    sortDirection: requestedSortDirection,
+  };
+}
+
 function resetTableSortSession(pageName, options = {}) {
   const nextSessionKey = tableSortSessionKey(pageName, options);
   if (nextSessionKey === state.tableSortSessionKey) return false;
@@ -2891,9 +2944,15 @@ function resetTableSortSession(pageName, options = {}) {
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   const nextView = normalizeViewForPage(options.view, normalizedPageName || "progression");
   const defaultSortState = defaultSortStateForView(nextView, normalizedPageName);
-  state.tableSortSessionSortState = defaultSortState;
-  state.sortKey = defaultSortState.sortKey;
-  state.sortDirection = defaultSortState.sortDirection;
+  const entrySortState = tableSortStateForSessionEntry(
+    normalizedPageName,
+    nextView,
+    options,
+    defaultSortState,
+  );
+  state.tableSortSessionSortState = entrySortState;
+  state.sortKey = entrySortState.sortKey;
+  state.sortDirection = entrySortState.sortDirection;
   return true;
 }
 
@@ -7805,12 +7864,34 @@ function setupChangelogSections() {
   });
 }
 
+function canonicalizeInitialTableLink(target) {
+  const pageName = String(target?.pageName || "");
+  if (!pageName || !tablePages.has(pageName) || !location.search) return false;
+  const tableUrlState = Reflect.get(window, "__mflTableUrlState");
+  if (!tableUrlState || typeof tableUrlState.resolve !== "function") return false;
+
+  const viewName = normalizeViewForPage(target?.options?.view || state.tablePageStates?.[pageName]?.view, pageName);
+  const fallbackState = state.tablePageStates?.[pageName] || defaultTablePageState(pageName);
+  const resolved = tableUrlState.resolve(pageName, viewName, location.search, fallbackState);
+  if (!resolved?.explicit) return false;
+
+  const canonicalSearch = String(resolved.canonicalSearch || "");
+  if (canonicalSearch === location.search) return false;
+  const canonicalLocation = `${location.pathname}${canonicalSearch}${location.hash || ""}`;
+  window.history.replaceState(window.history.state, "", canonicalLocation);
+  const canonicalTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  target.pageName = canonicalTarget.pageName;
+  target.options = canonicalTarget.options;
+  return true;
+}
+
 async function startApp() {
   loadTheme();
   setupChangelogSections();
   loadSavedTableState();
   window.__mflCoreContracts?.installEvaluationRecentStateOwnership?.();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
+  canonicalizeInitialTableLink(initialTarget);
   commitPageTransition(initialTarget.pageName, false, initialTarget.options);
   const startupNavigationSequence = navigationTransitionSequence;
   const startupSummaryPromise = loadSummary();

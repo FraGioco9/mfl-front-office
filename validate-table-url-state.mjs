@@ -5,11 +5,15 @@ import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [sharedCore, tableCore, generatedShared, generatedTable] = await Promise.all([
+const [sharedCore, tableCore, generatedShared, generatedTable, bootstrap, firstPaintSource, tableMarkupSource, generatedHtml] = await Promise.all([
   Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
+  read("./bootstrap.js"),
+  read("./html-sources/first-paint.html"),
+  read("./html-sources/tables.html"),
+  read("./index.html"),
 ]);
 
 for (const [source, label] of [[tableCore, "canonical Table source"], [generatedTable, "generated Table runtime"]]) {
@@ -104,7 +108,89 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
   invariant(source.includes('window.addEventListener("popstate", () => {')
     && source.includes('pageTargetFromPath(`${window.location.pathname}${window.location.search}`)')
     && source.includes("preserveScroll: true"), `${label} browser back/forward must restore URL-derived table state without resetting scroll.`);
+  invariant(
+    source.includes("function tableSortSearchForSessionEntry(options = {}) {")
+      && source.includes('const routePath = String(options.path || options.replaceUrl || "");')
+      && source.includes("function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {")
+      && source.includes('const requestedSortKey = String(params.get("sort") || "");')
+      && source.includes("sortKeySupportedByView(requestedSortKey, viewName, pageName)")
+      && source.includes("state.tableSortSessionSortState = entrySortState;"),
+    `${label} must seed valid linked sorting into a new table session before any hydration-time header rebuild.`,
+  );
 }
+
+for (const [source, label] of [[tableMarkupSource, "canonical table markup"], [generatedHtml, "generated table markup"]]) {
+  const countNodeIndex = source.indexOf('id="filterSummary" class="filtersViewCount" hidden');
+  const countProjectionIndex = source.indexOf('const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))', countNodeIndex);
+  const quickFiltersIndex = source.indexOf('<section class="quickFilters" aria-label="Quick filters">', countProjectionIndex);
+  invariant(
+    countNodeIndex >= 0
+      && countProjectionIndex > countNodeIndex
+      && quickFiltersIndex > countProjectionIndex
+      && source.includes('filterSummary.textContent = String(activeRuleCount);')
+      && source.includes('filterSummary.hidden = false;')
+      && !source.includes('id="filterSummary" class="filtersViewCount">0</span>'),
+    `${label} must never expose a literal zero filter badge before linked parser-time state is projected.`,
+  );
+}
+
+for (const [source, label] of [[firstPaintSource, "canonical parser first paint"], [generatedHtml, "generated parser first paint"]]) {
+  invariant(
+    source.includes("function initialTableStateFromLocation(pageName, viewName, savedState = {}) {")
+      && source.includes("rules: initialTableUrlRules(pageName, viewName, params),")
+      && source.includes('if (key === "hideRetired") state.hideRetired = enabled;')
+      && source.includes('else if (key === "newMintsOnly") state.newMints = enabled;')
+      && source.includes("initialTableStateFromLocation(tablePage, activeView, storedInitialState)"),
+    `${label} must resolve linked filters before the Filters button and Quick Filters controls are parsed.`,
+  );
+  invariant(
+    source.includes("function initialTableUrlRules(pageName, viewName, params) {")
+      && source.includes("initialTableFilterColumnAllowed(pageName, viewName, column)")
+      && source.includes("initialTableUrlRuleIsValid("),
+    `${label} must count only destination-compatible valid linked filter rules during parser first paint.`,
+  );
+}
+
+invariant(
+  bootstrap.includes("function firstPaintTableUrlControlState(pageName, viewName, urlLike, savedState = {}) {")
+    && bootstrap.includes("rules: firstPaintTableUrlRules(normalizedPage, viewName, params),")
+    && bootstrap.includes('if (key === "hideRetired") state.hideRetired = enabled;')
+    && bootstrap.includes('else if (key === "newMintsOnly") state.newMints = enabled;')
+    && bootstrap.includes('if (normalizedPage === "mfl" && state.newMints) state.mflPackable = false;'),
+  "Bootstrap must resolve canonical linked filter state synchronously before the Table chrome becomes visible.",
+);
+invariant(
+  bootstrap.includes("function firstPaintTableUrlRules(pageName, viewName, params) {")
+    && bootstrap.includes("firstPaintTableAllowedFilterColumns(pageName, viewName)")
+    && bootstrap.includes("firstPaintTableUrlRuleIsValid(")
+    && bootstrap.includes('const match = String(key || "").match(/^(or\\.)?([^.]+)\\.([a-z]+)(?:\\.(from|to))?$/);'),
+  "Bootstrap must count only compatible valid public filter rules for the first-paint filter badge.",
+);
+invariant(
+  bootstrap.includes("function firstPaintTableSortState(page, view, urlLike = window.location.href) {")
+    && bootstrap.includes('const requestedSortKey = String(params.get("sort") || "");')
+    && bootstrap.includes('const requestedSortDirection = String(params.get("direction") || "").toLowerCase();')
+    && bootstrap.includes("FIRST_PAINT_SORTABLE_COLUMNS.has(requestedSortKey)")
+    && bootstrap.includes("visibleColumns.includes(requestedSortKey)"),
+  "Bootstrap must resolve only visible sortable URL columns before rendering the first table header.",
+);
+invariant(
+  bootstrap.includes("function primeInitialTableStructure(page, view) {")
+    && bootstrap.includes("const sort = firstPaintTableSortState(normalizedPage, normalizedView);")
+    && bootstrap.includes('header.setAttribute("aria-sort", sort.sortDirection === "asc" ? "ascending" : "descending");')
+    && bootstrap.includes("arrow.className = `sortArrow ${sort.sortDirection}`;"),
+  "First-paint table headers must expose the linked sort arrow and aria-sort before hydration.",
+);
+invariant(
+  bootstrap.includes("firstPaintTableUrlControlState(normalizedPage, view, urlLike, savedState)")
+    && bootstrap.includes("normalizedBootstrapTableControlState(normalizedPage, view, initialControlState)")
+    && bootstrap.includes("filterSummary.textContent = String(activeRuleCount);"),
+  "First-paint table chrome must derive its filter badge from URL-authoritative control state.",
+);
+invariant(
+  bootstrap.includes("primeInitialTableStructure(tablePage, view);"),
+  "Initial route bootstrap must retain the canonical table-structure owner while linked sorting resolves from the current URL.",
+);
 
 const syncIndex = sharedCore.indexOf('tableUrlState.syncFromControls();');
 const reloadIndex = sharedCore.indexOf('void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });', syncIndex);
@@ -116,4 +202,4 @@ const routeReturnIndex = sharedCore.indexOf("return route;", requestStateIndex);
 invariant(resolveIndex >= 0 && requestStateIndex > resolveIndex && routeReturnIndex > requestStateIndex,
   "Direct refresh must carry resolved URL state into the first route request with no correction fetch.");
 
-console.log("Table filter/sort URL state is canonical, shareable, first-request authoritative, and history-safe.");
+console.log("Table filter/sort URL state is canonical, shareable, first-paint accurate, first-request authoritative, and history-safe.");

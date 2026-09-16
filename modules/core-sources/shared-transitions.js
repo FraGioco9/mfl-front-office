@@ -66,10 +66,33 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   state.currentPage = statePageName;
   if (nextView) state.view = nextView;
   state.page = 1;
-  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
-  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+
+  const tableTransition = tablePages.has(statePageName) || statePageName === "club";
+  if (tableTransition && nextView) {
+    const explicitSortState = Object.prototype.hasOwnProperty.call(options, "sortKey")
+      && Object.prototype.hasOwnProperty.call(options, "sortDirection")
+      ? normalizedViewSortState(
+          { sortKey: options.sortKey, sortDirection: options.sortDirection },
+          nextView,
+          routePageName,
+        )
+      : null;
+    const transitionSortState = explicitSortState || tableSortStateForSessionEntry(
+      routePageName,
+      nextView,
+      { ...options, useCurrentLocation: false },
+      defaultSortStateForView(nextView, routePageName),
+    );
+    state.sortKey = transitionSortState.sortKey;
+    state.sortDirection = transitionSortState.sortDirection;
+    if (state.tableSortSessionKey) state.tableSortSessionSortState = transitionSortState;
+  } else {
+    if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+    if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+  }
+
   document.body.dataset.page = routePageName;
-  if (tablePages.has(statePageName) || statePageName === "club") buildHeader();
+  if (tableTransition) buildHeader();
 
   const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
     ...options,
