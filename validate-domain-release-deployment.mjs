@@ -6,6 +6,7 @@ const validators = [
   "validate-generated-styles.mjs",
   "validate-next-deployment-ownership.mjs",
   "validate-database-refresh-deployment.mjs",
+  "validate-security-boundaries.mjs",
 ];
 
 for (const validator of validators) {
