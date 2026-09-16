@@ -35,12 +35,14 @@ invariant(
 invariant(
   bootstrap.includes('function primeTableChrome(page, urlLike = window.location.href, options = {}) {')
     && bootstrap.includes('const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};')
-    && bootstrap.includes('const controlState = normalizedBootstrapTableControlState(normalizedPage, view, savedState);')
+    && bootstrap.includes('firstPaintTableUrlControlState(normalizedPage, view, urlLike, savedState)')
+    && bootstrap.includes('const initialControlState = urlControlState.state;')
+    && bootstrap.includes('const controlState = normalizedBootstrapTableControlState(normalizedPage, view, initialControlState);')
     && bootstrap.includes('const activeRuleCount = resetFilters ? 0 : controlState.activeRuleCount;')
     && bootstrap.includes('filterSummary.textContent = String(activeRuleCount);')
     && bootstrap.includes('filterRules.replaceChildren();')
     && !bootstrap.includes('filterSummary.textContent = "0 active";'),
-  "Destination table first paint must preserve saved controls and a count-only saved-rule summary while explicit page resets remain zeroed.",
+  "Destination table first paint must preserve saved controls without a query, prefer linked controls when URL state is explicit, and keep explicit page resets zeroed.",
 );
 invariant(
   bootstrap.includes('function normalizedBootstrapTableControlState(pageName, viewName, savedState = {}) {'),
