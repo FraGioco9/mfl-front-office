@@ -70,6 +70,9 @@ const developmentWebpack = process.env.NODE_ENV !== "production"
 
 const nextConfig = {
   devIndicators: { position: "bottom-left" },
+  env: {
+    MFL_DEPLOY_COMMIT: String(process.env.MFL_DEPLOY_COMMIT || "").trim(),
+  },
   ...developmentWebpack,
   outputFileTracingIncludes,
   headers() {

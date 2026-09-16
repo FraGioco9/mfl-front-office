@@ -10,7 +10,19 @@ const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8")
 const workflow = await readWorkflowSource(
   new URL("./.github/workflows/full-database-refresh.yml", import.meta.url),
 );
-const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer, vercelPrebuiltRootStager] = await Promise.all([
+const [
+  resolver,
+  installer,
+  publisher,
+  adapterValidator,
+  baselineRestore,
+  resumeRestore,
+  resumeWriter,
+  vercelRootNormalizer,
+  vercelPrebuiltRootStager,
+  identityRecorder,
+  deploymentVerifier,
+] = await Promise.all([
   readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
@@ -20,6 +32,8 @@ const [resolver, installer, publisher, adapterValidator, baselineRestore, resume
   readRepository("scripts/workflows/full-database-refresh-write-resume-checkpoint.sh"),
   readRepository("scripts/workflows/normalize-vercel-project-root.mjs"),
   readRepository("scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"),
+  readRepository("scripts/workflows/record-production-identity.sh"),
+  readRepository("scripts/workflows/verify-live-production-deployment.sh"),
 ]);
 const deploymentSource = [
   workflow,
@@ -32,6 +46,8 @@ const deploymentSource = [
   resumeWriter,
   vercelRootNormalizer,
   vercelPrebuiltRootStager,
+  identityRecorder,
+  deploymentVerifier,
 ].join("\n");
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -80,7 +96,7 @@ includes(
 );
 invariant(
   publisher.indexOf('VERCEL_REMOTE_ROOT="$(node -e')
-    < publisher.indexOf('normalize-vercel-project-root.mjs'),
+    < publisher.indexOf("normalize-vercel-project-root.mjs"),
   "Database checkpoint deployment must capture remote Root Directory before local normalization clears it.",
 );
 includes(
@@ -126,8 +142,40 @@ excludes(
   "Database-only refreshes must not use the retired static Vercel config projection.",
 );
 includes(
+  "record-production-identity.sh",
+  "Every checkpoint deployment must record its published site commit, application version and database generation before deployment.",
+);
+includes(
+  'MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build',
+  "Every checkpoint deployment must bind the preserved published-site commit into the rebuilt runtime.",
+);
+includes(
+  "verify-live-production-deployment.sh",
+  "Every checkpoint deployment must verify live identity and representative direct routes before the next stage can continue.",
+);
+includes(
+  "deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt}",
+  "Checkpoint telemetry must retain site commit, application version and database generation together.",
+);
+invariant(
+  identityRecorder.includes('"commitVerificationRequired": commit_verification_required')
+    && identityRecorder.includes('"siteCommit": site_commit')
+    && identityRecorder.includes('"generatedAt": generated_at'),
+  "Checkpoint identity recording must preserve a compatibility gate for the last pre-identity published runtime while retaining the full expected tuple.",
+);
+invariant(
+  deploymentVerifier.includes('routes = ["/", "/database", "/evaluation", "/players/374097", "/clubs/1/squad"]')
+    && deploymentVerifier.includes('base_url + "/api/identity"')
+    && deploymentVerifier.includes("commit_required = bool(expected.get(\"commitVerificationRequired\"))"),
+  "Checkpoint verification must cover runtime identity plus representative root and deep routes.",
+);
+excludes(
   "full-database-refresh-verify-live-production-database.sh",
-  "Every checkpoint deployment must verify the live production database before the next stage can continue.",
+  "Database checkpoint publication must not retain the superseded database-only live verifier.",
+);
+excludes(
+  "full-database-refresh-record-expected-database-summary.sh",
+  "Database checkpoint publication must not retain the superseded database-only identity recorder.",
 );
 excludes(
   "fresh SQLite data/runtime adapter",
@@ -174,4 +222,4 @@ invariant(
   "Resume checkpoints must advance only after stage side effects are safe to skip, while the final validated snapshot may resume directly at publication.",
 );
 
-console.log("Staged database checkpoints preserve the published site runtime, retain immutable comparison data, resume same-run validated stages, and safely replace coherent SQLite snapshots.");
+console.log("Staged database checkpoints preserve the published runtime, record deployment identity, verify representative live routes, retain immutable comparison data, resume validated stages, and safely replace coherent SQLite snapshots.");

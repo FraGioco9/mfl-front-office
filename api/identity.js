@@ -23,6 +23,7 @@ module.exports = async function handler(request, response) {
     const etag = snapshotEtag(
       identity.runtime.version,
       identity.runtime.description,
+      identity.runtime.commit || "",
       identity.database.generatedAt,
     );
     const cacheOptions = {
