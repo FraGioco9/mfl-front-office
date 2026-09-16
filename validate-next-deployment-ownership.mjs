@@ -7,13 +7,12 @@ const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage, remoteRootNormalizer] = await Promise.all([
+const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage] = await Promise.all([
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
-  read("scripts/workflows/ensure-vercel-remote-project-root.mjs"),
 ]);
 
 const developmentHeaders = createNextHeaders({ production: false });
@@ -41,21 +40,16 @@ invariant(
 invariant(!packageSource.includes("build-vercel-config.mjs") && !packageSource.includes("vercel.production.json"), "Package scripts must not retain the legacy generated Vercel config model.");
 invariant(!vercelIgnore.includes("html-sources") && !vercelIgnore.includes("modules/core-sources"), "Vercel uploads must retain sources required by next build.");
 
-invariant(
-  remoteRootNormalizer.includes('body: JSON.stringify({ rootDirectory: null })')
-    && remoteRootNormalizer.includes("Verified Vercel project rootDirectory is repository root."),
-  "Vercel deployment must persist repository-root ownership through the remote project API.",
-);
 for (const source of [siteUpdateWorkflow, checkpointPublisher]) {
-  invariant(
-    source.includes("ensure-vercel-remote-project-root.mjs")
-      && source.indexOf("ensure-vercel-remote-project-root.mjs") < source.indexOf("vercel pull"),
-    "Production deployment must persist the remote Vercel project root before pulling project settings.",
-  );
   invariant(source.includes("vercel pull") && source.includes("--environment=production"), "Production deployment must pull Vercel project settings/environment.");
   invariant(source.includes("vercel build --prod"), "Production deployment must create a production Vercel build.");
   invariant(source.includes("vercel deploy --prebuilt --prod"), "Production deployment must deploy the exact prebuilt Next artifact.");
   invariant(!source.includes("vercel.production.json"), "Production deployment must not use the retired static Vercel config projection.");
 }
+
+invariant(
+  !siteUpdateWorkflow.includes("ensure-vercel-remote-project-root.mjs"),
+  "Normal site deployment must not require privileged Vercel project-setting mutation.",
+);
 
 console.log("Next.js/Vercel deployment ownership validation passed.");

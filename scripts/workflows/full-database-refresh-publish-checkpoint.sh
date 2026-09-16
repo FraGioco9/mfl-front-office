@@ -52,12 +52,12 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   if [ ! -d node_modules ]; then
     npm ci --no-audit --no-fund
   fi
-  node "$GITHUB_WORKSPACE/builder/scripts/workflows/ensure-vercel-remote-project-root.mjs"
   vercel pull --yes --environment=production \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"
   ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  node "$GITHUB_WORKSPACE/builder/scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"
   vercel deploy --prebuilt --prod --yes --force \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
 )
