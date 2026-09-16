@@ -44,11 +44,18 @@ for (const required of [
   'id="openSearchButton" class="searchButton"',
   'id="openFiltersButton" class="filtersViewButton"',
   '<span class="filtersViewLabel">Filters</span>',
-  '<span id="filterSummary" class="filtersViewCount">0</span>',
+  '<span id="filterSummary" class="filtersViewCount" hidden></span>',
   'id="viewControlsSeparator" class="viewControlsSeparator"',
 ]) {
   invariant(index.includes(required), `Search and Filters must exist in structural first-paint markup through ${required}`);
 }
+invariant(
+  index.includes('const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))')
+    && index.includes('filterSummary.textContent = String(activeRuleCount);')
+    && index.includes('filterSummary.hidden = false;')
+    && !index.includes('<span id="filterSummary" class="filtersViewCount">0</span>'),
+  "Parser-time Filters count must stay hidden until the linked count is projected, so refresh can never paint a literal zero first.",
+);
 invariant(!index.includes('id="openFiltersButton" class="compactButton"'), "Legacy compact Filters markup must stay removed.");
 invariant(!index.includes('id="filterSummary">0 active'), "Legacy Filters active-count markup must stay removed.");
 invariant(
