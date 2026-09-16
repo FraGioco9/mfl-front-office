@@ -103,6 +103,8 @@ jobs:
             exit 1
           fi
           jq -e '.runtime.version and .database.generatedAt' /tmp/mfl-dev-identity.json >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:4000/api/operational-health > /tmp/mfl-dev-operational-health.json
+          jq -e '.database.freshness.status and .database.freshness.generatedAt' /tmp/mfl-dev-operational-health.json >/dev/null
           curl --fail --silent --show-error --cookie-jar /tmp/mfl-wallet-cookies.txt http://127.0.0.1:4000/api/wallet-session > /tmp/mfl-wallet-challenge.json
           CHALLENGE_TOKEN="$(jq -r '.token' /tmp/mfl-wallet-challenge.json)"
           EXCHANGE_BODY="$(jq -nc --arg token "$CHALLENGE_TOKEN" '{challengeToken:$token,proof:{}}')"
