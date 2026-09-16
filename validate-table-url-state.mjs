@@ -5,11 +5,12 @@ import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [sharedCore, tableCore, generatedShared, generatedTable] = await Promise.all([
+const [sharedCore, tableCore, generatedShared, generatedTable, bootstrap] = await Promise.all([
   Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
+  read("./bootstrap.js"),
 ]);
 
 for (const [source, label] of [[tableCore, "canonical Table source"], [generatedTable, "generated Table runtime"]]) {
@@ -106,6 +107,47 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
     && source.includes("preserveScroll: true"), `${label} browser back/forward must restore URL-derived table state without resetting scroll.`);
 }
 
+invariant(
+  bootstrap.includes("function firstPaintTableUrlControlState(pageName, viewName, urlLike, savedState = {}) {")
+    && bootstrap.includes("rules: firstPaintTableUrlRules(normalizedPage, viewName, params),")
+    && bootstrap.includes('if (key === "hideRetired") state.hideRetired = enabled;')
+    && bootstrap.includes('else if (key === "newMintsOnly") state.newMints = enabled;')
+    && bootstrap.includes('if (normalizedPage === "mfl" && state.newMints) state.mflPackable = false;'),
+  "Bootstrap must resolve canonical linked filter state synchronously before the Table chrome becomes visible.",
+);
+invariant(
+  bootstrap.includes("function firstPaintTableUrlRules(pageName, viewName, params) {")
+    && bootstrap.includes("firstPaintTableAllowedFilterColumns(pageName, viewName)")
+    && bootstrap.includes("firstPaintTableUrlRuleIsValid(")
+    && bootstrap.includes('const match = String(key || "").match(/^(or\\.)?([^.]+)\\.([a-z]+)(?:\\.(from|to))?$/);'),
+  "Bootstrap must count only compatible valid public filter rules for the first-paint filter badge.",
+);
+invariant(
+  bootstrap.includes("function firstPaintTableSortState(page, view, urlLike = window.location.href) {")
+    && bootstrap.includes('const requestedSortKey = String(params.get("sort") || "");')
+    && bootstrap.includes('const requestedSortDirection = String(params.get("direction") || "").toLowerCase();')
+    && bootstrap.includes("FIRST_PAINT_SORTABLE_COLUMNS.has(requestedSortKey)")
+    && bootstrap.includes("visibleColumns.includes(requestedSortKey)"),
+  "Bootstrap must resolve only visible sortable URL columns before rendering the first table header.",
+);
+invariant(
+  bootstrap.includes("function primeInitialTableStructure(page, view, urlLike = window.location.href) {")
+    && bootstrap.includes("const sort = firstPaintTableSortState(normalizedPage, normalizedView, urlLike);")
+    && bootstrap.includes('header.setAttribute("aria-sort", sort.sortDirection === "asc" ? "ascending" : "descending");')
+    && bootstrap.includes("arrow.className = `sortArrow ${sort.sortDirection}`;"),
+  "First-paint table headers must expose the linked sort arrow and aria-sort before hydration.",
+);
+invariant(
+  bootstrap.includes("firstPaintTableUrlControlState(normalizedPage, view, urlLike, savedState)")
+    && bootstrap.includes("normalizedBootstrapTableControlState(normalizedPage, view, initialControlState)")
+    && bootstrap.includes("filterSummary.textContent = String(activeRuleCount);"),
+  "First-paint table chrome must derive its filter badge from URL-authoritative control state.",
+);
+invariant(
+  bootstrap.includes("primeInitialTableStructure(tablePage, view, window.location.href);"),
+  "Initial route bootstrap must pass the current URL into the first-paint header owner.",
+);
+
 const syncIndex = sharedCore.indexOf('tableUrlState.syncFromControls();');
 const reloadIndex = sharedCore.indexOf('void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });', syncIndex);
 invariant(syncIndex >= 0 && reloadIndex > syncIndex, "Filter/sort URL replacement must happen before the incremental request begins.");
@@ -116,4 +158,4 @@ const routeReturnIndex = sharedCore.indexOf("return route;", requestStateIndex);
 invariant(resolveIndex >= 0 && requestStateIndex > resolveIndex && routeReturnIndex > requestStateIndex,
   "Direct refresh must carry resolved URL state into the first route request with no correction fetch.");
 
-console.log("Table filter/sort URL state is canonical, shareable, first-request authoritative, and history-safe.");
+console.log("Table filter/sort URL state is canonical, shareable, first-paint accurate, first-request authoritative, and history-safe.");
