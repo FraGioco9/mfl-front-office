@@ -22,7 +22,25 @@
             </div>
           </section>
           <section class="views" aria-label="Table views">
-            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
+            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount" hidden></span></button>
+            <script>
+              (() => {
+                const state = window.__mflInitialTableControlState;
+                const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))
+                  ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
+                  : 0;
+                const filterSummary = document.getElementById("filterSummary");
+                const openFiltersButton = document.getElementById("openFiltersButton");
+                if (filterSummary instanceof HTMLElement) {
+                  filterSummary.textContent = String(activeRuleCount);
+                  filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                  filterSummary.hidden = false;
+                }
+                if (openFiltersButton instanceof HTMLElement) {
+                  openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                }
+              })();
+            </script>
             <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
@@ -107,18 +125,6 @@
                 newMintsLabel.textContent = state.pageName === "mfl" ? "Only aged players" : "Only new mints";
               }
 
-              const activeRuleCount = Number.isFinite(Number(state.activeRuleCount))
-                ? Math.max(0, Math.trunc(Number(state.activeRuleCount)))
-                : 0;
-              const filterSummary = document.getElementById("filterSummary");
-              const openFiltersButton = document.getElementById("openFiltersButton");
-              if (filterSummary instanceof HTMLElement) {
-                filterSummary.textContent = String(activeRuleCount);
-                filterSummary.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
-              }
-              if (openFiltersButton instanceof HTMLElement) {
-                openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
-              }
             })();
           </script>
 
