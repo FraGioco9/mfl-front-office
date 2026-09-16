@@ -4,6 +4,7 @@ const validators = [
   "validate-wallet-challenge.mjs",
   "validate-wallet-session.mjs",
   "validate-wallet-session-integration.mjs",
+  "validate-wallet-permission-cache.mjs",
   "validate-data-read-cache-policy.mjs",
   "validate-public-page-cache-policy.mjs",
   "validate-database-stats-ownership.mjs",
