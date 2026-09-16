@@ -915,6 +915,7 @@ const browserTestSource = String.raw`(() => {
         if (String(pageName || "") !== "evaluation" || typeof originalEnsureRouteCore !== "function") {
           return originalEnsureRouteCore?.(pageName, options);
         }
+        if (evaluationCoreRequested) return originalEnsureRouteCore(pageName, options);
         evaluationCoreRequested = true;
         return new Promise((resolve, reject) => {
           releaseEvaluationCore = () => Promise.resolve(originalEnsureRouteCore(pageName, options)).then(resolve, reject);
