@@ -1,6 +1,6 @@
 const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
-const { readJsonBody } = require("./_request-body");
+const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
   normalizeEvaluationId,
   generateEvaluationId,
@@ -8,6 +8,7 @@ const {
 } = require("./_evaluation-payload");
 
 const MAX_SAVED_EVALUATIONS_PER_WALLET = 100;
+const MAX_BODY_BYTES = 256 * 1024;
 
 async function savedEvaluationCount(wallet) {
   const rows = await supabaseRequest(`evaluation_saves?select=id&wallet_address=eq.${encodeURIComponent(wallet)}`);
@@ -31,7 +32,7 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
-      const body = await readJsonBody(request);
+      const body = await readJsonBody(request, { maxBytes: MAX_BODY_BYTES });
       const payload = normalizeEvaluationPayload(body, { includeSummaryMetrics: true });
       const requestedSavedId = normalizeEvaluationId(body.savedId || body.id);
 
@@ -153,6 +154,7 @@ module.exports = async function handler(request, response) {
 
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
+    if (sendRequestBodyError(response, error)) return;
     console.warn("Could not handle saved evaluation.", error);
     response.status(500).json({ error: "Could not handle saved evaluation." });
   }
