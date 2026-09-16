@@ -309,6 +309,13 @@ function orderSql(scope, view, sortKey, sortDirection) {
     return `${quoteIdentifier(derived)} IS NULL, ${quoteIdentifier(derived)} ${direction}, ${quoteIdentifier(key)} ${direction}, player_id DESC`;
   }
 
+  if (key === "active_contract_club_name") {
+    return `CASE
+      WHEN trim(coalesce(active_contract_club_name, '')) = '' THEN 'Free Agent'
+      ELSE active_contract_club_name
+    END COLLATE NOCASE ${direction}, player_id DESC`;
+  }
+
   if (key === "active_contract_club_division") {
     const divisionDirection = direction === "ASC" ? "DESC" : "ASC";
     const activeContract = "(coalesce(active_contract_club_name, '') <> '' OR coalesce(active_contract_club_id, '') <> '')";
