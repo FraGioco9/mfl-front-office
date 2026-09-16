@@ -204,8 +204,10 @@ export const TABLE_SORTABLE_COLUMNS = Object.freeze([
   "listing_price",
   "age",
   "player_seasons",
+  "wallet_name",
   "owned_since",
   "active_contract_revenue_share",
+  "active_contract_club_name",
   "active_contract_club_division",
   ...TABLE_STAT_COLUMNS,
 ]);
