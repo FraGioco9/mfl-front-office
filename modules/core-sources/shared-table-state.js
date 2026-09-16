@@ -209,6 +209,7 @@ function tableSortSearchForSessionEntry(options = {}) {
 
 function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {
   const fallback = fallbackSortState || defaultSortStateForView(viewName, pageName);
+  if (pageName === "club") return fallback;
   const params = new URLSearchParams(tableSortSearchForSessionEntry(options).replace(/^\?/, ""));
   const requestedSortKey = String(params.get("sort") || "");
   const requestedSortDirection = String(params.get("direction") || "").toLowerCase();
