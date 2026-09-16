@@ -1984,6 +1984,19 @@ function syncMobileTablePageTransitionChrome(pageName) {
   if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
 }
 
+async function prepareInteractiveRouteBeforeCommit(pageName, options = {}) {
+  if (String(pageName || "") !== "evaluation") return;
+  const ensureRouteCore = Reflect.get(window, "__mflEnsureRouteCore");
+  const ensureRouteRuntime = Reflect.get(window, "__mflEnsureRouteRuntime");
+  const routeCorePromise = typeof ensureRouteCore === "function"
+    ? ensureRouteCore("evaluation", options)
+    : null;
+  if (typeof ensureRouteRuntime === "function") {
+    await ensureRouteRuntime("evaluation", options);
+  }
+  if (routeCorePromise) await routeCorePromise;
+}
+
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   if (!settingsConfirmNavigation(pageName, updateHash)) return null;
   syncMobileTablePageTransitionChrome(pageName);
@@ -2002,13 +2015,20 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
   try {
     const sequence = ++navigationTransitionSequence;
     window.__mflCancelIncrementalRouteRequest?.();
+    if (String(pageName || "") === "evaluation") {
+      loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
+      await prepareInteractiveRouteBeforeCommit(pageName, options);
+      if (sequence !== navigationTransitionSequence) return null;
+    }
     const transition = {
       ...commitPageTransition(pageName, updateHash, options),
       kind: "page",
       sequence,
     };
     document.documentElement.classList.add("mflInitialRouteSuperseded");
-    loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
+    if (!loadingToken) {
+      loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
+    }
     const preservedTableIdentity = typeof loader === "function"
       ? preservedTableTransitionIdentity(transition)
       : "";
