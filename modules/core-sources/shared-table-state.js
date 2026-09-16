@@ -204,6 +204,7 @@ function tableSortSearchForSessionEntry(options = {}) {
     const hashIndex = routePath.indexOf("#", queryIndex);
     return routePath.slice(queryIndex, hashIndex >= 0 ? hashIndex : undefined);
   }
+  if (options.useCurrentLocation === false) return "";
   return String(window.location.search || "");
 }
 
