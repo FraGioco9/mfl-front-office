@@ -108,13 +108,13 @@ jq -n \
 {
   echo "### Database checkpoint: $CHECKPOINT_NAME"
   echo
-  echo "Published at `$COMPLETED_AT` from run `$GITHUB_RUN_ID` attempt `$GITHUB_RUN_ATTEMPT`."
+  echo "Published at $COMPLETED_AT from run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT."
   echo
   echo '| Deployment identity | Value |'
   echo '| --- | --- |'
-  echo "| Site commit | `$EXPECTED_SHA` |"
-  echo "| Application version | `$VERSION` |"
-  echo "| Database generated at | `$GENERATED_AT` |"
+  echo "| Site commit | $EXPECTED_SHA |"
+  echo "| Application version | $VERSION |"
+  echo "| Database generated at | $GENERATED_AT |"
   echo
   echo '| Domain | Status |'
   echo '| --- | --- |'
