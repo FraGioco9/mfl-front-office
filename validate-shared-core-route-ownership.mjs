@@ -33,6 +33,11 @@ for (const [chunkName, names] of Object.entries(routeOnlyFunctions)) {
   }
 }
 
+invariant(
+  !shared.includes("displayColumnForPage("),
+  "Shared route state must not call the lazy Table display-column helper before the Table core has loaded.",
+);
+
 const protectedSharedFunctions = [
   "updateSettingsDateFormat",
   "updateSettingsTimeFormat",
