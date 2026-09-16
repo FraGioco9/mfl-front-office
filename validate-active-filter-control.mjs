@@ -99,15 +99,23 @@ invariant(
 );
 
 for (const required of [
-  "function syncFilterSummaryNow() {",
-  "const count = activeFilterCountFromDialog();",
+  "function updateFilterSummaryThroughOwner(count) {",
   'const canonicalUpdater = Reflect.get(window, "updateFilterSummary");',
   'if (typeof canonicalUpdater === "function") {',
   "canonicalUpdater(count);",
-  "summary instanceof HTMLElement) summary.textContent = String(count);",
+  "function syncFilterSummaryNow() {",
+  "updateFilterSummaryThroughOwner(activeFilterCountFromDialog());",
+  "function syncInitialFilterSummaryNow() {",
+  'const initialState = Reflect.get(window, "__mflInitialTableControlState");',
+  "updateFilterSummaryThroughOwner(initialCount);",
+  "syncInitialFilterSummaryNow();",
 ]) {
-  invariant(sharedTableUi.includes(required), `Shared table UI must delegate applied count updates through the canonical active-state owner: ${required}`);
+  invariant(sharedTableUi.includes(required), `Shared table UI must delegate live and startup count updates through the canonical active-state owner: ${required}`);
 }
+invariant(
+  !sharedTableUi.includes("markInitialTableFiltersForReset();\n    syncFilterSummaryNow();"),
+  "Shared Table UI startup must not replace parser-owned linked filter count with the still-empty dialog count.",
+);
 
 invariant(
   !sharedTableUi.includes("summary.textContent = String(activeFilterCountFromDialog());"),
