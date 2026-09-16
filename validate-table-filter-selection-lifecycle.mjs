@@ -49,7 +49,10 @@ invariant(
   "Bootstrap must own a normalized fallback for saved first-paint table controls.",
 );
 const quickFiltersMarkup = await read("./index.html");
-const quickFiltersStart = quickFiltersMarkup.indexOf('<section class="quickFilters" aria-label="Quick filters">');
+const filtersButtonStart = quickFiltersMarkup.indexOf('id="openFiltersButton" class="filtersViewButton"');
+const filterSummaryStart = quickFiltersMarkup.indexOf('id="filterSummary" class="filtersViewCount" hidden', filtersButtonStart);
+const filterCountProjection = quickFiltersMarkup.indexOf('const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))', filterSummaryStart);
+const quickFiltersStart = quickFiltersMarkup.indexOf('<section class="quickFilters" aria-label="Quick filters">', filterCountProjection);
 const quickFiltersProjection = quickFiltersMarkup.indexOf('const state = window.__mflInitialTableControlState;', quickFiltersStart);
 const controlsBarStart = quickFiltersMarkup.indexOf('<section class="controlsBar" aria-label="Table controls">', quickFiltersStart);
 invariant(
@@ -59,16 +62,20 @@ invariant(
     && quickFiltersMarkup.includes('const storedInitialState = storedInitialTablePageState(tablePage) || {};')
     && quickFiltersMarkup.includes('initialTableStateFromLocation(tablePage, activeView, storedInitialState)')
     && quickFiltersMarkup.includes('const mflPackable = pageName === "mfl"\n            ? (newMints ? false')
-    && quickFiltersStart >= 0
+    && filtersButtonStart >= 0
+    && filterSummaryStart > filtersButtonStart
+    && filterCountProjection > filterSummaryStart
+    && quickFiltersStart > filterCountProjection
     && quickFiltersProjection > quickFiltersStart
     && controlsBarStart > quickFiltersProjection
+    && quickFiltersMarkup.includes('filterSummary.textContent = String(activeRuleCount);')
+    && quickFiltersMarkup.includes('filterSummary.hidden = false;')
     && quickFiltersMarkup.includes('setChecked("hideRetiredInput", state.hideRetired);')
     && quickFiltersMarkup.includes('setChecked("hideRetiringInput", state.hideRetiring);')
     && quickFiltersMarkup.includes('setChecked("hideMflPlayersInput", state.hideMflPlayers);')
     && quickFiltersMarkup.includes('setChecked("packablePlayersInput", state.mflPackable);')
-    && quickFiltersMarkup.includes('setChecked("newMintsInput", state.newMints);')
-    && quickFiltersMarkup.includes('filterSummary.textContent = String(activeRuleCount);'),
-  "Parser-time first paint must prefer linked filter state before the Filters control is parsed, while preserving saved controls when no query is present.",
+    && quickFiltersMarkup.includes('setChecked("newMintsInput", state.newMints);'),
+  "Parser-time refresh must never expose a static zero filter count: linked count projection must run immediately after the hidden count node, before later table controls are parsed.",
 );
 invariant(
   appCore.includes('function tableStateWithoutPageFilters(pageName, savedState) {')
