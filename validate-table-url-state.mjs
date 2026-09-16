@@ -5,13 +5,14 @@ import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [sharedCore, tableCore, generatedShared, generatedTable, bootstrap, firstPaintSource, generatedHtml] = await Promise.all([
+const [sharedCore, tableCore, generatedShared, generatedTable, bootstrap, firstPaintSource, tableMarkupSource, generatedHtml] = await Promise.all([
   Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
   read("./bootstrap.js"),
   read("./html-sources/first-paint.html"),
+  read("./html-sources/tables.html"),
   read("./index.html"),
 ]);
 
@@ -115,6 +116,21 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
       && source.includes("sortKeySupportedByView(requestedSortKey, viewName, pageName)")
       && source.includes("state.tableSortSessionSortState = entrySortState;"),
     `${label} must seed valid linked sorting into a new table session before any hydration-time header rebuild.`,
+  );
+}
+
+for (const [source, label] of [[tableMarkupSource, "canonical table markup"], [generatedHtml, "generated table markup"]]) {
+  const countNodeIndex = source.indexOf('id="filterSummary" class="filtersViewCount" hidden');
+  const countProjectionIndex = source.indexOf('const activeRuleCount = Number.isFinite(Number(state?.activeRuleCount))', countNodeIndex);
+  const quickFiltersIndex = source.indexOf('<section class="quickFilters" aria-label="Quick filters">', countProjectionIndex);
+  invariant(
+    countNodeIndex >= 0
+      && countProjectionIndex > countNodeIndex
+      && quickFiltersIndex > countProjectionIndex
+      && source.includes('filterSummary.textContent = String(activeRuleCount);')
+      && source.includes('filterSummary.hidden = false;')
+      && !source.includes('id="filterSummary" class="filtersViewCount">0</span>'),
+    `${label} must never expose a literal zero filter badge before linked parser-time state is projected.`,
   );
 }
 
