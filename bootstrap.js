@@ -1076,7 +1076,7 @@
     return true;
   }
 
-  function primeInitialTableStructure(page, view, urlLike = window.location.href) {
+  function primeInitialTableStructure(page, view) {
     const colGroup = document.getElementById("tableColGroup");
     const head = document.getElementById("tableHead");
     if (!(colGroup instanceof HTMLTableColElement) && !(colGroup instanceof HTMLElement)) return 0;
@@ -1085,7 +1085,7 @@
     const normalizedPage = String(page || "").toLowerCase();
     const normalizedView = String(view || "").toLowerCase();
     const columns = firstPaintTableColumns(normalizedPage, normalizedView);
-    const sort = firstPaintTableSortState(normalizedPage, normalizedView, urlLike);
+    const sort = firstPaintTableSortState(normalizedPage, normalizedView);
     const signature = [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");
     if (head.rows[0] && head.dataset.mflStaticHeader === "true" && head.dataset.mflHeaderSignature === signature) {
       neutralizeFirstPaintSelectionHeader(head);
@@ -1697,7 +1697,7 @@
       : "";
     if (target.id === "progressionPage" && tablePage) {
       const view = primeTableChrome(tablePage, window.location.href);
-      primeInitialTableStructure(tablePage, view, window.location.href);
+      primeInitialTableStructure(tablePage, view);
       primeInitialTableRows();
       if (tablePage === "club") {
         primeClubIdentityFirstPaint(window.location.href);
