@@ -71,8 +71,17 @@ includes(
   "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
 );
 includes(
-  'const remoteRoot = String(project.rootDirectory || "").trim();',
-  "Database-only refreshes must read the remote Vercel Root Directory used by the CLI.",
+  'VERCEL_REMOTE_ROOT="$(node -e',
+  "Database-only refreshes must capture the remote Vercel Root Directory from vercel pull output before normalization.",
+);
+includes(
+  'const remoteRoot = String(process.env.VERCEL_REMOTE_ROOT || "").trim();',
+  "Checkpoint prebuilt staging must use the captured Vercel Root Directory without calling the Vercel project API.",
+);
+invariant(
+  publisher.indexOf('VERCEL_REMOTE_ROOT="$(node -e')
+    < publisher.indexOf('normalize-vercel-project-root.mjs'),
+  "Database checkpoint deployment must capture remote Root Directory before local normalization clears it.",
 );
 includes(
   "await cp(source, destination, { recursive: true });",
