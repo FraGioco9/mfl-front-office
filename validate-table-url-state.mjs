@@ -17,6 +17,7 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
   invariant(source.includes("function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {"), `${label} must parse URL-backed table state centrally.`);
   invariant(source.includes("function tableUrlSearchForState(pageName, viewName, tableState) {"), `${label} must serialize URL-backed table state centrally.`);
   invariant(source.includes('const TABLE_URL_QUICK_FILTER_KEYS = Object.freeze(new Set(['), `${label} must keep stable quick-filter URL keys.`);
+  invariant(source.includes('const TABLE_URL_SORT_KEYS = Object.freeze(new Set(["sort", "direction"]));'), `${label} must expose stable public sorting URL keys.`);
   invariant(source.includes('"hideRetired"') && source.includes('"hideRetiring"') && source.includes('"hideMfl"')
     && source.includes('"packableOnly"') && source.includes('"newMintsOnly"'), `${label} must cover every shared quick filter.`);
   const urlSerializerStart = source.indexOf("function tableUrlSearchForState(pageName, viewName, tableState) {");
@@ -36,6 +37,21 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
     source.includes('const booleanValue = String(value || "").toLowerCase();')
       && source.includes('const booleanIsValid = booleanValue === "true" || booleanValue === "false";'),
     `${label} must parse boolean URL values case-insensitively and canonicalize them to lowercase true/false.`,
+  );
+  invariant(
+    urlSerializer.includes('const defaultSortState = defaultSortStateForView(viewName, pageName);')
+      && urlSerializer.includes('const resolvedSortState = normalizedViewSortState(')
+      && urlSerializer.includes('params.set("sort", resolvedSortState.sortKey);')
+      && urlSerializer.includes('params.set("direction", resolvedSortState.sortDirection);'),
+    `${label} must serialize non-default sorting into readable shareable URL parameters.`,
+  );
+  invariant(
+    source.includes('const requestedSortKey = String(params.get("sort") || "");')
+      && source.includes('const requestedSortDirection = String(params.get("direction") || "").toLowerCase();')
+      && source.includes('sortKeySupportedByView(requestedSortKey, viewName, pageName)')
+      && source.includes('sortKey: parsedSortState?.sortKey || defaultSortState.sortKey')
+      && source.includes('sortDirection: parsedSortState?.sortDirection || defaultSortState.sortDirection'),
+    `${label} must restore only view-compatible sorting from public links and fall back to the canonical view sort.`,
   );
   invariant(
     source.includes('const key = `${connectorPrefix}${rule.column}.${operatorToken}`;')
@@ -59,14 +75,17 @@ for (const [source, label] of [[tableCore, "canonical Table source"], [generated
     && source.includes('const requestedView = normalizeViewForPage(options.view || fallbackState.view, pageName);')
     && source.includes("const urlState = tableUrlStateFromSearch(pageName, requestedView, tableRestoreUrlSearch(options), fallbackState);")
     && source.includes("const savedState = urlState.state;"), `${label} must keep the original route query authoritative through direct-refresh hydration instead of relying only on the mutable current URL.`);
-  invariant(source.includes("replaceTableUrlForState(pageName, state.view, savedState);"), `${label} must canonicalize invalid/default URL state without a second navigation owner.`);
+  invariant(source.includes("state.tableSortSessionSortState = viewSortState;")
+    && source.includes("replaceTableUrlForState(pageName, state.view, {")
+    && source.includes("...savedState,")
+    && source.includes("...viewSortState,"), `${label} must restore linked sorting into the active sort session before canonicalizing the URL.`);
   invariant(source.includes("return savedState;"), `${label} restore must return the resolved state for first-request ownership.`);
 }
 
 for (const [source, label] of [[sharedCore, "canonical Shared source"], [generatedShared, "generated Shared runtime"]]) {
   invariant(source.includes('const tableUrlState = Reflect.get(window, "__mflTableUrlState");')
     && source.includes('typeof tableUrlState.syncFromControls === "function"')
-    && source.includes("tableUrlState.syncFromControls();"), `${label} must replace the URL when committed filters change.`);
+    && source.includes("tableUrlState.syncFromControls();"), `${label} must replace the URL when committed filters or sorting change.`);
   invariant(source.includes("const restoredPageState = savedPageState")
     && source.includes("restoreSavedTableState(pageName, {")
     && source.includes("path: options.path,")
@@ -79,7 +98,7 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
     && source.includes("tableFilters ? tableFilters.newMints : newMintsInput.checked"), `${label} first request must consume resolved quick filters rather than stale controls.`);
   invariant(source.includes('typeof tableUrlState?.searchForCurrentControls === "function"')
     && source.includes("tableUrlState.searchForCurrentControls(pageName, nextView)")
-    && source.includes("if (compatibleSearch) targetPath += compatibleSearch;"), `${label} must preserve only destination-compatible filters during view changes.`);
+    && source.includes("if (compatibleSearch) targetPath += compatibleSearch;"), `${label} must preserve only destination-compatible filters and sorting during view changes.`);
   invariant(source.includes('const requestedSearch = routeQueryIndex >= 0 ? requestedPath.slice(routeQueryIndex) : "";')
     && source.includes("tablePageTarget(pageName, cleanPath, basePath, requestedSearch)"), `${label} route parser must preserve table query state until canonical Table ownership resolves it.`);
   invariant(source.includes('window.addEventListener("popstate", () => {')
@@ -89,7 +108,7 @@ for (const [source, label] of [[sharedCore, "canonical Shared source"], [generat
 
 const syncIndex = sharedCore.indexOf('tableUrlState.syncFromControls();');
 const reloadIndex = sharedCore.indexOf('void reloadIncrementalPage(1, { save: options.save !== false, loadingMode: "blank" });', syncIndex);
-invariant(syncIndex >= 0 && reloadIndex > syncIndex, "Filter URL replacement must happen before the incremental request begins.");
+invariant(syncIndex >= 0 && reloadIndex > syncIndex, "Filter/sort URL replacement must happen before the incremental request begins.");
 
 const resolveIndex = sharedCore.indexOf("const restoredPageState = savedPageState");
 const requestStateIndex = sharedCore.indexOf('Reflect.set(route, "tableFilters", {', resolveIndex);
@@ -97,4 +116,4 @@ const routeReturnIndex = sharedCore.indexOf("return route;", requestStateIndex);
 invariant(resolveIndex >= 0 && requestStateIndex > resolveIndex && routeReturnIndex > requestStateIndex,
   "Direct refresh must carry resolved URL state into the first route request with no correction fetch.");
 
-console.log("Table URL state is canonical, shareable, first-request authoritative, and history-safe.");
+console.log("Table filter/sort URL state is canonical, shareable, first-request authoritative, and history-safe.");

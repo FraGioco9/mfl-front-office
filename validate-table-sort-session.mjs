@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { TABLE_SORTABLE_COLUMNS } from "./modules/app-config.js";
 import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 // Sorting stays page-scoped until a destination view cannot represent the active key; Next Overall desc means lowest gap first, while Progression desc means largest increase then highest matching raw stat.
@@ -7,6 +9,8 @@ const core = readCombinedCanonicalCoreSource();
 const bootstrap = fs.readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
 const entry = fs.readFileSync(new URL("./modules/app-entry.js", import.meta.url), "utf8");
 const dataPage = fs.readFileSync(new URL("./api/_data-page.js", import.meta.url), "utf8");
+const require = createRequire(import.meta.url);
+const { orderSql } = require("./api/_data-page.js");
 
 function sourceBetween(source, start, end) {
   const startIndex = source.indexOf(start);
@@ -66,6 +70,38 @@ assert.match(core, /state\.currentPage === "progression" && \(state\.view === "c
 assert.doesNotMatch(core, /comparisonDirection = state\.currentPage === "progression"/u, "Progression primary and raw selected-stat tie-break must use the same visible sort direction.");
 assert.match(dataPage, /\["current", "all"\]\.includes\(view\)[\s\S]{0,320}quoteIdentifier\(key\)\} \$\{direction\}, player_id DESC/u, "Incremental Progression sorting must use selected progression first and the matching raw Overall/stat second.");
 assert.match(core, /compareRowsWithClubPositionOrder|clubPositionSort/u, "Existing Club position-order ownership must remain intact.");
+assert.ok(TABLE_SORTABLE_COLUMNS.includes("active_contract_club_name"), "Club Name must remain sortable through the canonical table config.");
+assert.ok(!TABLE_SORTABLE_COLUMNS.includes("wallet_name"), "Agent links must not become a separate sortable-column feature.");
+assert.match(
+  core,
+  /column === "active_contract_club_name"[\s\S]{0,120}formatContractClubName\(row\)\.toLocaleLowerCase\(\)/u,
+  "Client-side Club Name sorting must compare the displayed label alphabetically.",
+);
+const clubNameAsc = orderSql("database", "contracts", "active_contract_club_name", "asc");
+const clubNameDesc = orderSql("database", "contracts", "active_contract_club_name", "desc");
+for (const [direction, sql] of [["ASC", clubNameAsc], ["DESC", clubNameDesc]]) {
+  assert.match(sql, /THEN 'Free Agent'[\s\S]{0,120}END COLLATE NOCASE/u, `${direction} Club Name sorting must compare displayed labels case-insensitively.`);
+  assert.ok(sql.includes(`END COLLATE NOCASE ${direction}, player_id DESC`), `${direction} Club Name sorting must use alphabetical ${direction} order.`);
+}
+assert.match(
+  core,
+  /column === "active_contract_club_division"[\s\S]{0,420}isDevelopmentCenterClubName\(clubName\)[\s\S]{0,260}rowHasActiveContract\(row\)[\s\S]{0,220}return \[2 \* visibleDirection, 0\]/u,
+  "Client-side Division sorting must keep ranked divisions first, Development Center second-last and Free Agents last in both directions.",
+);
+const divisionDesc = orderSql("database", "contracts", "active_contract_club_division", "desc");
+const divisionAsc = orderSql("database", "contracts", "active_contract_club_division", "asc");
+for (const [direction, sql, divisionDirection] of [
+  ["DESC", divisionDesc, "ASC"],
+  ["ASC", divisionAsc, "DESC"],
+]) {
+  assert.match(sql, /development center' THEN 1/u, `${direction} Division sort must put Development Center after ranked divisions.`);
+  assert.match(sql, /WHEN \(coalesce\(active_contract_club_name, ''\) <> '' OR coalesce\(active_contract_club_id, ''\) <> ''\) AND CAST\(active_contract_club_division AS INTEGER\) BETWEEN 1 AND 10 THEN 0/u, `${direction} Division sort must recognize ranked active contracts.`);
+  assert.match(sql, /ELSE 2/u, `${direction} Division sort must put Free Agents after Development Center.`);
+  assert.ok(
+    sql.includes(`END ${divisionDirection},`),
+    `${direction} Division sort must use ${divisionDirection} numeric tier order.`,
+  );
+}
 assert.match(entry, /sortKey:\s*"positions"[\s\S]{0,80}sortDirection:\s*"asc"/u, "Club route bootstrap must keep Positions ascending.");
 
 console.log("Table sort session validation passed.");
