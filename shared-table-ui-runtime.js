@@ -535,15 +535,39 @@
     return Array.from(document.querySelectorAll("#filterRules .filterRule")).filter(filterRuleIsActive).length;
   }
 
-  function syncFilterSummaryNow() {
-    const count = activeFilterCountFromDialog();
+  function updateFilterSummaryThroughOwner(count) {
     const canonicalUpdater = Reflect.get(window, "updateFilterSummary");
     if (typeof canonicalUpdater === "function") {
       canonicalUpdater(count);
       return;
     }
+    const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Math.trunc(Number(count))) : 0;
     const summary = document.getElementById("filterSummary");
-    if (summary instanceof HTMLElement) summary.textContent = String(count);
+    const button = document.getElementById("openFiltersButton");
+    if (summary instanceof HTMLElement) {
+      summary.textContent = String(normalizedCount);
+      summary.classList.toggle("hasActiveFilters", normalizedCount >= 1);
+    }
+    if (button instanceof HTMLElement) button.classList.toggle("hasActiveFilters", normalizedCount >= 1);
+  }
+
+  function syncFilterSummaryNow() {
+    updateFilterSummaryThroughOwner(activeFilterCountFromDialog());
+  }
+
+  function syncInitialFilterSummaryNow() {
+    const page = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+    const initialState = Reflect.get(window, "__mflInitialTableControlState");
+    const initialStateMatchesPage = initialState
+      && String(initialState.pageName || "").toLowerCase() === page;
+    const initialCount = initialStateMatchesPage
+      ? Number(initialState.activeRuleCount)
+      : NaN;
+    if (Number.isFinite(initialCount)) {
+      updateFilterSummaryThroughOwner(initialCount);
+      return;
+    }
+    syncFilterSummaryNow();
   }
 
   function syncFilterSummaryAfterClose() {
@@ -1110,7 +1134,7 @@
   function sync() {
     ensureMobileStyle();
     markInitialTableFiltersForReset();
-    syncFilterSummaryNow();
+    syncInitialFilterSummaryNow();
     ensureMobilePageSizeOwnership();
     syncWatchlistSwitcherPlacement();
     ensureViewScrollers();
