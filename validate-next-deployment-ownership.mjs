@@ -7,17 +7,21 @@ const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage] = await Promise.all([
+const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage, vercelConfigSource] = await Promise.all([
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
+  read("vercel.json"),
 ]);
 
 const developmentHeaders = createNextHeaders({ production: false });
 const productionHeaders = createNextHeaders({ production: true });
 const rewrites = createNextRewrites();
+const vercelConfig = JSON.parse(vercelConfigSource);
+const vercelRewrites = Array.isArray(vercelConfig.rewrites) ? vercelConfig.rewrites : [];
+const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation";
 invariant(
   outputFileTracingIncludes["/api/data"]?.some((value) => String(value).includes("api/data-files/mfl_database.db")),
   "Next config must trace the SQLite database into database-backed routes.",
@@ -36,6 +40,29 @@ invariant(
   deepRoutePage.includes("export function getServerSideProps()")
     && deepRoutePage.includes("return { props: {} };"),
   "Production deep routes must stay server-resolved so Vercel can match arbitrary direct app URLs.",
+);
+invariant(
+  vercelRewrites.some((rule) =>
+    rule.source === "/evaluation"
+      && rule.destination === "/api/evaluation-preview"
+      && rule.has?.some((condition) => condition.type === "query" && condition.key === "share")
+  ),
+  "Vercel routing must preserve shared Evaluation preview requests before the SPA shell fallback.",
+);
+invariant(
+  vercelRewrites.some((rule) =>
+    rule.source === `/:app(${shellRouteExpression})`
+      && rule.destination === "/index.html"
+  )
+    && vercelRewrites.some((rule) =>
+      rule.source === `/:app(${shellRouteExpression})/:path*`
+        && rule.destination === "/index.html"
+    ),
+  "Vercel routing must send canonical app roots and deep links to the SPA shell.",
+);
+invariant(
+  !vercelRewrites.some((rule) => rule.source === "/api/:path*" && rule.destination === "/index.html"),
+  "Vercel SPA routing must not swallow API routes.",
 );
 invariant(!packageSource.includes("build-vercel-config.mjs") && !packageSource.includes("vercel.production.json"), "Package scripts must not retain the legacy generated Vercel config model.");
 invariant(!vercelIgnore.includes("html-sources") && !vercelIgnore.includes("modules/core-sources"), "Vercel uploads must retain sources required by next build.");
