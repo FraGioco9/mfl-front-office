@@ -19,6 +19,7 @@ export const securityHeaders = Object.freeze([
 export const outputFileTracingIncludes = {
   "/api/data": ["./api/data-files/mfl_database.db"],
   "/api/identity": ["./api/data-files/mfl_database.db"],
+  "/api/operational-health": ["./api/data-files/mfl_database.db"],
   "/api/evaluation-preview": ["./index.html", "./api/data-files/mfl_database.db"],
   "/api/evaluation-share": ["./api/data-files/mfl_database.db"],
   "/api/wallet-opt-ins": ["./api/data-files/mfl_database.db"],
