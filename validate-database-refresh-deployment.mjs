@@ -10,7 +10,7 @@ const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8")
 const workflow = await readWorkflowSource(
   new URL("./.github/workflows/full-database-refresh.yml", import.meta.url),
 );
-const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer, vercelRemoteRootNormalizer] = await Promise.all([
+const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer, vercelPrebuiltRootStager] = await Promise.all([
   readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
@@ -19,7 +19,7 @@ const [resolver, installer, publisher, adapterValidator, baselineRestore, resume
   readRepository("scripts/workflows/full-database-refresh-restore-resume-checkpoint.sh"),
   readRepository("scripts/workflows/full-database-refresh-write-resume-checkpoint.sh"),
   readRepository("scripts/workflows/normalize-vercel-project-root.mjs"),
-  readRepository("scripts/workflows/ensure-vercel-remote-project-root.mjs"),
+  readRepository("scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"),
 ]);
 const deploymentSource = [
   workflow,
@@ -31,7 +31,7 @@ const deploymentSource = [
   resumeRestore,
   resumeWriter,
   vercelRootNormalizer,
-  vercelRemoteRootNormalizer,
+  vercelPrebuiltRootStager,
 ].join("\n");
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -71,13 +71,19 @@ includes(
   "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
 );
 includes(
-  'body: JSON.stringify({ rootDirectory: null })',
-  "Database-only refreshes must persist repository-root ownership in the remote Vercel project.",
+  'const remoteRoot = String(project.rootDirectory || "").trim();',
+  "Database-only refreshes must read the remote Vercel Root Directory used by the CLI.",
+);
+includes(
+  "await cp(source, destination, { recursive: true });",
+  "Database-only refreshes must mirror prebuilt output into the remote Vercel Root Directory when required.",
 );
 invariant(
-  publisher.indexOf('ensure-vercel-remote-project-root.mjs')
-    < publisher.indexOf("vercel pull --yes --environment=production"),
-  "Database checkpoint deployment must clear the remote Vercel Root Directory before pulling project settings.",
+  publisher.indexOf("vercel build --prod")
+    < publisher.indexOf("stage-vercel-prebuilt-for-remote-root.mjs")
+    && publisher.indexOf("stage-vercel-prebuilt-for-remote-root.mjs")
+      < publisher.indexOf("vercel deploy --prebuilt --prod"),
+  "Database checkpoint deployment must stage the completed prebuilt output after build and before deploy.",
 );
 includes(
   "vercel pull --yes --environment=production",
