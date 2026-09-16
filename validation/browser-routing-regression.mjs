@@ -113,11 +113,12 @@ const browserTestSource = String.raw`(() => {
   "use strict";
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
+  const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
   const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
   const scenario = window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
-      ? (filteredEmpty ? "database-empty" : "database")
+      ? (linkedTableRefresh ? "database-linked-state" : filteredEmpty ? "database-empty" : "database")
       : window.location.pathname.startsWith("/players/")
         ? "player"
         : window.location.pathname.startsWith("/watchlist/")
@@ -154,6 +155,28 @@ const browserTestSource = String.raw`(() => {
   const errors = [];
   let parserSnapshot = null;
   let loadingSkeletonHeight = 0;
+  const linkedTablePaintHistory = { filterCounts: [], sortStates: [] };
+  let linkedTablePaintSampling = linkedTableRefresh;
+
+  const sampleLinkedTablePaint = () => {
+    if (!linkedTablePaintSampling) return;
+    const filterSummary = document.getElementById("filterSummary");
+    if (filterSummary instanceof HTMLElement && !filterSummary.hidden) {
+      const count = String(filterSummary.textContent || "").trim();
+      if (count && linkedTablePaintHistory.filterCounts.at(-1) !== count) {
+        linkedTablePaintHistory.filterCounts.push(count);
+      }
+    }
+    const sortedHeader = document.querySelector("#tableHead th[aria-sort]");
+    if (sortedHeader instanceof HTMLTableCellElement) {
+      const stateValue = String(sortedHeader.dataset.tableColumn || "") + ":" + String(sortedHeader.getAttribute("aria-sort") || "");
+      if (stateValue !== ":" && linkedTablePaintHistory.sortStates.at(-1) !== stateValue) {
+        linkedTablePaintHistory.sortStates.push(stateValue);
+      }
+    }
+    requestAnimationFrame(sampleLinkedTablePaint);
+  };
+  if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
   if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
     const proof = {
@@ -226,6 +249,9 @@ const browserTestSource = String.raw`(() => {
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
+      filterCount: text("#filterSummary"),
+      sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
+      sortDirection: String(document.querySelector("#tableHead th[aria-sort]")?.getAttribute("aria-sort") || ""),
       title: document.title,
     };
   }, { once: true });
@@ -442,10 +468,15 @@ const browserTestSource = String.raw`(() => {
 
   function assertInitialFirstPaint() {
     assert(parserSnapshot, "Parser-time first-paint snapshot was not captured.");
-    if (scenario === "database" || scenario === "database-empty") {
+    if (scenario === "database" || scenario === "database-empty" || scenario === "database-linked-state") {
       assert(parserSnapshot.initialPage === "database/attributes", "Database first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "database", "Database first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");
+      if (scenario === "database-linked-state") {
+        assert(parserSnapshot.filterCount === "1", "Linked Database parser first paint exposed the wrong filter count: " + parserSnapshot.filterCount);
+        assert(parserSnapshot.sortedColumn === "age", "Linked Database parser first paint sorted the wrong column: " + parserSnapshot.sortedColumn);
+        assert(parserSnapshot.sortDirection === "ascending", "Linked Database parser first paint exposed the wrong sort direction: " + parserSnapshot.sortDirection);
+      }
     } else if (scenario === "player") {
       assert(parserSnapshot.initialPage === "players/1", "Player first paint has the wrong initial path.");
       assert(parserSnapshot.initialEntityRoute === "player", "Player first paint has the wrong entity owner.");
@@ -509,7 +540,7 @@ const browserTestSource = String.raw`(() => {
   }
 
   function routeState() {
-    if (scenario === "database" || scenario === "database-empty") {
+    if (scenario === "database" || scenario === "database-empty" || scenario === "database-linked-state") {
       return {
         path: window.location.pathname,
         search: window.location.search,
@@ -585,6 +616,14 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.emptyHidden === false, "Filtered Database empty-state message remained hidden after refresh.");
       assert(stateValue.emptyText === "No players match the current filters.", "Filtered Database empty-state message is wrong: " + stateValue.emptyText);
       assert(stateValue.page === "database", "Filtered Database body page owner is wrong: " + stateValue.page);
+    } else if (scenario === "database-linked-state") {
+      assert(stateValue.path === "/database/attributes", "Linked Database canonical path is wrong: " + stateValue.path);
+      assert(
+        stateValue.search === "?overall.gte=79&sort=age&direction=asc",
+        "Linked Database URL state was not preserved: " + stateValue.search,
+      );
+      assert(stateValue.tableText.includes(expectedPlayerName), "Linked Database did not render the fixture player.");
+      assert(stateValue.page === "database", "Linked Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "player") {
       assert(stateValue.path === "/players/1", "Player canonical path is wrong: " + stateValue.path);
       assert(stateValue.hasPlayerName, "Player detail did not render the fixture identity.");
@@ -1016,6 +1055,20 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    if (scenario === "database-linked-state") {
+      await delay(80);
+      linkedTablePaintSampling = false;
+      assert(
+        linkedTablePaintHistory.filterCounts.length >= 1
+          && linkedTablePaintHistory.filterCounts.every((count) => count === "1"),
+        "Linked Database refresh painted a wrong filter count: " + JSON.stringify(linkedTablePaintHistory.filterCounts),
+      );
+      assert(
+        linkedTablePaintHistory.sortStates.length >= 1
+          && linkedTablePaintHistory.sortStates.every((sortState) => sortState === "age:ascending"),
+        "Linked Database refresh repainted a wrong sort header: " + JSON.stringify(linkedTablePaintHistory.sortStates),
+      );
+    }
     const compactDatabaseStickyRegression = scenario === "database"
       && document.documentElement.clientWidth <= 900;
     if (compactDatabaseStickyRegression) {
@@ -1075,6 +1128,14 @@ const browserTestSource = String.raw`(() => {
     if (scenario.endsWith("-empty")) {
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish("passed", scenario + ": URL-filtered direct refresh committed the authoritative empty table state.");
+      return;
+    }
+    if (scenario === "database-linked-state") {
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish(
+        "passed",
+        "database-linked-state: refresh kept linked filter count and sorting authoritative through every sampled paint.",
+      );
       return;
     }
 
@@ -1608,6 +1669,7 @@ const regressionScenarios = Object.freeze([
   ["database-tablet", "/database/attributes", 800, 900],
   ["database-phone", "/database/attributes", 520, 900],
   ["database-empty", "/database/attributes?overall.gte=99"],
+  ["database-linked-state", "/database/attributes?overall.gte=79&sort=age&direction=asc"],
   ["player", "/players/1"],
   ["player-1444", "/players/1", 1444, 900],
   ["player-1363", "/players/1", 1363, 900],
