@@ -97,6 +97,12 @@ jobs:
           fi
           ls -lh api/data-files/mfl_database.db
 
+      - name: Record expected production identity
+        shell: bash
+        env:
+          EXPECTED_SITE_SHA: ${{ github.sha }}
+        run: bash scripts/workflows/record-production-identity.sh
+
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
 
@@ -142,9 +148,25 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           ALLOW_VERCEL_ACTION_DEPLOY: "1"
+          MFL_DEPLOY_COMMIT: ${{ github.sha }}
         run: vercel build --prod --yes --token "$VERCEL_TOKEN"
 
       - name: Deploy protected site to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel deploy --prebuilt --prod --yes --force --token "$VERCEL_TOKEN"
+
+      - name: Verify live production identity and routes
+        shell: bash
+        env:
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: bash scripts/workflows/verify-live-production-deployment.sh
+
+      - name: Upload deployment identity
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-deployment-identity-${{ github.run_id }}
+          path: ${{ runner.temp }}/mfl-production-expected.json
+          if-no-files-found: warn
+          retention-days: 90
