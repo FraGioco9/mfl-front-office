@@ -310,7 +310,19 @@ function orderSql(scope, view, sortKey, sortDirection) {
   }
 
   if (key === "active_contract_club_division") {
-    return `CAST(active_contract_club_division AS INTEGER) ${direction === "ASC" ? "DESC" : "ASC"}, player_id DESC`;
+    const divisionDirection = direction === "ASC" ? "DESC" : "ASC";
+    const activeContract = "(coalesce(active_contract_club_name, '') <> '' OR coalesce(active_contract_club_id, '') <> '')";
+    const validDivision = "CAST(active_contract_club_division AS INTEGER) BETWEEN 1 AND 10";
+    return `CASE
+      WHEN normalize_search(active_contract_club_name) = 'development center' THEN 1
+      WHEN ${activeContract} AND ${validDivision} THEN 0
+      ELSE 2
+    END ASC,
+    CASE WHEN ${activeContract} AND ${validDivision}
+      THEN CAST(active_contract_club_division AS INTEGER)
+      ELSE NULL
+    END ${divisionDirection},
+    player_id DESC`;
   }
 
   const quotedKey = quoteIdentifier(key);
