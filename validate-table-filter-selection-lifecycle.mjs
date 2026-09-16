@@ -54,7 +54,10 @@ const quickFiltersProjection = quickFiltersMarkup.indexOf('const state = window.
 const controlsBarStart = quickFiltersMarkup.indexOf('<section class="controlsBar" aria-label="Table controls">', quickFiltersStart);
 invariant(
   quickFiltersMarkup.includes('window.__mflNormalizeInitialTableControlState = normalizeInitialTableControlState;')
-    && quickFiltersMarkup.includes('window.__mflInitialTableControlState = normalizeInitialTableControlState(')
+    && quickFiltersMarkup.includes('function initialTableStateFromLocation(pageName, viewName, savedState = {}) {')
+    && quickFiltersMarkup.includes('rules: initialTableUrlRules(pageName, viewName, params),')
+    && quickFiltersMarkup.includes('const storedInitialState = storedInitialTablePageState(tablePage) || {};')
+    && quickFiltersMarkup.includes('initialTableStateFromLocation(tablePage, activeView, storedInitialState)')
     && quickFiltersMarkup.includes('const mflPackable = pageName === "mfl"\n            ? (newMints ? false')
     && quickFiltersStart >= 0
     && quickFiltersProjection > quickFiltersStart
@@ -65,7 +68,7 @@ invariant(
     && quickFiltersMarkup.includes('setChecked("packablePlayersInput", state.mflPackable);')
     && quickFiltersMarkup.includes('setChecked("newMintsInput", state.newMints);')
     && quickFiltersMarkup.includes('filterSummary.textContent = String(activeRuleCount);'),
-  "Parser-time first paint must apply saved Quick Filters, MFL exclusivity, and the valid saved-rule count before later table chrome is parsed.",
+  "Parser-time first paint must prefer linked filter state before the Filters control is parsed, while preserving saved controls when no query is present.",
 );
 invariant(
   appCore.includes('function tableStateWithoutPageFilters(pageName, savedState) {')
