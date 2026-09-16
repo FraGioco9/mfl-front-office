@@ -57,6 +57,15 @@ const repeatedFailure = refreshHealth({
 }, now, MARKETPLACE_FRESHNESS_MAX_AGE_MS);
 invariant(oneFailure.status === "retrying", "One scheduled failure must remain visible as retrying.");
 invariant(repeatedFailure.status === "degraded", "Two consecutive scheduled failures must be degraded.");
+invariant(
+  refreshHealth({
+    lastOutcome: "failure",
+    lastAttemptAt: "2026-09-16T17:00:00Z",
+    lastSuccessAt: "2026-09-16T16:45:00Z",
+    consecutiveFailures: 1,
+  }, now, MARKETPLACE_FRESHNESS_MAX_AGE_MS).status === "stale",
+  "An old single-failure marker must age into stale instead of remaining retrying forever.",
+);
 
 const healthy = operationalHealthSnapshot({
   databaseGeneratedAt: "2026-09-16T12:00:00Z",
