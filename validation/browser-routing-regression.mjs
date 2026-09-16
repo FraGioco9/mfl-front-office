@@ -908,14 +908,64 @@ const browserTestSource = String.raw`(() => {
 
   async function navigateBackToScenario(setPage, timeline) {
     if (scenario === "player") {
-      await setPage("evaluation", true, { plain: true });
+      const originalEnsureRouteCore = window.__mflEnsureRouteCore;
+      let evaluationCoreRequested = false;
+      let releaseEvaluationCore = null;
+      window.__mflEnsureRouteCore = (pageName, options = {}) => {
+        if (String(pageName || "") !== "evaluation" || typeof originalEnsureRouteCore !== "function") {
+          return originalEnsureRouteCore?.(pageName, options);
+        }
+        evaluationCoreRequested = true;
+        return new Promise((resolve, reject) => {
+          releaseEvaluationCore = () => Promise.resolve(originalEnsureRouteCore(pageName, options)).then(resolve, reject);
+        });
+      };
+
+      const evaluationNavigation = setPage("evaluation", true, { plain: true });
+      await waitFor(() => evaluationCoreRequested && typeof releaseEvaluationCore === "function",
+        "Evaluation navigation did not request its lazy interaction core.");
+      await delay(80);
+
+      const playerPageBeforeCommit = document.getElementById("playerPage");
+      const evaluationPageBeforeCommit = document.getElementById("evaluationPage");
+      assert(window.location.pathname !== "/evaluation",
+        "Evaluation URL committed before its interaction core was ready.");
+      assert(playerPageBeforeCommit instanceof HTMLElement && !playerPageBeforeCommit.hidden && !playerPageBeforeCommit.inert,
+        "Player stopped being interactive before Evaluation controls were ready.");
+      assert(evaluationPageBeforeCommit instanceof HTMLElement && evaluationPageBeforeCommit.hidden,
+        "Evaluation became visible before its interaction handlers were ready.");
+
+      releaseEvaluationCore();
+      await evaluationNavigation;
+      window.__mflEnsureRouteCore = originalEnsureRouteCore;
+
       await waitFor(() => window.location.pathname === "/evaluation" && document.getElementById("evaluationPage")?.hidden === false,
         "Player could not navigate to Evaluation for accessibility cleanup.");
       const playerPage = document.getElementById("playerPage");
+      const evaluationPage = document.getElementById("evaluationPage");
+      const appShell = document.getElementById("appShell");
       assert(playerPage instanceof HTMLElement && playerPage.hidden && playerPage.inert,
         "Player route remained accessibility-active after navigating to Evaluation.");
       assert(playerPage.getAttribute("aria-hidden") === "true",
         "Player route remained in the accessibility tree after navigating to Evaluation.");
+      assert(evaluationPage instanceof HTMLElement && !evaluationPage.inert,
+        "Visible Evaluation route remained inert after its interaction core became ready.");
+      assert(appShell instanceof HTMLElement && !appShell.inert,
+        "Application shell remained inert after Evaluation navigation completed.");
+
+      const advancedSettingsButton = document.querySelector("#evaluationPage .advancedSettingsButton");
+      const advancedSettingsModal = document.getElementById("advancedSettingsModal");
+      const closeAdvancedSettingsButton = document.getElementById("closeAdvancedSettingsButton");
+      assert(advancedSettingsButton instanceof HTMLButtonElement
+        && advancedSettingsModal instanceof HTMLElement
+        && closeAdvancedSettingsButton instanceof HTMLButtonElement,
+      "Evaluation interaction regression could not find the Advanced Settings controls.");
+      advancedSettingsButton.click();
+      await waitFor(() => advancedSettingsModal.hidden === false && advancedSettingsModal.classList.contains("modalOpen"),
+        "Evaluation Advanced Settings button was visible but not interactive on first entry.");
+      closeAdvancedSettingsButton.click();
+      await waitFor(() => advancedSettingsModal.hidden === true,
+        "Evaluation Advanced Settings modal did not close after the interaction-readiness check.");
       assertPageAccessibilityState();
     }
     await setPage("privacy", true);
