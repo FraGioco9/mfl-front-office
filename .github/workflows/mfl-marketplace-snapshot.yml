@@ -12,6 +12,8 @@ on:
       - "scripts/marketplace/mfl_marketplace_snapshot.py"
       - "scripts/marketplace/mfl_marketplace_events.py"
       - "scripts/marketplace/mfl_marketplace_runtime_state.py"
+      - "scripts/operations/runtime_health.py"
+      - "tests/test_runtime_health.py"
       - "tests/test_mfl_marketplace_snapshot.py"
       - "tests/test_mfl_marketplace_events.py"
       - "tests/test_mfl_marketplace_runtime_state.py"
@@ -33,6 +35,8 @@ on:
       - "scripts/marketplace/mfl_marketplace_snapshot.py"
       - "scripts/marketplace/mfl_marketplace_events.py"
       - "scripts/marketplace/mfl_marketplace_runtime_state.py"
+      - "scripts/operations/runtime_health.py"
+      - "tests/test_runtime_health.py"
       - "tests/test_mfl_marketplace_snapshot.py"
       - "tests/test_mfl_marketplace_events.py"
       - "tests/test_mfl_marketplace_runtime_state.py"
@@ -110,9 +114,12 @@ jobs:
           scripts/marketplace/mfl_marketplace_snapshot.py
           scripts/marketplace/mfl_marketplace_events.py
           scripts/marketplace/mfl_marketplace_runtime_state.py
+          scripts/operations/runtime_health.py
+          tests/test_runtime_health.py
           tests/test_mfl_marketplace_snapshot.py
           tests/test_mfl_marketplace_events.py
           tests/test_mfl_marketplace_runtime_state.py
+          tests/test_runtime_health.py
           tests/test_reliable_marketplace_scheduler.py
 
       - name: Run marketplace regression tests
@@ -183,3 +190,21 @@ jobs:
           path: marketplace-output/mfl_marketplace_listings.json
           if-no-files-found: error
           retention-days: 1
+
+      - name: Record scheduled Marketplace refresh health
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.trigger_source == 'supabase-cron' }}
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          HEALTH_OUTCOME: ${{ job.status }}
+          HEALTH_TRIGGER_SOURCE: ${{ inputs.trigger_source }}
+          HEALTH_OCCURRENCE_KEY: ${{ inputs.occurrence_key }}
+        run: >-
+          python -m scripts.operations.runtime_health
+          --surface marketplace
+          --outcome "$HEALTH_OUTCOME"
+          --trigger-source "$HEALTH_TRIGGER_SOURCE"
+          --occurrence-key "$HEALTH_OCCURRENCE_KEY"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
