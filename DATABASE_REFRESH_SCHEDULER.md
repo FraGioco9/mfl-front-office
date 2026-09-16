@@ -158,6 +158,8 @@ The timing summary records:
 
 A recovered occurrence will naturally show roughly 10 minutes of trigger delay, making recovery visible in GitHub telemetry.
 
+Each Supabase-Cron production run also writes `mfl-runtime/health/database-refresh.json` after the normal workflow work. The marker records the latest scheduled outcome, attempt/success timestamps, occurrence/run identity, and a consecutive-failure count. The write is non-blocking so monitoring cannot convert a successfully published database into a failed refresh. `GET /api/operational-health` combines this marker with the live SQLite `generated_at`; two consecutive scheduled failures or a marker/data age beyond the documented threshold is reported as degraded.
+
 ## Failure behavior
 
 - **Transient GitHub API/network problem:** the Edge Function retries the GitHub request up to three times.
