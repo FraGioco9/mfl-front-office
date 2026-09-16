@@ -131,8 +131,8 @@ invariant(
   "Bootstrap must resolve only visible sortable URL columns before rendering the first table header.",
 );
 invariant(
-  bootstrap.includes("function primeInitialTableStructure(page, view, urlLike = window.location.href) {")
-    && bootstrap.includes("const sort = firstPaintTableSortState(normalizedPage, normalizedView, urlLike);")
+  bootstrap.includes("function primeInitialTableStructure(page, view) {")
+    && bootstrap.includes("const sort = firstPaintTableSortState(normalizedPage, normalizedView);")
     && bootstrap.includes('header.setAttribute("aria-sort", sort.sortDirection === "asc" ? "ascending" : "descending");')
     && bootstrap.includes("arrow.className = `sortArrow ${sort.sortDirection}`;"),
   "First-paint table headers must expose the linked sort arrow and aria-sort before hydration.",
@@ -144,8 +144,8 @@ invariant(
   "First-paint table chrome must derive its filter badge from URL-authoritative control state.",
 );
 invariant(
-  bootstrap.includes("primeInitialTableStructure(tablePage, view, window.location.href);"),
-  "Initial route bootstrap must pass the current URL into the first-paint header owner.",
+  bootstrap.includes("primeInitialTableStructure(tablePage, view);"),
+  "Initial route bootstrap must retain the canonical table-structure owner while linked sorting resolves from the current URL.",
 );
 
 const syncIndex = sharedCore.indexOf('tableUrlState.syncFromControls();');
