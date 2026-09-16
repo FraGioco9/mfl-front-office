@@ -1,5 +1,5 @@
 const crypto = require("node:crypto");
-const { readJsonBody } = require("./_request-body");
+const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
@@ -86,14 +86,8 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const contentLength = Number(request.headers?.["content-length"] || 0);
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    response.status(413).json({ error: "Bug report is too large." });
-    return;
-  }
-
   try {
-    const report = normalizeBugReport(await readJsonBody(request));
+    const report = normalizeBugReport(await readJsonBody(request, { maxBytes: MAX_BODY_BYTES }));
     const hash = reporterHash(request);
     await enforceRateLimit(hash);
     const wallet = await verifiedWallet(request);
@@ -114,6 +108,7 @@ module.exports = async function handler(request, response) {
 
     response.status(201).json({ id: row.id });
   } catch (error) {
+    if (sendRequestBodyError(response, error)) return;
     if (error instanceof BugReportValidationError) {
       response.status(400).json({ error: error.message });
       return;
