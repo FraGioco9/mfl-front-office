@@ -3,7 +3,6 @@ from __future__ import annotations
 import sqlite3
 import threading
 import time
-from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -22,29 +21,36 @@ RETIRED_PROGRESSION_BATCHES: tuple[tuple[int, ...], ...] | None = None
 
 
 class RollingRateLimiter:
-    """Allow an immediate burst, then limit starts in a rolling 60-second window."""
+    """Pace request starts evenly and support a shared API cooldown."""
 
     def __init__(self, requests_per_minute: int) -> None:
-        self.requests_per_minute = requests_per_minute
-        self.window_seconds = 60.0
-        self.starts: deque[float] = deque()
+        if requests_per_minute <= 0:
+            raise ValueError("requests_per_minute must be positive")
+        self.interval_seconds = 60.0 / requests_per_minute
+        self.next_allowed = 0.0
+        self.cooldown_until = 0.0
         self.lock = threading.Lock()
 
     def wait(self) -> None:
         while True:
             with self.lock:
                 now = time.monotonic()
-                cutoff = now - self.window_seconds
-                while self.starts and self.starts[0] <= cutoff:
-                    self.starts.popleft()
-
-                if len(self.starts) < self.requests_per_minute:
-                    self.starts.append(now)
+                ready_at = max(self.next_allowed, self.cooldown_until)
+                if now >= ready_at:
+                    self.next_allowed = now + self.interval_seconds
                     return
-
-                delay = max(0.001, self.starts[0] + self.window_seconds - now)
+                delay = max(0.001, ready_at - now)
 
             time.sleep(delay)
+
+    def defer(self, seconds: float) -> None:
+        """Delay all future request starts after a shared throttle response."""
+        delay = max(0.0, float(seconds))
+        with self.lock:
+            self.cooldown_until = max(
+                self.cooldown_until,
+                time.monotonic() + delay,
+            )
 
 
 def discover_player_batch_anchors(limiter: RollingRateLimiter) -> list[int]:

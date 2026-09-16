@@ -14,8 +14,8 @@ from scripts.database import run_flow_rebuild as pipeline
 from scripts.database import run_flow_rebuild_paged as paged
 from scripts.database import staged_rebuild
 
-PLAYER_REQUESTS_PER_MINUTE = 60
-PROGRESSION_REQUESTS_PER_MINUTE = 60
+PLAYER_REQUESTS_PER_MINUTE = 50
+PROGRESSION_REQUESTS_PER_MINUTE = 50
 MFL_API_TOKEN_ENVIRONMENT_VARIABLE = "MFL_API_TOKEN"
 REBUILD_STAGE_ENVIRONMENT_VARIABLE = "MFL_REBUILD_STAGE"
 FETCH_WALLETS_ENVIRONMENT_VARIABLE = "MFL_FETCH_WALLETS"
@@ -161,7 +161,7 @@ def configure_rebuild() -> dict[str, bool]:
     )
 
     pipeline.MFL_REQUESTS_PER_MINUTE = PLAYER_REQUESTS_PER_MINUTE
-    pipeline.MFL_WORKERS = 320
+    pipeline.MFL_WORKERS = 32
     pipeline.RateLimiter = paged.RollingRateLimiter
     pipeline.refresh_wallets = paged.refresh_wallets_without_playmfl_limiter
 

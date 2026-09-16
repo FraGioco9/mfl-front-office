@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from http.client import IncompleteRead
 import os
 import sqlite3
 import threading
@@ -125,9 +128,30 @@ def request_headers(url: str) -> dict[str, str]:
     return headers
 
 
+def retry_after_seconds(error: HTTPError) -> float:
+    """Resolve Retry-After seconds, falling back to the standard rebuild delay."""
+    raw_value = str(error.headers.get("Retry-After") or "").strip() if error.headers else ""
+    if not raw_value:
+        return RETRY_DELAY_SECONDS
+    try:
+        return max(0.0, float(raw_value))
+    except ValueError:
+        try:
+            retry_at = parsedate_to_datetime(raw_value)
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=timezone.utc)
+            return max(
+                0.0,
+                (retry_at - datetime.now(timezone.utc)).total_seconds(),
+            )
+        except (TypeError, ValueError, OverflowError):
+            return RETRY_DELAY_SECONDS
+
+
 def request_json(url: str, request_name: str, limiter: RateLimiter | None = None) -> Any:
     last_error: Exception | None = None
     for attempt in range(MAX_RETRIES + 1):
+        retry_delay = RETRY_DELAY_SECONDS
         if limiter:
             limiter.wait()
         request = Request(url, headers=request_headers(url))
@@ -139,11 +163,29 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
             last_error = RuntimeError(f"HTTP {error.code}: {body[:500]}")
             if error.code == 404:
                 raise RuntimeError(f"{request_name} failed: {last_error}") from error
-        except (URLError, TimeoutError, json.JSONDecodeError) as error:
+            if error.code == 429:
+                retry_delay = retry_after_seconds(error)
+                defer = getattr(limiter, "defer", None)
+                if callable(defer):
+                    defer(retry_delay)
+                log(
+                    f"{request_name} rate limited; shared cooldown "
+                    f"{format_duration(retry_delay)}"
+                )
+        except (
+            IncompleteRead,
+            ConnectionError,
+            URLError,
+            TimeoutError,
+            json.JSONDecodeError,
+        ) as error:
             last_error = error
         if attempt < MAX_RETRIES:
-            log(f"{request_name} failed; retrying in {format_duration(RETRY_DELAY_SECONDS)} ({attempt + 1}/{MAX_RETRIES})")
-            time.sleep(RETRY_DELAY_SECONDS)
+            log(
+                f"{request_name} failed; retrying in {format_duration(retry_delay)} "
+                f"({attempt + 1}/{MAX_RETRIES})"
+            )
+            time.sleep(retry_delay)
     raise RuntimeError(f"{request_name} failed: {last_error}")
 
 
