@@ -207,9 +207,9 @@ class RebuildMintAgePersistenceTests(unittest.TestCase):
             finally:
                 connection.close()
 
-    def test_production_mfl_limiters_use_sixty_starts_per_minute(self) -> None:
-        self.assertEqual(rebuild_database_runner.PLAYER_REQUESTS_PER_MINUTE, 60)
-        self.assertEqual(rebuild_database_runner.PROGRESSION_REQUESTS_PER_MINUTE, 60)
+    def test_production_mfl_limiters_keep_headroom_below_sixty_starts_per_minute(self) -> None:
+        self.assertEqual(rebuild_database_runner.PLAYER_REQUESTS_PER_MINUTE, 50)
+        self.assertEqual(rebuild_database_runner.PROGRESSION_REQUESTS_PER_MINUTE, 50)
 
 
 if __name__ == "__main__":
