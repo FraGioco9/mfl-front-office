@@ -108,10 +108,10 @@ function refreshHealth(marker, now, maxAgeMs) {
   let status = "healthy";
   if (failures >= REPEATED_FAILURE_THRESHOLD) {
     status = "degraded";
-  } else if (failures === 1) {
-    status = "retrying";
   } else if (ageMs > maxAgeMs) {
     status = "stale";
+  } else if (failures === 1) {
+    status = "retrying";
   }
 
   return {
