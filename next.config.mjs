@@ -8,6 +8,14 @@ const root = dirname(fileURLToPath(import.meta.url));
 const noStore = [{ key: "Cache-Control", value: "no-store, max-age=0" }];
 const immutable = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
 
+export const securityHeaders = Object.freeze([
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+  { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=()" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+]);
+
 export const outputFileTracingIncludes = {
   "/api/data": ["./api/data-files/mfl_database.db"],
   "/api/identity": ["./api/data-files/mfl_database.db"],
@@ -25,6 +33,7 @@ export const outputFileTracingIncludes = {
 
 export function createNextHeaders({ production = process.env.NODE_ENV === "production" } = {}) {
   return [
+    { source: "/:path*", headers: securityHeaders },
     { source: "/", headers: noStore },
     { source: "/index.html", headers: noStore },
     { source: "/release.json", headers: noStore },
