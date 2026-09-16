@@ -1,19 +1,30 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
+import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
-const [packageSource, vercelIgnore, siteUpdateWorkflow, checkpointPublisher, deepRoutePage, vercelConfigSource] = await Promise.all([
+const [
+  packageSource,
+  vercelIgnore,
+  siteUpdateWorkflow,
+  checkpointPublisher,
+  deepRoutePage,
+  vercelConfigSource,
+  identityRecorder,
+  deploymentVerifier,
+] = await Promise.all([
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
   read("vercel.json"),
+  read("scripts/workflows/record-production-identity.sh"),
+  read("scripts/workflows/verify-live-production-deployment.sh"),
 ]);
 
 const developmentHeaders = createNextHeaders({ production: false });
@@ -75,8 +86,47 @@ for (const source of [siteUpdateWorkflow, checkpointPublisher]) {
 }
 
 invariant(
+  Object.hasOwn(nextConfig.env || {}, "MFL_DEPLOY_COMMIT"),
+  "Next build configuration must expose one build-bound deployment commit owner.",
+);
+invariant(
+  siteUpdateWorkflow.includes("Record expected production identity")
+    && siteUpdateWorkflow.includes("EXPECTED_SITE_SHA: ${{ github.sha }}")
+    && siteUpdateWorkflow.includes("MFL_DEPLOY_COMMIT: ${{ github.sha }}")
+    && siteUpdateWorkflow.includes("verify-live-production-deployment.sh")
+    && siteUpdateWorkflow.includes("production-deployment-identity-${{ github.run_id }}"),
+  "Normal site deployment must record, embed, verify and retain the source/version/database identity tuple.",
+);
+invariant(
+  checkpointPublisher.includes('DEPLOYMENT_ROOT=production-site EXPECTED_SITE_SHA="$EXPECTED_SHA"')
+    && checkpointPublisher.includes('MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build')
+    && checkpointPublisher.includes("verify-live-production-deployment.sh")
+    && checkpointPublisher.includes("deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt}"),
+  "Database checkpoint publication must preserve the published site source identity and record it with the database generation.",
+);
+for (const token of [
+  '"siteCommit": site_commit',
+  '"version": version',
+  '"commitVerificationRequired": commit_verification_required',
+  '"generatedAt": generated_at',
+  '"mfl-production-expected.json"',
+]) {
+  invariant(identityRecorder.includes(token), "Production identity recording must retain commit, release and database generation together.");
+}
+for (const route of ["/database", "/evaluation", "/players/374097", "/clubs/1/squad"]) {
+  invariant(deploymentVerifier.includes(`"${route}"`), `Production verification must retain the representative route ${route}.`);
+}
+invariant(
+  deploymentVerifier.includes('base_url + "/api/identity"')
+    && deploymentVerifier.includes("runtime.get(\"commit\"")
+    && deploymentVerifier.includes("runtime.get(\"version\"")
+    && deploymentVerifier.includes("identity_database.get(\"generatedAt\"")
+    && deploymentVerifier.includes('if \'id="appShell"\' not in body:'),
+  "Production verification must bind the live runtime identity to the expected commit/version/database generation and canonical shell.",
+);
+invariant(
   !siteUpdateWorkflow.includes("ensure-vercel-remote-project-root.mjs"),
   "Normal site deployment must not require privileged Vercel project-setting mutation.",
 );
 
-console.log("Next.js/Vercel deployment ownership validation passed.");
+console.log("Next.js/Vercel deployment ownership and production identity verification passed.");
