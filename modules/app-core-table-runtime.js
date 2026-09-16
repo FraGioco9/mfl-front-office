@@ -536,8 +536,16 @@ function compareNextOverallRows(a, b, column, direction) {
 
 function sortableValue(row, column) {
   if (column === "active_contract_club_division") {
+    const clubName = getValue(row, "active_contract_club_name");
     const divisionRank = contractDivisionSortValue(getValue(row, column));
-    return divisionRank === null ? null : -divisionRank;
+    const visibleDirection = state.sortDirection === "asc" ? 1 : -1;
+    if (isDevelopmentCenterClubName(clubName)) {
+      return [visibleDirection, 0];
+    }
+    if (rowHasActiveContract(row) && divisionRank !== null) {
+      return [0, -divisionRank];
+    }
+    return [2 * visibleDirection, 0];
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
