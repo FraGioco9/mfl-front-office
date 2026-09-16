@@ -70,8 +70,18 @@ assert.match(core, /state\.currentPage === "progression" && \(state\.view === "c
 assert.doesNotMatch(core, /comparisonDirection = state\.currentPage === "progression"/u, "Progression primary and raw selected-stat tie-break must use the same visible sort direction.");
 assert.match(dataPage, /\["current", "all"\]\.includes\(view\)[\s\S]{0,320}quoteIdentifier\(key\)\} \$\{direction\}, player_id DESC/u, "Incremental Progression sorting must use selected progression first and the matching raw Overall/stat second.");
 assert.match(core, /compareRowsWithClubPositionOrder|clubPositionSort/u, "Existing Club position-order ownership must remain intact.");
-for (const linkedColumn of ["wallet_name", "active_contract_club_name"]) {
-  assert.ok(TABLE_SORTABLE_COLUMNS.includes(linkedColumn), `${linkedColumn} links must remain sortable through the canonical table config.`);
+assert.ok(TABLE_SORTABLE_COLUMNS.includes("active_contract_club_name"), "Club Name must remain sortable through the canonical table config.");
+assert.ok(!TABLE_SORTABLE_COLUMNS.includes("wallet_name"), "Agent links must not become a separate sortable-column feature.");
+assert.match(
+  core,
+  /column === "active_contract_club_name"[\s\S]{0,120}formatContractClubName\(row\)\.toLocaleLowerCase\(\)/u,
+  "Client-side Club Name sorting must compare the displayed label alphabetically.",
+);
+const clubNameAsc = orderSql("database", "contracts", "active_contract_club_name", "asc");
+const clubNameDesc = orderSql("database", "contracts", "active_contract_club_name", "desc");
+for (const [direction, sql] of [["ASC", clubNameAsc], ["DESC", clubNameDesc]]) {
+  assert.match(sql, /THEN 'Free Agent'[\s\S]{0,120}END COLLATE NOCASE/u, `${direction} Club Name sorting must compare displayed labels case-insensitively.`);
+  assert.ok(sql.includes(`END COLLATE NOCASE ${direction}, player_id DESC`), `${direction} Club Name sorting must use alphabetical ${direction} order.`);
 }
 assert.match(
   core,
