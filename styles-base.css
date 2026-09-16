@@ -1394,6 +1394,12 @@ button:disabled:not(.menuButton) {
   font-size: 10px;
 }
 
+.advancedMflUsdResetButton[hidden],
+.advancedRewardRateResetButton[hidden],
+.evaluationMetricResetButton[hidden] {
+  display: none;
+}
+
 .advancedPercentControl {
   display: inline-grid;
   grid-template-columns: 18px 92px auto;
