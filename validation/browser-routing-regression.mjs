@@ -622,7 +622,27 @@ const browserTestSource = String.raw`(() => {
         stateValue.search === "?sort=age&direction=asc&overall.gte=79",
         "Linked Database canonical URL state was not preserved: " + stateValue.search,
       );
-      assert(stateValue.tableText.includes(expectedPlayerName), "Linked Database did not render the fixture player.");
+      assert(
+        stateValue.tableText.includes(expectedPlayerName),
+        "Linked Database did not render the fixture player. Debug: " + JSON.stringify({
+          rows: typeof state !== "undefined" ? state.rows : null,
+          filteredRows: typeof state !== "undefined" ? state.filteredRows : null,
+          columns: typeof state !== "undefined" ? state.columns : null,
+          pageSize: typeof state !== "undefined" ? state.pageSize : null,
+          incrementalMode: typeof state !== "undefined" ? state.incrementalMode : null,
+          incrementalTotalRows: typeof state !== "undefined" ? state.incrementalTotalRows : null,
+          currentPage: typeof state !== "undefined" ? state.currentPage : null,
+          view: typeof state !== "undefined" ? state.view : null,
+          sortKey: typeof state !== "undefined" ? state.sortKey : null,
+          sortDirection: typeof state !== "undefined" ? state.sortDirection : null,
+          hideRetired: document.getElementById("hideRetiredInput")?.checked,
+          hideRetiring: document.getElementById("hideRetiringInput")?.checked,
+          hideMfl: document.getElementById("hideMflPlayersInput")?.checked,
+          newMints: document.getElementById("newMintsInput")?.checked,
+          rules: typeof readFilterRules === "function" ? readFilterRules() : null,
+          pendingRestore: typeof state !== "undefined" ? state.pendingTableControlRestore : null,
+        }),
+      );
       assert(stateValue.page === "database", "Linked Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "player") {
       assert(stateValue.path === "/players/1", "Player canonical path is wrong: " + stateValue.path);
