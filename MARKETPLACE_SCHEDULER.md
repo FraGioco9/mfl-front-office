@@ -68,3 +68,5 @@ In Supabase **Integrations -> Cron**, confirm `mfl-marketplace-snapshot-quarter-
 In GitHub Actions, scheduled Marketplace runs should be `workflow_dispatch` runs whose title contains an occurrence key such as `20260827-0515-p0200`. There should be no GitHub `schedule` event for the Marketplace workflow.
 
 At 04:00 Rome the dispatched mode must be `reconcile`; all other scheduled quarter-hours must be `incremental`.
+
+Each Supabase-Cron production dispatch also writes `mfl-runtime/health/marketplace-refresh.json` after the normal snapshot workflow. The marker tracks the latest scheduled outcome and consecutive failures without being rewritten by manual or push-triggered runs. `GET /api/operational-health` combines it with the Marketplace runtime `generated_at`. The monitoring threshold is two hours so the 90-minute 04:00 reconcile remains valid; the site's separate 24-hour fail-closed listing cutoff is unchanged.

@@ -8,6 +8,8 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 `bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
 
+`api/_operational-health.js` is the server-only reader for operational runtime objects in the existing private `mfl-runtime` Storage bucket. It reads the Marketplace runtime snapshot plus `health/database-refresh.json` and `health/marketplace-refresh.json` with the service-role key; `api/operational-health.js` exposes only normalized freshness/outcome metadata and never returns credentials or raw private objects. Scheduled production workflow writes are owned by `scripts/operations/runtime_health.py`.
+
 ## Tables and owners
 
 ### `wallet_opt_ins`
