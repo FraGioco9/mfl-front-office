@@ -555,3 +555,22 @@ jobs:
           path: ${{ runner.temp }}/full-database-refresh-trigger-telemetry.json
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Record scheduled database refresh health
+        if: ${{ always() && needs.resolve-refresh-trigger.outputs.trigger_source == 'supabase-cron' }}
+        continue-on-error: true
+        working-directory: builder
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          HEALTH_OUTCOME: ${{ job.status }}
+          HEALTH_TRIGGER_SOURCE: ${{ needs.resolve-refresh-trigger.outputs.trigger_source }}
+          HEALTH_OCCURRENCE_KEY: ${{ needs.resolve-refresh-trigger.outputs.occurrence_key }}
+        run: >-
+          python -m scripts.operations.runtime_health
+          --surface database
+          --outcome "$HEALTH_OUTCOME"
+          --trigger-source "$HEALTH_TRIGGER_SOURCE"
+          --occurrence-key "$HEALTH_OCCURRENCE_KEY"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
