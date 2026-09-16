@@ -7,13 +7,47 @@ const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
 const WALLET_PERMISSION_CACHE = new Map();
 const WALLET_PERMISSION_CACHE_TTL_MS = 60_000;
+const WALLET_PERMISSION_CACHE_MAX_ENTRIES = 256;
 const PRIVATE_CACHE_CONTROL = "private, no-store, no-cache, must-revalidate, max-age=0";
 const PUBLIC_REVALIDATE_CACHE_CONTROL = "public, max-age=0, must-revalidate";
 
+function pruneWalletPermissionCache(now = Date.now()) {
+  for (const [wallet, entry] of WALLET_PERMISSION_CACHE) {
+    if (!(entry?.expiresAt > now)) {
+      WALLET_PERMISSION_CACHE.delete(wallet);
+    }
+  }
+
+  while (WALLET_PERMISSION_CACHE.size > WALLET_PERMISSION_CACHE_MAX_ENTRIES) {
+    const oldestWallet = WALLET_PERMISSION_CACHE.keys().next().value;
+    if (oldestWallet === undefined) break;
+    WALLET_PERMISSION_CACHE.delete(oldestWallet);
+  }
+}
+
+function cachedWalletPermission(wallet, now = Date.now()) {
+  pruneWalletPermissionCache(now);
+  const cached = WALLET_PERMISSION_CACHE.get(wallet);
+  if (!cached) return null;
+  WALLET_PERMISSION_CACHE.delete(wallet);
+  WALLET_PERMISSION_CACHE.set(wallet, cached);
+  return cached.allowed;
+}
+
+function cacheWalletPermission(wallet, allowed, now = Date.now()) {
+  pruneWalletPermissionCache(now);
+  WALLET_PERMISSION_CACHE.delete(wallet);
+  WALLET_PERMISSION_CACHE.set(wallet, {
+    allowed,
+    expiresAt: now + WALLET_PERMISSION_CACHE_TTL_MS,
+  });
+  pruneWalletPermissionCache(now);
+}
+
 async function walletAllowed(wallet) {
   const normalizedWallet = normalizeWalletAddress(wallet);
-  const cached = WALLET_PERMISSION_CACHE.get(normalizedWallet);
-  if (cached?.expiresAt > Date.now()) return cached.allowed;
+  const cached = cachedWalletPermission(normalizedWallet);
+  if (cached !== null) return cached;
   if (!supabaseConfig()) return false;
 
   let rows;
@@ -31,10 +65,7 @@ async function walletAllowed(wallet) {
   }
 
   const allowed = Array.isArray(rows) && rows.length > 0;
-  WALLET_PERMISSION_CACHE.set(normalizedWallet, {
-    allowed,
-    expiresAt: Date.now() + WALLET_PERMISSION_CACHE_TTL_MS,
-  });
+  cacheWalletPermission(normalizedWallet, allowed);
   return allowed;
 }
 
