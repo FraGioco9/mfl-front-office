@@ -534,6 +534,10 @@ function compareNextOverallRows(a, b, column, direction) {
 }
 
 function sortableValue(row, column) {
+  if (column === "active_contract_club_name") {
+    return formatContractClubName(row).toLocaleLowerCase();
+  }
+
   if (column === "active_contract_club_division") {
     const clubName = getValue(row, "active_contract_club_name");
     const divisionRank = contractDivisionSortValue(getValue(row, column));
@@ -1643,6 +1647,7 @@ const TABLE_URL_QUICK_FILTER_KEYS = Object.freeze(new Set([
   "packableOnly",
   "newMintsOnly",
 ]));
+const TABLE_URL_SORT_KEYS = Object.freeze(new Set(["sort", "direction"]));
 
 function tableUrlRuleIsValid(column, operator, value, valueTo = "") {
   const allowedOperators = new Set(filterOperatorsForColumn(column).map(([candidate]) => candidate));
@@ -1705,7 +1710,7 @@ function tableUrlRulesFromParams(pageName, viewName, params) {
   const entries = [];
 
   for (const [key, rawValue] of params.entries()) {
-    if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) continue;
+    if (TABLE_URL_QUICK_FILTER_KEYS.has(key) || TABLE_URL_SORT_KEYS.has(key)) continue;
     const parts = tableUrlRuleKeyParts(key);
     if (!parts || !allowedColumns.has(parts.column)) continue;
 
@@ -1769,6 +1774,20 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
   if (pageName === "mfl" && !source.mflPackable && !source.newMints) params.set("packableOnly", "false");
   if (source.newMints) params.set("newMintsOnly", "true");
 
+  const defaultSortState = defaultSortStateForView(viewName, pageName);
+  const resolvedSortState = normalizedViewSortState(
+    { sortKey: source.sortKey, sortDirection: source.sortDirection },
+    viewName,
+    pageName,
+  );
+  if (
+    resolvedSortState.sortKey !== defaultSortState.sortKey
+    || resolvedSortState.sortDirection !== defaultSortState.sortDirection
+  ) {
+    params.set("sort", resolvedSortState.sortKey);
+    params.set("direction", resolvedSortState.sortDirection);
+  }
+
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
   const rules = Array.isArray(source.rules) ? source.rules : [];
   rules.forEach((rule, index) => {
@@ -1801,6 +1820,7 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
   let explicit = false;
   const parsedQuick = {};
   const parsedRules = [];
+  let parsedSortState = null;
 
   for (const [key, value] of params.entries()) {
     if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) {
@@ -1815,15 +1835,35 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
       continue;
     }
 
+    if (TABLE_URL_SORT_KEYS.has(key)) {
+      explicit = true;
+      continue;
+    }
+
     explicit = true;
+  }
+
+  const requestedSortKey = String(params.get("sort") || "");
+  const requestedSortDirection = String(params.get("direction") || "").toLowerCase();
+  if (
+    sortKeySupportedByView(requestedSortKey, viewName, pageName)
+    && (requestedSortDirection === "asc" || requestedSortDirection === "desc")
+  ) {
+    parsedSortState = {
+      sortKey: requestedSortKey,
+      sortDirection: requestedSortDirection,
+    };
   }
 
   parsedRules.push(...tableUrlRulesFromParams(pageName, viewName, params));
 
+  const defaultSortState = defaultSortStateForView(viewName, pageName);
   const resolved = explicit
     ? {
         ...tableStateWithoutPageFilters(pageName, fallback),
         ...parsedQuick,
+        sortKey: parsedSortState?.sortKey || defaultSortState.sortKey,
+        sortDirection: parsedSortState?.sortDirection || defaultSortState.sortDirection,
         rules: parsedRules,
         selectedPlayerIds: [],
       }
@@ -1925,19 +1965,25 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
   const urlState = tableUrlStateFromSearch(pageName, requestedView, tableRestoreUrlSearch(options), fallbackState);
   const savedState = urlState.state;
   state.view = savedState.view;
-  replaceTableUrlForState(pageName, state.view, savedState);
 
   if (Number(savedState.pageSize)) {
     state.pageSize = Number(savedState.pageSize);
   }
 
-  const viewSortState = tableSortStateForView(
-  state.view,
-  pageName,
-  { sortKey: state.sortKey, sortDirection: state.sortDirection },
-);
-state.sortKey = viewSortState.sortKey;
-state.sortDirection = viewSortState.sortDirection;
+  const viewSortState = normalizedViewSortState(
+    { sortKey: savedState.sortKey, sortDirection: savedState.sortDirection },
+    state.view,
+    pageName,
+  );
+  state.sortKey = viewSortState.sortKey;
+  state.sortDirection = viewSortState.sortDirection;
+  if (state.tableSortSessionKey) {
+    state.tableSortSessionSortState = viewSortState;
+  }
+  replaceTableUrlForState(pageName, state.view, {
+    ...savedState,
+    ...viewSortState,
+  });
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
   state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
   return savedState;
