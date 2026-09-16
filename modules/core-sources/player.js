@@ -1175,13 +1175,13 @@ function animateReadyControls(container = document) {
     if (teamName && clubId) {
       team = document.createElement("a");
       team.className = "playerContractTeam playerContractTeamLink clubPageLink";
-      team.href = window.__mflAppConfig?.routes?.clubPath?.(clubId, "info") || "/clubs/" + encodeURIComponent(clubId) + "/info";
+      team.href = window.__mflAppConfig?.routes?.clubPath?.(clubId, "attributes") || "/clubs/" + encodeURIComponent(clubId) + "/squad";
       team.dataset.clubId = clubId;
       team.textContent = teamName;
       team.addEventListener("click", (event) => {
         if (typeof window.mflOpenClubPage !== "function") return;
         event.preventDefault();
-        window.mflOpenClubPage(clubId, "info");
+        window.mflOpenClubPage(clubId, "attributes");
       });
     } else {
       team = document.createElement("span");
@@ -2053,7 +2053,7 @@ function bindContractTeamLink(playerId) {
     if (!teamName || /^(free agent|development center)$/i.test(teamName)) return;
     const clubId = contractClubId(playerId, teamName);
     if (!clubId) return;
-    const href = "/clubs/" + encodeURIComponent(clubId) + "/info";
+    const href = window.__mflAppConfig?.routes?.clubPath?.(clubId, "attributes") || "/clubs/" + encodeURIComponent(clubId) + "/squad";
     const link = team instanceof HTMLAnchorElement ? team : document.createElement("a");
     if (link !== team) {
       link.className = String(team.className || "playerContractTeam");
@@ -2070,7 +2070,7 @@ function bindContractTeamLink(playerId) {
       if (typeof window.mflOpenClubPage !== "function") return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      window.mflOpenClubPage(clubId, "info");
+      window.mflOpenClubPage(clubId, "attributes");
     }, true);
   }
 
@@ -2147,7 +2147,7 @@ function renderPlayerPageOwner(playerId) {
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();
   const contractTeamHtml = contractClubId
-    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/info" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
+    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="${escapeHtml(window.__mflAppConfig?.routes?.clubPath?.(contractClubId, "attributes") || `/clubs/${encodeURIComponent(contractClubId)}/squad`)}" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
     : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;
   const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;
   const revenueShare = rowHasActiveContract(row)

@@ -6,7 +6,7 @@ import { readCanonicalCoreArtifacts, readCanonicalCoreSource } from "./validate-
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [coreSource, appConfig, routeLoader, buildCore, bootstrap, walletPreferencesApi, stylesBase, generatedPlayer] = await Promise.all([
+const [coreSource, appConfig, routeLoader, buildCore, bootstrap, walletPreferencesApi, stylesBase, generatedPlayer, playerHtml] = await Promise.all([
   Promise.all([
     readCanonicalCoreSource("shared"),
     read("./modules/core-sources/evaluation.js"),
@@ -25,6 +25,7 @@ const [coreSource, appConfig, routeLoader, buildCore, bootstrap, walletPreferenc
   read("./api/wallet-preferences.js"),
   read("./styles-base.css"),
   read("./modules/app-core-player-runtime.js"),
+  read("./html-sources/player.html"),
 ]);
 const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
@@ -94,6 +95,12 @@ includes(playerCore, 'return "\\u00A0";', "Pending Player values must remain bla
 includes(playerCore, "pitch.innerHTML = pendingPitchHtml();", "Static pitch geometry must exist during pending Player paint.");
 includes(playerCore, 'if (storedWalletOptIn()) stack.appendChild(createPendingNotesPanel(context));', "Pending Player notes must respect wallet opt-in.");
 includes(playerCore, 'views.style.visibility = "visible";', "Player views must remain visible during the stable pending shell.");
+
+includes(playerCore, 'clubPath?.(clubId, "attributes") || "/clubs/" + encodeURIComponent(clubId) + "/squad"', "Pending and rebound Player contract links must target the canonical Club Squad route.");
+includes(playerCore, 'window.mflOpenClubPage(clubId, "attributes");', "Player contract clicks must open the canonical Club Squad view.");
+excludes(playerCore, '/info', "Player runtime must not generate the retired Club Info destination.");
+includes(playerHtml, 'team.href = "/clubs/" + encodeURIComponent(clubId) + "/squad";', "Player first paint must target the canonical Club Squad route.");
+excludes(playerHtml, '+ "/info"', "Player first paint must not generate the retired Club Info destination.");
 
 includes(playerCore, "const PLAYER_HERO_OVERALL_SIZE_PX = 100;", "Player hero Overall geometry must remain canonical.");
 includes(playerCore, "const PLAYER_HERO_IDENTITY_WIDTH_PX = 360;", "Player hero identity width must remain canonical.");
