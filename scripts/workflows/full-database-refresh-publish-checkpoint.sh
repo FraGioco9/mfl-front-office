@@ -54,6 +54,8 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   fi
   vercel pull --yes --environment=production \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  VERCEL_REMOTE_ROOT="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(".vercel/project.json","utf8")); process.stdout.write(String(p?.settings?.rootDirectory ?? p?.rootDirectory ?? ""));')"
+  export VERCEL_REMOTE_ROOT
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"
   ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
