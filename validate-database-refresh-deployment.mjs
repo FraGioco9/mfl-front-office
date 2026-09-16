@@ -10,7 +10,7 @@ const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8")
 const workflow = await readWorkflowSource(
   new URL("./.github/workflows/full-database-refresh.yml", import.meta.url),
 );
-const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer] = await Promise.all([
+const [resolver, installer, publisher, adapterValidator, baselineRestore, resumeRestore, resumeWriter, vercelRootNormalizer, vercelRemoteRootNormalizer] = await Promise.all([
   readRepository("scripts/workflows/full-database-refresh-resolve-last-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-install-fresh-database-in-published-site-source.sh"),
   readRepository("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
@@ -19,6 +19,7 @@ const [resolver, installer, publisher, adapterValidator, baselineRestore, resume
   readRepository("scripts/workflows/full-database-refresh-restore-resume-checkpoint.sh"),
   readRepository("scripts/workflows/full-database-refresh-write-resume-checkpoint.sh"),
   readRepository("scripts/workflows/normalize-vercel-project-root.mjs"),
+  readRepository("scripts/workflows/ensure-vercel-remote-project-root.mjs"),
 ]);
 const deploymentSource = [
   workflow,
@@ -30,6 +31,7 @@ const deploymentSource = [
   resumeRestore,
   resumeWriter,
   vercelRootNormalizer,
+  vercelRemoteRootNormalizer,
 ].join("\n");
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -67,6 +69,15 @@ includes(
 includes(
   'require(path.resolve("production-site/api/_database.js"))',
   "Every checkpoint database must be smoke-tested through the published site's own SQLite adapter before deployment.",
+);
+includes(
+  'body: JSON.stringify({ rootDirectory: null })',
+  "Database-only refreshes must persist repository-root ownership in the remote Vercel project.",
+);
+invariant(
+  publisher.indexOf('ensure-vercel-remote-project-root.mjs')
+    < publisher.indexOf("vercel pull --yes --environment=production"),
+  "Database checkpoint deployment must clear the remote Vercel Root Directory before pulling project settings.",
 );
 includes(
   "vercel pull --yes --environment=production",
