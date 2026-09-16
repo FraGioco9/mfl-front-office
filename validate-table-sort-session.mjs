@@ -29,6 +29,7 @@ assert.doesNotMatch(core, /sortDirection:\s*viewName === "next" \? "asc" : "desc
 
 const resetSessionSource = sourceBetween(core, "function tableSortSearchForSessionEntry", "function defaultTablePageState");
 assert.match(resetSessionSource, /const routePath = String\(options\.path \|\| options\.replaceUrl \|\| ""\);/u, "A new page session must inspect the destination route before it paints.");
+assert.match(resetSessionSource, /if \(options\.useCurrentLocation === false\) return "";/u, "A page transition must never inherit sorting from the previous page URL when no destination query is supplied.");
 assert.match(resetSessionSource, /const requestedSortKey = String\(params\.get\("sort"\) \|\| ""\);/u, "A new page session must read linked sort intent from the destination URL.");
 assert.match(resetSessionSource, /sortKeySupportedByView\(requestedSortKey, viewName, pageName\)/u, "Linked first-paint sorting must reject columns unsupported by the destination view.");
 assert.match(resetSessionSource, /state\.tableSortSessionSortState = null;/u, "Changing page/entity must clear the previous page sort intent.");
@@ -54,6 +55,18 @@ assert.doesNotMatch(core, /function applyFilters\(options = \{\}\) \{\s*remember
 
 const commitViewSource = sourceBetween(core, "function commitViewTransition", "function commitPageTransition");
 assert.match(commitViewSource, /buildHeader\(\);/u, "View transitions must rebuild the sorted header before their runtime paint.");
+const commitPageSource = sourceBetween(core, "function commitPageTransition", "function stageViewTransition");
+assert.match(
+  commitPageSource,
+  /const tableTransition = tablePages\.has\(statePageName\) \|\| statePageName === "club";[\s\S]*tableSortStateForSessionEntry\([\s\S]*useCurrentLocation: false[\s\S]*state\.sortKey = transitionSortState\.sortKey;[\s\S]*state\.sortDirection = transitionSortState\.sortDirection;/u,
+  "Refresh page-transition commit must seed linked sorting before its first header rebuild instead of repainting the canonical default.",
+);
+const transitionSortIndex = commitPageSource.indexOf("const transitionSortState =");
+const transitionHeaderIndex = commitPageSource.indexOf("if (tableTransition) buildHeader();");
+assert.ok(
+  transitionSortIndex >= 0 && transitionHeaderIndex > transitionSortIndex,
+  "Linked transition sorting must be committed before buildHeader() can paint.",
+);
 const runViewTransitionSource = sourceBetween(core, "async function runViewTransition", "function tableSortStateForView");
 assert.ok(runViewTransitionSource.indexOf("stageViewTransition(pageName, viewName, options)") < runViewTransitionSource.indexOf('classList.add("mflInitialRouteSuperseded")'), "The canonical view-transition order must remain stage then supersede.");
 assert.match(core, /function ensureCanonicalTableHeader\(\)[\s\S]*?stagedViewCommit[\s\S]{0,700}buildHeader\(\)/u, "A staged destination view must be allowed to replace a stale bootstrap header during loading, including Club views.");
