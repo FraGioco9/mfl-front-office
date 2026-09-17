@@ -89,17 +89,17 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 
 for (const [contract, label] of [
-  ["--mfl-responsive-table-age-marker-size: clamp(11px, calc(5.1871px + 0.645161vw), 14px);", "Age status markers"],
-  ["--mfl-responsive-table-listing-icon-size: clamp(9px, calc(3.1871px + 0.645161vw), 12px);", "Listing icons"],
-  ["--mfl-responsive-table-flag-size: clamp(14px, calc(2.3742px + 1.290323vw), 20px);", "nationality flags"],
-  ["--mfl-responsive-table-note-icon-size: clamp(9px, calc(-0.6882px + 1.075269vw), 14px);", "Note icons"],
-  ["--mfl-responsive-table-rarity-size: clamp(5px, calc(-0.8129px + 0.645161vw), 8px);", "Overall rarity markers"],
-  ["--mfl-responsive-table-checkbox-size: clamp(13px, calc(7.1871px + 0.645161vw), 16px);", "selection controls"],
-  ["--mfl-responsive-table-action-size: clamp(18px, calc(14.1247px + 0.430108vw), 20px);", "row action controls"],
+  ["--mfl-responsive-table-age-marker-size: clamp(8px, calc(5.791411px + 0.613497vw), 16px);", "Age status markers"],
+  ["--mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);", "Listing icons"],
+  ["--mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);", "nationality flags"],
+  ["--mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);", "Note icons"],
+  ["--mfl-responsive-table-rarity-size: clamp(5px, calc(4.171779px + 0.230061vw), 8px);", "Overall rarity markers"],
+  ["--mfl-responsive-table-checkbox-size: clamp(10px, calc(8.343558px + 0.460123vw), 16px);", "selection controls"],
+  ["--mfl-responsive-table-action-size: clamp(13px, calc(11.067485px + 0.536810vw), 20px);", "row action controls"],
 ]) {
   assert.ok(
     responsiveSource.includes(contract),
-    `${label} must scale only through the 901-1366px intermediate table band instead of staying at a fixed mobile size.`,
+    `${label} must share the continuous 360-1664px responsive scale instead of switching to a separate above-900 size model.`,
   );
 }
 
