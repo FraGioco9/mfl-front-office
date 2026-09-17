@@ -1,20 +1,13 @@
-#progressionPage #tableHead .rowActionsCell .playerTableActionsButton {
-  display: none;
-}
-
 @media (min-width: 901px) and (max-width: 1444px) {
-  #progressionPage #tableHead .rowActionsCell {
-    overflow: hidden;
+  .stats div {
+    width: 116px;
+    min-width: 116px;
+    padding: 7px 18px;
   }
 
-  #progressionPage #tableHead .rowActionsCell > * {
-    display: none;
-  }
-
-  #progressionPage #tableHead .rowActionsCell::before,
-  #progressionPage #tableHead .rowActionsCell::after {
-    content: none;
-    display: none;
+  .stats > div > span {
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 
@@ -29,12 +22,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;
   }
 
-  .stats div {
-    width: 72px;
-    min-width: 72px;
-    padding-inline: 6px;
-  }
-
   .accountMenu {
     flex: 0 0 96px;
     width: 96px;
@@ -46,12 +33,6 @@
     grid-template-columns: minmax(0, 1fr) 44px max-content;
     gap: 8px;
     padding-inline: 12px;
-  }
-
-  .stats div {
-    width: 68px;
-    min-width: 68px;
-    padding-inline: 5px;
   }
 
   .accountMenu {
