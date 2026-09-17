@@ -10,7 +10,7 @@ const temporaryPath = resolve(validationDirectory, ".browser-routing-responsive-
 const source = await readFile(sourcePath, "utf8");
 
 const oldContract = 'if (viewportWidth <= 900 && selector.startsWith(".stats")) {';
-const newContract = 'if (viewportWidth <= 1040 && selector.startsWith(".stats")) {';
+const newContract = 'if (viewportWidth <= 1366 && selector.startsWith(".stats")) {';
 assert.equal(
   source.split(oldContract).length - 1,
   1,
@@ -29,9 +29,9 @@ try {
     child.once("error", rejectStatus);
     child.once("close", resolveStatus);
   });
-  assert.equal(status, 0, "Broad browser routing regression failed with the 1040px shell contract.");
+  assert.equal(status, 0, "Broad browser routing regression failed with the 1366px shell contract.");
 } finally {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("Broad browser routing regression passed with the 1040px compact-shell contract.");
+console.log("Broad browser routing regression passed with the 1366px compact-shell contract.");
