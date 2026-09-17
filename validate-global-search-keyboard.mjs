@@ -13,7 +13,7 @@ const keydown = keydownStart >= 0 && keydownEnd > keydownStart
   : "";
 
 invariant(
-  shared.includes("function focusedGlobalSearchResult(target = document.activeElement) {")
+  shared.includes("/** @param {EventTarget | null} [target] */\nfunction focusedGlobalSearchResult(target = document.activeElement) {")
     && shared.includes("target instanceof HTMLButtonElement")
     && shared.includes("playerSearchResults.contains(target)")
     && shared.includes('target.classList.contains("searchResult")'),
@@ -22,9 +22,9 @@ invariant(
 
 invariant(
   shared.includes("function handleGlobalSearchEscape(event) {")
-    && shared.includes("if (searchModal.hidden) return false;")
+    && shared.includes('if (searchModal.hasAttribute("hidden")) return false;')
     && shared.includes("if (event.target === playerSearchInput) {\n    playerSearchInput.blur();\n  } else {\n    closeSearch();\n  }")
-    && shared.includes('window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(\n  "global-search",\n  handleGlobalSearchEscape,\n  { priority: 200 },\n);')
+    && shared.includes('Reflect.get(window, "__mflControlInteractionsRuntime")?.registerEscapeHandler?.(\n  "global-search",\n  handleGlobalSearchEscape,\n  { priority: 200 },\n);')
     && !keydown.includes('event.key === "Escape" && !searchModal.hidden'),
   "Global Search Escape must use capture-phase ownership: first blur the focused search input, otherwise close Search.",
 );
