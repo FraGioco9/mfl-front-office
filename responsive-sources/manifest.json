@@ -7,6 +7,7 @@
   "evaluation-tablet.css.inc",
   "static-tablet.css.inc",
   "intermediate-desktop.css.inc",
+  "chrome-compact-shell.css.inc",
   "my-clubs-tablet.css.inc",
   "parity.css.inc",
   "tables-phone.css.inc",
