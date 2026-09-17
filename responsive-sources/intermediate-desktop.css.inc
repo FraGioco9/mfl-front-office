@@ -21,6 +21,12 @@
     margin-top: 0;
     line-height: 1;
   }
+
+  #progressionPage .playerTableScroller th.selectionCell {
+    padding-inline: 0;
+    text-align: center;
+    text-overflow: clip;
+  }
 }
 
 @media (min-width: 901px) and (max-width: 1366px) {
