@@ -888,7 +888,7 @@
 
   function syncWidthAwareHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
-    document.querySelectorAll("#progressionPage #tableHead th > span:first-child").forEach((label) => {
+    document.querySelectorAll("#progressionPage #tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]").forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
       const header = label.closest("th");
       if (!(header instanceof HTMLTableCellElement)) return;
