@@ -2,6 +2,7 @@ const validators = [
   "validate-global-search-results.mjs",
   "validate-global-search-agent-activation.mjs",
   "validate-global-search-open-lifecycle.mjs",
+  "validate-global-search-keyboard.mjs",
   "validate-document-title-runtime.mjs",
   "validate-evaluation-refresh-hydration.mjs",
   "validate-evaluation-stale-wallet-preferences-ui.mjs",
