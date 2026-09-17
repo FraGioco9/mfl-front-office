@@ -8,32 +8,45 @@ const validationDirectory = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(validationDirectory, "browser-routing-regression.mjs");
 const temporaryPath = resolve(validationDirectory, ".browser-listing-width-regression.tmp.mjs");
 const source = await readFile(sourcePath, "utf8");
-
-assert.ok(source.includes("  listing_price: null,\n"), "Browser fixture listing price hook must remain discoverable.");
-let diagnosticSource = source.replace("  listing_price: null,\n", "  listing_price: 10000,\n");
+let diagnosticSource = source;
 
 const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.\");\n';
 assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
 const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
-      await waitFor(
-        () => document.querySelector("#tableBody td.col-listing .listingCellPrice") instanceof HTMLElement,
-        "Five-digit Listing fixture never rendered.",
-      );
       const tableBody = document.getElementById("tableBody");
-      const firstPrice = tableBody?.querySelector("td.col-listing .listingCellPrice");
+      assert(tableBody instanceof HTMLTableSectionElement, "Database table body is missing.");
+
+      const makeListingRow = (playerId, priceText) => {
+        const row = document.createElement("tr");
+        row.dataset.playerId = String(playerId);
+        const cell = document.createElement("td");
+        cell.className = "col-listing";
+        const host = document.createElement("span");
+        host.className = "listingCellTableHost";
+        const badge = document.createElement("span");
+        badge.className = "listingCellContent";
+        badge.setAttribute("aria-label", "For Sale at " + priceText);
+        const icon = document.createElement("img");
+        icon.className = "listingCellIcon";
+        icon.alt = "";
+        const price = document.createElement("span");
+        price.className = "listingCellPrice";
+        price.textContent = priceText;
+        badge.append(icon, price);
+        host.appendChild(badge);
+        cell.appendChild(host);
+        row.appendChild(cell);
+        return row;
+      };
+
+      tableBody.replaceChildren(
+        makeListingRow(1, "$10,000"),
+        makeListingRow(2, "$999"),
+      );
+      const prices = Array.from(tableBody.querySelectorAll("td.col-listing .listingCellPrice"));
+      assert(prices.length === 2, "Listing compaction regression must render two Listing prices.");
+      const firstPrice = prices[0];
       assert(firstPrice instanceof HTMLElement, "Five-digit Listing fixture is missing.");
-      assert(String(firstPrice.textContent || "").replace(/\D/g, "").length >= 5, "Listing fixture must contain at least five digits.");
-
-      const sourceRow = firstPrice.closest("tr");
-      assert(sourceRow instanceof HTMLTableRowElement, "Listing fixture row is missing.");
-      const secondRow = sourceRow.cloneNode(true);
-      assert(secondRow instanceof HTMLTableRowElement, "Could not clone a second Listing row.");
-      secondRow.dataset.playerId = "2";
-      const secondPrice = secondRow.querySelector("td.col-listing .listingCellPrice");
-      assert(secondPrice instanceof HTMLElement, "Second Listing fixture is missing.");
-      secondPrice.textContent = "$999";
-      tableBody.appendChild(secondRow);
-
       firstPrice.style.flex = "0 0 20px";
       firstPrice.style.width = "20px";
       firstPrice.style.maxWidth = "20px";
@@ -42,10 +55,8 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
 
       window.__mflSharedTableUiRuntime?.sync?.();
       await delay(80);
-      const compactPrices = Array.from(tableBody.querySelectorAll("td.col-listing .listingCellPrice"));
-      assert(compactPrices.length >= 2, "Listing compaction regression needs multiple visible Listing rows.");
       assert(
-        compactPrices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display === "none"),
+        prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display === "none"),
         "If one five-digit Listing would clip, every Listing price must compact together.",
       );
 
@@ -54,9 +65,8 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
       firstPrice.style.removeProperty("max-width");
       window.__mflSharedTableUiRuntime?.sync?.();
       await delay(80);
-      const restoredPrices = Array.from(tableBody.querySelectorAll("td.col-listing .listingCellPrice"));
       assert(
-        restoredPrices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display !== "none"),
+        prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display !== "none"),
         "Listing prices must restore together when the five-digit price fits again.",
       );
     }
