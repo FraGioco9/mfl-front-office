@@ -33,6 +33,10 @@ assert.ok(
   intermediateSource.includes("#progressionPage #tableHead .rowActionsCell .playerTableActionsButton {\n  display: none;\n}"),
   "The actual bootstrap three-dot placeholder must be hidden directly in the table header rather than relying on the hydrated empty-header contract.",
 );
+assert.ok(
+  intermediateSource.includes("@media (min-width: 901px) and (max-width: 1444px) {\n  #progressionPage #tableHead .rowActionsCell {\n    overflow: hidden;"),
+  "The actions-header cell suppression must cover the full intermediate-desktop range, including 1374px, instead of stopping at 1366px.",
+);
 
 assert.ok(
   responsive.includes(".playerPage .playerHero {\n    padding-bottom: 4px;\n  }"),
