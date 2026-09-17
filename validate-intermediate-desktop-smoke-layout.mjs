@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const responsive = read("./responsive.css");
 const intermediateSource = read("./responsive-sources/intermediate-desktop.css.inc");
+const compactShellSource = read("./responsive-sources/chrome-compact-shell.css.inc");
 const tableSource = read("./modules/core-sources/table.js");
 const bootstrap = read("./bootstrap.js");
 
@@ -41,7 +42,7 @@ assert.ok(
     && intermediateSource.includes("width: 116px;\n    min-width: 116px;\n    height: 42px;")
     && intermediateSource.includes(".stats > div > span {\n    overflow: visible;\n    text-overflow: clip;\n    line-height: 1;\n  }")
     && intermediateSource.includes(".stats label {\n    margin-top: 0;\n    line-height: 1;\n  }"),
-  "Intermediate desktop header must keep the full title visible, preserve desktop counter proportions, and tighten the number/label spacing inside the 42px Players/Wallets boxes.",
+  "Intermediate desktop header foundations must preserve counter proportions for the visible 1367-1444px range.",
 );
 
 for (const compactCounterRule of [
@@ -57,21 +58,28 @@ for (const compactCounterRule of [
 
 assert.ok(
   responsive.includes(".playerPage .playerHero {\n    padding-bottom: 4px;\n  }"),
-  "Intermediate desktop Player heroes must keep bottom breathing room below the full-width Open link action row.",
+  "Intermediate Player heroes must keep bottom breathing room below the full-width Open link action row.",
 );
 
 assert.ok(
-  intermediateSource.includes("@media (min-width: 1041px) and (max-width: 1366px) {")
-    && intermediateSource.includes("grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;")
-    && intermediateSource.includes("flex: 0 0 96px;\n    width: 96px;"),
-  "Intermediate desktop chrome must preserve compact Search/Account geometry without shrinking the header stat boxes.",
+  !intermediateSource.includes("@media (min-width: 1041px) and (max-width: 1366px)")
+    && !intermediateSource.includes("@media (min-width: 901px) and (max-width: 1040px)"),
+  "Intermediate desktop CSS must not compete with the canonical compact-shell owner inside 901-1366px.",
+);
+assert.ok(
+  !intermediateSource.includes("grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;")
+    && !intermediateSource.includes("flex: 0 0 96px;"),
+  "Retired 1041-1366 desktop Search/Account geometry must not remain as a competing owner.",
 );
 
 assert.ok(
-  intermediateSource.includes("@media (min-width: 901px) and (max-width: 1040px) {")
-    && intermediateSource.includes("grid-template-columns: minmax(0, 1fr) 44px max-content;")
-    && intermediateSource.includes("flex-basis: 44px;\n    width: 44px;"),
-  "The narrow desktop cascade must compact Search/Account while leaving Players/Wallets at their normal width and shared compact height.",
+  compactShellSource.includes("@media (min-width: 901px) and (max-width: 1366px) {")
+    && compactShellSource.includes("--pinned-sidebar-width: 0px;")
+    && compactShellSource.includes("grid-template-areas: \"brand search controls\";")
+    && compactShellSource.includes(".topbar .stats {\n    display: none;\n  }")
+    && compactShellSource.includes(".accountMenu {\n    width: 44px;\n    flex: 0 0 44px;\n  }")
+    && compactShellSource.includes(".sidebarGrid {\n    display: contents;\n  }"),
+  "The compact application shell must be the single 901-1366px chrome owner.",
 );
 
-console.log("Intermediate desktop final-smoke layout validation passed.");
+console.log("Intermediate desktop and compact-shell final-smoke layout validation passed.");
