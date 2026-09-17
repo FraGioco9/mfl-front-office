@@ -58,11 +58,11 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const selectionWidth = selection instanceof Element ? Math.round(selection.getBoundingClientRect().width) : 0;
       const actionButtonWidth = actionButton instanceof Element ? Math.round(actionButton.getBoundingClientRect().width) : 0;
       const expectedMarkerWidth = ({ 1366: 14, 1200: 13, 1041: 12, 901: 11 })[viewportWidth];
-      const expectedListingIconWidth = ({ 1366: 12, 1200: 11, 1041: 10, 901: 9 })[viewportWidth];
-      const expectedFlagWidth = ({ 1366: 20, 1200: 18, 1041: 16, 901: 14 })[viewportWidth];
-      const expectedRarityWidth = ({ 1366: 8, 1200: 7, 1041: 6, 901: 5 })[viewportWidth];
-      const expectedSelectionWidth = ({ 1366: 16, 1200: 15, 1041: 14, 901: 13 })[viewportWidth];
-      const expectedActionButtonWidth = ({ 1366: 20, 1200: 19, 1041: 19, 901: 18 })[viewportWidth];
+      const expectedListingIconWidth = ({ 1366: 11, 1200: 10, 1041: 9, 901: 8 })[viewportWidth];
+      const expectedFlagWidth = ({ 1366: 16, 1200: 15, 1041: 14, 901: 13 })[viewportWidth];
+      const expectedRarityWidth = ({ 1366: 7, 1200: 7, 1041: 7, 901: 6 })[viewportWidth];
+      const expectedSelectionWidth = ({ 1366: 15, 1200: 14, 1041: 13, 901: 12 })[viewportWidth];
+      const expectedActionButtonWidth = ({ 1366: 18, 1200: 18, 1041: 17, 901: 16 })[viewportWidth];
 
       assert(menuRail instanceof HTMLElement, "Intermediate compact navigation rail is missing at " + viewportWidth + "px.");
       assert(menuStyle?.position === "absolute", "Bottom navigation must replace the sidebar through 1366px.");
