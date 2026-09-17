@@ -11,7 +11,7 @@ const excludes = (source, unexpected, message) => {
   if (source.includes(unexpected)) throw new Error(message);
 };
 
-const [sharedUi, staticUi, discountUi, evaluationSource, tableSource, generatedTable, buildCore, bootstrap] = await Promise.all([
+const [sharedUi, staticUi, discountUi, evaluationSource, tableSource, generatedTable, buildCore, bootstrap, responsive] = await Promise.all([
   read("./shared-table-ui-runtime.js"),
   read("./static-ui-runtime.js"),
   read("./evaluation-discount-rate-ui-runtime.js"),
@@ -20,6 +20,7 @@ const [sharedUi, staticUi, discountUi, evaluationSource, tableSource, generatedT
   read("./modules/app-core-table-runtime.js"),
   read("./build-app-core.mjs"),
   read("./bootstrap.js"),
+  read("./responsive.css"),
 ]);
 
 includes(sharedUi, 'const MOBILE_TABLE_MEDIA = window.matchMedia("(max-width: 900px)");', "Mobile table behavior must be gated from desktop.");
@@ -48,7 +49,7 @@ includes(sharedUi, "function setPlayerTableFadeDirections(scroller, canScrollLef
 includes(sharedUi, "function fadeShadow(canScrollLeft, canScrollRight, strength = 56)", "Views and Quick Filters must retain dynamic edge fading.");
 excludes(sharedUi, "MutationObserver", "Mobile table presentation must remain render/resize driven.");
 
-includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Canonical Table source must explicitly gate mobile-only behavior.");
+includes(tableSource, 'const mobileTable = window.matchMedia("(max-width: 900px)").matches;', "Canonical Table header behavior must use the shared mobile breakpoint.");
 includes(tableSource, 'selectVisibleInput.type = "checkbox";\n  selectVisibleInput.disabled = true;', "Rebuilt headers must stay non-selectable until loaded selection state exists.");
 includes(tableSource, 'positions: "POS"', "Small-screen Positions headings must use POS.");
 excludes(tableSource, '? "POSITIONS"', "Small-screen headers must not restore long POSITIONS text.");
@@ -56,12 +57,21 @@ for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
   includes(tableSource, `: "${label}"`, `Canonical compact headings must include ${label}.`);
 }
 includes(tableSource, "function compactMobilePlayerName(value)", "Canonical Table source must own N. Surname formatting.");
+includes(tableSource, 'fullNameValue.className = "playerNameFullValue";', "Table rows must retain the full player name in stable DOM.");
+includes(tableSource, 'compactNameValue.className = "playerNameCompactValue";', "Table rows must retain N. Surname in stable DOM.");
 includes(tableSource, 'nameLink.setAttribute("aria-label", fullPlayerName);', "Compact names must retain the full accessible name.");
 includes(tableSource, 'column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")', "Listing header blanking must remain inside mobile behavior.");
-includes(tableSource, 'const priceText = String(price?.textContent || "").trim();', "Mobile Listing tooltip must reuse the formatted price.");
-includes(tableSource, "price?.remove();", "Mobile Listing price must not remain visible in the cell.");
-includes(tableSource, "badge.dataset.tooltip = priceText;", "Mobile Listing price must move to the tooltip.");
-excludes(tableSource, "For Sale at", "Mobile Listing tooltips must contain only the formatted price.");
+includes(tableSource, 'cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;', "Listing rows must retain canonical icon and price markup at every breakpoint.");
+excludes(tableSource, "price?.remove();", "Responsive Listing presentation must not remove the price node.");
+excludes(tableSource, 'const template = document.createElement("template");', "Responsive Listing presentation must not rebuild badge markup in the renderer.");
+includes(tableSource, "For Sale at", "Canonical Listing markup must retain its accessible full-price label.");
+includes(responsive, "#progressionPage .playerTableScroller .playerNameFullValue {\n    display: none;", "Mobile CSS must hide full player names.");
+includes(responsive, "#progressionPage .playerTableScroller .playerNameCompactValue {\n    display: inline;", "Mobile CSS must show N. Surname names.");
+includes(responsive, "#progressionPage .playerTableScroller .listingCellPrice {\n    display: none;", "Mobile CSS must switch Listing to icon-only without changing DOM.");
+includes(responsive, "#progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {\n    gap: 2px;", "Narrow mobile CSS must reduce Age/icon spacing to 2px.");
+includes(responsive, "#progressionPage .playerTableScroller .joinedAgencyFullValue {\n    display: none;", "Phone CSS must hide the full Joined Agency value.");
+includes(responsive, "#progressionPage .playerTableScroller .joinedAgencyCompactValue {\n    display: inline;", "Phone CSS must show the compact Joined Agency value.");
+includes(responsive, "#progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {\n    gap: 1px;", "Tiny mobile CSS must reduce Age/icon spacing to 1px.");
 
 includes(staticUi, 'const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");', "Global tooltip ownership must recognize mobile input.");
 includes(staticUi, "function onTooltipClick(event)", "Mobile tooltips must be click/tap driven.");
@@ -89,4 +99,4 @@ if (generatedTable.slice(tableBanner.length).replace(/\s*$/, "") !== tableSource
   throw new Error("Generated Table runtime must exactly match the manifest-assembled canonical Table source.");
 }
 
-console.log("Source-owned mobile Table scrolling, responsive geometry, compact headings, tooltip behavior, first-paint parity, and generated-runtime equivalence validation passed.");
+console.log("Source-owned mobile Table scrolling, resize-safe content presentation, responsive geometry, compact headings, tooltip behavior, first-paint parity, and generated-runtime equivalence validation passed.");
