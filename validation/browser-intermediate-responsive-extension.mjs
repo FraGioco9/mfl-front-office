@@ -47,17 +47,17 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const markerGraphicWidth = markerGraphic instanceof Element ? Math.round(markerGraphic.getBoundingClientRect().width) : 0;
 
       assert(menuRail instanceof HTMLElement, "Intermediate compact navigation rail is missing at " + viewportWidth + "px.");
-      assert.equal(menuStyle?.position, "absolute", "Bottom navigation must replace the sidebar through 1366px.");
-      assert.equal(gridStyle?.display, "contents", "Sidebar grid must flatten into the bottom rail through 1366px.");
+      assert(menuStyle?.position === "absolute", "Bottom navigation must replace the sidebar through 1366px.");
+      assert(gridStyle?.display === "contents", "Sidebar grid must flatten into the bottom rail through 1366px.");
       assert(hidden(".topbar .stats"), "Header stats must stay hidden through 1366px.");
-      assert.equal(mainStyle?.marginLeft, "0px", "Main content must not reserve sidebar space through 1366px.");
+      assert(mainStyle?.marginLeft === "0px", "Main content must not reserve sidebar space through 1366px.");
       assert(row instanceof HTMLTableRowElement, "Database row is missing at " + viewportWidth + "px.");
-      assert.equal(fullStyle?.display, "none", "Full player name must remain compact through 1366px.");
-      assert.notEqual(compactStyle?.display, "none", "Compact player name must remain visible through 1366px.");
-      assert.equal(listingStyle?.display, "none", "Listing price must remain icon-only through 1366px.");
+      assert(fullStyle?.display === "none", "Full player name must remain compact through 1366px.");
+      assert(compactStyle?.display !== "none", "Compact player name must remain visible through 1366px.");
+      assert(listingStyle?.display === "none", "Listing price must remain icon-only through 1366px.");
       assert(marker instanceof HTMLElement, "Age status marker is missing at " + viewportWidth + "px.");
-      assert.equal(markerWidth, 11, "Age status marker must use compact 11px geometry through 1366px.");
-      assert.equal(markerGraphicWidth, 11, "Age status icon drawing must use compact 11px geometry through 1366px.");
+      assert(markerWidth === 11, "Age status marker must use compact 11px geometry through 1366px.");
+      assert(markerGraphicWidth === 11, "Age status icon drawing must use compact 11px geometry through 1366px.");
     }
 
     if (viewportWidth === 1367) {
@@ -66,11 +66,11 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const row = document.querySelector("#tableBody tr[data-player-id=\"1\"]");
       const fullName = row?.querySelector(".playerNameFullValue");
       const compactName = row?.querySelector(".playerNameCompactValue");
-      assert.equal(getComputedStyle(menuRail).position, "fixed", "Desktop sidebar must restore at 1367px.");
-      assert.equal(getComputedStyle(sidebarGrid).display, "grid", "Desktop sidebar grid must restore at 1367px.");
+      assert(menuRail instanceof HTMLElement && getComputedStyle(menuRail).position === "fixed", "Desktop sidebar must restore at 1367px.");
+      assert(sidebarGrid instanceof HTMLElement && getComputedStyle(sidebarGrid).display === "grid", "Desktop sidebar grid must restore at 1367px.");
       assert(!hidden(".topbar .stats"), "Header stats must restore at 1367px.");
-      assert.notEqual(getComputedStyle(fullName).display, "none", "Full player name must restore at 1367px.");
-      assert.equal(getComputedStyle(compactName).display, "none", "Compact player name must hide at 1367px.");
+      assert(fullName instanceof HTMLElement && getComputedStyle(fullName).display !== "none", "Full player name must restore at 1367px.");
+      assert(compactName instanceof HTMLElement && getComputedStyle(compactName).display === "none", "Compact player name must hide at 1367px.");
     }
 `;
 
