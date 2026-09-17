@@ -1,5 +1,6 @@
 const validators = [
   "validate-responsive-layout.mjs",
+  "validate-intermediate-desktop-smoke-layout.mjs",
   "validate-mobile-box-press-shape.mjs",
   "validate-mobile-footer-floor.mjs",
   "validate-footer-route-coverage.mjs",
