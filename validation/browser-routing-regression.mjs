@@ -961,6 +961,50 @@ const browserTestSource = String.raw`(() => {
         && advancedSettingsModal instanceof HTMLElement
         && closeAdvancedSettingsButton instanceof HTMLButtonElement,
       "Evaluation interaction regression could not find the Advanced Settings controls.");
+      const advancedSettingsRect = advancedSettingsButton.getBoundingClientRect();
+      const advancedSettingsHitTarget = document.elementFromPoint(
+        advancedSettingsRect.left + advancedSettingsRect.width / 2,
+        advancedSettingsRect.top + advancedSettingsRect.height / 2,
+      );
+      assert(
+        advancedSettingsHitTarget instanceof Element
+          && (advancedSettingsHitTarget === advancedSettingsButton || advancedSettingsButton.contains(advancedSettingsHitTarget)),
+        "Evaluation Advanced Settings is visually exposed but blocked from pointer hit-testing. Debug: " + JSON.stringify({
+          viewport: { width: innerWidth, height: innerHeight },
+          button: {
+            left: advancedSettingsRect.left,
+            top: advancedSettingsRect.top,
+            right: advancedSettingsRect.right,
+            bottom: advancedSettingsRect.bottom,
+          },
+          hitTarget: advancedSettingsHitTarget instanceof Element
+            ? {
+                tag: advancedSettingsHitTarget.tagName,
+                id: advancedSettingsHitTarget.id,
+                className: String(advancedSettingsHitTarget.className || ""),
+              }
+            : null,
+          main: (() => {
+            const main = document.querySelector("#appShell > main");
+            return main instanceof HTMLElement
+              ? { scrollHeight: main.scrollHeight, clientHeight: main.clientHeight, scrollTop: main.scrollTop }
+              : null;
+          })(),
+          searchResults: (() => {
+            const results = document.getElementById("evaluationSearchResults");
+            if (!(results instanceof HTMLElement)) return null;
+            const rect = results.getBoundingClientRect();
+            return {
+              hidden: results.hidden,
+              children: results.children.length,
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+            };
+          })(),
+        }),
+      );
       advancedSettingsButton.click();
       await waitFor(() => advancedSettingsModal.hidden === false && advancedSettingsModal.classList.contains("modalOpen"),
         "Evaluation Advanced Settings button was visible but not interactive on first entry.");
