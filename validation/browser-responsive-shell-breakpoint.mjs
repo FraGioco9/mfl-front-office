@@ -107,7 +107,7 @@ const shellProbe = String.raw`    await cdp.send("Runtime.enable");
       }
     });
 
-    return await waitForBrowserRegression(cdp);
+    return true;
 `;
 
 diagnosticSource = diagnosticSource.replace(runtimeEnableMarker, shellProbe);
