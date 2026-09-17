@@ -79,17 +79,18 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
 
     stages.forEach((stage, index) => {
       const contract = expected[index];
-      assert.equal(stage.sameRow, true, `Database row was replaced at ${contract.width}px: ${JSON.stringify(stage)}`);
-      assert.equal(stage.renderedName, contract.name, `Player name did not follow responsive contract at ${contract.width}px: ${JSON.stringify(stage)}`);
-      assert.equal(stage.listingPricePresent, true, `Listing price must stay in breakpoint-neutral DOM at ${contract.width}px: ${JSON.stringify(stage)}`);
-      assert.equal(stage.listingPriceVisible, contract.listing, `Listing price visibility is wrong at ${contract.width}px: ${JSON.stringify(stage)}`);
-      assert.equal(stage.mobileMedia, contract.width <= 900, `Mobile media-query state is wrong at ${contract.width}px: ${JSON.stringify(stage)}`);
+      const stageDetail = JSON.stringify(stage);
+      assert.equal(stage.sameRow, true, "Database row was replaced at " + contract.width + "px: " + stageDetail);
+      assert.equal(stage.renderedName, contract.name, "Player name did not follow responsive contract at " + contract.width + "px: " + stageDetail);
+      assert.equal(stage.listingPricePresent, true, "Listing price must stay in breakpoint-neutral DOM at " + contract.width + "px: " + stageDetail);
+      assert.equal(stage.listingPriceVisible, contract.listing, "Listing price visibility is wrong at " + contract.width + "px: " + stageDetail);
+      assert.equal(stage.mobileMedia, contract.width <= 900, "Mobile media-query state is wrong at " + contract.width + "px: " + stageDetail);
       if (contract.width <= 900) {
-        assert.equal(stage.fullNameNodePresent, true, `Full-name node is missing at ${contract.width}px.`);
-        assert.equal(stage.compactNameNodePresent, true, `Compact-name node is missing at ${contract.width}px.`);
+        assert.equal(stage.fullNameNodePresent, true, "Full-name node is missing at " + contract.width + "px.");
+        assert.equal(stage.compactNameNodePresent, true, "Compact-name node is missing at " + contract.width + "px.");
       }
-      if (contract.gap) assert.equal(stage.ageGap, contract.gap, `Age/marker gap is wrong at ${contract.width}px: ${JSON.stringify(stage)}`);
-      if (contract.icon) assert.equal(stage.listingIconWidth, contract.icon, `Listing icon width is wrong at ${contract.width}px: ${JSON.stringify(stage)}`);
+      if (contract.gap) assert.equal(stage.ageGap, contract.gap, "Age/marker gap is wrong at " + contract.width + "px: " + stageDetail);
+      if (contract.icon) assert.equal(stage.listingIconWidth, contract.icon, "Listing icon width is wrong at " + contract.width + "px: " + stageDetail);
     });
 
     return await waitForBrowserRegression(cdp);
