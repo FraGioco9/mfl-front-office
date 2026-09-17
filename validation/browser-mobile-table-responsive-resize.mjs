@@ -13,6 +13,7 @@ let diagnosticSource = source;
 for (const [from, to, label] of [
   ['  name: "Browser Player",', '  name: "Nicolò Barella",', "fixture player name"],
   ["  listing_price: null,", "  listing_price: 10000,", "fixture Listing price"],
+  ["  retirement_years: 5,", "  retirement_years: 2,", "fixture retirement marker"],
   ['  const expectedPlayerName = "Browser Player";', '  const expectedPlayerName = "Nicolò Barella";', "browser expected player name"],
   [
     "writeJson(response, { generatedAt, prices: {}, flowBlockHeight: 0 });",
@@ -68,27 +69,29 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       });
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 180));
       const evaluation = await cdp.send("Runtime.evaluate", {
-        expression: "(() => { const row = document.querySelector('#tableBody tr[data-player-id=\\\"1\\\"]'); if (!(row instanceof HTMLTableRowElement)) return { missing: 'row', width: window.innerWidth }; const visibleText = (element) => { if (!(element instanceof HTMLElement)) return ''; const style = getComputedStyle(element); return style.display === 'none' || style.visibility === 'hidden' || element.getClientRects().length === 0 ? '' : String(element.textContent || '').trim(); }; const nameLink = row.querySelector('.playerNameLink'); const fullNameValue = row.querySelector('.playerNameFullValue'); const compactNameValue = row.querySelector('.playerNameCompactValue'); const renderedName = visibleText(fullNameValue) || visibleText(compactNameValue) || visibleText(nameLink); const listingPrice = row.querySelector('td.col-listing .listingCellPrice'); const listingIcon = row.querySelector('td.col-listing .listingCellIcon'); const listingPricePresent = listingPrice instanceof HTMLElement; const listingPriceVisible = listingPricePresent && getComputedStyle(listingPrice).display !== 'none' && getComputedStyle(listingPrice).visibility !== 'hidden' && listingPrice.getClientRects().length > 0; const ageHost = row.querySelector('td.col-age .tableControlCellContent'); const ageMarker = row.querySelector('td.col-age .retirementMarker, td.col-age .newMintMarker'); const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null; const ageGap = ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : ''; const iconWidth = listingIcon instanceof HTMLElement ? Math.round(listingIcon.getBoundingClientRect().width) : 0; return { width: window.innerWidth, clientWidth: document.documentElement.clientWidth, visualViewportWidth: Math.round(window.visualViewport?.width || 0), devicePixelRatio: window.devicePixelRatio, sameRow: row === window.__mflResponsiveResizeOriginalRow, renderedName, fullNameNodePresent: fullNameValue instanceof HTMLElement, compactNameNodePresent: compactNameValue instanceof HTMLElement, listingPricePresent, listingPriceVisible, listingIconWidth: iconWidth, ageMarkerPresent: ageMarker instanceof HTMLElement && ageMarker.getClientRects().length > 0, ageGap, compactTableMedia: matchMedia('(max-width: 1040px)').matches, mobileMedia: matchMedia('(max-width: 900px)').matches, coarsePointer: matchMedia('(pointer: coarse)').matches, hoverNone: matchMedia('(hover: none)').matches }; })()",
+        expression: "(() => { const row = document.querySelector('#tableBody tr[data-player-id=\\\"1\\\"]'); if (!(row instanceof HTMLTableRowElement)) return { missing: 'row', width: window.innerWidth }; const visibleText = (element) => { if (!(element instanceof HTMLElement)) return ''; const style = getComputedStyle(element); return style.display === 'none' || style.visibility === 'hidden' || element.getClientRects().length === 0 ? '' : String(element.textContent || '').trim(); }; const nameLink = row.querySelector('.playerNameLink'); const fullNameValue = row.querySelector('.playerNameFullValue'); const compactNameValue = row.querySelector('.playerNameCompactValue'); const renderedName = visibleText(fullNameValue) || visibleText(compactNameValue) || visibleText(nameLink); const listingPrice = row.querySelector('td.col-listing .listingCellPrice'); const listingIcon = row.querySelector('td.col-listing .listingCellIcon'); const listingPricePresent = listingPrice instanceof HTMLElement; const listingPriceVisible = listingPricePresent && getComputedStyle(listingPrice).display !== 'none' && getComputedStyle(listingPrice).visibility !== 'hidden' && listingPrice.getClientRects().length > 0; const ageHost = row.querySelector('td.col-age .tableControlCellContent'); const ageMarker = row.querySelector('td.col-age .retirementMarker, td.col-age .newMintMarker'); const markerGraphic = ageMarker?.querySelector('img, .newMintIcon') || ageMarker; const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null; const ageGap = ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : ''; const iconWidth = listingIcon instanceof HTMLElement ? Math.round(listingIcon.getBoundingClientRect().width) : 0; const ageMarkerWidth = ageMarker instanceof Element ? Math.round(ageMarker.getBoundingClientRect().width) : 0; const ageMarkerGraphicWidth = markerGraphic instanceof Element ? Math.round(markerGraphic.getBoundingClientRect().width) : 0; return { width: window.innerWidth, clientWidth: document.documentElement.clientWidth, visualViewportWidth: Math.round(window.visualViewport?.width || 0), devicePixelRatio: window.devicePixelRatio, sameRow: row === window.__mflResponsiveResizeOriginalRow, renderedName, fullNameNodePresent: fullNameValue instanceof HTMLElement, compactNameNodePresent: compactNameValue instanceof HTMLElement, listingPricePresent, listingPriceVisible, listingIconWidth: iconWidth, ageMarkerPresent: ageMarker instanceof HTMLElement && ageMarker.getClientRects().length > 0, ageMarkerWidth, ageMarkerGraphicWidth, ageGap, compactTableMedia: matchMedia('(max-width: 1366px)').matches, mobileMedia: matchMedia('(max-width: 900px)').matches, coarsePointer: matchMedia('(pointer: coarse)').matches, hoverNone: matchMedia('(hover: none)').matches }; })()",
         returnByValue: true,
       });
       return evaluation?.result?.value || {};
     };
 
     const stages = [];
-    for (const viewportWidth of [1041, 1040, 901, 900, 700, 520, 380, 360, 1041]) {
+    for (const viewportWidth of [1367, 1366, 1200, 1041, 901, 900, 700, 520, 380, 360, 1367]) {
       stages.push(await snapshotResponsiveTable(viewportWidth));
     }
 
     const expected = [
-      { width: 1041, name: "Nicolò Barella", listing: null, gap: null, icon: 12, compact: false, mobile: false },
-      { width: 1040, name: "N. Barella", listing: false, gap: "3px", icon: 9, compact: true, mobile: false },
-      { width: 901, name: "N. Barella", listing: false, gap: "3px", icon: 9, compact: true, mobile: false },
-      { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9, compact: true, mobile: true },
-      { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 9, compact: true, mobile: true },
-      { width: 520, name: "N. Barella", listing: false, gap: "2px", icon: 7, compact: true, mobile: true },
-      { width: 380, name: "N. Barella", listing: false, gap: "1px", icon: 6, compact: true, mobile: true },
-      { width: 360, name: "N. Barella", listing: false, gap: "1px", icon: 6, compact: true, mobile: true },
-      { width: 1041, name: "Nicolò Barella", listing: null, gap: null, icon: 12, compact: false, mobile: false },
+      { width: 1367, name: "Nicolò Barella", listing: null, gap: null, icon: 12, marker: null, compact: false, mobile: false },
+      { width: 1366, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
+      { width: 1200, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
+      { width: 1041, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
+      { width: 901, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
+      { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: true },
+      { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 9, marker: null, compact: true, mobile: true },
+      { width: 520, name: "N. Barella", listing: false, gap: "2px", icon: 7, marker: null, compact: true, mobile: true },
+      { width: 380, name: "N. Barella", listing: false, gap: "1px", icon: 6, marker: null, compact: true, mobile: true },
+      { width: 360, name: "N. Barella", listing: false, gap: "1px", icon: 6, marker: null, compact: true, mobile: true },
+      { width: 1367, name: "Nicolò Barella", listing: null, gap: null, icon: 12, marker: null, compact: false, mobile: false },
     ];
 
     stages.forEach((stage, index) => {
@@ -117,6 +120,10 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       }
       if (contract.gap) assert.equal(stage.ageGap, contract.gap, "Age/marker gap is wrong at " + contract.width + "px: " + stageDetail);
       if (contract.icon) assert.equal(stage.listingIconWidth, contract.icon, "Listing icon width is wrong at " + contract.width + "px: " + stageDetail);
+      if (contract.marker) {
+        assert.equal(stage.ageMarkerWidth, contract.marker, "Age status marker width is wrong at " + contract.width + "px: " + stageDetail);
+        assert.equal(stage.ageMarkerGraphicWidth, contract.marker, "Age status icon drawing width is wrong at " + contract.width + "px: " + stageDetail);
+      }
     });
 
     return { status: "passed", detail: "responsive table breakpoint passed" };
@@ -127,7 +134,7 @@ const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
   scenariosPattern,
-  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1041, 900]]);\n\nconst server =',
+  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1367, 900]]);\n\nconst server =',
 );
 
 await writeFile(temporaryPath, diagnosticSource, "utf8");
@@ -145,4 +152,4 @@ try {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("Mobile table responsive resize browser regression passed.");
+console.log("Mobile table responsive resize browser regression passed through the 1366px compact boundary.");
