@@ -15,8 +15,8 @@ const responsiveSource = readFileSync(resolve(root, "responsive.css"), "utf8");
 
 assert.doesNotMatch(
   tableSource,
-  /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/,
-  "Canonical Table rows must not branch their DOM on the 900px breakpoint.",
+  /const compactTableLayout = window\.matchMedia\("\(max-width: (?:900|1040)px\)"\)\.matches;/,
+  "Canonical Table rows must not branch their DOM on a responsive compact-table breakpoint.",
 );
 assert.doesNotMatch(
   tableSource,
@@ -73,7 +73,7 @@ for (const [breakpoint, fontSize] of [["900", "10"], ["520", "9"], ["380", "8"]]
 assert.match(sharedTableUiSource, /@media \(max-width: 900px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 10px;/, "Hydrated mobile headers must use 10px text against 12px rows.");
 assert.match(sharedTableUiSource, /@media \(max-width: 520px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 9px;/, "Hydrated phone headers must use 9px text against 11px rows.");
 assert.match(sharedTableUiSource, /@media \(max-width: 380px\) \{[\s\S]*#progressionPage \.playerTableScroller th \{[\s\S]*font-size: 8px;/, "Hydrated tiny-screen headers must use 8px text against 10px rows.");
-assert.match(responsiveSource, /#progressionPage \.playerTableScroller td \{\n {4}font-size: 12px;\n {2}\}/, "Mobile row text must retain its 12px font contract.");
+assert.match(responsiveSource, /#progressionPage \.playerTableScroller td \{\n {4}font-size: 12px;\n {2}\}/, "Compact-table row text must retain its 12px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 520px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 11px;\n {2}\}/, "Phone row text must retain its 11px font contract.");
 assert.match(responsiveSource, /@media \(max-width: 380px\)[\s\S]*#progressionPage \.playerTableScroller td \{\n {4}font-size: 10px;\n {2}\}/, "Tiny-screen row text must retain its 10px font contract.");
 assert.match(projectionSource, /@media \(max-width: 900px\)[\s\S]*--mfl-table-header-height: 30px; --mfl-table-row-height: 26px; --mfl-table-row-outer-height: 30px;/, "First-paint mobile header height must already match the visible row height.");
@@ -89,8 +89,13 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 assert.match(
   responsiveSource,
-  /@media \(max-width: 900px\) \{[\s\S]*\.playerNameFullValue \{[\s\S]*display: none;[\s\S]*\.playerNameCompactValue \{[\s\S]*display: inline;[\s\S]*\.listingCellPrice \{[\s\S]*display: none;/,
-  "Responsive Table presentation must switch names to N. Surname and Listing to icon-only at <=900px.",
+  /@media \(min-width: 901px\) and \(max-width: 1040px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;[\s\S]*\.listingCellIcon \{[\s\S]*width: 9px;/,
+  "Intermediate player tables must reuse compact tablet geometry from 901px through 1040px without changing the global desktop shell.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(max-width: 1040px\) \{[\s\S]*\.playerNameFullValue \{[\s\S]*display: none;[\s\S]*\.playerNameCompactValue \{[\s\S]*display: inline;[\s\S]*\.listingCellPrice \{[\s\S]*display: none;/,
+  "Responsive Table presentation must switch names to N. Surname and Listing to icon-only at <=1040px.",
 );
 assert.match(
   responsiveSource,
