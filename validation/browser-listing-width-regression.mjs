@@ -111,7 +111,7 @@ const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
   scenariosPattern,
-  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1041, 900]]);\n\nconst server =',
+  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1367, 900]]);\n\nconst server =',
 );
 
 await writeFile(temporaryPath, diagnosticSource, "utf8");
@@ -129,4 +129,4 @@ try {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("Listing width compaction browser regression passed.");
+console.log("Listing width compaction browser regression passed above the 1366px compact cutoff.");
