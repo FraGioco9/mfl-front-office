@@ -15,6 +15,7 @@ on:
       - "next-dev-legacy-bridge.mjs"
       - "validation/next-rendered-shell-browser.mjs"
       - "validation/next-mobile-table-browser.mjs"
+      - "validation/next-mobile-table-route-browser.mjs"
   workflow_dispatch:
 
 permissions:
@@ -56,6 +57,9 @@ jobs:
 
       - name: Verify real mobile table presentation in Next
         run: node validation/next-mobile-table-browser.mjs http://localhost:4000/
+
+      - name: Verify real mobile MFL and Agent table routes in Next
+        run: node validation/next-mobile-table-route-browser.mjs http://localhost:4000
 
       - name: Verify Document Head warnings are gone
         shell: bash
