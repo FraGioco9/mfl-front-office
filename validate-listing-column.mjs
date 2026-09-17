@@ -33,10 +33,9 @@ assert.match(core, /function listingPriceBadgeHtml\(row\)/);
 assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
 assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
 assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
-assert.match(core, /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/);
-assert.match(core, /if \(listingBadge\) \{\s*if \(!compactTableLayout\) \{\s*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
-assert.match(core, /const template = document\.createElement\("template"\);/);
-assert.match(core, /badge\.dataset\.tooltip = priceText;/);
+assert.match(core, /if \(listingBadge\) \{\s*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
+assert.doesNotMatch(core, /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/);
+assert.doesNotMatch(core, /price\?\.remove\(\)/);
 assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
 assert.doesNotMatch(core, /listingCellUnlisted/);
 assert.match(core, /<span class="playerTitleName">\$\{escapeHtml\(playerName\)\}<\/span>\$\{listingPriceBadgeHtml\(row\)\}<span class="playerTitleNoteIcon"/);
@@ -72,6 +71,7 @@ assert.match(marketplaceState, /signal: AbortSignal\.timeout\(MARKETPLACE_FETCH_
 assert.match(marketplaceState, /cache: "no-store"/);
 
 const styles = read("styles.css");
+const responsive = read("responsive.css");
 const width = (name) => {
   const match = styles.match(new RegExp(`--mfl-table-col-${name}: ([0-9.]+)%`));
   assert.ok(match, `Missing Uniform Width variable: ${name}`);
@@ -96,6 +96,7 @@ assert.match(styles, /#progressionPage #tableBody \.listingCellTableHost \{[\s\S
 assert.match(styles, /#progressionPage \.playerTableScroller th\.col-listing > span:first-child \{[\s\S]*padding-left: 21px;/);
 assert.match(styles, /\.listingCellContent \{[\s\S]*align-items: center;[\s\S]*background: rgba\(13, 74, 35, 0\.46\);[\s\S]*color: #3bfb52;/);
 assert.match(styles, /\.listingCellPrice \{[\s\S]*color: #3bfb52;/);
+assert.match(responsive, /@media \(max-width: 900px\) \{[\s\S]*#progressionPage \.playerTableScroller \.listingCellPrice \{[\s\S]*display: none;/);
 assert.match(styles, /\.playerTitle > :is\(\.playerTitleName, \.listingCellContent, \.playerTitleNoteIcon\) \{[\s\S]*vertical-align: middle;/);
 assert.match(styles, /\.playerTitle > \.listingCellContent \{[\s\S]*height: 22px;[\s\S]*font-size: 16px;/);
 assert.match(styles, /\.playerTitle > \.listingCellContent \.listingCellIcon \{[\s\S]*width: 14px;[\s\S]*height: 14px;/);
