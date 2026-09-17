@@ -89,8 +89,13 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 assert.match(
   responsiveSource,
-  /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) \{[\s\S]*width: 11px;[\s\S]*\.listingCellIcon \{[\s\S]*width: 9px;/,
-  "Intermediate player tables must reuse compact tablet geometry, including 11px Age markers, from 901px through 1366px.",
+  /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*--mfl-intermediate-age-marker-size: clamp\(11px, calc\(5\.1871px \+ 0\.645161vw\), 14px\);[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) \{[\s\S]*width: var\(--mfl-intermediate-age-marker-size\);[\s\S]*\.listingCellIcon \{[\s\S]*width: 9px;/,
+  "Intermediate player tables must reuse compact tablet geometry while Age markers scale fluidly from 11px to 14px across 901-1366px.",
+);
+assert.match(
+  responsiveSource,
+  /\.retirementMarker::before,[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) img,[\s\S]*\.newMintMarker \.newMintIcon \{[\s\S]*width: var\(--mfl-intermediate-age-marker-size\);[\s\S]*height: var\(--mfl-intermediate-age-marker-size\);/,
+  "Intermediate retirement and new-player visible icon drawings must use the same fluid Age-marker size as their containers.",
 );
 assert.match(
   responsiveSource,
