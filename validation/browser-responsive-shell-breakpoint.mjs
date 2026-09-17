@@ -49,23 +49,25 @@ const shellProbe = String.raw`    await cdp.send("Runtime.enable");
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 180));
 
       const evaluation = await cdp.send("Runtime.evaluate", {
-        expression: "(() => { const menuRail = document.querySelector('.menuRail'); const sidebar = document.querySelector('#sidebar'); const sidebarGrid = document.querySelector('.sidebarGrid'); const navButton = sidebar?.querySelector('.navButton'); const navIcon = navButton?.querySelector('.navEmoji'); const navText = navButton?.querySelector('.navText'); const stats = document.querySelector('.topbar .stats'); const searchButton = document.querySelector('.topbar .searchButton'); const searchIcon = searchButton?.querySelector('.searchIcon'); const accountButton = document.querySelector('#accountButton'); const accountIcon = accountButton?.querySelector('.accountButtonIcon'); const appShell = document.querySelector('.appShell'); const main = document.querySelector('#appShell > main'); const railStyle = menuRail instanceof HTMLElement ? getComputedStyle(menuRail) : null; const sidebarGridStyle = sidebarGrid instanceof HTMLElement ? getComputedStyle(sidebarGrid) : null; const navButtonStyle = navButton instanceof HTMLElement ? getComputedStyle(navButton) : null; const navTextStyle = navText instanceof HTMLElement ? getComputedStyle(navText) : null; const statsStyle = stats instanceof HTMLElement ? getComputedStyle(stats) : null; const appShellStyle = appShell instanceof HTMLElement ? getComputedStyle(appShell) : null; const mainStyle = main instanceof HTMLElement ? getComputedStyle(main) : null; const rectWidth = (element) => element instanceof Element ? Math.round(element.getBoundingClientRect().width) : 0; const rectHeight = (element) => element instanceof Element ? Math.round(element.getBoundingClientRect().height) : 0; const cssNumber = (value) => { const parsed = Number.parseFloat(String(value || '')); return Number.isFinite(parsed) ? parsed : 0; }; return { width: window.innerWidth, railPosition: railStyle?.position || '', railBottom: railStyle?.bottom || '', railWidth: rectWidth(menuRail), railHeight: rectHeight(menuRail), sidebarGridDisplay: sidebarGridStyle?.display || '', navButtonDisplay: navButtonStyle?.display || '', navButtonHeight: rectHeight(navButton), navIconWidth: rectWidth(navIcon), navTextFontSize: navTextStyle?.fontSize || '', statsDisplay: statsStyle?.display || '', searchWidth: rectWidth(searchButton), searchHeight: rectHeight(searchButton), searchIconWidth: rectWidth(searchIcon), accountWidth: rectWidth(accountButton), accountHeight: rectHeight(accountButton), accountIconWidth: rectWidth(accountIcon), sidebarOffset: appShellStyle?.getPropertyValue('--sidebar-offset').trim() || '', pinnedSidebarWidth: getComputedStyle(document.documentElement).getPropertyValue('--pinned-sidebar-width').trim(), mainMarginLeft: mainStyle?.marginLeft || '', mainPaddingBottom: cssNumber(mainStyle?.paddingBottom), mobileNavHeight: getComputedStyle(document.documentElement).getPropertyValue('--mobile-nav-height').trim(), compactShellMedia: matchMedia('(max-width: 1040px)').matches, legacyMobileMedia: matchMedia('(max-width: 900px)').matches }; })()",
+        expression: "(() => { const menuRail = document.querySelector('.menuRail'); const sidebar = document.querySelector('#sidebar'); const sidebarGrid = document.querySelector('.sidebarGrid'); const navButton = sidebar?.querySelector('.navButton'); const navIcon = navButton?.querySelector('.navEmoji'); const navText = navButton?.querySelector('.navText'); const stats = document.querySelector('.topbar .stats'); const searchButton = document.querySelector('.topbar .searchButton'); const searchIcon = searchButton?.querySelector('.searchIcon'); const accountButton = document.querySelector('#accountButton'); const accountIcon = accountButton?.querySelector('.accountButtonIcon'); const appShell = document.querySelector('.appShell'); const main = document.querySelector('#appShell > main'); const railStyle = menuRail instanceof HTMLElement ? getComputedStyle(menuRail) : null; const sidebarGridStyle = sidebarGrid instanceof HTMLElement ? getComputedStyle(sidebarGrid) : null; const navButtonStyle = navButton instanceof HTMLElement ? getComputedStyle(navButton) : null; const navTextStyle = navText instanceof HTMLElement ? getComputedStyle(navText) : null; const statsStyle = stats instanceof HTMLElement ? getComputedStyle(stats) : null; const appShellStyle = appShell instanceof HTMLElement ? getComputedStyle(appShell) : null; const mainStyle = main instanceof HTMLElement ? getComputedStyle(main) : null; const rectWidth = (element) => element instanceof Element ? Math.round(element.getBoundingClientRect().width) : 0; const rectHeight = (element) => element instanceof Element ? Math.round(element.getBoundingClientRect().height) : 0; const cssNumber = (value) => { const parsed = Number.parseFloat(String(value || '')); return Number.isFinite(parsed) ? parsed : 0; }; return { width: window.innerWidth, railPosition: railStyle?.position || '', railBottom: railStyle?.bottom || '', railWidth: rectWidth(menuRail), railHeight: rectHeight(menuRail), sidebarGridDisplay: sidebarGridStyle?.display || '', navButtonDisplay: navButtonStyle?.display || '', navButtonHeight: rectHeight(navButton), navIconWidth: rectWidth(navIcon), navTextFontSize: navTextStyle?.fontSize || '', statsDisplay: statsStyle?.display || '', searchWidth: rectWidth(searchButton), searchHeight: rectHeight(searchButton), searchIconWidth: rectWidth(searchIcon), accountWidth: rectWidth(accountButton), accountHeight: rectHeight(accountButton), accountIconWidth: rectWidth(accountIcon), sidebarOffset: appShellStyle?.getPropertyValue('--sidebar-offset').trim() || '', pinnedSidebarWidth: getComputedStyle(document.documentElement).getPropertyValue('--pinned-sidebar-width').trim(), mainMarginLeft: mainStyle?.marginLeft || '', mainPaddingBottom: cssNumber(mainStyle?.paddingBottom), mobileNavHeight: getComputedStyle(document.documentElement).getPropertyValue('--mobile-nav-height').trim(), compactShellMedia: matchMedia('(max-width: 1366px)').matches, legacyMobileMedia: matchMedia('(max-width: 900px)').matches }; })()",
         returnByValue: true,
       });
       return evaluation?.result?.value || {};
     };
 
     const stages = [];
-    for (const viewportWidth of [1041, 1040, 901, 900, 1041]) {
+    for (const viewportWidth of [1367, 1366, 1200, 1041, 901, 900, 1367]) {
       stages.push(await snapshotShell(viewportWidth));
     }
 
     const expected = [
-      { width: 1041, compact: false },
-      { width: 1040, compact: true },
+      { width: 1367, compact: false },
+      { width: 1366, compact: true },
+      { width: 1200, compact: true },
+      { width: 1041, compact: true },
       { width: 901, compact: true },
       { width: 900, compact: true },
-      { width: 1041, compact: false },
+      { width: 1367, compact: false },
     ];
 
     stages.forEach((stage, index) => {
@@ -116,7 +118,7 @@ const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
   scenariosPattern,
-  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1041, 900]]);\n\nconst server =',
+  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1367, 900]]);\n\nconst server =',
 );
 
 await writeFile(temporaryPath, diagnosticSource, "utf8");
@@ -134,4 +136,4 @@ try {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("Responsive shell breakpoint browser regression passed.");
+console.log("Responsive shell breakpoint browser regression passed through the 1366px compact boundary.");
