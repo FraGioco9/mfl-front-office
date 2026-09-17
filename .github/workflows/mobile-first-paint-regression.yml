@@ -105,10 +105,10 @@ jobs:
       - name: Build canonical assets
         run: npm run build
 
-      - name: Validate 1040px compact application shell
+      - name: Validate 1366px compact application shell
         run: node validation/browser-responsive-shell-breakpoint.mjs
 
-      - name: Validate 1366px shell/table extension and Age icon scaling
+      - name: Validate 1366px shell/table route coverage and Age icon scaling
         run: node validation/browser-intermediate-responsive-extension.mjs
 
   compact-route-coverage:
