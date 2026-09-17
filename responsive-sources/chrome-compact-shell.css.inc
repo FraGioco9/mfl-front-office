@@ -1,3 +1,51 @@
+/* One responsive icon scale from small phones to large desktop.
+ * 360px keeps the refined tiny-screen sizes; 1664px reaches the normal desktop geometry.
+ */
+@media (max-width: 1664px) {
+  :root {
+    --mfl-responsive-shell-search-icon-size: clamp(14px, calc(13.171779px + 0.230061vw), 17px);
+    --mfl-responsive-shell-account-icon-size: clamp(15px, calc(14.171779px + 0.230061vw), 18px);
+    --mfl-responsive-shell-theme-icon-size: clamp(16px, calc(14.343558px + 0.460123vw), 22px);
+    --mfl-responsive-navigation-icon-size: clamp(14px, calc(12.895706px + 0.306748vw), 18px);
+
+    --mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);
+    --mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);
+    --mfl-responsive-table-age-marker-size: clamp(8px, calc(5.791411px + 0.613497vw), 16px);
+    --mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);
+    --mfl-responsive-table-rarity-size: clamp(5px, calc(4.171779px + 0.230061vw), 8px);
+    --mfl-responsive-table-checkbox-size: clamp(10px, calc(8.343558px + 0.460123vw), 16px);
+    --mfl-responsive-table-checkbox-check-width: clamp(6px, calc(4.895706px + 0.306748vw), 10px);
+    --mfl-responsive-table-checkbox-check-height: clamp(4px, calc(2.895706px + 0.306748vw), 8px);
+    --mfl-responsive-table-action-size: clamp(13px, calc(11.067485px + 0.536810vw), 20px);
+    --mfl-responsive-table-action-icon-size: clamp(8px, calc(6.895706px + 0.306748vw), 12px);
+    --mfl-responsive-table-listing-content-size: var(--mfl-responsive-table-action-size);
+  }
+
+  .topbar .searchButton .searchIcon {
+    flex-basis: var(--mfl-responsive-shell-search-icon-size);
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
+  }
+
+  #accountButton .accountButtonIcon {
+    width: var(--mfl-responsive-shell-account-icon-size);
+    height: var(--mfl-responsive-shell-account-icon-size);
+  }
+
+  .themeButton .themeModeIcon {
+    width: var(--mfl-responsive-shell-theme-icon-size);
+    height: var(--mfl-responsive-shell-theme-icon-size);
+  }
+
+  .menuRail .navButton .navEmoji {
+    flex-basis: var(--mfl-responsive-navigation-icon-size);
+    width: var(--mfl-responsive-navigation-icon-size);
+    height: var(--mfl-responsive-navigation-icon-size);
+    font-size: var(--mfl-responsive-navigation-icon-size);
+    line-height: var(--mfl-responsive-navigation-icon-size);
+  }
+}
+
 /* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
@@ -61,8 +109,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
     gap: 0;
   }
 
@@ -80,9 +128,9 @@
   }
 
   .topbar .searchButton .searchIcon {
-    flex: 0 0 22px;
-    width: 22px;
-    height: 22px;
+    flex: 0 0 var(--mfl-responsive-shell-search-icon-size);
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
   }
 
   .searchShortcut {
@@ -133,8 +181,8 @@
   }
 
   #accountButton .accountButtonIcon {
-    width: 20px;
-    height: 20px;
+    width: var(--mfl-responsive-shell-account-icon-size);
+    height: var(--mfl-responsive-shell-account-icon-size);
   }
 
   #accountDropdown {
@@ -211,12 +259,12 @@
   }
 
   .menuRail .navButton .navEmoji {
-    flex: 0 0 var(--mfl-icon-size-navigation);
-    width: var(--mfl-icon-size-navigation);
-    height: var(--mfl-icon-size-navigation);
+    flex: 0 0 var(--mfl-responsive-navigation-icon-size);
+    width: var(--mfl-responsive-navigation-icon-size);
+    height: var(--mfl-responsive-navigation-icon-size);
     color: inherit;
-    font-size: var(--mfl-icon-size-navigation);
-    line-height: var(--mfl-icon-size-navigation);
+    font-size: var(--mfl-responsive-navigation-icon-size);
+    line-height: var(--mfl-responsive-navigation-icon-size);
   }
 
   .menuRail .navButton .navText {
