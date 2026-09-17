@@ -15,6 +15,11 @@ assert.match(
 );
 assert.match(
   owner,
+  /document\.querySelectorAll\("#progressionPage #tableHead \[data-mfl-full-table-label\]\[data-mfl-compact-table-label\]"\)/,
+  "Header label fallback must target both direct labels and labels nested inside sortable header buttons.",
+);
+assert.match(
+  owner,
   /label\.textContent = full;/,
   "Intermediate/desktop headers must try their full label before deciding whether fallback is needed.",
 );
