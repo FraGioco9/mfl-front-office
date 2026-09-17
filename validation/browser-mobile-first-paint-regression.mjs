@@ -17,6 +17,27 @@ const snapshotProbe = String.raw`      tableHeaderLabels: Array.from(document.qu
 `;
 let diagnosticSource = source.replace(snapshotMarker, snapshotProbe);
 
+const paintSamplerMarker = '  if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);\n';
+assert.ok(diagnosticSource.includes(paintSamplerMarker), "Frame paint-sampling hook must remain discoverable.");
+const paintSamplerProbe = paintSamplerMarker + String.raw`
+  const tableHeaderPaintHistory = [];
+  let tableHeaderPaintSampling = scenario === "database";
+  const sampleTableHeaderPaint = () => {
+    if (!tableHeaderPaintSampling) return;
+    const labels = Array.from(document.querySelectorAll("#tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]"))
+      .map((label) => String(label.textContent || "").trim());
+    const mode = labels.includes("Positions") || labels.includes("Seasons")
+      ? "full"
+      : labels.includes("POS") && labels.includes("SZN")
+        ? "compact"
+        : "";
+    if (mode && tableHeaderPaintHistory.at(-1) !== mode) tableHeaderPaintHistory.push(mode);
+    requestAnimationFrame(sampleTableHeaderPaint);
+  };
+  if (tableHeaderPaintSampling) requestAnimationFrame(sampleTableHeaderPaint);
+`;
+diagnosticSource = diagnosticSource.replace(paintSamplerMarker, paintSamplerProbe);
+
 const databaseFirstPaintMarker = '      assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");\n';
 assert.ok(diagnosticSource.includes(databaseFirstPaintMarker), "Database first-paint assertion hook must remain discoverable.");
 const databaseFirstPaintProbe = databaseFirstPaintMarker + String.raw`      assert(
@@ -29,6 +50,22 @@ const databaseFirstPaintProbe = databaseFirstPaintMarker + String.raw`      asse
       );
 `;
 diagnosticSource = diagnosticSource.replace(databaseFirstPaintMarker, databaseFirstPaintProbe);
+
+const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");\n';
+assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
+const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
+      tableHeaderPaintSampling = false;
+      assert(
+        tableHeaderPaintHistory[0] === "compact",
+        "1374px header paint history must start compact: " + JSON.stringify(tableHeaderPaintHistory),
+      );
+      assert(
+        !tableHeaderPaintHistory.includes("full"),
+        "1374px compact headers must never bounce back to full during hydration: " + JSON.stringify(tableHeaderPaintHistory),
+      );
+    }
+`;
+diagnosticSource = diagnosticSource.replace(routeReadyMarker, routeReadyProbe);
 
 const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
