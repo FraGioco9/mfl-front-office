@@ -108,6 +108,9 @@ jobs:
       - name: Validate 1040px compact application shell
         run: node validation/browser-responsive-shell-breakpoint.mjs
 
+      - name: Validate 1366px shell/table extension and Age icon scaling
+        run: node validation/browser-intermediate-responsive-extension.mjs
+
   compact-route-coverage:
     runs-on: ubuntu-latest
     steps:
