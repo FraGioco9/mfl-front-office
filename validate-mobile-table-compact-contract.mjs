@@ -89,13 +89,13 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 
 for (const [contract, label] of [
-  ["--mfl-intermediate-age-marker-size: clamp(11px, calc(5.1871px + 0.645161vw), 14px);", "Age status markers"],
-  ["--mfl-intermediate-listing-icon-size: clamp(9px, calc(3.1871px + 0.645161vw), 12px);", "Listing icons"],
-  ["--mfl-intermediate-flag-size: clamp(14px, calc(2.3742px + 1.290323vw), 20px);", "nationality flags"],
-  ["--mfl-intermediate-note-icon-size: clamp(9px, calc(-0.6882px + 1.075269vw), 14px);", "Note icons"],
-  ["--mfl-intermediate-rarity-size: clamp(5px, calc(-0.8129px + 0.645161vw), 8px);", "Overall rarity markers"],
-  ["--mfl-intermediate-checkbox-size: clamp(13px, calc(7.1871px + 0.645161vw), 16px);", "selection controls"],
-  ["--mfl-intermediate-action-size: clamp(18px, calc(14.1247px + 0.430108vw), 20px);", "row action controls"],
+  ["--mfl-responsive-table-age-marker-size: clamp(11px, calc(5.1871px + 0.645161vw), 14px);", "Age status markers"],
+  ["--mfl-responsive-table-listing-icon-size: clamp(9px, calc(3.1871px + 0.645161vw), 12px);", "Listing icons"],
+  ["--mfl-responsive-table-flag-size: clamp(14px, calc(2.3742px + 1.290323vw), 20px);", "nationality flags"],
+  ["--mfl-responsive-table-note-icon-size: clamp(9px, calc(-0.6882px + 1.075269vw), 14px);", "Note icons"],
+  ["--mfl-responsive-table-rarity-size: clamp(5px, calc(-0.8129px + 0.645161vw), 8px);", "Overall rarity markers"],
+  ["--mfl-responsive-table-checkbox-size: clamp(13px, calc(7.1871px + 0.645161vw), 16px);", "selection controls"],
+  ["--mfl-responsive-table-action-size: clamp(18px, calc(14.1247px + 0.430108vw), 20px);", "row action controls"],
 ]) {
   assert.ok(
     responsiveSource.includes(contract),
@@ -105,47 +105,52 @@ for (const [contract, label] of [
 
 assert.match(
   responsiveSource,
+  /@media \(max-width: 1664px\) \{[\s\S]*--mfl-responsive-table-listing-icon-size: clamp\(6px,[\s\S]*12px\);[\s\S]*--mfl-responsive-table-flag-size: clamp\(10px,[\s\S]*18px\);[\s\S]*--mfl-responsive-table-age-marker-size: clamp\(8px,[\s\S]*16px\);/,
+  "Responsive table icons must share one continuous small-phone-to-large-desktop scale through 1664px.",
+);
+assert.match(
+  responsiveSource,
   /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;/,
   "Intermediate player tables must reuse the compact tablet layout from 901px through 1366px.",
 );
 assert.match(
   responsiveSource,
-  /:is\(\.retirementMarker, \.newMintMarker\) \{[\s\S]*width: var\(--mfl-intermediate-age-marker-size\);/,
+  /:is\(\.retirementMarker, \.newMintMarker\) \{[\s\S]*width: var\(--mfl-responsive-table-age-marker-size\);/,
   "Intermediate Age marker containers must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /\.retirementMarker::before,[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) img,[\s\S]*\.newMintMarker \.newMintIcon \{[\s\S]*width: var\(--mfl-intermediate-age-marker-size\);[\s\S]*height: var\(--mfl-intermediate-age-marker-size\);/,
+  /\.retirementMarker::before,[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) img,[\s\S]*\.newMintMarker \.newMintIcon \{[\s\S]*width: var\(--mfl-responsive-table-age-marker-size\);[\s\S]*height: var\(--mfl-responsive-table-age-marker-size\);/,
   "Intermediate retirement and new-player visible icon drawings must use the same fluid Age-marker size as their containers.",
 );
 assert.match(
   responsiveSource,
-  /\.playerTableScroller \.listingCellIcon \{[\s\S]*width: var\(--mfl-intermediate-listing-icon-size\);[\s\S]*height: var\(--mfl-intermediate-listing-icon-size\);/,
+  /\.playerTableScroller \.listingCellIcon \{[\s\S]*width: var\(--mfl-responsive-table-listing-icon-size\);[\s\S]*height: var\(--mfl-responsive-table-listing-icon-size\);/,
   "Intermediate Listing icons must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /\.playerTableScroller \.flagImage \{[\s\S]*width: var\(--mfl-intermediate-flag-size\);[\s\S]*height: var\(--mfl-intermediate-flag-size\);/,
+  /\.playerTableScroller \.flagImage \{[\s\S]*width: var\(--mfl-responsive-table-flag-size\);[\s\S]*height: var\(--mfl-responsive-table-flag-size\);/,
   "Intermediate flag icons must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /\.playerTableScroller \.playerNoteIcon \{[\s\S]*font-size: var\(--mfl-intermediate-note-icon-size\);/,
+  /\.playerTableScroller \.playerNoteIcon \{[\s\S]*font-size: var\(--mfl-responsive-table-note-icon-size\);/,
   "Intermediate Note icons must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /#tableBody \.tableOverallRarityCircle \{[\s\S]*width: var\(--mfl-intermediate-rarity-size\);[\s\S]*height: var\(--mfl-intermediate-rarity-size\);/,
+  /#tableBody \.tableOverallRarityCircle \{[\s\S]*width: var\(--mfl-responsive-table-rarity-size\);[\s\S]*height: var\(--mfl-responsive-table-rarity-size\);/,
   "Intermediate Overall rarity markers must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /\.playerTableScroller :is\(th, td\)\.selectionCell input,[\s\S]*\.quickFilters input\[type="checkbox"\] \{[\s\S]*width: var\(--mfl-intermediate-checkbox-size\);[\s\S]*height: var\(--mfl-intermediate-checkbox-size\);/,
+  /\.playerTableScroller :is\(th, td\)\.selectionCell input,[\s\S]*\.quickFilters input\[type="checkbox"\] \{[\s\S]*width: var\(--mfl-responsive-table-checkbox-size\);[\s\S]*height: var\(--mfl-responsive-table-checkbox-size\);/,
   "Intermediate selection controls must consume their fluid size token.",
 );
 assert.match(
   responsiveSource,
-  /\.playerTableScroller \.playerTableActionsButton \{[\s\S]*width: var\(--mfl-intermediate-action-size\);[\s\S]*height: var\(--mfl-intermediate-action-size\);/,
+  /\.playerTableScroller \.playerTableActionsButton \{[\s\S]*width: var\(--mfl-responsive-table-action-size\);[\s\S]*height: var\(--mfl-responsive-table-action-size\);/,
   "Intermediate row action controls must consume their fluid size token.",
 );
 assert.match(
@@ -170,9 +175,9 @@ assert.match(
 );
 
 const phoneStyle = sharedTableUiSource.match(/@media \(max-width: 520px\) \{([\s\S]*?)\n\}\n@media \(max-width: 380px\)/)?.[1] || "";
-assert.match(phoneStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: 5px;[\s\S]*width: 5px;[\s\S]*height: 5px;[\s\S]*margin-right: 3px;/, "The Overall rarity circle must use the refined 5px size and 3px number gap on phone screens.");
+assert.match(phoneStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: var\(--mfl-responsive-table-rarity-size\);[\s\S]*width: var\(--mfl-responsive-table-rarity-size\);[\s\S]*height: var\(--mfl-responsive-table-rarity-size\);[\s\S]*margin-right: 3px;/, "Phone Overall rarity circles must consume the continuous responsive size while keeping the 3px number gap.");
 const tinyStyle = sharedTableUiSource.match(/@media \(max-width: 380px\) \{([\s\S]*?)\n\}`;/)?.[1] || "";
-assert.match(tinyStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: 5px;[\s\S]*width: 5px;[\s\S]*height: 5px;[\s\S]*margin-right: 3px;/, "The Overall rarity circle must keep the refined 5px size and 3px number gap on tiny screens.");
+assert.match(tinyStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: var\(--mfl-responsive-table-rarity-size\);[\s\S]*width: var\(--mfl-responsive-table-rarity-size\);[\s\S]*height: var\(--mfl-responsive-table-rarity-size\);[\s\S]*margin-right: 3px;/, "Tiny-screen Overall rarity circles must keep consuming the continuous responsive size with the 3px number gap.");
 
 assert.doesNotMatch(tableSource, /!important/, "Canonical responsive Table presentation must not add !important overrides.");
 assert.doesNotMatch(sharedTableUiSource, /!important/, "Shared mobile Table presentation must not add !important overrides.");
