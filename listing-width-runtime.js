@@ -51,6 +51,46 @@
     return (String(value || "").match(/\d/g) || []).length;
   }
 
+  function cssPixels(value) {
+    const parsed = Number.parseFloat(String(value || ""));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function listingBadgeRequiredWidth(price) {
+    if (!(price instanceof HTMLElement)) return 0;
+    const badge = price.closest(".listingCellContent");
+    if (!(badge instanceof HTMLElement)) return 0;
+
+    const badgeStyle = getComputedStyle(badge);
+    const icon = badge.querySelector(".listingCellIcon");
+    const iconWidth = icon instanceof HTMLElement
+      ? Math.max(icon.scrollWidth, icon.getBoundingClientRect().width)
+      : 0;
+    const priceWidth = Math.max(price.scrollWidth, price.getBoundingClientRect().width);
+    const gap = iconWidth > 0 && priceWidth > 0
+      ? cssPixels(badgeStyle.columnGap || badgeStyle.gap)
+      : 0;
+
+    return cssPixels(badgeStyle.paddingLeft)
+      + iconWidth
+      + gap
+      + priceWidth
+      + cssPixels(badgeStyle.paddingRight);
+  }
+
+  function listingCellAvailableWidth(price) {
+    if (!(price instanceof HTMLElement)) return 0;
+    const cell = price.closest("td.col-listing");
+    if (!(cell instanceof HTMLTableCellElement)) return 0;
+    const cellStyle = getComputedStyle(cell);
+    return Math.max(
+      0,
+      cell.clientWidth
+        - cssPixels(cellStyle.paddingLeft)
+        - cssPixels(cellStyle.paddingRight),
+    );
+  }
+
   function syncListingTooltip(price, compact) {
     if (!(price instanceof HTMLElement)) return;
     const badge = price.closest(".listingCellContent");
@@ -82,8 +122,16 @@
   function fiveDigitPriceWouldOverflow(price) {
     if (!(price instanceof HTMLElement)) return false;
     if (numericDigitCount(price.textContent) < 5) return false;
-    if (price.getClientRects().length === 0 || price.clientWidth <= 0) return false;
-    return price.scrollWidth - price.clientWidth > OVERFLOW_EPSILON;
+    if (price.getClientRects().length === 0) return false;
+
+    const requiredWidth = listingBadgeRequiredWidth(price);
+    const availableWidth = listingCellAvailableWidth(price);
+    if (requiredWidth > 0 && availableWidth > 0) {
+      return requiredWidth - availableWidth > OVERFLOW_EPSILON;
+    }
+
+    return price.clientWidth > 0
+      && price.scrollWidth - price.clientWidth > OVERFLOW_EPSILON;
   }
 
   function sync() {
@@ -148,14 +196,14 @@
     mutationObserver?.disconnect();
     window.removeEventListener("resize", scheduleSync);
     MOBILE_TABLE_MEDIA.removeEventListener("change", scheduleSync);
-    document.removeEventListener("mfl:route-ready", syncAndObserve);
+    window.removeEventListener("mfl:route-ready", syncAndObserve);
     playerTableScroller()?.classList.remove(COMPACT_CLASS);
   }
 
   ensureStyle();
   window.addEventListener("resize", scheduleSync, { passive: true });
   MOBILE_TABLE_MEDIA.addEventListener("change", scheduleSync);
-  document.addEventListener("mfl:route-ready", syncAndObserve);
+  window.addEventListener("mfl:route-ready", syncAndObserve);
   syncAndObserve();
 
   window.__mflListingWidthRuntime = Object.freeze({
