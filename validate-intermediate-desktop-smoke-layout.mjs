@@ -39,8 +39,9 @@ assert.ok(
   intermediateSource.includes("@media (min-width: 901px) and (max-width: 1444px) {")
     && intermediateSource.includes(".topbar h1 {\n    overflow: visible;\n    text-overflow: clip;\n  }")
     && intermediateSource.includes("width: 116px;\n    min-width: 116px;\n    height: 42px;")
-    && intermediateSource.includes(".stats > div > span {\n    overflow: visible;\n    text-overflow: clip;"),
-  "Intermediate desktop header must keep the full title visible and make Players/Wallets the same 42px height as Theme/Account without ellipses.",
+    && intermediateSource.includes(".stats > div > span {\n    overflow: visible;\n    text-overflow: clip;\n    line-height: 1;\n  }")
+    && intermediateSource.includes(".stats label {\n    margin-top: 0;\n    line-height: 1;\n  }"),
+  "Intermediate desktop header must keep the full title visible, preserve desktop counter proportions, and tighten the number/label spacing inside the 42px Players/Wallets boxes.",
 );
 
 for (const compactCounterRule of [
