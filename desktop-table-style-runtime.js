@@ -14,7 +14,6 @@
   let destroyed = false;
   let routeFrame = 0;
   let listingResizeObserver = null;
-  let listingMutationObserver = null;
   let observedListingScroller = null;
   let observedListingTable = null;
   let observedListingBody = null;
@@ -209,24 +208,16 @@
       && normalizedBody === observedListingBody) return;
 
     listingResizeObserver?.disconnect();
-    listingMutationObserver?.disconnect();
     observedListingScroller = scroller;
     observedListingTable = normalizedTable;
     observedListingBody = normalizedBody;
 
-    if (!(scroller instanceof HTMLElement)) return;
+    if (!(scroller instanceof HTMLElement) || typeof ResizeObserver !== "function") return;
 
-    if (typeof ResizeObserver === "function") {
-      listingResizeObserver ||= new ResizeObserver(scheduleRouteSync);
-      listingResizeObserver.observe(scroller);
-      if (normalizedTable) listingResizeObserver.observe(normalizedTable);
-      if (normalizedBody) listingResizeObserver.observe(normalizedBody);
-    }
-
-    if (typeof MutationObserver === "function" && normalizedBody) {
-      listingMutationObserver ||= new MutationObserver(scheduleRouteSync);
-      listingMutationObserver.observe(normalizedBody, { childList: true, subtree: true });
-    }
+    listingResizeObserver ||= new ResizeObserver(scheduleRouteSync);
+    listingResizeObserver.observe(scroller);
+    if (normalizedTable) listingResizeObserver.observe(normalizedTable);
+    if (normalizedBody) listingResizeObserver.observe(normalizedBody);
   }
 
   function syncRouteUi() {
@@ -282,9 +273,7 @@
     if (routeFrame) cancelAnimationFrame(routeFrame);
     routeFrame = 0;
     listingResizeObserver?.disconnect();
-    listingMutationObserver?.disconnect();
     listingResizeObserver = null;
-    listingMutationObserver = null;
     observedListingScroller = null;
     observedListingTable = null;
     observedListingBody = null;
