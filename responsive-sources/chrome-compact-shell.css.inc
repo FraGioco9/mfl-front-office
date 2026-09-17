@@ -281,7 +281,6 @@
   }
 
   body > #appShell > main {
-    --mfl-footer-page-floor: max(560px, calc(100dvh - var(--mobile-nav-overlay-clearance)));
     padding: var(--mfl-page-inset-block-start) var(--mfl-page-gutter-inline) var(--mfl-page-inset-block-end);
     overflow-x: hidden;
   }
