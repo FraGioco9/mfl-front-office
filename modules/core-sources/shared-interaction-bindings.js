@@ -135,7 +135,11 @@ document.addEventListener("keydown", (event) => {
     openSearch();
   } else if (event.key === "Escape" && !searchModal.hidden) {
     event.preventDefault();
-    closeSearch();
+    if (document.activeElement === playerSearchInput) {
+      playerSearchInput.blur();
+    } else {
+      closeSearch();
+    }
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     event.preventDefault();
     if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
@@ -238,72 +242,3 @@ brandLinks.forEach((link) => {
     setPage("home");
   });
 });
-
-document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
-    setPage("changelog");
-  });
-});
-openSearchButton.addEventListener("click", openSearch);
-closeSearchButton.addEventListener("click", closeSearch);
-playerSearchClearButton.addEventListener("click", clearPlayerSearch);
-window.addEventListener("storage", syncRecentSearchStateFromStorage);
-playerSearchInput.addEventListener("input", renderSearchResults);
-const setPageWithoutRouteLoading = setPage;
-
-navButtons.forEach((button) => {
-  button.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const pageName = button.dataset.page;
-    const reuseCachedEvaluationRoute = pageName === "evaluation" && evaluationPageCacheReady;
-    const options = tablePages.has(pageName)
-      ? { view: preferredViewForPage(pageName) }
-      : pageName === "evaluation"
-        ? { plain: true, reuseCachedRoute: reuseCachedEvaluationRoute }
-        : {};
-    const target = pagePath(pageName, options);
-    if (button.classList.contains("active") && target === `${location.pathname}${location.search}`) return;
-    if (pageName === "evaluation") preparePlainEvaluationReentry();
-    if (reuseCachedEvaluationRoute) {
-      await setPageWithoutRouteLoading(pageName, true, options);
-      return;
-    }
-    await setPage(pageName, true, options);
-  });
-});
-
-
-window.addEventListener("scroll", () => hidePlayerNoteTooltip({ immediate: true }), true);
-window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true }));
-
-window.addEventListener("popstate", () => {
-  const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
-  setPage(target.pageName, false, { ...target.options, preserveScroll: true });
-});
-
-accountButton.addEventListener("click", (event) => {
-  event.stopPropagation();
-  toggleAccountMenu();
-});
-accountEmail.addEventListener("click", () => {
-  if (!state.linkedWalletAddress || !hasWalletProof()) {
-    return;
-  }
-  closeAccountMenu();
-  setPage("myplayers");
-});
-linkWalletButton.addEventListener("click", linkWallet);
-if (accountSettingsButton) {
-  accountSettingsButton.addEventListener("click", () => {
-    accountDropdown.hidden = true;
-    accountButton.setAttribute("aria-expanded", "false");
-    setPage("settings");
-  });
-}
-if (homeOptInButton) {
-  homeOptInButton.addEventListener("click", linkWallet);
-}
-if (myPlayersOptInButton) {
-  myPlayersOptInButton.addEventListener("click", linkWallet);
-}
