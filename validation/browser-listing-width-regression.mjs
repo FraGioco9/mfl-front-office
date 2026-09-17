@@ -15,14 +15,18 @@ assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness
 const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
       const tableBody = document.getElementById("tableBody");
       assert(tableBody instanceof HTMLTableSectionElement, "Database table body is missing.");
+      const firstRow = tableBody.querySelector("tr");
+      assert(firstRow instanceof HTMLTableRowElement, "Database fixture row is missing.");
+      const firstListingCell = firstRow.querySelector("td.col-listing");
+      assert(firstListingCell instanceof HTMLTableCellElement, "Database Listing cell is missing.");
 
-      const makeListingRow = (playerId, priceText) => {
-        const row = document.createElement("tr");
-        row.dataset.playerId = String(playerId);
-        const cell = document.createElement("td");
-        cell.className = "col-listing";
-        const host = document.createElement("span");
-        host.className = "listingCellTableHost";
+      const setListingPrice = (cell, priceText) => {
+        cell.removeAttribute("aria-label");
+        cell.replaceChildren();
+        const controlHost = document.createElement("span");
+        controlHost.className = "tableControlCellContent";
+        const listingHost = document.createElement("span");
+        listingHost.className = "listingCellTableHost";
         const badge = document.createElement("span");
         badge.className = "listingCellContent";
         badge.setAttribute("aria-label", "For Sale at " + priceText);
@@ -33,42 +37,65 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
         price.className = "listingCellPrice";
         price.textContent = priceText;
         badge.append(icon, price);
-        host.appendChild(badge);
-        cell.appendChild(host);
-        row.appendChild(cell);
-        return row;
+        listingHost.appendChild(badge);
+        controlHost.appendChild(listingHost);
+        cell.appendChild(controlHost);
+        return { badge, price };
       };
 
-      tableBody.replaceChildren(
-        makeListingRow(1, "$10,000"),
-        makeListingRow(2, "$999"),
+      const firstListing = setListingPrice(firstListingCell, "$10,000");
+      const secondRow = firstRow.cloneNode(true);
+      assert(secondRow instanceof HTMLTableRowElement, "Second Listing fixture row could not be cloned.");
+      secondRow.dataset.playerId = "2";
+      const secondListingCell = secondRow.querySelector("td.col-listing");
+      assert(secondListingCell instanceof HTMLTableCellElement, "Second Database Listing cell is missing.");
+      const secondListing = setListingPrice(secondListingCell, "$999");
+      tableBody.appendChild(secondRow);
+
+      const prices = [firstListing.price, secondListing.price];
+      const badges = [firstListing.badge, secondListing.badge];
+      const cellStyle = getComputedStyle(firstListingCell);
+      const availableWidth = firstListingCell.clientWidth
+        - (Number.parseFloat(cellStyle.paddingLeft) || 0)
+        - (Number.parseFloat(cellStyle.paddingRight) || 0);
+      const badgeStyle = getComputedStyle(firstListing.badge);
+      const iconWidth = firstListing.badge.querySelector(".listingCellIcon")?.getBoundingClientRect().width || 0;
+      const requiredWidth = (Number.parseFloat(badgeStyle.paddingLeft) || 0)
+        + iconWidth
+        + (Number.parseFloat(badgeStyle.columnGap || badgeStyle.gap) || 0)
+        + firstListing.price.scrollWidth
+        + (Number.parseFloat(badgeStyle.paddingRight) || 0);
+      assert(
+        requiredWidth > availableWidth + 1,
+        "Five-digit Listing fixture must reproduce real cell-boundary clipping before compaction: "
+          + JSON.stringify({ requiredWidth, availableWidth }),
       );
-      const prices = Array.from(tableBody.querySelectorAll("td.col-listing .listingCellPrice"));
-      assert(prices.length === 2, "Listing compaction regression must render two Listing prices.");
-      const firstPrice = prices[0];
-      assert(firstPrice instanceof HTMLElement, "Five-digit Listing fixture is missing.");
-      firstPrice.style.flex = "0 0 20px";
-      firstPrice.style.width = "20px";
-      firstPrice.style.maxWidth = "20px";
-      const wouldOverflow = firstPrice.scrollWidth - firstPrice.clientWidth > 1;
-      assert(wouldOverflow, "Five-digit Listing fixture must reproduce a clipped price before compaction.");
 
       window.dispatchEvent(new Event("resize"));
       await delay(80);
       assert(
-        prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display === "none"),
-        "If one five-digit Listing would clip, every Listing price must compact together.",
+        prices.every((price) => getComputedStyle(price).display === "none"),
+        "If one five-digit Listing would cross its cell boundary, every Listing price must compact together.",
+      );
+      assert(
+        badges[0].dataset.tooltip === "$10,000" && badges[1].dataset.tooltip === "$999",
+        "Compacted Listing badges must preserve each full price as tooltip text.",
       );
 
-      firstPrice.style.removeProperty("flex");
-      firstPrice.style.removeProperty("width");
-      firstPrice.style.removeProperty("max-width");
+      const progressionPage = document.getElementById("progressionPage");
+      assert(progressionPage instanceof HTMLElement, "Progression page is missing.");
+      progressionPage.style.setProperty("--mfl-table-col-listing", "20%");
       window.dispatchEvent(new Event("resize"));
       await delay(80);
       assert(
-        prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display !== "none"),
-        "Listing prices must restore together when the five-digit price fits again.",
+        prices.every((price) => getComputedStyle(price).display !== "none"),
+        "Listing prices must restore together when the Listing column has enough room.",
       );
+      assert(
+        badges.every((badge) => !badge.dataset.tooltip),
+        "Runtime-owned Listing tooltips must clear when full prices are restored.",
+      );
+      progressionPage.style.removeProperty("--mfl-table-col-listing");
     }
 `;
 diagnosticSource = diagnosticSource.replace(routeReadyMarker, routeReadyProbe);
