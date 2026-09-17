@@ -29,8 +29,8 @@ assert.match(tableSource, /joinedAgencyFullValue/, "Canonical Table rows must re
 assert.match(tableSource, /joinedAgencyCompactValue/, "Canonical Table rows must retain the compact Joined Agency value in stable DOM.");
 assert.match(
   tableSource,
-  /column === "listing_price"[\s\S]*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/,
-  "Canonical Table rows must retain Listing icon and price markup regardless of viewport width.",
+  /column === "listing_price"[\s\S]*host\.className = "listingCellTableHost";[\s\S]*host\.innerHTML = listingBadge;[\s\S]*cell\.appendChild\(host\);/,
+  "Canonical Table rows must retain the structural Listing host plus icon and price markup regardless of viewport width.",
 );
 assert.doesNotMatch(tableSource, /price\?\.remove\(\)/, "Mobile Table rendering must not remove Listing prices from the DOM.");
 
