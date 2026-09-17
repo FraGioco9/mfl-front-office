@@ -21,9 +21,9 @@ invariant(
 
 invariant(
   keydown.includes('event.key === "Escape" && !searchModal.hidden')
-    && keydown.includes("event.preventDefault();\n    closeSearch();")
+    && keydown.includes("event.preventDefault();\n    if (document.activeElement === playerSearchInput) {\n      playerSearchInput.blur();\n    } else {\n      closeSearch();\n    }")
     && !keydown.includes("searchModal.contains(document.activeElement)) document.activeElement.blur();"),
-  "Escape must close Global Search through the canonical modal lifecycle instead of only blurring its focused control.",
+  "Escape must first blur the focused Global Search input, then close Search when focus is elsewhere.",
 );
 
 invariant(
@@ -38,4 +38,4 @@ invariant(
   "Search-result keyboard focus must keep the existing row highlight without a second browser-default light outline.",
 );
 
-console.log("Global Search keyboard close, focused-result activation, and row-highlight focus styling are validated.");
+console.log("Global Search staged Escape, focused-result activation, and row-highlight focus styling are validated.");
