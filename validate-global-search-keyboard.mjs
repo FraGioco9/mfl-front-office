@@ -3,6 +3,7 @@ import { invariant } from "./validation/assertions.mjs";
 import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 const shared = readCanonicalCoreSource("shared");
+const controls = String(await readFile(new URL("./control-interactions-runtime.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const foundations = String(await readFile(new URL("./ui-foundations.css", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
 const keydownStart = shared.indexOf('document.addEventListener("keydown", (event) => {');
@@ -12,30 +13,40 @@ const keydown = keydownStart >= 0 && keydownEnd > keydownStart
   : "";
 
 invariant(
-  shared.includes("function focusedGlobalSearchResult() {")
-    && shared.includes("active instanceof HTMLButtonElement")
-    && shared.includes("playerSearchResults.contains(active)")
-    && shared.includes('active.classList.contains("searchResult")'),
-  "Global Search keyboard activation must resolve only the actually focused result button.",
+  shared.includes("function focusedGlobalSearchResult(target = document.activeElement) {")
+    && shared.includes("target instanceof HTMLButtonElement")
+    && shared.includes("playerSearchResults.contains(target)")
+    && shared.includes('target.classList.contains("searchResult")'),
+  "Global Search keyboard activation must resolve the result button that actually owns the key event.",
 );
 
 invariant(
-  keydown.includes('event.key === "Escape" && !searchModal.hidden')
-    && keydown.includes("event.preventDefault();\n    if (document.activeElement === playerSearchInput) {\n      playerSearchInput.blur();\n    } else {\n      closeSearch();\n    }")
-    && !keydown.includes("searchModal.contains(document.activeElement)) document.activeElement.blur();"),
-  "Escape must first blur the focused Global Search input, then close Search when focus is elsewhere.",
+  shared.includes("function handleGlobalSearchEscape(event) {")
+    && shared.includes("if (searchModal.hidden) return false;")
+    && shared.includes("if (event.target === playerSearchInput) {\n    playerSearchInput.blur();\n  } else {\n    closeSearch();\n  }")
+    && shared.includes('window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(\n  "global-search",\n  handleGlobalSearchEscape,\n  { priority: 200 },\n);')
+    && !keydown.includes('event.key === "Escape" && !searchModal.hidden'),
+  "Global Search Escape must use capture-phase ownership: first blur the focused search input, otherwise close Search.",
 );
 
 invariant(
-  keydown.includes('event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult()')
-    && keydown.includes("event.preventDefault();\n    focusedGlobalSearchResult()?.click();"),
-  "Enter must explicitly activate the focused Global Search result instead of relying on browser default button activation.",
+  controls.includes("function globalSearchResultOwnsEnter(target) {")
+    && controls.includes('document.getElementById("searchModal")')
+    && controls.includes('target.classList.contains("searchResult")')
+    && controls.includes("!globalSearchResultOwnsEnter(event.target)"),
+  "The global modal Enter guard must let a focused Global Search result receive Enter instead of swallowing it in capture phase.",
+);
+
+invariant(
+  keydown.includes('event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult(event.target)')
+    && keydown.includes("event.preventDefault();\n    focusedGlobalSearchResult(event.target)?.click();"),
+  "Enter must explicitly activate the Global Search result that owns the keyboard event.",
 );
 
 invariant(
   foundations.includes(".searchResult:focus-visible,\n.evaluationSearchResult:focus-visible {\n  outline: none;\n}")
-    && shared.includes('active.classList.contains("searchResult")'),
+    && shared.includes('target.classList.contains("searchResult")'),
   "Search-result keyboard focus must keep the existing row highlight without a second browser-default light outline.",
 );
 
-console.log("Global Search staged Escape, focused-result activation, and row-highlight focus styling are validated.");
+console.log("Global Search capture-owned Escape, result Enter activation, and row-highlight focus styling are validated.");
