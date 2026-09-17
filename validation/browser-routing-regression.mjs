@@ -961,6 +961,18 @@ const browserTestSource = String.raw`(() => {
         && advancedSettingsModal instanceof HTMLElement
         && closeAdvancedSettingsButton instanceof HTMLButtonElement,
       "Evaluation interaction regression could not find the Advanced Settings controls.");
+      const evaluationMain = document.querySelector("#appShell > main");
+      assert(evaluationMain instanceof HTMLElement,
+        "Evaluation interaction regression could not find the main scrollport.");
+      const scrollbarSpacer = document.createElement("div");
+      scrollbarSpacer.dataset.mflEvaluationScrollbarRegression = "true";
+      scrollbarSpacer.style.height = `${Math.max(evaluationMain.clientHeight + 64, 720)}px`;
+      scrollbarSpacer.style.pointerEvents = "none";
+      evaluationPage.appendChild(scrollbarSpacer);
+      await delay(25);
+      assert(evaluationMain.scrollHeight > evaluationMain.clientHeight,
+        "Evaluation interaction regression did not create the reported vertical-scrollbar state.");
+
       const advancedSettingsRect = advancedSettingsButton.getBoundingClientRect();
       const advancedSettingsHitTarget = document.elementFromPoint(
         advancedSettingsRect.left + advancedSettingsRect.width / 2,
@@ -1011,6 +1023,7 @@ const browserTestSource = String.raw`(() => {
       closeAdvancedSettingsButton.click();
       await waitFor(() => advancedSettingsModal.hidden === true,
         "Evaluation Advanced Settings modal did not close after the interaction-readiness check.");
+      scrollbarSpacer.remove();
       assertPageAccessibilityState();
     }
     await setPage("privacy", true);
