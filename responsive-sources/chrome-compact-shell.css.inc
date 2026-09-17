@@ -1,7 +1,7 @@
-/* Compact application shell for the intermediate 901-1040px range.
+/* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
-@media (min-width: 901px) and (max-width: 1040px) {
+@media (min-width: 901px) and (max-width: 1366px) {
   :root {
     --pinned-sidebar-width: 0px;
     --mobile-nav-height: 58px;
