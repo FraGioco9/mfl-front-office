@@ -82,9 +82,9 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
 
     const expected = [
       { width: 1367, name: "Nicolò Barella", listing: null, gap: null, icon: 12, marker: null, compact: false, mobile: false },
-      { width: 1366, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
-      { width: 1200, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
-      { width: 1041, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
+      { width: 1366, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 14, compact: true, mobile: false },
+      { width: 1200, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 13, compact: true, mobile: false },
+      { width: 1041, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 12, compact: true, mobile: false },
       { width: 901, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: true },
       { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 9, marker: null, compact: true, mobile: true },
