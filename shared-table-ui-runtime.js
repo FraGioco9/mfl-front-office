@@ -15,6 +15,7 @@
   const PLAYER_TABLE_NAME_STUCK_CLASS = "mflPlayerTableNameStuck";
   const VIEW_SCROLL_EPSILON = 2;
   const PLAYER_TABLE_SCROLL_EPSILON = 2;
+  const HEADER_LABEL_OVERFLOW_EPSILON = 1;
   const MOBILE_STYLE_ID = "mflInitialMobileTableStyle";
   const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
@@ -895,12 +896,18 @@
       const short = String(label.dataset.mflCompactTableLabel || "").trim();
       if (!full) return;
       const column = String(header.dataset.tableColumn || "");
-      const desired = mobile && column === "listing_price"
-        ? ""
-        : mobile && short
-          ? short
-          : full;
-      if (label.textContent !== desired) label.textContent = desired;
+      if (mobile && column === "listing_price") {
+        label.textContent = "";
+        return;
+      }
+      if (mobile && short) {
+        label.textContent = short;
+        return;
+      }
+      label.textContent = full;
+      if (!short || short === full || label.getClientRects().length === 0 || label.clientWidth <= 0) return;
+      const fullOverflows = label.scrollWidth - label.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;
+      if (fullOverflows && short && short !== full) label.textContent = short;
     });
   }
 
