@@ -11178,10 +11178,16 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 @media (min-width: 901px) and (max-width: 1444px) {
+  .topbar h1 {
+    overflow: visible;
+    text-overflow: clip;
+  }
+
   .stats div {
     width: 116px;
     min-width: 116px;
-    padding: 7px 18px;
+    height: 42px;
+    padding: 4px 18px;
   }
 
   .stats > div > span {
