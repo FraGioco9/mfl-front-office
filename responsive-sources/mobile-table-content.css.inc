@@ -11,9 +11,10 @@
   display: none;
 }
 
-/* Intermediate widths already use the compact table presentation even though
- * the rest of the site remains in its desktop/intermediate shell. */
-@media (min-width: 901px) and (max-width: 1040px) {
+/* The full intermediate 901-1366px shell shares compact table presentation.
+ * Narrower 700/520/380 layers continue to own progressively tighter geometry.
+ */
+@media (min-width: 901px) and (max-width: 1366px) {
   #progressionPage {
     --mfl-table-header-height: 30px;
     --mfl-table-row-height: 26px;
@@ -173,7 +174,7 @@
   }
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1366px) {
   #progressionPage .playerTableScroller .playerNameFullValue {
     display: none;
   }
