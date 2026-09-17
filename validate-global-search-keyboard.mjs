@@ -27,7 +27,7 @@ invariant(
 );
 
 invariant(
-  keydown.includes('event.key === "Enter" && !searchModal.hidden && focusedGlobalSearchResult()')
+  keydown.includes('event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult()')
     && keydown.includes("event.preventDefault();\n    focusedGlobalSearchResult()?.click();"),
   "Enter must explicitly activate the focused Global Search result instead of relying on browser default button activation.",
 );
