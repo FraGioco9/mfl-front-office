@@ -34,6 +34,11 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const row = document.querySelector("#tableBody tr[data-player-id=\"1\"]");
       const marker = row?.querySelector("td.col-age .retirementMarker, td.col-age .newMintMarker");
       const markerChild = marker?.querySelector("img, .newMintIcon");
+      const listingIcon = row?.querySelector("td.col-listing .listingCellIcon");
+      const flag = row?.querySelector(".flagImage");
+      const rarity = row?.querySelector(".tableOverallRarityCircle");
+      const selection = row?.querySelector("td.selectionCell input[type=\"checkbox\"]");
+      const actionButton = row?.querySelector(".playerTableActionsButton");
       const fullName = row?.querySelector(".playerNameFullValue");
       const compactName = row?.querySelector(".playerNameCompactValue");
       const listingPrice = row?.querySelector("td.col-listing .listingCellPrice");
@@ -47,7 +52,17 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const markerChildWidth = markerChild instanceof Element ? Math.round(markerChild.getBoundingClientRect().width) : 0;
       const markerPseudoWidth = marker instanceof Element ? Math.round(Number.parseFloat(getComputedStyle(marker, "::before").width) || 0) : 0;
       const markerGraphicWidth = markerChildWidth > 0 ? markerChildWidth : markerPseudoWidth;
+      const listingIconWidth = listingIcon instanceof Element ? Math.round(listingIcon.getBoundingClientRect().width) : 0;
+      const flagWidth = flag instanceof Element ? Math.round(flag.getBoundingClientRect().width) : 0;
+      const rarityWidth = rarity instanceof Element ? Math.round(rarity.getBoundingClientRect().width) : 0;
+      const selectionWidth = selection instanceof Element ? Math.round(selection.getBoundingClientRect().width) : 0;
+      const actionButtonWidth = actionButton instanceof Element ? Math.round(actionButton.getBoundingClientRect().width) : 0;
       const expectedMarkerWidth = ({ 1366: 14, 1200: 13, 1041: 12, 901: 11 })[viewportWidth];
+      const expectedListingIconWidth = ({ 1366: 12, 1200: 11, 1041: 10, 901: 9 })[viewportWidth];
+      const expectedFlagWidth = ({ 1366: 20, 1200: 18, 1041: 16, 901: 14 })[viewportWidth];
+      const expectedRarityWidth = ({ 1366: 8, 1200: 7, 1041: 6, 901: 5 })[viewportWidth];
+      const expectedSelectionWidth = ({ 1366: 16, 1200: 15, 1041: 14, 901: 13 })[viewportWidth];
+      const expectedActionButtonWidth = ({ 1366: 20, 1200: 19, 1041: 19, 901: 18 })[viewportWidth];
 
       assert(menuRail instanceof HTMLElement, "Intermediate compact navigation rail is missing at " + viewportWidth + "px.");
       assert(menuStyle?.position === "absolute", "Bottom navigation must replace the sidebar through 1366px.");
@@ -61,6 +76,11 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       assert(marker instanceof HTMLElement, "Age status marker is missing at " + viewportWidth + "px.");
       assert(markerWidth === expectedMarkerWidth, "Age status marker must scale fluidly through 1366px.");
       assert(markerGraphicWidth === expectedMarkerWidth, "Visible Age status icon drawing must scale fluidly through 1366px.");
+      assert(listingIconWidth === expectedListingIconWidth, "Listing icon must scale fluidly above 900px.");
+      assert(flagWidth === expectedFlagWidth, "Flag icon must scale fluidly above 900px.");
+      assert(rarityWidth === expectedRarityWidth, "Overall rarity marker must scale fluidly above 900px.");
+      assert(selectionWidth === expectedSelectionWidth, "Selection control must scale fluidly above 900px.");
+      assert(actionButtonWidth === expectedActionButtonWidth, "Row action control must scale fluidly above 900px.");
     }
 
     if (viewportWidth === 1367) {
