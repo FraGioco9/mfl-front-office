@@ -37,9 +37,10 @@ assert.ok(
 
 assert.ok(
   intermediateSource.includes("@media (min-width: 901px) and (max-width: 1444px) {")
-    && intermediateSource.includes("width: 116px;\n    min-width: 116px;\n    padding: 7px 18px;")
+    && intermediateSource.includes(".topbar h1 {\n    overflow: visible;\n    text-overflow: clip;\n  }")
+    && intermediateSource.includes("width: 116px;\n    min-width: 116px;\n    height: 42px;")
     && intermediateSource.includes(".stats > div > span {\n    overflow: visible;\n    text-overflow: clip;"),
-  "Intermediate desktop chrome must preserve the normal Players/Wallets boxes and never collapse their values into ellipses.",
+  "Intermediate desktop header must keep the full title visible and make Players/Wallets the same 42px height as Theme/Account without ellipses.",
 );
 
 for (const compactCounterRule of [
@@ -69,7 +70,7 @@ assert.ok(
   intermediateSource.includes("@media (min-width: 901px) and (max-width: 1040px) {")
     && intermediateSource.includes("grid-template-columns: minmax(0, 1fr) 44px max-content;")
     && intermediateSource.includes("flex-basis: 44px;\n    width: 44px;"),
-  "The narrow desktop cascade must compact Search/Account while leaving Players/Wallets at their normal box width.",
+  "The narrow desktop cascade must compact Search/Account while leaving Players/Wallets at their normal width and shared compact height.",
 );
 
 console.log("Intermediate desktop final-smoke layout validation passed.");
