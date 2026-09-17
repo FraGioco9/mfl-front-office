@@ -966,7 +966,7 @@ const browserTestSource = String.raw`(() => {
         "Evaluation interaction regression could not find the main scrollport.");
       const scrollbarSpacer = document.createElement("div");
       scrollbarSpacer.dataset.mflEvaluationScrollbarRegression = "true";
-      scrollbarSpacer.style.height = `${Math.max(evaluationMain.clientHeight + 64, 720)}px`;
+      scrollbarSpacer.style.height = String(Math.max(evaluationMain.clientHeight + 64, 720)) + "px";
       scrollbarSpacer.style.pointerEvents = "none";
       evaluationPage.appendChild(scrollbarSpacer);
       await delay(25);
