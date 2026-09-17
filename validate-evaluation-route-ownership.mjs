@@ -42,6 +42,15 @@ for (const binding of evaluationActionBindings) {
   invariant(!shared.includes(binding), `Evaluation-only action ownership must not remain in universal Shared: ${binding}`);
   invariant(evaluation.includes(binding), `Evaluation route core must own action binding: ${binding}`);
 }
+invariant(
+  evaluation.includes("function activeEvaluationRow(playerId = state.evaluationPlayerId) {")
+    && evaluation.includes('const route = incrementalRouteTarget("evaluation", { playerId: key });')
+    && evaluation.includes("const payload = cachedIncrementalPayload(route, 1);")
+    && evaluation.includes("applyIncrementalPayload(route, payload);")
+    && evaluation.includes("const row = activeEvaluationRow(playerId);")
+    && (evaluation.match(/const row = activeEvaluationRow\(state\.evaluationPlayerId\);/g) || []).length >= 2,
+  "Evaluation controls must recover their selected player from the Evaluation route cache when shared route rows have been displaced.",
+);
 for (const typedControl of [
   'const evaluationSaveButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationSaveButton"));',
   'const evaluationShareButton = /** @type {HTMLButtonElement} */ (document.querySelector("#evaluationShareButton"));',

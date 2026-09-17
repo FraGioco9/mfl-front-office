@@ -27,8 +27,24 @@ function evaluationOverallValues(row, expectedSeasons) {
   return values;
 }
 
+function activeEvaluationRow(playerId = state.evaluationPlayerId) {
+  const key = String(playerId || "").trim();
+  if (!key) return null;
+
+  const currentRow = rowByPlayerId(key);
+  if (currentRow) return currentRow;
+
+  const route = incrementalRouteTarget("evaluation", { playerId: key });
+  const payload = cachedIncrementalPayload(route, 1);
+  if (!route || !payload) return null;
+
+  applyIncrementalPayload(route, payload);
+  state.evaluationPlayerId = key;
+  return rowByPlayerId(key);
+}
+
 function adjustEvaluationOverall(playerId, season, delta) {
-  const row = rowByPlayerId(playerId);
+  const row = activeEvaluationRow(playerId);
 
   if (!row) {
     return;
@@ -301,7 +317,7 @@ async function evaluationRenderPageOwner() {
     return;
   }
 
-  let row = rowByPlayerId(state.evaluationPlayerId);
+  let row = activeEvaluationRow(state.evaluationPlayerId);
   const pendingEvaluationRoute = Boolean(
     evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
   );
@@ -1803,7 +1819,7 @@ if (evaluationShareButton) {
 }
 
 evaluationResetButton.addEventListener("click", () => {
-  const row = rowByPlayerId(state.evaluationPlayerId);
+  const row = activeEvaluationRow(state.evaluationPlayerId);
 
   if (!row) {
     return;
@@ -1817,7 +1833,7 @@ const openEvaluationPlayerPage = (event) => {
     return;
   }
 
-  const row = rowByPlayerId(state.evaluationPlayerId);
+  const row = activeEvaluationRow(state.evaluationPlayerId);
 
   if (!row) {
     return;

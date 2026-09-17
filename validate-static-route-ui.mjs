@@ -125,6 +125,9 @@ excludes(staticUi, "not-found.css", "The not-found page must not load a standalo
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, "setRoutePageVisibility(page, target);", "Committed page state must reveal the destination shell through the shared cached-Table-aware visibility owner.");
+includes(staticUi, 'page.hidden = false;\n      page.inert = false;\n      page.removeAttribute("aria-hidden");', "Visible route shells must become interactive atomically with reveal.");
+includes(staticUi, 'page.hidden = false;\n      page.inert = true;\n      page.classList.add("mflCachedTablePageParked");', "Parked rendered tables must remain inert even while preserved in layout.");
+includes(staticUi, 'page.inert = true;\n    page.setAttribute("aria-hidden", "true");\n    page.hidden = true;', "Hidden route shells must become inert synchronously instead of waiting for MutationObserver cleanup.");
 includes(staticUi, 'if (!(target instanceof HTMLElement)) {', "Missing route-shell integration must fail closed.");
 includes(staticUi, 'page.hidden = true;', "Missing route-shell integration must hide every stale page rather than reveal Home.");
 includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");

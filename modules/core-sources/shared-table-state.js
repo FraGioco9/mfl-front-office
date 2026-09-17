@@ -119,8 +119,11 @@ function sortKeySupportedByView(
   const normalizedPageName = pageName === "mflstats" ? "mfl" : String(pageName || "");
   if (normalizedPageName === "club" && sortKey === "positions") return true;
   const normalizedView = normalizeViewForPage(viewName, normalizedPageName || "progression");
-  const visibleColumns = (views[normalizedView]?.columns || [])
-    .map((column) => displayColumnForPage(column, normalizedPageName));
+  const visibleColumns = (views[normalizedView]?.columns || []).map((column) => (
+    column === agentColumn && joinedAgencyPages().has(normalizedPageName)
+      ? joinedAgencyColumn
+      : column
+  ));
   return sortableColumns.has(sortKey) && visibleColumns.includes(sortKey);
 }
 

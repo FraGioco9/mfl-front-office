@@ -133,9 +133,13 @@ invariant(appEntry.includes('const plainEvaluationStartup = initialRouteRuntime.
   && appRoutePaintIndex > appRecentAwaitIndex
   && !syncSource.includes("restoreEmptyRecentResults(")
   && !readySource.includes("restoreEmptyRecentResults(")
-  && !layoutSyncSource.includes("renderEmptyRecents")
+  && !layoutSyncSource.includes("hidePassiveSearchResults")
   && !layoutSyncSource.includes("restoreEmptyRecentResults")
-  && layoutRuntime.includes("queueMicrotask(renderEmptyRecents);")
+  && layoutRuntime.includes("function hidePassiveSearchResults()")
+  && layoutRuntime.includes("if (!input || input.value.trim() || document.activeElement === input) return;")
+  && layoutRuntime.includes("if (results instanceof HTMLElement) results.hidden = true;")
+  && layoutRuntime.includes("queueMicrotask(hidePassiveSearchResults);")
+  && !layoutRuntime.includes("restoreEmptyRecentResults")
   && !searchRuntime.includes('mfl:evaluation-route-active'),
   "Direct plain Evaluation startup must await the existing recent-five hydration before route-ready releases first-paint ownership; search and layout runtime sync/readiness hooks remain passive.");
 invariant(walletPreferences.includes("recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds)"),

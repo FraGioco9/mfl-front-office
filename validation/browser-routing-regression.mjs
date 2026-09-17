@@ -908,14 +908,185 @@ const browserTestSource = String.raw`(() => {
 
   async function navigateBackToScenario(setPage, timeline) {
     if (scenario === "player") {
-      await setPage("evaluation", true, { plain: true });
+      const originalEnsureRouteCore = window.__mflEnsureRouteCore;
+      let evaluationCoreRequested = false;
+      let releaseEvaluationCore = null;
+      window.__mflEnsureRouteCore = (pageName, options = {}) => {
+        if (String(pageName || "") !== "evaluation" || typeof originalEnsureRouteCore !== "function") {
+          return originalEnsureRouteCore?.(pageName, options);
+        }
+        if (evaluationCoreRequested) return originalEnsureRouteCore(pageName, options);
+        evaluationCoreRequested = true;
+        return new Promise((resolve, reject) => {
+          releaseEvaluationCore = () => Promise.resolve(originalEnsureRouteCore(pageName, options)).then(resolve, reject);
+        });
+      };
+
+      const evaluationNavigation = setPage("evaluation", true, { plain: true });
+      await waitFor(() => evaluationCoreRequested && typeof releaseEvaluationCore === "function",
+        "Evaluation navigation did not request its lazy interaction core.");
+      await delay(80);
+
+      const playerPageBeforeCommit = document.getElementById("playerPage");
+      const evaluationPageBeforeCommit = document.getElementById("evaluationPage");
+      assert(window.location.pathname !== "/evaluation",
+        "Evaluation URL committed before its interaction core was ready.");
+      assert(playerPageBeforeCommit instanceof HTMLElement && !playerPageBeforeCommit.hidden && !playerPageBeforeCommit.inert,
+        "Player stopped being interactive before Evaluation controls were ready.");
+      assert(evaluationPageBeforeCommit instanceof HTMLElement && evaluationPageBeforeCommit.hidden,
+        "Evaluation became visible before its interaction handlers were ready.");
+
+      releaseEvaluationCore();
+      await evaluationNavigation;
+      window.__mflEnsureRouteCore = originalEnsureRouteCore;
+
       await waitFor(() => window.location.pathname === "/evaluation" && document.getElementById("evaluationPage")?.hidden === false,
         "Player could not navigate to Evaluation for accessibility cleanup.");
       const playerPage = document.getElementById("playerPage");
+      const evaluationPage = document.getElementById("evaluationPage");
+      const appShell = document.getElementById("appShell");
       assert(playerPage instanceof HTMLElement && playerPage.hidden && playerPage.inert,
         "Player route remained accessibility-active after navigating to Evaluation.");
       assert(playerPage.getAttribute("aria-hidden") === "true",
         "Player route remained in the accessibility tree after navigating to Evaluation.");
+      assert(evaluationPage instanceof HTMLElement && !evaluationPage.inert,
+        "Visible Evaluation route remained inert after its interaction core became ready.");
+      assert(appShell instanceof HTMLElement && !appShell.inert,
+        "Application shell remained inert after Evaluation navigation completed.");
+
+      const advancedSettingsButton = document.querySelector("#evaluationPage .advancedSettingsButton");
+      const advancedSettingsModal = document.getElementById("advancedSettingsModal");
+      const closeAdvancedSettingsButton = document.getElementById("closeAdvancedSettingsButton");
+      assert(advancedSettingsButton instanceof HTMLButtonElement
+        && advancedSettingsModal instanceof HTMLElement
+        && closeAdvancedSettingsButton instanceof HTMLButtonElement,
+      "Evaluation interaction regression could not find the Advanced Settings controls.");
+      const evaluationMain = document.querySelector("#appShell > main");
+      assert(evaluationMain instanceof HTMLElement,
+        "Evaluation interaction regression could not find the main scrollport.");
+      const scrollbarSpacer = document.createElement("div");
+      scrollbarSpacer.dataset.mflEvaluationScrollbarRegression = "true";
+      scrollbarSpacer.style.height = String(Math.max(evaluationMain.clientHeight + 64, 720)) + "px";
+      scrollbarSpacer.style.pointerEvents = "none";
+      evaluationPage.appendChild(scrollbarSpacer);
+      await delay(25);
+      assert(evaluationMain.scrollHeight > evaluationMain.clientHeight,
+        "Evaluation interaction regression did not create the reported vertical-scrollbar state.");
+
+      const advancedSettingsRect = advancedSettingsButton.getBoundingClientRect();
+      const advancedSettingsHitTarget = document.elementFromPoint(
+        advancedSettingsRect.left + advancedSettingsRect.width / 2,
+        advancedSettingsRect.top + advancedSettingsRect.height / 2,
+      );
+      assert(
+        advancedSettingsHitTarget instanceof Element
+          && (advancedSettingsHitTarget === advancedSettingsButton || advancedSettingsButton.contains(advancedSettingsHitTarget)),
+        "Evaluation Advanced Settings is visually exposed but blocked from pointer hit-testing. Debug: " + JSON.stringify({
+          viewport: { width: innerWidth, height: innerHeight },
+          button: {
+            left: advancedSettingsRect.left,
+            top: advancedSettingsRect.top,
+            right: advancedSettingsRect.right,
+            bottom: advancedSettingsRect.bottom,
+          },
+          hitTarget: advancedSettingsHitTarget instanceof Element
+            ? {
+                tag: advancedSettingsHitTarget.tagName,
+                id: advancedSettingsHitTarget.id,
+                className: String(advancedSettingsHitTarget.className || ""),
+              }
+            : null,
+          main: (() => {
+            const main = document.querySelector("#appShell > main");
+            return main instanceof HTMLElement
+              ? { scrollHeight: main.scrollHeight, clientHeight: main.clientHeight, scrollTop: main.scrollTop }
+              : null;
+          })(),
+          searchResults: (() => {
+            const results = document.getElementById("evaluationSearchResults");
+            if (!(results instanceof HTMLElement)) return null;
+            const rect = results.getBoundingClientRect();
+            return {
+              hidden: results.hidden,
+              children: results.children.length,
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+            };
+          })(),
+        }),
+      );
+      advancedSettingsButton.click();
+      await waitFor(() => advancedSettingsModal.hidden === false && advancedSettingsModal.classList.contains("modalOpen"),
+        "Evaluation Advanced Settings button was visible but not interactive on first entry.");
+      closeAdvancedSettingsButton.click();
+      await waitFor(() => advancedSettingsModal.hidden === true,
+        "Evaluation Advanced Settings modal did not close after the interaction-readiness check.");
+
+      await setPage("evaluation", true, { playerId: "1" });
+      await waitFor(
+        () => window.location.pathname === "/evaluation"
+          && new URL(window.location.href).searchParams.get("player") === "1"
+          && document.querySelector("#evaluationTableBody [data-evaluation-overall-delta=\"1\"]") instanceof HTMLButtonElement,
+        "Evaluation player controls did not become ready for displaced-row interaction coverage.",
+      );
+
+      const overallIncreaseButton = document.querySelector("#evaluationTableBody [data-evaluation-overall-delta=\"1\"]");
+      const evaluationResetControl = document.getElementById("evaluationResetButton");
+      const evaluationPlayerPageControl = document.getElementById("evaluationPlayerPageButton");
+      assert(
+        overallIncreaseButton instanceof HTMLButtonElement
+          && evaluationResetControl instanceof HTMLButtonElement
+          && evaluationPlayerPageControl instanceof HTMLButtonElement,
+        "Evaluation displaced-row regression could not find +, Reset, and Player Page controls.",
+      );
+
+      const overallValue = () => Number(
+        overallIncreaseButton.closest(".evaluationOverallControl")?.querySelector("strong")?.textContent || 0
+      );
+      const initialOverall = overallValue();
+      assert(initialOverall > 0, "Evaluation displaced-row regression could not read the current Overall.");
+
+      state.rows = [];
+      state.filteredRows = [];
+      overallIncreaseButton.click();
+      await waitFor(
+        () => Number(document.querySelector("#evaluationTableBody .evaluationOverallControl strong")?.textContent || 0) === initialOverall + 1,
+        "Evaluation + control stopped working after shared route rows were displaced.",
+      );
+
+      state.rows = [];
+      state.filteredRows = [];
+      evaluationResetControl.click();
+      await waitFor(
+        () => Number(document.querySelector("#evaluationTableBody .evaluationOverallControl strong")?.textContent || 0) === initialOverall,
+        "Evaluation Reset stopped working after shared route rows were displaced.",
+      );
+
+      state.rows = [];
+      state.filteredRows = [];
+      const originalWindowOpen = window.open;
+      let openedPlayerUrl = "";
+      window.open = (url) => {
+        openedPlayerUrl = String(url || "");
+        return { blur() {} };
+      };
+      try {
+        evaluationPlayerPageControl.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+        }));
+      } finally {
+        window.open = originalWindowOpen;
+      }
+      assert(
+        openedPlayerUrl.includes("/players/1"),
+        "Evaluation Player Page stopped working after shared route rows were displaced.",
+      );
+
+      scrollbarSpacer.remove();
       assertPageAccessibilityState();
     }
     await setPage("privacy", true);

@@ -39,14 +39,15 @@ const layoutSyncSource = layoutSyncStart >= 0 && layoutSyncEnd > layoutSyncStart
   ? layoutRuntime.slice(layoutSyncStart, layoutSyncEnd)
   : "";
 invariant(
-  layoutRuntime.includes("function renderEmptyRecents()")
-    && layoutRuntime.includes("restoreEmptyRecentResults?.(false)")
+  layoutRuntime.includes("function hidePassiveSearchResults()")
+    && layoutRuntime.includes("if (!input || input.value.trim() || document.activeElement === input) return;")
+    && layoutRuntime.includes("if (results instanceof HTMLElement) results.hidden = true;")
     && layoutRuntime.includes("function onPointerDown(event)")
     && layoutRuntime.includes("if (input && document.activeElement === input) input.blur();")
-    && layoutRuntime.includes("queueMicrotask(renderEmptyRecents);")
-    && !layoutSyncSource.includes("renderEmptyRecents")
-    && !layoutSyncSource.includes("restoreEmptyRecentResults"),
-  "Evaluation layout may restore empty recents after an explicit outside pointer interaction, but startup sync must never become a second recent-five loader.",
+    && layoutRuntime.includes("queueMicrotask(hidePassiveSearchResults);")
+    && !layoutRuntime.includes("restoreEmptyRecentResults")
+    && !layoutSyncSource.includes("hidePassiveSearchResults"),
+  "Evaluation layout may hide an unfocused passive results layer after an explicit outside pointer interaction, but it must never own recent-five loading or startup hydration.",
 );
 
 const selectorStart = searchRuntime.indexOf("function selectEmptySearch()");

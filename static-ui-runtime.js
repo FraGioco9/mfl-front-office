@@ -343,18 +343,21 @@
     if (!(page instanceof HTMLElement)) return;
     if (page === target) {
       page.classList.remove("mflCachedTablePageParked");
-      page.removeAttribute("aria-hidden");
       page.hidden = false;
+      page.inert = false;
+      page.removeAttribute("aria-hidden");
       return;
     }
     if (renderedTablePageCanPark(page)) {
       page.hidden = false;
+      page.inert = true;
       page.classList.add("mflCachedTablePageParked");
       page.setAttribute("aria-hidden", "true");
       return;
     }
     page.classList.remove("mflCachedTablePageParked");
-    page.removeAttribute("aria-hidden");
+    page.inert = true;
+    page.setAttribute("aria-hidden", "true");
     page.hidden = true;
   }
 
