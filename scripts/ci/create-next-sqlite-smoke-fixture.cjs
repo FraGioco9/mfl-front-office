@@ -19,6 +19,74 @@ try {
     INSERT INTO runtime_metadata (key, value)
     VALUES ('generated_at', '2026-09-14T00:00:00.000Z');
   `);
+
+  const insertPlayer = database.prepare(`
+    INSERT INTO players (
+      player_id,
+      wallet_address,
+      wallet_name,
+      name,
+      positions,
+      age,
+      nationality,
+      retirement_years,
+      owned_since,
+      player_seasons,
+      overall,
+      pace,
+      shooting,
+      passing,
+      dribbling,
+      defense,
+      physical,
+      goalkeeping
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertPlayer.run(
+    "1",
+    "0xff8d2bbed8164db0",
+    "MFL Browser Agent",
+    "Nicolò Barella",
+    "CM",
+    "29",
+    "Italy",
+    "5",
+    "1700000000",
+    "1",
+    "84",
+    "78",
+    "76",
+    "86",
+    "85",
+    "77",
+    "80",
+    "10",
+  );
+  insertPlayer.run(
+    "2",
+    "0x2222222222222222",
+    "Browser Agent",
+    "Alessandro Bastoni",
+    "CB",
+    "27",
+    "Italy",
+    "6",
+    "1710000000",
+    "2",
+    "82",
+    "74",
+    "55",
+    "80",
+    "76",
+    "86",
+    "84",
+    "10",
+  );
+  database.exec(`
+    INSERT INTO wallets (wallet_address) VALUES ('0xff8d2bbed8164db0');
+    INSERT INTO wallets (wallet_address) VALUES ('0x2222222222222222');
+  `);
 } finally {
   database.close();
 }
