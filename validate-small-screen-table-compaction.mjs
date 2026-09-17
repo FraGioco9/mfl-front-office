@@ -82,7 +82,7 @@ for (const token of [
   '.listingCellContent { width: var(--mfl-responsive-table-listing-content-size);',
   '.listingCellIcon { flex: 0 0 var(--mfl-responsive-table-listing-icon-size);',
   '.tableOverallRarityCircle { flex: 0 0 var(--mfl-responsive-table-rarity-size);',
-  'selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { box-sizing: border-box; flex: 0 0 var(--mfl-responsive-table-checkbox-size);',
+  'flex: 0 0 var(--mfl-responsive-table-checkbox-size); width: var(--mfl-responsive-table-checkbox-size); min-width: var(--mfl-responsive-table-checkbox-size);',
 ]) {
   assert.ok(projection.includes(token), `First-paint mobile control geometry must consume the continuous responsive token: ${token}`);
 }
