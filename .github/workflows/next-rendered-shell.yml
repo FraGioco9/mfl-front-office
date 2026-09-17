@@ -13,6 +13,7 @@ on:
       - "dev-legacy-watch-loader.cjs"
       - "legacy-dev-watch-token.js"
       - "next-dev-legacy-bridge.mjs"
+      - "scripts/ci/create-next-sqlite-smoke-fixture.cjs"
       - "validation/next-rendered-shell-browser.mjs"
       - "validation/next-mobile-table-browser.mjs"
       - "validation/next-mobile-table-route-browser.mjs"
