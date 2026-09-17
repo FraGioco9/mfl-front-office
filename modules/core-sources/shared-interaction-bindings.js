@@ -120,6 +120,7 @@ watchlistButton?.addEventListener("click", (event) => {
   toggleWatchlistDropdown();
 });
 
+/** @param {EventTarget | null} [target] */
 function focusedGlobalSearchResult(target = document.activeElement) {
   return target instanceof HTMLButtonElement
     && playerSearchResults.contains(target)
@@ -129,7 +130,7 @@ function focusedGlobalSearchResult(target = document.activeElement) {
 }
 
 function handleGlobalSearchEscape(event) {
-  if (searchModal.hidden) return false;
+  if (searchModal.hasAttribute("hidden")) return false;
   if (event.target === playerSearchInput) {
     playerSearchInput.blur();
   } else {
@@ -138,7 +139,7 @@ function handleGlobalSearchEscape(event) {
   return true;
 }
 
-window.__mflControlInteractionsRuntime?.registerEscapeHandler?.(
+Reflect.get(window, "__mflControlInteractionsRuntime")?.registerEscapeHandler?.(
   "global-search",
   handleGlobalSearchEscape,
   { priority: 200 },
