@@ -11213,6 +11213,55 @@ html:not(.mflInitialRouteResolved):is(
     padding-bottom: 4px;
   }
 }
+/* One responsive icon scale from small phones to large desktop.
+ * 360px keeps the refined tiny-screen sizes; 1664px reaches the normal desktop geometry.
+ */
+@media (max-width: 1664px) {
+  :root {
+    --mfl-responsive-shell-search-icon-size: clamp(14px, calc(13.171779px + 0.230061vw), 17px);
+    --mfl-responsive-shell-account-icon-size: clamp(15px, calc(14.171779px + 0.230061vw), 18px);
+    --mfl-responsive-shell-theme-icon-size: clamp(16px, calc(14.343558px + 0.460123vw), 22px);
+    --mfl-responsive-navigation-icon-size: clamp(14px, calc(12.895706px + 0.306748vw), 18px);
+    --mfl-icon-size-navigation: var(--mfl-responsive-navigation-icon-size);
+
+    --mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);
+    --mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);
+    --mfl-responsive-table-age-marker-size: clamp(8px, calc(5.791411px + 0.613497vw), 16px);
+    --mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);
+    --mfl-responsive-table-rarity-size: clamp(5px, calc(4.171779px + 0.230061vw), 8px);
+    --mfl-responsive-table-checkbox-size: clamp(10px, calc(8.343558px + 0.460123vw), 16px);
+    --mfl-responsive-table-checkbox-check-width: clamp(6px, calc(4.895706px + 0.306748vw), 10px);
+    --mfl-responsive-table-checkbox-check-height: clamp(4px, calc(2.895706px + 0.306748vw), 8px);
+    --mfl-responsive-table-action-size: clamp(13px, calc(11.067485px + 0.536810vw), 20px);
+    --mfl-responsive-table-action-icon-size: clamp(8px, calc(6.895706px + 0.306748vw), 12px);
+    --mfl-responsive-table-listing-content-size: var(--mfl-responsive-table-action-size);
+  }
+
+  .topbar .searchButton .searchIcon {
+    flex-basis: var(--mfl-responsive-shell-search-icon-size);
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
+  }
+
+  #accountButton .accountButtonIcon {
+    width: var(--mfl-responsive-shell-account-icon-size);
+    height: var(--mfl-responsive-shell-account-icon-size);
+  }
+
+  .themeButton .themeModeIcon {
+    width: var(--mfl-responsive-shell-theme-icon-size);
+    height: var(--mfl-responsive-shell-theme-icon-size);
+  }
+
+  .menuRail .navButton .navEmoji {
+    flex-basis: var(--mfl-responsive-navigation-icon-size);
+    width: var(--mfl-responsive-navigation-icon-size);
+    height: var(--mfl-responsive-navigation-icon-size);
+    font-size: var(--mfl-responsive-navigation-icon-size);
+    line-height: var(--mfl-responsive-navigation-icon-size);
+  }
+}
+
 /* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
@@ -11276,8 +11325,8 @@ html:not(.mflInitialRouteResolved):is(
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
     gap: 0;
   }
 
@@ -11295,9 +11344,9 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .topbar .searchButton .searchIcon {
-    flex: 0 0 22px;
-    width: 22px;
-    height: 22px;
+    flex: 0 0 var(--mfl-responsive-shell-search-icon-size);
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
   }
 
   .searchShortcut {
@@ -11348,8 +11397,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #accountButton .accountButtonIcon {
-    width: 20px;
-    height: 20px;
+    width: var(--mfl-responsive-shell-account-icon-size);
+    height: var(--mfl-responsive-shell-account-icon-size);
   }
 
   #accountDropdown {
@@ -11426,12 +11475,12 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .menuRail .navButton .navEmoji {
-    flex: 0 0 var(--mfl-icon-size-navigation);
-    width: var(--mfl-icon-size-navigation);
-    height: var(--mfl-icon-size-navigation);
+    flex: 0 0 var(--mfl-responsive-navigation-icon-size);
+    width: var(--mfl-responsive-navigation-icon-size);
+    height: var(--mfl-responsive-navigation-icon-size);
     color: inherit;
-    font-size: var(--mfl-icon-size-navigation);
-    line-height: var(--mfl-icon-size-navigation);
+    font-size: var(--mfl-responsive-navigation-icon-size);
+    line-height: var(--mfl-responsive-navigation-icon-size);
   }
 
   .menuRail .navButton .navText {
@@ -13519,16 +13568,6 @@ html:not(.mflInitialRouteResolved):is(
     --mfl-table-header-height: 30px;
     --mfl-table-row-height: 26px;
     --mfl-table-row-outer-height: 30px;
-    --mfl-intermediate-age-marker-size: clamp(11px, calc(5.1871px + 0.645161vw), 14px);
-    --mfl-intermediate-listing-icon-size: clamp(9px, calc(3.1871px + 0.645161vw), 12px);
-    --mfl-intermediate-flag-size: clamp(14px, calc(2.3742px + 1.290323vw), 20px);
-    --mfl-intermediate-note-icon-size: clamp(9px, calc(-0.6882px + 1.075269vw), 14px);
-    --mfl-intermediate-rarity-size: clamp(5px, calc(-0.8129px + 0.645161vw), 8px);
-    --mfl-intermediate-checkbox-size: clamp(13px, calc(7.1871px + 0.645161vw), 16px);
-    --mfl-intermediate-checkbox-check-width: clamp(8px, calc(4.1247px + 0.430108vw), 10px);
-    --mfl-intermediate-checkbox-check-height: clamp(6px, calc(2.1247px + 0.430108vw), 8px);
-    --mfl-intermediate-action-size: clamp(18px, calc(14.1247px + 0.430108vw), 20px);
-    --mfl-intermediate-listing-content-size: var(--mfl-intermediate-action-size);
   }
 
   #progressionPage .tableShell {
@@ -13583,12 +13622,12 @@ html:not(.mflInitialRouteResolved):is(
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--mfl-intermediate-listing-content-size);
-    min-width: var(--mfl-intermediate-listing-content-size);
-    max-width: var(--mfl-intermediate-listing-content-size);
-    height: var(--mfl-intermediate-listing-content-size);
-    min-height: var(--mfl-intermediate-listing-content-size);
-    max-height: var(--mfl-intermediate-listing-content-size);
+    width: var(--mfl-responsive-table-listing-content-size);
+    min-width: var(--mfl-responsive-table-listing-content-size);
+    max-width: var(--mfl-responsive-table-listing-content-size);
+    height: var(--mfl-responsive-table-listing-content-size);
+    min-height: var(--mfl-responsive-table-listing-content-size);
+    max-height: var(--mfl-responsive-table-listing-content-size);
     margin-inline: auto;
     gap: 0;
     padding: 0;
@@ -13609,46 +13648,46 @@ html:not(.mflInitialRouteResolved):is(
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
     box-sizing: border-box;
-    flex: 0 0 var(--mfl-intermediate-checkbox-size);
-    width: var(--mfl-intermediate-checkbox-size);
-    min-width: var(--mfl-intermediate-checkbox-size);
-    max-width: var(--mfl-intermediate-checkbox-size);
-    height: var(--mfl-intermediate-checkbox-size);
-    min-height: var(--mfl-intermediate-checkbox-size);
-    max-height: var(--mfl-intermediate-checkbox-size);
+    flex: 0 0 var(--mfl-responsive-table-checkbox-size);
+    width: var(--mfl-responsive-table-checkbox-size);
+    min-width: var(--mfl-responsive-table-checkbox-size);
+    max-width: var(--mfl-responsive-table-checkbox-size);
+    height: var(--mfl-responsive-table-checkbox-size);
+    min-height: var(--mfl-responsive-table-checkbox-size);
+    max-height: var(--mfl-responsive-table-checkbox-size);
     aspect-ratio: 1 / 1;
-    background-size: var(--mfl-intermediate-checkbox-check-width) var(--mfl-intermediate-checkbox-check-height);
+    background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
     border-radius: 3px;
   }
 
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: var(--mfl-intermediate-action-size);
-    min-width: var(--mfl-intermediate-action-size);
-    max-width: var(--mfl-intermediate-action-size);
-    height: var(--mfl-intermediate-action-size);
-    min-height: var(--mfl-intermediate-action-size);
-    max-height: var(--mfl-intermediate-action-size);
+    width: var(--mfl-responsive-table-action-size);
+    min-width: var(--mfl-responsive-table-action-size);
+    max-width: var(--mfl-responsive-table-action-size);
+    height: var(--mfl-responsive-table-action-size);
+    min-height: var(--mfl-responsive-table-action-size);
+    max-height: var(--mfl-responsive-table-action-size);
     padding: 0;
   }
 
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
-    width: 12px;
-    height: 12px;
+    width: var(--mfl-responsive-table-action-icon-size);
+    height: var(--mfl-responsive-table-action-icon-size);
   }
 
   #progressionPage .playerTableScroller .flagImage {
-    width: var(--mfl-intermediate-flag-size);
-    height: var(--mfl-intermediate-flag-size);
+    width: var(--mfl-responsive-table-flag-size);
+    height: var(--mfl-responsive-table-flag-size);
   }
 
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex: 0 0 var(--mfl-intermediate-age-marker-size);
-    width: var(--mfl-intermediate-age-marker-size);
-    min-width: var(--mfl-intermediate-age-marker-size);
-    max-width: var(--mfl-intermediate-age-marker-size);
-    height: var(--mfl-intermediate-age-marker-size);
-    min-height: var(--mfl-intermediate-age-marker-size);
-    max-height: var(--mfl-intermediate-age-marker-size);
+    flex: 0 0 var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
     margin: 0;
     transform: none;
   }
@@ -13656,31 +13695,98 @@ html:not(.mflInitialRouteResolved):is(
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: var(--mfl-intermediate-age-marker-size);
-    height: var(--mfl-intermediate-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
 
   #progressionPage .playerTableScroller .playerNoteIcon {
-    font-size: var(--mfl-intermediate-note-icon-size);
+    font-size: var(--mfl-responsive-table-note-icon-size);
     line-height: 1;
   }
 
   #progressionPage .playerTableScroller .listingCellIcon {
-    flex: 0 0 var(--mfl-intermediate-listing-icon-size);
-    width: var(--mfl-intermediate-listing-icon-size);
-    height: var(--mfl-intermediate-listing-icon-size);
+    flex: 0 0 var(--mfl-responsive-table-listing-icon-size);
+    width: var(--mfl-responsive-table-listing-icon-size);
+    height: var(--mfl-responsive-table-listing-icon-size);
   }
 
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex: 0 0 var(--mfl-intermediate-rarity-size);
-    width: var(--mfl-intermediate-rarity-size);
-    height: var(--mfl-intermediate-rarity-size);
+    flex: 0 0 var(--mfl-responsive-table-rarity-size);
+    width: var(--mfl-responsive-table-rarity-size);
+    height: var(--mfl-responsive-table-rarity-size);
     margin-right: 1px;
   }
 
   #progressionPage .playerTableScroller .sortArrow {
     transform: scale(0.75);
     transform-origin: center;
+  }
+}
+
+@media (min-width: 1367px) and (max-width: 1664px) {
+  #progressionPage .playerTableScroller :is(th, td).selectionCell input,
+  #progressionPage .quickFilters input[type="checkbox"] {
+    flex-basis: var(--mfl-responsive-table-checkbox-size);
+    width: var(--mfl-responsive-table-checkbox-size);
+    min-width: var(--mfl-responsive-table-checkbox-size);
+    max-width: var(--mfl-responsive-table-checkbox-size);
+    height: var(--mfl-responsive-table-checkbox-size);
+    min-height: var(--mfl-responsive-table-checkbox-size);
+    max-height: var(--mfl-responsive-table-checkbox-size);
+    background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
+  }
+
+  #progressionPage .playerTableScroller .playerTableActionsButton {
+    width: var(--mfl-responsive-table-action-size);
+    min-width: var(--mfl-responsive-table-action-size);
+    max-width: var(--mfl-responsive-table-action-size);
+    height: var(--mfl-responsive-table-action-size);
+    min-height: var(--mfl-responsive-table-action-size);
+    max-height: var(--mfl-responsive-table-action-size);
+  }
+
+  #progressionPage .playerTableScroller .playerTableActionsButton svg {
+    width: var(--mfl-responsive-table-action-icon-size);
+    height: var(--mfl-responsive-table-action-icon-size);
+  }
+
+  #progressionPage .playerTableScroller .flagImage {
+    width: var(--mfl-responsive-table-flag-size);
+    height: var(--mfl-responsive-table-flag-size);
+  }
+
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
+    flex: 0 0 var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
+    margin: 0;
+  }
+
+  #progressionPage .playerTableScroller .retirementMarker::before,
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
+  #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+  }
+
+  #progressionPage .playerTableScroller .playerNoteIcon {
+    font-size: var(--mfl-responsive-table-note-icon-size);
+  }
+
+  #progressionPage .playerTableScroller .listingCellIcon {
+    flex-basis: var(--mfl-responsive-table-listing-icon-size);
+    width: var(--mfl-responsive-table-listing-icon-size);
+    height: var(--mfl-responsive-table-listing-icon-size);
+  }
+
+  #progressionPage #tableBody .tableOverallRarityCircle {
+    flex-basis: var(--mfl-responsive-table-rarity-size);
+    width: var(--mfl-responsive-table-rarity-size);
+    height: var(--mfl-responsive-table-rarity-size);
   }
 }
 
