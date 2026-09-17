@@ -10,9 +10,17 @@ const temporaryPath = resolve(validationDirectory, ".browser-listing-width-regre
 const source = await readFile(sourcePath, "utf8");
 let diagnosticSource = source;
 
-const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");\n';
-assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
-const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
+const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.\n");';
+const actualRouteReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");\n';
+assert.ok(diagnosticSource.includes(actualRouteReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
+const routeReadyProbe = actualRouteReadyMarker + String.raw`    if (scenario === "database") {
+      window.__mflListingWidthRuntime?.destroy?.();
+      document.getElementById("mflListingWidthStyle")?.remove();
+
+      const scroller = document.querySelector("#progressionPage .playerTableScroller");
+      assert(scroller instanceof HTMLElement, "Database player-table scroller is missing.");
+      scroller.classList.remove("mflListingPricesCompact");
+
       const tableBody = document.getElementById("tableBody");
       assert(tableBody instanceof HTMLTableSectionElement, "Database table body is missing.");
       const firstRow = tableBody.querySelector("tr");
@@ -75,7 +83,7 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
       await delay(80);
       assert(
         prices.every((price) => getComputedStyle(price).display === "none"),
-        "If one five-digit Listing would cross its cell boundary, every Listing price must compact together.",
+        "Shared table ownership must compact every Listing price even when the standalone Listing runtime is unavailable.",
       );
       assert(
         badges[0].dataset.tooltip === "$10,000" && badges[1].dataset.tooltip === "$999",
@@ -98,7 +106,7 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
       progressionPage.style.removeProperty("--mfl-table-col-listing");
     }
 `;
-diagnosticSource = diagnosticSource.replace(routeReadyMarker, routeReadyProbe);
+diagnosticSource = diagnosticSource.replace(actualRouteReadyMarker, routeReadyProbe);
 
 const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
