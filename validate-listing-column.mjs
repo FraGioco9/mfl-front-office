@@ -33,7 +33,7 @@ assert.match(core, /function listingPriceBadgeHtml\(row\)/);
 assert.match(core, /listingPriceFormatter = new Intl\.NumberFormat\("en-US", \{ maximumFractionDigits: 0 \}\)/);
 assert.match(core, /class="listingCellIcon" src="\/listing-shopping-bag\.svg" width="12" height="12"/);
 assert.match(core, /const listingBadge = listingPriceBadgeHtml\(row\);/);
-assert.match(core, /if \(listingBadge\) \{\s*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/);
+assert.match(core, /if \(listingBadge\) \{[\s\S]*host\.className = "listingCellTableHost";[\s\S]*host\.innerHTML = listingBadge;[\s\S]*cell\.appendChild\(host\);/);
 assert.doesNotMatch(core, /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/);
 assert.doesNotMatch(core, /price\?\.remove\(\)/);
 assert.match(core, /cell\.setAttribute\("aria-label", "Not For Sale"\);/);
