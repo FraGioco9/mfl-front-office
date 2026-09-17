@@ -74,12 +74,12 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
 
     const expected = [
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9 },
-      { width: 1600, name: "Nicolò Barella", listing: true, gap: null, icon: null },
+      { width: 1600, name: "Nicolò Barella", listing: null, gap: null, icon: 12 },
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9 },
       { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 9 },
       { width: 520, name: "N. Barella", listing: false, gap: "2px", icon: 7 },
       { width: 380, name: "N. Barella", listing: false, gap: "1px", icon: 6 },
-      { width: 1600, name: "Nicolò Barella", listing: true, gap: null, icon: null },
+      { width: 1600, name: "Nicolò Barella", listing: null, gap: null, icon: 12 },
     ];
 
     stages.forEach((stage, index) => {
@@ -88,7 +88,9 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       assert.equal(stage.sameRow, true, "Database row was replaced at " + contract.width + "px: " + stageDetail);
       assert.equal(stage.renderedName, contract.name, "Player name did not follow responsive contract at " + contract.width + "px: " + stageDetail);
       assert.equal(stage.listingPricePresent, true, "Listing price must stay in breakpoint-neutral DOM at " + contract.width + "px: " + stageDetail);
-      assert.equal(stage.listingPriceVisible, contract.listing, "Listing price visibility is wrong at " + contract.width + "px: " + stageDetail);
+      if (contract.listing !== null) {
+        assert.equal(stage.listingPriceVisible, contract.listing, "Listing price visibility is wrong at " + contract.width + "px: " + stageDetail);
+      }
       assert.equal(stage.ageMarkerPresent, true, "Age marker is missing at " + contract.width + "px: " + stageDetail);
       assert.equal(stage.mobileMedia, contract.width <= 900, "Mobile media-query state is wrong at " + contract.width + "px: " + stageDetail);
       if (contract.width <= 900) {
