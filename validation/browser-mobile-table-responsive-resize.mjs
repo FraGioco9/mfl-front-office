@@ -68,18 +68,18 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
     };
 
     const stages = [];
-    for (const viewportWidth of [900, 1100, 900, 700, 520, 380, 1100]) {
+    for (const viewportWidth of [900, 1600, 900, 700, 520, 380, 1600]) {
       stages.push(await snapshotResponsiveTable(viewportWidth));
     }
 
     const expected = [
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9 },
-      { width: 1100, name: "Nicolò Barella", listing: true, gap: null, icon: null },
+      { width: 1600, name: "Nicolò Barella", listing: true, gap: null, icon: null },
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 9 },
       { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 9 },
       { width: 520, name: "N. Barella", listing: false, gap: "2px", icon: 7 },
       { width: 380, name: "N. Barella", listing: false, gap: "1px", icon: 6 },
-      { width: 1100, name: "Nicolò Barella", listing: true, gap: null, icon: null },
+      { width: 1600, name: "Nicolò Barella", listing: true, gap: null, icon: null },
     ];
 
     stages.forEach((stage, index) => {
