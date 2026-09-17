@@ -2,7 +2,7 @@
   display: none;
 }
 
-@media (min-width: 901px) and (max-width: 1366px) {
+@media (min-width: 901px) and (max-width: 1444px) {
   #progressionPage #tableHead .rowActionsCell {
     overflow: hidden;
   }
@@ -16,7 +16,9 @@
     content: none;
     display: none;
   }
+}
 
+@media (min-width: 901px) and (max-width: 1366px) {
   .playerPage .playerHero {
     padding-bottom: 4px;
   }
