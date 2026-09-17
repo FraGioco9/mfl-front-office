@@ -151,8 +151,6 @@ for (const required of [
 excludes(tableCore, 'appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");', "NEW must not return to the Name-cell marker slot.");
 
 for (const optimizedRenderContract of [
-  'const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;',
-  'const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;',
   'const renderColumns = currentViewColumns().map((column) => ({',
   'for (const row of pageRows) {',
   'for (const { column, className } of renderColumns) {',
@@ -167,8 +165,15 @@ const tableRenderEnd = tableCore.indexOf("function showTableBusyState() {", tabl
 invariant(tableRenderStart >= 0 && tableRenderEnd > tableRenderStart, "Canonical Table source must expose a bounded render-table owner section.");
 const tableRenderSection = tableCore.slice(tableRenderStart, tableRenderEnd);
 excludes(tableRenderSection, "currentViewColumns().forEach((column) => {", "Table rendering must not recompute mapped view columns once per row.");
+excludes(tableRenderSection, 'const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;', "Table rows must not encode the 900px presentation breakpoint in their render identity.");
+excludes(tableRenderSection, 'const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;', "Table rows must not encode the 520px Joined Agency presentation breakpoint in their render identity.");
 excludes(tableRenderSection, 'nameLink.textContent = window.matchMedia("(max-width: 900px)").matches', "Table rendering must not repeat the 900px media query inside each Name cell.");
 excludes(tableRenderSection, 'cell.textContent = window.matchMedia("(max-width: 520px)").matches', "Table rendering must not repeat the 520px media query inside each Joined Agency cell.");
+includes(tableRenderSection, 'fullNameValue.className = "playerNameFullValue";', "Table rows must keep the full player name in stable DOM.");
+includes(tableRenderSection, 'compactNameValue.className = "playerNameCompactValue";', "Table rows must keep the compact player name in stable DOM.");
+includes(tableRenderSection, 'fullValue.className = "joinedAgencyFullValue";', "Table rows must keep the full Joined Agency value in stable DOM.");
+includes(tableRenderSection, 'compactValue.className = "joinedAgencyCompactValue";', "Table rows must keep the compact Joined Agency value in stable DOM.");
+excludes(tableRenderSection, "price?.remove();", "Table rows must never remove Listing prices to implement responsive presentation.");
 
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route cell formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
@@ -196,4 +201,4 @@ invariant(
   "Generated Table runtime must exactly match the manifest-assembled canonical Table source.",
 );
 
-console.log("Source-owned Table facades, lazy Table-only handlers, page/filter/pager controls, delegated Table-body interactions, typed control references, editable pager, canonical dependency loading, and generated-runtime equivalence validation passed.");
+console.log("Source-owned Table facades, lazy Table-only handlers, page/filter/pager controls, delegated Table-body interactions, typed control references, editable pager, breakpoint-neutral row rendering, canonical dependency loading, and generated-runtime equivalence validation passed.");
