@@ -51,8 +51,8 @@ for (const retiredOwner of [
   invariant(!coreSource.includes(retiredOwner), `Canonical Home summary source must not depend on retired build ownership: ${retiredOwner}`);
 }
 
-includes(indexHtml, '<span id="totalPlayers">-</span>', "Header Players must exist statically with '-' before summary data loads.");
-includes(indexHtml, '<span id="totalWallets">-</span>', "Header Wallets must exist statically with '-' before summary data loads.");
+includes(indexHtml, '<span id="totalPlayers"><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">1,500</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span>', "Header Players must ship its loading skeleton in static first paint.");
+includes(indexHtml, '<span id="totalWallets"><span class="mflSkeletonText" aria-hidden="true"><span class="mflSkeletonTextSample">500</span><span class="mflDataPlaceholder mflSkeletonTextFill" aria-hidden="true"></span></span></span>', "Header Wallets must ship its loading skeleton in static first paint.");
 includes(indexHtml, '<span id="homePlayers">-</span>', "Home Players tracked must exist statically with '-' before summary data loads.");
 includes(indexHtml, '<span id="homeWallets">-</span>', "Home Wallets tracked must exist statically with '-' before summary data loads.");
 includes(stylesBase, 'body[data-page="home"] .topbar .stats', "The canonical header summary visibility rule must remain Home-owned.");
@@ -141,6 +141,6 @@ invariant(context.__mflHomeSummaryCache?.isReady?.() === true, "Home summary cac
 updates.length = 0;
 await context.__loadSummary();
 invariant(fetchCount === 1, "Returning Home after a successful summary load must not fetch again.");
-invariant(updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87, "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.");
+invariant(updates.length === 1 && updates[0][0] === 321 && updates[0][1] === 87, "Returning Home must repaint cached Players/Wallets counts after route priming reset them to loading placeholders.");
 
 console.log("Source-owned Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, Club waits for verification, Player paints its structural shell immediately, and cached Home counts repaint without refetching through the canonical data client.");
