@@ -53,7 +53,7 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
       const wouldOverflow = firstPrice.scrollWidth - firstPrice.clientWidth > 1;
       assert(wouldOverflow, "Five-digit Listing fixture must reproduce a clipped price before compaction.");
 
-      window.__mflSharedTableUiRuntime?.sync?.();
+      window.dispatchEvent(new Event("resize"));
       await delay(80);
       assert(
         prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display === "none"),
@@ -63,7 +63,7 @@ const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "data
       firstPrice.style.removeProperty("flex");
       firstPrice.style.removeProperty("width");
       firstPrice.style.removeProperty("max-width");
-      window.__mflSharedTableUiRuntime?.sync?.();
+      window.dispatchEvent(new Event("resize"));
       await delay(80);
       assert(
         prices.every((price) => price instanceof HTMLElement && getComputedStyle(price).display !== "none"),
