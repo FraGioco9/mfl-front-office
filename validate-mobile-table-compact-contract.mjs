@@ -13,11 +13,26 @@ const projectionSource = readFileSync(resolve(root, "sync-release-projections.mj
 const bootstrapSource = readFileSync(resolve(root, "bootstrap.js"), "utf8");
 const responsiveSource = readFileSync(resolve(root, "responsive.css"), "utf8");
 
+assert.doesNotMatch(
+  tableSource,
+  /const compactTableLayout = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/,
+  "Canonical Table rows must not branch their DOM on the 900px breakpoint.",
+);
+assert.doesNotMatch(
+  tableSource,
+  /const compactJoinedAgencyLayout = window\.matchMedia\("\(max-width: 520px\)"\)\.matches;/,
+  "Canonical Table rows must not branch Joined Agency DOM on the 520px breakpoint.",
+);
+assert.match(tableSource, /playerNameFullValue/, "Canonical Table rows must retain the full player name in stable DOM.");
+assert.match(tableSource, /playerNameCompactValue/, "Canonical Table rows must retain the compact player name in stable DOM.");
+assert.match(tableSource, /joinedAgencyFullValue/, "Canonical Table rows must retain the full Joined Agency value in stable DOM.");
+assert.match(tableSource, /joinedAgencyCompactValue/, "Canonical Table rows must retain the compact Joined Agency value in stable DOM.");
 assert.match(
   tableSource,
-  /const mobileTable = window\.matchMedia\("\(max-width: 900px\)"\)\.matches;/,
-  "Canonical Table source must use the shared 900px compact breakpoint.",
+  /column === "listing_price"[\s\S]*cell\.innerHTML = `<span class="listingCellTableHost">\$\{listingBadge\}<\/span>`;/,
+  "Canonical Table rows must retain Listing icon and price markup regardless of viewport width.",
 );
+assert.doesNotMatch(tableSource, /price\?\.remove\(\)/, "Mobile Table rendering must not remove Listing prices from the DOM.");
 
 assert.match(
   sharedTableUiSource,
@@ -70,8 +85,28 @@ assert.match(tableRuntimeSource, /selectVisibleInput\.type = "checkbox";[\s\S]*s
 assert.match(sharedTableUiSource, /#progressionPage #tableHead \.selectionCell input:disabled \{[\s\S]*opacity: 0\.45;/, "The disabled hydrated header checkbox must be graphically distinct.");
 assert.match(projectionSource, /#tableHead \.selectionCell input:disabled \{ opacity: 0\.45; \}/, "The first-paint disabled header checkbox must already use the final disabled appearance.");
 
-assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must have a compact date-only formatter.");
-assert.match(tableSource, /column === joinedAgencyColumn[\s\S]*window\.matchMedia\("\(max-width: 520px\)"\)\.matches[\s\S]*compactMobileJoinedAgency\(joinedAgencyValue\)/, "Joined Agency must switch to date-only values only on small screens.");
+assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player names must retain one canonical compact formatter.");
+assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
+assert.match(
+  responsiveSource,
+  /@media \(max-width: 900px\) \{[\s\S]*\.playerNameFullValue \{[\s\S]*display: none;[\s\S]*\.playerNameCompactValue \{[\s\S]*display: inline;[\s\S]*\.listingCellPrice \{[\s\S]*display: none;/,
+  "Responsive Table presentation must switch names to N. Surname and Listing to icon-only at <=900px.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(max-width: 700px\) \{[\s\S]*#progressionPage \.playerTableScroller #tableBody td\.col-age \.tableControlCellContent \{[\s\S]*gap: 2px;/,
+  "Age/marker spacing must shrink to 2px at <=700px.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(max-width: 520px\) \{[\s\S]*\.joinedAgencyFullValue \{[\s\S]*display: none;[\s\S]*\.joinedAgencyCompactValue \{[\s\S]*display: inline;/,
+  "Joined Agency must switch to its compact date-only value at <=520px without rerendering rows.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(max-width: 380px\) \{[\s\S]*#progressionPage \.playerTableScroller #tableBody td\.col-age \.tableControlCellContent \{[\s\S]*gap: 1px;/,
+  "Age/marker spacing must shrink to 1px at <=380px.",
+);
 
 const phoneStyle = sharedTableUiSource.match(/@media \(max-width: 520px\) \{([\s\S]*?)\n\}\n@media \(max-width: 380px\)/)?.[1] || "";
 assert.match(phoneStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: 5px;[\s\S]*width: 5px;[\s\S]*height: 5px;[\s\S]*margin-right: 3px;/, "The Overall rarity circle must use the refined 5px size and 3px number gap on phone screens.");
@@ -80,6 +115,8 @@ assert.match(tinyStyle, /#progressionPage #tableBody \.tableOverallRarityCircle 
 
 assert.doesNotMatch(tableSource, /!important/, "Canonical mobile Table presentation must not add !important overrides.");
 assert.doesNotMatch(sharedTableUiSource, /!important/, "Shared mobile table presentation must not add !important overrides.");
+assert.doesNotMatch(responsiveSource, /mobile-table-content[\s\S]*!important/, "Responsive mobile Table content must not require !important overrides.");
+assert.doesNotMatch(sharedTableUiSource, /MutationObserver/, "Shared mobile Table presentation must not repair rendered rows through MutationObserver.");
 
 const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
 assert.ok(tableRuntimeSource.startsWith(tableBanner), "Generated Table runtime must carry the canonical banner.");
@@ -89,4 +126,4 @@ assert.equal(
   "Generated Table runtime must exactly match the manifest-assembled canonical Table source.",
 );
 
-console.log("Source-owned mobile compact table contract validation passed.");
+console.log("Source-owned resize-safe mobile compact table contract validation passed.");
