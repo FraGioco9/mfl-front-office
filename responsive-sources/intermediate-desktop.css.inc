@@ -14,6 +14,12 @@
   .stats > div > span {
     overflow: visible;
     text-overflow: clip;
+    line-height: 1;
+  }
+
+  .stats label {
+    margin-top: 0;
+    line-height: 1;
   }
 }
 
