@@ -15,23 +15,28 @@ assert.match(
 );
 assert.match(
   owner,
-  /document\.querySelectorAll\("#progressionPage #tableHead \[data-mfl-full-table-label\]\[data-mfl-compact-table-label\]"\)/,
-  "Header label fallback must target both direct labels and labels nested inside sortable header buttons.",
+  /const labels = Array\.from\(document\.querySelectorAll\("#progressionPage #tableHead \[data-mfl-full-table-label\]\[data-mfl-compact-table-label\]"\)\)/,
+  "Header label fallback must collect both direct labels and labels nested inside sortable header buttons as one set.",
 );
 assert.match(
   owner,
-  /label\.textContent = full;/,
-  "Intermediate/desktop headers must try their full label before deciding whether fallback is needed.",
+  /labels\.forEach\(\(label\) => \{[\s\S]*?label\.textContent = full;[\s\S]*?\}\);/,
+  "Intermediate/desktop headers must all try their full labels before overflow is evaluated.",
 );
 assert.match(
   owner,
-  /const fullOverflows = label\.scrollWidth - label\.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;/,
-  "Header fallback must be driven by the rendered label's real overflow rather than by a hard-coded desktop breakpoint.",
+  /const useCompact = labels\.some\(\(label\) => \{[\s\S]*?label\.scrollWidth - label\.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;[\s\S]*?\}\);/,
+  "One shared compact-mode decision must be driven by whether any rendered full header label overflows.",
 );
 assert.match(
+  owner,
+  /labels\.forEach\(\(label\) => \{[\s\S]*?const desired = useCompact && short \? short : full;[\s\S]*?label\.textContent = desired;[\s\S]*?\}\);/,
+  "If any header needs shortening, every header with a compact label must switch together instead of mixing full and compact names.",
+);
+assert.doesNotMatch(
   owner,
   /if \(fullOverflows && short && short !== full\) label\.textContent = short;/,
-  "Any full header label that would ellipsize must switch to its existing compact/mobile label.",
+  "Header fallback must not shorten columns independently anymore.",
 );
 assert.match(
   owner,
@@ -44,4 +49,4 @@ assert.match(
   "Mobile headers must continue to use compact labels directly.",
 );
 
-console.log("Responsive table-header full-to-compact fallback validation passed.");
+console.log("Responsive table-header grouped full-to-compact fallback validation passed.");
