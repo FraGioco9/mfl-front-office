@@ -14,6 +14,7 @@ on:
       - "legacy-dev-watch-token.js"
       - "next-dev-legacy-bridge.mjs"
       - "validation/next-rendered-shell-browser.mjs"
+      - "validation/next-mobile-table-browser.mjs"
   workflow_dispatch:
 
 permissions:
@@ -52,6 +53,9 @@ jobs:
 
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
+
+      - name: Verify real mobile table presentation in Next
+        run: node validation/next-mobile-table-browser.mjs http://localhost:4000/
 
       - name: Verify Document Head warnings are gone
         shell: bash
