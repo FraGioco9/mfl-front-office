@@ -280,6 +280,15 @@
       && bugReportModal.contains(target);
   }
 
+  function globalSearchResultOwnsEnter(target) {
+    const searchModal = document.getElementById("searchModal");
+    return searchModal instanceof HTMLElement
+      && !searchModal.hidden
+      && target instanceof HTMLButtonElement
+      && target.classList.contains("searchResult")
+      && searchModal.contains(target);
+  }
+
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton, #filtersModal")) {
@@ -385,7 +394,11 @@
   }
 
   function onKeyDown(event) {
-    if (event.key === "Enter" && visibleModalBackdrop() && !bugReportModalOwnsKeyboard(event.target) && !openSelect()) {
+    if (event.key === "Enter"
+        && visibleModalBackdrop()
+        && !bugReportModalOwnsKeyboard(event.target)
+        && !globalSearchResultOwnsEnter(event.target)
+        && !openSelect()) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
