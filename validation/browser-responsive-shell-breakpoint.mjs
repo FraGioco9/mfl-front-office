@@ -62,11 +62,11 @@ const shellProbe = String.raw`    await cdp.send("Runtime.enable");
 
     const expected = [
       { width: 1367, compact: false },
-      { width: 1366, compact: true },
-      { width: 1200, compact: true },
-      { width: 1041, compact: true },
-      { width: 901, compact: true },
-      { width: 900, compact: true },
+      { width: 1366, compact: true, navIcon: 17, searchIcon: 16, accountIcon: 17 },
+      { width: 1200, compact: true, navIcon: 17, searchIcon: 16, accountIcon: 17 },
+      { width: 1041, compact: true, navIcon: 16, searchIcon: 16, accountIcon: 17 },
+      { width: 901, compact: true, navIcon: 16, searchIcon: 15, accountIcon: 16 },
+      { width: 900, compact: true, navIcon: 16, searchIcon: 15, accountIcon: 16 },
       { width: 1367, compact: false },
     ];
 
@@ -82,15 +82,15 @@ const shellProbe = String.raw`    await cdp.send("Runtime.enable");
         assert.equal(stage.sidebarGridDisplay, "contents", "Sidebar grid must flatten into the bottom rail at " + contract.width + "px: " + detail);
         assert.equal(stage.navButtonDisplay, "flex", "Bottom navigation buttons must use compact flex geometry at " + contract.width + "px: " + detail);
         assert.equal(stage.navButtonHeight, 48, "Bottom navigation button height is wrong at " + contract.width + "px: " + detail);
-        assert.equal(stage.navIconWidth, 18, "Bottom navigation icon size is wrong at " + contract.width + "px: " + detail);
+        assert.equal(stage.navIconWidth, contract.navIcon, "Bottom navigation icon must follow the continuous small-to-large scale at " + contract.width + "px: " + detail);
         assert.equal(stage.navTextFontSize, "9px", "Bottom navigation label size is wrong at " + contract.width + "px: " + detail);
         assert.equal(stage.statsDisplay, "none", "Header stats must be hidden in compact shell at " + contract.width + "px: " + detail);
         assert.equal(stage.searchWidth, 44, "Compact search control width is wrong at " + contract.width + "px: " + detail);
         assert.equal(stage.searchHeight, 44, "Compact search control height is wrong at " + contract.width + "px: " + detail);
-        assert.equal(stage.searchIconWidth, 22, "Compact search icon size is wrong at " + contract.width + "px: " + detail);
+        assert.equal(stage.searchIconWidth, contract.searchIcon, "Compact search icon must follow the continuous small-to-large scale at " + contract.width + "px: " + detail);
         assert.equal(stage.accountWidth, 44, "Compact account control width is wrong at " + contract.width + "px: " + detail);
         assert.equal(stage.accountHeight, 44, "Compact account control height is wrong at " + contract.width + "px: " + detail);
-        assert.equal(stage.accountIconWidth, 20, "Compact account icon size is wrong at " + contract.width + "px: " + detail);
+        assert.equal(stage.accountIconWidth, contract.accountIcon, "Compact account icon must follow the continuous small-to-large scale at " + contract.width + "px: " + detail);
         assert.equal(stage.sidebarOffset, "0px", "Compact shell sidebar offset must be zero at " + contract.width + "px: " + detail);
         assert.equal(stage.pinnedSidebarWidth, "0px", "Pinned sidebar width must collapse at " + contract.width + "px: " + detail);
         assert.equal(stage.mainMarginLeft, "0px", "Main content must not reserve desktop sidebar space at " + contract.width + "px: " + detail);
