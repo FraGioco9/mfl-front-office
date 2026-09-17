@@ -14,6 +14,11 @@ for (const [from, to, label] of [
   ['  name: "Browser Player",', '  name: "Nicolò Barella",', "fixture player name"],
   ["  listing_price: null,", "  listing_price: 10000,", "fixture Listing price"],
   ['  const expectedPlayerName = "Browser Player";', '  const expectedPlayerName = "Nicolò Barella";', "browser expected player name"],
+  [
+    "writeJson(response, { generatedAt, prices: {}, flowBlockHeight: 0 });",
+    'writeJson(response, { generatedAt, prices: { "1": 10000 }, flowBlockHeight: 0 });',
+    "marketplace Listing overlay fixture",
+  ],
 ]) {
   assert.ok(diagnosticSource.includes(from), `${label} hook must remain discoverable.`);
   diagnosticSource = diagnosticSource.replace(from, to);
