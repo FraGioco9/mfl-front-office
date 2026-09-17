@@ -888,26 +888,48 @@
 
   function syncWidthAwareHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
-    document.querySelectorAll("#progressionPage #tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]").forEach((label) => {
-      if (!(label instanceof HTMLElement)) return;
-      const header = label.closest("th");
-      if (!(header instanceof HTMLTableCellElement)) return;
+    const labels = Array.from(document.querySelectorAll("#progressionPage #tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]"))
+      .filter((label) => label instanceof HTMLElement);
+
+    if (mobile) {
+      labels.forEach((label) => {
+        const header = label.closest("th");
+        if (!(header instanceof HTMLTableCellElement)) return;
+        const full = String(label.dataset.mflFullTableLabel || "").trim();
+        const short = String(label.dataset.mflCompactTableLabel || "").trim();
+        if (!full) return;
+        const column = String(header.dataset.tableColumn || "");
+        if (mobile && column === "listing_price") {
+          label.textContent = "";
+          return;
+        }
+        if (mobile && short) {
+          label.textContent = short;
+          return;
+        }
+        label.textContent = full;
+      });
+      return;
+    }
+
+    labels.forEach((label) => {
+      const full = String(label.dataset.mflFullTableLabel || "").trim();
+      if (full) label.textContent = full;
+    });
+
+    const useCompact = labels.some((label) => {
+      const full = String(label.dataset.mflFullTableLabel || "").trim();
+      const short = String(label.dataset.mflCompactTableLabel || "").trim();
+      if (!full || !short || short === full || label.getClientRects().length === 0 || label.clientWidth <= 0) return false;
+      return label.scrollWidth - label.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;
+    });
+
+    labels.forEach((label) => {
       const full = String(label.dataset.mflFullTableLabel || "").trim();
       const short = String(label.dataset.mflCompactTableLabel || "").trim();
       if (!full) return;
-      const column = String(header.dataset.tableColumn || "");
-      if (mobile && column === "listing_price") {
-        label.textContent = "";
-        return;
-      }
-      if (mobile && short) {
-        label.textContent = short;
-        return;
-      }
-      label.textContent = full;
-      if (!short || short === full || label.getClientRects().length === 0 || label.clientWidth <= 0) return;
-      const fullOverflows = label.scrollWidth - label.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;
-      if (fullOverflows && short && short !== full) label.textContent = short;
+      const desired = useCompact && short ? short : full;
+      if (label.textContent !== desired) label.textContent = desired;
     });
   }
 
