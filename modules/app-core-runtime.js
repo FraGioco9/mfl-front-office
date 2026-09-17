@@ -7631,13 +7631,22 @@ watchlistButton?.addEventListener("click", (event) => {
   toggleWatchlistDropdown();
 });
 
+function focusedGlobalSearchResult() {
+  const active = document.activeElement;
+  return active instanceof HTMLButtonElement
+    && playerSearchResults.contains(active)
+    && active.classList.contains("searchResult")
+    ? active
+    : null;
+}
+
 document.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     openSearch();
   } else if (event.key === "Escape" && !searchModal.hidden) {
     event.preventDefault();
-    if (document.activeElement instanceof HTMLElement && searchModal.contains(document.activeElement)) document.activeElement.blur();
+    closeSearch();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     event.preventDefault();
     if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
@@ -7657,6 +7666,9 @@ document.addEventListener("keydown", (event) => {
     closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
+  } else if (event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult()) {
+    event.preventDefault();
+    focusedGlobalSearchResult()?.click();
   } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
     event.preventDefault();
     confirmAddWatchlist();
