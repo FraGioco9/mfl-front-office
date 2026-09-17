@@ -111,7 +111,7 @@ const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
   scenariosPattern,
-  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1000, 900]]);\n\nconst server =',
+  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1041, 900]]);\n\nconst server =',
 );
 
 await writeFile(temporaryPath, diagnosticSource, "utf8");
