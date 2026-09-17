@@ -23,8 +23,9 @@ for (const token of [
   assert.ok(bootstrap.includes(token), `First-paint compact headings missing ${token}`);
 }
 assert.doesNotMatch(table, /\? "POSITIONS"/, "Small screens must not restore the long Positions heading.");
-assert.ok(
-  shared.includes('if (mobile && short) {\n        label.textContent = short;\n        return;\n      }'),
+assert.match(
+  shared,
+  /if \(mobile && short\) \{\s*label\.textContent = short;\s*return;\s*\}/,
   "Hydration must retain compact labels throughout <=900px.",
 );
 assert.doesNotMatch(shared, /function syncMobileColumnWidths/, "Responsive column widths must not be imperatively rewritten after paint.");
