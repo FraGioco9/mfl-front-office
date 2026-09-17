@@ -31,7 +31,11 @@ assert.match(
 assert.doesNotMatch(shared, /function syncMobileColumnWidths/, "Responsive column widths must not be imperatively rewritten after paint.");
 for (const width of [760, 600, 540]) assert.ok(shared.includes(`min-width: ${width}px;`), `Player table missing ${width}px compact floor.`);
 for (const geometry of ['30px;\n    --mfl-table-row-height: 26px', '26px;\n    --mfl-table-row-height: 22px', '24px;\n    --mfl-table-row-height: 20px']) assert.ok(shared.includes(geometry), `Player rows missing compact geometry ${geometry}`);
-for (const triggerSize of [18, 15, 13]) assert.ok(shared.includes(`width: ${triggerSize}px;`), `Player row action trigger missing ${triggerSize}px compact size.`);
+assert.ok(
+  shared.includes("width: var(--mfl-responsive-table-action-size);")
+    && shared.includes("width: var(--mfl-responsive-table-action-icon-size);"),
+  "Player row actions must consume the continuous responsive control/icon scale instead of fixed breakpoint sizes.",
+);
 
 assert.ok(
   shared.includes('const TINY_TABLE_MEDIA = window.matchMedia("(max-width: 380px)");')
@@ -70,28 +74,17 @@ assert.ok(
 );
 
 for (const token of [
-  '.playerTableActionsButton { width: 18px;',
-  '.playerTableActionsButton svg { width: 12px;',
-  '.flagImage { width: 14px;',
-  ':is(.retirementMarker, .newMintMarker) { flex: 0 0 11px;',
-  '.playerNoteIcon { font-size: 9px;',
-  '.listingCellContent { width: 18px;',
-  '.listingCellIcon { flex: 0 0 9px;',
-  '.playerTableActionsButton { width: 15px;',
-  '.playerTableActionsButton svg { width: 9px;',
-  '.flagImage { width: 11px;',
-  ':is(.retirementMarker, .newMintMarker) { flex-basis: 9px;',
-  '.playerNoteIcon { font-size: 7px;',
-  '.listingCellContent { width: 15px;',
-  '.listingCellIcon { flex-basis: 7px;',
-  '.playerTableActionsButton { width: 13px;',
-  '.playerTableActionsButton svg { width: 8px;',
-  '.flagImage { width: 10px;',
-  ':is(.retirementMarker, .newMintMarker) { flex-basis: 8px;',
-  '.listingCellContent { width: 13px;',
-  '.listingCellIcon { flex-basis: 6px;',
+  '.playerTableActionsButton { width: var(--mfl-responsive-table-action-size);',
+  '.playerTableActionsButton svg { width: var(--mfl-responsive-table-action-icon-size);',
+  '.flagImage { width: var(--mfl-responsive-table-flag-size);',
+  ':is(.retirementMarker, .newMintMarker) { flex: 0 0 var(--mfl-responsive-table-age-marker-size);',
+  '.playerNoteIcon { font-size: var(--mfl-responsive-table-note-icon-size);',
+  '.listingCellContent { width: var(--mfl-responsive-table-listing-content-size);',
+  '.listingCellIcon { flex: 0 0 var(--mfl-responsive-table-listing-icon-size);',
+  '.tableOverallRarityCircle { flex: 0 0 var(--mfl-responsive-table-rarity-size);',
+  'selectionCell input, #appShell #progressionPage .quickFilters input[type="checkbox"] { box-sizing: border-box; flex: 0 0 var(--mfl-responsive-table-checkbox-size);',
 ]) {
-  assert.ok(projection.includes(token), `First-paint mobile control geometry missing ${token}`);
+  assert.ok(projection.includes(token), `First-paint mobile control geometry must consume the continuous responsive token: ${token}`);
 }
 
 assert.ok(responsive.includes('min-width: 500px;'), "Phone Evaluation table must use a reduced width floor.");
