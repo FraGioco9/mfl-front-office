@@ -10,7 +10,7 @@ const temporaryPath = resolve(validationDirectory, ".browser-listing-width-regre
 const source = await readFile(sourcePath, "utf8");
 let diagnosticSource = source;
 
-const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.\");\n';
+const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");\n';
 assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
 const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
       const tableBody = document.getElementById("tableBody");
