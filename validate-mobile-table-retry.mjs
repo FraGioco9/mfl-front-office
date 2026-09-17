@@ -11,11 +11,12 @@ const excludes = (source, unexpected, message) => {
   if (source.includes(unexpected)) throw new Error(message);
 };
 
-const [sharedUi, staticUi, discountUi, evaluationSource, tableSource, generatedTable, buildCore, bootstrap, responsive] = await Promise.all([
+const [sharedUi, staticUi, discountUi, evaluationSource, sharedSource, tableSource, generatedTable, buildCore, bootstrap, responsive] = await Promise.all([
   read("./shared-table-ui-runtime.js"),
   read("./static-ui-runtime.js"),
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./modules/core-sources/evaluation.js"),
+  Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
   read("./modules/app-core-table-runtime.js"),
   read("./build-app-core.mjs"),
@@ -61,10 +62,11 @@ includes(tableSource, 'fullNameValue.className = "playerNameFullValue";', "Table
 includes(tableSource, 'compactNameValue.className = "playerNameCompactValue";', "Table rows must retain N. Surname in stable DOM.");
 includes(tableSource, 'nameLink.setAttribute("aria-label", fullPlayerName);', "Compact names must retain the full accessible name.");
 includes(tableSource, 'column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")', "Listing header blanking must remain inside mobile behavior.");
-includes(tableSource, 'cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;', "Listing rows must retain canonical icon and price markup at every breakpoint.");
+includes(tableSource, 'host.className = "listingCellTableHost";', "Listing rows must retain the skeleton-shared structural host at every breakpoint.");
+includes(tableSource, "host.innerHTML = listingBadge;", "Listing rows must mount canonical icon and price markup inside the structural host.");
 excludes(tableSource, "price?.remove();", "Responsive Listing presentation must not remove the price node.");
 excludes(tableSource, 'const template = document.createElement("template");', "Responsive Listing presentation must not rebuild badge markup in the renderer.");
-includes(tableSource, "For Sale at", "Canonical Listing markup must retain its accessible full-price label.");
+includes(sharedSource, "For Sale at", "Canonical shared Listing markup must retain its accessible full-price label.");
 includes(responsive, "#progressionPage .playerTableScroller .playerNameFullValue {\n    display: none;", "Mobile CSS must hide full player names.");
 includes(responsive, "#progressionPage .playerTableScroller .playerNameCompactValue {\n    display: inline;", "Mobile CSS must show N. Surname names.");
 includes(responsive, "#progressionPage .playerTableScroller .listingCellPrice {\n    display: none;", "Mobile CSS must switch Listing to icon-only without changing DOM.");
