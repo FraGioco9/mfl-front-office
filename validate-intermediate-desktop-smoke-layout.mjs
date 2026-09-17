@@ -30,7 +30,7 @@ assert.ok(
   "Bootstrap must keep its first-paint actions placeholder identifiable as the hidden player-table action button.",
 );
 assert.ok(
-  responsive.includes("#progressionPage #tableHead .rowActionsCell .playerTableActionsButton {\n    display: none;\n  }"),
+  intermediateSource.includes("#progressionPage #tableHead .rowActionsCell .playerTableActionsButton {\n  display: none;\n}"),
   "The actual bootstrap three-dot placeholder must be hidden directly in the table header rather than relying on the hydrated empty-header contract.",
 );
 
