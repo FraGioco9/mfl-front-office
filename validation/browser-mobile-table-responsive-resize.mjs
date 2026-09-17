@@ -56,48 +56,7 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       });
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 120));
       const evaluation = await cdp.send("Runtime.evaluate", {
-        expression: `(() => {
-          const row = document.querySelector('#tableBody tr[data-player-id="1"]');
-          if (!(row instanceof HTMLTableRowElement)) return { missing: 'row', width: ${viewportWidth} };
-          const visibleText = (element) => {
-            if (!(element instanceof HTMLElement)) return '';
-            const style = getComputedStyle(element);
-            return style.display === 'none' || style.visibility === 'hidden' || element.getClientRects().length === 0
-              ? ''
-              : String(element.textContent || '').trim();
-          };
-          const nameLink = row.querySelector('.playerNameLink');
-          const fullNameValue = row.querySelector('.playerNameFullValue');
-          const compactNameValue = row.querySelector('.playerNameCompactValue');
-          const renderedName = visibleText(fullNameValue)
-            || visibleText(compactNameValue)
-            || visibleText(nameLink);
-          const listingPrice = row.querySelector('td.col-listing .listingCellPrice');
-          const listingIcon = row.querySelector('td.col-listing .listingCellIcon');
-          const listingPricePresent = listingPrice instanceof HTMLElement;
-          const listingPriceVisible = listingPricePresent
-            && getComputedStyle(listingPrice).display !== 'none'
-            && getComputedStyle(listingPrice).visibility !== 'hidden'
-            && listingPrice.getClientRects().length > 0;
-          const ageHost = row.querySelector('td.col-age .tableControlCellContent');
-          const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null;
-          const ageGap = ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : '';
-          const iconWidth = listingIcon instanceof HTMLElement
-            ? Math.round(listingIcon.getBoundingClientRect().width)
-            : 0;
-          return {
-            width: ${viewportWidth},
-            sameRow: row === window.__mflResponsiveResizeOriginalRow,
-            renderedName,
-            fullNameNodePresent: fullNameValue instanceof HTMLElement,
-            compactNameNodePresent: compactNameValue instanceof HTMLElement,
-            listingPricePresent,
-            listingPriceVisible,
-            listingIconWidth: iconWidth,
-            ageGap,
-            mobileMedia: matchMedia('(max-width: 900px)').matches,
-          };
-        })()`,
+        expression: "(() => { const row = document.querySelector('#tableBody tr[data-player-id=\\\"1\\\"]'); if (!(row instanceof HTMLTableRowElement)) return { missing: 'row', width: window.innerWidth }; const visibleText = (element) => { if (!(element instanceof HTMLElement)) return ''; const style = getComputedStyle(element); return style.display === 'none' || style.visibility === 'hidden' || element.getClientRects().length === 0 ? '' : String(element.textContent || '').trim(); }; const nameLink = row.querySelector('.playerNameLink'); const fullNameValue = row.querySelector('.playerNameFullValue'); const compactNameValue = row.querySelector('.playerNameCompactValue'); const renderedName = visibleText(fullNameValue) || visibleText(compactNameValue) || visibleText(nameLink); const listingPrice = row.querySelector('td.col-listing .listingCellPrice'); const listingIcon = row.querySelector('td.col-listing .listingCellIcon'); const listingPricePresent = listingPrice instanceof HTMLElement; const listingPriceVisible = listingPricePresent && getComputedStyle(listingPrice).display !== 'none' && getComputedStyle(listingPrice).visibility !== 'hidden' && listingPrice.getClientRects().length > 0; const ageHost = row.querySelector('td.col-age .tableControlCellContent'); const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null; const ageGap = ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : ''; const iconWidth = listingIcon instanceof HTMLElement ? Math.round(listingIcon.getBoundingClientRect().width) : 0; return { width: window.innerWidth, sameRow: row === window.__mflResponsiveResizeOriginalRow, renderedName, fullNameNodePresent: fullNameValue instanceof HTMLElement, compactNameNodePresent: compactNameValue instanceof HTMLElement, listingPricePresent, listingPriceVisible, listingIconWidth: iconWidth, ageGap, mobileMedia: matchMedia('(max-width: 900px)').matches }; })()",
         returnByValue: true,
       });
       return evaluation?.result?.value || {};
