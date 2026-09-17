@@ -23,7 +23,10 @@ for (const token of [
   assert.ok(bootstrap.includes(token), `First-paint compact headings missing ${token}`);
 }
 assert.doesNotMatch(table, /\? "POSITIONS"/, "Small screens must not restore the long Positions heading.");
-assert.ok(shared.includes('mobile && short\n          ? short'), "Hydration must retain compact labels throughout <=900px.");
+assert.ok(
+  shared.includes('if (mobile && short) {\n        label.textContent = short;\n        return;\n      }'),
+  "Hydration must retain compact labels throughout <=900px.",
+);
 assert.doesNotMatch(shared, /function syncMobileColumnWidths/, "Responsive column widths must not be imperatively rewritten after paint.");
 for (const width of [760, 600, 540]) assert.ok(shared.includes(`min-width: ${width}px;`), `Player table missing ${width}px compact floor.`);
 for (const geometry of ['30px;\n    --mfl-table-row-height: 26px', '26px;\n    --mfl-table-row-height: 22px', '24px;\n    --mfl-table-row-height: 20px']) assert.ok(shared.includes(geometry), `Player rows missing compact geometry ${geometry}`);
