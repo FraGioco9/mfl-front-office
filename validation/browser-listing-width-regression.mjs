@@ -15,6 +15,10 @@ let diagnosticSource = source.replace("  listing_price: null,\n", "  listing_pri
 const routeReadyMarker = '    await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.\");\n';
 assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
 const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
+      await waitFor(
+        () => document.querySelector("#tableBody td.col-listing .listingCellPrice") instanceof HTMLElement,
+        "Five-digit Listing fixture never rendered.",
+      );
       const tableBody = document.getElementById("tableBody");
       const firstPrice = tableBody?.querySelector("td.col-listing .listingCellPrice");
       assert(firstPrice instanceof HTMLElement, "Five-digit Listing fixture is missing.");
