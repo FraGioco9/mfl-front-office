@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const responsive = read("./responsive.css");
 const intermediateSource = read("./responsive-sources/intermediate-desktop.css.inc");
-const chromeSource = read("./responsive-sources/chrome-tablet.css.inc");
 const tableSource = read("./modules/core-sources/table.js");
 const bootstrap = read("./bootstrap.js");
 
@@ -37,8 +36,10 @@ assert.ok(
 );
 
 assert.ok(
-  !chromeSource.includes(".stats > div > span {\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }"),
-  "Desktop header counters must never turn Players/Wallets values into ellipses when space tightens.",
+  intermediateSource.includes("@media (min-width: 901px) and (max-width: 1444px) {")
+    && intermediateSource.includes("width: 116px;\n    min-width: 116px;\n    padding: 7px 18px;")
+    && intermediateSource.includes(".stats > div > span {\n    overflow: visible;\n    text-overflow: clip;"),
+  "Intermediate desktop chrome must preserve the normal Players/Wallets boxes and never collapse their values into ellipses.",
 );
 
 for (const compactCounterRule of [
@@ -47,12 +48,8 @@ for (const compactCounterRule of [
   "width: 68px;\n    min-width: 68px;",
 ]) {
   assert.ok(
-    !chromeSource.includes(compactCounterRule),
-    `Responsive chrome must keep the normal Players/Wallets box width instead of applying ${compactCounterRule.split(";")[0]}.`,
-  );
-  assert.ok(
     !intermediateSource.includes(compactCounterRule),
-    `Late intermediate CSS must not reintroduce compact Players/Wallets geometry via ${compactCounterRule.split(";")[0]}.`,
+    `The final responsive cascade must not shrink Players/Wallets via ${compactCounterRule.split(";")[0]}.`,
   );
 }
 
@@ -65,14 +62,14 @@ assert.ok(
   intermediateSource.includes("@media (min-width: 1041px) and (max-width: 1366px) {")
     && intermediateSource.includes("grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;")
     && intermediateSource.includes("flex: 0 0 96px;\n    width: 96px;"),
-  "Intermediate desktop chrome must preserve the 1444px Search/Account geometry after the broad 1366px Player rules.",
+  "Intermediate desktop chrome must preserve compact Search/Account geometry without shrinking the header stat boxes.",
 );
 
 assert.ok(
   intermediateSource.includes("@media (min-width: 901px) and (max-width: 1040px) {")
     && intermediateSource.includes("grid-template-columns: minmax(0, 1fr) 44px max-content;")
     && intermediateSource.includes("flex-basis: 44px;\n    width: 44px;"),
-  "The late intermediate-desktop layer must preserve the narrower 1040px Search/Account geometry after the broad 1366px Player rules.",
+  "The narrow desktop cascade must compact Search/Account while leaving Players/Wallets at their normal box width.",
 );
 
 console.log("Intermediate desktop final-smoke layout validation passed.");
