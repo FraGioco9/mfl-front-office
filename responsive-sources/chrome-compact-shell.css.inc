@@ -7,6 +7,7 @@
     --mfl-responsive-shell-account-icon-size: clamp(15px, calc(14.171779px + 0.230061vw), 18px);
     --mfl-responsive-shell-theme-icon-size: clamp(16px, calc(14.343558px + 0.460123vw), 22px);
     --mfl-responsive-navigation-icon-size: clamp(14px, calc(12.895706px + 0.306748vw), 18px);
+    --mfl-icon-size-navigation: var(--mfl-responsive-navigation-icon-size);
 
     --mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);
     --mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);
