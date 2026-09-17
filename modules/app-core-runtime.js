@@ -7631,26 +7631,35 @@ watchlistButton?.addEventListener("click", (event) => {
   toggleWatchlistDropdown();
 });
 
-function focusedGlobalSearchResult() {
-  const active = document.activeElement;
-  return active instanceof HTMLButtonElement
-    && playerSearchResults.contains(active)
-    && active.classList.contains("searchResult")
-    ? active
+/** @param {EventTarget | null} [target] */
+function focusedGlobalSearchResult(target = document.activeElement) {
+  return target instanceof HTMLButtonElement
+    && playerSearchResults.contains(target)
+    && target.classList.contains("searchResult")
+    ? target
     : null;
 }
+
+function handleGlobalSearchEscape(event) {
+  if (searchModal.hasAttribute("hidden")) return false;
+  if (event.target === playerSearchInput) {
+    playerSearchInput.blur();
+  } else {
+    closeSearch();
+  }
+  return true;
+}
+
+Reflect.get(window, "__mflControlInteractionsRuntime")?.registerEscapeHandler?.(
+  "global-search",
+  handleGlobalSearchEscape,
+  { priority: 200 },
+);
 
 document.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     openSearch();
-  } else if (event.key === "Escape" && !searchModal.hidden) {
-    event.preventDefault();
-    if (document.activeElement === playerSearchInput) {
-      playerSearchInput.blur();
-    } else {
-      closeSearch();
-    }
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     event.preventDefault();
     if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
@@ -7670,9 +7679,9 @@ document.addEventListener("keydown", (event) => {
     closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
-  } else if (event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult()) {
+  } else if (event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult(event.target)) {
     event.preventDefault();
-    focusedGlobalSearchResult()?.click();
+    focusedGlobalSearchResult(event.target)?.click();
   } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
     event.preventDefault();
     confirmAddWatchlist();
