@@ -155,7 +155,7 @@ document.addEventListener("keydown", (event) => {
     closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
-  } else if (event.key === "Enter" && !searchModal.hidden && focusedGlobalSearchResult()) {
+  } else if (event.key === "Enter" && !searchModal.hasAttribute("hidden") && focusedGlobalSearchResult()) {
     event.preventDefault();
     focusedGlobalSearchResult()?.click();
   } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
