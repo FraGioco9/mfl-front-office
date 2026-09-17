@@ -14,12 +14,11 @@
     return input instanceof HTMLInputElement ? input : null;
   }
 
-  function renderEmptyRecents() {
+  function hidePassiveSearchResults() {
     const input = searchInput();
-    if (!input || input.value.trim()) return;
-    try {
-      window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
-    } catch {}
+    if (!input || input.value.trim() || document.activeElement === input) return;
+    const results = document.getElementById("evaluationSearchResults");
+    if (results instanceof HTMLElement) results.hidden = true;
   }
 
   function onPointerDown(event) {
@@ -28,7 +27,7 @@
     if (target?.closest("#evaluationSearchInput, #evaluationSearchClearButton, #evaluationSearchResults")) return;
     const input = searchInput();
     if (input && document.activeElement === input) input.blur();
-    queueMicrotask(renderEmptyRecents);
+    queueMicrotask(hidePassiveSearchResults);
   }
 
   function sync() {
