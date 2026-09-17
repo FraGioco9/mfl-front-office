@@ -11213,34 +11213,10 @@ html:not(.mflInitialRouteResolved):is(
     padding-bottom: 4px;
   }
 }
-
-@media (min-width: 1041px) and (max-width: 1366px) {
-  .topbar {
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) max-content;
-  }
-
-  .accountMenu {
-    flex: 0 0 96px;
-    width: 96px;
-  }
-}
-
-@media (min-width: 901px) and (max-width: 1040px) {
-  .topbar {
-    grid-template-columns: minmax(0, 1fr) 44px max-content;
-    gap: 8px;
-    padding-inline: 12px;
-  }
-
-  .accountMenu {
-    flex-basis: 44px;
-    width: 44px;
-  }
-}
-/* Compact application shell for the intermediate 901-1040px range.
+/* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
-@media (min-width: 901px) and (max-width: 1040px) {
+@media (min-width: 901px) and (max-width: 1366px) {
   :root {
     --pinned-sidebar-width: 0px;
     --mobile-nav-height: 58px;
@@ -13535,9 +13511,10 @@ html:not(.mflInitialRouteResolved):is(
   display: none;
 }
 
-/* Intermediate widths already use the compact table presentation even though
- * the rest of the site remains in its desktop/intermediate shell. */
-@media (min-width: 901px) and (max-width: 1040px) {
+/* The full intermediate 901-1366px shell shares compact table presentation.
+ * Narrower 700/520/380 layers continue to own progressively tighter geometry.
+ */
+@media (min-width: 901px) and (max-width: 1366px) {
   #progressionPage {
     --mfl-table-header-height: 30px;
     --mfl-table-row-height: 26px;
@@ -13697,7 +13674,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1366px) {
   #progressionPage .playerTableScroller .playerNameFullValue {
     display: none;
   }
