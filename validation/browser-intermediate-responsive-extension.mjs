@@ -33,7 +33,7 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const main = document.querySelector("#appShell > main");
       const row = document.querySelector("#tableBody tr[data-player-id=\"1\"]");
       const marker = row?.querySelector("td.col-age .retirementMarker, td.col-age .newMintMarker");
-      const markerGraphic = marker?.querySelector("img, .newMintIcon") || marker;
+      const markerChild = marker?.querySelector("img, .newMintIcon");
       const fullName = row?.querySelector(".playerNameFullValue");
       const compactName = row?.querySelector(".playerNameCompactValue");
       const listingPrice = row?.querySelector("td.col-listing .listingCellPrice");
@@ -44,7 +44,9 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const compactStyle = compactName instanceof HTMLElement ? getComputedStyle(compactName) : null;
       const listingStyle = listingPrice instanceof HTMLElement ? getComputedStyle(listingPrice) : null;
       const markerWidth = marker instanceof Element ? Math.round(marker.getBoundingClientRect().width) : 0;
-      const markerGraphicWidth = markerGraphic instanceof Element ? Math.round(markerGraphic.getBoundingClientRect().width) : 0;
+      const markerChildWidth = markerChild instanceof Element ? Math.round(markerChild.getBoundingClientRect().width) : 0;
+      const markerPseudoWidth = marker instanceof Element ? Math.round(Number.parseFloat(getComputedStyle(marker, "::before").width) || 0) : 0;
+      const markerGraphicWidth = markerChildWidth > 0 ? markerChildWidth : markerPseudoWidth;
 
       assert(menuRail instanceof HTMLElement, "Intermediate compact navigation rail is missing at " + viewportWidth + "px.");
       assert(menuStyle?.position === "absolute", "Bottom navigation must replace the sidebar through 1366px.");
@@ -57,7 +59,7 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       assert(listingStyle?.display === "none", "Listing price must remain icon-only through 1366px.");
       assert(marker instanceof HTMLElement, "Age status marker is missing at " + viewportWidth + "px.");
       assert(markerWidth === 11, "Age status marker must use compact 11px geometry through 1366px.");
-      assert(markerGraphicWidth === 11, "Age status icon drawing must use compact 11px geometry through 1366px.");
+      assert(markerGraphicWidth === 11, "Visible Age status icon drawing must use compact 11px geometry through 1366px.");
     }
 
     if (viewportWidth === 1367) {
