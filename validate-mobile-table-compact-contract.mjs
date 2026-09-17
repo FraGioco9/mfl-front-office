@@ -15,7 +15,7 @@ const responsiveSource = readFileSync(resolve(root, "responsive.css"), "utf8");
 
 assert.doesNotMatch(
   tableSource,
-  /const compactTableLayout = window\.matchMedia\("\(max-width: (?:900|1040)px\)"\)\.matches;/,
+  /const compactTableLayout = window\.matchMedia\("\(max-width: (?:900|1040|1366)px\)"\)\.matches;/,
   "Canonical Table rows must not branch their DOM on a responsive compact-table breakpoint.",
 );
 assert.doesNotMatch(
@@ -32,7 +32,7 @@ assert.match(
   /column === "listing_price"[\s\S]*host\.className = "listingCellTableHost";[\s\S]*host\.innerHTML = listingBadge;[\s\S]*cell\.appendChild\(host\);/,
   "Canonical Table rows must retain the structural Listing host plus icon and price markup regardless of viewport width.",
 );
-assert.doesNotMatch(tableSource, /price\?\.remove\(\)/, "Mobile Table rendering must not remove Listing prices from the DOM.");
+assert.doesNotMatch(tableSource, /price\?\.remove\(\)/, "Responsive Table rendering must not remove Listing prices from the DOM.");
 
 assert.match(
   sharedTableUiSource,
@@ -89,13 +89,13 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 assert.match(
   responsiveSource,
-  /@media \(min-width: 901px\) and \(max-width: 1040px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;[\s\S]*\.listingCellIcon \{[\s\S]*width: 9px;/,
-  "Intermediate player tables must reuse compact tablet geometry from 901px through 1040px without changing the global desktop shell.",
+  /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;[\s\S]*:is\(\.retirementMarker, \.newMintMarker\) \{[\s\S]*width: 11px;[\s\S]*\.listingCellIcon \{[\s\S]*width: 9px;/,
+  "Intermediate player tables must reuse compact tablet geometry, including 11px Age markers, from 901px through 1366px.",
 );
 assert.match(
   responsiveSource,
-  /@media \(max-width: 1040px\) \{[\s\S]*\.playerNameFullValue \{[\s\S]*display: none;[\s\S]*\.playerNameCompactValue \{[\s\S]*display: inline;[\s\S]*\.listingCellPrice \{[\s\S]*display: none;/,
-  "Responsive Table presentation must switch names to N. Surname and Listing to icon-only at <=1040px.",
+  /@media \(max-width: 1366px\) \{[\s\S]*\.playerNameFullValue \{[\s\S]*display: none;[\s\S]*\.playerNameCompactValue \{[\s\S]*display: inline;[\s\S]*\.listingCellPrice \{[\s\S]*display: none;/,
+  "Responsive Table presentation must switch names to N. Surname and Listing to icon-only at <=1366px.",
 );
 assert.match(
   responsiveSource,
@@ -118,9 +118,9 @@ assert.match(phoneStyle, /#progressionPage #tableBody \.tableOverallRarityCircle
 const tinyStyle = sharedTableUiSource.match(/@media \(max-width: 380px\) \{([\s\S]*?)\n\}`;/)?.[1] || "";
 assert.match(tinyStyle, /#progressionPage #tableBody \.tableOverallRarityCircle \{[\s\S]*flex-basis: 5px;[\s\S]*width: 5px;[\s\S]*height: 5px;[\s\S]*margin-right: 3px;/, "The Overall rarity circle must keep the refined 5px size and 3px number gap on tiny screens.");
 
-assert.doesNotMatch(tableSource, /!important/, "Canonical mobile Table presentation must not add !important overrides.");
+assert.doesNotMatch(tableSource, /!important/, "Canonical responsive Table presentation must not add !important overrides.");
 assert.doesNotMatch(sharedTableUiSource, /!important/, "Shared mobile table presentation must not add !important overrides.");
-assert.doesNotMatch(responsiveSource, /mobile-table-content[\s\S]*!important/, "Responsive mobile Table content must not require !important overrides.");
+assert.doesNotMatch(responsiveSource, /mobile-table-content[\s\S]*!important/, "Responsive Table content must not require !important overrides.");
 assert.doesNotMatch(sharedTableUiSource, /MutationObserver/, "Shared mobile Table presentation must not repair rendered rows through MutationObserver.");
 
 const tableBanner = "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n";
@@ -131,4 +131,4 @@ assert.equal(
   "Generated Table runtime must exactly match the manifest-assembled canonical Table source.",
 );
 
-console.log("Source-owned resize-safe mobile compact table contract validation passed.");
+console.log("Source-owned resize-safe compact table contract through 1366px validation passed.");
