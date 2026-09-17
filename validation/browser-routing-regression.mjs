@@ -1023,6 +1023,69 @@ const browserTestSource = String.raw`(() => {
       closeAdvancedSettingsButton.click();
       await waitFor(() => advancedSettingsModal.hidden === true,
         "Evaluation Advanced Settings modal did not close after the interaction-readiness check.");
+
+      await setPage("evaluation", true, { playerId: "1" });
+      await waitFor(
+        () => window.location.pathname === "/evaluation"
+          && new URL(window.location.href).searchParams.get("player") === "1"
+          && document.querySelector("#evaluationTableBody [data-evaluation-overall-delta=\"1\"]") instanceof HTMLButtonElement,
+        "Evaluation player controls did not become ready for displaced-row interaction coverage.",
+      );
+
+      const overallIncreaseButton = document.querySelector("#evaluationTableBody [data-evaluation-overall-delta=\"1\"]");
+      const evaluationResetControl = document.getElementById("evaluationResetButton");
+      const evaluationPlayerPageControl = document.getElementById("evaluationPlayerPageButton");
+      assert(
+        overallIncreaseButton instanceof HTMLButtonElement
+          && evaluationResetControl instanceof HTMLButtonElement
+          && evaluationPlayerPageControl instanceof HTMLButtonElement,
+        "Evaluation displaced-row regression could not find +, Reset, and Player Page controls.",
+      );
+
+      const overallValue = () => Number(
+        overallIncreaseButton.closest(".evaluationOverallControl")?.querySelector("strong")?.textContent || 0
+      );
+      const initialOverall = overallValue();
+      assert(initialOverall > 0, "Evaluation displaced-row regression could not read the current Overall.");
+
+      state.rows = [];
+      state.filteredRows = [];
+      overallIncreaseButton.click();
+      await waitFor(
+        () => Number(document.querySelector("#evaluationTableBody .evaluationOverallControl strong")?.textContent || 0) === initialOverall + 1,
+        "Evaluation + control stopped working after shared route rows were displaced.",
+      );
+
+      state.rows = [];
+      state.filteredRows = [];
+      evaluationResetControl.click();
+      await waitFor(
+        () => Number(document.querySelector("#evaluationTableBody .evaluationOverallControl strong")?.textContent || 0) === initialOverall,
+        "Evaluation Reset stopped working after shared route rows were displaced.",
+      );
+
+      state.rows = [];
+      state.filteredRows = [];
+      const originalWindowOpen = window.open;
+      let openedPlayerUrl = "";
+      window.open = (url) => {
+        openedPlayerUrl = String(url || "");
+        return { blur() {} };
+      };
+      try {
+        evaluationPlayerPageControl.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+        }));
+      } finally {
+        window.open = originalWindowOpen;
+      }
+      assert(
+        openedPlayerUrl.includes("/players/1"),
+        "Evaluation Player Page stopped working after shared route rows were displaced.",
+      );
+
       scrollbarSpacer.remove();
       assertPageAccessibilityState();
     }
