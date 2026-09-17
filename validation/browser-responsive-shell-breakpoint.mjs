@@ -107,7 +107,7 @@ const shellProbe = String.raw`    await cdp.send("Runtime.enable");
       }
     });
 
-    return true;
+    return { status: "passed", detail: "responsive shell breakpoint passed" };
 `;
 
 diagnosticSource = diagnosticSource.replace(runtimeEnableMarker, shellProbe);
