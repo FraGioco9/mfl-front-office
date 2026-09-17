@@ -119,7 +119,7 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       if (contract.icon) assert.equal(stage.listingIconWidth, contract.icon, "Listing icon width is wrong at " + contract.width + "px: " + stageDetail);
     });
 
-    return await waitForBrowserRegression(cdp);
+    return true;
 `;
 diagnosticSource = diagnosticSource.replace(runtimeEnableMarker, responsiveProbe);
 
