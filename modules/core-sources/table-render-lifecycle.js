@@ -197,7 +197,10 @@ function tableRenderTableOwner() {
       } else if (column === "listing_price") {
         const listingBadge = listingPriceBadgeHtml(row);
         if (listingBadge) {
-          cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;
+          const host = document.createElement("span");
+          host.className = "listingCellTableHost";
+          host.innerHTML = listingBadge;
+          cell.appendChild(host);
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }
