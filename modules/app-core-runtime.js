@@ -7646,7 +7646,11 @@ document.addEventListener("keydown", (event) => {
     openSearch();
   } else if (event.key === "Escape" && !searchModal.hidden) {
     event.preventDefault();
-    closeSearch();
+    if (document.activeElement === playerSearchInput) {
+      playerSearchInput.blur();
+    } else {
+      closeSearch();
+    }
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     event.preventDefault();
     if (document.activeElement instanceof HTMLElement && filtersModal.contains(document.activeElement)) document.activeElement.blur();
