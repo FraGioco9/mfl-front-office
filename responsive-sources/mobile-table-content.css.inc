@@ -19,6 +19,7 @@
     --mfl-table-header-height: 30px;
     --mfl-table-row-height: 26px;
     --mfl-table-row-outer-height: 30px;
+    --mfl-intermediate-age-marker-size: clamp(11px, calc(5.1871px + 0.645161vw), 14px);
   }
 
   #progressionPage .tableShell {
@@ -132,13 +133,13 @@
   }
 
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex: 0 0 11px;
-    width: 11px;
-    min-width: 11px;
-    max-width: 11px;
-    height: 11px;
-    min-height: 11px;
-    max-height: 11px;
+    flex: 0 0 var(--mfl-intermediate-age-marker-size);
+    width: var(--mfl-intermediate-age-marker-size);
+    min-width: var(--mfl-intermediate-age-marker-size);
+    max-width: var(--mfl-intermediate-age-marker-size);
+    height: var(--mfl-intermediate-age-marker-size);
+    min-height: var(--mfl-intermediate-age-marker-size);
+    max-height: var(--mfl-intermediate-age-marker-size);
     margin: 0;
     transform: none;
   }
@@ -146,8 +147,8 @@
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: 11px;
-    height: 11px;
+    width: var(--mfl-intermediate-age-marker-size);
+    height: var(--mfl-intermediate-age-marker-size);
   }
 
   #progressionPage .playerTableScroller .playerNoteIcon {
