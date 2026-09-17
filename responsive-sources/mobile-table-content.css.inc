@@ -18,8 +18,6 @@
     --mfl-table-header-height: 30px;
     --mfl-table-row-height: 26px;
     --mfl-table-row-outer-height: 30px;
-    --mfl-table-col-listing: 4%;
-    --mfl-table-col-positions: 9.89924379593141%;
   }
 
   #progressionPage .tableShell {
@@ -95,11 +93,6 @@
 
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
     gap: 3px;
-  }
-
-  #progressionPage .playerTableScroller td.col-age .playerAgeValue {
-    flex: 0 0 auto;
-    min-width: 0;
   }
 
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
