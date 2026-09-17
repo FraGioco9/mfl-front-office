@@ -107,6 +107,14 @@
   --mfl-shadow-mobile-navigation: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
+/* Result-card keyboard focus is already expressed by the same border/background
+ * highlight as hover. Suppress the browser-default light outline so focus never
+ * adds a second white ring around an otherwise highlighted result. */
+.searchResult:focus-visible,
+.evaluationSearchResult:focus-visible {
+  outline: none;
+}
+
 /* Canonical cross-site stacking-level owner for MFL Front Office.
  *
  * Stacking contract:
