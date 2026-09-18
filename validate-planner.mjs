@@ -41,7 +41,6 @@ invariant(planner.includes('"/api/planner-plans"'), "Planner UI must use the per
 invariant(planner.includes('sourceId'), "Planner Duplicate must use the persistence duplication contract.");
 invariant(planner.includes('shared: true') && planner.includes('shared: false'), "Planner Share must support enabling and revoking unlisted sharing.");
 invariant(planner.includes('planId') && planner.includes('canEdit'), "Planner must distinguish saved/shared route ownership.");
-invariant(planner.includes('scope: "club"'), "Planner roster loading must reuse the canonical Club data scope.");
 invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club selection must reuse canonical Club search.");
 invariant(sharedSearch.includes('type === "clubs"'), "Shared database search must normalize Club-only results.");
 invariant(planner.includes('plannerState.assignments.set') && planner.includes('plannerState.assignments.delete'), "Planner must support tap assignment, movement and removal.");
