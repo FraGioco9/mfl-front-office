@@ -50,6 +50,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
     rosterBody?.replaceChildren();
     if(rosterBody)rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="";
