@@ -53,12 +53,32 @@
         cell.textContent=value===null||value===undefined||value===""?"—":String(value);
         row.appendChild(cell);
       }
+      const contractCell=document.createElement("td");
+      const contractInput=document.createElement("input");
+      contractInput.type="number";
+      contractInput.className="plannerContractInput";
+      contractInput.min="0";
+      contractInput.step="1";
+      contractInput.inputMode="numeric";
+      contractInput.setAttribute("aria-label","Contract matches for "+String(player.name||"player"));
+      const contractMatches=player.planned_contract_matches;
+      contractInput.value=contractMatches===null||contractMatches===undefined||contractMatches===""?"":String(contractMatches);
+      contractInput.addEventListener("input",()=>{
+        const raw=contractInput.value.trim();
+        if(!raw){player.planned_contract_matches=null;return;}
+        const numeric=Number(raw);
+        if(!Number.isFinite(numeric))return;
+        const normalized=Math.max(0,Math.trunc(numeric));
+        player.planned_contract_matches=normalized;
+        if(String(normalized)!==raw)contractInput.value=String(normalized);
+      });
+      contractCell.appendChild(contractInput);
+      row.appendChild(contractCell);
       const action=document.createElement("td");
       const remove=document.createElement("button");
       remove.type="button";
       remove.className="iconButton popupCloseButton plannerRosterRemove";
       remove.setAttribute("aria-label","Remove "+String(player.name||"player")+" from planned squad");
-      remove.title="Remove from planned squad";
       remove.addEventListener("click",()=>{
         const index=roster.findIndex(candidate=>candidate.player_id===player.player_id);
         roster=roster.filter(candidate=>candidate.player_id!==player.player_id);
@@ -87,7 +107,7 @@
       for(let index=0;index<8;index+=1){
         const row=document.createElement("tr");
         row.setAttribute("aria-hidden","true");
-        for(let column=0;column<5;column+=1){
+        for(let column=0;column<6;column+=1){
           const cell=document.createElement("td");
           const skeleton=document.createElement("span");
           skeleton.className="plannerRosterSkeleton";
@@ -106,7 +126,10 @@
       if(!response.ok)throw new Error("Could not load the squad.");
       if(!Array.isArray(payload.columns)||!Array.isArray(payload.rows)||!payload.columns.includes("player_id")||!payload.columns.includes("name"))throw new Error("Could not read the squad.");
       if(Number(payload.totalRows)>payload.rows.length)throw new Error("The full squad could not be loaded.");
-      roster=payload.rows.map(values=>Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]])));
+      roster=payload.rows.map(values=>{
+        const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
+        return {...player,planned_contract_matches:player.active_contract_nb_matches};
+      });
       renderRoster();
     }catch(error){
       if(seq!==rosterSequence||controller.signal.aborted)return;
