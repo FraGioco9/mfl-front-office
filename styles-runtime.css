@@ -8419,6 +8419,10 @@ body[data-page="club"] #progressionPage .rowsField {
   line-height: 1.2;
 }
 
+#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
+  align-self: center;
+}
+
 #progressionPage #tableBody .tableControlCellContent > :is(.progressionValue, .tableNextOverallValue) {
   margin-left: 2px;
 }
