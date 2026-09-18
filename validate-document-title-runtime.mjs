@@ -20,6 +20,8 @@ includes(projections, 'else if (firstPaintRouteRoot === "club" || firstPaintRout
 includes(projections, 'else if (firstPaintRouteRoot === "agents") firstPaintDocumentTitle = firstPaintAgentTitle();', "Agent refreshes must become Agent-aware during head parsing.");
 includes(projections, 'else if (firstPaintRouteRoot === "watchlist") firstPaintDocumentTitle = firstPaintWatchlistTitle();', "Watchlist refreshes must become Watchlist-aware during head parsing.");
 includes(projections, 'else if (firstPaintRouteRoot === "evaluation") firstPaintDocumentTitle = firstPaintEvaluationTitle();', "Evaluation refreshes must become Evaluation-aware during head parsing.");
+includes(projections, 'planner: "Planner"', "Planner refreshes must resolve the Planner browser title during head parsing.");
+includes(indexHtml, 'planner: "Planner"', "Generated index.html must preserve the Planner first-paint browser title.");
 includes(projections, 'mfl-player-first-paint-v1:', "Player first paint should upgrade from the generic fallback when canonical cached identity is already known.");
 includes(projections, 'mfl-evaluation-first-paint-name-v2:', "Evaluation first paint should use the full cached Player identity immediately when available.");
 includes(projections, 'root.dataset.initialEvaluationPlayerName = playerName;', "Early Evaluation identity must be handed to the canonical runtime without waiting for panel rendering.");
