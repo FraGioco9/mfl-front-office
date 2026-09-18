@@ -103,9 +103,24 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const headerLabel = (column) => String(document.querySelector(
         '#tableHead th[data-table-column="' + column + '"] [data-mfl-full-table-label][data-mfl-compact-table-label]'
       )?.textContent || "").trim();
-      assert(headerLabel("positions") === "Positions", "Positions header must restore its full label at 1367px.");
-      assert(headerLabel("player_seasons") === "Seasons", "Seasons header must restore its full label at 1367px.");
-      assert(headerLabel("overall") === "Overall", "Overall header must restore its full label at 1367px.");
+      const headerDiagnostics = {
+        viewportWidth,
+        compactMedia: window.matchMedia("(max-width: 1366px)").matches,
+        positions: headerLabel("positions"),
+        seasons: headerLabel("player_seasons"),
+        overall: headerLabel("overall"),
+        positionsData: (() => {
+          const label = document.querySelector('#tableHead th[data-table-column="positions"] [data-mfl-full-table-label][data-mfl-compact-table-label]');
+          return label instanceof HTMLElement ? {
+            full: label.dataset.mflFullTableLabel || "",
+            compact: label.dataset.mflCompactTableLabel || "",
+          } : null;
+        })(),
+        routeReady: document.documentElement.dataset.mflRouteReady || "",
+      };
+      assert(headerLabel("positions") === "Positions", "Positions header must restore its full label at 1367px: " + JSON.stringify(headerDiagnostics));
+      assert(headerLabel("player_seasons") === "Seasons", "Seasons header must restore its full label at 1367px: " + JSON.stringify(headerDiagnostics));
+      assert(headerLabel("overall") === "Overall", "Overall header must restore its full label at 1367px: " + JSON.stringify(headerDiagnostics));
     }
 `;
 
