@@ -7276,6 +7276,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
 .plannerSearchControl #plannerClubSearchInput,
+.plannerSearchControl #plannerPlayerSearchInput,
 #pageSizeSelect {
   transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
@@ -7305,6 +7306,9 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .plannerSearchControl:hover #plannerClubSearchInput:not(:disabled),
 #plannerClubSearchInput:focus:not(:disabled),
 #plannerClubSearchInput:focus-visible:not(:disabled),
+.plannerSearchControl:hover #plannerPlayerSearchInput:not(:disabled),
+#plannerPlayerSearchInput:focus:not(:disabled),
+#plannerPlayerSearchInput:focus-visible:not(:disabled),
 #pageSizeSelect:hover:not(:disabled),
 #pageSizeSelect:focus:not(:disabled),
 #pageSizeSelect:focus-visible:not(:disabled),
@@ -7327,7 +7331,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 
 .evaluationSearchControl #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
-.plannerSearchControl #plannerClubSearchInput {
+.plannerSearchControl #plannerClubSearchInput,
+.plannerSearchControl #plannerPlayerSearchInput {
   width: 100%;
   padding-right: 42px;
 }
@@ -7366,6 +7371,12 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
 #playerSearchInput:placeholder-shown + .playerSearchClearButton,
 #plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#plannerPlayerSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -14419,7 +14430,8 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 }
 
 .plannerPageHeader .tablePageTitle,
-.plannerRosterHeader h3 {
+.plannerRosterHeader h3,
+.plannerSectionHeading h3 {
   margin: 0;
 }
 
@@ -14448,7 +14460,8 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 .plannerFieldLabel,
 .plannerFormationField > span,
 .plannerRosterEyebrow,
-.plannerClubEyebrow {
+.plannerClubEyebrow,
+.plannerSectionEyebrow {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 800;
@@ -14464,7 +14477,8 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   min-height: var(--mfl-control-height);
 }
 
-.plannerClubSearchWrap {
+.plannerClubSearchWrap,
+.plannerPlayerSearchWrap {
   position: relative;
   width: 100%;
 }
@@ -14473,7 +14487,8 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   position: relative;
 }
 
-.plannerSearchControl #plannerClubSearchInput {
+.plannerSearchControl #plannerClubSearchInput,
+.plannerSearchControl #plannerPlayerSearchInput {
   width: 100%;
   padding-right: 42px;
 }
@@ -14491,13 +14506,15 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   box-shadow: none;
 }
 
-#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton,
+#plannerPlayerSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
 }
 
-.plannerClubSearchResults {
+.plannerClubSearchResults,
+.plannerPlayerSearchResults {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -14515,16 +14532,19 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 }
 
 .plannerClubSearchResults[hidden],
+.plannerPlayerSearchResults[hidden],
 .plannerSharedNotice[hidden] {
   display: none;
 }
 
-.plannerClubSearchResult {
+.plannerClubSearchResult,
+.plannerPlayerSearchResult {
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
 }
 
-.plannerClubSearchResult strong {
+.plannerClubSearchResult strong,
+.plannerPlayerSearchResult strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -14543,7 +14563,7 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 
 .plannerWorkspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(260px, 0.8fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.9fr);
   align-items: start;
   gap: 14px;
 }
@@ -14568,6 +14588,22 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 12px;
+}
+
+.plannerPitchHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.plannerSectionHeading {
+  flex: 0 0 auto;
+}
+
+.plannerSectionHeading h3 {
+  font-size: 18px;
+  line-height: 1.1;
 }
 
 .plannerClubIdentity {
@@ -14621,23 +14657,15 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   left: var(--planner-x);
   top: var(--planner-y);
   z-index: 2;
-  width: clamp(70px, 16%, 104px);
-  min-height: 54px;
+  width: clamp(88px, 18%, 118px);
+  min-height: 58px;
   padding: 5px 6px;
   border: 1px solid var(--border-strong);
   border-radius: 7px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   color: var(--text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  cursor: pointer;
   transform: translate(-50%, -50%);
-}
-
-.plannerSlot:hover,
-.plannerSlot:focus-visible,
-.plannerSlot.is-selected {
-  border-color: var(--primary);
-  background: var(--row-hover);
 }
 
 .plannerSlotLabel {
@@ -14649,35 +14677,51 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   text-transform: uppercase;
 }
 
-.plannerSlotPlayer {
-  display: block;
-  margin-top: 3px;
-  overflow: hidden;
-  font-size: 12px;
+.plannerDepthList {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.plannerDepthPlayer {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.plannerDepthRank,
+.plannerDepthOverall {
+  color: var(--text-soft);
   font-weight: 800;
-  line-height: 1.15;
+}
+
+.plannerDepthName {
+  overflow: hidden;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.plannerSlotOverall {
-  display: block;
-  margin-top: 2px;
+.plannerDepthEmpty,
+.plannerDepthMore {
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-}
-
-.plannerSlot.is-empty .plannerSlotPlayer {
-  color: var(--text-soft);
-  font-weight: 700;
+  line-height: 1.15;
 }
 
 .plannerSlot.is-loading {
-  cursor: default;
+  pointer-events: none;
 }
 
-.plannerSlot.is-loading :is(.plannerSlotPlayer, .plannerSlotOverall) {
+.plannerDepthSkeletonLine {
+  display: block;
+  width: 78%;
+  min-height: 9px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface-muted);
@@ -14685,31 +14729,21 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   user-select: none;
 }
 
-.plannerSlot.is-loading .plannerSlotPlayer {
-  width: 78%;
-  min-height: 12px;
-}
-
-.plannerSlot.is-loading .plannerSlotOverall {
-  width: 52%;
-  min-height: 9px;
-}
-
 .plannerRosterHeader {
   justify-content: space-between;
   gap: 10px;
+}
+
+.plannerPlayerPicker {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0;
 }
 
 .plannerRosterCount {
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 800;
-}
-
-.plannerRosterHint {
-  margin: 5px 0 10px;
-  color: var(--text-soft);
-  font-size: 12px;
 }
 
 .plannerRoster {
@@ -14721,7 +14755,7 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 
 .plannerPlayer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto 28px;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -14732,14 +14766,10 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   background: var(--surface);
   color: var(--text);
   text-align: left;
-  cursor: pointer;
 }
 
-.plannerPlayer:hover,
-.plannerPlayer:focus-visible,
-.plannerPlayer.is-selected {
-  border-color: var(--primary);
-  background: var(--row-hover);
+.plannerPlayerIdentity {
+  min-width: 0;
 }
 
 .plannerPlayerName {
@@ -14760,6 +14790,25 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 .plannerPlayerOverall {
   font-size: 14px;
   font-weight: 800;
+}
+
+.plannerPlayerRemove {
+  position: relative;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--danger);
+}
+
+.plannerPlayerRemove:hover:not(:disabled),
+.plannerPlayerRemove:focus-visible:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #ffffff;
 }
 
 .plannerPlayerSkeleton {
@@ -14832,6 +14881,12 @@ body[data-page="planner"] #plannerPage {
     flex-basis: auto;
   }
 
+  .plannerPitchHeaderMain {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .plannerRoster {
     max-height: none;
   }
@@ -14857,16 +14912,19 @@ body[data-page="planner"] #plannerPage {
   }
 
   .plannerSlot {
-    width: clamp(58px, 20%, 78px);
+    width: clamp(72px, 22%, 88px);
     min-height: 48px;
     padding: 4px;
   }
 
-  .plannerSlotPlayer {
-    font-size: 10px;
+  .plannerDepthPlayer {
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    gap: 2px;
+    font-size: 8px;
   }
 
-  .plannerSlotOverall {
-    font-size: 9px;
+  .plannerDepthEmpty,
+  .plannerDepthMore {
+    font-size: 8px;
   }
 }
