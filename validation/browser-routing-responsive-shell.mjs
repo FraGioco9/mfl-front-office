@@ -9,16 +9,14 @@ const sourcePath = resolve(validationDirectory, "browser-routing-regression.mjs"
 const temporaryPath = resolve(validationDirectory, ".browser-routing-responsive-shell.tmp.mjs");
 const source = await readFile(sourcePath, "utf8");
 
-const oldContract = 'if (viewportWidth <= 900 && selector.startsWith(".stats")) {';
-const newContract = 'if (viewportWidth <= 1366 && selector.startsWith(".stats")) {';
+const compactShellContract = 'if (viewportWidth <= 1366 && selector.startsWith(".stats")) {';
 assert.equal(
-  source.split(oldContract).length - 1,
+  source.split(compactShellContract).length - 1,
   1,
-  "Broad routing regression must expose exactly one compact-header breakpoint contract.",
+  "Broad routing regression must consume exactly one canonical compact-shell breakpoint contract.",
 );
 
-const responsiveSource = source.replace(oldContract, newContract);
-await writeFile(temporaryPath, responsiveSource, "utf8");
+await writeFile(temporaryPath, source, "utf8");
 
 try {
   const status = await new Promise((resolveStatus, rejectStatus) => {
