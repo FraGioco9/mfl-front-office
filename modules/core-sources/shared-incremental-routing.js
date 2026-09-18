@@ -225,9 +225,42 @@ function currentRouteDataCacheReady() {
   return routeDataCacheReady(target.pageName, target.options || {});
 }
 
+function plannerClubCacheRoute(clubId) {
+  const normalizedClubId = String(clubId || "").trim();
+  if (!normalizedClubId) return null;
+  return incrementalRouteTarget("club", {
+    clubId: normalizedClubId,
+    view: "attributes",
+    ignoreCurrentClubRoute: true,
+  });
+}
+
+function readClubPayload(clubId) {
+  const route = plannerClubCacheRoute(clubId);
+  if (!route) return null;
+  return readIncrementalPayloadCache(incrementalRequestDetails(route, 1).cacheKey);
+}
+
+function rememberClubPayload(clubId, payload) {
+  const route = plannerClubCacheRoute(clubId);
+  if (!route || !payload) return null;
+  adoptIncrementalPayloadDataset(payload);
+  const { cacheKey } = incrementalRequestDetails(route, 1);
+  return rememberIncrementalPayload(cacheKey, payload);
+}
+
+function clubRequestPath(clubId) {
+  const route = plannerClubCacheRoute(clubId);
+  if (!route) return "";
+  return "/api/data?" + incrementalRequestDetails(route, 1).requestKey;
+}
+
 Reflect.set(globalThis, "__mflRouteDataCache", Object.freeze({
   isReady: routeDataCacheReady,
   isCurrentRouteReady: currentRouteDataCacheReady,
+  readClubPayload,
+  rememberClubPayload,
+  clubRequestPath,
 }));
 
 function applyIncrementalPayload(route, payload) {
