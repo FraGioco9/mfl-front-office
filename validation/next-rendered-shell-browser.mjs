@@ -216,7 +216,11 @@ try {
   const state = await waitForRenderedShell(cdp);
   initialDevAssetToken = state.devAssetToken;
   assert(initialDevAssetToken && initialDevAssetToken !== "production-static", "Development document did not receive the Webpack legacy-asset watch token.");
-  assert.equal(state.documentTitle, "MFL Front Office", "Next-rendered root document title is incorrect.");
+  const targetPathname = new URL(targetUrl).pathname;
+  const expectedDocumentTitle = targetPathname === "/planner"
+    ? "Planner - MFL Front Office"
+    : "MFL Front Office";
+  assert.equal(state.documentTitle, expectedDocumentTitle, `Next-rendered ${targetPathname} document title is incorrect.`);
   assert.equal(state.viewportMetaCount, 1, "Next-rendered shell must expose exactly one viewport meta tag.");
   assert.equal(
     state.viewportContent,
