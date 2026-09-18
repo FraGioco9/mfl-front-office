@@ -31,7 +31,7 @@
   const playerSelection=document.getElementById("plannerPlayerSelection");
   const playerSelectionStatus=document.getElementById("plannerPlayerSelectionStatus");
   const playerSelectionCount=document.getElementById("plannerPlayerSelectionCount");
-  const playerSelectionList=document.getElementById("plannerPlayerSelectionList");
+  const playerSelectionBody=document.getElementById("plannerPlayerSelectionBody");
   const playerDiscardButton=document.getElementById("plannerPlayerDiscardButton");
   const playerConfirmButton=document.getElementById("plannerPlayerConfirmButton");
   let roster=[],rosterSequence=0,rosterController=null;
@@ -77,6 +77,16 @@
     const numeric=Number(value);
     return normalizeContractValue(Number.isFinite(numeric)?numeric/100:0);
   }
+  function totalPlannedContracts(excludedPlayerId=null){
+    return roster.reduce((sum,player)=>{
+      if(excludedPlayerId!==null&&Number(player?.player_id)===Number(excludedPlayerId))return sum;
+      const value=Number(player?.planned_contract_value);
+      return sum+(Number.isFinite(value)?value:0);
+    },0);
+  }
+  function contractLimitForPlayer(playerId){
+    return Math.min(20,Math.max(0,Math.round((100-totalPlannedContracts(playerId))*100)/100));
+  }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
   function contractDisplayText(value){return contractText(value)+"%";}
   function plannerAgeMarker(player){
@@ -106,6 +116,9 @@
     element.setAttribute("aria-label",marker.label);
     host.appendChild(element);
   }
+  function normalizePlannerSearchQuery(value){
+    return String(value??"").trim().toLocaleLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"").replace(/\s+/g," ");
+  }
   function clearPlayerResults(){
     playerSearchSequence+=1;
     if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
@@ -130,11 +143,44 @@
     const contracts=roster.map(player=>Number(player?.planned_contract_value)).filter(Number.isFinite);
     if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(2):"—";
     if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(2):"—";
-    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2)+"%":"—";
+    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+Math.min(100,contracts.reduce((sum,value)=>sum+value,0)).toFixed(2)+"%":"—";
   }
   function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
   function updateAddPlayerAvailability(){
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=availablePlayerSlots()===0;
+  }
+  function makePlannerActionText(label,{disabled=false,pressed=false,onActivate=null}={}){
+    const action=document.createElement("span");
+    action.className="plannerPlayerActionText";
+    action.textContent=label;
+    action.setAttribute("role","button");
+    action.setAttribute("aria-disabled",String(disabled));
+    action.setAttribute("aria-pressed",String(pressed));
+    if(!disabled){
+      action.tabIndex=0;
+      action.addEventListener("click",()=>onActivate?.());
+      action.addEventListener("keydown",event=>{
+        if(event.key==="Enter"||event.key===" "){event.preventDefault();onActivate?.();}
+      });
+    }
+    return action;
+  }
+  function appendPlannerPlayerTableCells(row,player){
+    const flagCell=document.createElement("td");
+    flagCell.className="plannerPlayerSearchFlagCell";
+    const flag=typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null;
+    if(flag)flagCell.appendChild(flag);
+    else flagCell.textContent="—";
+    const nameCell=document.createElement("td");
+    nameCell.className="plannerPlayerSearchNameCell";
+    nameCell.textContent=String(player?.name||"Unknown player");
+    const positionCell=document.createElement("td");
+    positionCell.textContent=String(player?.positions||"—");
+    const ageCell=document.createElement("td");
+    ageCell.textContent=player?.age===null||player?.age===undefined||player?.age===""?"—":String(player.age);
+    const overallCell=document.createElement("td");
+    overallCell.textContent=player?.overall===null||player?.overall===undefined||player?.overall===""?"—":String(player.overall);
+    row.append(flagCell,nameCell,positionCell,ageCell,overallCell);
   }
   function renderPendingPlayers(){
     const selected=[...pendingPlayers.values()];
@@ -145,30 +191,25 @@
       playerSelectionStatus.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" in squad · "+selected.length+" selected · "+Math.max(0,slots-selected.length)+" spots remaining";
     }
     if(playerConfirmButton instanceof HTMLButtonElement)playerConfirmButton.disabled=!selected.length;
-    if(!(playerSelectionList instanceof HTMLElement))return;
+    if(!(playerSelectionBody instanceof HTMLElement))return;
     const fragment=document.createDocumentFragment();
     for(const player of selected){
-      const item=document.createElement("button");
-      item.type="button";
-      item.className="plannerPendingPlayer";
-      item.dataset.playerId=String(player.player_id);
-      item.setAttribute("aria-label","Remove "+String(player.name||"player")+" from selection");
-      const label=document.createElement("span");
-      label.textContent=String(player.name||"Unknown player")+" · "+String(player.positions||"—")+" · OVR "+String(player.overall??"—");
-      const remove=document.createElement("span");
-      remove.className="plannerPendingPlayerRemove";
-      remove.textContent="×";
-      remove.setAttribute("aria-hidden","true");
-      item.append(label,remove);
-      item.addEventListener("click",()=>{
+      const row=document.createElement("tr");
+      row.className="plannerPendingPlayer";
+      row.dataset.playerId=String(player.player_id);
+      appendPlannerPlayerTableCells(row,player);
+      const actionCell=document.createElement("td");
+      actionCell.className="plannerPlayerSearchActionCell";
+      actionCell.appendChild(makePlannerActionText("Remove",{onActivate:()=>{
         pendingPlayers.delete(Number(player.player_id));
         renderPendingPlayers();
         const q=playerSearchInput?.value.trim()||"";
         if(q)void requestPlayers(q);
-      });
-      fragment.appendChild(item);
+      }}));
+      row.appendChild(actionCell);
+      fragment.appendChild(row);
     }
-    playerSelectionList.replaceChildren(fragment);
+    playerSelectionBody.replaceChildren(fragment);
   }
   function closePlayerModal({focusButton=false}={}){
     clearTimeout(playerSearchTimer);
@@ -187,6 +228,7 @@
     if(!(playerModal instanceof HTMLElement)||!(playerSearchInput instanceof HTMLInputElement)||availablePlayerSlots()===0)return;
     pendingPlayers.clear();
     renderPendingPlayers();
+    if(playerModal.parentElement!==document.body)document.body.appendChild(playerModal);
     playerModal.hidden=false;
     playerModal.classList.toggle("modalOpen",true);
     playerSearchInput.value="";
@@ -200,7 +242,9 @@
     if(Number(player?.retirement_years)===0)return false;
     if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
-    roster.push({...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)});
+    const availableContract=Math.max(0,100-totalPlannedContracts());
+    const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
+    roster.push({...player,planned_contract_value:plannedContract});
     sortPlannerRoster();
     if(render)renderRoster();
     return true;
@@ -247,40 +291,16 @@
       row.classList.toggle("selected",selected);
       row.classList.toggle("inSquad",inSquad);
 
-      const flagCell=document.createElement("td");
-      flagCell.className="plannerPlayerSearchFlagCell";
-      const flag=typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null;
-      if(flag)flagCell.appendChild(flag);
-      else flagCell.textContent="—";
-
-      const nameCell=document.createElement("td");
-      nameCell.className="plannerPlayerSearchNameCell";
-      nameCell.textContent=String(player?.name||"Unknown player");
-
-      const positionsCell=document.createElement("td");
-      positionsCell.textContent=String(player?.positions||"—");
-
-      const ageCell=document.createElement("td");
-      ageCell.textContent=player?.age===null||player?.age===undefined||player?.age===""?"—":String(player.age);
-
-      const overallCell=document.createElement("td");
-      overallCell.textContent=player?.overall===null||player?.overall===undefined||player?.overall===""?"—":String(player.overall);
-
+      appendPlannerPlayerTableCells(row,player);
       const actionCell=document.createElement("td");
       actionCell.className="plannerPlayerSearchActionCell";
-      const button=document.createElement("button");
-      button.type="button";
-      button.className="compactButton plannerPlayerSelectButton";
-      button.dataset.playerId=String(playerId);
-      button.disabled=inSquad||atCapacity;
-      button.setAttribute("aria-pressed",String(selected));
-      button.textContent=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select";
-      button.addEventListener("click",()=>{
-        if(togglePendingPlayer(player))renderPlayerResults(payload,query);
-      });
-      actionCell.appendChild(button);
-
-      row.append(flagCell,nameCell,positionsCell,ageCell,overallCell,actionCell);
+      const label=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select";
+      actionCell.appendChild(makePlannerActionText(label,{
+        disabled:inSquad||atCapacity,
+        pressed:selected,
+        onActivate:()=>{if(togglePendingPlayer(player))renderPlayerResults(payload,query);}
+      }));
+      row.appendChild(actionCell);
       fragment.appendChild(row);
       visibleRows+=1;
     }
@@ -300,7 +320,7 @@
       const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(payload?.error||"Could not search players.");
-      if(seq!==playerSearchSequence||playerSearchInput?.value.trim()!==q)return null;
+      if(seq!==playerSearchSequence||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q))return null;
       renderPlayerResults(payload,q);
       return payload;
     }catch(error){
@@ -374,7 +394,7 @@
         if(commit){
           const raw=contractInput.value.trim();
           const numeric=Number(raw);
-          if(raw&&Number.isFinite(numeric))player.planned_contract_value=normalizeContractValue(numeric);
+          if(raw&&Number.isFinite(numeric))player.planned_contract_value=Math.min(normalizeContractValue(numeric),contractLimitForPlayer(player.player_id));
           renderRosterTotals();
         }
         contractValue.textContent=contractDisplayText(player.planned_contract_value);
@@ -409,13 +429,14 @@
         const parts=raw.split(".");
         if(parts.length>1)raw=parts[0]+"."+parts[1].slice(0,2);
         const numeric=Number(raw);
-        if(raw&&Number.isFinite(numeric)&&numeric>20)raw="20.00";
+        const limit=contractLimitForPlayer(player.player_id);
+        if(raw&&Number.isFinite(numeric)&&numeric>limit)raw=limit.toFixed(2);
         contractInput.value=raw;
       });
       const adjustContractDraft=(delta)=>{
         const current=Number(contractInput.value);
         const fallback=Number(player.planned_contract_value);
-        const next=normalizeContractValue((Number.isFinite(current)?current:fallback)+delta);
+        const next=Math.min(normalizeContractValue((Number.isFinite(current)?current:fallback)+delta),contractLimitForPlayer(player.player_id));
         contractInput.value=contractText(next);
       };
       increaseContract.addEventListener("mousedown",event=>event.preventDefault());
@@ -534,8 +555,8 @@
   });
   playerSearchInput?.addEventListener("keydown",event=>{
     if(event.key==="Enter"){
-      const first=playerSearchResults?.querySelector(".plannerPlayerSelectButton:not(:disabled)");
-      if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
+      const first=playerSearchResults?.querySelector('.plannerPlayerActionText:not([aria-disabled="true"])');
+      if(first instanceof HTMLElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){event.preventDefault();closePlayerModal({focusButton:true});}
   });
   playerSearchClearButton?.addEventListener("click",()=>{
