@@ -110,6 +110,22 @@ assert.match(
 );
 assert.match(
   responsiveSource,
+  /@media \(min-width: 701px\) and \(max-width: 900px\) \{[\s\S]*--mfl-responsive-table-age-marker-size: 10px;/,
+  "Age status markers must stop growing above their <=700px mobile size before the compact-shell band.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-responsive-table-age-marker-size: clamp\(10px, calc\(6\.124731px \+ 0\.430108vw\), 12px\);/,
+  "Age status markers must use the slower 10-12px intermediate scale through 1366px.",
+);
+assert.match(
+  responsiveSource,
+  /@media \(min-width: 1367px\) and \(max-width: 1664px\) \{[\s\S]*--mfl-responsive-table-age-marker-size: clamp\(12px, calc\(-6\.410774px \+ 1\.346801vw\), 16px\);/,
+  "Age status markers must rejoin the normal 16px desktop size smoothly by 1664px.",
+);
+
+assert.match(
+  responsiveSource,
   /--mfl-responsive-table-sort-arrow-half-width: clamp\(2px,[\s\S]*4px\);[\s\S]*--mfl-responsive-table-sort-arrow-height: clamp\(3px,[\s\S]*6px\);[\s\S]*--mfl-responsive-table-sort-arrow-gap: clamp\(1px,[\s\S]*3px\);/,
   "Sort arrows must scale continuously with the rest of the responsive table icon system.",
 );
