@@ -50,7 +50,23 @@ invariant(
     && planner.includes('plannerState.assignments.set(sourceSlotId, targetPlayerId)'),
   "Planner must swap two occupied pitch slots instead of silently dropping the displaced player.",
 );
-invariant(club.includes("clubIdentityPlannerLink"), "Club pages must expose Open in Planner.");
+invariant(
+  !html.includes("plannerPageIntro")
+    && !html.includes("Build, save and share Club lineups."),
+  "Planner page must not render a subtitle under its title.",
+);
+invariant(
+  !html.includes("clubIdentityPlannerLink")
+    && !club.includes("clubIdentityPlannerLink")
+    && !styles.includes(".clubIdentityPlannerLink"),
+  "Club pages must not expose an Open in Planner button.",
+);
+invariant(
+  planner.includes("__mflDropdowns")
+    && planner.includes("syncSelect(savedPlanSelect)")
+    && planner.includes("syncSelect(formationSelect)"),
+  "Planner Saved Plans and Formation controls must opt into the canonical dropdown lifecycle after the lazy page becomes visible.",
+);
 invariant(Array.isArray(formationData) && formationData.length >= 5 && formationData.every(item => Array.isArray(item.slots) && item.slots.length === 11), "Planner formations must stay data-driven with eleven slots.");
 invariant(
   planner.includes('"/planner-formations.json"')
@@ -76,8 +92,11 @@ invariant(
 );
 invariant(
   browserRouting.includes("plannerClubPageRequests")
+    && browserRouting.includes("plannerClubSearchRequests")
     && browserRouting.includes('"planner-saved"')
-    && browserRouting.includes("plannerLoadingPitchGeometry"),
+    && browserRouting.includes("plannerLoadingPitchGeometry")
+    && browserRouting.includes("Planner Club search did not return the expected result")
+    && browserRouting.includes("Planner dropdowns did not use the canonical enhanced-select lifecycle"),
   "Rendered Planner coverage must protect cached Club reuse, loading geometry, and saved/shared plan restoration.",
 );
 invariant(styles.includes(".plannerPitch") && styles.includes("@media (max-width: 900px)"), "Planner must provide responsive pitch/roster geometry.");
