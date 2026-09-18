@@ -94,7 +94,7 @@ invariant(
   "The public identity endpoint must combine canonical runtime/data identity with deployment commit and conditional revalidation.",
 );
 invariant(
-  nextConfig.includes('MFL_DEPLOY_COMMIT: String(process.env.MFL_DEPLOY_COMMIT || "").trim()'),
+  nextConfig.includes("MFL_DEPLOY_COMMIT: deploymentCommit") && nextConfig.includes("resolveDeploymentCommit({ root })"),
   "Next builds must bind the deployment commit into the server runtime identity.",
 );
 invariant(
