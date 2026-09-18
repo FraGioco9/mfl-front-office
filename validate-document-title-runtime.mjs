@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import { includes, excludes } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
@@ -102,5 +103,23 @@ for (const [visible, full, busy, expected] of [
 }
 includes(runtime, '"data-player-full-name"', "Browser titles must resync when full identity changes without changing the abbreviated label.");
 includes(runtime, '"data-initial-evaluation-player-name"', "Browser titles must resync if the early full Evaluation identity arrives before the visible panel.");
+
+
+
+// A stale document must not seed a not-found title while a known route is busy.
+for (const initialTitle of ["Planner - MFL Front Office", "Page not found - MFL Front Office"]) {
+  const document = {
+    title: initialTitle,
+    body: { dataset: { page: "notfound" } },
+    documentElement: { dataset: { interactionBusy: "true" } },
+    querySelector: () => null,
+  };
+  vm.runInNewContext(runtime, {
+    document,
+    window: { location: { pathname: "/planner", search: "" }, addEventListener() {} },
+    MutationObserver: class { observe() {} },
+  });
+  assert.equal(document.title, "Planner - MFL Front Office");
+}
 
 console.log("Document-title runtime validation passed: parser-time route fallbacks and canonical SPA ownership keep viewport-independent titles stable through hydration.");
