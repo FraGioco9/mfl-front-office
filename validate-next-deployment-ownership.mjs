@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
-import { resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
+import { deploymentCommitModulePath, resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
 import { verifyPrebuiltDeploymentCommit } from "./scripts/workflows/verify-prebuilt-deployment-commit.mjs";
 import { verifyNextBuildDeploymentCommit } from "./scripts/workflows/verify-next-build-deployment-commit.mjs";
 
@@ -148,6 +148,11 @@ try {
     resolveDeploymentCommit({ root: fixtureRoot, env: {} }) === fixtureCommit,
     "Deployment commit files must round-trip through the canonical build owner.",
   );
+  const fixtureCommitModule = await readFile(deploymentCommitModulePath(fixtureRoot), "utf8");
+  invariant(
+    fixtureCommitModule === `module.exports = "${fixtureCommit}";\n`,
+    "Deployment commit binding must materialize the exact source SHA into the API bundle input.",
+  );
   let mismatchRejected = false;
   try {
     resolveDeploymentCommit({ root: fixtureRoot, env: { MFL_DEPLOY_COMMIT: "b".repeat(40) } });
@@ -163,6 +168,10 @@ try {
     malformedRejected = true;
   }
   invariant(malformedRejected, "Malformed deployment commit inputs must fail before build.");
+  invariant(
+    (await readFile(deploymentCommitModulePath(fixtureRoot), "utf8")) === fixtureCommitModule,
+    "Rejected deployment commit writes must not corrupt the previously materialized API bundle identity.",
+  );
 
   const fixtureNextManifest = resolve(fixtureRoot, ".next/required-server-files.json");
   await mkdir(resolve(fixtureRoot, ".next"), { recursive: true });
