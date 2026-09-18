@@ -35,14 +35,19 @@ invariant(
   "Home must be a concrete Next page so development tooling has a canonical root route.",
 );
 invariant(
-  pageSource.includes("export function getServerSideProps()")
-    && pageSource.includes("return { props: {} };"),
+  pageSource.includes("export function getServerSideProps(context)")
+    && pageSource.includes("initialDocumentTitle(context?.resolvedUrl)"),
   "Deep-route catch-all must remain server-resolved so direct production requests cannot be statically optimized into Vercel 404s.",
 );
 invariant(
-  pageSource.includes("export default function MflLegacyShellRoutePage()")
-    && pageSource.includes("return null;"),
-  "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
+  pageSource.includes('if (pathname === "/planner") return "Planner - MFL Front Office";')
+    && pageSource.includes('React.createElement("title", null, initialDocumentTitle)'),
+  "Planner refreshes must server-render their browser title before first paint.",
+);
+invariant(
+  pageSource.includes("export default function MflLegacyShellRoutePage({ initialDocumentTitle = \"\" })")
+    && pageSource.includes("if (!initialDocumentTitle) return null;"),
+  "Required deep-route Next page must remain visually empty while allowing route-owned head metadata.",
 );
 invariant(
   nextConfig.includes('devIndicators: { position: "bottom-left" }'),
