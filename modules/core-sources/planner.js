@@ -76,6 +76,7 @@
     return normalizeContractValue(Number.isFinite(numeric)?numeric/100:0);
   }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
+  function contractDisplayText(value){return contractText(value)+"%";}
   function plannerAgeMarker(player){
     const retirementYears=player?.retirement_years===null||player?.retirement_years===undefined||String(player.retirement_years).trim()===""?null:Number(player.retirement_years);
     if([1,2,3].includes(retirementYears)){
@@ -123,9 +124,9 @@
     const ages=roster.map(player=>Number(player?.age)).filter(Number.isFinite);
     const overalls=roster.map(player=>Number(player?.overall)).filter(Number.isFinite);
     const contracts=roster.map(player=>Number(player?.planned_contract_value)).filter(Number.isFinite);
-    if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(1):"—";
-    if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(1):"—";
-    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2):"—";
+    if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(2):"—";
+    if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(2):"—";
+    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2)+"%":"—";
   }
   function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
   function updateAddPlayerAvailability(){
@@ -313,7 +314,7 @@
       contractControl.className="plannerContractControl";
       const contractValue=document.createElement("span");
       contractValue.className="plannerContractValue";
-      contractValue.textContent=contractText(player.planned_contract_value);
+      contractValue.textContent=contractDisplayText(player.planned_contract_value);
       const contractEditor=document.createElement("span");
       contractEditor.className="plannerContractEditor";
       contractEditor.hidden=true;
@@ -350,7 +351,7 @@
           if(raw&&Number.isFinite(numeric))player.planned_contract_value=normalizeContractValue(numeric);
           renderRosterTotals();
         }
-        contractValue.textContent=contractText(player.planned_contract_value);
+        contractValue.textContent=contractDisplayText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
         contractValue.hidden=false;
         contractEditor.hidden=true;
