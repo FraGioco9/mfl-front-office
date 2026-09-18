@@ -124,8 +124,8 @@ assert.equal(body.children.some(row => row.dataset.playerId === "9"), false, "St
 assert.equal(route.confirmPendingPlayers(), true, "Add selected must commit the staged batch");
 assert.equal(body.children.some(row => row.dataset.playerId === "9"), true, "Confirmed staged player must enter the squad");
 assert.equal(body.children.some(row => row.dataset.playerId === "10"), true, "All staged players must be committed together");
-for(let id=20;id<40&&body.children.length<24;id+=1){
-  route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5 }, { render:false });
+for(let id=20;id<39;id+=1){
+  assert.equal(route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5 }, { render:false }), true);
 }
 assert.equal(route.togglePendingPlayer({ player_id: 90, name: "Final Slot", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), true, "Modal selection must allow the final available squad slot");
 assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Modal selection must stop when staged squad size reaches 25");
