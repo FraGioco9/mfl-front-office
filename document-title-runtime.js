@@ -56,7 +56,6 @@
   }
 
   function fallbackRoutePageName() {
-    if (document.body?.dataset.page === "notfound") return "notfound";
     const firstPart = String(window.location.pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
     if (!firstPart) return "home";
     if (firstPart === "my-players") return "myplayers";
@@ -66,6 +65,7 @@
     if (["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
+    if (document.body?.dataset.page === "notfound") return "notfound";
     return "notfound";
   }
 
