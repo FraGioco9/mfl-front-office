@@ -335,7 +335,7 @@ const browserTestSource = String.raw`(() => {
       ".siteFooterDetails",
       ".siteFooterDetailsInner",
     ]) {
-      if (viewportWidth <= 900 && selector.startsWith(".stats")) {
+      if (viewportWidth <= 1366 && selector.startsWith(".stats")) {
         assert(hidden(".stats"), "Mobile header counters should use the compact hidden state.");
         continue;
       }
