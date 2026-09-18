@@ -21,7 +21,7 @@ const testPlayer = Object.freeze({
   positions: "ST",
   age: 23,
   nationality: "Italy",
-  retirement_years: 2,
+  retirement_years: 5,
   owned_since: 1700000000,
   player_seasons: 5,
   overall: 80,
@@ -1687,7 +1687,10 @@ function pageDataStub(url, scenario = "") {
       logoUrl: browserClubLogo9002,
     },
   };
-  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [rowForColumns(pageColumns)] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const plannerRow = pageColumns.map((column) => (
+    column === "retirement_years" ? 2 : (testPlayer[column] ?? null)
+  ));
+  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
