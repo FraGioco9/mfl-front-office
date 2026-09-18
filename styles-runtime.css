@@ -11226,7 +11226,7 @@ html:not(.mflInitialRouteResolved):is(
 
     --mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);
     --mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);
-    --mfl-responsive-table-age-marker-size: clamp(8px, calc(5.791411px + 0.613497vw), 16px);
+    --mfl-responsive-table-age-marker-size: clamp(8px, calc(6.666667px + 0.370370vw), 10px);
     --mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);
     --mfl-responsive-table-rarity-size: clamp(5px, calc(4.171779px + 0.230061vw), 8px);
     --mfl-responsive-table-checkbox-size: clamp(10px, calc(8.343558px + 0.460123vw), 16px);
@@ -11265,16 +11265,9 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
-/* Age-adjacent status markers need a quieter scale than the other table controls.
- * Keep <=700px behavior intact, hold around 10px near the mobile/tablet handoff,
- * then grow gradually through the compact shell before rejoining the 16px desktop size.
+/* Age-adjacent status markers use a quieter continuous scale than the other table controls:
+ * 8px on very small screens -> 10px at 900px -> 12px at 1366/1367px -> 16px at 1664px.
  */
-@media (min-width: 701px) and (max-width: 900px) {
-  :root {
-    --mfl-responsive-table-age-marker-size: 10px;
-  }
-}
-
 @media (min-width: 901px) and (max-width: 1366px) {
   :root {
     --mfl-responsive-table-age-marker-size: clamp(10px, calc(6.124731px + 0.430108vw), 12px);
