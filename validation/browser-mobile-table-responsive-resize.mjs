@@ -122,13 +122,16 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
         assert.equal(stage.hoverNone, true, "Mobile hover capability is not none at " + contract.width + "px: " + stageDetail);
         assert.equal(stage.devicePixelRatio, 3, "Mobile DPR is wrong at " + contract.width + "px: " + stageDetail);
       }
-      assert.equal(Number.isFinite(stage.ageGapPx), true, "Age/marker gap must resolve to a responsive pixel value at " + contract.width + "px: " + stageDetail);\n      assert.ok(Math.abs(stage.ageGapPx - contract.gap) <= 0.08, "Age/marker gap is wrong at " + contract.width + "px: " + stageDetail);
+      assert.equal(Number.isFinite(stage.ageGapPx), true, "Age/marker gap must resolve to a responsive pixel value at " + contract.width + "px: " + stageDetail);
+      assert.ok(Math.abs(stage.ageGapPx - contract.gap) <= 0.08, "Age/marker gap is wrong at " + contract.width + "px: " + stageDetail);
       if (contract.icon) assert.equal(stage.listingIconWidth, contract.icon, "Listing icon width is wrong at " + contract.width + "px: " + stageDetail);
       if (contract.marker) {
         assert.equal(stage.ageMarkerWidth, contract.marker, "Age status marker width is wrong at " + contract.width + "px: " + stageDetail);
-        assert.equal(stage.ageMarkerGraphicWidth, contract.marker, "Visible Age status icon drawing width is wrong at " + contract.width + "px: " + stageDetail);\n        assert.equal(stage.ageMarkerHeight, contract.marker, "Age status marker must keep a 1:1 width/height proportion at " + contract.width + "px: " + stageDetail);
+        assert.equal(stage.ageMarkerGraphicWidth, contract.marker, "Visible Age status icon drawing width is wrong at " + contract.width + "px: " + stageDetail);
+        assert.equal(stage.ageMarkerHeight, contract.marker, "Age status marker must keep a 1:1 width/height proportion at " + contract.width + "px: " + stageDetail);
         assert.equal(stage.ageMarkerInsideCell, true, "Age status marker must stay inside its Age cell at " + contract.width + "px: " + stageDetail);
-        assert.equal(stage.ageMarkerMaskFitsBox, true, "Retirement icon mask must fit its responsive marker box at " + contract.width + "px: " + stageDetail);\n        assert.equal(stage.ageMarkerMaskSize, "contain", "Retirement icon mask must preserve its intrinsic proportions while scaling at " + contract.width + "px: " + stageDetail);
+        assert.equal(stage.ageMarkerMaskFitsBox, true, "Retirement icon mask must fit its responsive marker box at " + contract.width + "px: " + stageDetail);
+        assert.equal(stage.ageMarkerMaskSize, "contain", "Retirement icon mask must preserve its intrinsic proportions while scaling at " + contract.width + "px: " + stageDetail);
       }
     });
 
