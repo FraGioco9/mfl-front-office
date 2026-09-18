@@ -27,6 +27,8 @@
   const playerSearchInput=/** @type {HTMLInputElement|null} */(document.getElementById("plannerPlayerSearchInput"));
   const playerSearchClearButton=document.getElementById("plannerPlayerSearchClearButton");
   const playerSearchResults=document.getElementById("plannerPlayerSearchResults");
+  const playerSearchBody=document.getElementById("plannerPlayerSearchBody");
+  const playerSearchEmpty=document.getElementById("plannerPlayerSearchEmpty");
   const playerSelection=document.getElementById("plannerPlayerSelection");
   const playerSelectionStatus=document.getElementById("plannerPlayerSelectionStatus");
   const playerSelectionCount=document.getElementById("plannerPlayerSelectionCount");
@@ -107,7 +109,9 @@
   }
   function clearPlayerResults(){
     playerSearchSequence+=1;
-    if(playerSearchResults instanceof HTMLElement){playerSearchResults.hidden=true;playerSearchResults.replaceChildren();}
+    if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
+    if(playerSearchEmpty instanceof HTMLElement)playerSearchEmpty.hidden=true;
+    if(playerSearchResults instanceof HTMLElement)playerSearchResults.hidden=true;
   }
   function primaryPlannerPosition(player){
     return String(player?.positions||"").split(",")[0].trim().toUpperCase();
@@ -226,51 +230,73 @@
     return Boolean(added);
   }
   function renderPlayerResults(payload,query=""){
-    if(!(playerSearchResults instanceof HTMLElement))return;
+    if(!(playerSearchResults instanceof HTMLElement)||!(playerSearchBody instanceof HTMLElement))return;
     const columns=Array.isArray(payload?.columns)?payload.columns:[];
     const rows=Array.isArray(payload?.rows)?payload.rows:[];
     const fragment=document.createDocumentFragment();
+    let visibleRows=0;
     for(const values of rows){
       const player=Object.fromEntries(columns.map((column,index)=>[column,values[index]]));
       const playerId=Number(player?.player_id);
-      if(Number(player?.retirement_years)===0||roster.some(candidate=>Number(candidate.player_id)===playerId))continue;
+      if(Number(player?.retirement_years)===0)continue;
+      const inSquad=roster.some(candidate=>Number(candidate.player_id)===playerId);
       const selected=pendingPlayers.has(playerId);
-      const atCapacity=!selected&&pendingPlayers.size>=availablePlayerSlots();
+      const atCapacity=!selected&&!inSquad&&pendingPlayers.size>=availablePlayerSlots();
+      const row=document.createElement("tr");
+      row.className="plannerPlayerSearchResult";
+      row.dataset.playerId=String(playerId);
+      row.classList.toggle("selected",selected);
+      row.classList.toggle("inSquad",inSquad);
+
+      const flagCell=document.createElement("td");
+      flagCell.className="plannerPlayerSearchFlagCell";
+      const flag=typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null;
+      if(flag)flagCell.appendChild(flag);
+      else flagCell.textContent="—";
+
+      const nameCell=document.createElement("td");
+      nameCell.className="plannerPlayerSearchNameCell";
+      nameCell.textContent=String(player?.name||"Unknown player");
+
+      const positionsCell=document.createElement("td");
+      positionsCell.textContent=String(player?.positions||"—");
+
+      const ageCell=document.createElement("td");
+      ageCell.textContent=player?.age===null||player?.age===undefined||player?.age===""?"—":String(player.age);
+
+      const overallCell=document.createElement("td");
+      overallCell.textContent=player?.overall===null||player?.overall===undefined||player?.overall===""?"—":String(player.overall);
+
+      const actionCell=document.createElement("td");
+      actionCell.className="plannerPlayerSearchActionCell";
       const button=document.createElement("button");
       button.type="button";
-      button.className="searchResult playerSearchResult plannerPlayerSearchResult";
+      button.className="compactButton plannerPlayerSelectButton";
       button.dataset.playerId=String(playerId);
-      button.classList.toggle("selected",selected);
-      button.disabled=atCapacity;
-      button.setAttribute("role","option");
-      button.setAttribute("aria-selected",String(selected));
-      const title=document.createElement("strong");
-      title.textContent=String(player?.name||"Unknown player");
-      const meta=document.createElement("span");
-      meta.textContent="Player · #"+String(player?.player_id||"")+" · "+String(player?.positions||"—")+" · OVR "+String(player?.overall??"—");
-      const selectionState=document.createElement("span");
-      selectionState.className="plannerPlayerResultSelection";
-      selectionState.textContent=selected?"Selected":atCapacity?"Squad full":"Select";
-      button.append(title,meta,selectionState);
+      button.disabled=inSquad||atCapacity;
+      button.setAttribute("aria-pressed",String(selected));
+      button.textContent=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select";
       button.addEventListener("click",()=>{
         if(togglePendingPlayer(player))renderPlayerResults(payload,query);
       });
-      fragment.appendChild(button);
+      actionCell.appendChild(button);
+
+      row.append(flagCell,nameCell,positionsCell,ageCell,overallCell,actionCell);
+      fragment.appendChild(row);
+      visibleRows+=1;
     }
-    if(!fragment.childNodes.length&&query){
-      const empty=document.createElement("div");
-      empty.className="searchHint";
-      empty.textContent="No eligible players found.";
-      fragment.appendChild(empty);
+    playerSearchBody.replaceChildren(fragment);
+    if(playerSearchEmpty instanceof HTMLElement){
+      playerSearchEmpty.textContent=query?"No players found.":"Search by player ID or name.";
+      playerSearchEmpty.hidden=visibleRows>0;
     }
-    playerSearchResults.replaceChildren(fragment);
-    playerSearchResults.hidden=!playerSearchResults.childNodes.length;
+    playerSearchResults.hidden=false;
   }
   async function requestPlayers(query){
     const q=String(query||"").trim();
     if(!q){clearPlayerResults();return null;}
     const seq=++playerSearchSequence;
-    const params=new URLSearchParams({mode:"search",type:"players",limit:"10",q});
+    const params=new URLSearchParams({mode:"search",type:"players",limit:"25",q});
     try{
       const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
       const payload=await response.json().catch(()=>({}));
@@ -509,7 +535,7 @@
   });
   playerSearchInput?.addEventListener("keydown",event=>{
     if(event.key==="Enter"){
-      const first=playerSearchResults?.querySelector(".plannerPlayerSearchResult");
+      const first=playerSearchResults?.querySelector(".plannerPlayerSelectButton:not(:disabled)");
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){event.preventDefault();closePlayerModal({focusButton:true});}
   });
