@@ -71,10 +71,10 @@ includes(sharedSource, "For Sale at", "Canonical shared Listing markup must reta
 includes(responsive, "#progressionPage .playerTableScroller .playerNameFullValue {\n    display: none;", "Mobile CSS must hide full player names.");
 includes(responsive, "#progressionPage .playerTableScroller .playerNameCompactValue {\n    display: inline;", "Mobile CSS must show N. Surname names.");
 includes(responsive, "#progressionPage .playerTableScroller .listingCellPrice {\n    display: none;", "Mobile CSS must switch Listing to icon-only without changing DOM.");
-includes(responsive, "#progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {\n    gap: 2px;", "Narrow mobile CSS must reduce Age/icon spacing to 2px.");
+includes(responsive, "--mfl-responsive-table-age-marker-gap: clamp(1px, calc(-0.656442px + 0.460123vw), 7px);", "Responsive table CSS must define one continuous Age/icon spacing scale.");
 includes(responsive, "#progressionPage .playerTableScroller .joinedAgencyFullValue {\n    display: none;", "Phone CSS must hide the full Joined Agency value.");
 includes(responsive, "#progressionPage .playerTableScroller .joinedAgencyCompactValue {\n    display: inline;", "Phone CSS must show the compact Joined Agency value.");
-includes(responsive, "#progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {\n    gap: 1px;", "Tiny mobile CSS must reduce Age/icon spacing to 1px.");
+includes(responsive, "#progressionPage .playerTableScroller td.col-age .tableControlCellContent {\n    gap: var(--mfl-responsive-table-age-marker-gap);", "Age/icon spacing must consume the continuous responsive gap token.");
 
 includes(staticUi, 'const MOBILE_TOOLTIP_MEDIA = window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)");', "Global tooltip ownership must recognize mobile input.");
 includes(staticUi, "function onTooltipClick(event)", "Mobile tooltips must be click/tap driven.");
