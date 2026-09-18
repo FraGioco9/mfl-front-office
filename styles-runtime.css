@@ -7569,7 +7569,7 @@ html.mflDataLoading #pageSizeSelect {
 #plannerTeamDivision{font-size:12px;font-weight:700}
 #plannerTeamClearButton{flex-shrink:0;margin-left:auto}
 
-.plannerWorkspace{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);align-items:start;gap:32px;margin-top:24px}
+.plannerWorkspace{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:start;gap:32px;margin-top:24px}
 .plannerWorkspace[hidden],.plannerRosterPanel [hidden]{display:none}
 .plannerRosterPanel,.plannerPitchPanel{min-width:0}
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
