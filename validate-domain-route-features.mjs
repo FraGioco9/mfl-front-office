@@ -18,6 +18,7 @@ const validators = [
   "validate-watchlist-route-core.mjs",
   "validate-watchlist-progression-access.mjs",
   "validate-watchlist-selector-navigation.mjs",
+  "validate-planner.mjs",
 ];
 
 for (const validator of validators) {
