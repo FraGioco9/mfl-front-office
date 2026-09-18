@@ -6,6 +6,7 @@ import { createServer as createNetServer } from "node:net";
 import { extname, join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { Script } from "node:vm";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
@@ -559,8 +560,6 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialRouteShell === "plannerPage", "Planner canonical first-paint shell is wrong: " + parserSnapshot.initialRouteShell);
       assert(parserSnapshot.homeHidden === true, "Planner direct first paint exposed Home.");
       assert(parserSnapshot.title === "Planner - MFL Front Office", "Planner parser-time title is wrong: " + parserSnapshot.title);
-    } else if (scenario === "planner") {
-      await setPage("planner", true, { clubId: "9001" });
     } else if (scenario === "mflstats") {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
@@ -1183,6 +1182,10 @@ const browserTestSource = String.raw`(() => {
       await setPage("player", true, { playerId: "1" });
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       await setPage("watchlist", true, { watchlistId: testWatchlistId, view: "current" });
+    } else if (scenario === "planner") {
+      markPhase("navigate-back:set-planner");
+      await setPage("planner", true, { clubId: "9001" });
+      markPhase("navigate-back:planner-returned");
     } else if (scenario === "mflstats") {
       const requestsBefore = mflStatsSummaryRequests;
       await setPage("mfl", true, { view: "stats" });
@@ -1494,6 +1497,8 @@ const browserTestSource = String.raw`(() => {
     window.addEventListener("mfl:ready", () => void run(), { once: true });
   }
 })();`;
+
+new Script(browserTestSource, { filename: "browser-routing-regression.injected.js" });
 
 function browserExecutable() {
   const candidates = [
