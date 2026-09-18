@@ -7601,12 +7601,18 @@ html.mflDataLoading #pageSizeSelect {
 .plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:14px;height:14px;flex-basis:14px}
 .plannerContractControl{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:0}
 .plannerContractValue{min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
-.plannerContractInput{box-sizing:border-box;width:58px;max-width:100%;min-width:0;height:24px;padding:1px 4px;text-align:right;font-variant-numeric:tabular-nums}
-.plannerContractInput[hidden]{display:none}
+.plannerContractEditor{display:grid;grid-template-columns:minmax(0,1fr) 18px;align-items:center;gap:4px}
+.plannerContractEditor[hidden]{display:none}
+.plannerContractInput{box-sizing:border-box;width:58px;max-width:100%;min-width:0;height:28px;padding:2px 6px;appearance:textfield;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+.plannerContractInput::-webkit-inner-spin-button,.plannerContractInput::-webkit-outer-spin-button{margin:0;-webkit-appearance:none}
+.plannerContractInput:hover:not(:disabled),.plannerContractInput:focus:not(:disabled),.plannerContractInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}
+.plannerContractStepper{display:grid;gap:2px}
+.plannerContractStepper button{width:18px;height:13px;min-height:13px;padding:0;border-radius:3px;font-size:8px;line-height:1}
 .plannerContractEditButton{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-height:18px;padding:0;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text-soft);font-size:12px;line-height:1;cursor:pointer}
 .plannerContractEditButton:hover,.plannerContractEditButton:focus-visible{background:var(--row-hover);color:var(--text)}
-.plannerRosterRemove{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-height:22px;padding:0;border:0;background:transparent;box-shadow:none;color:var(--danger);font:700 20px/1 Arial,sans-serif;cursor:pointer}
-.plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:transparent;box-shadow:none;color:var(--danger);outline:0}
+.plannerRosterRemove{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-height:22px;padding:0;border:0;border-radius:4px;background:transparent;box-shadow:none;color:var(--danger);font:700 20px/1 Arial,sans-serif;cursor:pointer}
+.plannerRosterTable tbody tr:has(.plannerRosterRemove:hover),.plannerRosterTable tbody tr:has(.plannerRosterRemove:focus-visible){background:color-mix(in srgb,var(--danger) 7%,var(--surface))}
+.plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:color-mix(in srgb,var(--danger) 14%,transparent);box-shadow:none;color:var(--danger);outline:0}
 .plannerRosterRemove:focus-visible{text-decoration:underline}
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
 .plannerRosterTable td:first-child .plannerRosterSkeleton{margin-left:0}
