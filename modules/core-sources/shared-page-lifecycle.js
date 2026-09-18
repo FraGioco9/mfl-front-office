@@ -266,6 +266,7 @@ function renderProtectedOptOutShell(pageName) {
   myPlayersLockedPage.hidden = false;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
+  plannerPage.hidden = true;
   settingsPage.hidden = true;
   changelogPage.hidden = true;
   privacyPage.hidden = true;
@@ -320,6 +321,12 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   return;
 }
 
+if (pageName === "planner") {
+    const plannerOwner = Reflect.get(window, "__mflRenderPlannerPageOwner");
+    if (typeof plannerOwner !== "function") throw new Error("Planner route owner is unavailable.");
+    return plannerOwner.call(this, updateHash, options);
+  }
+
 if (pageName === "my-clubs") {
     const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
     if (typeof myClubsOwner !== "function") throw new Error("My Clubs route owner is unavailable.");
@@ -348,6 +355,7 @@ if (pageName === "my-clubs") {
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
+    plannerPage.hidden = true;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
     privacyPage.hidden = true;
@@ -384,6 +392,7 @@ if (pageName === "my-clubs") {
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
+  plannerPage.hidden = true;
   settingsPage.hidden = !settingsPageActive;
   changelogPage.hidden = pageName !== "changelog";
   privacyPage.hidden = pageName !== "privacy";
