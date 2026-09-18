@@ -2,9 +2,19 @@ const formations = require("../planner-formations.json");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const ENTITY_ID = /^[1-9][0-9]{0,14}$/;
 const record = value => value !== null && typeof value === "object" && !Array.isArray(value);
+const MAX_SQUAD_PLAYERS = 50;
 
 function planId(value) {
   return typeof value === "string" && UUID.test(value) ? value : "";
+}
+
+function normalizeSquadPlayerIds(value) {
+  if (value === null || value === undefined) return null;
+  if (!Array.isArray(value) || value.length > MAX_SQUAD_PLAYERS) return undefined;
+  const normalized = value.map((rawId) => String(rawId ?? ""));
+  if (normalized.some((playerId) => !ENTITY_ID.test(playerId))) return undefined;
+  if (new Set(normalized).size !== normalized.length) return undefined;
+  return normalized;
 }
 
 function normalizePlan(value) {
@@ -13,6 +23,8 @@ function normalizePlan(value) {
   const clubId = String(value.clubId ?? "");
   const formation = formations.find(item => item.id === value.formationId);
   if (!name || name.length > 80 || !ENTITY_ID.test(clubId) || !formation || !record(value.assignments)) return null;
+  const squadPlayerIds = normalizeSquadPlayerIds(value.squadPlayerIds);
+  if (squadPlayerIds === undefined) return null;
   const slots = new Set(formation.slots.map(slot => slot.id));
   const players = new Set();
   const assignments = {};
@@ -22,11 +34,17 @@ function normalizePlan(value) {
     assignments[slot] = playerId;
     players.add(playerId);
   }
-  return { name, clubId, formationId: formation.id, assignments };
+  return { name, clubId, formationId: formation.id, assignments, squadPlayerIds };
 }
 
 function planColumns(plan) {
-  return { name: plan.name, club_id: plan.clubId, formation_id: plan.formationId, assignments: plan.assignments };
+  return {
+    name: plan.name,
+    club_id: plan.clubId,
+    formation_id: plan.formationId,
+    assignments: plan.assignments,
+    metadata: plan.squadPlayerIds === null ? {} : { squadPlayerIds: plan.squadPlayerIds },
+  };
 }
 
 function presentPlan(row, wallet) {
@@ -36,6 +54,7 @@ function presentPlan(row, wallet) {
     clubId: row.club_id,
     formationId: row.formation_id,
     assignments: row.assignments,
+    squadPlayerIds: Array.isArray(row?.metadata?.squadPlayerIds) ? row.metadata.squadPlayerIds.map((value) => String(value)) : null,
     visibility: row.visibility,
     revision: row.revision,
     schemaVersion: row.schema_version,

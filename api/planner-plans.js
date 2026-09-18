@@ -8,7 +8,7 @@ const { planId, normalizePlan, planColumns, presentPlan } = require("./_planner-
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const PAGE_SIZE = 50;
 const MAX_BODY_BYTES = 16 * 1024;
-const fields = "id,wallet_address,name,club_id,formation_id,assignments,visibility,revision,schema_version,created_at,updated_at";
+const fields = "id,wallet_address,name,club_id,formation_id,assignments,metadata,visibility,revision,schema_version,created_at,updated_at";
 const encoded = encodeURIComponent;
 const ownerFilter = wallet => `wallet_address=eq.${encoded(wallet)}`;
 const idFilter = id => `id=eq.${encoded(id)}`;

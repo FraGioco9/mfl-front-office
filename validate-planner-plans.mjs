@@ -22,7 +22,13 @@ const originalEnv = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_S
 process.env.SUPABASE_URL = "https://planner-test.invalid";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
 process.env.WALLET_CHALLENGE_ORIGIN = "http://localhost:4000";
-const payload = { name: "First XI", clubId: "123", formationId: "4-3-3", assignments: { GK: "42", ST: "43" } };
+const payload = {
+  name: "First XI",
+  clubId: "123",
+  formationId: "4-3-3",
+  assignments: {},
+  squadPlayerIds: ["42", "43", "44"],
+};
 let wallet = owner;
 let failStore = false;
 globalThis.fetch = async (input, options = {}) => {
@@ -73,6 +79,8 @@ try {
   assert.equal(plan.canEdit, true);
   assert.equal(plan.revision, 1);
   assert.deepEqual(plan.assignments, payload.assignments);
+  assert.deepEqual(plan.squadPlayerIds, payload.squadPlayerIds);
+  assert.deepEqual(rows.get(plan.id).metadata, { squadPlayerIds: payload.squadPlayerIds });
   assert.equal(rows.get(plan.id).wallet_address, owner);
   assert.equal(plan.wallet_address, undefined);
   const query = `?id=${plan.id}`;
@@ -108,6 +116,7 @@ try {
   assert.notEqual(duplicate.body.plan.id, plan.id);
   assert.equal(duplicate.body.plan.visibility, "private");
   assert.deepEqual(duplicate.body.plan.assignments, payload.assignments);
+  assert.deepEqual(duplicate.body.plan.squadPlayerIds, payload.squadPlayerIds);
   assert.equal(rows.get(duplicate.body.plan.id).wallet_address, other);
   assert.equal((await call("PATCH", query, { shared: false, revision: 3 })).code, 404);
   wallet = owner;
@@ -115,7 +124,21 @@ try {
   wallet = null;
   assert.equal((await call("GET", query)).code, 404);
   wallet = owner;
-  for (const invalid of [null, [], { ...payload, name: " " }, { ...payload, clubId: "-1" }, { ...payload, formationId: "invalid" }, { ...payload, assignments: { GK: "42", ST: "42" } }, { ...payload, assignments: { NOPE: "42" } }, { ...payload, assignments: [] }, { ...payload, assignments: { GK: 0 } }]) {
+  for (const invalid of [
+    null,
+    [],
+    { ...payload, name: " " },
+    { ...payload, clubId: "-1" },
+    { ...payload, formationId: "invalid" },
+    { ...payload, assignments: { GK: "42", ST: "42" } },
+    { ...payload, assignments: { NOPE: "42" } },
+    { ...payload, assignments: [] },
+    { ...payload, assignments: { GK: 0 } },
+    { ...payload, squadPlayerIds: "42" },
+    { ...payload, squadPlayerIds: ["42", "42"] },
+    { ...payload, squadPlayerIds: ["0"] },
+    { ...payload, squadPlayerIds: Array.from({ length: 51 }, (_, index) => String(index + 1)) },
+  ]) {
     assert.equal((await call("POST", "", invalid)).code, 400);
   }
   assert.equal((await call("GET", "?id=bad")).code, 400);
