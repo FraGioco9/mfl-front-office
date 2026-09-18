@@ -56,6 +56,15 @@ jobs:
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
 
+      - name: Verify Planner title is correct in initial HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error http://localhost:4000/planner > /tmp/mfl-next-planner.html
+          grep -Fq "<title>Planner - MFL Front Office</title>" /tmp/mfl-next-planner.html
+          curl --fail --silent --show-error "http://localhost:4000/planner?club=123" > /tmp/mfl-next-planner-club.html
+          grep -Fq "<title>Planner - MFL Front Office</title>" /tmp/mfl-next-planner-club.html
+
       - name: Verify Planner refresh title stays stable
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/planner
 
