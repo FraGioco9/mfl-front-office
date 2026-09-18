@@ -20,6 +20,7 @@ const validators = [
   "validate-evaluation-preview-rarity-accent.mjs",
   "validate-evaluation-preview-shell-path.mjs",
   "validate-bug-report.mjs",
+  "validate-planner-plans.mjs",
 ];
 
 for (const validator of validators) {

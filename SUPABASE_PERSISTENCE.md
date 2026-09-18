@@ -175,3 +175,27 @@ The Issue #200 audit removed three redundant keys from new `wallet_preferences.t
 3. `recentSearchAgentWallets` — derivable from canonical `recentSearchItems`.
 
 The pre-existing watchlist-state cleanup remains in place. Migration `supabase/migrations/20260823140000_minimize_wallet_preferences_table_state.sql` removes redundant keys from existing rows conservatively: legacy recent-search arrays are deleted only when canonical `recentSearchItems` is already present, so legacy-only histories are never discarded before the API can migrate them on the next authenticated save.
+
+## Planner plans
+
+`api/planner-plans.js` owns the `planner_plans` table through the existing service-role-only Supabase adapter. `api/_planner-plan.js` validates plan snapshots and projects safe responses. `pages/api/planner-plans.js` exposes the endpoint through Next with streaming body limits. `planner-formations.json` owns the five initial formation definitions; unique slot IDs are distinct from canonical player positions.
+
+Apply `supabase/migrations/20260918152729_planner_plans.sql` before enabling the Planner UI. The migration is additive and repeatable; this PR does not apply it to a live database. `supabase-schema.sql` contains the same table definition for fresh setups. Signed Dapper sessions are the authority: direct `anon` and `authenticated` table access is revoked, RLS is enabled without public policies, and only the server's service role has CRUD grants. See [Supabase's API security guidance](https://supabase.com/docs/guides/api/securing-your-api).
+
+Plans are private on creation, including duplicates. Owners explicitly enable `unlisted` visibility through Share. Unlisted plans are readable by anyone with their random UUID link, but are not listed publicly and never expose the wallet address. Disabling sharing makes that link inaccessible to other visitors immediately. Links identify the live saved plan, so later owner saves update what recipients see; existing copies remain independent. Re-enabling sharing restores the same link. The future UI uses `/planner/<plan_id>`; this backend PR does not introduce that page yet.
+
+All responses are `no-store`. Every write requires a valid signed session, the configured trusted request origin and JSON content type, with a 16 KiB body limit. Owner and revision predicates are included in the same database mutation to prevent unauthorized writes and stale overwrites. Metadata is reserved for future server-managed fields and is never accepted from these requests. Assignments store canonical numeric player IDs rather than player objects; roster hydration remains owned by the Club data path.
+
+| Request | Body / query | Behavior |
+| --- | --- | --- |
+| `GET /api/planner-plans` | Optional `offset` | Owner's plans, pages of 50 and `nextOffset` |
+| `GET /api/planner-plans?id=<uuid>` | None | Owner or unlisted read; otherwise 404 |
+| `POST /api/planner-plans` | `name`, `clubId`, `formationId`, `assignments` | New private plan, 201 |
+| `POST /api/planner-plans` | `sourceId` | Copy an accessible plan into a new private plan |
+| `PUT /api/planner-plans?id=<uuid>` | Complete snapshot and `revision` | Save owner changes; preserve sharing setting |
+| `PATCH /api/planner-plans?id=<uuid>` | `shared` boolean and `revision` | Owner enables/disables sharing |
+| `DELETE /api/planner-plans?id=<uuid>` | `revision` | Owner deletes plan |
+
+An assignment snapshot looks like `{"name":"First XI","clubId":"123","formationId":"4-3-3","assignments":{"GK":"42","ST":"43"}}`. Empty slots are omitted. Duplicate players and unknown slots are rejected. Reads/writes return `{plan}` with `canEdit` and `revision`; conflicts return 409 so the UI can reload instead of overwriting a newer plan.
+
+Verification: `node validate-planner-plans.mjs` exercises the real endpoint/session adapter with an isolated REST fixture. `validation/planner-schema.sql` checks defaults, role permissions, RLS, constraints and revision predicates in a disposable database after the migration; it rolls back all test data. The migration and SQL checks also passed against local PGlite Postgres. Hosted Supabase deployment remains a separate rollout step.

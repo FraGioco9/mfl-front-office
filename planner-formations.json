@@ -1,0 +1,87 @@
+[
+  {
+    "id": "4-3-3",
+    "name": "4-3-3",
+    "slots": [
+      {"id": "GK", "position": "GK", "x": 50, "y": 90},
+      {"id": "LW", "position": "LW", "x": 25.0, "y": 15.0},
+      {"id": "ST", "position": "ST", "x": 50.0, "y": 15.0},
+      {"id": "RW", "position": "RW", "x": 75.0, "y": 15.0},
+      {"id": "LCM", "position": "CM", "x": 25.0, "y": 45.0},
+      {"id": "CM", "position": "CM", "x": 50.0, "y": 45.0},
+      {"id": "RCM", "position": "CM", "x": 75.0, "y": 45.0},
+      {"id": "LB", "position": "LB", "x": 20.0, "y": 75.0},
+      {"id": "LCB", "position": "CB", "x": 40.0, "y": 75.0},
+      {"id": "RCB", "position": "CB", "x": 60.0, "y": 75.0},
+      {"id": "RB", "position": "RB", "x": 80.0, "y": 75.0}
+    ]
+  },
+  {
+    "id": "4-2-3-1",
+    "name": "4-2-3-1",
+    "slots": [
+      {"id": "GK", "position": "GK", "x": 50, "y": 90},
+      {"id": "ST", "position": "ST", "x": 50.0, "y": 15.0},
+      {"id": "LAM", "position": "CAM", "x": 25.0, "y": 35.0},
+      {"id": "CAM", "position": "CAM", "x": 50.0, "y": 35.0},
+      {"id": "RAM", "position": "CAM", "x": 75.0, "y": 35.0},
+      {"id": "LDM", "position": "CDM", "x": 33.33, "y": 55.0},
+      {"id": "RDM", "position": "CDM", "x": 66.67, "y": 55.0},
+      {"id": "LB", "position": "LB", "x": 20.0, "y": 75.0},
+      {"id": "LCB", "position": "CB", "x": 40.0, "y": 75.0},
+      {"id": "RCB", "position": "CB", "x": 60.0, "y": 75.0},
+      {"id": "RB", "position": "RB", "x": 80.0, "y": 75.0}
+    ]
+  },
+  {
+    "id": "4-4-2",
+    "name": "4-4-2",
+    "slots": [
+      {"id": "GK", "position": "GK", "x": 50, "y": 90},
+      {"id": "LST", "position": "ST", "x": 33.33, "y": 15.0},
+      {"id": "RST", "position": "ST", "x": 66.67, "y": 15.0},
+      {"id": "LM", "position": "LM", "x": 20.0, "y": 45.0},
+      {"id": "LCM", "position": "CM", "x": 40.0, "y": 45.0},
+      {"id": "RCM", "position": "CM", "x": 60.0, "y": 45.0},
+      {"id": "RM", "position": "RM", "x": 80.0, "y": 45.0},
+      {"id": "LB", "position": "LB", "x": 20.0, "y": 75.0},
+      {"id": "LCB", "position": "CB", "x": 40.0, "y": 75.0},
+      {"id": "RCB", "position": "CB", "x": 60.0, "y": 75.0},
+      {"id": "RB", "position": "RB", "x": 80.0, "y": 75.0}
+    ]
+  },
+  {
+    "id": "3-5-2",
+    "name": "3-5-2",
+    "slots": [
+      {"id": "GK", "position": "GK", "x": 50, "y": 90},
+      {"id": "LST", "position": "ST", "x": 33.33, "y": 15.0},
+      {"id": "RST", "position": "ST", "x": 66.67, "y": 15.0},
+      {"id": "LWB", "position": "LB", "x": 16.67, "y": 45.0},
+      {"id": "LCM", "position": "CM", "x": 33.33, "y": 45.0},
+      {"id": "CM", "position": "CM", "x": 50.0, "y": 45.0},
+      {"id": "RCM", "position": "CM", "x": 66.67, "y": 45.0},
+      {"id": "RWB", "position": "RB", "x": 83.33, "y": 45.0},
+      {"id": "LCB", "position": "CB", "x": 25.0, "y": 75.0},
+      {"id": "CB", "position": "CB", "x": 50.0, "y": 75.0},
+      {"id": "RCB", "position": "CB", "x": 75.0, "y": 75.0}
+    ]
+  },
+  {
+    "id": "3-4-3",
+    "name": "3-4-3",
+    "slots": [
+      {"id": "GK", "position": "GK", "x": 50, "y": 90},
+      {"id": "LW", "position": "LW", "x": 25.0, "y": 15.0},
+      {"id": "ST", "position": "ST", "x": 50.0, "y": 15.0},
+      {"id": "RW", "position": "RW", "x": 75.0, "y": 15.0},
+      {"id": "LM", "position": "LM", "x": 20.0, "y": 45.0},
+      {"id": "LCM", "position": "CM", "x": 40.0, "y": 45.0},
+      {"id": "RCM", "position": "CM", "x": 60.0, "y": 45.0},
+      {"id": "RM", "position": "RM", "x": 80.0, "y": 45.0},
+      {"id": "LCB", "position": "CB", "x": 25.0, "y": 75.0},
+      {"id": "CB", "position": "CB", "x": 50.0, "y": 75.0},
+      {"id": "RCB", "position": "CB", "x": 75.0, "y": 75.0}
+    ]
+  }
+]
