@@ -468,6 +468,8 @@
       plannerState.columns = [];
       plannerState.rows = [];
       if (resetAssignments) plannerState.assignments.clear();
+      plannerState.selectedPlayerId = "";
+      plannerState.selectedFromSlotId = "";
       renderWorkspace();
       if (updateUrl) setCanonicalUrl({ planId: "", clubId: "" });
       return false;
@@ -477,23 +479,22 @@
     setStatus("Loading Club…");
     workspace?.setAttribute("aria-busy", "true");
     try {
-      const query = new URLSearchParams({
-        mode: "page",
-        scope: "club",
-        view: "attributes",
-        page: "1",
-        pageSize: "5000",
-        sortKey: "positions",
-        sortDirection: "asc",
-        access: "public-database",
-        clubId: normalizedClubId,
-      });
-      const response = await window.__mflDataClient.fetch("/api/data?" + query.toString(), {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload?.error || "Could not load this Club.");
+      const routeCache = Reflect.get(window, "__mflRouteDataCache");
+      const cachedPayload = routeCache?.readClubPayload?.(normalizedClubId) || null;
+      let payload = cachedPayload;
+
+      if (!payload) {
+        const requestPath = String(routeCache?.clubRequestPath?.(normalizedClubId) || "");
+        if (!requestPath) throw new Error("Canonical Club request is unavailable.");
+        const response = await window.__mflDataClient.fetch(requestPath, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || "Could not load this Club.");
+        routeCache?.rememberClubPayload?.(normalizedClubId, payload);
+      }
+
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
 
       const rows = Array.isArray(payload?.rows) ? payload.rows : [];
@@ -509,6 +510,7 @@
       if (resetAssignments) {
         plannerState.assignments.clear();
         plannerState.selectedPlayerId = "";
+        plannerState.selectedFromSlotId = "";
         plannerState.formationId = DEFAULT_FORMATION;
         markDirty();
       }
