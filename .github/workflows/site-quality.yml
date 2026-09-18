@@ -126,8 +126,10 @@ jobs:
         env:
           WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4010
+          MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-build-smoke.db
         run: |
           set -euo pipefail
+          node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
           npx next start -p 4010 > /tmp/mfl-next-start.log 2>&1 &
           NEXT_PID=$!
           cleanup() {
