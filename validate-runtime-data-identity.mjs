@@ -81,10 +81,12 @@ invariant(
 invariant(requestMatchesEtag({ headers: { "if-none-match": baseEtag } }, baseEtag), "Strong If-None-Match values must revalidate runtime/data identity.");
 invariant(requestMatchesEtag({ headers: { "if-none-match": `W/${baseEtag}` } }, baseEtag), "Weak If-None-Match values must revalidate runtime/data identity.");
 
-const [identityApi, dataApi, nextConfig] = await Promise.all([
+const [identityApi, runtimeIdentitySource, dataApi, nextConfig, runtimePreparation] = await Promise.all([
   read("./api/identity.js"),
+  read("./api/_runtime-data-identity.js"),
   read("./api/data.js"),
   read("./next.config.mjs"),
+  read("./prepare-next-runtime.mjs"),
 ]);
 invariant(
   identityApi.includes("runtimeDataIdentity(getGeneratedAt())")
@@ -96,6 +98,15 @@ invariant(
 invariant(
   nextConfig.includes("MFL_DEPLOY_COMMIT: deploymentCommit") && nextConfig.includes("resolveDeploymentCommit({ root })"),
   "Next builds must bind the deployment commit into the server runtime identity.",
+);
+invariant(
+  runtimeIdentitySource.includes('require("./_deployment-commit.generated")')
+    && runtimeIdentitySource.includes("Bundled and environment deployment identities disagree."),
+  "Runtime identity must prefer the build-materialized API commit while rejecting conflicting environment identity.",
+);
+invariant(
+  runtimePreparation.includes("materializeDeploymentCommit({ root })"),
+  "Next runtime preparation must materialize deployment identity before function packaging.",
 );
 invariant(
   dataApi.includes('require("./_http-cache")')
