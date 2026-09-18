@@ -40,14 +40,22 @@ diagnosticSource = diagnosticSource.replace(paintSamplerMarker, paintSamplerProb
 
 const databaseFirstPaintMarker = '      assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");\n';
 assert.ok(diagnosticSource.includes(databaseFirstPaintMarker), "Database first-paint assertion hook must remain discoverable.");
-const databaseFirstPaintProbe = databaseFirstPaintMarker + String.raw`      assert(
-        parserSnapshot.tableHeaderLabels.includes("POS") && parserSnapshot.tableHeaderLabels.includes("SZN"),
-        "1374px parser first paint must already use the compact table-header set: " + JSON.stringify(parserSnapshot.tableHeaderLabels),
-      );
-      assert(
-        !parserSnapshot.tableHeaderLabels.includes("Positions") && !parserSnapshot.tableHeaderLabels.includes("Seasons"),
-        "1374px parser first paint must not expose full labels before compacting: " + JSON.stringify(parserSnapshot.tableHeaderLabels),
-      );
+const databaseFirstPaintProbe = databaseFirstPaintMarker + String.raw`      {
+        const compactHeader = document.documentElement.clientWidth <= 1366;
+        const labels = parserSnapshot.tableHeaderLabels;
+        assert(
+          compactHeader
+            ? labels.includes("POS") && labels.includes("SZN")
+            : labels.includes("Positions") && labels.includes("Seasons"),
+          (compactHeader ? "1366px compact" : "1367px full") + " parser first paint has the wrong table-header set: " + JSON.stringify(labels),
+        );
+        assert(
+          compactHeader
+            ? !labels.includes("Positions") && !labels.includes("Seasons")
+            : !labels.includes("POS") && !labels.includes("SZN"),
+          (compactHeader ? "1366px compact" : "1367px full") + " parser first paint exposed the opposite header set: " + JSON.stringify(labels),
+        );
+      }
 `;
 diagnosticSource = diagnosticSource.replace(databaseFirstPaintMarker, databaseFirstPaintProbe);
 
@@ -55,13 +63,14 @@ const routeReadyMarker = '    await waitFor(() => document.documentElement.datas
 assert.ok(diagnosticSource.includes(routeReadyMarker), "Direct-refresh readiness hook must remain discoverable.");
 const routeReadyProbe = routeReadyMarker + String.raw`    if (scenario === "database") {
       tableHeaderPaintSampling = false;
+      const expectedHeaderMode = document.documentElement.clientWidth <= 1366 ? "compact" : "full";
       assert(
-        tableHeaderPaintHistory[0] === "compact",
-        "1374px header paint history must start compact: " + JSON.stringify(tableHeaderPaintHistory),
+        tableHeaderPaintHistory[0] === expectedHeaderMode,
+        expectedHeaderMode + " header paint history started in the wrong mode: " + JSON.stringify(tableHeaderPaintHistory),
       );
       assert(
-        !tableHeaderPaintHistory.includes("full"),
-        "1374px compact headers must never bounce back to full during hydration: " + JSON.stringify(tableHeaderPaintHistory),
+        tableHeaderPaintHistory.every((mode) => mode === expectedHeaderMode),
+        expectedHeaderMode + " headers bounced across the fixed 1366/1367 boundary during hydration: " + JSON.stringify(tableHeaderPaintHistory),
       );
     }
 `;
@@ -71,7 +80,7 @@ const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
   scenariosPattern,
-  'const regressionScenarios = Object.freeze([["database", "/database/attributes", 1374, 900]]);\n\nconst server =',
+  'const regressionScenarios = Object.freeze([["database-1366", "/database/attributes", 1366, 900], ["database-1367", "/database/attributes", 1367, 900]]);\n\nconst server =',
 );
 
 await writeFile(temporaryPath, diagnosticSource, "utf8");
@@ -84,9 +93,9 @@ try {
     child.once("error", rejectStatus);
     child.once("close", resolveStatus);
   });
-  assert.equal(status, 0, "1374px mobile first-paint header regression failed.");
+  assert.equal(status, 0, "1366/1367 table-header first-paint boundary regression failed.");
 } finally {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("1374px mobile first-paint header regression passed.");
+console.log("1366/1367 table-header first-paint boundary regression passed.");
