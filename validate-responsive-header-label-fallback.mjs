@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const sharedTableUi = readFileSync(new URL("./shared-table-ui-runtime.js", import.meta.url), "utf8");
 const bootstrap = readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
 const tableSource = readFileSync(new URL("./modules/core-sources/table.js", import.meta.url), "utf8");
+const firstPaintHeaderRuntime = readFileSync(new URL("./first-paint-table-header-runtime.js", import.meta.url), "utf8");
 
 const functionStart = sharedTableUi.indexOf("function syncWidthAwareHeaderLabels() {");
 const functionEnd = sharedTableUi.indexOf("\n  function syncPlayerTableFadeState", functionStart);
@@ -25,6 +26,16 @@ assert.match(
   tableSource,
   /const compactTableHeader = window\.matchMedia\("\(max-width: 1366px\)"\)\.matches;/,
   "Rebuilt player-table headers must use the same explicit <=1366px compact-label breakpoint.",
+);
+assert.match(
+  firstPaintHeaderRuntime,
+  /const INTERMEDIATE_TABLE_HEADER_MEDIA = window\.matchMedia\("\(min-width: 901px\) and \(max-width: 1366px\)"\);/,
+  "The parser-time header guard must stop at the same 1366px compact boundary.",
+);
+assert.doesNotMatch(
+  firstPaintHeaderRuntime,
+  /scrollWidth|clientWidth|HEADER_LABEL_OVERFLOW_EPSILON|decideMode/,
+  "Parser-time header shortening must not reintroduce overflow-measurement ownership.",
 );
 assert.match(
   owner,
