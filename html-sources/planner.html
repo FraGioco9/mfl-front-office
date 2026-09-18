@@ -50,5 +50,42 @@
 
             document.body.dataset.page = "planner";
             page.hidden = false;
+
+            const clubId = String(new URLSearchParams(location.search).get("club") || "").trim();
+            if (!clubId) return;
+
+            const selector = document.getElementById("plannerTeamSelector");
+            const selectedTeam = document.getElementById("plannerSelectedTeam");
+            const workspace = document.getElementById("plannerWorkspace");
+            const teamLogo = document.getElementById("plannerTeamLogo");
+            const rosterBody = document.getElementById("plannerRosterBody");
+            const rosterStatus = document.getElementById("plannerRosterStatus");
+
+            if (selector instanceof HTMLElement) selector.hidden = true;
+            if (selectedTeam instanceof HTMLElement) selectedTeam.hidden = false;
+            if (workspace instanceof HTMLElement) workspace.hidden = false;
+            if (teamLogo instanceof HTMLImageElement) {
+              teamLogo.hidden = false;
+              teamLogo.src = "https://d13e14gtps4iwl.cloudfront.net/u/clubs/" + encodeURIComponent(clubId) + "/logo.webp";
+            }
+            if (rosterBody instanceof HTMLElement && !rosterBody.childElementCount) {
+              rosterBody.setAttribute("aria-busy", "true");
+              for (let index = 0; index < 8; index += 1) {
+                const row = document.createElement("tr");
+                row.setAttribute("aria-hidden", "true");
+                for (let column = 0; column < 5; column += 1) {
+                  const cell = document.createElement("td");
+                  const skeleton = document.createElement("span");
+                  skeleton.className = "plannerRosterSkeleton";
+                  cell.appendChild(skeleton);
+                  row.appendChild(cell);
+                }
+                rosterBody.appendChild(row);
+              }
+            }
+            if (rosterStatus instanceof HTMLElement) {
+              rosterStatus.textContent = "Loading squad…";
+              rosterStatus.hidden = false;
+            }
           })();
         </script>
