@@ -224,8 +224,8 @@ try {
   await installProbeRow(cdp);
 
   const contracts = [
-    { width: 900, name: "N. Barella", listing: "none", gap: "3px", icon: 9, joined: "17/09/2026 12:30" },
-    { width: 700, name: "N. Barella", listing: "none", gap: "2px", icon: 9, joined: "17/09/2026 12:30" },
+    { width: 900, name: "N. Barella", listing: "none", gap: "3px", icon: 8, joined: "17/09/2026 12:30" },
+    { width: 700, name: "N. Barella", listing: "none", gap: "2px", icon: 8, joined: "17/09/2026 12:30" },
     { width: 520, name: "N. Barella", listing: "none", gap: "2px", icon: 7, joined: "17/09/2026" },
     { width: 380, name: "N. Barella", listing: "none", gap: "1px", icon: 6, joined: "17/09/2026" },
     { width: 360, name: "N. Barella", listing: "none", gap: "1px", icon: 6, joined: "17/09/2026" },
