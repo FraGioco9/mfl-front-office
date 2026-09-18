@@ -9,12 +9,37 @@ function normalizeDeploymentCommit(value) {
   return commit;
 }
 
+function readBundledDeploymentCommit() {
+  try {
+    return require("./_deployment-commit.generated");
+  } catch (error) {
+    if (
+      error?.code === "MODULE_NOT_FOUND"
+      && String(error?.message || "").includes("_deployment-commit.generated")
+    ) {
+      return "";
+    }
+    throw error;
+  }
+}
+
+function resolveRuntimeDeploymentCommit(env = process.env) {
+  const bundledCommit = normalizeDeploymentCommit(readBundledDeploymentCommit());
+  const environmentCommit = normalizeDeploymentCommit(env.MFL_DEPLOY_COMMIT);
+
+  if (bundledCommit && environmentCommit && bundledCommit !== environmentCommit) {
+    throw new Error("Bundled and environment deployment identities disagree.");
+  }
+
+  return bundledCommit || environmentCommit;
+}
+
 function runtimeDataIdentity(databaseGeneratedAt, options = {}) {
   const version = String(release?.version || "").trim();
   const description = String(release?.description || "").trim();
   const generatedAt = String(databaseGeneratedAt || "").trim();
   const commit = normalizeDeploymentCommit(
-    options.commit === undefined ? process.env.MFL_DEPLOY_COMMIT : options.commit,
+    options.commit === undefined ? resolveRuntimeDeploymentCommit() : options.commit,
   );
 
   if (!version) {
@@ -38,5 +63,6 @@ function runtimeDataIdentity(databaseGeneratedAt, options = {}) {
 
 module.exports = {
   normalizeDeploymentCommit,
+  resolveRuntimeDeploymentCommit,
   runtimeDataIdentity,
 };
