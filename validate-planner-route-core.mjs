@@ -82,7 +82,7 @@ invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrom
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
 invariant(styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%") && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"), "Selected-team Clear must be pinned to the right from first paint.");
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
-invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("border:0;background:transparent"), "Planner Contract editor must stay compact and roster Remove must be a bare danger-colored X.");
+invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("background-color:transparent"), "Planner Contract editor must stay compact and roster Remove must remain visually unfilled on hover.");
 invariant(styles.includes(".plannerRosterTable th,.plannerRosterTable td{padding:4px 5px;line-height:1.15}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster rows and remove control must use compact geometry.");
 invariant(
   planner.includes('contractInput.type="text"')
@@ -112,7 +112,7 @@ invariant(
 invariant(
   styles.includes('tr:has(.plannerRosterRemove:hover)')
     && styles.includes("background:color-mix(in srgb,var(--danger) 7%,var(--surface))")
-    && styles.includes(".plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:transparent"),
+    && styles.includes(".plannerRosterRemove:hover:not(:disabled),.plannerRosterRemove:focus-visible:not(:disabled){border-color:transparent;background-color:transparent"),
   "Planner Remove hover must tint only the row red while the X itself remains transparent.",
 );
 invariant(planner.includes("plannerAgeMarker") && planner.includes('retirementMarker--"+marker.status') && planner.includes('Number(player?.player_seasons)===1') && planner.includes('label:"New mint"'), "Planner Age must preserve canonical retirement and New mint marker semantics.");
@@ -127,10 +127,39 @@ invariant(
   "Planner Add player modal must stage multiple players and enforce the 25-player squad limit before and during confirmation.",
 );
 invariant(
+  planner.includes('playerModal.classList.toggle("modalOpen",true)')
+    && planner.includes('playerModal.classList.toggle("modalOpen",false)'),
+  "Planner Add player modal must enter and leave the site's canonical modalOpen state.",
+);
+invariant(
   styles.includes(".plannerPlayerDialog")
     && styles.includes(".plannerPlayerSelectionList")
     && styles.includes(".plannerPlayerModalFooter"),
   "Planner Add player modal must own dedicated dialog, selection-list and footer styling.",
+);
+invariant(
+  planner.includes("PLANNER_POSITION_ORDER")
+    && planner.includes("sortPlannerRoster()")
+    && planner.includes('["GK","RB","CB","LB","RWB","LWB","CDM","RM","CM","LM","CAM","RW","CF","LW","ST"]'),
+  "Planner roster must use the canonical primary-position order.",
+);
+invariant(
+  html.includes('id="plannerAverageAge"')
+    && html.includes('id="plannerAverageOverall"')
+    && html.includes('id="plannerTotalContracts"')
+    && planner.includes("renderRosterTotals()"),
+  "Planner roster must expose and maintain average Age, average Overall and total Contract values in the table footer.",
+);
+invariant(
+  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:38%}")
+    && styles.includes("max-width:560px")
+    && styles.includes("gap:32px"),
+  "Planner desktop layout must shorten the Player column and enlarge the pitch while keeping a safe table/pitch gutter.",
+);
+invariant(
+  styles.includes(".plannerTeamSearchResult:hover,.plannerTeamSearchResult:focus-visible")
+    && styles.includes("box-shadow:inset 0 0 0 1px var(--primary)"),
+  "Planner club-result highlighting must match Global Search.",
 );
 invariant(!planner.includes('remove.title='), "Planner remove X must not expose a native hover tooltip.");
 invariant(planner.includes('type:"clubs"') && planner.includes('mode:"search"'), "Planner team search must call the club-only data search.");
