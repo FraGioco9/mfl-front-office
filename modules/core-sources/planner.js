@@ -17,8 +17,14 @@
   const rosterCount=document.getElementById("plannerRosterCount");
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
+  const addPlayerButton=document.getElementById("plannerAddPlayerButton");
+  const playerAdder=document.getElementById("plannerPlayerAdder");
+  const playerSearchInput=/** @type {HTMLInputElement|null} */(document.getElementById("plannerPlayerSearchInput"));
+  const playerSearchClearButton=document.getElementById("plannerPlayerSearchClearButton");
+  const playerSearchResults=document.getElementById("plannerPlayerSearchResults");
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="";
+  let playerSearchTimer=0,playerSearchSequence=0;
 
   function showOnly(target){document.querySelectorAll("main > .pageView").forEach(candidate=>{if(candidate instanceof HTMLElement)candidate.hidden=candidate!==target;});}
   function syncNavigation(){document.querySelectorAll("#sidebar .navButton[data-page]").forEach(button=>{if(button instanceof HTMLElement)button.classList.toggle("active",String(button.dataset.page||"")===PAGE);});}
@@ -41,6 +47,84 @@
   function rosterMessage(message=""){
     if(rosterStatus instanceof HTMLElement){rosterStatus.textContent=message;rosterStatus.hidden=!message;}
   }
+  function normalizeContractValue(value){
+    const numeric=Number(value);
+    if(!Number.isFinite(numeric))return 0;
+    return Math.min(20,Math.max(0,Math.round(numeric*100)/100));
+  }
+  function contractText(value){return normalizeContractValue(value).toFixed(2);}
+  function clearPlayerResults(){
+    playerSearchSequence+=1;
+    if(playerSearchResults instanceof HTMLElement){playerSearchResults.hidden=true;playerSearchResults.replaceChildren();}
+  }
+  function closePlayerAdder({focusButton=false}={}){
+    clearTimeout(playerSearchTimer);
+    clearPlayerResults();
+    if(playerSearchInput instanceof HTMLInputElement)playerSearchInput.value="";
+    if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=true;
+    if(playerAdder instanceof HTMLElement)playerAdder.hidden=true;
+    if(addPlayerButton instanceof HTMLElement)addPlayerButton.setAttribute("aria-expanded","false");
+    if(focusButton)addPlayerButton?.focus();
+  }
+  function addPlayerToRoster(player){
+    const playerId=Number(player?.player_id);
+    if(!Number.isSafeInteger(playerId)||playerId<=0)return false;
+    if(Number(player?.retirement_years)===0)return false;
+    if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
+    roster.push({...player,planned_contract_value:0});
+    roster.sort((a,b)=>(Number(b?.overall)||0)-(Number(a?.overall)||0)||Number(b?.player_id||0)-Number(a?.player_id||0));
+    renderRoster();
+    closePlayerAdder({focusButton:true});
+    return true;
+  }
+  function renderPlayerResults(payload,query=""){
+    if(!(playerSearchResults instanceof HTMLElement))return;
+    const columns=Array.isArray(payload?.columns)?payload.columns:[];
+    const rows=Array.isArray(payload?.rows)?payload.rows:[];
+    const fragment=document.createDocumentFragment();
+    for(const values of rows){
+      const player=Object.fromEntries(columns.map((column,index)=>[column,values[index]]));
+      if(Number(player?.retirement_years)===0||roster.some(candidate=>Number(candidate.player_id)===Number(player?.player_id)))continue;
+      const button=document.createElement("button");
+      button.type="button";
+      button.className="searchResult playerSearchResult plannerPlayerSearchResult";
+      button.setAttribute("role","option");
+      const title=document.createElement("strong");
+      title.textContent=String(player?.name||"Unknown player");
+      const meta=document.createElement("span");
+      meta.textContent="Player · #"+String(player?.player_id||"")+" · "+String(player?.positions||"—")+" · OVR "+String(player?.overall??"—");
+      button.append(title,meta);
+      button.addEventListener("click",()=>addPlayerToRoster(player));
+      fragment.appendChild(button);
+    }
+    if(!fragment.childNodes.length&&query){
+      const empty=document.createElement("div");
+      empty.className="searchHint";
+      empty.textContent="No eligible players found.";
+      fragment.appendChild(empty);
+    }
+    playerSearchResults.replaceChildren(fragment);
+    playerSearchResults.hidden=!playerSearchResults.childNodes.length;
+  }
+  async function requestPlayers(query){
+    const q=String(query||"").trim();
+    if(!q){clearPlayerResults();return null;}
+    const seq=++playerSearchSequence;
+    const params=new URLSearchParams({mode:"search",type:"players",limit:"10",q});
+    try{
+      const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload?.error||"Could not search players.");
+      if(seq!==playerSearchSequence||playerSearchInput?.value.trim()!==q)return null;
+      renderPlayerResults(payload,q);
+      return payload;
+    }catch(error){
+      if(seq!==playerSearchSequence)return null;
+      renderPlayerResults({},q);
+      rosterMessage(error?.message||"Could not search players.");
+      return null;
+    }
+  }
   function renderRoster(){
     if(!(rosterBody instanceof HTMLElement))return;
     const fragment=document.createDocumentFragment();
@@ -57,26 +141,33 @@
       contractInput.type="number";
       contractInput.className="plannerContractInput";
       contractInput.min="0";
-      contractInput.step="1";
-      contractInput.inputMode="numeric";
-      contractInput.setAttribute("aria-label","Contract matches for "+String(player.name||"player"));
-      const contractMatches=player.planned_contract_matches;
-      contractInput.value=contractMatches===null||contractMatches===undefined||contractMatches===""?"":String(contractMatches);
+      contractInput.max="20";
+      contractInput.step="0.01";
+      contractInput.inputMode="decimal";
+      contractInput.setAttribute("aria-label","Contract value for "+String(player.name||"player"));
+      contractInput.value=contractText(player.planned_contract_value);
       contractInput.addEventListener("input",()=>{
         const raw=contractInput.value.trim();
-        if(!raw){player.planned_contract_matches=null;return;}
+        if(!raw)return;
         const numeric=Number(raw);
         if(!Number.isFinite(numeric))return;
-        const normalized=Math.max(0,Math.trunc(numeric));
-        player.planned_contract_matches=normalized;
-        if(String(normalized)!==raw)contractInput.value=String(normalized);
+        const normalized=normalizeContractValue(numeric);
+        player.planned_contract_value=normalized;
+        if(numeric!==normalized)contractInput.value=contractText(normalized);
       });
+      const commitContract=()=>{
+        player.planned_contract_value=normalizeContractValue(contractInput.value);
+        contractInput.value=contractText(player.planned_contract_value);
+      };
+      contractInput.addEventListener("change",commitContract);
+      contractInput.addEventListener("blur",commitContract);
       contractCell.appendChild(contractInput);
       row.appendChild(contractCell);
       const action=document.createElement("td");
       const remove=document.createElement("button");
       remove.type="button";
-      remove.className="iconButton popupCloseButton plannerRosterRemove";
+      remove.className="plannerRosterRemove";
+      remove.textContent="×";
       remove.setAttribute("aria-label","Remove "+String(player.name||"player")+" from planned squad");
       remove.addEventListener("click",()=>{
         const index=roster.findIndex(candidate=>candidate.player_id===player.player_id);
@@ -127,7 +218,7 @@
       if(Number(payload.totalRows)>payload.rows.length)throw new Error("The full squad could not be loaded.");
       roster=payload.rows.map(values=>{
         const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
-        return {...player,planned_contract_matches:player.active_contract_nb_matches};
+        return {...player,planned_contract_value:normalizeContractValue(player.active_contract_revenue_share)};
       });
       renderRoster();
     }catch(error){
@@ -157,12 +248,41 @@
 
   input?.addEventListener("input",()=>{syncClearButton();setStatus("");clearTimeout(searchTimer);if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}const q=input.value.trim();if(!q){clearResults();return;}searchTimer=setTimeout(()=>void requestTeams(q),140);});
   input?.addEventListener("keydown",event=>{if(event.key==="Enter"){const first=results?.querySelector(".plannerTeamSearchResult");if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}}else if(event.key==="Escape"){clearResults();input.blur();}});
-  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerAdder();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   rosterRetry?.addEventListener("click",()=>{if(selectedTeamId)void loadRoster(selectedTeamId);});
+  addPlayerButton?.addEventListener("click",()=>{
+    if(!(playerAdder instanceof HTMLElement)||!(playerSearchInput instanceof HTMLInputElement))return;
+    const opening=playerAdder.hidden;
+    if(!opening){closePlayerAdder();return;}
+    playerAdder.hidden=false;
+    addPlayerButton.setAttribute("aria-expanded","true");
+    playerSearchInput.focus();
+  });
+  playerSearchInput?.addEventListener("input",()=>{
+    rosterMessage("");
+    if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=!playerSearchInput.value.trim();
+    clearTimeout(playerSearchTimer);
+    const q=playerSearchInput.value.trim();
+    if(!q){clearPlayerResults();return;}
+    playerSearchTimer=setTimeout(()=>void requestPlayers(q),140);
+  });
+  playerSearchInput?.addEventListener("keydown",event=>{
+    if(event.key==="Enter"){
+      const first=playerSearchResults?.querySelector(".plannerPlayerSearchResult");
+      if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
+    }else if(event.key==="Escape"){event.preventDefault();closePlayerAdder({focusButton:true});}
+  });
+  playerSearchClearButton?.addEventListener("click",()=>{
+    if(!(playerSearchInput instanceof HTMLInputElement))return;
+    playerSearchInput.value="";
+    playerSearchClearButton.hidden=true;
+    clearPlayerResults();
+    playerSearchInput.focus();
+  });
   teamClearButton?.addEventListener("click",clearSelection);
   teamLogo?.addEventListener("error",()=>{if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;});
   document.addEventListener("click",event=>{if(!(results instanceof HTMLElement)||results.hidden)return;const target=event.target;if(target===input||(target instanceof Node&&results.contains(target)))return;results.hidden=true;});
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
-  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam}));
+  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster}));
 })();
