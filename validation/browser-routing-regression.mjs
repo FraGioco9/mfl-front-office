@@ -361,6 +361,46 @@ const browserTestSource = String.raw`(() => {
       assertVisibleElementInside(selector, ancestorSelector);
     }
 
+    if (scenario === "planner") {
+      const main = document.querySelector("#appShell > main");
+      const workspace = document.getElementById("plannerWorkspace");
+      assert(main instanceof HTMLElement && workspace instanceof HTMLElement, "Planner layout shell is missing.");
+      assert(
+        main.scrollWidth <= main.clientWidth + 1,
+        "Planner route overflows the main viewport: " + JSON.stringify({
+          scrollWidth: main.scrollWidth,
+          clientWidth: main.clientWidth,
+          viewportWidth,
+        }),
+      );
+      for (const selector of [
+        "#plannerPage",
+        ".plannerPageHeader",
+        ".plannerSetup",
+        "#plannerWorkspace",
+        ".plannerPitchPanel",
+        "#plannerPitch",
+        ".plannerRosterPanel",
+      ]) {
+        assertElementWithinViewport(selector, viewportWidth);
+      }
+      const workspaceColumns = getComputedStyle(workspace).gridTemplateColumns
+        .split(" ")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      if (viewportWidth <= 900) {
+        assert(
+          workspaceColumns.length === 1,
+          "Mobile Planner workspace must collapse to one column: " + getComputedStyle(workspace).gridTemplateColumns,
+        );
+      } else {
+        assert(
+          workspaceColumns.length === 2,
+          "Desktop Planner workspace must keep pitch and roster side by side: " + getComputedStyle(workspace).gridTemplateColumns,
+        );
+      }
+    }
+
     if (scenario === "player") {
       const main = document.querySelector("#appShell > main");
       assert(main instanceof HTMLElement, "Player main shell is missing.");
