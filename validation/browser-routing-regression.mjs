@@ -1430,37 +1430,55 @@ const browserTestSource = String.raw`(() => {
       assert(contractEdit instanceof HTMLButtonElement && contractEdit.textContent === "✎", "Planner Contract must expose an Edit button beside the normal value.");
       contractEdit.click();
       assert(!contractEditor.hidden && contractEdit.textContent === "✓", "Planner Contract Edit must reveal the editor and become Confirm.");
-      assert(contractInput.max === "20" && contractInput.step === "0.01", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
+      assert(contractInput.getAttribute("data-min") === "0" && contractInput.getAttribute("data-max") === "20", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
       assert(document.activeElement === contractInput, "Planner Contract must focus the active editor.");
       contractInput.value = "20.75";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
       assert(contractInput.value === "20.00", "Planner Contract must clamp values above 20.00.");
-      contractInput.value = "18.25";
+      contractInput.value = "18,25";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "18.25", "Planner Contract editor must normalize decimals to a dot separator.");
       const firstStepperButtons = contractEditor.querySelectorAll(".plannerContractStepper button");
       assert(firstStepperButtons.length === 2 && firstStepperButtons[0].textContent === "▲" && firstStepperButtons[1].textContent === "▼", "Planner Contract must use the site-style custom stepper.");
       firstStepperButtons[0].click();
-      assert(contractInput.value === "18.26", "Planner Contract increase arrow must use the 0.01 step.");
+      assert(contractInput.value === "19.25", "Planner Contract increase arrow must increment by 1.00.");
       firstStepperButtons[1].click();
-      assert(contractInput.value === "18.25", "Planner Contract decrease arrow must use the 0.01 step.");
+      assert(contractInput.value === "18.25", "Planner Contract decrease arrow must decrement by 1.00.");
       const removeButton = document.querySelector(".plannerRosterRemove");
       const removeStyle = getComputedStyle(removeButton);
       assert(removeButton.textContent === "×", "Planner Remove must render as a red X glyph.");
       assert(removeStyle.backgroundColor === "rgba(0, 0, 0, 0)" && parseFloat(removeStyle.borderTopWidth) === 0, "Planner Remove must have no surrounding box.");
       assert(removeStyle.color !== getComputedStyle(document.body).color, "Planner Remove must use destructive coloring.");
+      removeButton.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(removeButton).backgroundColor === "rgba(0, 0, 0, 0)", "Planner Remove hover must keep the X background transparent.");
       const addPlayerButton = document.getElementById("plannerAddPlayerButton");
       addPlayerButton.click();
-      assert(!hidden("#plannerPlayerAdder"), "Add player must reveal the player search.");
+      assert(!hidden("#plannerPlayerModal"), "Add player must open the Add players modal.");
       const playerSearch = document.getElementById("plannerPlayerSearchInput");
       playerSearch.value = "Added";
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      await waitFor(() => document.querySelector(".plannerPlayerSearchResult"), "Planner player search");
-      playerSearch.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"]').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"]').click();
+      assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Staged modal selections must not mutate the squad.");
+      document.getElementById("plannerPlayerDiscardButton").click();
+      assert(hidden("#plannerPlayerModal"), "Discard must close the Add players modal.");
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Discard must leave the squad unchanged.");
+
+      addPlayerButton.click();
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search after discard");
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"]').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"]').click();
+      document.getElementById("plannerPlayerConfirmButton").click();
+      assert(hidden("#plannerPlayerModal"), "Add selected must close the modal.");
       const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
-      assert(addedRow, "Planner Add player must append an eligible non-retired player.");
+      const addedDefenderRow = document.querySelector('#plannerRosterBody tr[data-player-id="3"]');
+      assert(addedRow && addedDefenderRow, "Add selected must append every staged eligible player.");
       assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75", "Added player Contract must also use database value divided by 100.");
       assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
-      assert(hidden("#plannerPlayerAdder"), "Planner player search must close after an addition.");
       const addedContractValue = addedRow.querySelector(".plannerContractValue");
       const addedContractEditor = addedRow.querySelector(".plannerContractEditor");
       const addedContractEdit = addedRow.querySelector(".plannerContractEditButton");
@@ -1481,8 +1499,9 @@ const browserTestSource = String.raw`(() => {
       if (innerWidth > 800) assert(pitchBox.left >= squadBox.right, "Pitch must appear to the right of the squad.");
       else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
       document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
-      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]'), "Remove must update the planned squad.");
-      assert(document.querySelector('#plannerRosterBody tr[data-player-id="1"]'), "Removing an added player must keep the original planned player.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="3"] .plannerRosterRemove').click();
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Remove must update the planned squad.");
+      assert(document.querySelector('#plannerRosterBody tr[data-player-id="1"]'), "Removing added players must keep the original planned player.");
       document.querySelector('#plannerRosterBody tr[data-player-id="1"] .plannerRosterRemove').click();
       assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Removing the remaining player must empty the planned squad.");
       assert(text("#plannerRosterStatus") === "No players in this squad.", "Empty planned squad must be explicit.");
@@ -1784,7 +1803,13 @@ function dataStub(url, scenario = "") {
   }
   if (mode === "search" && url.searchParams.get("type") === "players" && String(url.searchParams.get("q") || "").toLowerCase().includes("added")) {
     const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
-    return { columns, rows: [[2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375]] };
+    return {
+      columns,
+      rows: [
+        [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
+        [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
+      ],
+    };
   }
   if (mode === "search") {
     const playerIds = new Set(
