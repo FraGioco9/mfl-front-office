@@ -169,7 +169,7 @@
     align-self: center;
   }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
-    gap: 3px;
+    gap: var(--mfl-responsive-table-age-marker-gap);
   }
   #progressionPage .playerTableScroller td.col-age .playerAgeValue {
     flex: 0 0 auto;
@@ -212,9 +212,18 @@
     width: var(--mfl-responsive-table-age-marker-size);
     height: var(--mfl-responsive-table-age-marker-size);
   }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker),
+  #progressionPage .playerTableScroller .retirementMarker::before,
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
+  #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
+    aspect-ratio: 1 / 1;
+  }
   #progressionPage .playerTableScroller .retirementMarker::before {
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
+    object-fit: contain;
   }
   #progressionPage .playerTableScroller .playerNoteIcon {
     font-size: var(--mfl-responsive-table-note-icon-size);
