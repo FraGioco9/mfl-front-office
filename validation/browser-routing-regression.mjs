@@ -1887,7 +1887,26 @@ async function waitForBrowserRegression(cdp) {
     if (value?.status === "failed") throw new Error(`Browser routing regression failed: ${value.detail}`);
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
   }
-  throw new Error("Browser routing regression did not publish a result before timeout.");
+  const diagnostics = await cdp.send("Runtime.evaluate", {
+    expression: `(() => ({
+      href: location.href,
+      readyState: document.readyState,
+      mflReady: document.documentElement.dataset.mflReady || "",
+      routeReady: document.documentElement.dataset.mflRouteReady || "",
+      initialPage: document.documentElement.dataset.initialPage || "",
+      initialRoutePage: document.documentElement.dataset.initialRoutePage || "",
+      bodyPage: document.body?.dataset?.page || "",
+      activePage: Array.from(document.querySelectorAll("#appShell main > .pageView"))
+        .filter((page) => page instanceof HTMLElement && !page.hidden)
+        .map((page) => page.id),
+      capturedErrors: typeof errors !== "undefined" ? errors : [],
+    }))()`,
+    returnByValue: true,
+  }).catch(() => null);
+  throw new Error(
+    "Browser routing regression did not publish a result before timeout. Diagnostics: "
+      + JSON.stringify(diagnostics?.result?.value || null),
+  );
 }
 
 async function runChromeRegression(executable, url, width = 1280, height = 900) {
