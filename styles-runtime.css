@@ -11265,6 +11265,28 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
+/* Age-adjacent status markers need a quieter scale than the other table controls.
+ * Keep <=700px behavior intact, hold around 10px near the mobile/tablet handoff,
+ * then grow gradually through the compact shell before rejoining the 16px desktop size.
+ */
+@media (min-width: 701px) and (max-width: 900px) {
+  :root {
+    --mfl-responsive-table-age-marker-size: 10px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1366px) {
+  :root {
+    --mfl-responsive-table-age-marker-size: clamp(10px, calc(6.124731px + 0.430108vw), 12px);
+  }
+}
+
+@media (min-width: 1367px) and (max-width: 1664px) {
+  :root {
+    --mfl-responsive-table-age-marker-size: clamp(12px, calc(-6.410774px + 1.346801vw), 16px);
+  }
+}
+
 /* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
