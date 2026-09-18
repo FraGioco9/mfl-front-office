@@ -2,9 +2,10 @@ import { readFile } from "node:fs/promises";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = path => readFile(new URL(path, import.meta.url), "utf8");
-const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, sharedIncremental, browserRouting, formations] = await Promise.all([
+const [appConfig, planner, plannerPlan, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, sharedIncremental, browserRouting, formations] = await Promise.all([
   read("./modules/app-config.js"),
   read("./modules/core-sources/planner.js"),
+  read("./api/_planner-plan.js"),
   read("./html-sources/planner.html"),
   read("./html-sources/chrome.html"),
   read("./modules/core-sources/shared-routing.js"),
@@ -33,7 +34,18 @@ invariant(chrome.includes('href="/planner" data-page="planner"'), "Planner must 
 invariant(html.includes('id="plannerPage"'), "Planner must own a dedicated page shell.");
 invariant(html.includes('id="plannerPlanNameInput"'), "Planner must expose a plan-name field.");
 invariant(html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerDuplicatePlanButton"') && html.includes('id="plannerSharePlanButton"'), "Planner must expose persisted-plan actions.");
-invariant(html.includes('class="pitch plannerPitch"') && html.includes('id="plannerRoster"'), "Planner must expose the pitch and roster workspace.");
+invariant(
+  html.includes('id="plannerPitchSectionTitle">Pitch</h3>')
+    && html.includes('id="plannerSquadSectionTitle">Squad list</h3>')
+    && html.includes('class="pitch plannerPitch"')
+    && html.includes('id="plannerRoster"'),
+  "Planner workspace must contain the Pitch and Squad list product sections.",
+);
+invariant(
+  html.includes('id="plannerPlayerSearchInput"')
+    && html.includes('id="plannerPlayerSearchResults"'),
+  "Planner Squad list must expose an editable database-player search.",
+);
 invariant(routing.includes('if (pageName === "planner")'), "Shared SPA routing must build Planner URLs.");
 invariant(routing.includes('const plannerMatch = cleanPath.match'), "Shared SPA routing must classify /planner and /planner/<id>.");
 invariant(lifecycle.includes('pageName === "planner"'), "Shared page lifecycle must delegate to the Planner route owner.");
@@ -43,12 +55,30 @@ invariant(planner.includes('shared: true') && planner.includes('shared: false'),
 invariant(planner.includes('planId') && planner.includes('canEdit'), "Planner must distinguish saved/shared route ownership.");
 invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club selection must reuse canonical Club search.");
 invariant(sharedSearch.includes('type === "clubs"'), "Shared database search must normalize Club-only results.");
-invariant(planner.includes('plannerState.assignments.set') && planner.includes('plannerState.assignments.delete'), "Planner must support tap assignment, movement and removal.");
 invariant(
-  planner.includes('selectedFromSlotId')
-    && planner.includes('targetPlayerId')
-    && planner.includes('plannerState.assignments.set(sourceSlotId, targetPlayerId)'),
-  "Planner must swap two occupied pitch slots instead of silently dropping the displaced player.",
+  planner.includes("squadPlayers: new Map()")
+    && planner.includes("setSquadFromClubRows")
+    && planner.includes("plannerState.squadPlayers.delete")
+    && planner.includes("plannerState.squadPlayers.set"),
+  "Planner Squad list must start from the live Club roster and support editable add/remove membership.",
+);
+invariant(
+  planner.includes("depthChartForFormation")
+    && planner.includes("candidates = squad.filter")
+    && planner.includes("slots[index % slots.length]"),
+  "Planner Pitch must derive formation-specific squad depths and distribute repeated positions deterministically.",
+);
+invariant(
+  planner.includes('requestDatabaseSearch(normalized, "players"')
+    && planner.includes("!entry.retired")
+    && sharedSearch.includes("excludeRetired: true"),
+  "Planner Squad additions must reuse canonical database player search and exclude retired players.",
+);
+invariant(
+  plannerPlan.includes("squadPlayerIds")
+    && plannerPlan.includes("metadata")
+    && planner.includes("squadPlayerIds: squadPlayerIds()"),
+  "Saved/shared Planner plans must persist the edited squad membership.",
 );
 invariant(
   !html.includes("plannerPageIntro")
@@ -93,6 +123,10 @@ invariant(
 invariant(
   browserRouting.includes("plannerClubPageRequests")
     && browserRouting.includes("plannerClubSearchRequests")
+    && browserRouting.includes("plannerPlayerSearchRequests")
+    && browserRouting.includes("Planner Squad list did not add the searched database player")
+    && browserRouting.includes("Planner Squad list did not remove the player")
+    && browserRouting.includes("Planner Pitch did not update its squad depth")
     && browserRouting.includes('"planner-saved"')
     && browserRouting.includes("plannerLoadingPitchGeometry")
     && browserRouting.includes("Planner Club search did not return the expected result")
@@ -101,6 +135,10 @@ invariant(
 );
 invariant(styles.includes(".plannerPitch") && styles.includes("@media (max-width: 900px)"), "Planner must provide responsive pitch/roster geometry.");
 invariant(controls.includes(".plannerSearchControl") && controls.includes(".plannerSearchClearButton"), "Planner search must use shared search-control styling.");
-invariant(interactions.includes("#plannerClubSearchInput"), "Planner Club search must participate in shared input interaction handling.");
+invariant(
+  interactions.includes("#plannerClubSearchInput")
+    && controls.includes("#plannerPlayerSearchInput"),
+  "Planner Club and player searches must participate in shared input interaction handling.",
+);
 
-console.log("Planner route, workspace, cache reuse, loading geometry, assignment, persistence, sharing and responsive ownership checks passed.");
+console.log("Planner route, two-section workspace, editable squad, formation depths, persistence, sharing and responsive ownership checks passed.");

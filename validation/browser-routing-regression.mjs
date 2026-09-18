@@ -106,8 +106,29 @@ const pageColumns = [
   "active_contract_club_division",
 ];
 
-function rowForColumns(columns) {
-  return columns.map((column) => testPlayer[column] ?? null);
+const plannerAddedPlayer = Object.freeze({
+  ...testPlayer,
+  player_id: 2,
+  name: "Planner Added Player",
+  positions: "ST,RW",
+  age: 21,
+  overall: 84,
+  active_contract_club_id: "",
+  active_contract_club_name: "",
+});
+const plannerRetiredPlayer = Object.freeze({
+  ...testPlayer,
+  player_id: 3,
+  name: "Retired Planner Player",
+  positions: "ST",
+  retirement_years: 0,
+  overall: 90,
+  active_contract_club_id: "",
+  active_contract_club_name: "",
+});
+
+function rowForColumns(columns, player = testPlayer) {
+  return columns.map((column) => player[column] ?? null);
 }
 
 const browserTestSource = String.raw`(() => {
@@ -144,6 +165,7 @@ const browserTestSource = String.raw`(() => {
   let mflStatsSummaryRequests = 0;
   let plannerClubPageRequests = 0;
   let plannerClubSearchRequests = 0;
+  let plannerPlayerSearchRequests = 0;
   let plannerLoadingPitchGeometry = null;
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
@@ -165,6 +187,13 @@ const browserTestSource = String.raw`(() => {
       && requestUrl.searchParams.get("type") === "clubs"
     ) {
       plannerClubSearchRequests += 1;
+    }
+    if (
+      requestUrl.pathname === "/api/data"
+      && requestUrl.searchParams.get("mode") === "search"
+      && requestUrl.searchParams.get("type") === "players"
+    ) {
+      plannerPlayerSearchRequests += 1;
     }
     if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
@@ -809,8 +838,11 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.plannerHidden === false && stateValue.workspaceHidden === false, "Saved Planner workspace remained hidden.");
       assert(stateValue.clubName === "Browser Club", "Saved Planner did not restore its Club identity.");
       assert(stateValue.slotCount === 11 && stateValue.formation === "4-4-2", "Saved Planner did not restore its formation.");
-      assert(stateValue.pitchText.includes(expectedPlayerName), "Saved Planner did not restore its assigned player.");
-      assert(!stateValue.rosterText.includes(expectedPlayerName), "Saved Planner left its assigned player in the available roster.");
+      assert(stateValue.pitchText.includes(expectedPlayerName), "Saved Planner Pitch did not restore the current squad depth.");
+      assert(
+        stateValue.rosterText.includes(expectedPlayerName) && stateValue.rosterText.includes("Planner Added Player"),
+        "Saved Planner Squad list did not restore persisted squad membership.",
+      );
       assert(stateValue.sharedNoticeHidden === false, "Shared saved plan did not expose its read-only notice.");
       assert(stateValue.saveDisabled && stateValue.formationDisabled, "Shared saved plan remained editable.");
     } else if (scenario === "myclubs-stale") {
@@ -1528,6 +1560,60 @@ const browserTestSource = String.raw`(() => {
         "Planner return to the cached original Club repeated its canonical Club request.",
       );
       assert(text("#plannerClubName") === "Browser Club", "Planner cached return did not restore the original Club.");
+
+      const playerSearchInput = document.getElementById("plannerPlayerSearchInput");
+      const playerSearchResults = document.getElementById("plannerPlayerSearchResults");
+      assert(
+        playerSearchInput instanceof HTMLInputElement && playerSearchResults instanceof HTMLElement,
+        "Planner Squad list player search controls are unavailable.",
+      );
+      assert(
+        text("#plannerSquadSectionTitle") === "Squad list" && text("#plannerPitchSectionTitle") === "Pitch",
+        "Planner did not expose the required Pitch and Squad list sections.",
+      );
+
+      const initialSquadCount = document.querySelectorAll("#plannerRoster .plannerPlayer:not(.plannerPlayerSkeleton)").length;
+      const playerSearchRequestsBefore = plannerPlayerSearchRequests;
+      playerSearchInput.value = "Planner Added Player";
+      playerSearchInput.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(
+        () => playerSearchResults.querySelector('[data-player-id="2"]') instanceof HTMLButtonElement,
+        "Planner database player search did not return the eligible non-retired player.",
+      );
+      assert(
+        plannerPlayerSearchRequests > playerSearchRequestsBefore,
+        "Planner Squad list did not use canonical database player search.",
+      );
+      assert(
+        !playerSearchResults.textContent.includes("Retired Planner Player"),
+        "Planner database player search exposed a retired player.",
+      );
+
+      playerSearchInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      await waitFor(
+        () => document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"]') instanceof HTMLElement,
+        "Planner Squad list did not add the searched database player.",
+      );
+      assert(
+        document.querySelectorAll("#plannerRoster .plannerPlayer:not(.plannerPlayerSkeleton)").length === initialSquadCount + 1,
+        "Planner Squad list count did not increase after adding a player.",
+      );
+      await waitFor(
+        () => text("#plannerPitch").includes("Planner Added Player"),
+        "Planner Pitch did not update its squad depth after adding an eligible player.",
+      );
+
+      const removeAdded = document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"] .plannerPlayerRemove');
+      assert(removeAdded instanceof HTMLButtonElement, "Planner Squad list remove control is unavailable.");
+      removeAdded.click();
+      await waitFor(
+        () => !document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"]'),
+        "Planner Squad list did not remove the player.",
+      );
+      assert(
+        !text("#plannerPitch").includes("Planner Added Player"),
+        "Planner Pitch retained a removed player in its squad depth.",
+      );
     }
 
     markPhase("representative:direct-state");
@@ -1834,16 +1920,31 @@ function dataStub(url) {
         )),
       };
     }
+    if (searchType === "players") {
+      const candidates = [testPlayer, plannerAddedPlayer, plannerRetiredPlayer]
+        .filter((player) => Number(player.retirement_years) !== 0)
+        .filter((player) => (
+          !query
+          || String(player.player_id).includes(query)
+          || String(player.name).toLowerCase().includes(query)
+        ));
+      return {
+        columns: searchColumns,
+        rows: candidates.map((player) => rowForColumns(searchColumns, player)),
+      };
+    }
     const playerIds = new Set(
       String(url.searchParams.get("playerIds") || "")
         .split(",")
         .map((entry) => entry.trim())
         .filter(Boolean),
     );
+    const recentPlayers = [testPlayer, plannerAddedPlayer, plannerRetiredPlayer]
+      .filter((player) => playerIds.has(String(player.player_id)));
     return {
       players: {
         columns: searchColumns,
-        rows: playerIds.has("1") ? [rowForColumns(searchColumns)] : [],
+        rows: recentPlayers.map((player) => rowForColumns(searchColumns, player)),
       },
       agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [] },
       clubs: [],
@@ -1925,7 +2026,8 @@ async function createRegressionServer() {
             name: "Shared Browser Plan",
             clubId: "9001",
             formationId: "4-4-2",
-            assignments: { LST: "1" },
+            assignments: {},
+            squadPlayerIds: ["1", "2"],
             canEdit: false,
             visibility: "unlisted",
             revision: 1,
