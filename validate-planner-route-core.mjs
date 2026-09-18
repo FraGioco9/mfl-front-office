@@ -154,6 +154,7 @@ invariant(
 );
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:38%}")
+    && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
     && styles.includes("max-width:640px")
     && styles.includes("width:calc(100% - 16px)")
     && styles.includes("gap:32px"),
