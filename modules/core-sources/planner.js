@@ -17,6 +17,9 @@
   const rosterCount=document.getElementById("plannerRosterCount");
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
+  const averageAgeCell=document.getElementById("plannerAverageAge");
+  const averageOverallCell=document.getElementById("plannerAverageOverall");
+  const totalContractsCell=document.getElementById("plannerTotalContracts");
   const addPlayerButton=document.getElementById("plannerAddPlayerButton");
   const playerModal=document.getElementById("plannerPlayerModal");
   const playerModalCloseButton=document.getElementById("plannerPlayerModalCloseButton");
@@ -35,6 +38,8 @@
   let pendingPlayers=new Map();
   let activeContractEditor=null;
   const MAX_SQUAD_SIZE=25;
+  const PLANNER_POSITION_ORDER=["GK","RB","CB","LB","RWB","LWB","CDM","RM","CM","LM","CAM","RW","CF","LW","ST"];
+  const PLANNER_POSITION_RANK=new Map(PLANNER_POSITION_ORDER.map((position,index)=>[position,index]));
 
   function showOnly(target){document.querySelectorAll("main > .pageView").forEach(candidate=>{if(candidate instanceof HTMLElement)candidate.hidden=candidate!==target;});}
   function syncNavigation(){document.querySelectorAll("#sidebar .navButton[data-page]").forEach(button=>{if(button instanceof HTMLElement)button.classList.toggle("active",String(button.dataset.page||"")===PAGE);});}
@@ -50,6 +55,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    renderRosterTotals();
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
     rosterBody?.replaceChildren();
     if(rosterBody)rosterBody.removeAttribute("aria-busy");
@@ -101,6 +107,26 @@
     playerSearchSequence+=1;
     if(playerSearchResults instanceof HTMLElement){playerSearchResults.hidden=true;playerSearchResults.replaceChildren();}
   }
+  function primaryPlannerPosition(player){
+    return String(player?.positions||"").split(",")[0].trim().toUpperCase();
+  }
+  function sortPlannerRoster(){
+    roster.sort((a,b)=>{
+      const aRank=PLANNER_POSITION_RANK.get(primaryPlannerPosition(a))??PLANNER_POSITION_ORDER.length;
+      const bRank=PLANNER_POSITION_RANK.get(primaryPlannerPosition(b))??PLANNER_POSITION_ORDER.length;
+      return aRank-bRank
+        || String(a?.name||"").localeCompare(String(b?.name||""),undefined,{sensitivity:"base"})
+        || Number(a?.player_id||0)-Number(b?.player_id||0);
+    });
+  }
+  function renderRosterTotals(){
+    const ages=roster.map(player=>Number(player?.age)).filter(Number.isFinite);
+    const overalls=roster.map(player=>Number(player?.overall)).filter(Number.isFinite);
+    const contracts=roster.map(player=>Number(player?.planned_contract_value)).filter(Number.isFinite);
+    if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(1):"—";
+    if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(1):"—";
+    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2):"—";
+  }
   function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
   function updateAddPlayerAvailability(){
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=availablePlayerSlots()===0;
@@ -146,7 +172,10 @@
     renderPendingPlayers();
     if(playerSearchInput instanceof HTMLInputElement)playerSearchInput.value="";
     if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=true;
-    if(playerModal instanceof HTMLElement)playerModal.hidden=true;
+    if(playerModal instanceof HTMLElement){
+      playerModal.classList.toggle("modalOpen",false);
+      playerModal.hidden=true;
+    }
     if(focusButton)addPlayerButton?.focus();
   }
   function openPlayerModal(){
@@ -154,6 +183,7 @@
     pendingPlayers.clear();
     renderPendingPlayers();
     playerModal.hidden=false;
+    playerModal.classList.toggle("modalOpen",true);
     playerSearchInput.value="";
     if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=true;
     clearPlayerResults();
@@ -166,7 +196,7 @@
     if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
     roster.push({...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)});
-    roster.sort((a,b)=>(Number(b?.overall)||0)-(Number(a?.overall)||0)||Number(b?.player_id||0)-Number(a?.player_id||0));
+    sortPlannerRoster();
     if(render)renderRoster();
     return true;
   }
@@ -318,6 +348,7 @@
           const raw=contractInput.value.trim();
           const numeric=Number(raw);
           if(raw&&Number.isFinite(numeric))player.planned_contract_value=normalizeContractValue(numeric);
+          renderRosterTotals();
         }
         contractValue.textContent=contractText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
@@ -393,6 +424,7 @@
     rosterBody.replaceChildren(fragment);
     rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="("+roster.length+")";
+    renderRosterTotals();
     rosterMessage(roster.length?"":"No players in this squad.");
   }
   async function loadRoster(clubId){
@@ -428,6 +460,7 @@
         const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
         return {...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)};
       });
+      sortPlannerRoster();
       renderRoster();
     }catch(error){
       if(seq!==rosterSequence||controller.signal.aborted)return;
