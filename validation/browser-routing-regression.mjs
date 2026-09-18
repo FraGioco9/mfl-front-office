@@ -35,6 +35,7 @@ const testPlayer = Object.freeze({
   height: 185,
   preferred_foot: "Right",
   active_contract_revenue_share: 10,
+  active_contract_nb_matches: 12,
   active_contract_club_id: "browser-club",
   active_contract_club_name: "Browser FC",
   active_contract_club_division: 2,
@@ -73,6 +74,7 @@ const publicColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -100,6 +102,7 @@ const pageColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -258,6 +261,8 @@ const browserTestSource = String.raw`(() => {
       plannerWorkspaceHidden: hidden("#plannerWorkspace"),
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
+      plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
+      plannerClearButtonRight: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().right || 0,
       bodyPage: String(document.body.dataset.page || ""),
       filterCount: text("#filterSummary"),
       sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
@@ -530,8 +535,9 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerTeamSelectorHidden === true, "Selected Planner first paint exposed the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === false, "Selected Planner first paint did not expose the club identity.");
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
-        assert(parserSnapshot.plannerRosterSkeletons === 40, "Selected Planner first paint did not expose the roster loading skeleton.");
+        assert(parserSnapshot.plannerRosterSkeletons === 48, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
+        assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear was not pinned to the right at first paint.");
       } else {
         assert(parserSnapshot.plannerTeamSelectorHidden === false, "Empty Planner first paint hid the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === true, "Empty Planner first paint exposed a selected club.");
@@ -1381,6 +1387,9 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
       assert(text("#plannerTeamDivision") === "Diamond", "Selected Planner refresh must restore the division.");
+      const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
+      const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
+      assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay pinned to the right after hydration.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected Planner refresh must show the club logo.");
       assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Selected Planner refresh must restore the roster.");
       assert(document.documentElement.scrollWidth <= innerWidth, "Selected Planner must not overflow horizontally.");
@@ -1404,7 +1413,13 @@ const browserTestSource = String.raw`(() => {
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
-      assert(text("#plannerRosterBody td") === "Browser Player", "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody td").includes("Browser Player"), "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(3)") === "23", "Planner must show player age.");
+      const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
+      assert(contractInput instanceof HTMLInputElement && contractInput.value === "12", "Planner must seed editable Contract from the current match clause.");
+      contractInput.value = "18";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "18", "Planner Contract must be editable locally.");
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
       if (innerWidth > 800) assert(pitchBox.left >= squadBox.right, "Pitch must appear to the right of the squad.");
