@@ -55,15 +55,17 @@ invariant(
   normalizeIndexFirstPaintConfigProjection(firstPaintSource) === firstPaintSource,
   "html-sources/first-paint.html must not drift behind the generated first-paint route projection.",
 );
+const siteQualityBuildIndex = siteQualityWorkflow.indexOf("npm run build");
+const siteQualityGeneratedCommitIndex = siteQualityWorkflow.indexOf('git commit -m "Regenerate site artifacts"');
 invariant(
-  siteQualityWorkflow.includes("run: npm run build")
+  siteQualityBuildIndex >= 0
+    && siteQualityGeneratedCommitIndex > siteQualityBuildIndex
     && siteQualityWorkflow.includes("bootstrap.js")
     && siteQualityWorkflow.includes("bootstrap-core.js")
     && siteQualityWorkflow.includes("index.html")
     && siteQualityWorkflow.includes("responsive.css")
     && siteQualityWorkflow.includes("styles-runtime.css")
-    && siteQualityWorkflow.includes("modules/app-core-*-runtime.js")
-    && siteQualityWorkflow.includes('git commit -m "Regenerate site artifacts"'),
+    && siteQualityWorkflow.includes("modules/app-core-*-runtime.js"),
   "Site Quality must own one ordered build-and-commit path for release projections and every tracked generated site artifact.",
 );
 invariant(
