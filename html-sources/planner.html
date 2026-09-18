@@ -12,3 +12,16 @@
           </section>
           <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
         </section>
+        <script>
+          (() => {
+            const root = document.documentElement;
+            const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
+            if (initialPage !== "planner") return;
+
+            const page = document.getElementById("plannerPage");
+            if (!(page instanceof HTMLElement)) return;
+
+            document.body.dataset.page = "planner";
+            page.hidden = false;
+          })();
+        </script>
