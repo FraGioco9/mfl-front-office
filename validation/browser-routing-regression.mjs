@@ -1420,16 +1420,16 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(3)") === "23", "Planner must show player age.");
-      assert(text("#plannerAverageAge") === "Avg 23.0", "Planner totals row must show average age.");
-      assert(text("#plannerAverageOverall") === "Avg 80.0", "Planner totals row must show average overall.");
-      assert(text("#plannerTotalContracts") === "Total 12.50", "Planner totals row must show total contracts.");
+      assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
+      assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
+      assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
       assert(ageMarker instanceof HTMLElement && ageMarker.classList.contains("retirementMarker--retiring-2"), "Planner must show the canonical retirement marker beside Age.");
       const contractValue = document.querySelector("#plannerRosterBody .plannerContractValue");
       const contractEditor = document.querySelector("#plannerRosterBody .plannerContractEditor");
       const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
       const contractEdit = document.querySelector("#plannerRosterBody .plannerContractEditButton");
-      assert(contractValue instanceof HTMLElement && contractValue.textContent === "12.50", "Planner Contract must display database revenue share divided by 100.");
+      assert(contractValue instanceof HTMLElement && contractValue.textContent === "12.50%", "Planner Contract must display database revenue share divided by 100.");
       assert(contractEditor instanceof HTMLElement && contractEditor.hidden, "Planner Contract editor must be hidden outside edit mode.");
       assert(contractInput instanceof HTMLInputElement, "Planner Contract input is missing.");
       assert(contractEdit instanceof HTMLButtonElement && contractEdit.textContent === "✎", "Planner Contract must expose an Edit button beside the normal value.");
@@ -1485,10 +1485,10 @@ const browserTestSource = String.raw`(() => {
       assert(addedRow && addedDefenderRow, "Add selected must append every staged eligible player.");
       const sortedPlannerIds = Array.from(document.querySelectorAll("#plannerRosterBody tr[data-player-id]")).map(row => row.dataset.playerId);
       assert(JSON.stringify(sortedPlannerIds) === JSON.stringify(["3","2","1"]), "Planner roster must sort by canonical primary-position order.");
-      assert(text("#plannerAverageAge") === "Avg 22.0", "Planner totals row must update average age after multi-add.");
-      assert(text("#plannerAverageOverall") === "Avg 77.7", "Planner totals row must update average overall after multi-add.");
-      assert(text("#plannerTotalContracts") === "Total 20.75", "Planner totals row must update total contracts after multi-add.");
-      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75", "Added player Contract must also use database value divided by 100.");
+      assert(text("#plannerAverageAge") === "Avg 22.00", "Planner totals row must update average age after multi-add.");
+      assert(text("#plannerAverageOverall") === "Avg 77.67", "Planner totals row must update average overall after multi-add.");
+      assert(text("#plannerTotalContracts") === "Total 20.75%", "Planner totals row must update total contracts after multi-add.");
+      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75%", "Added player Contract must also use database value divided by 100.");
       assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
       const addedContractValue = addedRow.querySelector(".plannerContractValue");
       const addedContractEditor = addedRow.querySelector(".plannerContractEditor");
@@ -1504,13 +1504,15 @@ const browserTestSource = String.raw`(() => {
       contractInput.value = "18.25";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
       contractEdit.click();
-      assert(contractValue.textContent === "18.25" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+      assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+      assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
       const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
       if (innerWidth > 800) {
         assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
-        assert(pitchSurfaceBox.width > 420, "Desktop Planner pitch must use the enlarged available width.");
+        assert(pitchSurfaceBox.width > 440, "Desktop Planner Depth pitch must use the enlarged available width.");
+        assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
       }
       else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
       document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
