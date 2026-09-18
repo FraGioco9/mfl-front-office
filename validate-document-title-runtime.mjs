@@ -34,6 +34,11 @@ includes(runtime, 'const APP_NAME = "MFL Front Office";', "Document titles must 
 includes(runtime, 'window.__mflAppConfig?.routes?.canonicalRequest', "Document titles must derive the active page from the canonical SPA route owner.");
 includes(runtime, 'canonicalRequest(window.location.pathname)', "Document titles must classify the current browser URL instead of startup-only page state.");
 includes(runtime, 'if (document.body?.dataset.page === "notfound") return "notfound";', "The fallback classifier must retain typed not-found state before app config is available.");
+assert.ok(
+  runtime.indexOf('["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)')
+    < runtime.indexOf('if (document.body?.dataset.page === "notfound") return "notfound";'),
+  "Known direct routes such as Planner must win over transient not-found body state during refresh.",
+);
 excludes(runtime, 'document.body?.dataset.page || document.documentElement.dataset.initialPage', "Document titles must not use startup page metadata as the active SPA route owner.");
 includes(runtime, 'database: "Database"', "Database must expose a route-aware browser title.");
 includes(runtime, 'mfl: "MFL"', "MFL must expose a route-aware browser title.");
