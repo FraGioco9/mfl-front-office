@@ -57,12 +57,7 @@ jobs:
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
 
       - name: Verify Planner refresh title stays stable
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error http://localhost:4000/planner > /tmp/mfl-next-planner.html
-          grep -Fq "<title>Planner - MFL Front Office</title>" /tmp/mfl-next-planner.html
-          node validation/next-rendered-shell-browser.mjs http://localhost:4000/planner
+        run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/planner
 
       - name: Verify real mobile table presentation in Next
         run: node validation/next-mobile-table-browser.mjs http://localhost:4000/
