@@ -941,6 +941,7 @@ function tableBuildHeaderOwner() {
   headerRow.appendChild(actionsHeader);
 
   const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  const compactTableHeader = window.matchMedia("(max-width: 1366px)").matches;
   currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
@@ -972,11 +973,13 @@ function tableBuildHeaderOwner() {
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
-    label.textContent = !mobileTable
-      ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
-      : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+    label.textContent = column === agentColumn && state.currentPage === "mfl"
+      ? ""
+      : mobileTable && column === "listing_price"
         ? ""
-        : compactLabel;
+        : compactTableHeader
+          ? compactLabel
+          : fullLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
