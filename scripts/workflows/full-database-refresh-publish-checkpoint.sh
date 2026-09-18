@@ -59,8 +59,10 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   VERCEL_REMOTE_ROOT="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(".vercel/project.json","utf8")); process.stdout.write(String(p?.settings?.rootDirectory ?? p?.rootDirectory ?? ""));')"
   export VERCEL_REMOTE_ROOT
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/normalize-vercel-project-root.mjs"
-  MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
+  node "$GITHUB_WORKSPACE/builder/scripts/workflows/write-deployment-commit.mjs" "$EXPECTED_SHA"
+  ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  node "$GITHUB_WORKSPACE/builder/scripts/workflows/verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"
   vercel deploy --prebuilt --prod --yes --force \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"

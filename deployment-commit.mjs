@@ -1,0 +1,40 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+export const DEPLOYMENT_COMMIT_FILE = ".mfl-deploy-commit";
+
+export function normalizeDeploymentCommit(value, { allowEmpty = true } = {}) {
+  const commit = String(value ?? "").trim().toLowerCase();
+  if (!commit) {
+    if (allowEmpty) return "";
+    throw new Error("Deployment commit is required.");
+  }
+  if (!/^[0-9a-f]{40}$/.test(commit)) {
+    throw new Error("Deployment commit must be a 40-character hexadecimal SHA.");
+  }
+  return commit;
+}
+
+export function deploymentCommitPath(root = process.cwd()) {
+  return resolve(root, DEPLOYMENT_COMMIT_FILE);
+}
+
+export function resolveDeploymentCommit({ root = process.cwd(), env = process.env } = {}) {
+  const filePath = deploymentCommitPath(root);
+  const fileCommit = existsSync(filePath)
+    ? normalizeDeploymentCommit(readFileSync(filePath, "utf8"))
+    : "";
+  const envCommit = normalizeDeploymentCommit(env.MFL_DEPLOY_COMMIT || "");
+
+  if (fileCommit && envCommit && fileCommit !== envCommit) {
+    throw new Error("Deployment commit file and environment disagree.");
+  }
+
+  return fileCommit || envCommit;
+}
+
+export function writeDeploymentCommit(value, { root = process.cwd() } = {}) {
+  const commit = normalizeDeploymentCommit(value, { allowEmpty: false });
+  writeFileSync(deploymentCommitPath(root), `${commit}\n`, { encoding: "utf8", mode: 0o600 });
+  return commit;
+}

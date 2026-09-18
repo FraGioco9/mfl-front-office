@@ -1,7 +1,11 @@
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
+import { resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
+import { verifyPrebuiltDeploymentCommit } from "./scripts/workflows/verify-prebuilt-deployment-commit.mjs";
+import { verifyNextBuildDeploymentCommit } from "./scripts/workflows/verify-next-build-deployment-commit.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
@@ -11,20 +15,24 @@ const [
   packageSource,
   vercelIgnore,
   siteUpdateWorkflow,
+  siteQualityWorkflow,
   checkpointPublisher,
   deepRoutePage,
   vercelConfigSource,
   identityRecorder,
   deploymentVerifier,
+  prebuiltVerifier,
 ] = await Promise.all([
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
+  read(".github/workflows/site-quality.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
   read("vercel.json"),
   read("scripts/workflows/record-production-identity.sh"),
   read("scripts/workflows/verify-live-production-deployment.sh"),
+  read("scripts/workflows/verify-prebuilt-deployment-commit.mjs"),
 ]);
 
 const developmentHeaders = createNextHeaders({ production: false });
@@ -90,16 +98,24 @@ invariant(
   "Next build configuration must expose one build-bound deployment commit owner.",
 );
 invariant(
+  siteQualityWorkflow.includes('write-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"')
+    && siteQualityWorkflow.includes('verify-next-build-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'),
+  "Site Quality must prove the explicit deployment commit survives a real Next build and runtime.",
+);
+invariant(
   siteUpdateWorkflow.includes("Record expected production identity")
     && siteUpdateWorkflow.includes("EXPECTED_SITE_SHA: ${{ github.sha }}")
-    && siteUpdateWorkflow.includes("MFL_DEPLOY_COMMIT: ${{ github.sha }}")
+    && siteUpdateWorkflow.includes('write-deployment-commit.mjs "$GITHUB_SHA"')
+    && siteUpdateWorkflow.includes('verify-prebuilt-deployment-commit.mjs "$GITHUB_SHA"')
     && siteUpdateWorkflow.includes("verify-live-production-deployment.sh")
     && siteUpdateWorkflow.includes("production-deployment-identity-${{ github.run_id }}"),
   "Normal site deployment must record, embed, verify and retain the source/version/database identity tuple.",
 );
 invariant(
   checkpointPublisher.includes('DEPLOYMENT_ROOT=production-site EXPECTED_SITE_SHA="$EXPECTED_SHA"')
-    && checkpointPublisher.includes('MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build')
+    && checkpointPublisher.includes('write-deployment-commit.mjs" "$EXPECTED_SHA"')
+    && checkpointPublisher.includes('verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"')
+    && checkpointPublisher.includes('ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build')
     && checkpointPublisher.includes("verify-live-production-deployment.sh")
     && checkpointPublisher.includes("deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt}"),
   "Database checkpoint publication must preserve the published site source identity and record it with the database generation.",
@@ -124,6 +140,67 @@ invariant(
     && deploymentVerifier.includes('if \'id="appShell"\' not in body:'),
   "Production verification must bind the live runtime identity to the expected commit/version/database generation and canonical shell.",
 );
+const fixtureRoot = await mkdtemp(join(tmpdir(), "mfl-deployment-commit-"));
+try {
+  const fixtureCommit = "a".repeat(40);
+  writeDeploymentCommit(fixtureCommit, { root: fixtureRoot });
+  invariant(
+    resolveDeploymentCommit({ root: fixtureRoot, env: {} }) === fixtureCommit,
+    "Deployment commit files must round-trip through the canonical build owner.",
+  );
+  let mismatchRejected = false;
+  try {
+    resolveDeploymentCommit({ root: fixtureRoot, env: { MFL_DEPLOY_COMMIT: "b".repeat(40) } });
+  } catch {
+    mismatchRejected = true;
+  }
+  invariant(mismatchRejected, "Conflicting deployment commit owners must fail closed.");
+
+  let malformedRejected = false;
+  try {
+    writeDeploymentCommit("not-a-commit", { root: fixtureRoot });
+  } catch {
+    malformedRejected = true;
+  }
+  invariant(malformedRejected, "Malformed deployment commit inputs must fail before build.");
+
+  const fixtureNextManifest = resolve(fixtureRoot, ".next/required-server-files.json");
+  await mkdir(resolve(fixtureRoot, ".next"), { recursive: true });
+  await writeFile(
+    fixtureNextManifest,
+    JSON.stringify({ config: { env: { MFL_DEPLOY_COMMIT: fixtureCommit } } }),
+  );
+  invariant(
+    await verifyNextBuildDeploymentCommit({ expected: fixtureCommit, manifestPath: fixtureNextManifest }) === fixtureCommit,
+    "Next build manifest verification must preserve the exact source commit.",
+  );
+
+  const fixtureFunctions = resolve(fixtureRoot, ".vercel/output/functions");
+  const fixtureIdentityFunction = resolve(fixtureFunctions, "api/identity.func");
+  await mkdir(fixtureIdentityFunction, { recursive: true });
+  await writeFile(resolve(fixtureIdentityFunction, "index.js"), `module.exports = "${fixtureCommit}";\n`);
+  invariant(
+    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions }) === fixtureIdentityFunction,
+    "Prebuilt deployment verification must accept an identity function containing the exact source commit.",
+  );
+  await writeFile(resolve(fixtureIdentityFunction, "index.js"), "module.exports = null;\n");
+  let missingCommitRejected = false;
+  try {
+    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions });
+  } catch {
+    missingCommitRejected = true;
+  }
+  invariant(missingCommitRejected, "Prebuilt deployment verification must reject an identity function that lost its source commit.");
+} finally {
+  await rm(fixtureRoot, { recursive: true, force: true });
+}
+invariant(
+  prebuiltVerifier.includes("identity.func")
+    && prebuiltVerifier.includes(".vercel/output/functions")
+    && prebuiltVerifier.includes("verifyPrebuiltDeploymentCommit"),
+  "Production deploys must retain the canonical prebuilt identity verifier.",
+);
+
 invariant(
   !siteUpdateWorkflow.includes("ensure-vercel-remote-project-root.mjs"),
   "Normal site deployment must not require privileged Vercel project-setting mutation.",

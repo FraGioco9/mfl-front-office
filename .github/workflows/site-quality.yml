@@ -114,7 +114,15 @@ jobs:
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/workflows/write-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          npm run build
+
+      - name: Verify built deployment identity
+        if: steps.changes.outputs.site == 'true'
+        run: node scripts/workflows/verify-next-build-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
       - name: Next runtime smoke test
         if: steps.changes.outputs.site == 'true'

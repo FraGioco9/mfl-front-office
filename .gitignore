@@ -8,5 +8,6 @@ api/data-files/*
 .env*
 !.env.example
 .vercel/
+.mfl-deploy-commit
 .next/
 public/
