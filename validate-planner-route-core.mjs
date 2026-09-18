@@ -5,7 +5,7 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, releaseJson, vercelJson] = await Promise.all([
+const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, dataViews, releaseJson, vercelJson] = await Promise.all([
   read("./modules/core-sources/planner.js"),
   read("./html-sources/planner.html"),
   read("./index.html"),
@@ -13,6 +13,7 @@ const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, release
   read("./planner.css"),
   read("./modules/core-sources/shared-routing.js"),
   read("./modules/core-sources/shared-page-lifecycle.js"),
+  read("./api/_data-views.js"),
   read("./release.json"),
   read("./vercel.json"),
 ]);
@@ -74,9 +75,10 @@ invariant(
     && html.includes('id="plannerPlayerSearchBody"')
     && html.includes('class="plannerPlayerSearchTable"')
     && html.includes('<th scope="col">Name</th>')
-    && html.includes('<th scope="col">Position(s)</th>')
+    && html.includes('<th scope="col">Position</th>')
     && html.includes('<th scope="col">OVR</th>')
-    && html.includes('id="plannerPlayerSelectionList"')
+    && html.includes('id="plannerPlayerSelectionBody"')
+    && html.includes('class="plannerPlayerSearchTable plannerPlayerSelectionTable"')
     && html.includes('id="plannerPlayerDiscardButton"')
     && html.includes('id="plannerPlayerConfirmButton"'),
   "Planner Add player must use a modal with staged multi-selection and explicit discard/confirm actions.",
@@ -194,12 +196,49 @@ invariant(
   "Planner desktop layout must shorten the Player column and enlarge the Depth pitch while keeping a safe gutter and internal panel margin.",
 );
 invariant(
-  styles.includes(".plannerTeamSearchResult:hover,.plannerTeamSearchResult:focus-visible")
+  styles.includes(".plannerTeamSearchResults .plannerTeamSearchResult:hover,.plannerTeamSearchResults .plannerTeamSearchResult:focus-visible")
     && styles.includes("box-shadow:inset 0 0 0 1px var(--primary)"),
-  "Planner club-result highlighting must match Global Search.",
+  "Planner club-result highlighting must use the same specificity and visual state as Global Search.",
 );
 invariant(!planner.includes('remove.title='), "Planner remove X must not expose a native hover tooltip.");
 invariant(planner.includes('type:"clubs"') && planner.includes('mode:"search"'), "Planner team search must call the club-only data search.");
+invariant(
+  dataViews.includes('const nameTokens = String(query || "").split(/\\s+/).filter(Boolean);')
+    && dataViews.includes('const nameTokenPatterns = nameTokens.map((token) => literalLikePattern(token));')
+    && dataViews.includes('const nameMatch = nameTokenPatterns.map(() =>'),
+  "Canonical player name search must match normalized name tokens independently of typed word order.",
+);
+invariant(
+  planner.includes('normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q)'),
+  "Planner player-search stale-response checks must use normalized name semantics.",
+);
+invariant(
+  planner.includes('makePlannerActionText')
+    && !planner.includes('plannerPlayerSelectButton')
+    && styles.includes(".plannerPlayerActionText{display:inline-block"),
+  "Planner player selection must render as text actions rather than boxed buttons.",
+);
+invariant(
+  planner.includes('if(playerModal.parentElement!==document.body)document.body.appendChild(playerModal);'),
+  "Planner Add players modal must portal to body so it paints above the fixed header.",
+);
+invariant(
+  planner.includes("contractLimitForPlayer")
+    && planner.includes("100-totalPlannedContracts")
+    && planner.includes('Math.min(100,contracts.reduce'),
+  "Planner Contract editing/additions and footer total must enforce a 100% aggregate ceiling.",
+);
+invariant(
+  html.includes('<th scope="col">POS</th>')
+    && !html.includes('<th scope="col">Pos.</th>'),
+  "Planner squad must use the requested POS header label.",
+);
+invariant(
+  styles.includes(".plannerRosterHeader h3{display:flex;align-items:center;gap:6px")
+    && styles.includes("height:31px")
+    && styles.includes("line-height:31px"),
+  "Planner must separate Squad/count and use reduced player-search row height.",
+);
 invariant(planner.includes('"searchResult clubSearchResult plannerTeamSearchResult"'), "Planner results must reuse canonical search-result presentation.");
 invariant(planner.includes("contractDivisionInfo(team?.division)") && planner.includes('division.className="clubSearchDivision"'), "Planner results must use the same named and colored division presentation as Global Search.");
 invariant(!planner.includes('"Division "+division'), "Planner must not expose raw numeric division labels.");
