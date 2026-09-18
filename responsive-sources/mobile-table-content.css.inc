@@ -30,9 +30,24 @@
     border-top: var(--mfl-responsive-table-sort-arrow-height) solid var(--text);
   }
 
+  #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
+    gap: var(--mfl-responsive-table-age-marker-gap);
+  }
+
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker),
+  #progressionPage .playerTableScroller .retirementMarker::before,
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
+  #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
+    aspect-ratio: 1 / 1;
+  }
+
   #progressionPage .playerTableScroller .retirementMarker::before {
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
+    object-fit: contain;
   }
 }
 
@@ -115,10 +130,6 @@
 
   #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
     align-self: center;
-  }
-
-  #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
-    gap: 3px;
   }
 
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
@@ -275,12 +286,6 @@
   }
 }
 
-@media (max-width: 700px) {
-  #progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {
-    gap: 2px;
-  }
-}
-
 @media (max-width: 520px) {
   #progressionPage .playerTableScroller .joinedAgencyFullValue {
     display: none;
@@ -288,11 +293,5 @@
 
   #progressionPage .playerTableScroller .joinedAgencyCompactValue {
     display: inline;
-  }
-}
-
-@media (max-width: 380px) {
-  #progressionPage .playerTableScroller #tableBody td.col-age .tableControlCellContent {
-    gap: 1px;
   }
 }
