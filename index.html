@@ -188,7 +188,7 @@
   #progressionPage .playerTableScroller .listingCellContent { width: var(--mfl-responsive-table-listing-content-size); min-width: var(--mfl-responsive-table-listing-content-size); max-width: var(--mfl-responsive-table-listing-content-size); height: var(--mfl-responsive-table-listing-content-size); min-height: var(--mfl-responsive-table-listing-content-size); max-height: var(--mfl-responsive-table-listing-content-size); }
   #progressionPage .playerTableScroller .listingCellIcon { flex: 0 0 var(--mfl-responsive-table-listing-icon-size); width: var(--mfl-responsive-table-listing-icon-size); height: var(--mfl-responsive-table-listing-icon-size); }
   #progressionPage #tableBody .tableOverallRarityCircle { flex: 0 0 var(--mfl-responsive-table-rarity-size); width: var(--mfl-responsive-table-rarity-size); height: var(--mfl-responsive-table-rarity-size); margin-right: 1px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.75); transform-origin: center; }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: none; transform-origin: center; }
 }
 @media (min-width: 521px) and (max-width: 900px) {
   #progressionPage #tableHead th > span:first-child { font-size: 10px; }
@@ -215,7 +215,7 @@
   #progressionPage .playerTableScroller .listingCellContent { width: var(--mfl-responsive-table-listing-content-size); min-width: var(--mfl-responsive-table-listing-content-size); max-width: var(--mfl-responsive-table-listing-content-size); height: var(--mfl-responsive-table-listing-content-size); min-height: var(--mfl-responsive-table-listing-content-size); max-height: var(--mfl-responsive-table-listing-content-size); }
   #progressionPage .playerTableScroller .listingCellIcon { flex: 0 0 var(--mfl-responsive-table-listing-icon-size); width: var(--mfl-responsive-table-listing-icon-size); height: var(--mfl-responsive-table-listing-icon-size); }
   #progressionPage #tableBody .tableOverallRarityCircle { flex: 0 0 var(--mfl-responsive-table-rarity-size); width: var(--mfl-responsive-table-rarity-size); height: var(--mfl-responsive-table-rarity-size); margin-right: 3px; }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.62); }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: none; }
 }
 @media (max-width: 380px) {
   #progressionPage { --mfl-table-header-height: 24px; --mfl-table-row-height: 20px; --mfl-table-row-outer-height: 24px; --mfl-table-col-listing: 3%; --mfl-table-col-positions: 10.89924379593141%; }
@@ -231,7 +231,7 @@
   #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: var(--mfl-responsive-table-age-marker-size); height: var(--mfl-responsive-table-age-marker-size); }
   #progressionPage .playerTableScroller .listingCellContent { width: var(--mfl-responsive-table-listing-content-size); min-width: var(--mfl-responsive-table-listing-content-size); max-width: var(--mfl-responsive-table-listing-content-size); height: var(--mfl-responsive-table-listing-content-size); min-height: var(--mfl-responsive-table-listing-content-size); max-height: var(--mfl-responsive-table-listing-content-size); }
   #progressionPage .playerTableScroller .listingCellIcon { flex: 0 0 var(--mfl-responsive-table-listing-icon-size); width: var(--mfl-responsive-table-listing-icon-size); height: var(--mfl-responsive-table-listing-icon-size); }
-  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: scale(0.54); }
+  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .playerTableScroller .sortArrow { transform: none; }
 }
 `;
         document.head.appendChild(mobileTableFirstPaintStyle);
