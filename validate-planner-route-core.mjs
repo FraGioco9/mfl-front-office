@@ -65,7 +65,17 @@ invariant(
 );
 invariant(html.includes('id="plannerWorkspace"') && html.includes('id="plannerRosterBody"') && html.includes("pitch plannerPitch"), "Selected teams must expose a squad table and pitch workspace.");
 invariant(html.includes('<th scope="col">Age</th>') && html.includes('<th scope="col">Contract</th>') && html.includes('plannerContractColumn'), "Planner squad must expose Age and editable Contract columns.");
-invariant(html.includes('id="plannerAddPlayerButton"') && html.includes('id="plannerPlayerSearchInput"') && html.includes('id="plannerPlayerSearchResults"'), "Planner squad must expose a functional Add player search surface.");
+invariant(
+  html.includes('id="plannerAddPlayerButton"')
+    && html.includes('id="plannerPlayerModal"')
+    && html.includes('aria-modal="true"')
+    && html.includes('id="plannerPlayerSearchInput"')
+    && html.includes('id="plannerPlayerSearchResults"')
+    && html.includes('id="plannerPlayerSelectionList"')
+    && html.includes('id="plannerPlayerDiscardButton"')
+    && html.includes('id="plannerPlayerConfirmButton"'),
+  "Planner Add player must use a modal with staged multi-selection and explicit discard/confirm actions.",
+);
 invariant(html.includes("column < 6"), "Planner selected-club first paint must reserve all six roster columns.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
@@ -74,16 +84,54 @@ invariant(styles.includes(".plannerSelectedTeam{display:flex;align-items:center;
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
 invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("border:0;background:transparent"), "Planner Contract editor must stay compact and roster Remove must be a bare danger-colored X.");
 invariant(styles.includes(".plannerRosterTable th,.plannerRosterTable td{padding:4px 5px;line-height:1.15}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster rows and remove control must use compact geometry.");
-invariant(planner.includes('contractInput.max="20"') && planner.includes('contractInput.step="0.01"') && planner.includes("toFixed(2)"), "Planner Contract must enforce 0.00 through 20.00 with two-decimal formatting.");
+invariant(
+  planner.includes('contractInput.type="text"')
+    && planner.includes('contractInput.setAttribute("data-min","0")')
+    && planner.includes('contractInput.setAttribute("data-max","20")')
+    && planner.includes('replace(/,/g,".")')
+    && planner.includes("toFixed(2)"),
+  "Planner Contract must use dot-decimal text editing while preserving the 0.00 through 20.00 formatted range.",
+);
 invariant(planner.includes("contractValueFromDatabase") && planner.includes("numeric/100") && planner.includes("active_contract_revenue_share"), "Planner Contract must seed from the database value divided by 100.");
 invariant(planner.includes('editContract.textContent="✎"') && planner.includes('editContract.textContent="✓"') && planner.includes("contractEditor.hidden=true"), "Planner Contract must show a normal value until the MFL/USD-style Edit control opens the editor.");
 invariant(planner.includes("activeContractEditor") && planner.includes("activeContractEditor.cancel()"), "Only one Planner Contract editor may be active; opening another must discard the prior draft.");
-invariant(planner.includes('increaseContract.textContent="▲"') && planner.includes('decreaseContract.textContent="▼"') && planner.includes("adjustContractDraft(0.01)") && planner.includes("adjustContractDraft(-0.01)"), "Planner Contract arrows must use the site-style custom stepper.");
+invariant(
+  planner.includes('increaseContract.textContent="▲"')
+    && planner.includes('decreaseContract.textContent="▼"')
+    && planner.includes("adjustContractDraft(1)")
+    && planner.includes("adjustContractDraft(-1)"),
+  "Planner Contract arrows must use the site-style custom stepper with 1.00 increments.",
+);
 invariant(styles.includes(".plannerContractStepper button{width:18px;height:13px;min-height:13px") && styles.includes("font-size:8px"), "Planner Contract custom arrows must preserve the canonical site stepper geometry.");
-invariant(styles.includes(".plannerContractInput::-webkit-inner-spin-button") && styles.includes("border-color:var(--primary-hover);background:var(--row-hover)") && styles.includes(".plannerContractStepper"), "Planner Contract input must suppress native arrows and use canonical box focus plus custom stepper styling.");
-invariant(styles.includes("color-mix(in srgb,var(--danger) 14%,transparent)") && styles.includes('tr:has(.plannerRosterRemove:hover)'), "Planner Remove hover must use a danger treatment instead of the standard blue row hover.");
+invariant(
+  !styles.includes(".plannerContractInput::-webkit-inner-spin-button")
+    && styles.includes("border-color:var(--primary-hover);background:var(--row-hover)")
+    && styles.includes(".plannerContractStepper"),
+  "Planner Contract input must use a text editor with canonical box focus plus custom stepper styling.",
+);
+invariant(
+  styles.includes('tr:has(.plannerRosterRemove:hover)')
+    && styles.includes("background:color-mix(in srgb,var(--danger) 7%,var(--surface))")
+    && styles.includes(".plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:transparent"),
+  "Planner Remove hover must tint only the row red while the X itself remains transparent.",
+);
 invariant(planner.includes("plannerAgeMarker") && planner.includes('retirementMarker--"+marker.status') && planner.includes('Number(player?.player_seasons)===1') && planner.includes('label:"New mint"'), "Planner Age must preserve canonical retirement and New mint marker semantics.");
 invariant(planner.includes('type:"players"') && planner.includes("retirement_years") && planner.includes("addPlayerToRoster"), "Planner Add player must reuse canonical non-retired player search with a client guard.");
+invariant(
+  planner.includes("const MAX_SQUAD_SIZE=25")
+    && planner.includes("pendingPlayers=new Map()")
+    && planner.includes("togglePendingPlayer")
+    && planner.includes("confirmPendingPlayers")
+    && planner.includes("pendingPlayers.size>=availablePlayerSlots()")
+    && planner.includes("roster.length>=MAX_SQUAD_SIZE"),
+  "Planner Add player modal must stage multiple players and enforce the 25-player squad limit before and during confirmation.",
+);
+invariant(
+  styles.includes(".plannerPlayerDialog")
+    && styles.includes(".plannerPlayerSelectionList")
+    && styles.includes(".plannerPlayerModalFooter"),
+  "Planner Add player modal must own dedicated dialog, selection-list and footer styling.",
+);
 invariant(!planner.includes('remove.title='), "Planner remove X must not expose a native hover tooltip.");
 invariant(planner.includes('type:"clubs"') && planner.includes('mode:"search"'), "Planner team search must call the club-only data search.");
 invariant(planner.includes('"searchResult clubSearchResult plannerTeamSearchResult"'), "Planner results must reuse canonical search-result presentation.");
