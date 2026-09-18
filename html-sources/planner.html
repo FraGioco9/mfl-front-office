@@ -28,6 +28,16 @@
                 <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
                 <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
                 <tbody id="plannerRosterBody"></tbody>
+                <tfoot>
+                  <tr class="plannerRosterTotalsRow">
+                    <th scope="row">Squad totals</th>
+                    <td></td>
+                    <td id="plannerAverageAge">—</td>
+                    <td id="plannerAverageOverall">—</td>
+                    <td id="plannerTotalContracts">—</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
               <p id="plannerRosterStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
               <button id="plannerRosterRetryButton" class="compactButton" type="button" hidden>Retry</button>
