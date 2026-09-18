@@ -1,0 +1,430 @@
+.plannerPage {
+  width: 100%;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+.plannerPageHeader,
+.plannerWorkspaceHeader,
+.plannerRosterHeader,
+.plannerClubIdentity {
+  display: flex;
+  align-items: center;
+}
+
+.plannerPageHeader {
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.plannerPageHeader .tablePageTitle,
+.plannerRosterHeader h3 {
+  margin: 0;
+}
+
+.plannerPageIntro {
+  margin: 3px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.plannerPlanActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.plannerSetup {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(280px, 1.4fr);
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.plannerField,
+.plannerFormationField {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.plannerFieldLabel,
+.plannerFormationField > span,
+.plannerRosterEyebrow,
+.plannerClubEyebrow {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.plannerSetup :is(input, select),
+.plannerFormationField select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--mfl-control-height);
+  min-height: var(--mfl-control-height);
+}
+
+.plannerClubSearchWrap {
+  position: relative;
+  width: 100%;
+}
+
+.plannerSearchControl {
+  position: relative;
+}
+
+.plannerSearchControl #plannerClubSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.plannerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  outline: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.plannerClubSearchResults {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: var(--mfl-z-dropdown);
+  display: grid;
+  gap: 6px;
+  max-height: 362px;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}
+
+.plannerClubSearchResults[hidden],
+.plannerSharedNotice[hidden] {
+  display: none;
+}
+
+.plannerClubSearchResult {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.plannerClubSearchResult strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannerSharedNotice {
+  margin-bottom: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--mfl-radius-control);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.plannerWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(260px, 0.8fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.plannerPitchPanel,
+.plannerRosterPanel {
+  min-width: 0;
+  border: var(--mfl-panel-border);
+  border-radius: var(--mfl-radius-panel);
+  background: var(--mfl-panel-background);
+}
+
+.plannerPitchPanel {
+  padding: 14px;
+}
+
+.plannerRosterPanel {
+  padding: 12px;
+}
+
+.plannerWorkspaceHeader {
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.plannerClubIdentity {
+  min-width: 0;
+  gap: 10px;
+}
+
+.plannerClubLogoFrame {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.plannerClubLogo {
+  display: block;
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.plannerClubIdentityText {
+  min-width: 0;
+}
+
+.plannerClubName {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 18px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannerFormationField {
+  flex: 0 0 150px;
+}
+
+.plannerPitch {
+  position: relative;
+  width: min(100%, 560px);
+  height: auto;
+  aspect-ratio: 360 / 498;
+  margin: 0 auto;
+}
+
+.plannerSlot {
+  position: absolute;
+  left: var(--planner-x);
+  top: var(--planner-y);
+  z-index: 2;
+  width: clamp(70px, 16%, 104px);
+  min-height: 54px;
+  padding: 5px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.plannerSlot:hover,
+.plannerSlot:focus-visible,
+.plannerSlot.is-selected {
+  border-color: var(--primary);
+  background: var(--row-hover);
+}
+
+.plannerSlotLabel {
+  display: block;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.plannerSlotPlayer {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannerSlotOverall {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.plannerSlot.is-empty .plannerSlotPlayer {
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.plannerRosterHeader {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plannerRosterCount {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.plannerRosterHint {
+  margin: 5px 0 10px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.plannerRoster {
+  display: grid;
+  gap: 5px;
+  max-height: min(72vh, 760px);
+  overflow-y: auto;
+}
+
+.plannerPlayer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.plannerPlayer:hover,
+.plannerPlayer:focus-visible,
+.plannerPlayer.is-selected {
+  border-color: var(--primary);
+  background: var(--row-hover);
+}
+
+.plannerPlayerName {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannerPlayerMeta {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.plannerPlayerOverall {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.plannerStatus {
+  margin: 12px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.clubIdentityPlannerLink {
+  margin-top: 10px;
+  text-decoration: none;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-page^="planner"] body[data-page="home"] main > .pageView:not(#plannerPage) {
+  display: none;
+  visibility: hidden;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-page^="planner"] body[data-page="home"] #plannerPage,
+body[data-page="planner"] #plannerPage {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .plannerPageHeader,
+  .plannerWorkspaceHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .plannerPlanActions {
+    justify-content: flex-start;
+  }
+
+  .plannerSetup,
+  .plannerWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plannerFormationField {
+    width: min(100%, 220px);
+    flex-basis: auto;
+  }
+
+  .plannerRoster {
+    max-height: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .plannerPageHeader {
+    gap: 10px;
+  }
+
+  .plannerPlanActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plannerPlanActions .compactButton {
+    width: 100%;
+  }
+
+  .plannerPitchPanel,
+  .plannerRosterPanel {
+    padding: 10px;
+  }
+
+  .plannerSlot {
+    width: clamp(58px, 20%, 78px);
+    min-height: 48px;
+    padding: 4px;
+  }
+
+  .plannerSlotPlayer {
+    font-size: 10px;
+  }
+
+  .plannerSlotOverall {
+    font-size: 9px;
+  }
+}
