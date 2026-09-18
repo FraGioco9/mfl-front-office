@@ -343,6 +343,8 @@ const optInLockedTitle = document.querySelector("#optInLockedTitle");
 const optInLockedMessage = document.querySelector("#optInLockedMessage");
 const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
+/** @type {HTMLElement | null} */
+const plannerPage = document.querySelector("#plannerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
 /** @type {HTMLDivElement | null} */
 const playerDetail = document.querySelector("#playerDetail");
@@ -1506,6 +1508,27 @@ function pageTargetFromPath(path) {
     };
   }
 
+  const plannerMatch = cleanPath.match(/^\/planner(?:\/([^/]+))?$/);
+  if (plannerMatch) {
+    const planId = String(plannerMatch[1] ? decodeURIComponent(plannerMatch[1]) : "").trim();
+    const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const clubId = planId ? "" : String(params.get("club") || "").trim();
+    const canonicalPath = planId
+      ? `/planner/${encodeURIComponent(planId)}`
+      : clubId
+        ? `/planner?club=${encodeURIComponent(clubId)}`
+        : "/planner";
+    return {
+      pageName: "planner",
+      options: {
+        ...(planId ? { planId } : {}),
+        ...(clubId ? { clubId } : {}),
+        path: canonicalPath,
+        ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
+    };
+  }
+
   if (cleanPath === "/my-clubs" || cleanPath === "/myclubs") {
     if (!hasWalletOptIn()) {
       return {
@@ -1649,6 +1672,16 @@ function pagePath(pageName, options = {}) {
     const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
     return clubPath || window.location.pathname;
   }
+  if (pageName === "planner") {
+    const planId = String(options.planId || "").trim();
+    if (planId) return `/planner/${encodeURIComponent(planId)}`;
+    const clubId = String(options.clubId || "").trim();
+    if (clubId) return `/planner?club=${encodeURIComponent(clubId)}`;
+    const explicitPath = String(options.path || "").trim();
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
+    return "/planner";
+  }
+
   if (pageName === "player") {
     const playerId = options.playerId || playerIdFromUrl();
     return playerId ? `/players/${encodeURIComponent(playerId)}` : window.location.pathname;
@@ -2379,6 +2412,7 @@ function renderProtectedOptOutShell(pageName) {
   myPlayersLockedPage.hidden = false;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
+  plannerPage.hidden = true;
   settingsPage.hidden = true;
   changelogPage.hidden = true;
   privacyPage.hidden = true;
@@ -2433,6 +2467,12 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   return;
 }
 
+if (pageName === "planner") {
+    const plannerOwner = Reflect.get(window, "__mflRenderPlannerPageOwner");
+    if (typeof plannerOwner !== "function") throw new Error("Planner route owner is unavailable.");
+    return plannerOwner.call(this, updateHash, options);
+  }
+
 if (pageName === "my-clubs") {
     const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
     if (typeof myClubsOwner !== "function") throw new Error("My Clubs route owner is unavailable.");
@@ -2461,6 +2501,7 @@ if (pageName === "my-clubs") {
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
+    plannerPage.hidden = true;
     settingsPage.hidden = true;
     changelogPage.hidden = true;
     privacyPage.hidden = true;
@@ -2497,6 +2538,7 @@ if (pageName === "my-clubs") {
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
+  plannerPage.hidden = true;
   settingsPage.hidden = !settingsPageActive;
   changelogPage.hidden = pageName !== "changelog";
   privacyPage.hidden = pageName !== "privacy";
@@ -5529,6 +5571,17 @@ function databaseSearchIdentifiers() {
 }
 
 function applyDatabaseSearchPayload(payload, type = "all") {
+  if (type === "clubs") {
+    state.clubSearchIndex = (Array.isArray(payload?.results) ? payload.results : []).map((club) => ({
+      clubId: String(club?.clubId || ""),
+      name: String(club?.name || ""),
+      division: Number.isFinite(Number(club?.division)) ? Number(club.division) : null,
+      searchText: normalizeSearchText(`${club?.name || ""} ${club?.clubId || ""}`),
+    })).filter((club) => club.clubId && club.name);
+    state.searchIndexesLoaded = true;
+    return;
+  }
+
   const players = type === "players" ? payload : (payload?.players || { columns: [], rows: [] });
   const agents = type === "players" ? { columns: [], rows: [] } : (payload?.agents || { columns: [], rows: [] });
   const playerColumns = Array.isArray(players?.columns) ? players.columns : [];
@@ -5570,7 +5623,9 @@ async function requestDatabaseSearch(rawQuery = "", type = "all", options = {}) 
   const cacheKey = `${type}:${normalizedQuery}`;
   if (options.force) databaseSearchResponseCache.delete(cacheKey);
   const cachedPayload = databaseSearchResponseCache.get(cacheKey);
-  const activeInput = () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
+  const activeInput = typeof options.activeInput === "function"
+    ? options.activeInput
+    : () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
 
   databaseSearchAbortControllers.get(type)?.abort();
   if (cachedPayload) {
@@ -8693,7 +8748,8 @@ Reflect.set(window, "__mflSetPageRouteOwner", setPageWithRouteRuntime);
   function installSearchMatching() {
     if (typeof normalizeSearchText !== "function") return false;
 
-    if (typeof searchMatchScore === "function" && !searchMatchScore.__mflSurnameFirst) {
+    const markedSearchMatchScore = /** @type {typeof searchMatchScore & { __mflSurnameFirst?: boolean }} */ (searchMatchScore);
+    if (typeof markedSearchMatchScore === "function" && !markedSearchMatchScore.__mflSurnameFirst) {
       const surnameFirstSearchMatchScore = function(query, primaryText, secondaryText = "") {
         const normalizedQuery = normalizeSearchText(query);
         const primary = normalizeSearchText(primaryText);
@@ -8728,7 +8784,8 @@ Reflect.set(window, "__mflSetPageRouteOwner", setPageWithRouteRuntime);
       searchMatchScore = surnameFirstSearchMatchScore;
     }
 
-    if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflSurnameFirst) {
+    const markedEvaluationSearchMatches = /** @type {typeof evaluationSearchMatches & { __mflSurnameFirst?: boolean }} */ (evaluationSearchMatches);
+    if (typeof markedEvaluationSearchMatches === "function" && !markedEvaluationSearchMatches.__mflSurnameFirst) {
       const surnameFirstEvaluationSearchMatches = function(query) {
         if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
         const results = [];
