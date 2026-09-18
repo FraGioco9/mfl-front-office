@@ -60,7 +60,7 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const rarityWidth = rarity instanceof Element ? Math.round(rarity.getBoundingClientRect().width) : 0;
       const selectionWidth = selection instanceof Element ? Math.round(selection.getBoundingClientRect().width) : 0;
       const actionButtonWidth = actionButton instanceof Element ? Math.round(actionButton.getBoundingClientRect().width) : 0;
-      const expectedMarkerWidth = ({ 1366: 14, 1200: 13, 1041: 12, 901: 11 })[viewportWidth];
+      const expectedMarkerWidth = ({ 1366: 12, 1200: 11, 1041: 11, 901: 10 })[viewportWidth];
       const expectedListingIconWidth = ({ 1366: 11, 1200: 10, 1041: 9, 901: 8 })[viewportWidth];
       const expectedFlagWidth = ({ 1366: 16, 1200: 15, 1041: 14, 901: 13 })[viewportWidth];
       const expectedRarityWidth = ({ 1366: 7, 1200: 7, 1041: 7, 901: 6 })[viewportWidth];
