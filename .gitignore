@@ -5,6 +5,7 @@ __pycache__/
 node_modules/
 api/data-files/*
 !api/data-files/.gitignore
+api/_deployment-commit.generated.js
 .env*
 !.env.example
 .vercel/
