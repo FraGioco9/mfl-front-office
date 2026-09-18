@@ -136,7 +136,7 @@ async function installProbeRow(cdp) {
         return { installed: false };
       }
       page.hidden = false;
-      scroller.innerHTML = '<table><tbody id="tableBody"><tr data-player-id="mobile-probe"><td class="nameCell col-name"><div class="playerNameCell"><a class="playerNameLink"><span class="playerNameFullValue">Nicolò Barella</span><span class="playerNameCompactValue">N. Barella</span></a></div></td><td class="col-listing"><span class="listingCellTableHost"><span class="listingCellContent"><img class="listingCellIcon" src="/listing-shopping-bag.svg" width="12" height="12" alt=""><span class="listingCellPrice">$10,000</span></span></span></td><td class="col-age"><span class="tableControlCellContent"><span class="playerAgeValue">23</span><span class="retirementMarker">R</span></span></td><td class="col-owned-since"><span class="joinedAgencyFullValue">17/09/2026 12:30</span><span class="joinedAgencyCompactValue">17/09/2026</span></td></tr></tbody></table>';
+      scroller.innerHTML = '<table><tbody id="tableBody"><tr data-player-id="mobile-probe"><td class="selectionCell"><span class="tableControlCellContent tableControlCellContentCentered"><input type="checkbox" aria-label="Select probe"></span></td><td class="nameCell col-name"><span class="tableControlCellContent"><div class="playerNameCell"><a class="playerNameLink"><span class="playerNameFullValue">Nicolò Barella</span><span class="playerNameCompactValue">N. Barella</span></a><span class="playerNameMarkers"><span class="playerNoteIcon">📝</span></span></div></span></td><td class="flagCell"><span class="tableControlCellContent tableControlCellContentCentered"><img class="flagImage" src="/flags/it.svg" alt="Italy"></span></td><td class="col-listing"><span class="tableControlCellContent"><span class="listingCellTableHost"><span class="listingCellContent"><img class="listingCellIcon" src="/listing-shopping-bag.svg" width="12" height="12" alt=""><span class="listingCellPrice">$10,000</span></span></span></span></td><td class="col-age"><span class="tableControlCellContent"><span class="playerAgeValue">23</span><span class="retirementMarker">R</span></span></td><td class="col-owned-since"><span class="tableControlCellContent"><span class="joinedAgencyFullValue">17/09/2026 12:30</span><span class="joinedAgencyCompactValue">17/09/2026</span></span></td><td class="rowActionsCell"><span class="tableControlCellContent tableControlCellContentCentered"><button type="button" class="playerTableActionsButton" aria-label="Actions"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1"></circle><circle cx="8" cy="8" r="1"></circle><circle cx="13" cy="8" r="1"></circle></svg></button></span></td></tr></tbody></table>';
       return { installed: Boolean(scroller.querySelector('tr[data-player-id="mobile-probe"]')) };
     })()`,
     returnByValue: true,
@@ -161,6 +161,28 @@ async function snapshot(cdp, width) {
       const display = (element) => element instanceof HTMLElement ? getComputedStyle(element).display : "missing";
       const visibleText = (element) => element instanceof HTMLElement && display(element) !== "none" ? String(element.textContent || "").trim() : "";
       const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null;
+      const centeredObjectSelectors = [
+        '.tableControlCellContent > *',
+        '.tableOverallCellContent > *',
+        '.playerNameCell > *',
+        '.playerNameMarkers > *',
+        '.listingCellTableHost > *',
+        '.listingCellContent > *',
+      ];
+      const centeredObjects = [...row.querySelectorAll(centeredObjectSelectors.join(','))]
+        .filter((element) => element instanceof HTMLElement && getComputedStyle(element).display !== 'none' && element.getClientRects().length > 0)
+        .map((element) => {
+          const parent = element.parentElement;
+          if (!(parent instanceof HTMLElement)) return null;
+          const elementRect = element.getBoundingClientRect();
+          const parentRect = parent.getBoundingClientRect();
+          return {
+            selector: element.className || element.tagName,
+            offset: Math.abs((elementRect.top + elementRect.height / 2) - (parentRect.top + parentRect.height / 2)),
+          };
+        })
+        .filter(Boolean);
+      const maxRowObjectCenterOffset = centeredObjects.reduce((maxOffset, item) => Math.max(maxOffset, item.offset), 0);
       return {
         width: window.innerWidth,
         clientWidth: document.documentElement.clientWidth,
@@ -175,6 +197,8 @@ async function snapshot(cdp, width) {
         listingDisplay: display(listingPrice),
         listingIconWidth: listingIcon instanceof HTMLElement ? Math.round(listingIcon.getBoundingClientRect().width) : 0,
         ageGap: ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : '',
+        maxRowObjectCenterOffset,
+        rowObjectCenterOffsets: centeredObjects,
         joinedFullDisplay: display(joinedFull),
         joinedCompactDisplay: display(joinedCompact),
         renderedJoined: visibleText(joinedFull) || visibleText(joinedCompact),
@@ -224,11 +248,11 @@ try {
   await installProbeRow(cdp);
 
   const contracts = [
-    { width: 900, name: "N. Barella", listing: "none", gap: "3px", icon: 8, joined: "17/09/2026 12:30" },
-    { width: 700, name: "N. Barella", listing: "none", gap: "2px", icon: 8, joined: "17/09/2026 12:30" },
-    { width: 520, name: "N. Barella", listing: "none", gap: "2px", icon: 7, joined: "17/09/2026" },
-    { width: 380, name: "N. Barella", listing: "none", gap: "1px", icon: 6, joined: "17/09/2026" },
-    { width: 360, name: "N. Barella", listing: "none", gap: "1px", icon: 6, joined: "17/09/2026" },
+    { width: 900, name: "N. Barella", listing: "none", gap: 3.48, icon: 8, joined: "17/09/2026 12:30" },
+    { width: 700, name: "N. Barella", listing: "none", gap: 2.56, icon: 8, joined: "17/09/2026 12:30" },
+    { width: 520, name: "N. Barella", listing: "none", gap: 1.74, icon: 7, joined: "17/09/2026" },
+    { width: 380, name: "N. Barella", listing: "none", gap: 1.09, icon: 6, joined: "17/09/2026" },
+    { width: 360, name: "N. Barella", listing: "none", gap: 1.00, icon: 6, joined: "17/09/2026" },
   ];
 
   for (const contract of contracts) {
@@ -246,7 +270,8 @@ try {
     assert.equal(state.renderedName, contract.name, `Player name presentation is wrong at ${contract.width}px: ${detail}`);
     assert.equal(state.listingDisplay, contract.listing, `Listing price is still visible at ${contract.width}px: ${detail}`);
     assert.equal(state.listingIconWidth, contract.icon, `Listing icon size is wrong at ${contract.width}px: ${detail}`);
-    assert.equal(state.ageGap, contract.gap, `Age/marker spacing is wrong at ${contract.width}px: ${detail}`);
+    assert.ok(Math.abs(Number.parseFloat(state.ageGap) - contract.gap) <= 0.08, `Age/marker spacing is wrong at ${contract.width}px: ${detail}`);
+    assert.ok(state.maxRowObjectCenterOffset <= 1, `A visible row object is not vertically centered at ${contract.width}px: ${detail}`);
     assert.equal(state.renderedJoined, contract.joined, `Joined Agency presentation is wrong at ${contract.width}px: ${detail}`);
     assert.ok(state.documentOverflow <= 1, `Mobile table leaked horizontal overflow to the document at ${contract.width}px: ${detail}`);
   }
