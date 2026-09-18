@@ -2,8 +2,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { MflLegacyDevBridgePlugin } from "./next-dev-legacy-bridge.mjs";
+import { resolveDeploymentCommit } from "./deployment-commit.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
+const deploymentCommit = resolveDeploymentCommit({ root });
 
 const noStore = [{ key: "Cache-Control", value: "no-store, max-age=0" }];
 const immutable = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
@@ -81,7 +83,7 @@ const developmentWebpack = process.env.NODE_ENV !== "production"
 const nextConfig = {
   devIndicators: { position: "bottom-left" },
   env: {
-    MFL_DEPLOY_COMMIT: String(process.env.MFL_DEPLOY_COMMIT || "").trim(),
+    MFL_DEPLOY_COMMIT: deploymentCommit,
   },
   ...developmentWebpack,
   outputFileTracingIncludes,
