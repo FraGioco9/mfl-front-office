@@ -145,7 +145,7 @@ const browserTestSource = String.raw`(() => {
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
+    if (!["myclubs-competition-fail", "myclubs-stale", "planner"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
     return originalFetch(input, { ...init, headers });
@@ -1355,16 +1355,29 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
+      assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
+      assert(text("#plannerRosterBody td") === "Browser Player", "Planner must display the canonical current squad.");
+      const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
+      const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
+      if (innerWidth > 800) assert(pitchBox.left >= squadBox.right, "Pitch must appear to the right of the squad.");
+      else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
+      document.querySelector(".plannerRosterRemove").click();
+      assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Remove must update the planned squad.");
+      assert(text("#plannerRosterStatus") === "No players in this squad.", "Empty planned squad must be explicit.");
       document.getElementById("plannerTeamClearButton").click();
       assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
       assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
+      assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
       history.replaceState({}, "", "/planner?club=9001");
       await window.__mflPlannerRoute.render(false);
       assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Restored Planner roster");
+      assert(document.documentElement.scrollWidth <= innerWidth, "Planner must not overflow horizontally.");
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish(
         "passed",
-        "planner: parser-time first paint and direct refresh exposed Planner before route hydration.",
+        "planner: stable first paint, selected-team identity, current roster/removal and responsive pitch workspace.",
       );
       return;
     }
@@ -1493,7 +1506,7 @@ function writeJson(response, data, status = 200) {
   response.end(JSON.stringify(data));
 }
 
-function pageDataStub(url) {
+function pageDataStub(url, scenario = "") {
   const scope = String(url.searchParams.get("scope") || "database").toLowerCase();
   let rules = [];
   try {
@@ -1534,7 +1547,7 @@ function pageDataStub(url) {
       logoUrl: browserClubLogo9002,
     },
   };
-  const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const rows = scope === "club" ? (scenario === "planner" ? [rowForColumns(pageColumns)] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -1556,7 +1569,7 @@ function pageDataStub(url) {
   };
 }
 
-function dataStub(url) {
+function dataStub(url, scenario = "") {
   const mode = String(url.searchParams.get("mode") || "bootstrap");
   if (mode === "bootstrap") {
     return {
@@ -1664,7 +1677,7 @@ function dataStub(url) {
       clubs: [],
     };
   }
-  if (mode === "page") return pageDataStub(url);
+  if (mode === "page") return pageDataStub(url, scenario);
   return {};
 }
 
@@ -1726,7 +1739,7 @@ async function createRegressionServer() {
           ? { error: "Invalid wallet proof." }
           : competitionBatchFailure
             ? { error: "Fixture competition batch unavailable." }
-            : dataStub(url),
+            : dataStub(url, String(request.headers["x-browser-regression-scenario"] || "")),
         invalidMyClubsProof ? 401 : competitionBatchFailure ? 500 : 200,
       );
       return;

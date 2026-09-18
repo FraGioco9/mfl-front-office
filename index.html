@@ -1059,6 +1059,25 @@
             </div>
             <button id="plannerTeamClearButton" class="compactButton" type="button">Clear</button>
           </div>
+          <div id="plannerWorkspace" class="plannerWorkspace" hidden>
+            <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
+              <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
+              <table class="plannerRosterTable" aria-label="Planned squad">
+                <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerRemoveColumn"></colgroup>
+                <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                <tbody id="plannerRosterBody"></tbody>
+              </table>
+              <p id="plannerRosterStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
+              <button id="plannerRosterRetryButton" class="compactButton" type="button" hidden>Retry</button>
+            </section>
+            <section class="plannerPitchPanel" aria-labelledby="plannerPitchHeading">
+              <h3 id="plannerPitchHeading">Pitch</h3>
+              <div class="pitch plannerPitch" role="img" aria-label="Football pitch">
+                <span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span>
+                <span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>
+              </div>
+            </section>
+          </div>
           <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
         </section>
         <script>

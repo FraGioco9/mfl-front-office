@@ -50,7 +50,7 @@ invariant(
     && generatedHtml.includes("page.hidden = false;"),
   "Generated index.html must preserve parser-time Planner first-paint ownership.",
 );
-invariant(!html.includes("plannerPitch") && !html.includes("plannerRoster"), "Initial Planner must stay limited to team selection.");
+invariant(html.includes('id="plannerWorkspace"') && html.includes('id="plannerRosterBody"') && html.includes("pitch plannerPitch"), "Selected teams must expose a squad table and pitch workspace.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
