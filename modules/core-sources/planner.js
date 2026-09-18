@@ -61,6 +61,9 @@
   const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById("plannerClubSearchInput"));
   const searchResults = document.getElementById("plannerClubSearchResults");
   const searchClearButton = document.getElementById("plannerClubSearchClearButton");
+  const playerSearchInput = /** @type {HTMLInputElement | null} */ (document.getElementById("plannerPlayerSearchInput"));
+  const playerSearchResults = document.getElementById("plannerPlayerSearchResults");
+  const playerSearchClearButton = document.getElementById("plannerPlayerSearchClearButton");
   const planNameInput = /** @type {HTMLInputElement | null} */ (document.getElementById("plannerPlanNameInput"));
   const savedPlanSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById("plannerSavedPlanSelect"));
   const formationSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById("plannerFormationSelect"));
@@ -82,9 +85,8 @@
     columns: [],
     rows: [],
     formationId: DEFAULT_FORMATION,
-    assignments: new Map(),
-    selectedPlayerId: "",
-    selectedFromSlotId: "",
+    squadPlayers: new Map(),
+    plannedSquadPlayerIds: null,
     requestSequence: 0,
     planId: "",
     planName: "My plan",
@@ -102,6 +104,8 @@
 
   let searchTimer = 0;
   let searchSequence = 0;
+  let playerSearchTimer = 0;
+  let playerSearchSequence = 0;
   let planSequence = 0;
 
   function showOnly(target) {
@@ -129,53 +133,93 @@
     return !plannerState.loading && (!plannerState.planId || plannerState.canEdit);
   }
 
-  function columnIndex(name) {
-    return plannerState.columns.indexOf(name);
-  }
-
-  function value(row, name) {
-    const index = columnIndex(name);
+  function columnValue(row, columns, name) {
+    const index = Array.isArray(columns) ? columns.indexOf(name) : -1;
     if (index < 0 || !Array.isArray(row)) return "";
     return row[index];
   }
 
-  function playerId(row) {
-    return String(value(row, "player_id") || value(row, "id") || "").trim();
-  }
-
-  function playerName(row) {
-    return String(value(row, "name") || ("Player " + playerId(row))).trim();
-  }
-
-  function playerPositions(row) {
-    const raw = value(row, "positions");
-    if (Array.isArray(raw)) return raw.map((position) => String(position || "").trim()).filter(Boolean);
+  function normalizePlayerPositions(raw) {
+    if (Array.isArray(raw)) return raw.map((position) => String(position || "").trim().toUpperCase()).filter(Boolean);
     const text = String(raw || "").trim();
     if (!text) return [];
     if (text.startsWith("[")) {
       try {
         const parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) return parsed.map((position) => String(position || "").trim()).filter(Boolean);
+        if (Array.isArray(parsed)) return parsed.map((position) => String(position || "").trim().toUpperCase()).filter(Boolean);
       } catch {}
     }
-    return text.split(",").map((position) => position.trim()).filter(Boolean);
+    return text.split(",").map((position) => position.trim().toUpperCase()).filter(Boolean);
   }
 
-  function playerOverall(row) {
-    const overall = Number(value(row, "overall"));
-    return Number.isFinite(overall) ? Math.round(overall) : null;
+  function plannerPlayerFromRow(row, columns = plannerState.columns) {
+    const id = String(columnValue(row, columns, "player_id") || columnValue(row, columns, "id") || "").trim();
+    if (!id) return null;
+    const rawOverall = Number(columnValue(row, columns, "overall"));
+    const retirementValue = columnValue(row, columns, "retirement_years");
+    return {
+      id,
+      name: String(columnValue(row, columns, "name") || ("Player " + id)).trim(),
+      positions: normalizePlayerPositions(columnValue(row, columns, "positions")),
+      overall: Number.isFinite(rawOverall) ? Math.round(rawOverall) : null,
+      retired: retirementValue !== "" && retirementValue !== null && Number(retirementValue) === 0,
+    };
   }
 
-  function rowByPlayerId(id) {
-    return plannerState.rows.find((row) => playerId(row) === String(id || "")) || null;
+  function plannerPlayerFromSearchEntry(entry) {
+    const id = String(entry?.playerId || "").trim();
+    if (!id) return null;
+    const rawOverall = Number(entry?.overall);
+    return {
+      id,
+      name: String(entry?.nameDisplay || ("Player " + id)).trim(),
+      positions: normalizePlayerPositions(entry?.positionsDisplay),
+      overall: Number.isFinite(rawOverall) ? Math.round(rawOverall) : null,
+      retired: Boolean(entry?.retired),
+    };
   }
 
-  function assignedPlayerIds() {
-    return new Set(Array.from(plannerState.assignments.values()).filter(Boolean));
+  function squadPlayersSorted() {
+    return Array.from(plannerState.squadPlayers.values()).sort((left, right) => {
+      const leftOverall = left.overall ?? -1;
+      const rightOverall = right.overall ?? -1;
+      return rightOverall - leftOverall || left.name.localeCompare(right.name) || left.id.localeCompare(right.id);
+    });
   }
 
-  function assignmentsObject() {
-    return Object.fromEntries(Array.from(plannerState.assignments.entries()).filter(([, id]) => Boolean(id)));
+  function squadPlayerIds() {
+    return squadPlayersSorted().map((player) => player.id);
+  }
+
+  function setSquadFromClubRows() {
+    const next = new Map();
+    plannerState.rows.forEach((row) => {
+      const player = plannerPlayerFromRow(row);
+      if (player?.id) next.set(player.id, player);
+    });
+    plannerState.squadPlayers = next;
+    plannerState.plannedSquadPlayerIds = squadPlayerIds();
+  }
+
+  function depthChartForFormation() {
+    const formation = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
+    const result = new Map((formation?.slots || []).map((slot) => [slot.id, []]));
+    const slotsByPosition = new Map();
+    (formation?.slots || []).forEach((slot) => {
+      const position = String(slot.position || "").toUpperCase();
+      const slots = slotsByPosition.get(position) || [];
+      slots.push(slot);
+      slotsByPosition.set(position, slots);
+    });
+    const squad = squadPlayersSorted();
+    for (const [position, slots] of slotsByPosition.entries()) {
+      const candidates = squad.filter((player) => player.positions.includes(position));
+      candidates.forEach((player, index) => {
+        const target = slots[index % slots.length];
+        result.get(target.id)?.push(player);
+      });
+    }
+    return result;
   }
 
   function setCanonicalUrl({ planId = plannerState.planId, clubId = plannerState.clubId, replace = true } = {}) {
@@ -212,6 +256,13 @@
     searchClearButton.toggleAttribute("hidden", hidden);
   }
 
+  function syncPlayerSearchClearButton() {
+    if (!(playerSearchInput instanceof HTMLInputElement) || !(playerSearchClearButton instanceof HTMLElement)) return;
+    const hidden = !playerSearchInput.value.trim();
+    playerSearchClearButton.hidden = hidden;
+    playerSearchClearButton.toggleAttribute("hidden", hidden);
+  }
+
   function syncPlanControls() {
     const hasClub = Boolean(plannerState.clubId);
     const owner = Boolean(plannerState.planId && plannerState.canEdit);
@@ -222,6 +273,7 @@
     }
     if (formationSelect instanceof HTMLSelectElement) formationSelect.disabled = !editable();
     if (searchInput instanceof HTMLInputElement) searchInput.disabled = !editable();
+    if (playerSearchInput instanceof HTMLInputElement) playerSearchInput.disabled = !hasClub || !editable();
     if (savePlanButton) {
       savePlanButton.disabled = !hasClub || !editable() || !signedIn;
       savePlanButton.textContent = plannerState.planId ? (plannerState.dirty ? "Save Changes" : "Saved") : "Save Plan";
@@ -285,6 +337,7 @@
     if (!(pitch instanceof HTMLElement)) return;
     const formation = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
     const slots = formation?.slots || [];
+    const depthChart = depthChartForFormation();
     const fragment = document.createDocumentFragment();
     const fieldLines = PITCH_LINE_CLASSES.map((className) => {
       const line = document.createElement("span");
@@ -292,96 +345,66 @@
       line.setAttribute("aria-hidden", "true");
       return line;
     });
-
     slots.forEach(({ id: slotId, position, x, y }) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "plannerSlot";
-      button.dataset.slotId = slotId;
-      button.style.setProperty("--planner-x", x + "%");
-      button.style.setProperty("--planner-y", y + "%");
-      button.disabled = plannerState.loading || !editable();
-      if (plannerState.loading) button.classList.add("is-loading");
+      const slot = document.createElement("div");
+      slot.className = "plannerSlot plannerDepthSlot";
+      slot.dataset.slotId = slotId;
+      slot.style.setProperty("--planner-x", x + "%");
+      slot.style.setProperty("--planner-y", y + "%");
+      if (plannerState.loading) slot.classList.add("is-loading");
 
       const labelNode = document.createElement("span");
       labelNode.className = "plannerSlotLabel";
       labelNode.textContent = position;
-
-      const assignedId = String(plannerState.assignments.get(slotId) || "");
-      const row = assignedId ? rowByPlayerId(assignedId) : null;
-      const playerNode = document.createElement("span");
-      playerNode.className = "plannerSlotPlayer";
-      const overallNode = document.createElement("span");
-      overallNode.className = "plannerSlotOverall";
+      slot.appendChild(labelNode);
 
       if (plannerState.loading) {
-        playerNode.textContent = "Loading player";
-        overallNode.textContent = "Loading";
-        button.setAttribute("aria-label", "Loading " + position + " position");
-      } else if (assignedId) {
-        const name = row ? playerName(row) : "Player " + assignedId;
-        playerNode.textContent = name;
-        const overall = row ? playerOverall(row) : null;
-        overallNode.textContent = overall === null ? (row ? playerPositions(row).join(" / ") : "Unavailable") : "OVR " + overall;
-        button.setAttribute("aria-label", position + ": " + name + (editable() ? ". Select to move or remove this player." : "."));
+        const skeleton = document.createElement("span");
+        skeleton.className = "plannerDepthList plannerDepthSkeleton";
+        for (let index = 0; index < 2; index += 1) {
+          const line = document.createElement("span");
+          line.className = "plannerDepthSkeletonLine";
+          line.textContent = "Loading player";
+          skeleton.appendChild(line);
+        }
+        slot.appendChild(skeleton);
+        slot.setAttribute("aria-label", "Loading " + position + " squad depth");
       } else {
-        button.classList.add("is-empty");
-        playerNode.textContent = "Select";
-        overallNode.textContent = "Position";
-        button.setAttribute("aria-label", "Empty " + position + " position");
+        const depth = depthChart.get(slotId) || [];
+        const list = document.createElement("span");
+        list.className = "plannerDepthList";
+        depth.slice(0, 4).forEach((player, index) => {
+          const row = document.createElement("span");
+          row.className = "plannerDepthPlayer";
+          row.dataset.playerId = player.id;
+          const rank = document.createElement("span");
+          rank.className = "plannerDepthRank";
+          rank.textContent = String(index + 1);
+          const name = document.createElement("span");
+          name.className = "plannerDepthName";
+          name.textContent = player.name;
+          const overall = document.createElement("span");
+          overall.className = "plannerDepthOverall";
+          overall.textContent = player.overall === null ? "—" : String(player.overall);
+          row.append(rank, name, overall);
+          list.appendChild(row);
+        });
+        if (!depth.length) {
+          const empty = document.createElement("span");
+          empty.className = "plannerDepthEmpty";
+          empty.textContent = "No players";
+          list.appendChild(empty);
+        } else if (depth.length > 4) {
+          const more = document.createElement("span");
+          more.className = "plannerDepthMore";
+          more.textContent = "+" + (depth.length - 4) + " more";
+          list.appendChild(more);
+        }
+        slot.appendChild(list);
+        slot.setAttribute("aria-label", position + " squad depth: " + (depth.length ? depth.map((player) => player.name).join(", ") : "No players"));
       }
-
-      button.append(labelNode, playerNode, overallNode);
-      if (plannerState.selectedFromSlotId === slotId) button.classList.add("is-selected");
-      button.addEventListener("click", () => {
-        if (!editable()) return;
-        if (plannerState.selectedPlayerId) {
-          const selectedPlayerId = plannerState.selectedPlayerId;
-          const sourceSlotId = plannerState.selectedFromSlotId;
-          const targetPlayerId = String(plannerState.assignments.get(slotId) || "");
-
-          if (sourceSlotId) {
-            if (slotId === sourceSlotId) {
-              plannerState.assignments.delete(sourceSlotId);
-              setStatus("Player returned to the available roster.");
-            } else {
-              plannerState.assignments.set(slotId, selectedPlayerId);
-              if (targetPlayerId && targetPlayerId !== selectedPlayerId) {
-                plannerState.assignments.set(sourceSlotId, targetPlayerId);
-                setStatus("Players swapped. Select another player to continue.");
-              } else {
-                plannerState.assignments.delete(sourceSlotId);
-                setStatus("Player moved. Select another player to continue.");
-              }
-            }
-          } else {
-            for (const [assignedSlotId, assignedPlayerId] of plannerState.assignments.entries()) {
-              if (assignedPlayerId === selectedPlayerId) plannerState.assignments.delete(assignedSlotId);
-            }
-            plannerState.assignments.set(slotId, selectedPlayerId);
-            setStatus(targetPlayerId
-              ? "Player assigned; the previous player returned to the available roster."
-              : "Player assigned. Select another player to continue.");
-          }
-
-          plannerState.selectedPlayerId = "";
-          plannerState.selectedFromSlotId = "";
-          markDirty();
-          renderWorkspace();
-          return;
-        }
-
-        if (assignedId) {
-          plannerState.selectedPlayerId = assignedId;
-          plannerState.selectedFromSlotId = slotId;
-          setStatus("Player selected. Choose another position to move or swap, or select this position again to remove the player.");
-          renderWorkspace();
-        }
-      });
-
-      fragment.appendChild(button);
+      fragment.appendChild(slot);
     });
-
     pitch.replaceChildren(...fieldLines, fragment);
   }
 
@@ -393,7 +416,6 @@
         const row = document.createElement("div");
         row.className = "plannerPlayer plannerPlayerSkeleton";
         row.setAttribute("aria-hidden", "true");
-
         const identity = document.createElement("span");
         identity.className = "plannerPlayerSkeletonIdentity";
         const name = document.createElement("span");
@@ -401,7 +423,6 @@
         const meta = document.createElement("span");
         meta.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonMeta";
         identity.append(name, meta);
-
         const overall = document.createElement("span");
         overall.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonOverall";
         row.append(identity, overall);
@@ -412,56 +433,42 @@
       return;
     }
 
-    const assigned = assignedPlayerIds();
-    const available = plannerState.rows
-      .filter((row) => {
-        const id = playerId(row);
-        return id && !assigned.has(id);
-      })
-      .sort((left, right) => {
-        const leftOverall = playerOverall(left) ?? -1;
-        const rightOverall = playerOverall(right) ?? -1;
-        return rightOverall - leftOverall || playerName(left).localeCompare(playerName(right));
-      });
-
+    const squad = squadPlayersSorted();
     const fragment = document.createDocumentFragment();
-    available.forEach((row) => {
-      const id = playerId(row);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "plannerPlayer";
-      if (id === plannerState.selectedPlayerId) button.classList.add("is-selected");
-      button.dataset.playerId = id;
-      button.disabled = !editable();
-
+    squad.forEach((player) => {
+      const row = document.createElement("div");
+      row.className = "plannerPlayer";
+      row.dataset.playerId = player.id;
       const identity = document.createElement("span");
+      identity.className = "plannerPlayerIdentity";
       const name = document.createElement("span");
       name.className = "plannerPlayerName";
-      name.textContent = playerName(row);
+      name.textContent = player.name;
       const meta = document.createElement("span");
       meta.className = "plannerPlayerMeta";
-      meta.textContent = playerPositions(row).join(" / ") || "—";
+      meta.textContent = [player.positions.join(" / ") || "—", "#" + player.id].join(" · ");
       identity.append(name, meta);
-
       const overall = document.createElement("span");
       overall.className = "plannerPlayerOverall";
-      const overallValue = playerOverall(row);
-      overall.textContent = overallValue === null ? "—" : String(overallValue);
-
-      button.append(identity, overall);
-      button.addEventListener("click", () => {
+      overall.textContent = player.overall === null ? "—" : String(player.overall);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "iconButton popupCloseButton plannerPlayerRemove";
+      remove.setAttribute("aria-label", "Remove " + player.name + " from squad");
+      remove.disabled = !editable();
+      remove.addEventListener("click", () => {
         if (!editable()) return;
-        const nextSelectedPlayerId = plannerState.selectedPlayerId === id && !plannerState.selectedFromSlotId ? "" : id;
-        plannerState.selectedPlayerId = nextSelectedPlayerId;
-        plannerState.selectedFromSlotId = "";
-        setStatus(plannerState.selectedPlayerId ? "Player selected. Choose a position on the pitch." : "Player selection cleared.");
+        plannerState.squadPlayers.delete(player.id);
+        plannerState.plannedSquadPlayerIds = squadPlayerIds();
+        markDirty();
         renderWorkspace();
+        setStatus(player.name + " removed from the planned squad.");
       });
-      fragment.appendChild(button);
+      row.append(identity, overall, remove);
+      fragment.appendChild(row);
     });
-
     roster.replaceChildren(fragment);
-    if (rosterCount instanceof HTMLElement) rosterCount.textContent = String(available.length);
+    if (rosterCount instanceof HTMLElement) rosterCount.textContent = String(squad.length);
   }
 
   function renderWorkspace() {
@@ -477,17 +484,16 @@
     syncPlanControls();
   }
 
-  function renderPlannerLoadingState(clubId, { resetAssignments = true } = {}) {
+  function renderPlannerLoadingState(clubId, { resetSquad = true } = {}) {
     const normalizedClubId = String(clubId || "").trim();
     plannerState.loading = true;
     plannerState.clubId = normalizedClubId;
     plannerState.club = { clubId: normalizedClubId };
     plannerState.columns = [];
     plannerState.rows = [];
-    plannerState.selectedPlayerId = "";
-    plannerState.selectedFromSlotId = "";
-    if (resetAssignments) {
-      plannerState.assignments.clear();
+    if (resetSquad) {
+      plannerState.squadPlayers = new Map();
+      plannerState.plannedSquadPlayerIds = null;
       plannerState.formationId = DEFAULT_FORMATION;
     }
     renderWorkspace();
@@ -501,37 +507,84 @@
     plannerState.revision = 0;
     plannerState.dirty = false;
     plannerState.loading = false;
-    plannerState.assignments.clear();
-    plannerState.selectedPlayerId = "";
-    plannerState.selectedFromSlotId = "";
     plannerState.formationId = DEFAULT_FORMATION;
-    if (!preserveClub) {
+    plannerState.plannedSquadPlayerIds = null;
+    if (preserveClub && plannerState.clubId) {
+      setSquadFromClubRows();
+    } else if (!preserveClub) {
       plannerState.clubId = "";
       plannerState.club = null;
       plannerState.columns = [];
       plannerState.rows = [];
-      plannerState.loading = false;
+      plannerState.squadPlayers = new Map();
       if (searchInput instanceof HTMLInputElement) searchInput.value = "";
     }
+    if (playerSearchInput instanceof HTMLInputElement) playerSearchInput.value = "";
+    if (playerSearchResults instanceof HTMLElement) {
+      playerSearchResults.hidden = true;
+      playerSearchResults.replaceChildren();
+    }
+    syncPlayerSearchClearButton();
   }
 
   function newPlan({ preserveClub = true, updateUrl = true } = {}) {
     resetPlanIdentity({ preserveClub });
     renderWorkspace();
     if (updateUrl) setCanonicalUrl({ planId: "", clubId: plannerState.clubId, replace: false });
-    setStatus(plannerState.clubId ? "New private plan. Select players and save when ready." : "Choose a Club to start planning.");
+    setStatus(plannerState.clubId ? "New private plan. Edit the squad list or change formation." : "Choose a Club to start planning.");
   }
 
-  async function loadClub(clubId, { updateUrl = true, resetAssignments = true } = {}) {
+  async function hydratePlannedSquadPlayers() {
+    const requested = Array.isArray(plannerState.plannedSquadPlayerIds)
+      ? [...new Set(plannerState.plannedSquadPlayerIds.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 50)
+      : null;
+    if (requested === null) {
+      setSquadFromClubRows();
+      return;
+    }
+    const known = new Map();
+    plannerState.rows.forEach((row) => {
+      const player = plannerPlayerFromRow(row);
+      if (player?.id) known.set(player.id, player);
+    });
+    const missing = requested.filter((id) => !known.has(id));
+    if (missing.length) {
+      const parameters = new URLSearchParams({ mode: "search", type: "recent", playerIds: missing.join(",") });
+      const response = await window.__mflDataClient.fetch("/api/data?" + parameters, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Could not restore planned squad players.");
+      const columns = Array.isArray(payload?.players?.columns) ? payload.players.columns : [];
+      const rows = Array.isArray(payload?.players?.rows) ? payload.players.rows : [];
+      rows.forEach((row) => {
+        const player = plannerPlayerFromRow(row, columns);
+        if (player?.id && !player.retired) known.set(player.id, player);
+      });
+    }
+    const next = new Map();
+    requested.forEach((id) => {
+      const player = known.get(id);
+      if (player) next.set(id, player);
+    });
+    plannerState.squadPlayers = next;
+    plannerState.plannedSquadPlayerIds = squadPlayerIds();
+  }
+
+  async function loadClub(clubId, options = {}) {
+    const updateUrl = options.updateUrl !== false;
+    const resetSquad = options.resetSquad ?? options.resetAssignments ?? true;
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) {
       plannerState.clubId = "";
       plannerState.club = null;
       plannerState.columns = [];
       plannerState.rows = [];
-      if (resetAssignments) plannerState.assignments.clear();
-      plannerState.selectedPlayerId = "";
-      plannerState.selectedFromSlotId = "";
+      if (resetSquad) {
+        plannerState.squadPlayers = new Map();
+        plannerState.plannedSquadPlayerIds = null;
+      }
       renderWorkspace();
       if (updateUrl) setCanonicalUrl({ planId: "", clubId: "" });
       return false;
@@ -545,7 +598,7 @@
       let payload = cachedPayload;
 
       if (!payload) {
-        renderPlannerLoadingState(normalizedClubId, { resetAssignments });
+        renderPlannerLoadingState(normalizedClubId, { resetSquad });
         const requestPath = String(routeCache?.clubRequestPath?.(normalizedClubId) || "");
         if (!requestPath) throw new Error("Canonical Club request is unavailable.");
         const response = await window.__mflDataClient.fetch(requestPath, {
@@ -570,16 +623,16 @@
         : { clubId: normalizedClubId };
       plannerState.columns = columns;
       plannerState.rows = rows;
-      if (resetAssignments) {
-        plannerState.assignments.clear();
-        plannerState.selectedPlayerId = "";
-        plannerState.selectedFromSlotId = "";
+      if (resetSquad) {
         plannerState.formationId = DEFAULT_FORMATION;
+        setSquadFromClubRows();
         markDirty();
+      } else {
+        await hydratePlannedSquadPlayers();
       }
       if (updateUrl && !plannerState.planId) setCanonicalUrl({ clubId: normalizedClubId });
       renderWorkspace();
-      setStatus(rows.length + " players loaded. Select a player, then a position.");
+      setStatus(plannerState.squadPlayers.size + " players in the planned squad. Edit the squad list or change formation.");
       return true;
     } catch (error) {
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
@@ -623,7 +676,8 @@
         searchResults.replaceChildren();
         if (searchInput instanceof HTMLInputElement) searchInput.value = name;
         syncSearchClearButton();
-        void loadClub(id);
+        if (plannerState.planId) resetPlanIdentity({ preserveClub: false });
+        void loadClub(id, { resetSquad: true });
       });
       fragment.appendChild(button);
     });
@@ -663,12 +717,87 @@
     }
   }
 
+  function renderPlayerSearchResults(entries) {
+    if (!(playerSearchResults instanceof HTMLElement)) return;
+    const players = Array.isArray(entries)
+      ? entries.filter((entry) => {
+          const player = plannerPlayerFromSearchEntry(entry);
+          return player && !player.retired && !plannerState.squadPlayers.has(player.id);
+        })
+      : [];
+    if (!players.length) {
+      playerSearchResults.hidden = true;
+      playerSearchResults.replaceChildren();
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    players.slice(0, 20).forEach((entry) => {
+      const player = plannerPlayerFromSearchEntry(entry);
+      if (!player) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "searchResult plannerPlayerSearchResult";
+      button.setAttribute("role", "option");
+      button.dataset.playerId = player.id;
+      const name = document.createElement("strong");
+      name.textContent = player.name;
+      const meta = document.createElement("span");
+      meta.textContent = [player.overall === null ? "" : "OVR " + player.overall, player.positions.join(" / "), "#" + player.id].filter(Boolean).join(" · ");
+      button.append(name, meta);
+      button.addEventListener("click", () => {
+        if (!editable() || player.retired || plannerState.squadPlayers.has(player.id)) return;
+        plannerState.squadPlayers.set(player.id, player);
+        plannerState.plannedSquadPlayerIds = squadPlayerIds();
+        if (playerSearchInput instanceof HTMLInputElement) playerSearchInput.value = "";
+        renderPlayerSearchResults([]);
+        syncPlayerSearchClearButton();
+        markDirty();
+        renderWorkspace();
+        setStatus(player.name + " added to the planned squad.");
+      });
+      fragment.appendChild(button);
+    });
+    playerSearchResults.replaceChildren(fragment);
+    playerSearchResults.hidden = !playerSearchResults.childElementCount;
+  }
+
+  async function searchPlayers(query) {
+    const normalized = String(query || "").trim();
+    if (!normalized) {
+      playerSearchSequence += 1;
+      renderPlayerSearchResults([]);
+      return;
+    }
+    const sequence = ++playerSearchSequence;
+    try {
+      const applied = await requestDatabaseSearch(normalized, "players", {
+        force: true,
+        activeInput: () => playerSearchInput?.value || "",
+      });
+      if (!applied || sequence !== playerSearchSequence) return;
+      const normalizedQuery = normalizeSearchText(normalized);
+      const players = (Array.isArray(state.evaluationSearchIndex) ? state.evaluationSearchIndex : [])
+        .filter((entry) => (
+          !entry.retired
+          && !plannerState.squadPlayers.has(String(entry.playerId || ""))
+          && (entry.id.includes(normalizedQuery) || entry.name.includes(normalizedQuery))
+        ))
+        .sort((left, right) => Number(right.overall || 0) - Number(left.overall || 0) || String(left.nameDisplay || "").localeCompare(String(right.nameDisplay || "")));
+      renderPlayerSearchResults(players);
+    } catch (error) {
+      if (sequence !== playerSearchSequence) return;
+      renderPlayerSearchResults([]);
+      setStatus(error?.message || "Could not search players.");
+    }
+  }
+
   function snapshot() {
     return {
       name: String(plannerState.planName || "My plan").trim() || "My plan",
       clubId: plannerState.clubId,
       formationId: plannerState.formationId,
-      assignments: assignmentsObject(),
+      assignments: {},
+      squadPlayerIds: squadPlayerIds(),
     };
   }
 
@@ -693,13 +822,14 @@
     plannerState.planName = String(plan?.name || "My plan").trim() || "My plan";
     plannerState.clubId = String(plan?.clubId || "");
     plannerState.formationId = formations[plan?.formationId] ? plan.formationId : DEFAULT_FORMATION;
-    plannerState.assignments = new Map(Object.entries(plan?.assignments && typeof plan.assignments === "object" ? plan.assignments : {}));
+    plannerState.plannedSquadPlayerIds = Array.isArray(plan?.squadPlayerIds)
+      ? plan.squadPlayerIds.map((id) => String(id || "").trim()).filter(Boolean)
+      : null;
+    plannerState.squadPlayers = new Map();
     plannerState.canEdit = Boolean(plan?.canEdit);
     plannerState.visibility = plan?.visibility === "unlisted" ? "unlisted" : "private";
     plannerState.revision = Number.isSafeInteger(plan?.revision) ? plan.revision : 1;
     plannerState.dirty = false;
-    plannerState.selectedPlayerId = "";
-    plannerState.selectedFromSlotId = "";
   }
 
   async function loadPlan(planId, { updateUrl = true } = {}) {
@@ -713,7 +843,7 @@
       const plan = payload?.plan;
       if (!plan) throw new Error("Plan not found.");
       applyPlan(plan);
-      const loaded = await loadClub(plannerState.clubId, { updateUrl: false, resetAssignments: false });
+      const loaded = await loadClub(plannerState.clubId, { updateUrl: false, resetSquad: false });
       if (!loaded || sequence !== planSequence) return false;
       if (updateUrl) setCanonicalUrl({ planId: plannerState.planId, replace: true });
       renderWorkspace();
@@ -783,7 +913,7 @@
         body: JSON.stringify({ sourceId: plannerState.planId }),
       });
       applyPlan(payload.plan);
-      await loadClub(plannerState.clubId, { updateUrl: false, resetAssignments: false });
+      await loadClub(plannerState.clubId, { updateUrl: false, resetSquad: false });
       setCanonicalUrl({ planId: plannerState.planId, replace: false });
       await refreshSavedPlans();
       renderWorkspace();
@@ -849,14 +979,14 @@
     } else if (requestedClubId) {
       if (plannerState.planId || requestedClubId !== plannerState.clubId) {
         resetPlanIdentity({ preserveClub: false });
-        await loadClub(requestedClubId, { updateUrl: updateHash, resetAssignments: true });
+        await loadClub(requestedClubId, { updateUrl: updateHash, resetSquad: true });
       } else {
         renderWorkspace();
       }
     } else {
       if (plannerState.planId) resetPlanIdentity({ preserveClub: false });
       renderWorkspace();
-      setStatus(plannerState.clubId ? "Select a player, then a position." : "Choose a Club to start planning.");
+      setStatus(plannerState.clubId ? "Edit the squad list or change formation." : "Choose a Club to start planning.");
     }
 
     syncHomeLoginButton?.();
@@ -875,12 +1005,9 @@
     const next = String(formationSelect.value || "");
     if (!formations[next] || next === plannerState.formationId) return;
     plannerState.formationId = next;
-    plannerState.assignments.clear();
-    plannerState.selectedPlayerId = "";
-    plannerState.selectedFromSlotId = "";
     markDirty();
     renderWorkspace();
-    setStatus("Formation changed. Player assignments were reset.");
+    setStatus("Formation changed. Squad depths updated.");
   });
 
   savedPlanSelect?.addEventListener("change", () => {
@@ -924,11 +1051,50 @@
     searchInput.focus();
   });
 
+  playerSearchInput?.addEventListener("input", () => {
+    syncPlayerSearchClearButton();
+    window.clearTimeout(playerSearchTimer);
+    playerSearchTimer = window.setTimeout(() => void searchPlayers(playerSearchInput.value), 140);
+  });
+
+  playerSearchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      const firstResult = playerSearchResults?.querySelector(".plannerPlayerSearchResult");
+      if (firstResult instanceof HTMLButtonElement) {
+        event.preventDefault();
+        firstResult.click();
+      }
+      return;
+    }
+    if (event.key === "Escape") {
+      if (playerSearchResults instanceof HTMLElement) {
+        playerSearchResults.hidden = true;
+        playerSearchResults.replaceChildren();
+      }
+      playerSearchInput.blur();
+    }
+  });
+
+  playerSearchClearButton?.addEventListener("click", () => {
+    if (!(playerSearchInput instanceof HTMLInputElement)) return;
+    window.clearTimeout(playerSearchTimer);
+    playerSearchSequence += 1;
+    playerSearchInput.value = "";
+    syncPlayerSearchClearButton();
+    renderPlayerSearchResults([]);
+    playerSearchInput.focus();
+  });
+
   document.addEventListener("click", (event) => {
-    if (!(searchResults instanceof HTMLElement) || searchResults.hidden) return;
     const target = event.target;
-    if (target === searchInput || (target instanceof Node && searchResults.contains(target))) return;
-    searchResults.hidden = true;
+    if (searchResults instanceof HTMLElement && !searchResults.hidden
+        && target !== searchInput && !(target instanceof Node && searchResults.contains(target))) {
+      searchResults.hidden = true;
+    }
+    if (playerSearchResults instanceof HTMLElement && !playerSearchResults.hidden
+        && target !== playerSearchInput && !(target instanceof Node && playerSearchResults.contains(target))) {
+      playerSearchResults.hidden = true;
+    }
   });
 
   newPlanButton?.addEventListener("click", () => newPlan({ preserveClub: true, updateUrl: true }));
@@ -941,6 +1107,7 @@
     loadClub,
     loadPlan,
     reset: newPlan,
+    depthChartForFormation,
     formations,
   }));
 })();

@@ -40,15 +40,21 @@
           </div>
 
           <section id="plannerWorkspace" class="plannerWorkspace" hidden>
-            <section class="plannerPitchPanel" aria-label="Lineup">
+            <section class="plannerPitchPanel" aria-labelledby="plannerPitchSectionTitle">
               <div class="plannerWorkspaceHeader">
-                <div id="plannerClubIdentity" class="plannerClubIdentity">
-                  <div class="plannerClubLogoFrame">
-                    <img id="plannerClubLogo" class="plannerClubLogo" alt="" hidden>
+                <div class="plannerPitchHeaderMain">
+                  <div class="plannerSectionHeading">
+                    <span class="plannerSectionEyebrow">Formation</span>
+                    <h3 id="plannerPitchSectionTitle">Pitch</h3>
                   </div>
-                  <div class="plannerClubIdentityText">
-                    <span class="plannerClubEyebrow">Club</span>
-                    <strong id="plannerClubName" class="plannerClubName">Select a Club</strong>
+                  <div id="plannerClubIdentity" class="plannerClubIdentity">
+                    <div class="plannerClubLogoFrame">
+                      <img id="plannerClubLogo" class="plannerClubLogo" alt="" hidden>
+                    </div>
+                    <div class="plannerClubIdentityText">
+                      <span class="plannerClubEyebrow">Club</span>
+                      <strong id="plannerClubName" class="plannerClubName">Select a Club</strong>
+                    </div>
                   </div>
                 </div>
                 <label class="plannerFormationField" for="plannerFormationSelect">
@@ -56,20 +62,29 @@
                   <select id="plannerFormationSelect"></select>
                 </label>
               </div>
-              <div id="plannerPitch" class="pitch plannerPitch" aria-label="Formation pitch">
+              <div id="plannerPitch" class="pitch plannerPitch" aria-label="Formation squad depths">
                 <span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>
               </div>
             </section>
 
-            <aside class="plannerRosterPanel" aria-label="Available players">
+            <aside class="plannerRosterPanel" aria-labelledby="plannerSquadSectionTitle">
               <div class="plannerRosterHeader">
                 <div>
                   <span class="plannerRosterEyebrow">Squad</span>
-                  <h3>Available players</h3>
+                  <h3 id="plannerSquadSectionTitle">Squad list</h3>
                 </div>
                 <span id="plannerRosterCount" class="plannerRosterCount">0</span>
               </div>
-              <p class="plannerRosterHint">Select a player, then select a position on the pitch. Select an occupied position to move or remove its player.</p>
+              <div class="plannerPlayerPicker">
+                <label class="plannerFieldLabel" for="plannerPlayerSearchInput">Add player</label>
+                <div class="plannerPlayerSearchWrap">
+                  <div class="plannerSearchControl plannerPlayerSearchControl">
+                    <input id="plannerPlayerSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search database by player ID or name" aria-autocomplete="list" aria-controls="plannerPlayerSearchResults">
+                    <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                  </div>
+                  <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" role="listbox" hidden></div>
+                </div>
+              </div>
               <div id="plannerRoster" class="plannerRoster"></div>
             </aside>
           </section>

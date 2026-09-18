@@ -544,6 +544,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
 .plannerSearchControl #plannerClubSearchInput,
+.plannerSearchControl #plannerPlayerSearchInput,
 #pageSizeSelect {
   transition: background var(--mfl-motion-fast) ease, border-color var(--mfl-motion-fast) ease, color var(--mfl-motion-fast) ease;
 }
@@ -573,6 +574,9 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .plannerSearchControl:hover #plannerClubSearchInput:not(:disabled),
 #plannerClubSearchInput:focus:not(:disabled),
 #plannerClubSearchInput:focus-visible:not(:disabled),
+.plannerSearchControl:hover #plannerPlayerSearchInput:not(:disabled),
+#plannerPlayerSearchInput:focus:not(:disabled),
+#plannerPlayerSearchInput:focus-visible:not(:disabled),
 #pageSizeSelect:hover:not(:disabled),
 #pageSizeSelect:focus:not(:disabled),
 #pageSizeSelect:focus-visible:not(:disabled),
@@ -595,7 +599,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 
 .evaluationSearchControl #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
-.plannerSearchControl #plannerClubSearchInput {
+.plannerSearchControl #plannerClubSearchInput,
+.plannerSearchControl #plannerPlayerSearchInput {
   width: 100%;
   padding-right: 42px;
 }
@@ -633,7 +638,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 /* Clear controls are visible only while their adjacent search input has a value. */
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
 #playerSearchInput:placeholder-shown + .playerSearchClearButton,
-#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton,
+#plannerPlayerSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
