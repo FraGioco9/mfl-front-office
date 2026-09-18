@@ -65,7 +65,8 @@
   function installSearchMatching() {
     if (typeof normalizeSearchText !== "function") return false;
 
-    if (typeof searchMatchScore === "function" && !searchMatchScore.__mflSurnameFirst) {
+    const markedSearchMatchScore = /** @type {typeof searchMatchScore & { __mflSurnameFirst?: boolean }} */ (searchMatchScore);
+    if (typeof markedSearchMatchScore === "function" && !markedSearchMatchScore.__mflSurnameFirst) {
       const surnameFirstSearchMatchScore = function(query, primaryText, secondaryText = "") {
         const normalizedQuery = normalizeSearchText(query);
         const primary = normalizeSearchText(primaryText);
@@ -100,7 +101,8 @@
       searchMatchScore = surnameFirstSearchMatchScore;
     }
 
-    if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflSurnameFirst) {
+    const markedEvaluationSearchMatches = /** @type {typeof evaluationSearchMatches & { __mflSurnameFirst?: boolean }} */ (evaluationSearchMatches);
+    if (typeof markedEvaluationSearchMatches === "function" && !markedEvaluationSearchMatches.__mflSurnameFirst) {
       const surnameFirstEvaluationSearchMatches = function(query) {
         if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
         const results = [];
