@@ -45,10 +45,23 @@ invariant(
   "Planner direct refresh must expose the Planner shell synchronously during HTML parsing.",
 );
 invariant(
+  html.includes('new URLSearchParams(location.search).get("club")')
+    && html.includes("selector.hidden = true;")
+    && html.includes("selectedTeam.hidden = false;")
+    && html.includes("workspace.hidden = false;")
+    && html.includes('teamLogo.src = "https://d13e14gtps4iwl.cloudfront.net/u/clubs/"')
+    && html.includes('rosterBody.setAttribute("aria-busy", "true")'),
+  "A selected-club Planner refresh must enter the club workspace synchronously without exposing the Team search first.",
+);
+invariant(
   generatedHtml.includes('if (initialPage !== "planner") return;')
     && generatedHtml.includes('document.body.dataset.page = "planner";')
-    && generatedHtml.includes("page.hidden = false;"),
-  "Generated index.html must preserve parser-time Planner first-paint ownership.",
+    && generatedHtml.includes("page.hidden = false;")
+    && generatedHtml.includes('new URLSearchParams(location.search).get("club")')
+    && generatedHtml.includes("selector.hidden = true;")
+    && generatedHtml.includes("selectedTeam.hidden = false;")
+    && generatedHtml.includes("workspace.hidden = false;"),
+  "Generated index.html must preserve parser-time Planner first-paint ownership and selected-club state.",
 );
 invariant(html.includes('id="plannerWorkspace"') && html.includes('id="plannerRosterBody"') && html.includes("pitch plannerPitch"), "Selected teams must expose a squad table and pitch workspace.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
