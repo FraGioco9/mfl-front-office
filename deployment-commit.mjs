@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
@@ -38,6 +39,18 @@ export function resolveDeploymentCommit({ root = process.cwd(), env = process.en
   return fileCommit || envCommit;
 }
 
+export function resolveRepositoryCommit(root = process.cwd()) {
+  try {
+    return normalizeDeploymentCommit(execFileSync(
+      "git",
+      ["rev-parse", "HEAD"],
+      { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ));
+  } catch {
+    return "";
+  }
+}
+
 export function writeDeploymentCommitModule(value, { root = process.cwd() } = {}) {
   const commit = normalizeDeploymentCommit(value);
   const modulePath = deploymentCommitModulePath(root);
@@ -50,8 +63,16 @@ export function writeDeploymentCommitModule(value, { root = process.cwd() } = {}
   return commit;
 }
 
-export function materializeDeploymentCommit({ root = process.cwd(), env = process.env } = {}) {
-  const commit = resolveDeploymentCommit({ root, env });
+export function materializeDeploymentCommit({
+  root = process.cwd(),
+  env = process.env,
+  repositoryCommit,
+} = {}) {
+  const explicitCommit = resolveDeploymentCommit({ root, env });
+  const localCommit = repositoryCommit === undefined
+    ? resolveRepositoryCommit(root)
+    : normalizeDeploymentCommit(repositoryCommit);
+  const commit = explicitCommit || localCommit;
   writeDeploymentCommitModule(commit, { root });
   return commit;
 }
