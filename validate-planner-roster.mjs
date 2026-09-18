@@ -63,12 +63,13 @@ assert.equal(contractEdit.textContent, "✓", "Edit action must become Confirm w
 contractInput.value = "20.75";
 contractInput.events.input?.({ target: contractInput });
 assert.equal(contractInput.value, "20.00", "Contract must clamp values above 20.00");
-contractInput.value = "18.25";
+contractInput.value = "18,25";
 contractInput.events.input?.({ target: contractInput });
+assert.equal(contractInput.value, "18.25", "Contract editor must normalize decimal input to a dot separator");
 contractStepper.children[0].click();
-assert.equal(contractInput.value, "18.26", "Contract increase arrow must use the canonical stepper and 0.01 step");
+assert.equal(contractInput.value, "19.25", "Contract increase arrow must increment by 1.00");
 contractStepper.children[1].click();
-assert.equal(contractInput.value, "18.25", "Contract decrease arrow must use the canonical stepper and 0.01 step");
+assert.equal(contractInput.value, "18.25", "Contract decrease arrow must decrement by 1.00");
 const secondContractControl = body.children[1].children[4].children[0];
 const secondContractEditor = secondContractControl.children[1];
 const secondContractEdit = secondContractControl.children[2];
@@ -117,4 +118,17 @@ assert.equal(addedRow.children[4].children[0].children[0].textContent, "3.75", "
 assert.equal(addedRow.children[2].children[0].children[1].className.includes("newMintMarker"), true, "Added New mint player must keep the marker");
 assert.equal(route.addPlayer({ player_id: 8, name: "Retired Player", positions: "CB", age: 34, overall: 65, retirement_years: 0 }), false, "Retired player must be rejected client-side");
 assert.equal(route.addPlayer({ player_id: 7, name: "Added Player", positions: "RW", age: 21, overall: 77, retirement_years: 4 }), false, "Duplicate planned players must be rejected");
-console.log("Planner roster: complete read, contract bounds, add/remove, stale responses, Clear, empty state and retry passed.");
+assert.equal(route.togglePendingPlayer({ player_id: 9, name: "Pending One", positions: "CM", age: 22, overall: 76, retirement_years: 5, active_contract_revenue_share: 400 }), true, "First modal selection must stage without mutating the squad");
+assert.equal(route.togglePendingPlayer({ player_id: 10, name: "Pending Two", positions: "LB", age: 24, overall: 74, retirement_years: 5, active_contract_revenue_share: 500 }), true, "Second modal selection must coexist in the staged batch");
+assert.equal(body.children.some(row => row.dataset.playerId === "9"), false, "Staged players must not enter the squad before confirmation");
+assert.equal(route.confirmPendingPlayers(), true, "Add selected must commit the staged batch");
+assert.equal(body.children.some(row => row.dataset.playerId === "9"), true, "Confirmed staged player must enter the squad");
+assert.equal(body.children.some(row => row.dataset.playerId === "10"), true, "All staged players must be committed together");
+for(let id=20;id<40&&body.children.length<24;id+=1){
+  route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5 }, { render:false });
+}
+assert.equal(route.togglePendingPlayer({ player_id: 90, name: "Final Slot", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), true, "Modal selection must allow the final available squad slot");
+assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Modal selection must stop when staged squad size reaches 25");
+assert.equal(route.confirmPendingPlayers(), true, "Final available slot must be confirmable");
+assert.equal(route.addPlayer({ player_id: 92, name: "Twenty Six", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Planner squad must never exceed 25 players");
+console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
