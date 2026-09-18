@@ -2,10 +2,11 @@ import { readFile } from "node:fs/promises";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = path => readFile(new URL(path, import.meta.url), "utf8");
-const [appConfig, planner, plannerPlan, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, sharedIncremental, browserRouting, formations] = await Promise.all([
+const [appConfig, planner, plannerPlan, dataViews, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, sharedIncremental, browserRouting, formations] = await Promise.all([
   read("./modules/app-config.js"),
   read("./modules/core-sources/planner.js"),
   read("./api/_planner-plan.js"),
+  read("./api/_data-views.js"),
   read("./html-sources/planner.html"),
   read("./html-sources/chrome.html"),
   read("./modules/core-sources/shared-routing.js"),
@@ -71,7 +72,7 @@ invariant(
 invariant(
   planner.includes('requestDatabaseSearch(normalized, "players"')
     && planner.includes("!entry.retired")
-    && sharedSearch.includes("excludeRetired: true"),
+    && dataViews.includes('return playerSearchRows(query, limit, { excludeRetired: true });'),
   "Planner Squad additions must reuse canonical database player search and exclude retired players.",
 );
 invariant(
