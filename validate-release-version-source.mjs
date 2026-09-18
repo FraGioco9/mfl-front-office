@@ -3,19 +3,22 @@ import { access } from "node:fs/promises";
 
 import {
   normalizeBootstrapReleaseProjection,
+  normalizeIndexFirstPaintConfigProjection,
   normalizeIndexReleaseProjection,
 } from "./sync-release-projections.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [releaseSource, buildSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, releaseProjectionWorkflowExists] = await Promise.all([
+const [releaseSource, buildSource, projectionSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, firstPaintSource, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, releaseProjectionWorkflowExists] = await Promise.all([
   read("./release.json"),
   read("./build-app-core.mjs"),
+  read("./sync-release-projections.mjs"),
   read("./modules/pre-bootstrap-route-state.js"),
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./index.html"),
+  read("./html-sources/first-paint.html"),
   read("./table-width-runtime.js"),
   read("./.github/workflows/site-quality.yml"),
   read("./.github/workflows/cleanup-unused-branches.yml"),
@@ -43,6 +46,14 @@ invariant(
   buildSource.includes('import { synchronizeReleaseProjections } from "./sync-release-projections.mjs";')
     && buildSource.includes("await synchronizeReleaseProjections(siteRoot);"),
   "The canonical build must regenerate release projections from release.json before browser artifacts.",
+);
+invariant(
+  projectionSource.includes('["html-sources/first-paint.html", (source) => normalizeIndexFirstPaintConfigProjection(source)]'),
+  "The canonical first-paint HTML source must be synchronized by the same projection owner as generated index.html.",
+);
+invariant(
+  normalizeIndexFirstPaintConfigProjection(firstPaintSource) === firstPaintSource,
+  "html-sources/first-paint.html must not drift behind the generated first-paint route projection.",
 );
 invariant(
   siteQualityWorkflow.includes("run: npm run build")

@@ -233,10 +233,6 @@ export function firstPaintRouteConfigProjectionSource() {
     "  #progressionPage #tableHead th > span:first-child { font-size: 10px; }",
     "  #progressionPage #tableHead th > span:first-child::after { content: none; display: none; }",
     "}",
-    "@media (max-width: 700px) {",
-    "  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) { flex: 0 0 var(--mfl-responsive-table-age-marker-size); width: var(--mfl-responsive-table-age-marker-size); min-width: var(--mfl-responsive-table-age-marker-size); max-width: var(--mfl-responsive-table-age-marker-size); height: var(--mfl-responsive-table-age-marker-size); min-height: var(--mfl-responsive-table-age-marker-size); max-height: var(--mfl-responsive-table-age-marker-size); margin: 0; transform: none; }",
-    "  #progressionPage .playerTableScroller .retirementMarker::before, #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img, #progressionPage .playerTableScroller .newMintMarker .newMintIcon { width: var(--mfl-responsive-table-age-marker-size); height: var(--mfl-responsive-table-age-marker-size); }",
-    "}",
     "@media (max-width: 520px) {",
     "  #progressionPage { --mfl-table-header-height: 26px; --mfl-table-row-height: 22px; --mfl-table-row-outer-height: 26px; --mfl-table-col-listing: 3.5%; --mfl-table-col-positions: 10.39924379593141%; }",
     "  html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::before, html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page] #progressionPage .tableShell::after { width: 46px; }",
@@ -492,6 +488,7 @@ export async function synchronizeReleaseProjections(siteRoot = DEFAULT_SITE_ROOT
       normalizeBootstrapReleaseProjection(source, version, "bootstrap.js"),
     )],
     ["bootstrap-core.js", (source) => normalizeBootstrapReleaseProjection(source, version, "bootstrap-core.js")],
+    ["html-sources/first-paint.html", (source) => normalizeIndexFirstPaintConfigProjection(source)],
     ["index.html", (source) => normalizeIndexDocument(source, version)],
   ];
 

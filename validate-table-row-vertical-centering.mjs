@@ -7,6 +7,7 @@ import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 const root = dirname(fileURLToPath(import.meta.url));
 const styles = readFileSync(resolve(root, "styles.css"), "utf8");
 const sharedTableUi = readFileSync(resolve(root, "shared-table-ui-runtime.js"), "utf8");
+const responsiveTableSource = readFileSync(resolve(root, "responsive-sources", "mobile-table-content.css.inc"), "utf8");
 const releaseProjection = readFileSync(resolve(root, "sync-release-projections.mjs"), "utf8");
 const tableSource = readCanonicalCoreSource("table");
 const generatedTable = readFileSync(resolve(root, "modules/app-core-table-runtime.js"), "utf8");
@@ -54,17 +55,24 @@ for (const contentContract of [
   assert.ok(generatedTable.includes(contentContract), `Generated Table runtime must preserve specialized row content: ${contentContract}`);
 }
 
+assert.ok(
+  releaseProjection.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) { align-items: center; }')
+    && releaseProjection.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * { align-self: center; }'),
+  "Parser-time first-paint CSS must preserve the canonical row center before external styles settle.",
+);
+for (const source of [sharedTableUi, responsiveTableSource]) {
+  assert.doesNotMatch(
+    source,
+    /#progressionPage #tableBody :is\(\.tableControlCellContent, \.tableOverallCellContent\)\s*\{\s*align-items:\s*center;\s*\}/,
+    "Hydrated/responsive table CSS must not duplicate global row-host vertical-centering ownership.",
+  );
+  assert.doesNotMatch(
+    source,
+    /#progressionPage #tableBody :is\(\.tableControlCellContent, \.tableOverallCellContent\) > \*\s*\{\s*align-self:\s*center;\s*\}/,
+    "Hydrated/responsive table CSS must not duplicate global row-child vertical-centering ownership.",
+  );
+}
 for (const source of [sharedTableUi, releaseProjection]) {
-  assert.ok(
-    source.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {')
-      && source.includes('align-items: center;'),
-    "Compact first-paint and hydrated row hosts must keep the canonical vertical center line.",
-  );
-  assert.ok(
-    source.includes('#progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > *')
-      && source.includes('align-self: center;'),
-    "Every compact row element must explicitly share the row host center line.",
-  );
   assert.ok(
     source.includes('#progressionPage .playerTableScroller td.col-age .tableControlCellContent')
       && source.includes('gap: var(--mfl-responsive-table-age-marker-gap);'),
