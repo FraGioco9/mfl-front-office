@@ -40,7 +40,7 @@ const productionHeaders = createNextHeaders({ production: true });
 const rewrites = createNextRewrites();
 const vercelConfig = JSON.parse(vercelConfigSource);
 const vercelRewrites = Array.isArray(vercelConfig.rewrites) ? vercelConfig.rewrites : [];
-const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation";
+const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation|planner";
 invariant(
   outputFileTracingIncludes["/api/data"]?.some((value) => String(value).includes("api/data-files/mfl_database.db")),
   "Next config must trace the SQLite database into database-backed routes.",
