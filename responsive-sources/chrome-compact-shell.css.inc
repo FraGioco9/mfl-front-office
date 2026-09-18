@@ -12,6 +12,7 @@
     --mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);
     --mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);
     --mfl-responsive-table-age-marker-size: clamp(8px, calc(6.666667px + 0.370370vw), 10px);
+    --mfl-responsive-table-age-marker-gap: clamp(1px, calc(-0.656442px + 0.460123vw), 7px);
     --mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);
     --mfl-responsive-table-rarity-size: clamp(5px, calc(4.171779px + 0.230061vw), 8px);
     --mfl-responsive-table-checkbox-size: clamp(10px, calc(8.343558px + 0.460123vw), 16px);
