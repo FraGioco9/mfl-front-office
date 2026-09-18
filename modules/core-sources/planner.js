@@ -207,6 +207,7 @@
       const button=document.createElement("button");
       button.type="button";
       button.className="searchResult playerSearchResult plannerPlayerSearchResult";
+      button.dataset.playerId=String(playerId);
       button.classList.toggle("selected",selected);
       button.disabled=atCapacity;
       button.setAttribute("role","option");
