@@ -110,6 +110,26 @@ assert.match(
 );
 assert.match(
   responsiveSource,
+  /--mfl-responsive-table-sort-arrow-half-width: clamp\(2px,[\s\S]*4px\);[\s\S]*--mfl-responsive-table-sort-arrow-height: clamp\(3px,[\s\S]*6px\);[\s\S]*--mfl-responsive-table-sort-arrow-gap: clamp\(1px,[\s\S]*3px\);/,
+  "Sort arrows must scale continuously with the rest of the responsive table icon system.",
+);
+assert.match(
+  responsiveSource,
+  /\.playerTableScroller \.sortArrow \{[\s\S]*margin-left: var\(--mfl-responsive-table-sort-arrow-gap\);[\s\S]*transform: none;/,
+  "Responsive sort arrows must consume the shared fluid geometry instead of breakpoint transform jumps.",
+);
+assert.match(
+  responsiveSource,
+  /\.playerTableScroller \.sortArrow\.asc \{[\s\S]*border-left: var\(--mfl-responsive-table-sort-arrow-half-width\) solid transparent;[\s\S]*border-bottom: var\(--mfl-responsive-table-sort-arrow-height\) solid var\(--text\);/,
+  "Ascending sort arrows must consume the continuous responsive geometry.",
+);
+assert.doesNotMatch(
+  responsiveSource,
+  /\.playerTableScroller \.sortArrow \{\s*transform: scale\((?:0\.75|0\.62|0\.54)\)/,
+  "Sort arrows must not jump between the old fixed mobile scale tiers.",
+);
+assert.match(
+  responsiveSource,
   /@media \(min-width: 901px\) and \(max-width: 1366px\) \{[\s\S]*--mfl-table-header-height: 30px;[\s\S]*\.playerTableScroller \{[\s\S]*overflow-x: auto;[\s\S]*\.playerTableScroller th \{[\s\S]*font-size: 10px;[\s\S]*\.playerTableScroller td \{[\s\S]*font-size: 12px;/,
   "Intermediate player tables must reuse the compact tablet layout from 901px through 1366px.",
 );
