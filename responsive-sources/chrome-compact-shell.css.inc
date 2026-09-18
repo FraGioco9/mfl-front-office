@@ -19,6 +19,9 @@
     --mfl-responsive-table-checkbox-check-height: clamp(4px, calc(2.895706px + 0.306748vw), 8px);
     --mfl-responsive-table-action-size: clamp(13px, calc(11.067485px + 0.536810vw), 20px);
     --mfl-responsive-table-action-icon-size: clamp(8px, calc(6.895706px + 0.306748vw), 12px);
+    --mfl-responsive-table-sort-arrow-half-width: clamp(2px, calc(1.447853px + 0.153374vw), 4px);
+    --mfl-responsive-table-sort-arrow-height: clamp(3px, calc(2.171779px + 0.230061vw), 6px);
+    --mfl-responsive-table-sort-arrow-gap: clamp(1px, calc(0.447853px + 0.153374vw), 3px);
     --mfl-responsive-table-listing-content-size: var(--mfl-responsive-table-action-size);
   }
 
