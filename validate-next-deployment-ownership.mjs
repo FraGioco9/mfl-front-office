@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 import { resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
+import { verifyPrebuiltDeploymentCommit } from "./scripts/workflows/verify-prebuilt-deployment-commit.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
@@ -146,14 +147,39 @@ try {
     mismatchRejected = true;
   }
   invariant(mismatchRejected, "Conflicting deployment commit owners must fail closed.");
+
+  let malformedRejected = false;
+  try {
+    writeDeploymentCommit("not-a-commit", { root: fixtureRoot });
+  } catch {
+    malformedRejected = true;
+  }
+  invariant(malformedRejected, "Malformed deployment commit inputs must fail before build.");
+
+  const fixtureFunctions = resolve(fixtureRoot, ".vercel/output/functions");
+  const fixtureIdentityFunction = resolve(fixtureFunctions, "api/identity.func");
+  await mkdir(fixtureIdentityFunction, { recursive: true });
+  await writeFile(resolve(fixtureIdentityFunction, "index.js"), `module.exports = "${fixtureCommit}";\n`);
+  invariant(
+    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions }) === fixtureIdentityFunction,
+    "Prebuilt deployment verification must accept an identity function containing the exact source commit.",
+  );
+  await writeFile(resolve(fixtureIdentityFunction, "index.js"), "module.exports = null;\n");
+  let missingCommitRejected = false;
+  try {
+    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions });
+  } catch {
+    missingCommitRejected = true;
+  }
+  invariant(missingCommitRejected, "Prebuilt deployment verification must reject an identity function that lost its source commit.");
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }
 invariant(
   prebuiltVerifier.includes("identity.func")
     && prebuiltVerifier.includes(".vercel/output/functions")
-    && prebuiltVerifier.includes("does not contain deployment commit"),
-  "Prebuilt deployment verification must reject an identity function that lost its source commit.",
+    && prebuiltVerifier.includes("verifyPrebuiltDeploymentCommit"),
+  "Production deploys must retain the canonical prebuilt identity verifier.",
 );
 
 invariant(
