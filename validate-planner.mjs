@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = path => readFile(new URL(path, import.meta.url), "utf8");
-const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, formations] = await Promise.all([
+const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, controls, interactions, sharedSearch, sharedIncremental, browserRouting, formations] = await Promise.all([
   read("./modules/app-config.js"),
   read("./modules/core-sources/planner.js"),
   read("./html-sources/planner.html"),
@@ -14,6 +14,8 @@ const [appConfig, planner, html, chrome, routing, lifecycle, club, styles, contr
   read("./controls.css"),
   read("./control-interactions-runtime.js"),
   read("./modules/core-sources/shared-data-search.js"),
+  read("./modules/core-sources/shared-incremental-routing.js"),
+  read("./validation/browser-routing-regression.mjs"),
   read("./planner-formations.json"),
 ]);
 
@@ -43,10 +45,44 @@ invariant(planner.includes('scope: "club"'), "Planner roster loading must reuse 
 invariant(planner.includes('requestDatabaseSearch(normalized, "clubs"'), "Planner Club selection must reuse canonical Club search.");
 invariant(sharedSearch.includes('type === "clubs"'), "Shared database search must normalize Club-only results.");
 invariant(planner.includes('plannerState.assignments.set') && planner.includes('plannerState.assignments.delete'), "Planner must support tap assignment, movement and removal.");
+invariant(
+  planner.includes('selectedFromSlotId')
+    && planner.includes('targetPlayerId')
+    && planner.includes('plannerState.assignments.set(sourceSlotId, targetPlayerId)'),
+  "Planner must swap two occupied pitch slots instead of silently dropping the displaced player.",
+);
 invariant(club.includes("clubIdentityPlannerLink"), "Club pages must expose Open in Planner.");
 invariant(Array.isArray(formationData) && formationData.length >= 5 && formationData.every(item => Array.isArray(item.slots) && item.slots.length === 11), "Planner formations must stay data-driven with eleven slots.");
+invariant(
+  planner.includes('"/planner-formations.json"')
+    && !planner.includes('"4-3-3": Object.freeze(['),
+  "Planner formation geometry must have one owner in planner-formations.json rather than a duplicated JS formation map.",
+);
+invariant(
+  sharedIncremental.includes("readClubPayload")
+    && sharedIncremental.includes("rememberClubPayload")
+    && sharedIncremental.includes("clubRequestPath")
+    && planner.includes("__mflRouteDataCache")
+    && planner.includes("readClubPayload")
+    && planner.includes("rememberClubPayload")
+    && planner.includes("clubRequestPath"),
+  "Planner must reuse the canonical Club payload cache and request builder rather than issuing a parallel Club-data path.",
+);
+invariant(
+  planner.includes("plannerState.loading")
+    && planner.includes("renderPlannerLoadingState")
+    && styles.includes(".plannerPlayerSkeleton")
+    && styles.includes(".plannerSlot.is-loading"),
+  "Planner Club loading must preserve pitch/roster geometry with Planner-owned skeletons.",
+);
+invariant(
+  browserRouting.includes("plannerClubPageRequests")
+    && browserRouting.includes('"planner-saved"')
+    && browserRouting.includes("plannerLoadingPitchGeometry"),
+  "Rendered Planner coverage must protect cached Club reuse, loading geometry, and saved/shared plan restoration.",
+);
 invariant(styles.includes(".plannerPitch") && styles.includes("@media (max-width: 900px)"), "Planner must provide responsive pitch/roster geometry.");
 invariant(controls.includes(".plannerSearchControl") && controls.includes(".plannerSearchClearButton"), "Planner search must use shared search-control styling.");
 invariant(interactions.includes("#plannerClubSearchInput"), "Planner Club search must participate in shared input interaction handling.");
 
-console.log("Planner route, workspace, persistence controls, sharing and responsive ownership checks passed.");
+console.log("Planner route, workspace, cache reuse, loading geometry, assignment, persistence, sharing and responsive ownership checks passed.");
