@@ -562,7 +562,7 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(payload?.error || "Could not update Planner.");
+      const error = /** @type {Error & { status?: number }} */ (new Error(payload?.error || "Could not update Planner."));
       error.status = response.status;
       throw error;
     }
