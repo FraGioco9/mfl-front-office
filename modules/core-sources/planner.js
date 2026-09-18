@@ -549,7 +549,12 @@
     });
     const missing = requested.filter((id) => !known.has(id));
     if (missing.length) {
-      const parameters = new URLSearchParams({ mode: "search", type: "recent", playerIds: missing.join(",") });
+      const parameters = new URLSearchParams({
+        mode: "search",
+        type: "recent",
+        playerIds: missing.join(","),
+        excludeRetired: "1",
+      });
       const response = await window.__mflDataClient.fetch("/api/data?" + parameters, {
         cache: "no-store",
         headers: { Accept: "application/json" },
