@@ -130,8 +130,10 @@ jobs:
         env:
           WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4010
+          MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-start-smoke.db
         run: |
           set -euo pipefail
+          node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
           npx next start -p 4010 > /tmp/mfl-next-start.log 2>&1 &
           NEXT_PID=$!
           cleanup() {
@@ -154,6 +156,8 @@ jobs:
           grep -q "PREBUILT_CORE_PATH" /tmp/mfl-app-entry.js
           curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
+          curl --fail --silent --show-error http://127.0.0.1:4010/api/identity > /tmp/mfl-built-identity.json
+          jq -e '.runtime.commit == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" and .runtime.version and .database.generatedAt' /tmp/mfl-built-identity.json >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
 
