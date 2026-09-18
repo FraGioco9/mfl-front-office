@@ -273,7 +273,7 @@
       planNameInput.disabled = !editable();
     }
     if (formationSelect instanceof HTMLSelectElement) formationSelect.disabled = !editable();
-    if (searchInput instanceof HTMLInputElement) searchInput.disabled = !editable();
+    if (searchInput instanceof HTMLInputElement) searchInput.disabled = plannerState.loading;
     if (playerSearchInput instanceof HTMLInputElement) playerSearchInput.disabled = !hasClub || !editable();
     if (savePlanButton) {
       savePlanButton.disabled = !hasClub || !editable() || !signedIn;
@@ -296,7 +296,7 @@
 
   function renderClubIdentity() {
     const identity = plannerState.club && typeof plannerState.club === "object" ? plannerState.club : {};
-    const name = String(identity.name || identity.clubName || (plannerState.clubId ? "Club " + plannerState.clubId : "Select a Club")).trim();
+    const name = String(identity.name || identity.clubName || (plannerState.clubId ? "Team " + plannerState.clubId : "Select a team")).trim();
     if (clubName instanceof HTMLElement) clubName.textContent = name;
     if (searchInput instanceof HTMLInputElement && plannerState.clubId && document.activeElement !== searchInput) searchInput.value = name;
     syncSearchClearButton();
@@ -478,7 +478,7 @@
     renderPitch();
     renderRoster();
     if (workspace instanceof HTMLElement) {
-      workspace.hidden = !plannerState.clubId;
+      workspace.hidden = !plannerState.clubId || plannerState.loading;
       if (plannerState.loading) workspace.setAttribute("aria-busy", "true");
       else workspace.removeAttribute("aria-busy");
     }
@@ -664,19 +664,20 @@
     const fragment = document.createDocumentFragment();
     clubs.forEach((club) => {
       const id = String(club?.clubId || club?.id || "").trim();
-      const name = String(club?.name || club?.clubName || (id ? "Club " + id : "")).trim();
+      const name = String(club?.name || club?.clubName || (id ? "Team " + id : "")).trim();
       if (!id || !name) return;
+
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "searchResult plannerClubSearchResult";
+      button.className = "searchResult clubSearchResult plannerClubSearchResult";
       button.setAttribute("role", "option");
       button.dataset.clubId = id;
-      const nameNode = document.createElement("strong");
-      nameNode.textContent = name;
-      const metaNode = document.createElement("span");
-      const division = String(club?.divisionName || club?.division || "").trim();
-      metaNode.textContent = ["Club #" + id, division ? "Division " + division : ""].filter(Boolean).join(" · ");
-      button.append(nameNode, metaNode);
+
+      const division = contractDivisionInfo(club?.division);
+      const divisionHtml = division
+        ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>`
+        : "";
+      button.innerHTML = `<strong>${escapeHtml(name)}</strong><span>Club &middot; #${escapeHtml(id)}${divisionHtml}</span>`;
       button.addEventListener("click", () => {
         searchResults.hidden = true;
         searchResults.replaceChildren();
@@ -714,7 +715,7 @@
           (left.division ?? Number.POSITIVE_INFINITY) - (right.division ?? Number.POSITIVE_INFINITY)
           || left.name.localeCompare(right.name)
         ))
-        .slice(0, 20);
+        .slice(0, 10);
       renderSearchResults(clubs);
     } catch (error) {
       if (sequence !== searchSequence) return;
