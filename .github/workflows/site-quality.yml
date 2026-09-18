@@ -114,7 +114,11 @@ jobs:
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/workflows/write-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          npm run build
 
       - name: Next runtime smoke test
         if: steps.changes.outputs.site == 'true'
@@ -146,6 +150,8 @@ jobs:
           grep -q "PREBUILT_CORE_PATH" /tmp/mfl-app-entry.js
           curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
+          curl --fail --silent --show-error http://127.0.0.1:4010/api/identity > /tmp/mfl-built-identity.json
+          jq -e '.runtime.commit == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" and .runtime.version and .database.generatedAt' /tmp/mfl-built-identity.json >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
 
