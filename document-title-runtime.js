@@ -9,6 +9,7 @@
     database: "Database",
     mfl: "MFL",
     progression: "Progression",
+    planner: "Planner",
     evaluation: "Evaluation",
     watchlist: "Watchlist",
     myplayers: "My Players",
@@ -62,7 +63,7 @@
     if (firstPart === "my-clubs" || firstPart === "myclubs") return "my-clubs";
     if (["club", "clubs"].includes(firstPart)) return "club";
     if (firstPart === "players") return "player";
-    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
+    if (["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
     return "notfound";

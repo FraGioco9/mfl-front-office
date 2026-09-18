@@ -7,6 +7,7 @@ const entries = [
   ["mflstats", "mfl-stats.js", "app-core-mfl-stats-runtime.js", "// Generated MFL Stats core from modules/core-sources/mfl-stats.js. Do not edit directly.\n"],
   ["club", "club.js", "app-core-club-runtime.js", "// Generated Club core from modules/core-sources/club.js. Do not edit directly.\n"],
   ["my-clubs", "my-clubs.js", "app-core-my-clubs-runtime.js", "// Generated My Clubs core from modules/core-sources/my-clubs.js. Do not edit directly.\n"],
+  ["planner", "planner.js", "app-core-planner-runtime.js", "// Generated Planner core from modules/core-sources/planner.js. Do not edit directly.\n"],
   ["settings", "settings.js", "app-core-settings-runtime.js", "// Generated Settings core from modules/core-sources/settings.js. Do not edit directly.\n"],
   ["player", "player.js", "app-core-player-runtime.js", "// Generated Player core from modules/core-sources/player.js. Do not edit directly.\n"],
   ["table", ["table.js", "table-render-lifecycle.js", "table-interaction-bindings.js"], "app-core-table-runtime.js", "// Generated Table core from modules/core-sources/table.js. Do not edit directly.\n"],

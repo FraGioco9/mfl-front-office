@@ -55,6 +55,7 @@ export const ROUTE_SHELL_IDS = Object.freeze({
   myplayers: "progressionPage",
   club: "progressionPage",
   "my-clubs": "myClubsPage",
+  planner: "plannerPage",
   evaluation: "evaluationPage",
   player: "playerPage",
   settings: "settingsPage",
@@ -103,6 +104,7 @@ export const ROUTE_CORE_PATHS = Object.freeze({
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
   club: "/modules/app-core-club-runtime.js",
   "my-clubs": "/modules/app-core-my-clubs-runtime.js",
+  planner: "/modules/app-core-planner-runtime.js",
   settings: "/modules/app-core-settings-runtime.js",
   player: "/modules/app-core-player-runtime.js",
   table: "/modules/app-core-table-runtime.js",
@@ -500,6 +502,7 @@ export function browserConfigRuntimeSource(release) {
 
     if (pageSegment === "home" && segments.length === 1) return homeRequest(path);
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
+    if (pageSegment === "planner" && segments.length === 1) return requestResult(path, "planner", {}, "/planner");
     if ((pageSegment === "my-clubs" || pageSegment === "myclubs") && segments.length === 1) return requestResult(path, "my-clubs", {}, "/my-clubs");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
