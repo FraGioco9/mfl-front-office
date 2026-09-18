@@ -5,34 +5,56 @@
   const BASE_PATH = "/planner";
   const DEFAULT_FORMATION = "4-3-3";
   const PLANS_API = "/api/planner-plans";
-  const formations = Object.freeze({
-    "4-3-3": Object.freeze([
-      ["GK", "GK", 50, 90], ["LW", "LW", 25, 15], ["ST", "ST", 50, 15], ["RW", "RW", 75, 15],
-      ["LCM", "CM", 25, 45], ["CM", "CM", 50, 45], ["RCM", "CM", 75, 45],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "4-2-3-1": Object.freeze([
-      ["GK", "GK", 50, 90], ["ST", "ST", 50, 15],
-      ["LAM", "CAM", 25, 35], ["CAM", "CAM", 50, 35], ["RAM", "CAM", 75, 35],
-      ["LDM", "CDM", 33.33, 55], ["RDM", "CDM", 66.67, 55],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "4-4-2": Object.freeze([
-      ["GK", "GK", 50, 90], ["LST", "ST", 33.33, 15], ["RST", "ST", 66.67, 15],
-      ["LM", "LM", 20, 45], ["LCM", "CM", 40, 45], ["RCM", "CM", 60, 45], ["RM", "RM", 80, 45],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "3-5-2": Object.freeze([
-      ["GK", "GK", 50, 90], ["LST", "ST", 33.33, 15], ["RST", "ST", 66.67, 15],
-      ["LWB", "LB", 16.67, 45], ["LCM", "CM", 33.33, 45], ["CM", "CM", 50, 45], ["RCM", "CM", 66.67, 45], ["RWB", "RB", 83.33, 45],
-      ["LCB", "CB", 25, 75], ["CB", "CB", 50, 75], ["RCB", "CB", 75, 75],
-    ]),
-    "3-4-3": Object.freeze([
-      ["GK", "GK", 50, 90], ["LW", "LW", 25, 15], ["ST", "ST", 50, 15], ["RW", "RW", 75, 15],
-      ["LM", "LM", 20, 45], ["LCM", "CM", 40, 45], ["RCM", "CM", 60, 45], ["RM", "RM", 80, 45],
-      ["LCB", "CB", 25, 75], ["CB", "CB", 50, 75], ["RCB", "CB", 75, 75],
-    ]),
-  });
+  const FORMATIONS_URL = "/planner-formations.json";
+  let formations = Object.freeze({});
+  let formationLoadPromise = null;
+
+  function normalizeFormationData(payload) {
+    const items = Array.isArray(payload) ? payload : [];
+    const entries = items.map((formation) => {
+      const id = String(formation?.id || "").trim();
+      const name = String(formation?.name || id).trim() || id;
+      const slots = Array.isArray(formation?.slots)
+        ? formation.slots.map((slot) => Object.freeze({
+            id: String(slot?.id || "").trim(),
+            position: String(slot?.position || "").trim(),
+            x: Number(slot?.x),
+            y: Number(slot?.y),
+          }))
+        : [];
+      if (!id || slots.length !== 11 || slots.some((slot) => (
+        !slot.id
+        || !slot.position
+        || !Number.isFinite(slot.x)
+        || !Number.isFinite(slot.y)
+      ))) {
+        throw new Error("Planner formation data is invalid.");
+      }
+      return [id, Object.freeze({ id, name, slots: Object.freeze(slots) })];
+    });
+    const next = Object.freeze(Object.fromEntries(entries));
+    if (!next[DEFAULT_FORMATION]) throw new Error("Planner default formation is unavailable.");
+    return next;
+  }
+
+  async function ensureFormations() {
+    if (formations[DEFAULT_FORMATION]) return formations;
+    if (formationLoadPromise) return formationLoadPromise;
+    formationLoadPromise = (async () => {
+      const response = await window.__mflDataClient.fetch(FORMATIONS_URL, {
+        cache: "force-cache",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Could not load Planner formations.");
+      formations = normalizeFormationData(payload);
+      return formations;
+    })().catch((error) => {
+      formationLoadPromise = null;
+      throw error;
+    });
+    return formationLoadPromise;
+  }
 
   const page = document.getElementById("plannerPage");
   const workspace = document.getElementById("plannerWorkspace");
@@ -239,10 +261,10 @@
   function renderFormationOptions() {
     if (!(formationSelect instanceof HTMLSelectElement)) return;
     if (!formationSelect.options.length) {
-      Object.keys(formations).forEach((formationId) => {
+      Object.values(formations).forEach((formation) => {
         const option = document.createElement("option");
-        option.value = formationId;
-        option.textContent = formationId;
+        option.value = formation.id;
+        option.textContent = formation.name;
         formationSelect.appendChild(option);
       });
     }
@@ -251,7 +273,8 @@
 
   function renderPitch() {
     if (!(pitch instanceof HTMLElement)) return;
-    const slots = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
+    const formation = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
+    const slots = formation?.slots || [];
     const fragment = document.createDocumentFragment();
     const fieldLines = PITCH_LINE_CLASSES.map((className) => {
       const line = document.createElement("span");
@@ -260,7 +283,7 @@
       return line;
     });
 
-    slots.forEach(([slotId, position, x, y]) => {
+    slots.forEach(({ id: slotId, position, x, y }) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "plannerSlot";
@@ -736,6 +759,14 @@
     document.body.dataset.page = PAGE;
     syncNavigation();
     if (page instanceof HTMLElement) showOnly(page);
+
+    try {
+      await ensureFormations();
+    } catch (error) {
+      setStatus(error?.message || "Could not load Planner formations.");
+      syncPlanControls();
+      return false;
+    }
 
     const requestedPlanId = String(options.planId || "").trim();
     const requestedClubId = String(options.clubId || queryClubId() || "").trim();
