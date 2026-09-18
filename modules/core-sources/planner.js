@@ -25,6 +25,7 @@
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="";
   let playerSearchTimer=0,playerSearchSequence=0;
+  let activeContractEditor=null;
 
   function showOnly(target){document.querySelectorAll("main > .pageView").forEach(candidate=>{if(candidate instanceof HTMLElement)candidate.hidden=candidate!==target;});}
   function syncNavigation(){document.querySelectorAll("#sidebar .navButton[data-page]").forEach(button=>{if(button instanceof HTMLElement)button.classList.toggle("active",String(button.dataset.page||"")===PAGE);});}
@@ -34,6 +35,8 @@
   function plannerPath(clubId=""){const id=String(clubId||"").trim();return id?"/planner?club="+encodeURIComponent(id):"/planner";}
   function updatePlannerUrl(clubId="",{replace=false}={}){const next=plannerPath(clubId);if(location.pathname+location.search===next)return;history[replace?"replaceState":"pushState"]({},"",next);Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();}
   function resetRoster(){
+    activeContractEditor?.cancel?.();
+    activeContractEditor=null;
     rosterSequence+=1;
     rosterController?.abort();
     rosterController=null;
@@ -186,6 +189,9 @@
       const contractValue=document.createElement("span");
       contractValue.className="plannerContractValue";
       contractValue.textContent=contractText(player.planned_contract_value);
+      const contractEditor=document.createElement("span");
+      contractEditor.className="plannerContractEditor";
+      contractEditor.hidden=true;
       const contractInput=document.createElement("input");
       contractInput.type="number";
       contractInput.className="plannerContractInput";
@@ -195,7 +201,19 @@
       contractInput.inputMode="decimal";
       contractInput.setAttribute("aria-label","Contract value for "+String(player.name||"player"));
       contractInput.value=contractText(player.planned_contract_value);
-      contractInput.hidden=true;
+      const contractStepper=document.createElement("span");
+      contractStepper.className="mflIncrementStepper plannerContractStepper";
+      contractStepper.setAttribute("aria-label","Adjust contract for "+String(player.name||"player"));
+      const increaseContract=document.createElement("button");
+      increaseContract.type="button";
+      increaseContract.textContent="▲";
+      increaseContract.setAttribute("aria-label","Increase contract for "+String(player.name||"player"));
+      const decreaseContract=document.createElement("button");
+      decreaseContract.type="button";
+      decreaseContract.textContent="▼";
+      decreaseContract.setAttribute("aria-label","Decrease contract for "+String(player.name||"player"));
+      contractStepper.append(increaseContract,decreaseContract);
+      contractEditor.append(contractInput,contractStepper);
       const editContract=document.createElement("button");
       editContract.type="button";
       editContract.className="plannerContractEditButton";
@@ -210,22 +228,27 @@
         contractValue.textContent=contractText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
         contractValue.hidden=false;
-        contractInput.hidden=true;
+        contractEditor.hidden=true;
         editContract.textContent="✎";
         editContract.setAttribute("aria-label","Edit contract for "+String(player.name||"player"));
+        if(activeContractEditor?.playerId===player.player_id)activeContractEditor=null;
+      };
+      const openContractEdit=()=>{
+        if(activeContractEditor&&activeContractEditor.playerId!==player.player_id){
+          activeContractEditor.cancel();
+        }
+        contractValue.hidden=true;
+        contractEditor.hidden=false;
+        contractInput.value=contractText(player.planned_contract_value);
+        editContract.textContent="✓";
+        editContract.setAttribute("aria-label","Confirm contract for "+String(player.name||"player"));
+        activeContractEditor={playerId:player.player_id,cancel:()=>finishContractEdit(false),confirm:()=>finishContractEdit(true)};
+        contractInput.focus();
+        contractInput.select?.();
       };
       editContract.addEventListener("click",()=>{
-        if(contractInput.hidden){
-          contractValue.hidden=true;
-          contractInput.hidden=false;
-          contractInput.value=contractText(player.planned_contract_value);
-          editContract.textContent="✓";
-          editContract.setAttribute("aria-label","Confirm contract for "+String(player.name||"player"));
-          contractInput.focus();
-          contractInput.select?.();
-        }else{
-          finishContractEdit(true);
-        }
+        if(contractEditor.hidden)openContractEdit();
+        else finishContractEdit(true);
       });
       contractInput.addEventListener("input",()=>{
         const raw=contractInput.value.trim();
@@ -235,11 +258,21 @@
         const normalized=normalizeContractValue(numeric);
         if(numeric!==normalized)contractInput.value=contractText(normalized);
       });
+      const adjustContractDraft=(delta)=>{
+        const current=Number(contractInput.value);
+        const fallback=Number(player.planned_contract_value);
+        const next=normalizeContractValue((Number.isFinite(current)?current:fallback)+delta);
+        contractInput.value=contractText(next);
+      };
+      increaseContract.addEventListener("mousedown",event=>event.preventDefault());
+      decreaseContract.addEventListener("mousedown",event=>event.preventDefault());
+      increaseContract.addEventListener("click",()=>adjustContractDraft(0.01));
+      decreaseContract.addEventListener("click",()=>adjustContractDraft(-0.01));
       contractInput.addEventListener("keydown",event=>{
         if(event.key==="Enter"){event.preventDefault();finishContractEdit(true);}
         else if(event.key==="Escape"){event.preventDefault();finishContractEdit(false);editContract.focus();}
       });
-      contractControl.append(contractValue,contractInput,editContract);
+      contractControl.append(contractValue,contractEditor,editContract);
       contractCell.appendChild(contractControl);
       row.appendChild(contractCell);
       const action=document.createElement("td");
