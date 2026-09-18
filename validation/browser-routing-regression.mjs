@@ -1461,11 +1461,25 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerPlayerModal"), "Add player must open the Add players modal.");
       assert(document.getElementById("plannerPlayerModal").classList.contains("modalOpen"), "Add players modal must enter the canonical modalOpen state.");
       const playerSearch = document.getElementById("plannerPlayerSearchInput");
+      const playerModalBox = document.querySelector(".plannerPlayerDialog").getBoundingClientRect();
+      assert(playerModalBox.width >= Math.min(900, innerWidth - 60), "Planner Add players modal must use the enlarged table layout.");
+      playerSearch.value = "Browser";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]'), "Planner current-squad player search");
+      const ownPlayerSearchRow = document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]');
+      assert(ownPlayerSearchRow.children.length === 6, "Planner player search must use the six-column result table.");
+      assert(ownPlayerSearchRow.querySelector(".plannerPlayerSearchFlag"), "Planner player search must render the nationality flag.");
+      assert(ownPlayerSearchRow.children[1].textContent === "Browser Player", "Planner player-search table must show the player name.");
+      assert(ownPlayerSearchRow.children[2].textContent === "ST", "Planner player-search table must show positions.");
+      assert(ownPlayerSearchRow.children[3].textContent === "23", "Planner player-search table must show age.");
+      assert(ownPlayerSearchRow.children[4].textContent === "80", "Planner player-search table must show overall.");
+      const inSquadButton = ownPlayerSearchRow.querySelector(".plannerPlayerSelectButton");
+      assert(inSquadButton instanceof HTMLButtonElement && inSquadButton.disabled && inSquadButton.textContent === "In squad", "Matching current-squad players must remain visible as In squad.");
       playerSearch.value = "Added";
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
-      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"]').click();
-      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"]').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerSelectButton').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerSelectButton').click();
       assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
       assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Staged modal selections must not mutate the squad.");
       document.getElementById("plannerPlayerDiscardButton").click();
@@ -1476,8 +1490,8 @@ const browserTestSource = String.raw`(() => {
       playerSearch.value = "Added";
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search after discard");
-      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"]').click();
-      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"]').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerSelectButton').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerSelectButton').click();
       document.getElementById("plannerPlayerConfirmButton").click();
       assert(hidden("#plannerPlayerModal"), "Add selected must close the modal.");
       const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
@@ -1496,9 +1510,9 @@ const browserTestSource = String.raw`(() => {
       assert(addedContractEdit instanceof HTMLButtonElement, "Added player Contract Edit is missing.");
       addedContractEdit.click();
       assert(contractEditor.hidden, "Opening another Contract must close the previous editor.");
-      assert(contractValue.textContent === "12.50", "Opening another Contract must discard the previous unsaved draft.");
+      assert(contractValue.textContent === "12.50%", "Opening another Contract must discard the previous unsaved draft.");
       assert(addedContractEditor instanceof HTMLElement && !addedContractEditor.hidden, "The newly selected Contract must become the only active editor.");
-      assert(addedContractValue?.textContent === "3.75", "Switching editors must preserve the new Contract's committed value.");
+      assert(addedContractValue?.textContent === "3.75%", "Switching editors must preserve the new Contract's committed value.");
       addedContractEdit.click();
       contractEdit.click();
       contractInput.value = "18.25";
@@ -1506,6 +1520,9 @@ const browserTestSource = String.raw`(() => {
       contractEdit.click();
       assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
       assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
+      const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
+      const depthHeadingBox = document.getElementById("plannerPitchHeading").getBoundingClientRect();
+      assert(Math.abs(squadHeadingBox.top - depthHeadingBox.top) <= 1, "Depth heading must align vertically with Squad.");
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
       const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
@@ -1513,6 +1530,7 @@ const browserTestSource = String.raw`(() => {
         assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
         assert(pitchSurfaceBox.width > 440, "Desktop Planner Depth pitch must use the enlarged available width.");
         assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
+        assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 8, "Planner Depth pitch must sit directly below the Depth heading.");
       }
       else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
       document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
@@ -1821,15 +1839,21 @@ function dataStub(url, scenario = "") {
   if (mode === "search" && url.searchParams.get("type") === "clubs") {
     return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
   }
-  if (mode === "search" && url.searchParams.get("type") === "players" && String(url.searchParams.get("q") || "").toLowerCase().includes("added")) {
+  if (mode === "search" && url.searchParams.get("type") === "players") {
+    const q = String(url.searchParams.get("q") || "").toLowerCase();
     const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
-    return {
-      columns,
-      rows: [
-        [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
-        [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
-      ],
-    };
+    if (q.includes("browser")) {
+      return { columns, rows: [[1, "Browser Player", 80, 23, "Italy", "ST", 2, 5, 1250]] };
+    }
+    if (q.includes("added")) {
+      return {
+        columns,
+        rows: [
+          [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
+          [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
+        ],
+      };
+    }
   }
   if (mode === "search") {
     const playerIds = new Set(
