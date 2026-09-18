@@ -210,7 +210,7 @@ invariant(
     && runtime.includes('button.toggleAttribute("hidden", hidden);')
     && runtime.includes('document.addEventListener("click", onClearClick, true);')
     && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    syncClearButton();')
-    && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
+    && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton,\n#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {")
     && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
   "Global Search clear control must be visually hidden whenever its input is empty and restore canonical recents without invalidating session hydration.",
 );
