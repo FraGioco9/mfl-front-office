@@ -43,7 +43,7 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       const compactName = row?.querySelector(".playerNameCompactValue");
       const listingPrice = row?.querySelector("td.col-listing .listingCellPrice");
       const headerLabel = (column) => String(document.querySelector(
-        `#tableHead th[data-table-column="${column}"] [data-mfl-full-table-label][data-mfl-compact-table-label]`
+        '#tableHead th[data-table-column="' + column + '"] [data-mfl-full-table-label][data-mfl-compact-table-label]'
       )?.textContent || "").trim();
       const menuStyle = menuRail instanceof HTMLElement ? getComputedStyle(menuRail) : null;
       const gridStyle = sidebarGrid instanceof HTMLElement ? getComputedStyle(sidebarGrid) : null;
@@ -101,7 +101,7 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
       assert(fullName instanceof HTMLElement && getComputedStyle(fullName).display !== "none", "Full player name must restore at 1367px.");
       assert(compactName instanceof HTMLElement && getComputedStyle(compactName).display === "none", "Compact player name must hide at 1367px.");
       const headerLabel = (column) => String(document.querySelector(
-        `#tableHead th[data-table-column="${column}"] [data-mfl-full-table-label][data-mfl-compact-table-label]`
+        '#tableHead th[data-table-column="' + column + '"] [data-mfl-full-table-label][data-mfl-compact-table-label]'
       )?.textContent || "").trim();
       assert(headerLabel("positions") === "Positions", "Positions header must restore its full label at 1367px.");
       assert(headerLabel("player_seasons") === "Seasons", "Seasons header must restore its full label at 1367px.");
