@@ -20,7 +20,17 @@
           </div>
           <div id="plannerWorkspace" class="plannerWorkspace" hidden>
             <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
-              <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
+              <div class="plannerRosterHeader">
+                <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
+                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-expanded="false" aria-controls="plannerPlayerAdder">Add player</button>
+              </div>
+              <div id="plannerPlayerAdder" class="plannerPlayerAdder" hidden>
+                <div class="plannerPlayerSearchControl">
+                  <input id="plannerPlayerSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by player ID or name" aria-autocomplete="list" aria-controls="plannerPlayerSearchResults">
+                  <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerPlayerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                </div>
+                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" role="listbox" hidden></div>
+              </div>
               <table class="plannerRosterTable" aria-label="Planned squad">
                 <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
                 <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
