@@ -635,14 +635,15 @@
     setStatus(plannerState.planId ? "Saving changes…" : "Saving plan…");
     try {
       const body = snapshot();
-      const payload = plannerState.planId
-        ? await plannerRequest("?id=" + encodeURIComponent(plannerState.planId), {
+      const existingPlanId = plannerState.planId;
+      const payload = existingPlanId
+        ? await plannerRequest("?id=" + encodeURIComponent(existingPlanId), {
             method: "PUT",
             body: JSON.stringify({ ...body, revision: plannerState.revision }),
           })
         : await plannerRequest("", { method: "POST", body: JSON.stringify(body) });
       applyPlan(payload.plan);
-      setCanonicalUrl({ planId: plannerState.planId, replace: !plannerState.planId });
+      setCanonicalUrl({ planId: plannerState.planId, replace: Boolean(existingPlanId) });
       await refreshSavedPlans();
       renderWorkspace();
       setStatus("Plan saved.");
@@ -675,9 +676,12 @@
     const nextShared = plannerState.visibility !== "unlisted";
     setStatus(nextShared ? "Enabling sharing…" : "Stopping sharing…");
     try {
+      const shareUpdate = nextShared
+        ? { shared: true, revision: plannerState.revision }
+        : { shared: false, revision: plannerState.revision };
       const payload = await plannerRequest("?id=" + encodeURIComponent(plannerState.planId), {
         method: "PATCH",
-        body: JSON.stringify({ shared: nextShared, revision: plannerState.revision }),
+        body: JSON.stringify(shareUpdate),
       });
       applyPlan(payload.plan);
       renderWorkspace();
