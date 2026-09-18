@@ -11,6 +11,26 @@
   display: none;
 }
 
+@media (max-width: 1664px) {
+  #progressionPage .playerTableScroller .sortArrow {
+    margin-left: var(--mfl-responsive-table-sort-arrow-gap);
+    transform: none;
+    transform-origin: center;
+  }
+
+  #progressionPage .playerTableScroller .sortArrow.asc {
+    border-left: var(--mfl-responsive-table-sort-arrow-half-width) solid transparent;
+    border-right: var(--mfl-responsive-table-sort-arrow-half-width) solid transparent;
+    border-bottom: var(--mfl-responsive-table-sort-arrow-height) solid var(--text);
+  }
+
+  #progressionPage .playerTableScroller .sortArrow.desc {
+    border-left: var(--mfl-responsive-table-sort-arrow-half-width) solid transparent;
+    border-right: var(--mfl-responsive-table-sort-arrow-half-width) solid transparent;
+    border-top: var(--mfl-responsive-table-sort-arrow-height) solid var(--text);
+  }
+}
+
 /* The full intermediate 901-1366px shell shares compact table presentation.
  * Narrower 700/520/380 layers continue to own progressively tighter geometry.
  */
@@ -166,11 +186,6 @@
     width: var(--mfl-responsive-table-rarity-size);
     height: var(--mfl-responsive-table-rarity-size);
     margin-right: 1px;
-  }
-
-  #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.75);
-    transform-origin: center;
   }
 }
 
