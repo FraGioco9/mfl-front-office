@@ -25,8 +25,13 @@ for (const token of [
 assert.doesNotMatch(table, /\? "POSITIONS"/, "Small screens must not restore the long Positions heading.");
 assert.match(
   shared,
-  /if \(mobile && short\) \{\s*label\.textContent = short;\s*return;\s*\}/,
-  "Hydration must retain compact labels throughout <=900px.",
+  /const HEADER_LABEL_COMPACT_MEDIA = window\.matchMedia\("\(max-width: 1366px\)"\);/,
+  "Hydration must own the fixed <=1366px compact-header breakpoint.",
+);
+assert.match(
+  shared,
+  /const desired = compactHeader && short \? short : full;/,
+  "Hydration must retain compact labels through the fixed <=1366px boundary.",
 );
 assert.doesNotMatch(shared, /function syncMobileColumnWidths/, "Responsive column widths must not be imperatively rewritten after paint.");
 for (const width of [760, 600, 540]) assert.ok(shared.includes(`min-width: ${width}px;`), `Player table missing ${width}px compact floor.`);
