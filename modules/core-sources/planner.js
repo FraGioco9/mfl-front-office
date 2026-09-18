@@ -62,6 +62,7 @@
     formationId: DEFAULT_FORMATION,
     assignments: new Map(),
     selectedPlayerId: "",
+    selectedFromSlotId: "",
     requestSequence: 0,
     planId: "",
     planName: "My plan",
@@ -293,25 +294,49 @@
       }
 
       button.append(labelNode, playerNode, overallNode);
+      if (plannerState.selectedFromSlotId === slotId) button.classList.add("is-selected");
       button.addEventListener("click", () => {
         if (!editable()) return;
         if (plannerState.selectedPlayerId) {
-          for (const [assignedSlotId, assignedPlayerId] of plannerState.assignments.entries()) {
-            if (assignedPlayerId === plannerState.selectedPlayerId) plannerState.assignments.delete(assignedSlotId);
+          const selectedPlayerId = plannerState.selectedPlayerId;
+          const sourceSlotId = plannerState.selectedFromSlotId;
+          const targetPlayerId = String(plannerState.assignments.get(slotId) || "");
+
+          if (sourceSlotId) {
+            if (slotId === sourceSlotId) {
+              plannerState.assignments.delete(sourceSlotId);
+              setStatus("Player returned to the available roster.");
+            } else {
+              plannerState.assignments.set(slotId, selectedPlayerId);
+              if (targetPlayerId && targetPlayerId !== selectedPlayerId) {
+                plannerState.assignments.set(sourceSlotId, targetPlayerId);
+                setStatus("Players swapped. Select another player to continue.");
+              } else {
+                plannerState.assignments.delete(sourceSlotId);
+                setStatus("Player moved. Select another player to continue.");
+              }
+            }
+          } else {
+            for (const [assignedSlotId, assignedPlayerId] of plannerState.assignments.entries()) {
+              if (assignedPlayerId === selectedPlayerId) plannerState.assignments.delete(assignedSlotId);
+            }
+            plannerState.assignments.set(slotId, selectedPlayerId);
+            setStatus(targetPlayerId
+              ? "Player assigned; the previous player returned to the available roster."
+              : "Player assigned. Select another player to continue.");
           }
-          plannerState.assignments.set(slotId, plannerState.selectedPlayerId);
+
           plannerState.selectedPlayerId = "";
+          plannerState.selectedFromSlotId = "";
           markDirty();
-          setStatus("Player assigned. Select another player to continue.");
           renderWorkspace();
           return;
         }
 
         if (assignedId) {
-          plannerState.assignments.delete(slotId);
           plannerState.selectedPlayerId = assignedId;
-          markDirty();
-          setStatus("Player selected. Choose another position, or select the player in the roster to leave the slot empty.");
+          plannerState.selectedFromSlotId = slotId;
+          setStatus("Player selected. Choose another position to move or swap, or select this position again to remove the player.");
           renderWorkspace();
         }
       });
@@ -363,9 +388,11 @@
       button.append(identity, overall);
       button.addEventListener("click", () => {
         if (!editable()) return;
-        plannerState.selectedPlayerId = plannerState.selectedPlayerId === id ? "" : id;
+        const nextSelectedPlayerId = plannerState.selectedPlayerId === id && !plannerState.selectedFromSlotId ? "" : id;
+        plannerState.selectedPlayerId = nextSelectedPlayerId;
+        plannerState.selectedFromSlotId = "";
         setStatus(plannerState.selectedPlayerId ? "Player selected. Choose a position on the pitch." : "Player selection cleared.");
-        renderRoster();
+        renderWorkspace();
       });
       fragment.appendChild(button);
     });
@@ -392,6 +419,7 @@
     plannerState.dirty = false;
     plannerState.assignments.clear();
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
     plannerState.formationId = DEFAULT_FORMATION;
     if (!preserveClub) {
       plannerState.clubId = "";
@@ -580,6 +608,7 @@
     plannerState.revision = Number.isSafeInteger(plan?.revision) ? plan.revision : 1;
     plannerState.dirty = false;
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
   }
 
   async function loadPlan(planId, { updateUrl = true } = {}) {
@@ -746,6 +775,7 @@
     plannerState.formationId = next;
     plannerState.assignments.clear();
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
     markDirty();
     renderWorkspace();
     setStatus("Formation changed. Player assignments were reset.");
