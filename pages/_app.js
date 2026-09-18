@@ -1,10 +1,7 @@
 import React from "react";
 import Head from "next/head";
 
-export default function MflApp({ Component, pageProps, router }) {
-  const routePath = String(router?.asPath || "").split(/[?#]/, 1)[0] || "/";
-  const managedTitle = routePath === "/planner" ? "Planner - MFL Front Office" : "";
-
+export default function MflApp({ Component, pageProps }) {
   return React.createElement(
     React.Fragment,
     null,
@@ -15,7 +12,6 @@ export default function MflApp({ Component, pageProps, router }) {
         name: "viewport",
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       }),
-      managedTitle ? React.createElement("title", null, managedTitle) : null,
     ),
     React.createElement(Component, pageProps),
   );
