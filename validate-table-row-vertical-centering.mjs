@@ -19,6 +19,11 @@ assert.match(playerCellGeometry, /vertical-align: middle;/, "Table cells must re
 const sharedFullHeightContent = styles.match(/#progressionPage #tableBody :is\(\.tableControlCellContent, \.tableOverallCellContent\) \{([\s\S]*?)\n\}/)?.[1] || "";
 assert.match(sharedFullHeightContent, /display: flex;/, "The canonical row-content host must use flex layout.");
 assert.match(sharedFullHeightContent, /align-items: center;/, "The canonical row-content host must vertically center every child.");
+assert.match(
+  styles,
+  /#progressionPage #tableBody :is\(\.tableControlCellContent, \.tableOverallCellContent\) > \* \{[\s\S]*?align-self: center;[\s\S]*?\}/,
+  "Every object inside every canonical row-content host must explicitly share the row vertical center at all viewport widths.",
+);
 assert.match(sharedFullHeightContent, /width: 100%;/, "The canonical row-content host must own the full cell width.");
 assert.match(sharedFullHeightContent, /height: var\(--mfl-table-row-height\);/, "The canonical row-content host must own the full row-content height.");
 assert.match(sharedFullHeightContent, /min-height: var\(--mfl-table-row-height\);/, "The canonical row-content host must preserve the minimum row-content height.");
