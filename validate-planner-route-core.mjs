@@ -5,9 +5,10 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [planner, html, chrome, styles, routing, lifecycle, releaseJson, vercelJson] = await Promise.all([
+const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, releaseJson, vercelJson] = await Promise.all([
   read("./modules/core-sources/planner.js"),
   read("./html-sources/planner.html"),
+  read("./index.html"),
   read("./html-sources/chrome.html"),
   read("./planner.css"),
   read("./modules/core-sources/shared-routing.js"),
@@ -37,6 +38,18 @@ invariant(routes?.canonicalRequest("/planner")?.pageName === "planner", "Canonic
 invariant(routes?.routeShellId("planner") === "plannerPage", "Planner must own plannerPage as its route shell.");
 invariant(routes?.routeDependencyPlan("planner")?.core?.includes("planner"), "Planner navigation must load the Planner route core.");
 invariant(html.includes('id="plannerPage"') && html.includes('id="plannerTeamSearchInput"'), "Planner must expose its dedicated page and team search.");
+invariant(
+  html.includes('if (initialPage !== "planner") return;')
+    && html.includes('document.body.dataset.page = "planner";')
+    && html.includes("page.hidden = false;"),
+  "Planner direct refresh must expose the Planner shell synchronously during HTML parsing.",
+);
+invariant(
+  generatedHtml.includes('if (initialPage !== "planner") return;')
+    && generatedHtml.includes('document.body.dataset.page = "planner";')
+    && generatedHtml.includes("page.hidden = false;"),
+  "Generated index.html must preserve parser-time Planner first-paint ownership.",
+);
 invariant(!html.includes("plannerPitch") && !html.includes("plannerRoster"), "Initial Planner must stay limited to team selection.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
