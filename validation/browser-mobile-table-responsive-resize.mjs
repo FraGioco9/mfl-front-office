@@ -89,7 +89,7 @@ const responsiveProbe = String.raw`    await cdp.send("Runtime.enable");
       { width: 1041, name: "N. Barella", listing: false, gap: "3px", icon: 9, marker: 11, compact: true, mobile: false },
       { width: 901, name: "N. Barella", listing: false, gap: "3px", icon: 8, marker: 10, compact: true, mobile: false },
       { width: 900, name: "N. Barella", listing: false, gap: "3px", icon: 8, marker: 10, compact: true, mobile: true },
-      { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 8, marker: 10, compact: true, mobile: true },
+      { width: 700, name: "N. Barella", listing: false, gap: "2px", icon: 8, marker: 9, compact: true, mobile: true },
       { width: 520, name: "N. Barella", listing: false, gap: "2px", icon: 7, marker: 9, compact: true, mobile: true },
       { width: 380, name: "N. Barella", listing: false, gap: "1px", icon: 6, marker: 8, compact: true, mobile: true },
       { width: 360, name: "N. Barella", listing: false, gap: "1px", icon: 6, marker: 8, compact: true, mobile: true },
