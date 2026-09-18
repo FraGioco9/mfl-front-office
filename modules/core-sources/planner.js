@@ -462,7 +462,8 @@
     renderRoster();
     if (workspace instanceof HTMLElement) {
       workspace.hidden = !plannerState.clubId;
-      workspace.toggleAttribute("aria-busy", plannerState.loading);
+      if (plannerState.loading) workspace.setAttribute("aria-busy", "true");
+      else workspace.removeAttribute("aria-busy");
     }
     syncPlanControls();
   }
