@@ -342,6 +342,7 @@ const optInLockedTitle = document.querySelector("#optInLockedTitle");
 const optInLockedMessage = document.querySelector("#optInLockedMessage");
 const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
+/** @type {HTMLElement | null} */
 const plannerPage = document.querySelector("#plannerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
 /** @type {HTMLDivElement | null} */
