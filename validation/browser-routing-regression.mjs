@@ -420,8 +420,8 @@ const browserTestSource = String.raw`(() => {
         ".playerGrid",
         ".playerStack",
         ".playerPanel",
-        ".pitchPanel",
-        ".pitch",
+        "#playerPage .pitchPanel",
+        "#playerPage .pitch",
       ];
       if (main.scrollWidth > main.clientWidth + 1) {
         const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
