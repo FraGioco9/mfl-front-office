@@ -155,6 +155,10 @@ const browserTestSource = String.raw`(() => {
   const testWatchlistId = "browser1";
   const expectedPlayerName = "Browser Player";
   const errors = [];
+  const markPhase = (phase) => {
+    window.__mflBrowserRoutingPhase = String(phase || "");
+  };
+  markPhase("script-loaded");
   let parserSnapshot = null;
   let loadingSkeletonHeight = 0;
   const linkedTablePaintHistory = { filterCounts: [], sortStates: [] };
@@ -981,6 +985,7 @@ const browserTestSource = String.raw`(() => {
   }
 
   async function navigateBackToScenario(setPage, timeline) {
+    markPhase("navigate-back:start");
     if (scenario === "player") {
       const originalEnsureRouteCore = window.__mflEnsureRouteCore;
       let evaluationCoreRequested = false;
@@ -1163,12 +1168,17 @@ const browserTestSource = String.raw`(() => {
       scrollbarSpacer.remove();
       assertPageAccessibilityState();
     }
+    markPhase("navigate-back:set-privacy");
     await setPage("privacy", true);
+    markPhase("navigate-back:await-privacy-path");
     await waitFor(() => window.location.pathname === "/privacy", scenario + " could not navigate to Privacy.");
+    markPhase("navigate-back:privacy-ready");
     const baselineSequence = timeline.snapshot().at(-1)?.sequence || 0;
 
     if (scenario === "database" || scenario === "database-empty") {
+      markPhase("navigate-back:set-database");
       await setPage("database", true, { view: "attributes" });
+      markPhase("navigate-back:database-returned");
     } else if (scenario === "player") {
       await setPage("player", true, { playerId: "1" });
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
@@ -1311,6 +1321,7 @@ const browserTestSource = String.raw`(() => {
   }
 
   async function runRepresentativeRoute() {
+    markPhase("representative:start");
     const setPage = Reflect.get(window, "setPage");
     const timeline = window.__mflClientPerformance;
     assert(typeof setPage === "function", "Canonical setPage owner is unavailable.");
@@ -1318,8 +1329,10 @@ const browserTestSource = String.raw`(() => {
     assert(scenario !== "unknown", "Browser regression scenario could not be derived from the route.");
     assertInitialFirstPaint();
     assertInitialTiming(timeline);
+    markPhase("representative:await-route-ready");
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    markPhase("representative:route-ready");
     if (scenario === "database-linked-state") {
       await delay(80);
       linkedTablePaintSampling = false;
@@ -1355,13 +1368,18 @@ const browserTestSource = String.raw`(() => {
       finish("passed", "database: compact sticky Name behavior remained canonical across direct and cached routes.");
       return;
     }
+    markPhase("representative:shared-geometry");
     assertSharedChromeGeometry();
     assertPageAccessibilityState();
     assertLoadingAccessibility();
     assertParkedTableSpacing();
+    markPhase("representative:database-sort");
     await assertDatabaseSortAccessibility();
+    markPhase("representative:sticky-name");
     await assertStickyNameSeparator();
+    markPhase("representative:shared-modal");
     await assertSharedModalFocusLifecycle();
+    markPhase("representative:route-specific");
     if (scenario === "myclubs-in") {
       const ownershipRequest = timeline.snapshot().find((entry) => entry.phase === "data-request"
         && entry.detail?.url === "/api/data?mode=my-clubs");
@@ -1387,8 +1405,10 @@ const browserTestSource = String.raw`(() => {
     } else {
       await delay(80);
     }
+    markPhase("representative:direct-state");
     const directState = routeState();
     assertRouteState(directState);
+    markPhase("representative:navigate-back");
 
     if (scenario.endsWith("-empty")) {
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
@@ -1896,6 +1916,7 @@ async function waitForBrowserRegression(cdp) {
       initialPage: document.documentElement.dataset.initialPage || "",
       initialRoutePage: document.documentElement.dataset.initialRoutePage || "",
       bodyPage: document.body?.dataset?.page || "",
+      phase: window.__mflBrowserRoutingPhase || "",
       activePage: Array.from(document.querySelectorAll("#appShell main > .pageView"))
         .filter((page) => page instanceof HTMLElement && !page.hidden)
         .map((page) => page.id),
