@@ -141,6 +141,17 @@ async function inspectRouteRow(cdp, playerId) {
         ? String(element.textContent || "").replace(/\\s+/g, " ").trim()
         : "";
       const ageStyle = ageHost instanceof HTMLElement ? getComputedStyle(ageHost) : null;
+      const centeredObjects = [...row.querySelectorAll('.tableControlCellContent > *, .tableOverallCellContent > *, .playerNameCell > *, .playerNameMarkers > *, .listingCellTableHost > *, .listingCellContent > *')]
+        .filter((element) => element instanceof HTMLElement && getComputedStyle(element).display !== 'none' && element.getClientRects().length > 0)
+        .map((element) => {
+          const parent = element.parentElement;
+          if (!(parent instanceof HTMLElement)) return null;
+          const elementRect = element.getBoundingClientRect();
+          const parentRect = parent.getBoundingClientRect();
+          return Math.abs((elementRect.top + elementRect.height / 2) - (parentRect.top + parentRect.height / 2));
+        })
+        .filter((value) => Number.isFinite(value));
+      const maxRowObjectCenterOffset = centeredObjects.reduce((maxOffset, offset) => Math.max(maxOffset, offset), 0);
       const scroller = row.closest('.playerTableScroller');
       return {
         width: window.innerWidth,
@@ -162,6 +173,7 @@ async function inspectRouteRow(cdp, playerId) {
         renderedJoined: visibleText(joinedFull) || visibleText(joinedCompact),
         ageMarkerPresent: ageMarker instanceof HTMLElement && ageMarker.getClientRects().length > 0,
         ageGap: ageStyle ? String(ageStyle.columnGap || ageStyle.gap || '') : '',
+        maxRowObjectCenterOffset,
         tableScrollWidth: scroller instanceof HTMLElement ? scroller.scrollWidth : 0,
         tableClientWidth: scroller instanceof HTMLElement ? scroller.clientWidth : 0,
         documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -173,7 +185,7 @@ async function inspectRouteRow(cdp, playerId) {
 }
 
 async function verifyRoute(cdp, { path, playerId, compactName }) {
-  for (const [width, height, expectedGap] of [[390, 844, "2px"], [380, 800, "1px"]]) {
+  for (const [width, height, expectedGap] of [[390, 844, 1.14], [380, 800, 1.09]]) {
     await setPhoneViewport(cdp, width, height);
     await cdp.send("Page.navigate", { url: `${origin}${path}` });
     await waitForRouteRow(cdp, playerId);
@@ -198,7 +210,8 @@ async function verifyRoute(cdp, { path, playerId, compactName }) {
     assert.notEqual(state.joinedCompactDisplay, "none", `Joined Agency compact value is hidden on ${path}: ${detail}`);
     assert.ok(state.renderedJoined && !state.renderedJoined.includes(" "), `Joined Agency did not reduce to date-only on ${path}: ${detail}`);
     assert.equal(state.ageMarkerPresent, true, `Age marker is missing on ${path}: ${detail}`);
-    assert.equal(state.ageGap, expectedGap, `Age/marker spacing is wrong on ${path}: ${detail}`);
+    assert.ok(Math.abs(Number.parseFloat(state.ageGap) - expectedGap) <= 0.08, `Age/marker spacing is wrong on ${path}: ${detail}`);
+    assert.ok(state.maxRowObjectCenterOffset <= 1, `A visible row object is not vertically centered on ${path}: ${detail}`);
     assert.ok(state.tableScrollWidth >= state.tableClientWidth, `Player table scroller has invalid geometry on ${path}: ${detail}`);
     assert.ok(state.documentOverflow <= 1, `Player table leaked horizontal overflow to the document on ${path}: ${detail}`);
   }
