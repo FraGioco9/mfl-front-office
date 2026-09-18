@@ -638,7 +638,12 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 /* Clear controls are visible only while their adjacent search input has a value. */
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
 #playerSearchInput:placeholder-shown + .playerSearchClearButton,
-#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton,
+#plannerClubSearchInput:placeholder-shown + .plannerSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 #plannerPlayerSearchInput:placeholder-shown + .plannerSearchClearButton {
   visibility: hidden;
   opacity: 0;
