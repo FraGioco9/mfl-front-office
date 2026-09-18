@@ -417,8 +417,10 @@ const browserTestSource = String.raw`(() => {
 
     if (scenario === "planner" || scenario === "planner-saved") {
       const main = document.querySelector("#appShell > main");
+      const plannerPage = document.getElementById("plannerPage");
       const workspace = document.getElementById("plannerWorkspace");
-      assert(main instanceof HTMLElement && workspace instanceof HTMLElement, "Planner layout shell is missing.");
+      assert(main instanceof HTMLElement && plannerPage instanceof HTMLElement && workspace instanceof HTMLElement,
+        "Planner layout shell is missing.");
       assert(
         main.scrollWidth <= main.clientWidth + 1,
         "Planner route overflows the main viewport: " + JSON.stringify({
@@ -427,31 +429,15 @@ const browserTestSource = String.raw`(() => {
           viewportWidth,
         }),
       );
+      assert(getComputedStyle(plannerPage).maxWidth === "none", "Planner page must use the full available page width.");
       for (const selector of [
         "#plannerPage",
         ".plannerPageHeader",
-        ".plannerSetup",
+        ".plannerTeamSearch",
+        ".plannerSearchControl",
         "#plannerWorkspace",
-        ".plannerPitchPanel",
-        "#plannerPitch",
-        ".plannerRosterPanel",
       ]) {
         assertElementWithinViewport(selector, viewportWidth);
-      }
-      const workspaceColumns = getComputedStyle(workspace).gridTemplateColumns
-        .split(" ")
-        .map((value) => value.trim())
-        .filter(Boolean);
-      if (viewportWidth <= 900) {
-        assert(
-          workspaceColumns.length === 1,
-          "Mobile Planner workspace must collapse to one column: " + getComputedStyle(workspace).gridTemplateColumns,
-        );
-      } else {
-        assert(
-          workspaceColumns.length === 2,
-          "Desktop Planner workspace must keep pitch and roster side by side: " + getComputedStyle(workspace).gridTemplateColumns,
-        );
       }
     }
 
@@ -684,6 +670,7 @@ const browserTestSource = String.raw`(() => {
       };
     }
     if (scenario === "planner" || scenario === "planner-saved") {
+      const plannerLogo = document.getElementById("plannerClubLogo");
       return {
         path: window.location.pathname,
         search: window.location.search,
@@ -692,13 +679,9 @@ const browserTestSource = String.raw`(() => {
         plannerHidden: hidden("#plannerPage"),
         workspaceHidden: hidden("#plannerWorkspace"),
         clubName: text("#plannerClubName"),
-        slotCount: document.querySelectorAll("#plannerPitch .plannerSlot").length,
-        rosterText: text("#plannerRoster"),
-        pitchText: text("#plannerPitch"),
-        formation: String(document.getElementById("plannerFormationSelect")?.value || ""),
-        sharedNoticeHidden: hidden("#plannerSharedNotice"),
-        saveDisabled: document.getElementById("plannerSavePlanButton")?.disabled === true,
-        formationDisabled: document.getElementById("plannerFormationSelect")?.disabled === true,
+        clubLogoVisible: plannerLogo instanceof HTMLImageElement
+          && !plannerLogo.hidden
+          && Boolean(plannerLogo.getAttribute("src")),
       };
     }
     if (scenario === "myclubs-out" || scenario === "myclubs-in" || scenario === "myclubs-competition-fail" || scenario === "myclubs-stale") {
@@ -821,30 +804,22 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.lockedHidden === true, "Filtered Watchlist incorrectly rendered the guest lock screen.");
     } else if (scenario === "planner") {
       assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
-      assert(stateValue.search === "?club=9001", "Planner Club URL state was not preserved: " + stateValue.search);
+      assert(stateValue.search === "?club=9001", "Planner team URL state was not preserved: " + stateValue.search);
       assert(stateValue.title === "Planner - MFL Front Office", "Planner title is wrong: " + stateValue.title);
       assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
       assert(stateValue.plannerHidden === false, "Planner page remained hidden after route readiness.");
-      assert(stateValue.workspaceHidden === false, "Planner workspace remained hidden after Club loading.");
-      assert(stateValue.clubName === "Browser Club", "Planner did not render the selected Club identity: " + stateValue.clubName);
-      assert(stateValue.slotCount === 11, "Planner formation did not render exactly eleven slots: " + stateValue.slotCount);
-      assert(stateValue.rosterText.includes(expectedPlayerName), "Planner roster did not render the current Club player.");
-      assert(plannerClubPageRequests === 1, "Planner direct Club load must use exactly one canonical Club request: " + plannerClubPageRequests);
+      assert(stateValue.workspaceHidden === false, "Planner selected-team identity remained hidden after loading.");
+      assert(stateValue.clubName === "Browser Club", "Planner did not render the selected team name: " + stateValue.clubName);
+      assert(stateValue.clubLogoVisible, "Planner did not render the selected team logo.");
+      assert(plannerClubPageRequests === 1, "Planner direct team load must use exactly one canonical Club request: " + plannerClubPageRequests);
     } else if (scenario === "planner-saved") {
       assert(stateValue.path === "/planner/browser-plan", "Saved Planner canonical path is wrong: " + stateValue.path);
       assert(stateValue.search === "", "Saved Planner route unexpectedly retained query state: " + stateValue.search);
-      assert(stateValue.title === "Planner - MFL Front Office", "Saved Planner title is wrong: " + stateValue.title);
+      assert(stateValue.title === "Planner - MFL Front Office", "Planner title is wrong: " + stateValue.title);
       assert(stateValue.page === "planner", "Saved Planner body page owner is wrong: " + stateValue.page);
-      assert(stateValue.plannerHidden === false && stateValue.workspaceHidden === false, "Saved Planner workspace remained hidden.");
-      assert(stateValue.clubName === "Browser Club", "Saved Planner did not restore its Club identity.");
-      assert(stateValue.slotCount === 11 && stateValue.formation === "4-4-2", "Saved Planner did not restore its formation.");
-      assert(stateValue.pitchText.includes(expectedPlayerName), "Saved Planner Pitch did not restore the current squad depth.");
-      assert(
-        stateValue.rosterText.includes(expectedPlayerName) && stateValue.rosterText.includes("Planner Added Player"),
-        "Saved Planner Squad list did not restore persisted squad membership.",
-      );
-      assert(stateValue.sharedNoticeHidden === false, "Shared saved plan did not expose its read-only notice.");
-      assert(stateValue.saveDisabled && stateValue.formationDisabled, "Shared saved plan remained editable.");
+      assert(stateValue.plannerHidden === false && stateValue.workspaceHidden === false, "Saved Planner selected-team identity remained hidden.");
+      assert(stateValue.clubName === "Browser Club", "Saved Planner did not restore its team identity.");
+      assert(stateValue.clubLogoVisible, "Saved Planner did not restore its team logo.");
     } else if (scenario === "myclubs-stale") {
       assert(stateValue.path === "/my-clubs/opted-out", "Stale My Clubs proof did not canonicalize to opted-out.");
       assert(stateValue.page === "my-clubs", "Stale My Clubs proof lost the My Clubs page owner.");
@@ -1497,123 +1472,57 @@ const browserTestSource = String.raw`(() => {
     }
     if (scenario === "planner") {
       const plannerRoute = Reflect.get(window, "__mflPlannerRoute");
-      assert(plannerRoute && typeof plannerRoute.loadClub === "function", "Planner route owner does not expose Club loading.");
-
-      const savedPlansSelect = document.getElementById("plannerSavedPlanSelect");
-      const formationSelect = document.getElementById("plannerFormationSelect");
-      assert(
-        savedPlansSelect?.dataset?.mflDropdownEnhanced === "true"
-          && formationSelect?.dataset?.mflDropdownEnhanced === "true",
-        "Planner dropdowns did not use the canonical enhanced-select lifecycle.",
-      );
+      assert(plannerRoute && typeof plannerRoute.loadClub === "function", "Planner route owner does not expose team loading.");
 
       const searchInput = document.getElementById("plannerClubSearchInput");
       const searchResults = document.getElementById("plannerClubSearchResults");
       assert(searchInput instanceof HTMLInputElement && searchResults instanceof HTMLElement,
-        "Planner Club search controls are unavailable.");
+        "Planner team search controls are unavailable.");
+      assert(
+        document.getElementById("plannerPitch") === null
+          && document.getElementById("plannerRoster") === null
+          && document.getElementById("plannerPlayerSearchInput") === null
+          && document.getElementById("plannerPlanNameInput") === null,
+        "Planner must stay visually simple until later planning controls are reintroduced.",
+      );
 
       const originalClubRequests = plannerClubPageRequests;
       const originalSearchRequests = plannerClubSearchRequests;
-      plannerLoadingPitchGeometry = null;
       searchInput.value = "Second Browser Club";
       searchInput.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(
         () => searchResults.querySelector('[data-club-id="9002"]') instanceof HTMLButtonElement,
-        "Planner Club search did not return the expected result.",
+        "Planner team search did not return the expected result.",
       );
-      assert(plannerClubSearchRequests > originalSearchRequests, "Planner Club search did not issue the canonical Club-only search request.");
+      assert(plannerClubSearchRequests > originalSearchRequests, "Planner team search did not issue the canonical Club-only search request.");
 
       const result = searchResults.querySelector('[data-club-id="9002"]');
-      assert(result instanceof HTMLButtonElement, "Planner Club search result is not selectable.");
+      assert(result instanceof HTMLButtonElement, "Planner team search result is not selectable.");
+      assert(
+        result.classList.contains("searchResult")
+          && result.classList.contains("clubSearchResult")
+          && result.textContent.includes("Second Browser Club")
+          && result.textContent.includes("#9002"),
+        "Planner team search result does not match the canonical search-result presentation.",
+      );
       searchInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
       await waitFor(
-        () => document.getElementById("plannerWorkspace")?.getAttribute("aria-busy") === "true"
-          && document.querySelectorAll("#plannerPitch .plannerSlot.is-loading").length === 11
-          && document.querySelectorAll("#plannerRoster .plannerPlayerSkeleton").length > 0,
-        "Planner searched Club switch did not expose its geometry-preserving loading shell.",
+        () => text("#plannerClubName") === "Second Browser Club"
+          && !hidden("#plannerClubLogo"),
+        "Planner search result did not select and render its team identity.",
       );
-      const loadingPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
-      assert(loadingPitch && loadingPitch.width > 0 && loadingPitch.height > 0,
-        "Planner searched Club loading pitch has no measurable geometry.");
-      plannerLoadingPitchGeometry = { width: loadingPitch.width, height: loadingPitch.height };
-
-      await waitFor(() => text("#plannerClubName") === "Second Browser Club",
-        "Planner search result did not select and load its Club.");
-      const loadedPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
-      assert(
-        loadedPitch
-          && Math.abs(loadedPitch.width - plannerLoadingPitchGeometry.width) <= 1
-          && Math.abs(loadedPitch.height - plannerLoadingPitchGeometry.height) <= 1,
-        "Planner pitch geometry changed between searched-Club loading and loaded states: " + JSON.stringify({
-          loading: plannerLoadingPitchGeometry,
-          loaded: loadedPitch ? { width: loadedPitch.width, height: loadedPitch.height } : null,
-        }),
-      );
+      assert(window.location.search === "?club=9002", "Planner selected-team URL state was not updated.");
 
       assert(
         await plannerRoute.loadClub("9001", { updateUrl: true, resetAssignments: true }),
-        "Planner could not return to the original cached Club.",
+        "Planner could not return to the original cached team.",
       );
       assert(
         plannerClubPageRequests === originalClubRequests,
-        "Planner return to the cached original Club repeated its canonical Club request.",
+        "Planner return to the cached original team repeated its canonical Club request.",
       );
-      assert(text("#plannerClubName") === "Browser Club", "Planner cached return did not restore the original Club.");
-
-      const playerSearchInput = document.getElementById("plannerPlayerSearchInput");
-      const playerSearchResults = document.getElementById("plannerPlayerSearchResults");
-      assert(
-        playerSearchInput instanceof HTMLInputElement && playerSearchResults instanceof HTMLElement,
-        "Planner Squad list player search controls are unavailable.",
-      );
-      assert(
-        text("#plannerSquadSectionTitle") === "Squad list" && text("#plannerPitchSectionTitle") === "Pitch",
-        "Planner did not expose the required Pitch and Squad list sections.",
-      );
-
-      const initialSquadCount = document.querySelectorAll("#plannerRoster .plannerPlayer:not(.plannerPlayerSkeleton)").length;
-      const playerSearchRequestsBefore = plannerPlayerSearchRequests;
-      playerSearchInput.value = "Planner Added Player";
-      playerSearchInput.dispatchEvent(new Event("input", { bubbles: true }));
-      await waitFor(
-        () => playerSearchResults.querySelector('[data-player-id="2"]') instanceof HTMLButtonElement,
-        "Planner database player search did not return the eligible non-retired player.",
-      );
-      assert(
-        plannerPlayerSearchRequests > playerSearchRequestsBefore,
-        "Planner Squad list did not use canonical database player search.",
-      );
-      assert(
-        !playerSearchResults.textContent.includes("Retired Planner Player"),
-        "Planner database player search exposed a retired player.",
-      );
-
-      playerSearchInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      await waitFor(
-        () => document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"]') instanceof HTMLElement,
-        "Planner Squad list did not add the searched database player.",
-      );
-      assert(
-        document.querySelectorAll("#plannerRoster .plannerPlayer:not(.plannerPlayerSkeleton)").length === initialSquadCount + 1,
-        "Planner Squad list count did not increase after adding a player.",
-      );
-      await waitFor(
-        () => text("#plannerPitch").includes("Planner Added Player"),
-        "Planner Pitch did not update its squad depth after adding an eligible player.",
-      );
-
-      const removeAdded = document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"] .plannerPlayerRemove');
-      assert(removeAdded instanceof HTMLButtonElement, "Planner Squad list remove control is unavailable.");
-      removeAdded.click();
-      await waitFor(
-        () => !document.querySelector('#plannerRoster .plannerPlayer[data-player-id="2"]'),
-        "Planner Squad list did not remove the player.",
-      );
-      assert(
-        !text("#plannerPitch").includes("Planner Added Player"),
-        "Planner Pitch retained a removed player in its squad depth.",
-      );
+      assert(text("#plannerClubName") === "Browser Club", "Planner cached return did not restore the original team.");
     }
 
     markPhase("representative:direct-state");
