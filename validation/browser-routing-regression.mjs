@@ -131,9 +131,11 @@ const browserTestSource = String.raw`(() => {
                   : window.location.hash === "#stale-proof"
                     ? "myclubs-stale"
                     : "myclubs-out")
-            : window.location.pathname === "/mfl/stats"
-              ? "mflstats"
-              : "unknown";
+            : window.location.pathname === "/planner"
+              ? "planner"
+              : window.location.pathname === "/mfl/stats"
+                ? "mflstats"
+                : "unknown";
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
@@ -248,6 +250,7 @@ const browserTestSource = String.raw`(() => {
       homeHidden: hidden("#homePage"),
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
+      plannerHidden: hidden("#plannerPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
       filterCount: text("#filterSummary"),
       sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
@@ -506,6 +509,14 @@ const browserTestSource = String.raw`(() => {
       if (optedIn) {
         assert(parserSnapshot.myClubsSkeletons === 0, "My Clubs first paint must not guess a club-card count before ownership data arrives.");
       }
+    } else if (scenario === "planner") {
+      assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
+      assert(parserSnapshot.initialRoutePage === "planner", "Planner canonical first-paint route owner is wrong.");
+      assert(parserSnapshot.initialRouteShell === "plannerPage", "Planner canonical first-paint shell is wrong: " + parserSnapshot.initialRouteShell);
+      assert(parserSnapshot.homeHidden === true, "Planner direct first paint exposed Home.");
+      assert(parserSnapshot.title === "Planner - MFL Front Office", "Planner parser-time title is wrong: " + parserSnapshot.title);
+    } else if (scenario === "planner") {
+      await setPage("planner", true, { clubId: "9001" });
     } else if (scenario === "mflstats") {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
@@ -575,6 +586,19 @@ const browserTestSource = String.raw`(() => {
         emptyHidden: hidden("#emptyState"),
         watchlistName: text("#watchlistButtonText"),
         lockedHidden: hidden("#myPlayersLockedPage"),
+      };
+    }
+    if (scenario === "planner") {
+      return {
+        path: window.location.pathname,
+        search: window.location.search,
+        title: document.title,
+        page: String(document.body.dataset.page || ""),
+        plannerHidden: hidden("#plannerPage"),
+        workspaceHidden: hidden("#plannerWorkspace"),
+        clubName: text("#plannerClubName"),
+        slotCount: document.querySelectorAll("#plannerPitch .plannerSlot").length,
+        rosterText: text("#plannerRoster"),
       };
     }
     if (scenario === "myclubs-out" || scenario === "myclubs-in" || scenario === "myclubs-competition-fail" || scenario === "myclubs-stale") {
@@ -695,6 +719,16 @@ const browserTestSource = String.raw`(() => {
       );
       assert(stateValue.watchlistName === "Browser List", "Filtered Watchlist selector did not retain the selected list name.");
       assert(stateValue.lockedHidden === true, "Filtered Watchlist incorrectly rendered the guest lock screen.");
+    } else if (scenario === "planner") {
+      assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
+      assert(stateValue.search === "?club=9001", "Planner Club URL state was not preserved: " + stateValue.search);
+      assert(stateValue.title === "Planner - MFL Front Office", "Planner title is wrong: " + stateValue.title);
+      assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
+      assert(stateValue.plannerHidden === false, "Planner page remained hidden after route readiness.");
+      assert(stateValue.workspaceHidden === false, "Planner workspace remained hidden after Club loading.");
+      assert(stateValue.clubName === "Browser Club", "Planner did not render the selected Club identity: " + stateValue.clubName);
+      assert(stateValue.slotCount === 11, "Planner formation did not render exactly eleven slots: " + stateValue.slotCount);
+      assert(stateValue.rosterText.includes(expectedPlayerName), "Planner roster did not render the current Club player.");
     } else if (scenario === "myclubs-stale") {
       assert(stateValue.path === "/my-clubs/opted-out", "Stale My Clubs proof did not canonicalize to opted-out.");
       assert(stateValue.page === "my-clubs", "Stale My Clubs proof lost the My Clubs page owner.");
@@ -1481,7 +1515,7 @@ function pageDataStub(url) {
       logoUrl: browserClubLogo9002,
     },
   };
-  const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const rows = filteredEmpty ? [] : [rowForColumns(pageColumns)];
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -1879,6 +1913,8 @@ const regressionScenarios = Object.freeze([
   ["myclubs-in", "/my-clubs#opted-in"],
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
   ["myclubs-stale", "/my-clubs#stale-proof"],
+  ["planner", "/planner?club=9001"],
+  ["planner-phone", "/planner?club=9001", 390, 844],
   ["mflstats", "/mfl/stats"],
 ]);
 
