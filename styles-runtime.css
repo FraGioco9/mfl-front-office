@@ -7576,14 +7576,27 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterHeader h3{margin:0;font-size:16px;font-weight:800}
 .plannerPitchPanel h3{margin:0 0 12px;font-size:16px;font-weight:800}
 #plannerAddPlayerButton{flex-shrink:0}
-.plannerPlayerAdder{position:relative;display:grid;gap:6px;margin:0 0 10px}
-.plannerPlayerAdder[hidden]{display:none}
-.plannerPlayerSearchControl{position:relative;max-width:360px}
+.plannerPlayerModalBackdrop{z-index:var(--mfl-z-modal)}
+.plannerPlayerDialog{width:min(560px,calc(100vw - 24px));max-height:min(680px,calc(100vh - 24px))}
+.plannerPlayerModalBody{display:grid;gap:10px;min-height:0}
+.plannerPlayerSearchControl{position:relative;width:100%}
 #plannerPlayerSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px}
 .plannerPlayerSearchClearButton{position:absolute;top:50%;right:4px;width:30px;height:30px;transform:translateY(-50%);border-color:transparent;background:transparent;box-shadow:none}
-.plannerPlayerSearchResults{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--mfl-z-dropdown);display:grid;gap:8px;width:min(360px,100%);max-height:320px;padding:8px;overflow-y:auto;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.18)}
+.plannerPlayerSelectionStatus{margin:0;color:var(--text-soft);font-size:12px}
+.plannerPlayerSearchResults{display:grid;gap:6px;max-height:280px;padding:0;overflow-y:auto}
 .plannerPlayerSearchResults[hidden]{display:none}
-.plannerPlayerSearchResult{width:100%}
+.plannerPlayerSearchResult{position:relative;width:100%;padding-right:76px}
+.plannerPlayerSearchResult.selected{border-color:var(--primary-hover);background:var(--row-hover)}
+.plannerPlayerSearchResult:disabled{cursor:not-allowed;opacity:.45}
+.plannerPlayerResultSelection{position:absolute;top:50%;right:10px;color:var(--text-soft);font-size:11px;font-weight:700;transform:translateY(-50%)}
+.plannerPlayerSearchResult.selected .plannerPlayerResultSelection{color:var(--primary)}
+.plannerPlayerSelection{display:grid;gap:6px;min-height:0}
+.plannerPlayerSelection[hidden]{display:none}
+.plannerPlayerSelection h3{margin:0;font-size:13px}
+.plannerPlayerSelectionList{display:grid;gap:4px;max-height:150px;overflow-y:auto}
+.plannerPendingPlayer{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:32px;padding:5px 8px;text-align:left}
+.plannerPendingPlayerRemove{flex:0 0 auto;color:var(--danger);font-size:18px;line-height:1}
+.plannerPlayerModalFooter{margin-top:2px}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
 .plannerRosterTable .plannerPlayerColumn{width:47%}
@@ -7603,8 +7616,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerContractValue{min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
 .plannerContractEditor{display:grid;grid-template-columns:minmax(0,1fr) 18px;align-items:center;gap:4px}
 .plannerContractEditor[hidden]{display:none}
-.plannerContractInput{box-sizing:border-box;width:58px;max-width:100%;min-width:0;height:28px;padding:2px 6px;appearance:textfield;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
-.plannerContractInput::-webkit-inner-spin-button,.plannerContractInput::-webkit-outer-spin-button{margin:0;-webkit-appearance:none}
+.plannerContractInput{box-sizing:border-box;width:58px;max-width:100%;min-width:0;height:28px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
 .plannerContractInput:hover:not(:disabled),.plannerContractInput:focus:not(:disabled),.plannerContractInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}
 .plannerContractStepper{display:grid;gap:2px}
 .plannerContractStepper button{width:18px;height:13px;min-height:13px;padding:0;border-radius:3px;font-size:8px;line-height:1}
@@ -7612,7 +7624,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerContractEditButton:hover,.plannerContractEditButton:focus-visible{background:var(--row-hover);color:var(--text)}
 .plannerRosterRemove{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-height:22px;padding:0;border:0;border-radius:4px;background:transparent;box-shadow:none;color:var(--danger);font:700 20px/1 Arial,sans-serif;cursor:pointer}
 .plannerRosterTable tbody tr:has(.plannerRosterRemove:hover),.plannerRosterTable tbody tr:has(.plannerRosterRemove:focus-visible){background:color-mix(in srgb,var(--danger) 7%,var(--surface))}
-.plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:color-mix(in srgb,var(--danger) 14%,transparent);box-shadow:none;color:var(--danger);outline:0}
+.plannerRosterRemove:hover,.plannerRosterRemove:focus-visible{border:0;background:transparent;box-shadow:none;color:var(--danger);outline:0}
 .plannerRosterRemove:focus-visible{text-decoration:underline}
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
 .plannerRosterTable td:first-child .plannerRosterSkeleton{margin-left:0}
