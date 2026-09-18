@@ -93,6 +93,7 @@
     revision: 0,
     dirty: false,
     savedPlans: [],
+    loading: false,
   };
 
   const PITCH_LINE_CLASSES = Object.freeze([
@@ -125,7 +126,7 @@
   }
 
   function editable() {
-    return !plannerState.planId || plannerState.canEdit;
+    return !plannerState.loading && (!plannerState.planId || plannerState.canEdit);
   }
 
   function columnIndex(name) {
@@ -290,7 +291,8 @@
       button.dataset.slotId = slotId;
       button.style.setProperty("--planner-x", x + "%");
       button.style.setProperty("--planner-y", y + "%");
-      button.disabled = !editable();
+      button.disabled = plannerState.loading || !editable();
+      if (plannerState.loading) button.classList.add("is-loading");
 
       const labelNode = document.createElement("span");
       labelNode.className = "plannerSlotLabel";
@@ -303,7 +305,11 @@
       const overallNode = document.createElement("span");
       overallNode.className = "plannerSlotOverall";
 
-      if (assignedId) {
+      if (plannerState.loading) {
+        playerNode.textContent = "Loading player";
+        overallNode.textContent = "Loading";
+        button.setAttribute("aria-label", "Loading " + position + " position");
+      } else if (assignedId) {
         const name = row ? playerName(row) : "Player " + assignedId;
         playerNode.textContent = name;
         const overall = row ? playerOverall(row) : null;
@@ -372,6 +378,31 @@
 
   function renderRoster() {
     if (!(roster instanceof HTMLElement)) return;
+    if (plannerState.loading) {
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 8; index += 1) {
+        const row = document.createElement("div");
+        row.className = "plannerPlayer plannerPlayerSkeleton";
+        row.setAttribute("aria-hidden", "true");
+
+        const identity = document.createElement("span");
+        identity.className = "plannerPlayerSkeletonIdentity";
+        const name = document.createElement("span");
+        name.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonName";
+        const meta = document.createElement("span");
+        meta.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonMeta";
+        identity.append(name, meta);
+
+        const overall = document.createElement("span");
+        overall.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonOverall";
+        row.append(identity, overall);
+        fragment.appendChild(row);
+      }
+      roster.replaceChildren(fragment);
+      if (rosterCount instanceof HTMLElement) rosterCount.textContent = "—";
+      return;
+    }
+
     const assigned = assignedPlayerIds();
     const available = plannerState.rows
       .filter((row) => {
@@ -429,8 +460,27 @@
     renderFormationOptions();
     renderPitch();
     renderRoster();
-    if (workspace instanceof HTMLElement) workspace.hidden = !plannerState.clubId;
+    if (workspace instanceof HTMLElement) {
+      workspace.hidden = !plannerState.clubId;
+      workspace.toggleAttribute("aria-busy", plannerState.loading);
+    }
     syncPlanControls();
+  }
+
+  function renderPlannerLoadingState(clubId, { resetAssignments = true } = {}) {
+    const normalizedClubId = String(clubId || "").trim();
+    plannerState.loading = true;
+    plannerState.clubId = normalizedClubId;
+    plannerState.club = { clubId: normalizedClubId };
+    plannerState.columns = [];
+    plannerState.rows = [];
+    plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
+    if (resetAssignments) {
+      plannerState.assignments.clear();
+      plannerState.formationId = DEFAULT_FORMATION;
+    }
+    renderWorkspace();
   }
 
   function resetPlanIdentity({ preserveClub = true } = {}) {
@@ -440,6 +490,7 @@
     plannerState.visibility = "private";
     plannerState.revision = 0;
     plannerState.dirty = false;
+    plannerState.loading = false;
     plannerState.assignments.clear();
     plannerState.selectedPlayerId = "";
     plannerState.selectedFromSlotId = "";
@@ -449,6 +500,7 @@
       plannerState.club = null;
       plannerState.columns = [];
       plannerState.rows = [];
+      plannerState.loading = false;
       if (searchInput instanceof HTMLInputElement) searchInput.value = "";
     }
   }
@@ -477,13 +529,13 @@
 
     const sequence = ++plannerState.requestSequence;
     setStatus("Loading Club…");
-    workspace?.setAttribute("aria-busy", "true");
     try {
       const routeCache = Reflect.get(window, "__mflRouteDataCache");
       const cachedPayload = routeCache?.readClubPayload?.(normalizedClubId) || null;
       let payload = cachedPayload;
 
       if (!payload) {
+        renderPlannerLoadingState(normalizedClubId, { resetAssignments });
         const requestPath = String(routeCache?.clubRequestPath?.(normalizedClubId) || "");
         if (!requestPath) throw new Error("Canonical Club request is unavailable.");
         const response = await window.__mflDataClient.fetch(requestPath, {
@@ -501,6 +553,7 @@
       const columns = Array.isArray(payload?.columns) ? payload.columns : [];
       if (!rows.length && !payload?.club) throw new Error("Club not found.");
 
+      plannerState.loading = false;
       plannerState.clubId = normalizedClubId;
       plannerState.club = payload?.club && typeof payload.club === "object"
         ? { ...payload.club, clubId: normalizedClubId }
@@ -520,9 +573,12 @@
       return true;
     } catch (error) {
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
+      plannerState.loading = false;
+      renderWorkspace();
       setStatus(error?.message || "Could not load this Club.");
       return false;
     } finally {
+      if (sequence === plannerState.requestSequence) plannerState.loading = false;
       workspace?.removeAttribute("aria-busy");
     }
   }
