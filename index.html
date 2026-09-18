@@ -1103,7 +1103,30 @@
                   <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerPlayerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
                 </div>
                 <p id="plannerPlayerSelectionStatus" class="plannerPlayerSelectionStatus" role="status" aria-live="polite"></p>
-                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" role="listbox" hidden></div>
+                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" hidden>
+                  <table class="plannerPlayerSearchTable" aria-label="Player search results">
+                    <colgroup>
+                      <col class="plannerPlayerSearchFlagColumn">
+                      <col class="plannerPlayerSearchNameColumn">
+                      <col class="plannerPlayerSearchPositionsColumn">
+                      <col class="plannerPlayerSearchAgeColumn">
+                      <col class="plannerPlayerSearchOverallColumn">
+                      <col class="plannerPlayerSearchSelectColumn">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th scope="col" aria-label="Nationality"></th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Position(s)</th>
+                        <th scope="col">Age</th>
+                        <th scope="col">OVR</th>
+                        <th scope="col">Select</th>
+                      </tr>
+                    </thead>
+                    <tbody id="plannerPlayerSearchBody"></tbody>
+                  </table>
+                  <div id="plannerPlayerSearchEmpty" class="searchHint" hidden>No players found.</div>
+                </div>
                 <section id="plannerPlayerSelection" class="plannerPlayerSelection" aria-label="Selected players" hidden>
                   <h3>Selected <span id="plannerPlayerSelectionCount">0</span></h3>
                   <div id="plannerPlayerSelectionList" class="plannerPlayerSelectionList"></div>
