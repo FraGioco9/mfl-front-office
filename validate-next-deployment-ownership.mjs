@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
-import { deploymentCommitModulePath, resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
+import { deploymentCommitModulePath, materializeDeploymentCommit, resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
 import { verifyPrebuiltDeploymentCommit } from "./scripts/workflows/verify-prebuilt-deployment-commit.mjs";
 import { verifyNextBuildDeploymentCommit } from "./scripts/workflows/verify-next-build-deployment-commit.mjs";
 
@@ -152,6 +152,27 @@ try {
   invariant(
     fixtureCommitModule === `module.exports = "${fixtureCommit}";\n`,
     "Deployment commit binding must materialize the exact source SHA into the API bundle input.",
+  );
+  invariant(
+    materializeDeploymentCommit({
+      root: fixtureRoot,
+      env: {},
+      repositoryCommit: "c".repeat(40),
+    }) === fixtureCommit,
+    "Explicit deployment commit binding must take precedence over the local repository fallback.",
+  );
+  const localFixtureRoot = resolve(fixtureRoot, "local-runtime");
+  await mkdir(localFixtureRoot, { recursive: true });
+  const localFixtureCommit = "c".repeat(40);
+  invariant(
+    materializeDeploymentCommit({
+      root: localFixtureRoot,
+      env: {},
+      repositoryCommit: localFixtureCommit,
+    }) === localFixtureCommit
+      && (await readFile(deploymentCommitModulePath(localFixtureRoot), "utf8"))
+        === `module.exports = "${localFixtureCommit}";\n`,
+    "Local runtime preparation must materialize the repository commit when no explicit deployment binding exists.",
   );
   let mismatchRejected = false;
   try {
