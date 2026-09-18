@@ -62,8 +62,8 @@ for (const source of [sharedTableUi, releaseProjection]) {
   );
   assert.ok(
     source.includes('#progressionPage .playerTableScroller td.col-age .tableControlCellContent')
-      && source.includes('gap: 3px;'),
-    "Compact Age cells must keep the intentional 3px gap before retiring/retired/new-mint markers.",
+      && source.includes('gap: var(--mfl-responsive-table-age-marker-gap);'),
+    "Compact Age cells must consume the continuous responsive gap before retiring/retired/new-mint markers.",
   );
   assert.ok(
     source.includes('#progressionPage .playerTableScroller td.col-age .playerAgeValue')
@@ -73,7 +73,7 @@ for (const source of [sharedTableUi, releaseProjection]) {
   );
 }
 
-assert.match(sharedTableUi, /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{\s*gap:\s*3px;/, "Small-screen Age marker spacing must stay at the intentional 3px gap.");
+assert.match(sharedTableUi, /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{\s*gap:\s*var\(--mfl-responsive-table-age-marker-gap\);/, "Small-screen Age marker spacing must consume the continuous responsive gap token.");
 assert.doesNotMatch(tableSource, /app-core-table-row-centering|addTableRowVerticalCentering/, "Row centering must be authored directly in canonical Table source without a retired transform.");
 new Function(tableSource);
-console.log("Every player-table row item stays vertically centered, and compact Age markers keep the intentional 3px gap without reserved desktop spacing.");
+console.log("Every player-table row item stays vertically centered, and Age-marker spacing scales continuously without reserved desktop spacing.");
