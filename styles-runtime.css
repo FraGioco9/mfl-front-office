@@ -14423,12 +14423,6 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   margin: 0;
 }
 
-.plannerPageIntro {
-  margin: 3px 0 0;
-  color: var(--text-soft);
-  font-size: 13px;
-}
-
 .plannerPlanActions {
   display: flex;
   flex-wrap: wrap;
@@ -14803,11 +14797,6 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   margin: 12px 0 0;
   color: var(--text-soft);
   font-size: 13px;
-}
-
-.clubIdentityPlannerLink {
-  margin-top: 10px;
-  text-decoration: none;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-page^="planner"] body[data-page="home"] main > .pageView:not(#plannerPage) {

@@ -198,6 +198,14 @@
     syncPlanControls();
   }
 
+  function syncPlanDropdowns() {
+    const dropdownRuntime = Reflect.get(window, "__mflDropdowns");
+    const syncSelect = dropdownRuntime?.syncSelect;
+    if (typeof syncSelect !== "function") return;
+    syncSelect(savedPlanSelect);
+    syncSelect(formationSelect);
+  }
+
   function syncSearchClearButton() {
     if (!(searchInput instanceof HTMLInputElement) || !(searchClearButton instanceof HTMLElement)) return;
     const hidden = !searchInput.value.trim();
@@ -271,6 +279,7 @@
       });
     }
     formationSelect.value = plannerState.formationId;
+    syncPlanDropdowns();
   }
 
   function renderPitch() {
@@ -724,6 +733,7 @@
       plannerState.savedPlans = [];
       savedPlanSelect.replaceChildren(new Option("Opt in to load saved plans", ""));
       syncPlanControls();
+      syncPlanDropdowns();
       return;
     }
     try {
@@ -739,6 +749,7 @@
       savedPlanSelect.replaceChildren(new Option("Saved plans unavailable", ""));
     }
     syncPlanControls();
+    syncPlanDropdowns();
   }
 
   async function savePlan() {
@@ -819,6 +830,7 @@
     document.body.dataset.page = PAGE;
     syncNavigation();
     if (page instanceof HTMLElement) showOnly(page);
+    syncPlanDropdowns();
 
     try {
       await ensureFormations();

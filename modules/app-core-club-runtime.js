@@ -311,7 +311,6 @@
     const owner = document.getElementById("clubIdentityOwner");
     const ownerName = document.getElementById("clubIdentityOwnerName");
     const ownerWallet = document.getElementById("clubIdentityOwnerWallet");
-    const plannerLink = document.getElementById("clubIdentityPlannerLink");
     if (!(host instanceof HTMLElement)) return;
 
     host.removeAttribute("aria-busy");
@@ -388,12 +387,6 @@
       }
     }
 
-    if (plannerLink instanceof HTMLAnchorElement) {
-      plannerLink.hidden = !identity.clubId;
-      plannerLink.href = identity.clubId ? `/planner?club=${encodeURIComponent(identity.clubId)}` : "/planner";
-      plannerLink.dataset.clubId = identity.clubId || "";
-    }
-
     if (logo instanceof HTMLImageElement && logoFrame instanceof HTMLElement) {
       if (identity.logoUrl) {
         const canonicalLogoUrl = identity.logoUrl;
@@ -425,16 +418,6 @@
     }
 
   }
-
-  const clubIdentityPlannerLink = document.getElementById("clubIdentityPlannerLink");
-  clubIdentityPlannerLink?.addEventListener("click", (event) => {
-    const clubId = String(clubIdentityPlannerLink.dataset.clubId || activeClubId || "").trim();
-    if (!clubId) return;
-    event.preventDefault();
-    const target = `/planner?club=${encodeURIComponent(clubId)}`;
-    if (`${window.location.pathname}${window.location.search}` !== target) window.history.pushState({}, "", target);
-    void setPage("planner", false, { clubId, path: target });
-  });
 
   const clubIdentityOwnerLink = document.getElementById("clubIdentityOwnerName");
   clubIdentityOwnerLink?.addEventListener("click", (event) => {
