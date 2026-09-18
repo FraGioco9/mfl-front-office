@@ -1,0 +1,132 @@
+name: Mobile first-paint regression
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  summary-first-paint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate mobile summary first paint
+        run: node validate-mobile-summary-first-paint.mjs
+
+  header-first-paint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate mobile table-header first paint
+        run: node validation/browser-mobile-first-paint-regression.mjs
+
+  listing-width-compaction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate grouped Listing width compaction
+        run: node validation/browser-listing-width-regression.mjs
+
+  responsive-table-resize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate live mobile table breakpoint crossings
+        run: node validation/browser-mobile-table-responsive-resize.mjs
+
+  responsive-shell-breakpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate 1366px compact application shell
+        run: node validation/browser-responsive-shell-breakpoint.mjs
+
+      - name: Validate 1366px shell/table route coverage and Age icon scaling
+        run: node validation/browser-intermediate-responsive-extension.mjs
+
+  compact-route-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate compact mobile Database and Watchlist routes
+        run: node validation/browser-mobile-route-coverage.mjs

@@ -15,6 +15,7 @@
   const PLAYER_TABLE_NAME_STUCK_CLASS = "mflPlayerTableNameStuck";
   const VIEW_SCROLL_EPSILON = 2;
   const PLAYER_TABLE_SCROLL_EPSILON = 2;
+  const HEADER_LABEL_COMPACT_MEDIA = window.matchMedia("(max-width: 1366px)");
   const MOBILE_STYLE_ID = "mflInitialMobileTableStyle";
   const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
@@ -134,12 +135,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    min-width: 18px;
-    max-width: 18px;
-    height: 18px;
-    min-height: 18px;
-    max-height: 18px;
+    width: var(--mfl-responsive-table-listing-content-size);
+    min-width: var(--mfl-responsive-table-listing-content-size);
+    max-width: var(--mfl-responsive-table-listing-content-size);
+    height: var(--mfl-responsive-table-listing-content-size);
+    min-height: var(--mfl-responsive-table-listing-content-size);
+    max-height: var(--mfl-responsive-table-listing-content-size);
     margin-inline: auto;
     gap: 0;
     padding: 0;
@@ -150,15 +151,15 @@
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
     box-sizing: border-box;
-    flex: 0 0 13px;
-    width: 13px;
-    min-width: 13px;
-    max-width: 13px;
-    height: 13px;
-    min-height: 13px;
-    max-height: 13px;
+    flex: 0 0 var(--mfl-responsive-table-checkbox-size);
+    width: var(--mfl-responsive-table-checkbox-size);
+    min-width: var(--mfl-responsive-table-checkbox-size);
+    max-width: var(--mfl-responsive-table-checkbox-size);
+    height: var(--mfl-responsive-table-checkbox-size);
+    min-height: var(--mfl-responsive-table-checkbox-size);
+    max-height: var(--mfl-responsive-table-checkbox-size);
     aspect-ratio: 1 / 1;
-    background-size: 8px 6px;
+    background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
     border-radius: 3px;
   }
   #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
@@ -168,70 +169,79 @@
     align-self: center;
   }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
-    gap: 3px;
+    gap: var(--mfl-responsive-table-age-marker-gap);
   }
   #progressionPage .playerTableScroller td.col-age .playerAgeValue {
     flex: 0 0 auto;
     min-width: 0;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 18px;
-    min-width: 18px;
-    max-width: 18px;
-    height: 18px;
-    min-height: 18px;
-    max-height: 18px;
+    width: var(--mfl-responsive-table-action-size);
+    min-width: var(--mfl-responsive-table-action-size);
+    max-width: var(--mfl-responsive-table-action-size);
+    height: var(--mfl-responsive-table-action-size);
+    min-height: var(--mfl-responsive-table-action-size);
+    max-height: var(--mfl-responsive-table-action-size);
     padding: 0;
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
-    width: 12px;
-    height: 12px;
+    width: var(--mfl-responsive-table-action-icon-size);
+    height: var(--mfl-responsive-table-action-icon-size);
   }
   #progressionPage .playerTableScroller .flagImage {
-    width: 14px;
-    height: 14px;
+    width: var(--mfl-responsive-table-flag-size);
+    height: var(--mfl-responsive-table-flag-size);
   }
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex: 0 0 11px;
-    width: 11px;
-    min-width: 11px;
-    max-width: 11px;
-    height: 11px;
-    min-height: 11px;
-    max-height: 11px;
+    flex: 0 0 var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
     margin: 0;
     transform: none;
   }
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 11px;
-    height: 11px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: 11px;
-    height: 11px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+  }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker),
+  #progressionPage .playerTableScroller .retirementMarker::before,
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img,
+  #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
+    aspect-ratio: 1 / 1;
   }
   #progressionPage .playerTableScroller .retirementMarker::before {
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+  #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
+    object-fit: contain;
   }
   #progressionPage .playerTableScroller .playerNoteIcon {
-    font-size: 9px;
+    font-size: var(--mfl-responsive-table-note-icon-size);
     line-height: 1;
   }
   #progressionPage .playerTableScroller .listingCellIcon {
-    flex: 0 0 9px;
-    width: 9px;
-    height: 9px;
+    flex: 0 0 var(--mfl-responsive-table-listing-icon-size);
+    width: var(--mfl-responsive-table-listing-icon-size);
+    height: var(--mfl-responsive-table-listing-icon-size);
   }
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex: 0 0 5px;
-    width: 5px;
-    height: 5px;
+    flex: 0 0 var(--mfl-responsive-table-rarity-size);
+    width: var(--mfl-responsive-table-rarity-size);
+    height: var(--mfl-responsive-table-rarity-size);
     margin-right: 1px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.75);
+    transform: none;
     transform-origin: center;
   }
   #progressionPage nav.pager {
@@ -312,22 +322,22 @@
 }
 @media (max-width: 700px) {
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex-basis: 10px;
-    width: 10px;
-    min-width: 10px;
-    max-width: 10px;
-    height: 10px;
-    min-height: 10px;
-    max-height: 10px;
+    flex-basis: var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 10px;
-    height: 10px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: 10px;
-    height: 10px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
 }
 @media (max-width: 520px) {
@@ -350,73 +360,73 @@
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
-    flex-basis: 11px;
-    width: 11px;
-    min-width: 11px;
-    max-width: 11px;
-    height: 11px;
-    min-height: 11px;
-    max-height: 11px;
-    background-size: 7px 5px;
+    flex-basis: var(--mfl-responsive-table-checkbox-size);
+    width: var(--mfl-responsive-table-checkbox-size);
+    min-width: var(--mfl-responsive-table-checkbox-size);
+    max-width: var(--mfl-responsive-table-checkbox-size);
+    height: var(--mfl-responsive-table-checkbox-size);
+    min-height: var(--mfl-responsive-table-checkbox-size);
+    max-height: var(--mfl-responsive-table-checkbox-size);
+    background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 15px;
-    min-width: 15px;
-    max-width: 15px;
-    height: 15px;
-    min-height: 15px;
-    max-height: 15px;
+    width: var(--mfl-responsive-table-action-size);
+    min-width: var(--mfl-responsive-table-action-size);
+    max-width: var(--mfl-responsive-table-action-size);
+    height: var(--mfl-responsive-table-action-size);
+    min-height: var(--mfl-responsive-table-action-size);
+    max-height: var(--mfl-responsive-table-action-size);
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
-    width: 9px;
-    height: 9px;
+    width: var(--mfl-responsive-table-action-icon-size);
+    height: var(--mfl-responsive-table-action-icon-size);
   }
   #progressionPage .playerTableScroller .flagImage {
-    width: 11px;
-    height: 11px;
+    width: var(--mfl-responsive-table-flag-size);
+    height: var(--mfl-responsive-table-flag-size);
   }
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex-basis: 9px;
-    width: 9px;
-    min-width: 9px;
-    max-width: 9px;
-    height: 9px;
-    min-height: 9px;
-    max-height: 9px;
+    flex-basis: var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 9px;
-    height: 9px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: 9px;
-    height: 9px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .playerNoteIcon {
-    font-size: 7px;
+    font-size: var(--mfl-responsive-table-note-icon-size);
   }
   #progressionPage .playerTableScroller .listingCellContent {
-    width: 15px;
-    min-width: 15px;
-    max-width: 15px;
-    height: 15px;
-    min-height: 15px;
-    max-height: 15px;
+    width: var(--mfl-responsive-table-listing-content-size);
+    min-width: var(--mfl-responsive-table-listing-content-size);
+    max-width: var(--mfl-responsive-table-listing-content-size);
+    height: var(--mfl-responsive-table-listing-content-size);
+    min-height: var(--mfl-responsive-table-listing-content-size);
+    max-height: var(--mfl-responsive-table-listing-content-size);
   }
   #progressionPage .playerTableScroller .listingCellIcon {
-    flex-basis: 7px;
-    width: 7px;
-    height: 7px;
+    flex-basis: var(--mfl-responsive-table-listing-icon-size);
+    width: var(--mfl-responsive-table-listing-icon-size);
+    height: var(--mfl-responsive-table-listing-icon-size);
   }
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex-basis: 5px;
-    width: 5px;
-    height: 5px;
+    flex-basis: var(--mfl-responsive-table-rarity-size);
+    width: var(--mfl-responsive-table-rarity-size);
+    height: var(--mfl-responsive-table-rarity-size);
     margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.62);
+    transform: none;
   }
 }
 @media (max-width: 380px) {
@@ -439,70 +449,70 @@
   }
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
-    flex-basis: 10px;
-    width: 10px;
-    min-width: 10px;
-    max-width: 10px;
-    height: 10px;
-    min-height: 10px;
-    max-height: 10px;
-    background-size: 6px 4px;
+    flex-basis: var(--mfl-responsive-table-checkbox-size);
+    width: var(--mfl-responsive-table-checkbox-size);
+    min-width: var(--mfl-responsive-table-checkbox-size);
+    max-width: var(--mfl-responsive-table-checkbox-size);
+    height: var(--mfl-responsive-table-checkbox-size);
+    min-height: var(--mfl-responsive-table-checkbox-size);
+    max-height: var(--mfl-responsive-table-checkbox-size);
+    background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
   }
   #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: 13px;
-    min-width: 13px;
-    max-width: 13px;
-    height: 13px;
-    min-height: 13px;
-    max-height: 13px;
+    width: var(--mfl-responsive-table-action-size);
+    min-width: var(--mfl-responsive-table-action-size);
+    max-width: var(--mfl-responsive-table-action-size);
+    height: var(--mfl-responsive-table-action-size);
+    min-height: var(--mfl-responsive-table-action-size);
+    max-height: var(--mfl-responsive-table-action-size);
   }
   #progressionPage .playerTableScroller .playerTableActionsButton svg {
-    width: 8px;
-    height: 8px;
+    width: var(--mfl-responsive-table-action-icon-size);
+    height: var(--mfl-responsive-table-action-icon-size);
   }
   #progressionPage .playerTableScroller .flagImage {
-    width: 10px;
-    height: 10px;
+    width: var(--mfl-responsive-table-flag-size);
+    height: var(--mfl-responsive-table-flag-size);
   }
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) {
-    flex-basis: 8px;
-    width: 8px;
-    min-width: 8px;
-    max-width: 8px;
-    height: 8px;
-    min-height: 8px;
-    max-height: 8px;
+    flex-basis: var(--mfl-responsive-table-age-marker-size);
+    width: var(--mfl-responsive-table-age-marker-size);
+    min-width: var(--mfl-responsive-table-age-marker-size);
+    max-width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
+    min-height: var(--mfl-responsive-table-age-marker-size);
+    max-height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .retirementMarker::before,
   #progressionPage .playerTableScroller :is(.retirementMarker, .newMintMarker) img {
-    width: 8px;
-    height: 8px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .newMintMarker .newMintIcon {
-    width: 8px;
-    height: 8px;
+    width: var(--mfl-responsive-table-age-marker-size);
+    height: var(--mfl-responsive-table-age-marker-size);
   }
   #progressionPage .playerTableScroller .listingCellContent {
-    width: 13px;
-    min-width: 13px;
-    max-width: 13px;
-    height: 13px;
-    min-height: 13px;
-    max-height: 13px;
+    width: var(--mfl-responsive-table-listing-content-size);
+    min-width: var(--mfl-responsive-table-listing-content-size);
+    max-width: var(--mfl-responsive-table-listing-content-size);
+    height: var(--mfl-responsive-table-listing-content-size);
+    min-height: var(--mfl-responsive-table-listing-content-size);
+    max-height: var(--mfl-responsive-table-listing-content-size);
   }
   #progressionPage .playerTableScroller .listingCellIcon {
-    flex-basis: 6px;
-    width: 6px;
-    height: 6px;
+    flex-basis: var(--mfl-responsive-table-listing-icon-size);
+    width: var(--mfl-responsive-table-listing-icon-size);
+    height: var(--mfl-responsive-table-listing-icon-size);
   }
   #progressionPage #tableBody .tableOverallRarityCircle {
-    flex-basis: 5px;
-    width: 5px;
-    height: 5px;
+    flex-basis: var(--mfl-responsive-table-rarity-size);
+    width: var(--mfl-responsive-table-rarity-size);
+    height: var(--mfl-responsive-table-rarity-size);
     margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.54);
+    transform: none;
   }
 }`;
     document.head.appendChild(style);
@@ -887,19 +897,22 @@
 
   function syncWidthAwareHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
-    document.querySelectorAll("#progressionPage #tableHead th > span:first-child").forEach((label) => {
-      if (!(label instanceof HTMLElement)) return;
+    const compactHeader = HEADER_LABEL_COMPACT_MEDIA.matches;
+    const labels = Array.from(document.querySelectorAll("#progressionPage #tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]"))
+      .filter((label) => label instanceof HTMLElement);
+
+    labels.forEach((label) => {
       const header = label.closest("th");
       if (!(header instanceof HTMLTableCellElement)) return;
       const full = String(label.dataset.mflFullTableLabel || "").trim();
       const short = String(label.dataset.mflCompactTableLabel || "").trim();
       if (!full) return;
       const column = String(header.dataset.tableColumn || "");
-      const desired = mobile && column === "listing_price"
-        ? ""
-        : mobile && short
-          ? short
-          : full;
+      if (mobile && column === "listing_price") {
+        label.textContent = "";
+        return;
+      }
+      const desired = compactHeader && short ? short : full;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
@@ -1158,6 +1171,7 @@
     scrollContainer?.removeEventListener("scroll", onScroll);
     document.removeEventListener("scroll", onEvaluationTableScroll, true);
     MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
+    HEADER_LABEL_COMPACT_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     PHONE_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     TINY_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     boundViewScrollers.forEach((handler, scroller) => scroller.removeEventListener("scroll", handler));
@@ -1194,6 +1208,7 @@
   scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
   document.addEventListener("scroll", onEvaluationTableScroll, true);
   MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
+  HEADER_LABEL_COMPACT_MEDIA.addEventListener("change", onResponsiveSizeChange);
   PHONE_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
   TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
 

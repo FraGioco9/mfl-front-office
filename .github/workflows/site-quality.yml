@@ -163,7 +163,7 @@ jobs:
 
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-routing-regression.mjs
+        run: node validation/browser-routing-responsive-shell.mjs
 
       - name: Commit generated site artifacts
         id: generated

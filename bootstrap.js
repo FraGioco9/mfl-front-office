@@ -11,6 +11,7 @@
   const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v2:";
   const EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
   const FIRST_PAINT_HORIZONTAL_MEDIA = window.matchMedia("(max-width: 900px)");
+  const FIRST_PAINT_COMPACT_HEADER_MEDIA = window.matchMedia("(max-width: 1366px)");
   const FIRST_PAINT_PHONE_TABLE_MEDIA = window.matchMedia("(max-width: 520px)");
   const FIRST_PAINT_OVERFLOW_CLASS = "mflViewsOverflowing";
   const FIRST_PAINT_PLAYER_TABLE_FADE_LEFT_CLASS = "mflPlayerTableCanScrollLeft";
@@ -1033,11 +1034,34 @@
     const fullLabel = String(FIRST_PAINT_COLUMN_LABELS[column] || "");
     const compactLabel = String(FIRST_PAINT_COMPACT_COLUMN_LABELS[column] || fullLabel);
     const agentColumn = FIRST_PAINT_AGENT_PAGES.has(normalizedPage) ? "owned_since" : "wallet_name";
-    if (!FIRST_PAINT_HORIZONTAL_MEDIA.matches) {
-      return column === agentColumn && normalizedPage === "mfl" ? "" : fullLabel;
-    }
-    if (column === "listing_price" || (column === agentColumn && normalizedPage === "mfl")) return "";
-    return compactLabel;
+    if (column === agentColumn && normalizedPage === "mfl") return "";
+    if (FIRST_PAINT_HORIZONTAL_MEDIA.matches && column === "listing_price") return "";
+    return FIRST_PAINT_COMPACT_HEADER_MEDIA.matches ? compactLabel : fullLabel;
+  }
+
+  function syncFirstPaintTableHeaderLabels(head, page) {
+    if (!(head instanceof HTMLTableSectionElement)) return;
+    const normalizedPage = String(page || "").toLowerCase();
+    const agentColumn = FIRST_PAINT_AGENT_PAGES.has(normalizedPage) ? "owned_since" : "wallet_name";
+    const compactHeader = FIRST_PAINT_COMPACT_HEADER_MEDIA.matches;
+    const mobile = FIRST_PAINT_HORIZONTAL_MEDIA.matches;
+    head.querySelectorAll("[data-mfl-full-table-label][data-mfl-compact-table-label]").forEach((label) => {
+      if (!(label instanceof HTMLElement)) return;
+      const header = label.closest("th");
+      if (!(header instanceof HTMLTableCellElement)) return;
+      const column = String(header.dataset.tableColumn || "");
+      const fullLabel = String(label.dataset.mflFullTableLabel || "");
+      const compactLabel = String(label.dataset.mflCompactTableLabel || fullLabel);
+      if (column === agentColumn && normalizedPage === "mfl") {
+        label.textContent = "";
+        return;
+      }
+      if (mobile && column === "listing_price") {
+        label.textContent = "";
+        return;
+      }
+      label.textContent = compactHeader ? compactLabel : fullLabel;
+    });
   }
 
   function firstPaintTableSortState(page, view, urlLike = window.location.href) {
@@ -1088,6 +1112,7 @@
     const sort = firstPaintTableSortState(normalizedPage, normalizedView);
     const signature = [normalizedPage, normalizedView, columns.join(","), sort.sortKey, sort.sortDirection].join("|");
     if (head.rows[0] && head.dataset.mflStaticHeader === "true" && head.dataset.mflHeaderSignature === signature) {
+      syncFirstPaintTableHeaderLabels(head, normalizedPage);
       neutralizeFirstPaintSelectionHeader(head);
       return head.rows[0].cells.length;
     }

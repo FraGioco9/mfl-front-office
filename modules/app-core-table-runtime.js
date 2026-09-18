@@ -942,6 +942,7 @@ function tableBuildHeaderOwner() {
   headerRow.appendChild(actionsHeader);
 
   const mobileTable = window.matchMedia("(max-width: 900px)").matches;
+  const compactTableHeader = window.matchMedia("(max-width: 1366px)").matches;
   currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
@@ -973,11 +974,13 @@ function tableBuildHeaderOwner() {
     }[column] || fullLabel);
     label.dataset.mflFullTableLabel = fullLabel;
     label.dataset.mflCompactTableLabel = compactLabel;
-    label.textContent = !mobileTable
-      ? (column === agentColumn && state.currentPage === "mfl" ? "" : fullLabel)
-      : column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")
+    label.textContent = column === agentColumn && state.currentPage === "mfl"
+      ? ""
+      : mobileTable && column === "listing_price"
         ? ""
-        : compactLabel;
+        : compactTableHeader
+          ? compactLabel
+          : fullLabel;
     if (column === "listing_price") cell.setAttribute("aria-label", "Listing");
     cell.appendChild(label);
 
@@ -2816,7 +2819,7 @@ function tableCenterCellContents(cell) {
 
 const tableBodyRenderReuse = createRenderReuseGuard();
 
-function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, compactJoinedAgencyLayout) {
+function tableBodyRenderSignature(pageRows, renderColumns) {
   const presentationRows = pageRows.map((row) => {
     const playerId = String(getValue(row, "player_id") || "");
     return [
@@ -2835,8 +2838,6 @@ function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, c
     state.sortKey,
     state.sortDirection,
     renderColumns.map(({ column }) => column),
-    Boolean(compactTableLayout),
-    Boolean(compactJoinedAgencyLayout),
     state.settingsDateFormat,
     state.settingsTimeFormat,
     Boolean(hasWalletOptIn()),
@@ -2878,8 +2879,6 @@ function tableRenderTableOwner() {
 
   const pageRows = currentPageRows();
   const currentPage = state.currentPage;
-  const compactTableLayout = window.matchMedia("(max-width: 900px)").matches;
-  const compactJoinedAgencyLayout = window.matchMedia("(max-width: 520px)").matches;
   const agentLinksEnabled = currentPage !== "myplayers" && currentPage !== "agents" && currentPage !== "mfl";
   const clubLinksEnabled = currentPage !== "club";
   const statColumnSet = new Set(statColumns);
@@ -2887,12 +2886,7 @@ function tableRenderTableOwner() {
     column,
     className: tableColumnClass(column),
   }));
-  const renderSignature = tableBodyRenderSignature(
-    pageRows,
-    renderColumns,
-    compactTableLayout,
-    compactJoinedAgencyLayout,
-  );
+  const renderSignature = tableBodyRenderSignature(pageRows, renderColumns);
   const reusableTableBody = tableBodyRenderReuse.matches(
     renderSignature,
     tableBodyStructureReusable(pageRows),
@@ -2953,9 +2947,13 @@ function tableRenderTableOwner() {
         nameLink.className = "playerNameLink";
         markTableInteractiveHover(nameLink, "name", playerId);
         const fullPlayerName = playerName;
-        nameLink.textContent = compactTableLayout
-          ? compactMobilePlayerName(fullPlayerName)
-          : fullPlayerName;
+        const fullNameValue = document.createElement("span");
+        fullNameValue.className = "playerNameFullValue";
+        fullNameValue.textContent = fullPlayerName;
+        const compactNameValue = document.createElement("span");
+        compactNameValue.className = "playerNameCompactValue";
+        compactNameValue.textContent = compactMobilePlayerName(fullPlayerName);
+        nameLink.replaceChildren(fullNameValue, compactNameValue);
         if (fullPlayerName) nameLink.setAttribute("aria-label", fullPlayerName);
         nameLink.dataset.playerId = playerIdText;
         nameWrap.appendChild(nameLink);
@@ -2989,27 +2987,10 @@ function tableRenderTableOwner() {
       } else if (column === "listing_price") {
         const listingBadge = listingPriceBadgeHtml(row);
         if (listingBadge) {
-          if (!compactTableLayout) {
-            cell.innerHTML = `<span class="listingCellTableHost">${listingBadge}</span>`;
-          } else {
-            const template = document.createElement("template");
-            template.innerHTML = listingBadge.trim();
-            const badge = template.content.firstElementChild;
-            const price = badge instanceof HTMLElement ? badge.querySelector(".listingCellPrice") : null;
-            const priceText = String(price?.textContent || "").trim();
-            if (badge instanceof HTMLElement) {
-              price?.remove();
-              if (priceText) {
-                badge.dataset.tooltip = priceText;
-                badge.setAttribute("aria-label", priceText);
-                badge.tabIndex = 0;
-              }
-              const host = document.createElement("span");
-              host.className = "listingCellTableHost";
-              host.appendChild(badge);
-              cell.appendChild(host);
-            }
-          }
+          const host = document.createElement("span");
+          host.className = "listingCellTableHost";
+          host.innerHTML = listingBadge;
+          cell.appendChild(host);
         } else {
           cell.setAttribute("aria-label", "Not For Sale");
         }
@@ -3029,9 +3010,13 @@ function tableRenderTableOwner() {
         cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
         const joinedAgencyValue = formatCellValue(row, column);
-        cell.textContent = compactJoinedAgencyLayout
-          ? compactMobileJoinedAgency(joinedAgencyValue)
-          : joinedAgencyValue;
+        const fullValue = document.createElement("span");
+        fullValue.className = "joinedAgencyFullValue";
+        fullValue.textContent = joinedAgencyValue;
+        const compactValue = document.createElement("span");
+        compactValue.className = "joinedAgencyCompactValue";
+        compactValue.textContent = compactMobileJoinedAgency(joinedAgencyValue);
+        cell.replaceChildren(fullValue, compactValue);
       } else if (column === "active_contract_club_division") {
         const division = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, column)) : null;
         if (division) {

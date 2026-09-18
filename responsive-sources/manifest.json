@@ -6,6 +6,8 @@
   "player-tablet.css.inc",
   "evaluation-tablet.css.inc",
   "static-tablet.css.inc",
+  "intermediate-desktop.css.inc",
+  "chrome-compact-shell.css.inc",
   "my-clubs-tablet.css.inc",
   "parity.css.inc",
   "tables-phone.css.inc",
@@ -13,6 +15,7 @@
   "static-phone.css.inc",
   "my-clubs-phone.css.inc",
   "compact.css.inc",
+  "mobile-table-content.css.inc",
   "touch.css.inc",
   "footer.css.inc",
   "player-note-desktop.css.inc"

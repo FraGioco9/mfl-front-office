@@ -13,7 +13,10 @@ on:
       - "dev-legacy-watch-loader.cjs"
       - "legacy-dev-watch-token.js"
       - "next-dev-legacy-bridge.mjs"
+      - "scripts/ci/create-next-sqlite-smoke-fixture.cjs"
       - "validation/next-rendered-shell-browser.mjs"
+      - "validation/next-mobile-table-browser.mjs"
+      - "validation/next-mobile-table-route-browser.mjs"
   workflow_dispatch:
 
 permissions:
@@ -52,6 +55,12 @@ jobs:
 
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
+
+      - name: Verify real mobile table presentation in Next
+        run: node validation/next-mobile-table-browser.mjs http://localhost:4000/
+
+      - name: Verify real mobile MFL and Agent table routes in Next
+        run: node validation/next-mobile-table-route-browser.mjs http://localhost:4000
 
       - name: Verify Document Head warnings are gone
         shell: bash

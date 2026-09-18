@@ -68,16 +68,16 @@ const playerCommitIndex = playerRenderer.lastIndexOf("playerDetailRenderReuse.co
 invariant(playerReuseIndex >= 0 && playerReplaceIndex > playerReuseIndex && playerCommitIndex > playerReplaceIndex, "Player reuse must be checked before full subtree replacement and committed only after rebuild.");
 invariant((playerRenderer.match(/playerDetail\.innerHTML = `/g) || []).length === 1, "Player must retain exactly one canonical full-subtree rebuild site.");
 
-
 includes(tableCore, "const tableBodyRenderReuse = createRenderReuseGuard();", "Table must consume the shared render-reuse guard.");
-includes(tableCore, "function tableBodyRenderSignature(pageRows, renderColumns, compactTableLayout, compactJoinedAgencyLayout) {", "Table must derive a domain-owned render signature.");
+includes(tableCore, "function tableBodyRenderSignature(pageRows, renderColumns) {", "Table must derive a viewport-independent domain-owned render signature.");
 for (const input of [
   "state.columns,", "presentationRows,", "state.currentPage,", "state.view,", "state.page,", "state.pageSize,",
-  "state.sortKey,", "state.sortDirection,", "renderColumns.map(({ column }) => column),",
-  "Boolean(compactTableLayout),", "Boolean(compactJoinedAgencyLayout),", "state.settingsDateFormat,",
+  "state.sortKey,", "state.sortDirection,", "renderColumns.map(({ column }) => column),", "state.settingsDateFormat,",
   "state.settingsTimeFormat,", "Boolean(hasWalletOptIn()),", "normalizeWalletAddress(state.linkedWalletAddress).toLowerCase(),",
   "Boolean(state.walletPermissionAllowed),", "state.trainingAdjustments,",
 ]) includes(tableCore, input, `Table render signature must include ${input}`);
+excludes(tableCore, "Boolean(compactTableLayout),", "Table reuse identity must not depend on the 900px presentation breakpoint.");
+excludes(tableCore, "Boolean(compactJoinedAgencyLayout),", "Table reuse identity must not depend on the 520px presentation breakpoint.");
 includes(tableCore, "state.selectedPlayerIds.has(playerId),\n      playerNote(playerId),", "Table reuse must invalidate for row selection or note presentation changes.");
 includes(tableCore, "function tableBodyStructureReusable(pageRows) {", "Table reuse must verify that the existing tbody structure is still canonical.");
 includes(tableCore, "const reusableTableBody = tableBodyRenderReuse.matches(", "Table must check reusable tbody state before rebuilding rows.");
