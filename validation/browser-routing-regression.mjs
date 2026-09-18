@@ -1343,6 +1343,24 @@ const browserTestSource = String.raw`(() => {
     assertRouteState(directState);
 
     if (scenario === "planner") {
+      const input = document.getElementById("plannerTeamSearchInput");
+      assert(input.getBoundingClientRect().width <= 360, "Planner search must remain compact.");
+      input.value = "Browser";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector(".plannerTeamSearchResult"), "Planner team search");
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert(hidden("#plannerTeamSelector"), "Selected team must replace the search.");
+      assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
+      assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
+      assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
+      assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
+      assert(location.search === "?club=9001", "Selected team URL is incorrect.");
+      document.getElementById("plannerTeamClearButton").click();
+      assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
+      assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
+      history.replaceState({}, "", "/planner?club=9001");
+      await window.__mflPlannerRoute.render(false);
+      assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish(
         "passed",
@@ -1626,6 +1644,9 @@ function dataStub(url) {
       rows: [[80, 23, "packable", 1]],
       source: "browser-regression-summary",
     };
+  }
+  if (mode === "search" && url.searchParams.get("type") === "clubs") {
+    return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
   }
   if (mode === "search") {
     const playerIds = new Set(

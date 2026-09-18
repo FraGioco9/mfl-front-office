@@ -195,6 +195,7 @@
     const currentTitle = cleanText(document.title);
     const usable = pageName === "home" ? currentTitle === APP_NAME : Boolean(currentTitle && currentTitle !== APP_NAME);
     if (!usable) return;
+    if (pageName !== "notfound" && currentTitle === withAppName(GENERIC_PAGE_LABELS.notfound)) return;
     stableRouteIdentity = routeIdentityForRequest(request);
     stableTitle = currentTitle;
   }

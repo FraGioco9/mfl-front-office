@@ -1041,7 +1041,7 @@
           </div>
         </section>        <section id="plannerPage" class="pageView plannerPage" hidden>
           <h2 class="tablePageTitle">Planner</h2>
-          <section class="plannerTeamSelector" aria-label="Team selection">
+          <section id="plannerTeamSelector" class="plannerTeamSelector" aria-label="Team selection">
             <label class="plannerTeamSearchLabel" for="plannerTeamSearchInput">Team</label>
             <div class="plannerTeamSearch">
               <div class="plannerTeamSearchControl">
@@ -1051,6 +1051,14 @@
               <div id="plannerTeamSearchResults" class="plannerTeamSearchResults" role="listbox" hidden></div>
             </div>
           </section>
+          <div id="plannerSelectedTeam" class="plannerSelectedTeam" hidden>
+            <img id="plannerTeamLogo" class="plannerTeamLogo" alt="" width="48" height="48">
+            <div class="plannerTeamIdentity">
+              <strong id="plannerTeamName"></strong>
+              <span id="plannerTeamDivision" class="clubSearchDivision"></span>
+            </div>
+            <button id="plannerTeamClearButton" class="compactButton" type="button">Clear</button>
+          </div>
           <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
         </section>
         <script>
