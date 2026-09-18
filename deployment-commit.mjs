@@ -69,12 +69,16 @@ export function materializeDeploymentCommit({
   repositoryCommit,
 } = {}) {
   const explicitCommit = resolveDeploymentCommit({ root, env });
+  if (explicitCommit) {
+    writeDeploymentCommitModule(explicitCommit, { root });
+    return explicitCommit;
+  }
+
   const localCommit = repositoryCommit === undefined
     ? resolveRepositoryCommit(root)
     : normalizeDeploymentCommit(repositoryCommit);
-  const commit = explicitCommit || localCommit;
-  writeDeploymentCommitModule(commit, { root });
-  return commit;
+  writeDeploymentCommitModule(localCommit, { root });
+  return localCommit;
 }
 
 export function writeDeploymentCommit(value, { root = process.cwd() } = {}) {
