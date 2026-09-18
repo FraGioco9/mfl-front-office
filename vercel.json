@@ -16,11 +16,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation)",
+      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation|planner)",
       "destination": "/index.html"
     },
     {
-      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation)/:path*",
+      "source": "/:app(mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation|planner)/:path*",
       "destination": "/index.html"
     }
   ]
