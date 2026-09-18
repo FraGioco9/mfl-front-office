@@ -203,11 +203,13 @@ function recentSearchData(request) {
   const playerColumns = SEARCH_PLAYER_COLUMNS;
   const agentColumns = ["wallet_address", "wallet_name", "player_count"];
 
+  const excludeRetiredPlayers = String(request.query?.excludeRetired || "") === "1";
   const playerRows = playerIds.length
     ? queryRows(
       `SELECT ${selectList(playerColumns)}
        FROM players
-       WHERE player_id IN (${placeholders(playerIds)})`,
+       WHERE player_id IN (${placeholders(playerIds)})
+       ${excludeRetiredPlayers ? "AND coalesce(CAST(retirement_years AS INTEGER), 0) <> 0" : ""}`,
       playerIds,
     )
     : [];
