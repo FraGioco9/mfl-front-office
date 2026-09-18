@@ -22,14 +22,7 @@
             <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
               <div class="plannerRosterHeader">
                 <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
-                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-expanded="false" aria-controls="plannerPlayerAdder">Add player</button>
-              </div>
-              <div id="plannerPlayerAdder" class="plannerPlayerAdder" hidden>
-                <div class="plannerPlayerSearchControl">
-                  <input id="plannerPlayerSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by player ID or name" aria-autocomplete="list" aria-controls="plannerPlayerSearchResults">
-                  <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerPlayerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
-                </div>
-                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" role="listbox" hidden></div>
+                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player</button>
               </div>
               <table class="plannerRosterTable" aria-label="Planned squad">
                 <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
@@ -45,6 +38,30 @@
                 <span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span>
                 <span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>
               </div>
+            </section>
+          </div>
+          <div id="plannerPlayerModal" class="modalBackdrop plannerPlayerModalBackdrop" hidden>
+            <section class="mflDialog plannerPlayerDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlayerModalTitle">
+              <header class="mflDialogHeader">
+                <h2 id="plannerPlayerModalTitle">Add players</h2>
+                <button id="plannerPlayerModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close Add players"></button>
+              </header>
+              <section class="plannerPlayerModalBody">
+                <div class="plannerPlayerSearchControl">
+                  <input id="plannerPlayerSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by player ID or name" aria-autocomplete="list" aria-controls="plannerPlayerSearchResults">
+                  <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerPlayerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                </div>
+                <p id="plannerPlayerSelectionStatus" class="plannerPlayerSelectionStatus" role="status" aria-live="polite"></p>
+                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" role="listbox" hidden></div>
+                <section id="plannerPlayerSelection" class="plannerPlayerSelection" aria-label="Selected players" hidden>
+                  <h3>Selected <span id="plannerPlayerSelectionCount">0</span></h3>
+                  <div id="plannerPlayerSelectionList" class="plannerPlayerSelectionList"></div>
+                </section>
+              </section>
+              <footer class="mflDialogFooter plannerPlayerModalFooter">
+                <button id="plannerPlayerDiscardButton" type="button">Discard</button>
+                <button id="plannerPlayerConfirmButton" type="button" disabled>Add selected</button>
+              </footer>
             </section>
           </div>
           <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
