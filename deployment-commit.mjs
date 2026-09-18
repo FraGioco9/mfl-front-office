@@ -1,7 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 export const DEPLOYMENT_COMMIT_FILE = ".mfl-deploy-commit";
+export const DEPLOYMENT_COMMIT_MODULE = "api/_deployment-commit.generated.js";
 
 export function normalizeDeploymentCommit(value, { allowEmpty = true } = {}) {
   const commit = String(value ?? "").trim().toLowerCase();
@@ -19,6 +20,10 @@ export function deploymentCommitPath(root = process.cwd()) {
   return resolve(root, DEPLOYMENT_COMMIT_FILE);
 }
 
+export function deploymentCommitModulePath(root = process.cwd()) {
+  return resolve(root, DEPLOYMENT_COMMIT_MODULE);
+}
+
 export function resolveDeploymentCommit({ root = process.cwd(), env = process.env } = {}) {
   const filePath = deploymentCommitPath(root);
   const fileCommit = existsSync(filePath)
@@ -33,8 +38,27 @@ export function resolveDeploymentCommit({ root = process.cwd(), env = process.en
   return fileCommit || envCommit;
 }
 
+export function writeDeploymentCommitModule(value, { root = process.cwd() } = {}) {
+  const commit = normalizeDeploymentCommit(value);
+  const modulePath = deploymentCommitModulePath(root);
+  mkdirSync(dirname(modulePath), { recursive: true });
+  writeFileSync(
+    modulePath,
+    `module.exports = ${JSON.stringify(commit)};\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return commit;
+}
+
+export function materializeDeploymentCommit({ root = process.cwd(), env = process.env } = {}) {
+  const commit = resolveDeploymentCommit({ root, env });
+  writeDeploymentCommitModule(commit, { root });
+  return commit;
+}
+
 export function writeDeploymentCommit(value, { root = process.cwd() } = {}) {
   const commit = normalizeDeploymentCommit(value, { allowEmpty: false });
   writeFileSync(deploymentCommitPath(root), `${commit}\n`, { encoding: "utf8", mode: 0o600 });
+  writeDeploymentCommitModule(commit, { root });
   return commit;
 }
