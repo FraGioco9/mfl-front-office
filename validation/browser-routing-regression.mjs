@@ -143,6 +143,7 @@ const browserTestSource = String.raw`(() => {
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
   let plannerClubPageRequests = 0;
+  let plannerClubSearchRequests = 0;
   let plannerLoadingPitchGeometry = null;
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
@@ -157,6 +158,13 @@ const browserTestSource = String.raw`(() => {
       && requestUrl.searchParams.get("clubId") === "9001"
     ) {
       plannerClubPageRequests += 1;
+    }
+    if (
+      requestUrl.pathname === "/api/data"
+      && requestUrl.searchParams.get("mode") === "search"
+      && requestUrl.searchParams.get("type") === "clubs"
+    ) {
+      plannerClubSearchRequests += 1;
     }
     if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
@@ -1459,28 +1467,53 @@ const browserTestSource = String.raw`(() => {
       const plannerRoute = Reflect.get(window, "__mflPlannerRoute");
       assert(plannerRoute && typeof plannerRoute.loadClub === "function", "Planner route owner does not expose Club loading.");
 
+      const savedPlansSelect = document.getElementById("plannerSavedPlanSelect");
+      const formationSelect = document.getElementById("plannerFormationSelect");
+      assert(
+        savedPlansSelect?.dataset?.mflDropdownEnhanced === "true"
+          && formationSelect?.dataset?.mflDropdownEnhanced === "true",
+        "Planner dropdowns did not use the canonical enhanced-select lifecycle.",
+      );
+
+      const searchInput = document.getElementById("plannerClubSearchInput");
+      const searchResults = document.getElementById("plannerClubSearchResults");
+      assert(searchInput instanceof HTMLInputElement && searchResults instanceof HTMLElement,
+        "Planner Club search controls are unavailable.");
+
       const originalClubRequests = plannerClubPageRequests;
+      const originalSearchRequests = plannerClubSearchRequests;
       plannerLoadingPitchGeometry = null;
-      const switchPromise = plannerRoute.loadClub("9002", { updateUrl: false, resetAssignments: true });
+      searchInput.value = "Second Browser Club";
+      searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(
+        () => searchResults.querySelector('[data-club-id="9002"]') instanceof HTMLButtonElement,
+        "Planner Club search did not return the expected result.",
+      );
+      assert(plannerClubSearchRequests > originalSearchRequests, "Planner Club search did not issue the canonical Club-only search request.");
+
+      const result = searchResults.querySelector('[data-club-id="9002"]');
+      assert(result instanceof HTMLButtonElement, "Planner Club search result is not selectable.");
+      result.click();
+
       await waitFor(
         () => document.getElementById("plannerWorkspace")?.getAttribute("aria-busy") === "true"
           && document.querySelectorAll("#plannerPitch .plannerSlot.is-loading").length === 11
           && document.querySelectorAll("#plannerRoster .plannerPlayerSkeleton").length > 0,
-        "Planner uncached Club switch did not expose its geometry-preserving loading shell.",
+        "Planner searched Club switch did not expose its geometry-preserving loading shell.",
       );
       const loadingPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
       assert(loadingPitch && loadingPitch.width > 0 && loadingPitch.height > 0,
-        "Planner uncached loading pitch has no measurable geometry.");
+        "Planner searched Club loading pitch has no measurable geometry.");
       plannerLoadingPitchGeometry = { width: loadingPitch.width, height: loadingPitch.height };
 
-      assert(await switchPromise, "Planner could not complete the uncached Club switch.");
-      assert(text("#plannerClubName") === "Second Browser Club", "Planner did not commit the uncached Club switch.");
+      await waitFor(() => text("#plannerClubName") === "Second Browser Club",
+        "Planner search result did not select and load its Club.");
       const loadedPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
       assert(
         loadedPitch
           && Math.abs(loadedPitch.width - plannerLoadingPitchGeometry.width) <= 1
           && Math.abs(loadedPitch.height - plannerLoadingPitchGeometry.height) <= 1,
-        "Planner pitch geometry changed between uncached loading and loaded states: " + JSON.stringify({
+        "Planner pitch geometry changed between searched-Club loading and loaded states: " + JSON.stringify({
           loading: plannerLoadingPitchGeometry,
           loaded: loadedPitch ? { width: loadedPitch.width, height: loadedPitch.height } : null,
         }),
@@ -1781,6 +1814,26 @@ function dataStub(url) {
     };
   }
   if (mode === "search") {
+    const searchType = String(url.searchParams.get("type") || "");
+    const query = String(url.searchParams.get("q") || "").trim().toLowerCase();
+    if (searchType === "clubs") {
+      const clubs = [{
+        clubId: "9001",
+        name: "Browser Club",
+        division: 3,
+      }, {
+        clubId: "9002",
+        name: "Second Browser Club",
+        division: 4,
+      }];
+      return {
+        results: clubs.filter((club) => (
+          !query
+          || club.name.toLowerCase().includes(query)
+          || club.clubId.includes(query)
+        )),
+      };
+    }
     const playerIds = new Set(
       String(url.searchParams.get("playerIds") || "")
         .split(",")
