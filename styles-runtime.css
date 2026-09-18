@@ -7563,9 +7563,9 @@ html.mflDataLoading #pageSizeSelect {
 
 .plannerTeamSelector[hidden],.plannerSelectedTeam[hidden]{display:none}
 .plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:fit-content;max-width:100%}
-.plannerTeamLogo{width:48px;height:48px;object-fit:contain;flex-shrink:0}
+.plannerTeamLogo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
 .plannerTeamIdentity{display:grid;gap:4px;min-width:0}
-#plannerTeamName{overflow-wrap:anywhere;font-size:16px;font-weight:800}
+#plannerTeamName{overflow-wrap:anywhere;font-size:24px;font-weight:800}
 #plannerTeamDivision{font-size:12px;font-weight:700}
 #plannerTeamClearButton{flex-shrink:0;margin-left:8px}
 /* Source: footer.css */
