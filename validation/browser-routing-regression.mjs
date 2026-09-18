@@ -21,9 +21,9 @@ const testPlayer = Object.freeze({
   positions: "ST",
   age: 23,
   nationality: "Italy",
-  retirement_years: 5,
+  retirement_years: 2,
   owned_since: 1700000000,
-  player_seasons: 1,
+  player_seasons: 5,
   overall: 80,
   pace: 90,
   shooting: 82,
@@ -34,7 +34,7 @@ const testPlayer = Object.freeze({
   goalkeeping: 10,
   height: 185,
   preferred_foot: "Right",
-  active_contract_revenue_share: 12.5,
+  active_contract_revenue_share: 1250,
   active_contract_nb_matches: 12,
   active_contract_club_id: "browser-club",
   active_contract_club_name: "Browser FC",
@@ -1415,16 +1415,24 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(3)") === "23", "Planner must show player age.");
+      const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
+      assert(ageMarker instanceof HTMLElement && ageMarker.classList.contains("retirementMarker--retiring-2"), "Planner must show the canonical retirement marker beside Age.");
+      const contractValue = document.querySelector("#plannerRosterBody .plannerContractValue");
       const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
-      assert(contractInput instanceof HTMLInputElement && contractInput.value === "12.50", "Planner must seed editable Contract with two decimals.");
+      const contractEdit = document.querySelector("#plannerRosterBody .plannerContractEditButton");
+      assert(contractValue instanceof HTMLElement && contractValue.textContent === "12.50", "Planner Contract must display database revenue share divided by 100.");
+      assert(contractInput instanceof HTMLInputElement && contractInput.hidden, "Planner Contract input must be hidden outside edit mode.");
+      assert(contractEdit instanceof HTMLButtonElement && contractEdit.textContent === "✎", "Planner Contract must expose an Edit button beside the normal value.");
+      contractEdit.click();
+      assert(!contractInput.hidden && contractEdit.textContent === "✓", "Planner Contract Edit must reveal the input and become Confirm.");
       assert(contractInput.max === "20" && contractInput.step === "0.01", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
       contractInput.value = "20.75";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
       assert(contractInput.value === "20.00", "Planner Contract must clamp values above 20.00.");
       contractInput.value = "18.25";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
-      contractInput.dispatchEvent(new Event("change", { bubbles: true }));
-      assert(contractInput.value === "18.25", "Planner Contract must preserve valid two-decimal edits.");
+      contractEdit.click();
+      assert(contractValue.textContent === "18.25" && contractInput.hidden && contractEdit.textContent === "✎", "Planner Contract Confirm must restore normal display mode.");
       const removeButton = document.querySelector(".plannerRosterRemove");
       const removeStyle = getComputedStyle(removeButton);
       assert(removeButton.textContent === "×", "Planner Remove must render as a red X glyph.");
@@ -1438,7 +1446,10 @@ const browserTestSource = String.raw`(() => {
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelector(".plannerPlayerSearchResult"), "Planner player search");
       playerSearch.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      assert(document.querySelector('#plannerRosterBody tr[data-player-id="2"]'), "Planner Add player must append an eligible non-retired player.");
+      const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
+      assert(addedRow, "Planner Add player must append an eligible non-retired player.");
+      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75", "Added player Contract must also use database value divided by 100.");
+      assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
       assert(hidden("#plannerPlayerAdder"), "Planner player search must close after an addition.");
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
@@ -1747,8 +1758,8 @@ function dataStub(url, scenario = "") {
     return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
   }
   if (mode === "search" && url.searchParams.get("type") === "players" && String(url.searchParams.get("q") || "").toLowerCase().includes("added")) {
-    const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years"];
-    return { columns, rows: [[2, "Added Browser Player", 77, 21, "Italy", "RW", 4]] };
+    const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
+    return { columns, rows: [[2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375]] };
   }
   if (mode === "search") {
     const playerIds = new Set(
