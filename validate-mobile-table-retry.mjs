@@ -61,7 +61,8 @@ includes(tableSource, "function compactMobilePlayerName(value)", "Canonical Tabl
 includes(tableSource, 'fullNameValue.className = "playerNameFullValue";', "Table rows must retain the full player name in stable DOM.");
 includes(tableSource, 'compactNameValue.className = "playerNameCompactValue";', "Table rows must retain N. Surname in stable DOM.");
 includes(tableSource, 'nameLink.setAttribute("aria-label", fullPlayerName);', "Compact names must retain the full accessible name.");
-includes(tableSource, 'column === "listing_price" || (column === agentColumn && state.currentPage === "mfl")', "Listing header blanking must remain inside mobile behavior.");
+includes(tableSource, 'const compactTableHeader = window.matchMedia("(max-width: 1366px)").matches;', "Canonical Table headers must use the fixed compact-label breakpoint.");
+includes(tableSource, 'mobileTable && column === "listing_price"', "Listing header blanking must remain inside true mobile behavior.");
 includes(tableSource, 'host.className = "listingCellTableHost";', "Listing rows must retain the skeleton-shared structural host at every breakpoint.");
 includes(tableSource, "host.innerHTML = listingBadge;", "Listing rows must mount canonical icon and price markup inside the structural host.");
 excludes(tableSource, "price?.remove();", "Responsive Listing presentation must not remove the price node.");
