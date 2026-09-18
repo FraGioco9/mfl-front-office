@@ -34,7 +34,7 @@ const testPlayer = Object.freeze({
   goalkeeping: 10,
   height: 185,
   preferred_foot: "Right",
-  active_contract_revenue_share: 10,
+  active_contract_revenue_share: 12.5,
   active_contract_nb_matches: 12,
   active_contract_club_id: "browser-club",
   active_contract_club_name: "Browser FC",
@@ -1416,16 +1416,39 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerRosterBody td").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(3)") === "23", "Planner must show player age.");
       const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
-      assert(contractInput instanceof HTMLInputElement && contractInput.value === "12", "Planner must seed editable Contract from the current match clause.");
-      contractInput.value = "18";
+      assert(contractInput instanceof HTMLInputElement && contractInput.value === "12.50", "Planner must seed editable Contract with two decimals.");
+      assert(contractInput.max === "20" && contractInput.step === "0.01", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
+      contractInput.value = "20.75";
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
-      assert(contractInput.value === "18", "Planner Contract must be editable locally.");
+      assert(contractInput.value === "20.00", "Planner Contract must clamp values above 20.00.");
+      contractInput.value = "18.25";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      contractInput.dispatchEvent(new Event("change", { bubbles: true }));
+      assert(contractInput.value === "18.25", "Planner Contract must preserve valid two-decimal edits.");
+      const removeButton = document.querySelector(".plannerRosterRemove");
+      const removeStyle = getComputedStyle(removeButton);
+      assert(removeButton.textContent === "×", "Planner Remove must render as a red X glyph.");
+      assert(removeStyle.backgroundColor === "rgba(0, 0, 0, 0)" && parseFloat(removeStyle.borderTopWidth) === 0, "Planner Remove must have no surrounding box.");
+      assert(removeStyle.color !== getComputedStyle(document.body).color, "Planner Remove must use destructive coloring.");
+      const addPlayerButton = document.getElementById("plannerAddPlayerButton");
+      addPlayerButton.click();
+      assert(!hidden("#plannerPlayerAdder"), "Add player must reveal the player search.");
+      const playerSearch = document.getElementById("plannerPlayerSearchInput");
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector(".plannerPlayerSearchResult"), "Planner player search");
+      playerSearch.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert(document.querySelector('#plannerRosterBody tr[data-player-id="2"]'), "Planner Add player must append an eligible non-retired player.");
+      assert(hidden("#plannerPlayerAdder"), "Planner player search must close after an addition.");
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
       if (innerWidth > 800) assert(pitchBox.left >= squadBox.right, "Pitch must appear to the right of the squad.");
       else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
-      document.querySelector(".plannerRosterRemove").click();
-      assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Remove must update the planned squad.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]'), "Remove must update the planned squad.");
+      assert(document.querySelector('#plannerRosterBody tr[data-player-id="1"]'), "Removing an added player must keep the original planned player.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="1"] .plannerRosterRemove').click();
+      assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Removing the remaining player must empty the planned squad.");
       assert(text("#plannerRosterStatus") === "No players in this squad.", "Empty planned squad must be explicit.");
       document.getElementById("plannerTeamClearButton").click();
       assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
@@ -1722,6 +1745,10 @@ function dataStub(url, scenario = "") {
   }
   if (mode === "search" && url.searchParams.get("type") === "clubs") {
     return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
+  }
+  if (mode === "search" && url.searchParams.get("type") === "players" && String(url.searchParams.get("q") || "").toLowerCase().includes("added")) {
+    const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years"];
+    return { columns, rows: [[2, "Added Browser Player", 77, 21, "Italy", "RW", 4]] };
   }
   if (mode === "search") {
     const playerIds = new Set(
