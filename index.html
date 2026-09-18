@@ -1067,7 +1067,7 @@
               </div>
               <table class="plannerRosterTable" aria-label="Planned squad">
                 <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
-                <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                <thead><tr><th scope="col">Player</th><th scope="col">POS</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
                 <tbody id="plannerRosterBody"></tbody>
                 <tfoot>
                   <tr class="plannerRosterTotalsRow">
@@ -1117,7 +1117,7 @@
                       <tr>
                         <th scope="col" aria-label="Nationality"></th>
                         <th scope="col">Name</th>
-                        <th scope="col">Position(s)</th>
+                        <th scope="col">Position</th>
                         <th scope="col">Age</th>
                         <th scope="col">OVR</th>
                         <th scope="col">Select</th>
@@ -1129,7 +1129,29 @@
                 </div>
                 <section id="plannerPlayerSelection" class="plannerPlayerSelection" aria-label="Selected players" hidden>
                   <h3>Selected <span id="plannerPlayerSelectionCount">0</span></h3>
-                  <div id="plannerPlayerSelectionList" class="plannerPlayerSelectionList"></div>
+                  <div class="plannerPlayerSelectionTableShell">
+                    <table class="plannerPlayerSearchTable plannerPlayerSelectionTable" aria-label="Selected players">
+                      <colgroup>
+                        <col class="plannerPlayerSearchFlagColumn">
+                        <col class="plannerPlayerSearchNameColumn">
+                        <col class="plannerPlayerSearchPositionsColumn">
+                        <col class="plannerPlayerSearchAgeColumn">
+                        <col class="plannerPlayerSearchOverallColumn">
+                        <col class="plannerPlayerSearchSelectColumn">
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th scope="col" aria-label="Nationality"></th>
+                          <th scope="col">Name</th>
+                          <th scope="col">Position</th>
+                          <th scope="col">Age</th>
+                          <th scope="col">OVR</th>
+                          <th scope="col" aria-label="Remove selected player"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="plannerPlayerSelectionBody"></tbody>
+                    </table>
+                  </div>
                 </section>
               </section>
               <footer class="mflDialogFooter plannerPlayerModalFooter">
