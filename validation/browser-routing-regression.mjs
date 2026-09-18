@@ -132,20 +132,32 @@ const browserTestSource = String.raw`(() => {
                   : window.location.hash === "#stale-proof"
                     ? "myclubs-stale"
                     : "myclubs-out")
-            : window.location.pathname === "/planner"
-              ? "planner"
-              : window.location.pathname === "/mfl/stats"
+            : window.location.pathname.startsWith("/planner/")
+              ? "planner-saved"
+              : window.location.pathname === "/planner"
+                ? "planner"
+                : window.location.pathname === "/mfl/stats"
                 ? "mflstats"
                 : "unknown";
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
+  let plannerClubPageRequests = 0;
+  let plannerLoadingPitchGeometry = null;
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const requestUrl = new URL(typeof input === "string" ? input : input.url, window.location.origin);
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
+    if (
+      requestUrl.pathname === "/api/data"
+      && requestUrl.searchParams.get("mode") === "page"
+      && requestUrl.searchParams.get("scope") === "club"
+      && requestUrl.searchParams.get("clubId") === "9001"
+    ) {
+      plannerClubPageRequests += 1;
+    }
     if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
@@ -184,6 +196,30 @@ const browserTestSource = String.raw`(() => {
     requestAnimationFrame(sampleLinkedTablePaint);
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
+
+  const samplePlannerLoadingGeometry = () => {
+    if (scenario !== "planner" || plannerLoadingPitchGeometry) return;
+    const workspace = document.getElementById("plannerWorkspace");
+    const pitch = document.getElementById("plannerPitch");
+    const hasSlotSkeletons = document.querySelectorAll("#plannerPitch .plannerSlot.is-loading").length === 11;
+    const hasRosterSkeletons = document.querySelectorAll("#plannerRoster .plannerPlayerSkeleton").length > 0;
+    if (
+      workspace instanceof HTMLElement
+      && pitch instanceof HTMLElement
+      && !workspace.hidden
+      && workspace.getAttribute("aria-busy") === "true"
+      && hasSlotSkeletons
+      && hasRosterSkeletons
+    ) {
+      const rect = pitch.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        plannerLoadingPitchGeometry = { width: rect.width, height: rect.height };
+        return;
+      }
+    }
+    requestAnimationFrame(samplePlannerLoadingGeometry);
+  };
+  if (scenario === "planner") requestAnimationFrame(samplePlannerLoadingGeometry);
 
   if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
     const proof = {
@@ -366,7 +402,7 @@ const browserTestSource = String.raw`(() => {
       assertVisibleElementInside(selector, ancestorSelector);
     }
 
-    if (scenario === "planner") {
+    if (scenario === "planner" || scenario === "planner-saved") {
       const main = document.querySelector("#appShell > main");
       const workspace = document.getElementById("plannerWorkspace");
       assert(main instanceof HTMLElement && workspace instanceof HTMLElement, "Planner layout shell is missing.");
@@ -554,8 +590,11 @@ const browserTestSource = String.raw`(() => {
       if (optedIn) {
         assert(parserSnapshot.myClubsSkeletons === 0, "My Clubs first paint must not guess a club-card count before ownership data arrives.");
       }
-    } else if (scenario === "planner") {
-      assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
+    } else if (scenario === "planner" || scenario === "planner-saved") {
+      assert(
+        parserSnapshot.initialPage === (scenario === "planner-saved" ? "planner/browser-plan" : "planner"),
+        "Planner first paint has the wrong initial path: " + parserSnapshot.initialPage,
+      );
       assert(parserSnapshot.initialRoutePage === "planner", "Planner canonical first-paint route owner is wrong.");
       assert(parserSnapshot.initialRouteShell === "plannerPage", "Planner canonical first-paint shell is wrong: " + parserSnapshot.initialRouteShell);
       assert(parserSnapshot.homeHidden === true, "Planner direct first paint exposed Home.");
@@ -631,7 +670,7 @@ const browserTestSource = String.raw`(() => {
         lockedHidden: hidden("#myPlayersLockedPage"),
       };
     }
-    if (scenario === "planner") {
+    if (scenario === "planner" || scenario === "planner-saved") {
       return {
         path: window.location.pathname,
         search: window.location.search,
@@ -642,6 +681,11 @@ const browserTestSource = String.raw`(() => {
         clubName: text("#plannerClubName"),
         slotCount: document.querySelectorAll("#plannerPitch .plannerSlot").length,
         rosterText: text("#plannerRoster"),
+        pitchText: text("#plannerPitch"),
+        formation: String(document.getElementById("plannerFormationSelect")?.value || ""),
+        sharedNoticeHidden: hidden("#plannerSharedNotice"),
+        saveDisabled: document.getElementById("plannerSavePlanButton")?.disabled === true,
+        formationDisabled: document.getElementById("plannerFormationSelect")?.disabled === true,
       };
     }
     if (scenario === "myclubs-out" || scenario === "myclubs-in" || scenario === "myclubs-competition-fail" || scenario === "myclubs-stale") {
@@ -772,6 +816,30 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.clubName === "Browser Club", "Planner did not render the selected Club identity: " + stateValue.clubName);
       assert(stateValue.slotCount === 11, "Planner formation did not render exactly eleven slots: " + stateValue.slotCount);
       assert(stateValue.rosterText.includes(expectedPlayerName), "Planner roster did not render the current Club player.");
+      assert(plannerClubPageRequests === 1, "Planner direct Club load must use exactly one canonical Club request: " + plannerClubPageRequests);
+      assert(plannerLoadingPitchGeometry, "Planner direct Club load never exposed geometry-preserving skeletons.");
+      const finalPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
+      assert(
+        finalPitch
+          && Math.abs(finalPitch.width - plannerLoadingPitchGeometry.width) <= 1
+          && Math.abs(finalPitch.height - plannerLoadingPitchGeometry.height) <= 1,
+        "Planner pitch geometry changed between loading and loaded state: " + JSON.stringify({
+          loading: plannerLoadingPitchGeometry,
+          loaded: finalPitch ? { width: finalPitch.width, height: finalPitch.height } : null,
+        }),
+      );
+    } else if (scenario === "planner-saved") {
+      assert(stateValue.path === "/planner/browser-plan", "Saved Planner canonical path is wrong: " + stateValue.path);
+      assert(stateValue.search === "", "Saved Planner route unexpectedly retained query state: " + stateValue.search);
+      assert(stateValue.title === "Planner - MFL Front Office", "Saved Planner title is wrong: " + stateValue.title);
+      assert(stateValue.page === "planner", "Saved Planner body page owner is wrong: " + stateValue.page);
+      assert(stateValue.plannerHidden === false && stateValue.workspaceHidden === false, "Saved Planner workspace remained hidden.");
+      assert(stateValue.clubName === "Browser Club", "Saved Planner did not restore its Club identity.");
+      assert(stateValue.slotCount === 11 && stateValue.formation === "4-4-2", "Saved Planner did not restore its formation.");
+      assert(stateValue.pitchText.includes(expectedPlayerName), "Saved Planner did not restore its assigned player.");
+      assert(!stateValue.rosterText.includes(expectedPlayerName), "Saved Planner left its assigned player in the available roster.");
+      assert(stateValue.sharedNoticeHidden === false, "Shared saved plan did not expose its read-only notice.");
+      assert(stateValue.saveDisabled && stateValue.formationDisabled, "Shared saved plan remained editable.");
     } else if (scenario === "myclubs-stale") {
       assert(stateValue.path === "/my-clubs/opted-out", "Stale My Clubs proof did not canonicalize to opted-out.");
       assert(stateValue.page === "my-clubs", "Stale My Clubs proof lost the My Clubs page owner.");
@@ -1183,9 +1251,23 @@ const browserTestSource = String.raw`(() => {
     } else if (scenario === "watchlist" || scenario === "watchlist-empty") {
       await setPage("watchlist", true, { watchlistId: testWatchlistId, view: "current" });
     } else if (scenario === "planner") {
+      const plannerRequestsBefore = plannerClubPageRequests;
       markPhase("navigate-back:set-planner");
       await setPage("planner", true, { clubId: "9001" });
       markPhase("navigate-back:planner-returned");
+      assert(
+        plannerClubPageRequests === plannerRequestsBefore,
+        "Planner cached re-entry repeated the canonical Club request.",
+      );
+    } else if (scenario === "planner-saved") {
+      const plannerRequestsBefore = plannerClubPageRequests;
+      markPhase("navigate-back:set-planner-saved");
+      await setPage("planner", true, { planId: "browser-plan" });
+      markPhase("navigate-back:planner-saved-returned");
+      assert(
+        plannerClubPageRequests === plannerRequestsBefore,
+        "Saved Planner re-entry repeated the canonical Club request.",
+      );
     } else if (scenario === "mflstats") {
       const requestsBefore = mflStatsSummaryRequests;
       await setPage("mfl", true, { view: "stats" });
@@ -1774,6 +1856,30 @@ async function createRegressionServer() {
       );
       return;
     }
+    if (url.pathname === "/api/planner-plans") {
+      const planId = String(url.searchParams.get("id") || "").trim();
+      if (request.method === "GET" && planId === "browser-plan") {
+        writeJson(response, {
+          plan: {
+            id: "browser-plan",
+            name: "Shared Browser Plan",
+            clubId: "9001",
+            formationId: "4-4-2",
+            assignments: { LST: "1" },
+            canEdit: false,
+            visibility: "unlisted",
+            revision: 1,
+            createdAt: generatedAt,
+            updatedAt: generatedAt,
+          },
+        });
+        return;
+      }
+      if (request.method === "GET") {
+        writeJson(response, { plans: [] });
+        return;
+      }
+    }
     if (url.pathname === "/api/mfl-season-ratios-v2") {
       writeJson(response, {
         ratios: [
@@ -2000,6 +2106,7 @@ const regressionScenarios = Object.freeze([
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["planner", "/planner?club=9001"],
   ["planner-phone", "/planner?club=9001", 390, 844],
+  ["planner-saved", "/planner/browser-plan"],
   ["mflstats", "/mfl/stats"],
 ]);
 
