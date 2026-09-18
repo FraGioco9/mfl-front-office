@@ -140,4 +140,33 @@ assert.equal(route.togglePendingPlayer({ player_id: 90, name: "Final Slot", posi
 assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Modal selection must stop when staged squad size reaches 25");
 assert.equal(route.confirmPendingPlayers(), true, "Final available slot must be confirmable");
 assert.equal(route.addPlayer({ player_id: 92, name: "Twenty Six", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Planner squad must never exceed 25 players");
-console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
+
+const playerSearchPromise = route.searchPlayers("Final");
+assert.equal(requests.length > 0, true, "Planner player search must issue a request");
+const playerSearchRequest = requests.at(-1);
+const playerSearchQuery = new URL(playerSearchRequest.url, "https://example.test").searchParams;
+assert.equal(playerSearchQuery.get("type"), "players");
+assert.equal(playerSearchQuery.get("limit"), "25", "Planner player search must use the enlarged 25-result window");
+playerSearchRequest.resolve({
+  ok: true,
+  json: async () => ({
+    columns: ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"],
+    rows: [
+      [90, "Final Slot", 60, 22, "Italy", "CB", 5, 2, 300],
+      [93, "Outside Player", 61, 23, "France", "CM", 5, 2, 350],
+    ],
+  }),
+});
+await playerSearchPromise;
+await tick();
+const searchBody = elements.get("plannerPlayerSearchBody");
+assert.equal(searchBody.children.length, 2, "Planner search must keep current-squad matches visible in the results table");
+assert.equal(searchBody.children[0].children[1].textContent, "Final Slot", "Current-squad search result name must remain visible");
+assert.equal(searchBody.children[0].children[2].textContent, "CB", "Search table must show player positions");
+assert.equal(searchBody.children[0].children[3].textContent, "22", "Search table must show player age");
+assert.equal(searchBody.children[0].children[4].textContent, "60", "Search table must show player overall");
+assert.equal(searchBody.children[0].children[5].children[0].textContent, "In squad", "Current-squad players must be shown with an In squad action instead of disappearing");
+assert.equal(searchBody.children[0].children[5].children[0].disabled, true, "Current-squad players must not be selectable twice");
+assert.equal(searchBody.children[1].children[5].children[0].textContent, "Squad full", "Non-squad players must respect the 25-player cap");
+
+console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
