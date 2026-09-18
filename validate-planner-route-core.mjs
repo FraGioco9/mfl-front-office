@@ -133,14 +133,16 @@ invariant(
 );
 invariant(
   planner.includes("const inSquad=roster.some")
-    && planner.includes('button.textContent=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select"')
+    && planner.includes('const label=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select";')
+    && planner.includes("disabled:inSquad||atCapacity")
     && !planner.includes('retirement_years)===0||roster.some'),
-  "Planner search must keep matching current-squad players visible as disabled In squad rows instead of filtering them out.",
+  "Planner search must keep matching current-squad players visible as disabled In squad text instead of filtering them out.",
 );
 invariant(
   planner.includes('typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null')
-    && planner.includes('row.append(flagCell,nameCell,positionsCell,ageCell,overallCell,actionCell)'),
-  "Planner player-search table must render flag, name, positions, age, overall and action columns.",
+    && planner.includes("appendPlannerPlayerTableCells(row,player)")
+    && planner.includes("row.append(flagCell,nameCell,positionCell,ageCell,overallCell)"),
+  "Planner player-search and selected-player tables must render flag, name, position, age and overall before the text action.",
 );
 invariant(
   planner.includes("const MAX_SQUAD_SIZE=25")
@@ -159,9 +161,9 @@ invariant(
 invariant(
   styles.includes(".plannerPlayerDialog{width:min(1040px,calc(100vw - 48px));height:min(760px,calc(100vh - 48px))")
     && styles.includes(".plannerPlayerSearchTable{width:100%;table-layout:fixed")
-    && styles.includes(".plannerPlayerSelectionList")
+    && styles.includes(".plannerPlayerSelectionTableShell")
     && styles.includes(".plannerPlayerModalFooter"),
-  "Planner Add player modal must use the enlarged table-based dialog with selection-list and footer styling.",
+  "Planner Add player modal must use the enlarged table-based dialog with a matching selected-player table and footer styling.",
 );
 invariant(
   styles.includes(".plannerPlayerSearchControl:hover #plannerPlayerSearchInput:not(:disabled),#plannerPlayerSearchInput:focus:not(:disabled),#plannerPlayerSearchInput:focus-visible:not(:disabled)")
