@@ -197,30 +197,6 @@ const browserTestSource = String.raw`(() => {
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
-  const samplePlannerLoadingGeometry = () => {
-    if (scenario !== "planner" || plannerLoadingPitchGeometry) return;
-    const workspace = document.getElementById("plannerWorkspace");
-    const pitch = document.getElementById("plannerPitch");
-    const hasSlotSkeletons = document.querySelectorAll("#plannerPitch .plannerSlot.is-loading").length === 11;
-    const hasRosterSkeletons = document.querySelectorAll("#plannerRoster .plannerPlayerSkeleton").length > 0;
-    if (
-      workspace instanceof HTMLElement
-      && pitch instanceof HTMLElement
-      && !workspace.hidden
-      && workspace.getAttribute("aria-busy") === "true"
-      && hasSlotSkeletons
-      && hasRosterSkeletons
-    ) {
-      const rect = pitch.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        plannerLoadingPitchGeometry = { width: rect.width, height: rect.height };
-        return;
-      }
-    }
-    requestAnimationFrame(samplePlannerLoadingGeometry);
-  };
-  if (scenario === "planner") requestAnimationFrame(samplePlannerLoadingGeometry);
-
   if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
     const proof = {
       type: "session",
@@ -817,17 +793,6 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.slotCount === 11, "Planner formation did not render exactly eleven slots: " + stateValue.slotCount);
       assert(stateValue.rosterText.includes(expectedPlayerName), "Planner roster did not render the current Club player.");
       assert(plannerClubPageRequests === 1, "Planner direct Club load must use exactly one canonical Club request: " + plannerClubPageRequests);
-      assert(plannerLoadingPitchGeometry, "Planner direct Club load never exposed geometry-preserving skeletons.");
-      const finalPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
-      assert(
-        finalPitch
-          && Math.abs(finalPitch.width - plannerLoadingPitchGeometry.width) <= 1
-          && Math.abs(finalPitch.height - plannerLoadingPitchGeometry.height) <= 1,
-        "Planner pitch geometry changed between loading and loaded state: " + JSON.stringify({
-          loading: plannerLoadingPitchGeometry,
-          loaded: finalPitch ? { width: finalPitch.width, height: finalPitch.height } : null,
-        }),
-      );
     } else if (scenario === "planner-saved") {
       assert(stateValue.path === "/planner/browser-plan", "Saved Planner canonical path is wrong: " + stateValue.path);
       assert(stateValue.search === "", "Saved Planner route unexpectedly retained query state: " + stateValue.search);
@@ -1490,6 +1455,48 @@ const browserTestSource = String.raw`(() => {
     } else {
       await delay(80);
     }
+    if (scenario === "planner") {
+      const plannerRoute = Reflect.get(window, "__mflPlannerRoute");
+      assert(plannerRoute && typeof plannerRoute.loadClub === "function", "Planner route owner does not expose Club loading.");
+
+      const originalClubRequests = plannerClubPageRequests;
+      plannerLoadingPitchGeometry = null;
+      const switchPromise = plannerRoute.loadClub("9002", { updateUrl: false, resetAssignments: true });
+      await waitFor(
+        () => document.getElementById("plannerWorkspace")?.getAttribute("aria-busy") === "true"
+          && document.querySelectorAll("#plannerPitch .plannerSlot.is-loading").length === 11
+          && document.querySelectorAll("#plannerRoster .plannerPlayerSkeleton").length > 0,
+        "Planner uncached Club switch did not expose its geometry-preserving loading shell.",
+      );
+      const loadingPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
+      assert(loadingPitch && loadingPitch.width > 0 && loadingPitch.height > 0,
+        "Planner uncached loading pitch has no measurable geometry.");
+      plannerLoadingPitchGeometry = { width: loadingPitch.width, height: loadingPitch.height };
+
+      assert(await switchPromise, "Planner could not complete the uncached Club switch.");
+      assert(text("#plannerClubName") === "Second Browser Club", "Planner did not commit the uncached Club switch.");
+      const loadedPitch = document.getElementById("plannerPitch")?.getBoundingClientRect();
+      assert(
+        loadedPitch
+          && Math.abs(loadedPitch.width - plannerLoadingPitchGeometry.width) <= 1
+          && Math.abs(loadedPitch.height - plannerLoadingPitchGeometry.height) <= 1,
+        "Planner pitch geometry changed between uncached loading and loaded states: " + JSON.stringify({
+          loading: plannerLoadingPitchGeometry,
+          loaded: loadedPitch ? { width: loadedPitch.width, height: loadedPitch.height } : null,
+        }),
+      );
+
+      assert(
+        await plannerRoute.loadClub("9001", { updateUrl: false, resetAssignments: true }),
+        "Planner could not return to the original cached Club.",
+      );
+      assert(
+        plannerClubPageRequests === originalClubRequests,
+        "Planner return to the cached original Club repeated its canonical Club request.",
+      );
+      assert(text("#plannerClubName") === "Browser Club", "Planner cached return did not restore the original Club.");
+    }
+
     markPhase("representative:direct-state");
     const directState = routeState();
     assertRouteState(directState);
@@ -1842,7 +1849,7 @@ async function createRegressionServer() {
       }
       if (myClubsMode === "page"
           && String(url.searchParams.get("scope") || "") === "club"
-          && String(url.searchParams.get("clubId") || "") === "9001") {
+          && ["9001", "9002"].includes(String(url.searchParams.get("clubId") || ""))) {
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 220));
       }
       writeJson(
