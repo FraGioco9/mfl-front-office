@@ -7568,6 +7568,26 @@ html.mflDataLoading #pageSizeSelect {
 #plannerTeamName{overflow-wrap:anywhere;font-size:24px;font-weight:800}
 #plannerTeamDivision{font-size:12px;font-weight:700}
 #plannerTeamClearButton{flex-shrink:0;margin-left:8px}
+
+.plannerWorkspace{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);align-items:start;gap:24px;margin-top:24px}
+.plannerWorkspace[hidden],.plannerRosterPanel [hidden]{display:none}
+.plannerRosterPanel,.plannerPitchPanel{min-width:0}
+.plannerWorkspace h3{margin:0 0 12px;font-size:16px;font-weight:800}
+#plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
+.plannerRosterTable .plannerPlayerColumn{width:auto}
+.plannerRosterTable .plannerPositionColumn{width:80px}
+.plannerRosterTable .plannerAgeColumn,.plannerRosterTable .plannerOverallColumn{width:48px}
+.plannerRosterTable .plannerRemoveColumn{width:40px}
+.plannerRosterTable th,.plannerRosterTable td{padding:8px;line-height:1.3}
+.plannerRosterTable td:first-child{white-space:normal;overflow-wrap:anywhere}
+.plannerRosterTable td:not(:first-child),.plannerRosterTable th:not(:first-child){text-align:center}
+.plannerRosterTable tbody tr:hover{background:var(--row-hover)}
+.plannerRosterRemove{position:relative;width:28px;height:28px;min-height:28px;cursor:pointer}
+.plannerRosterSkeleton{display:block;width:75%;height:12px;border-radius:3px;background:var(--border-strong);margin:8px auto}
+.plannerRosterTable td:first-child .plannerRosterSkeleton{margin-left:0}
+.plannerPitchPanel .plannerPitch{box-sizing:border-box;width:100%;max-width:420px;height:auto;aspect-ratio:360/498;margin:0 auto}
+#plannerRosterRetryButton{margin-top:8px}
+@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr)}.plannerRosterTable .plannerPositionColumn{width:64px}.plannerRosterTable .plannerAgeColumn,.plannerRosterTable .plannerOverallColumn{width:40px}.plannerRosterTable th,.plannerRosterTable td{padding:6px 4px}}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
