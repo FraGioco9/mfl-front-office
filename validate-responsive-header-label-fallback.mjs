@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const sharedTableUi = readFileSync(new URL("./shared-table-ui-runtime.js", import.meta.url), "utf8");
+const bootstrap = readFileSync(new URL("./bootstrap.js", import.meta.url), "utf8");
+const tableSource = readFileSync(new URL("./modules/core-sources/table.js", import.meta.url), "utf8");
+
 const functionStart = sharedTableUi.indexOf("function syncWidthAwareHeaderLabels() {");
 const functionEnd = sharedTableUi.indexOf("\n  function syncPlayerTableFadeState", functionStart);
 
@@ -10,43 +13,43 @@ const owner = sharedTableUi.slice(functionStart, functionEnd);
 
 assert.match(
   sharedTableUi,
-  /const HEADER_LABEL_OVERFLOW_EPSILON = 1;/,
-  "Header label fallback must use one small shared overflow tolerance.",
+  /const HEADER_LABEL_COMPACT_MEDIA = window\.matchMedia\("\(max-width: 1366px\)"\);/,
+  "Hydrated player-table headers must own one explicit <=1366px compact-label breakpoint.",
+);
+assert.match(
+  bootstrap,
+  /const FIRST_PAINT_COMPACT_HEADER_MEDIA = window\.matchMedia\("\(max-width: 1366px\)"\);/,
+  "First-paint player-table headers must use the same explicit <=1366px compact-label breakpoint.",
+);
+assert.match(
+  tableSource,
+  /const compactTableHeader = window\.matchMedia\("\(max-width: 1366px\)"\)\.matches;/,
+  "Rebuilt player-table headers must use the same explicit <=1366px compact-label breakpoint.",
 );
 assert.match(
   owner,
-  /const labels = Array\.from\(document\.querySelectorAll\("#progressionPage #tableHead \[data-mfl-full-table-label\]\[data-mfl-compact-table-label\]"\)\)/,
-  "Header label fallback must collect both direct labels and labels nested inside sortable header buttons as one set.",
+  /const compactHeader = HEADER_LABEL_COMPACT_MEDIA\.matches;/,
+  "Hydrated header synchronization must derive compact mode only from the explicit viewport breakpoint.",
 );
 assert.match(
   owner,
-  /labels\.forEach\(\(label\) => \{[\s\S]*?label\.textContent = full;[\s\S]*?\}\);/,
-  "Intermediate/desktop headers must all try their full labels before overflow is evaluated.",
+  /const desired = compactHeader && short \? short : full;/,
+  "Every compact-able header must switch together at the fixed breakpoint.",
 );
-assert.match(
-  owner,
-  /const useCompact = labels\.some\(\(label\) => \{[\s\S]*?label\.scrollWidth - label\.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;[\s\S]*?\}\);/,
-  "One shared compact-mode decision must be driven by whether any rendered full header label overflows.",
-);
-assert.match(
-  owner,
-  /labels\.forEach\(\(label\) => \{[\s\S]*?const desired = useCompact && short \? short : full;[\s\S]*?label\.textContent = desired;[\s\S]*?\}\);/,
-  "If any header needs shortening, every header with a compact label must switch together instead of mixing full and compact names.",
+assert.doesNotMatch(
+  sharedTableUi,
+  /HEADER_LABEL_OVERFLOW_EPSILON/,
+  "Header shortening must no longer depend on measured text overflow.",
 );
 assert.doesNotMatch(
   owner,
-  /if \(fullOverflows && short && short !== full\) label\.textContent = short;/,
-  "Header fallback must not shorten columns independently anymore.",
+  /scrollWidth|clientWidth/,
+  "Header shortening must not read layout geometry to decide between full and compact labels.",
 );
 assert.match(
   owner,
   /if \(mobile && column === "listing_price"\) \{\s*label\.textContent = "";\s*return;\s*\}/,
   "Mobile Listing header must preserve its intentionally icon-only label.",
 );
-assert.match(
-  owner,
-  /if \(mobile && short\) \{\s*label\.textContent = short;\s*return;\s*\}/,
-  "Mobile headers must continue to use compact labels directly.",
-);
 
-console.log("Responsive table-header grouped full-to-compact fallback validation passed.");
+console.log("Responsive table headers use one fixed <=1366px full-to-compact breakpoint across first paint and hydration.");
