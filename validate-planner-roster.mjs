@@ -141,6 +141,7 @@ assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positi
 assert.equal(route.confirmPendingPlayers(), true, "Final available slot must be confirmable");
 assert.equal(route.addPlayer({ player_id: 92, name: "Twenty Six", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Planner squad must never exceed 25 players");
 
+elements.get("plannerPlayerSearchInput").value = "Final";
 const playerSearchPromise = route.searchPlayers("Final");
 assert.equal(requests.length > 0, true, "Planner player search must issue a request");
 const playerSearchRequest = requests.at(-1);
