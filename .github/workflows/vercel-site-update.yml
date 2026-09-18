@@ -144,12 +144,17 @@ jobs:
       - name: Normalize Vercel repository root
         run: node scripts/workflows/normalize-vercel-project-root.mjs
 
+      - name: Bind deployment commit to prebuilt artifact
+        run: node scripts/workflows/write-deployment-commit.mjs "$GITHUB_SHA"
+
       - name: Build protected Next.js deployment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           ALLOW_VERCEL_ACTION_DEPLOY: "1"
-          MFL_DEPLOY_COMMIT: ${{ github.sha }}
         run: vercel build --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Verify prebuilt deployment identity
+        run: node scripts/workflows/verify-prebuilt-deployment-commit.mjs "$GITHUB_SHA"
 
       - name: Deploy protected site to Vercel
         env:
