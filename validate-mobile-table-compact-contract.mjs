@@ -90,6 +90,7 @@ assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*
 
 for (const [contract, label] of [
   ["--mfl-responsive-table-age-marker-size: clamp(8px, calc(6.666667px + 0.370370vw), 10px);", "Age status markers"],
+  ["--mfl-responsive-table-age-marker-gap: clamp(1px, calc(-0.656442px + 0.460123vw), 7px);", "Age status marker spacing"],
   ["--mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);", "Listing icons"],
   ["--mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);", "nationality flags"],
   ["--mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);", "Note icons"],
@@ -161,6 +162,21 @@ assert.match(
 );
 assert.match(
   responsiveSource,
+  /:is\(\.retirementMarker, \.newMintMarker\),[\s\S]*\.newMintMarker \.newMintIcon \{[\s\S]*aspect-ratio: 1 \/ 1;/,
+  "Age status markers and their visible drawings must preserve square proportions while scaling.",
+);
+assert.match(
+  responsiveSource,
+  /\.retirementMarker::before \{[\s\S]*-webkit-mask-size: contain;[\s\S]*mask-size: contain;/,
+  "Retirement icon masks must use contain sizing so the source artwork is never stretched.",
+);
+assert.match(
+  responsiveSource,
+  /:is\(\.retirementMarker, \.newMintMarker\) img \{[\s\S]*object-fit: contain;/,
+  "Image-backed Age status markers must preserve their source proportions.",
+);
+assert.match(
+  responsiveSource,
   /\.playerTableScroller \.listingCellIcon \{[\s\S]*width: var\(--mfl-responsive-table-listing-icon-size\);[\s\S]*height: var\(--mfl-responsive-table-listing-icon-size\);/,
   "Intermediate Listing icons must consume their fluid size token.",
 );
@@ -196,18 +212,18 @@ assert.match(
 );
 assert.match(
   responsiveSource,
-  /@media \(max-width: 700px\) \{[\s\S]*#progressionPage \.playerTableScroller #tableBody td\.col-age \.tableControlCellContent \{[\s\S]*gap: 2px;/,
-  "Age/marker spacing must shrink to 2px at <=700px.",
+  /#progressionPage \.playerTableScroller td\.col-age \.tableControlCellContent \{[\s\S]*gap: var\(--mfl-responsive-table-age-marker-gap\);/,
+  "Age/marker spacing must consume one continuous responsive gap token.",
+);
+assert.doesNotMatch(
+  responsiveSource,
+  /td\.col-age \.tableControlCellContent \{[\s\S]{0,120}gap: (?:1|2|3)px;/,
+  "Age/marker spacing must not fall back to breakpoint-stepped fixed gaps.",
 );
 assert.match(
   responsiveSource,
   /@media \(max-width: 520px\) \{[\s\S]*\.joinedAgencyFullValue \{[\s\S]*display: none;[\s\S]*\.joinedAgencyCompactValue \{[\s\S]*display: inline;/,
   "Joined Agency must switch to its compact date-only value at <=520px without rerendering rows.",
-);
-assert.match(
-  responsiveSource,
-  /@media \(max-width: 380px\) \{[\s\S]*#progressionPage \.playerTableScroller #tableBody td\.col-age \.tableControlCellContent \{[\s\S]*gap: 1px;/,
-  "Age/marker spacing must shrink to 1px at <=380px.",
 );
 
 const phoneStyle = sharedTableUiSource.match(/@media \(max-width: 520px\) \{([\s\S]*?)\n\}\n@media \(max-width: 380px\)/)?.[1] || "";
