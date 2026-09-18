@@ -1493,7 +1493,7 @@ const browserTestSource = String.raw`(() => {
 
       const result = searchResults.querySelector('[data-club-id="9002"]');
       assert(result instanceof HTMLButtonElement, "Planner Club search result is not selectable.");
-      result.click();
+      searchInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
       await waitFor(
         () => document.getElementById("plannerWorkspace")?.getAttribute("aria-busy") === "true"
@@ -1520,7 +1520,7 @@ const browserTestSource = String.raw`(() => {
       );
 
       assert(
-        await plannerRoute.loadClub("9001", { updateUrl: false, resetAssignments: true }),
+        await plannerRoute.loadClub("9001", { updateUrl: true, resetAssignments: true }),
         "Planner could not return to the original cached Club.",
       );
       assert(
