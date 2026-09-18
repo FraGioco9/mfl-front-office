@@ -14,6 +14,7 @@ const [
   packageSource,
   vercelIgnore,
   siteUpdateWorkflow,
+  siteQualityWorkflow,
   checkpointPublisher,
   deepRoutePage,
   vercelConfigSource,
@@ -24,6 +25,7 @@ const [
   read("package.json"),
   read(".vercelignore"),
   read(".github/workflows/vercel-site-update.yml"),
+  read(".github/workflows/site-quality.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
   read("vercel.json"),
@@ -93,6 +95,11 @@ for (const source of [siteUpdateWorkflow, checkpointPublisher]) {
 invariant(
   Object.hasOwn(nextConfig.env || {}, "MFL_DEPLOY_COMMIT"),
   "Next build configuration must expose one build-bound deployment commit owner.",
+);
+invariant(
+  siteQualityWorkflow.includes('write-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"')
+    && siteQualityWorkflow.includes('.runtime.commit == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'),
+  "Site Quality must prove the explicit deployment commit survives a real Next build and runtime.",
 );
 invariant(
   siteUpdateWorkflow.includes("Record expected production identity")
