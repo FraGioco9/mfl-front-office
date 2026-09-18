@@ -1,4 +1,4 @@
-.plannerPage{width:100%;max-width:none;margin:0}.plannerTeamSelector{display:grid;gap:5px;width:100%;max-width:360px}.plannerTeamSearchLabel{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}.plannerTeamSearch,.plannerTeamSearchControl{position:relative;width:100%}#plannerTeamSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px;transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}.plannerTeamSearchControl:hover #plannerTeamSearchInput:not(:disabled),#plannerTeamSearchInput:focus:not(:disabled),#plannerTeamSearchInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}.plannerTeamSearchClearButton{position:absolute;top:50%;right:4px;width:30px;height:30px;transform:translateY(-50%);outline:0;border-color:transparent;background:transparent;box-shadow:none}.plannerTeamSearchClearButton:hover:not(:disabled),.plannerTeamSearchClearButton:focus:not(:disabled),.plannerTeamSearchClearButton:focus-visible:not(:disabled){outline:0;border-color:transparent;background:transparent;box-shadow:none}#plannerTeamSearchInput:placeholder-shown+.plannerTeamSearchClearButton{visibility:hidden;opacity:0;pointer-events:none}.plannerTeamSearchResults{position:absolute;top:calc(100% + 6px);right:0;left:0;z-index:var(--mfl-z-dropdown);display:grid;gap:8px;max-height:362px;padding:8px;overflow-y:auto;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.18)}.plannerTeamSearchResults[hidden],.plannerStatus[hidden]{display:none}.plannerTeamSearchResult{width:100%}.plannerTeamSearchResult:hover,.plannerTeamSearchResult:focus-visible{border-color:var(--primary);background:var(--row-hover);box-shadow:inset 0 0 0 1px var(--primary)}.plannerTeamSearchResult strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plannerStatus{margin:10px 0 0;color:var(--text-soft);font-size:12px}
+.plannerPage{width:100%;max-width:none;margin:0}.plannerTeamSelector{display:grid;gap:5px;width:100%;max-width:360px}.plannerTeamSearchLabel{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}.plannerTeamSearch,.plannerTeamSearchControl{position:relative;width:100%}#plannerTeamSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px;transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}.plannerTeamSearchControl:hover #plannerTeamSearchInput:not(:disabled),#plannerTeamSearchInput:focus:not(:disabled),#plannerTeamSearchInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}.plannerTeamSearchClearButton{position:absolute;top:50%;right:4px;width:30px;height:30px;transform:translateY(-50%);outline:0;border-color:transparent;background:transparent;box-shadow:none}.plannerTeamSearchClearButton:hover:not(:disabled),.plannerTeamSearchClearButton:focus:not(:disabled),.plannerTeamSearchClearButton:focus-visible:not(:disabled){outline:0;border-color:transparent;background:transparent;box-shadow:none}#plannerTeamSearchInput:placeholder-shown+.plannerTeamSearchClearButton{visibility:hidden;opacity:0;pointer-events:none}.plannerTeamSearchResults{position:absolute;top:calc(100% + 6px);right:0;left:0;z-index:var(--mfl-z-dropdown);display:grid;gap:8px;max-height:362px;padding:8px;overflow-y:auto;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.18)}.plannerTeamSearchResults[hidden],.plannerStatus[hidden]{display:none}.plannerTeamSearchResult{width:100%}.plannerTeamSearchResults .plannerTeamSearchResult:hover,.plannerTeamSearchResults .plannerTeamSearchResult:focus-visible{border-color:var(--primary);background:var(--row-hover);color:var(--text);box-shadow:inset 0 0 0 1px var(--primary)}.plannerTeamSearchResult strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plannerStatus{margin:10px 0 0;color:var(--text-soft);font-size:12px}
 
 .plannerTeamSelector[hidden],.plannerSelectedTeam[hidden]{display:none}
 .plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%;max-width:100%;min-height:72px}
@@ -12,7 +12,7 @@
 .plannerWorkspace[hidden],.plannerRosterPanel [hidden]{display:none}
 .plannerRosterPanel,.plannerPitchPanel{min-width:0}
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
-.plannerRosterHeader h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
+.plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
 .plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0 0 4px;font-size:16px;font-weight:800}
 #plannerAddPlayerButton{align-self:center;flex-shrink:0}
 .plannerPlayerModalBackdrop{z-index:var(--mfl-z-modal)}
@@ -32,8 +32,8 @@
 .plannerPlayerSearchTable .plannerPlayerSearchAgeColumn{width:10%}
 .plannerPlayerSearchTable .plannerPlayerSearchOverallColumn{width:10%}
 .plannerPlayerSearchTable .plannerPlayerSearchSelectColumn{width:18%}
-.plannerPlayerSearchTable th{position:sticky;top:0;z-index:1;height:34px;padding:0 10px;background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);line-height:34px;text-align:left;text-transform:uppercase}
-.plannerPlayerSearchTable td{height:38px;padding:0 10px;border-bottom:1px solid var(--mfl-table-border-color);line-height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerPlayerSearchTable th{position:sticky;top:0;z-index:1;height:30px;padding:0 9px;background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);line-height:30px;text-align:left;text-transform:uppercase}
+.plannerPlayerSearchTable td{height:31px;padding:0 9px;border-bottom:1px solid var(--mfl-table-border-color);line-height:31px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerPlayerSearchTable th:nth-child(1),.plannerPlayerSearchTable td:nth-child(1),.plannerPlayerSearchTable th:nth-child(4),.plannerPlayerSearchTable td:nth-child(4),.plannerPlayerSearchTable th:nth-child(5),.plannerPlayerSearchTable td:nth-child(5),.plannerPlayerSearchTable th:nth-child(6),.plannerPlayerSearchTable td:nth-child(6){text-align:center}
 .plannerPlayerSearchResult.selected td{background:var(--row-hover)}
 .plannerPlayerSearchResult.inSquad td{color:var(--text-soft)}
@@ -41,14 +41,16 @@
 .plannerPlayerSearchFlagCell .flagImage{display:block;width:20px;height:20px;margin:0 auto}
 .plannerPlayerSearchNameCell{font-weight:700}
 .plannerPlayerSearchActionCell{overflow:visible}
-.plannerPlayerSelectButton{min-width:92px;height:28px;min-height:28px;padding:0 10px}
-#plannerPlayerSearchEmpty{padding:18px 12px;text-align:center}
+.plannerPlayerActionText{display:inline-block;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:700;line-height:1;cursor:pointer;user-select:none}
+.plannerPlayerActionText:hover:not([aria-disabled="true"]),.plannerPlayerActionText:focus-visible:not([aria-disabled="true"]){color:var(--primary-hover);text-decoration:underline;outline:0}
+.plannerPlayerActionText[aria-disabled="true"]{color:var(--text-soft);cursor:default}
+#plannerPlayerSearchEmpty{padding:14px 12px;text-align:center}
 .plannerPlayerSelection{display:grid;gap:6px;min-height:0}
 .plannerPlayerSelection[hidden]{display:none}
 .plannerPlayerSelection h3{margin:0;font-size:13px}
-.plannerPlayerSelectionList{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px;max-height:104px;overflow-y:auto}
-.plannerPendingPlayer{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:30px;padding:4px 8px;border-color:var(--border);background:var(--surface-muted);text-align:left}
-.plannerPendingPlayerRemove{flex:0 0 auto;color:var(--danger);font-size:18px;line-height:1}
+.plannerPlayerSelectionTableShell{max-height:142px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.plannerPlayerSelectionTable th{position:sticky;top:0}
+.plannerPendingPlayer:hover td{background:var(--row-hover)}
 .plannerPlayerModalFooter{margin-top:2px}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
