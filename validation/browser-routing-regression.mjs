@@ -1342,6 +1342,15 @@ const browserTestSource = String.raw`(() => {
     const directState = routeState();
     assertRouteState(directState);
 
+    if (scenario === "planner") {
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish(
+        "passed",
+        "planner: parser-time first paint and direct refresh exposed Planner before route hydration.",
+      );
+      return;
+    }
+
     if (scenario.endsWith("-empty")) {
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish("passed", scenario + ": URL-filtered direct refresh committed the authoritative empty table state.");
