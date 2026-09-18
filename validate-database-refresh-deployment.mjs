@@ -145,9 +145,13 @@ includes(
   "record-production-identity.sh",
   "Every checkpoint deployment must record its published site commit, application version and database generation before deployment.",
 );
-includes(
-  'MFL_DEPLOY_COMMIT="$EXPECTED_SHA" ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build',
-  "Every checkpoint deployment must bind the preserved published-site commit into the rebuilt runtime.",
+invariant(
+  publisher.includes('write-deployment-commit.mjs" "$EXPECTED_SHA"')
+    && publisher.includes('verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"')
+    && publisher.indexOf('write-deployment-commit.mjs" "$EXPECTED_SHA"') < publisher.indexOf("vercel build --prod")
+    && publisher.indexOf('verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"') > publisher.indexOf("vercel build --prod")
+    && publisher.indexOf('verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"') < publisher.indexOf("vercel deploy --prebuilt --prod"),
+  "Every checkpoint deployment must bind the preserved published-site commit into the rebuilt runtime and verify the prebuilt identity before deployment.",
 );
 includes(
   "verify-live-production-deployment.sh",
