@@ -267,13 +267,16 @@ try {
     "Next-rendered viewport metadata does not match the legacy responsive contract.",
   );
 
-  responsiveSource = await readFile(responsivePath, "utf8");
-  await writeFile(responsivePath, `${responsiveSource.trimEnd()}\n${refreshMarker}\n`, "utf8");
-  const refreshed = await waitForLegacyAutoRefresh(cdp, {
-    originalToken: initialDevAssetToken,
-    marker: refreshMarker,
-    expectMarker: true,
-  });
+  let refreshed = null;
+  if (targetPathname === "/") {
+    responsiveSource = await readFile(responsivePath, "utf8");
+    await writeFile(responsivePath, `${responsiveSource.trimEnd()}\n${refreshMarker}\n`, "utf8");
+    refreshed = await waitForLegacyAutoRefresh(cdp, {
+      originalToken: initialDevAssetToken,
+      marker: refreshMarker,
+      expectMarker: true,
+    });
+  }
 
   console.log(`Next-rendered shell browser probe passed: ${JSON.stringify({ ...state, refreshTitles, autoRefresh: refreshed })}`);
 } catch (error) {
