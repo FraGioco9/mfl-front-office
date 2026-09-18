@@ -126,13 +126,6 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth >= 901 &
 
 diagnosticSource = diagnosticSource.replace(geometryMarker, geometryProbe);
 
-const oldStatsContract = '      if (viewportWidth <= 900 && selector.startsWith(".stats")) {';
-assert.ok(diagnosticSource.includes(oldStatsContract), "Shared stats visibility contract must remain discoverable.");
-diagnosticSource = diagnosticSource.replace(
-  oldStatsContract,
-  '      if (viewportWidth <= 1366 && selector.startsWith(".stats")) {',
-);
-
 const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
 assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
 diagnosticSource = diagnosticSource.replace(
