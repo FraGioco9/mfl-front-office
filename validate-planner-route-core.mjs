@@ -64,9 +64,15 @@ invariant(
   "Generated index.html must preserve parser-time Planner first-paint ownership and selected-club state.",
 );
 invariant(html.includes('id="plannerWorkspace"') && html.includes('id="plannerRosterBody"') && html.includes("pitch plannerPitch"), "Selected teams must expose a squad table and pitch workspace.");
+invariant(html.includes('<th scope="col">Age</th>') && html.includes('<th scope="col">Contract</th>') && html.includes('plannerContractColumn'), "Planner squad must expose Age and editable Contract columns.");
+invariant(html.includes("column < 6"), "Planner selected-club first paint must reserve all six roster columns.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
+invariant(styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%") && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"), "Selected-team Clear must be pinned to the right from first paint.");
+invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
+invariant(planner.includes("planned_contract_matches") && planner.includes("active_contract_nb_matches"), "Planner Contract edits must seed from the current contract match clause.");
+invariant(!planner.includes('remove.title='), "Planner remove X must not expose a native hover tooltip.");
 invariant(planner.includes('type:"clubs"') && planner.includes('mode:"search"'), "Planner team search must call the club-only data search.");
 invariant(planner.includes('"searchResult clubSearchResult plannerTeamSearchResult"'), "Planner results must reuse canonical search-result presentation.");
 invariant(planner.includes("contractDivisionInfo(team?.division)") && planner.includes('division.className="clubSearchDivision"'), "Planner results must use the same named and colored division presentation as Global Search.");
