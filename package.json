@@ -13,7 +13,7 @@
     "build:public": "node prepare-next-runtime.mjs",
     "build": "npm run build:legacy && npm run build:public && next build",
     "start": "next start -p 4000",
-    "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next-dev-legacy-bridge.mjs next.config.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages *-runtime.js validate*.mjs validation/*.mjs",
+    "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next-dev-legacy-bridge.mjs next.config.mjs deployment-commit.mjs scripts/workflows/write-deployment-commit.mjs scripts/workflows/verify-prebuilt-deployment-commit.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages *-runtime.js validate*.mjs validation/*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
     "verify:generated": "git diff --exit-code -- styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
     "validate": "node validate-all.mjs",
