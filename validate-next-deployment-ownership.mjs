@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import nextConfig, { createNextHeaders, createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 import { resolveDeploymentCommit, writeDeploymentCommit } from "./deployment-commit.mjs";
 import { verifyPrebuiltDeploymentCommit } from "./scripts/workflows/verify-prebuilt-deployment-commit.mjs";
+import { verifyNextBuildDeploymentCommit } from "./scripts/workflows/verify-next-build-deployment-commit.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (path) => readFile(resolve(root, path), "utf8");
@@ -98,7 +99,7 @@ invariant(
 );
 invariant(
   siteQualityWorkflow.includes('write-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"')
-    && siteQualityWorkflow.includes('.runtime.commit == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'),
+    && siteQualityWorkflow.includes('verify-next-build-deployment-commit.mjs "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'),
   "Site Quality must prove the explicit deployment commit survives a real Next build and runtime.",
 );
 invariant(
@@ -162,6 +163,17 @@ try {
     malformedRejected = true;
   }
   invariant(malformedRejected, "Malformed deployment commit inputs must fail before build.");
+
+  const fixtureNextManifest = resolve(fixtureRoot, ".next/required-server-files.json");
+  await mkdir(resolve(fixtureRoot, ".next"), { recursive: true });
+  await writeFile(
+    fixtureNextManifest,
+    JSON.stringify({ config: { env: { MFL_DEPLOY_COMMIT: fixtureCommit } } }),
+  );
+  invariant(
+    await verifyNextBuildDeploymentCommit({ expected: fixtureCommit, manifestPath: fixtureNextManifest }) === fixtureCommit,
+    "Next build manifest verification must preserve the exact source commit.",
+  );
 
   const fixtureFunctions = resolve(fixtureRoot, ".vercel/output/functions");
   const fixtureIdentityFunction = resolve(fixtureFunctions, "api/identity.func");
