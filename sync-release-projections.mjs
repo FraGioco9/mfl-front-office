@@ -160,6 +160,7 @@ function firstPaintDocumentTitleProjectionSource() {
           myplayers: "My Players",
           "my-clubs": "My Clubs",
           myclubs: "My Clubs",
+          planner: "Planner",
           settings: "Settings",
           changelog: "Changelog",
           privacy: "Privacy",
