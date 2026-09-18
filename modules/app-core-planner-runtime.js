@@ -19,14 +19,23 @@
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
   const addPlayerButton=document.getElementById("plannerAddPlayerButton");
-  const playerAdder=document.getElementById("plannerPlayerAdder");
+  const playerModal=document.getElementById("plannerPlayerModal");
+  const playerModalCloseButton=document.getElementById("plannerPlayerModalCloseButton");
   const playerSearchInput=/** @type {HTMLInputElement|null} */(document.getElementById("plannerPlayerSearchInput"));
   const playerSearchClearButton=document.getElementById("plannerPlayerSearchClearButton");
   const playerSearchResults=document.getElementById("plannerPlayerSearchResults");
+  const playerSelection=document.getElementById("plannerPlayerSelection");
+  const playerSelectionStatus=document.getElementById("plannerPlayerSelectionStatus");
+  const playerSelectionCount=document.getElementById("plannerPlayerSelectionCount");
+  const playerSelectionList=document.getElementById("plannerPlayerSelectionList");
+  const playerDiscardButton=document.getElementById("plannerPlayerDiscardButton");
+  const playerConfirmButton=document.getElementById("plannerPlayerConfirmButton");
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="";
   let playerSearchTimer=0,playerSearchSequence=0;
+  let pendingPlayers=new Map();
   let activeContractEditor=null;
+  const MAX_SQUAD_SIZE=25;
 
   function showOnly(target){document.querySelectorAll("main > .pageView").forEach(candidate=>{if(candidate instanceof HTMLElement)candidate.hidden=candidate!==target;});}
   function syncNavigation(){document.querySelectorAll("#sidebar .navButton[data-page]").forEach(button=>{if(button instanceof HTMLElement)button.classList.toggle("active",String(button.dataset.page||"")===PAGE);});}
@@ -42,6 +51,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
     rosterBody?.replaceChildren();
     if(rosterBody)rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="";
@@ -92,25 +102,97 @@
     playerSearchSequence+=1;
     if(playerSearchResults instanceof HTMLElement){playerSearchResults.hidden=true;playerSearchResults.replaceChildren();}
   }
-  function closePlayerAdder({focusButton=false}={}){
+  function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
+  function updateAddPlayerAvailability(){
+    if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=availablePlayerSlots()===0;
+  }
+  function renderPendingPlayers(){
+    const selected=[...pendingPlayers.values()];
+    if(playerSelectionCount)playerSelectionCount.textContent=String(selected.length);
+    if(playerSelection instanceof HTMLElement)playerSelection.hidden=!selected.length;
+    if(playerSelectionStatus instanceof HTMLElement){
+      const slots=availablePlayerSlots();
+      playerSelectionStatus.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" in squad · "+selected.length+" selected · "+Math.max(0,slots-selected.length)+" spots remaining";
+    }
+    if(playerConfirmButton instanceof HTMLButtonElement)playerConfirmButton.disabled=!selected.length;
+    if(!(playerSelectionList instanceof HTMLElement))return;
+    const fragment=document.createDocumentFragment();
+    for(const player of selected){
+      const item=document.createElement("button");
+      item.type="button";
+      item.className="plannerPendingPlayer";
+      item.dataset.playerId=String(player.player_id);
+      item.setAttribute("aria-label","Remove "+String(player.name||"player")+" from selection");
+      const label=document.createElement("span");
+      label.textContent=String(player.name||"Unknown player")+" · "+String(player.positions||"—")+" · OVR "+String(player.overall??"—");
+      const remove=document.createElement("span");
+      remove.className="plannerPendingPlayerRemove";
+      remove.textContent="×";
+      remove.setAttribute("aria-hidden","true");
+      item.append(label,remove);
+      item.addEventListener("click",()=>{
+        pendingPlayers.delete(Number(player.player_id));
+        renderPendingPlayers();
+        const q=playerSearchInput?.value.trim()||"";
+        if(q)void requestPlayers(q);
+      });
+      fragment.appendChild(item);
+    }
+    playerSelectionList.replaceChildren(fragment);
+  }
+  function closePlayerModal({focusButton=false}={}){
     clearTimeout(playerSearchTimer);
     clearPlayerResults();
+    pendingPlayers.clear();
+    renderPendingPlayers();
     if(playerSearchInput instanceof HTMLInputElement)playerSearchInput.value="";
     if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=true;
-    if(playerAdder instanceof HTMLElement)playerAdder.hidden=true;
-    if(addPlayerButton instanceof HTMLElement)addPlayerButton.setAttribute("aria-expanded","false");
+    if(playerModal instanceof HTMLElement)playerModal.hidden=true;
     if(focusButton)addPlayerButton?.focus();
   }
-  function addPlayerToRoster(player){
+  function openPlayerModal(){
+    if(!(playerModal instanceof HTMLElement)||!(playerSearchInput instanceof HTMLInputElement)||availablePlayerSlots()===0)return;
+    pendingPlayers.clear();
+    renderPendingPlayers();
+    playerModal.hidden=false;
+    playerSearchInput.value="";
+    if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=true;
+    clearPlayerResults();
+    playerSearchInput.focus();
+  }
+  function addPlayerToRoster(player,{render=true}={}){
     const playerId=Number(player?.player_id);
     if(!Number.isSafeInteger(playerId)||playerId<=0)return false;
     if(Number(player?.retirement_years)===0)return false;
+    if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
     roster.push({...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)});
     roster.sort((a,b)=>(Number(b?.overall)||0)-(Number(a?.overall)||0)||Number(b?.player_id||0)-Number(a?.player_id||0));
-    renderRoster();
-    closePlayerAdder({focusButton:true});
+    if(render)renderRoster();
     return true;
+  }
+  function togglePendingPlayer(player){
+    const playerId=Number(player?.player_id);
+    if(!Number.isSafeInteger(playerId)||playerId<=0||Number(player?.retirement_years)===0)return false;
+    if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
+    if(pendingPlayers.has(playerId)){
+      pendingPlayers.delete(playerId);
+      renderPendingPlayers();
+      return true;
+    }
+    if(pendingPlayers.size>=availablePlayerSlots())return false;
+    pendingPlayers.set(playerId,player);
+    renderPendingPlayers();
+    return true;
+  }
+  function confirmPendingPlayers(){
+    const selected=[...pendingPlayers.values()];
+    if(!selected.length)return false;
+    let added=0;
+    for(const player of selected){if(addPlayerToRoster(player,{render:false}))added+=1;}
+    if(added)renderRoster();
+    closePlayerModal({focusButton:true});
+    return Boolean(added);
   }
   function renderPlayerResults(payload,query=""){
     if(!(playerSearchResults instanceof HTMLElement))return;
@@ -119,17 +201,29 @@
     const fragment=document.createDocumentFragment();
     for(const values of rows){
       const player=Object.fromEntries(columns.map((column,index)=>[column,values[index]]));
-      if(Number(player?.retirement_years)===0||roster.some(candidate=>Number(candidate.player_id)===Number(player?.player_id)))continue;
+      const playerId=Number(player?.player_id);
+      if(Number(player?.retirement_years)===0||roster.some(candidate=>Number(candidate.player_id)===playerId))continue;
+      const selected=pendingPlayers.has(playerId);
+      const atCapacity=!selected&&pendingPlayers.size>=availablePlayerSlots();
       const button=document.createElement("button");
       button.type="button";
       button.className="searchResult playerSearchResult plannerPlayerSearchResult";
+      button.dataset.playerId=String(playerId);
+      button.classList.toggle("selected",selected);
+      button.disabled=atCapacity;
       button.setAttribute("role","option");
+      button.setAttribute("aria-selected",String(selected));
       const title=document.createElement("strong");
       title.textContent=String(player?.name||"Unknown player");
       const meta=document.createElement("span");
       meta.textContent="Player · #"+String(player?.player_id||"")+" · "+String(player?.positions||"—")+" · OVR "+String(player?.overall??"—");
-      button.append(title,meta);
-      button.addEventListener("click",()=>addPlayerToRoster(player));
+      const selectionState=document.createElement("span");
+      selectionState.className="plannerPlayerResultSelection";
+      selectionState.textContent=selected?"Selected":atCapacity?"Squad full":"Select";
+      button.append(title,meta,selectionState);
+      button.addEventListener("click",()=>{
+        if(togglePendingPlayer(player))renderPlayerResults(payload,query);
+      });
       fragment.appendChild(button);
     }
     if(!fragment.childNodes.length&&query){
@@ -162,6 +256,7 @@
   }
   function renderRoster(){
     if(!(rosterBody instanceof HTMLElement))return;
+    updateAddPlayerAvailability();
     const fragment=document.createDocumentFragment();
     for(const player of roster){
       const row=document.createElement("tr");
@@ -194,12 +289,11 @@
       contractEditor.className="plannerContractEditor";
       contractEditor.hidden=true;
       const contractInput=document.createElement("input");
-      contractInput.type="number";
+      contractInput.type="text";
       contractInput.className="plannerContractInput";
-      contractInput.min="0";
-      contractInput.max="20";
-      contractInput.step="0.01";
       contractInput.inputMode="decimal";
+      contractInput.setAttribute("data-min","0");
+      contractInput.setAttribute("data-max","20");
       contractInput.setAttribute("aria-label","Contract value for "+String(player.name||"player"));
       contractInput.value=contractText(player.planned_contract_value);
       const contractStepper=document.createElement("span");
@@ -252,12 +346,14 @@
         else finishContractEdit(true);
       });
       contractInput.addEventListener("input",()=>{
-        const raw=contractInput.value.trim();
-        if(!raw)return;
+        let raw=contractInput.value.replace(/,/g,".").replace(/[^0-9.]/g,"");
+        const firstDot=raw.indexOf(".");
+        if(firstDot>=0)raw=raw.slice(0,firstDot+1)+raw.slice(firstDot+1).replace(/\./g,"");
+        const parts=raw.split(".");
+        if(parts.length>1)raw=parts[0]+"."+parts[1].slice(0,2);
         const numeric=Number(raw);
-        if(!Number.isFinite(numeric))return;
-        const normalized=normalizeContractValue(numeric);
-        if(numeric!==normalized)contractInput.value=contractText(normalized);
+        if(raw&&Number.isFinite(numeric)&&numeric>20)raw="20.00";
+        contractInput.value=raw;
       });
       const adjustContractDraft=(delta)=>{
         const current=Number(contractInput.value);
@@ -267,8 +363,8 @@
       };
       increaseContract.addEventListener("mousedown",event=>event.preventDefault());
       decreaseContract.addEventListener("mousedown",event=>event.preventDefault());
-      increaseContract.addEventListener("click",()=>adjustContractDraft(0.01));
-      decreaseContract.addEventListener("click",()=>adjustContractDraft(-0.01));
+      increaseContract.addEventListener("click",()=>adjustContractDraft(1));
+      decreaseContract.addEventListener("click",()=>adjustContractDraft(-1));
       contractInput.addEventListener("keydown",event=>{
         if(event.key==="Enter"){event.preventDefault();finishContractEdit(true);}
         else if(event.key==="Escape"){event.preventDefault();finishContractEdit(false);editContract.focus();}
@@ -361,17 +457,14 @@
 
   input?.addEventListener("input",()=>{syncClearButton();setStatus("");clearTimeout(searchTimer);if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}const q=input.value.trim();if(!q){clearResults();return;}searchTimer=setTimeout(()=>void requestTeams(q),140);});
   input?.addEventListener("keydown",event=>{if(event.key==="Enter"){const first=results?.querySelector(".plannerTeamSearchResult");if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}}else if(event.key==="Escape"){clearResults();input.blur();}});
-  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerAdder();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerModal();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   rosterRetry?.addEventListener("click",()=>{if(selectedTeamId)void loadRoster(selectedTeamId);});
-  addPlayerButton?.addEventListener("click",()=>{
-    if(!(playerAdder instanceof HTMLElement)||!(playerSearchInput instanceof HTMLInputElement))return;
-    const opening=playerAdder.hidden;
-    if(!opening){closePlayerAdder();return;}
-    playerAdder.hidden=false;
-    addPlayerButton.setAttribute("aria-expanded","true");
-    playerSearchInput.focus();
-  });
+  addPlayerButton?.addEventListener("click",openPlayerModal);
+  playerModalCloseButton?.addEventListener("click",()=>closePlayerModal({focusButton:true}));
+  playerDiscardButton?.addEventListener("click",()=>closePlayerModal({focusButton:true}));
+  playerConfirmButton?.addEventListener("click",confirmPendingPlayers);
+  playerModal?.addEventListener("click",event=>{if(event.target===playerModal)closePlayerModal({focusButton:true});});
   playerSearchInput?.addEventListener("input",()=>{
     rosterMessage("");
     if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=!playerSearchInput.value.trim();
@@ -384,7 +477,7 @@
     if(event.key==="Enter"){
       const first=playerSearchResults?.querySelector(".plannerPlayerSearchResult");
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
-    }else if(event.key==="Escape"){event.preventDefault();closePlayerAdder({focusButton:true});}
+    }else if(event.key==="Escape"){event.preventDefault();closePlayerModal({focusButton:true});}
   });
   playerSearchClearButton?.addEventListener("click",()=>{
     if(!(playerSearchInput instanceof HTMLInputElement))return;
@@ -394,8 +487,14 @@
     playerSearchInput.focus();
   });
   teamClearButton?.addEventListener("click",clearSelection);
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape"&&playerModal instanceof HTMLElement&&!playerModal.hidden){
+      event.preventDefault();
+      closePlayerModal({focusButton:true});
+    }
+  });
   teamLogo?.addEventListener("error",()=>{if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;});
   document.addEventListener("click",event=>{if(!(results instanceof HTMLElement)||results.hidden)return;const target=event.target;if(target===input||(target instanceof Node&&results.contains(target)))return;results.hidden=true;});
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
-  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster}));
+  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers}));
 })();
