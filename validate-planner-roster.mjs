@@ -16,6 +16,7 @@ class Element {
   addEventListener(name, listener) { this.events[name] = listener; }
   click() { this.events.click?.({ target: this }); }
   focus() {}
+  select() {}
   querySelectorAll() { return []; }
 }
 class Input extends Element {}
@@ -26,13 +27,13 @@ const html = await readFile(new URL("./html-sources/planner.html", import.meta.u
 const elements = new Map([...html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"/g)].map(([, tag, id]) => [id, tag === "input" ? new Input(tag) : tag === "img" ? new Image(tag) : tag === "button" ? new Button(tag) : new Element(tag)]));
 const requests = [];
 const location = { pathname: "/planner", search: "" };
-const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
+const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
 const window = { __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } } };
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
 vm.runInNewContext(source, { window, document, location, history, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }) });
 const route = window.__mflPlannerRoute;
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const payload = { columns: ["player_id", "name", "positions", "age", "overall", "active_contract_revenue_share"], rows: [[1, "First Player", "ST", 23, 80, 12.5], [2, "Second Player", "GK", 25, 75, 8]], totalRows: 2 };
+const payload = { columns: ["player_id", "name", "positions", "age", "overall", "retirement_years", "player_seasons", "active_contract_revenue_share"], rows: [[1, "First Player", "ST", 23, 80, 2, 5, 1250], [2, "Second Player", "GK", 25, 75, 5, 1, 800]], totalRows: 2 };
 const complete = async (request, data = payload) => { request.resolve({ ok: true, json: async () => data }); await tick(); };
 route.select({ clubId: "9001", name: "First Club", division: 1 });
 assert.equal(requests.length, 1, "Selecting a club must load its roster");
@@ -45,26 +46,36 @@ await complete(requests[0]);
 const body = elements.get("plannerRosterBody");
 assert.equal(body.children.length, 2);
 assert.equal(body.children[0].children[0].textContent, "First Player");
-assert.equal(body.children[0].children[2].textContent, "23", "Age must remain visible in the planned squad");
-const contractInput = body.children[0].children[4].children[0];
-assert.equal(contractInput.value, "12.50", "Contract must start from the current contract value with two decimals");
+assert.equal(body.children[0].children[2].children[0].children[0].textContent, "23", "Age must remain visible in the planned squad");
+assert.equal(body.children[0].children[2].children[0].children[1].className.includes("retirementMarker--retiring-2"), true, "Retirement marker must match canonical 1–3 year semantics");
+assert.equal(body.children[1].children[2].children[0].children[1].className.includes("newMintMarker"), true, "One-season player must show the New mint marker");
+const contractControl = body.children[0].children[4].children[0];
+const contractValue = contractControl.children[0];
+const contractInput = contractControl.children[1];
+const contractEdit = contractControl.children[2];
+assert.equal(contractValue.textContent, "12.50", "Contract must divide the raw database value by 100");
+assert.equal(contractInput.hidden, true, "Contract editor must stay hidden until Edit is clicked");
+contractEdit.click();
+assert.equal(contractInput.hidden, false, "Edit must reveal the compact contract editor");
+assert.equal(contractEdit.textContent, "✓", "Edit action must become Confirm while editing");
 contractInput.value = "20.75";
 contractInput.events.input?.({ target: contractInput });
 assert.equal(contractInput.value, "20.00", "Contract must clamp values above 20.00");
 contractInput.value = "18.25";
 contractInput.events.input?.({ target: contractInput });
-contractInput.events.change?.({ target: contractInput });
+contractEdit.click();
+assert.equal(contractValue.textContent, "18.25", "Confirm must restore the normal contract display with the edited value");
 assert.equal(requests.length, 1, "Editing a planned contract must not write to the server");
 body.children[1].children.at(-1).children[0].click();
 assert.equal(body.children.length, 1, "Remove must update the planned squad");
 assert.equal(body.children[0].children[0].textContent, "First Player");
-assert.equal(body.children[0].children[4].children[0].value, "18.25", "Edited contract must survive local roster re-renders");
-assert.equal(payload.rows[0][5], 12.5, "Editing a planned contract must not mutate canonical data");
+assert.equal(body.children[0].children[4].children[0].children[0].textContent, "18.25", "Edited contract must survive local roster re-renders");
+assert.equal(payload.rows[0][7], 1250, "Editing a planned contract must not mutate canonical database data");
 assert.equal(payload.rows.length, 2, "Removing a player must not mutate canonical data");
 assert.equal(requests.length, 1, "Removing a player must not write to the server");
 route.select({ clubId: "9002", name: "Second Club" });
 route.select({ clubId: "9003", name: "Third Club" });
-await complete(requests[2], { ...payload, rows: [[3, "Newest Player", "CM", 20, 70, 6.5]], totalRows: 1 });
+await complete(requests[2], { ...payload, rows: [[3, "Newest Player", "CM", 20, 70, 3, 1, 650]], totalRows: 1 });
 await complete(requests[1]);
 assert.equal(body.children[0].children[0].textContent, "Newest Player", "Old responses must not overwrite the current club");
 route.select({ clubId: "9004", name: "Fourth Club" });
@@ -82,8 +93,11 @@ assert.equal(elements.get("plannerRosterRetryButton").hidden, false);
 elements.get("plannerRosterRetryButton").click();
 await complete(requests[6]);
 assert.equal(body.children.length, 2);
-assert.equal(route.addPlayer({ player_id: 7, name: "Added Player", positions: "RW", age: 21, overall: 77, retirement_years: 4 }), true);
+assert.equal(route.addPlayer({ player_id: 7, name: "Added Player", positions: "RW", age: 21, overall: 77, retirement_years: 4, player_seasons: 1, active_contract_revenue_share: 375 }), true);
 assert.equal(body.children.some(row => row.dataset.playerId === "7"), true, "Eligible player must be addable to the planned squad");
+const addedRow = body.children.find(row => row.dataset.playerId === "7");
+assert.equal(addedRow.children[4].children[0].children[0].textContent, "3.75", "Added player Contract must also use database value divided by 100");
+assert.equal(addedRow.children[2].children[0].children[1].className.includes("newMintMarker"), true, "Added New mint player must keep the marker");
 assert.equal(route.addPlayer({ player_id: 8, name: "Retired Player", positions: "CB", age: 34, overall: 65, retirement_years: 0 }), false, "Retired player must be rejected client-side");
 assert.equal(route.addPlayer({ player_id: 7, name: "Added Player", positions: "RW", age: 21, overall: 77, retirement_years: 4 }), false, "Duplicate planned players must be rejected");
 console.log("Planner roster: complete read, contract bounds, add/remove, stale responses, Clear, empty state and retry passed.");
