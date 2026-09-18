@@ -162,12 +162,6 @@
     background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
     border-radius: 3px;
   }
-  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
-    align-items: center;
-  }
-  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
-    align-self: center;
-  }
   #progressionPage .playerTableScroller td.col-age .tableControlCellContent {
     gap: var(--mfl-responsive-table-age-marker-gap);
   }
