@@ -14679,6 +14679,28 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   font-weight: 700;
 }
 
+.plannerSlot.is-loading {
+  cursor: default;
+}
+
+.plannerSlot.is-loading :is(.plannerSlotPlayer, .plannerSlotOverall) {
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: transparent;
+  user-select: none;
+}
+
+.plannerSlot.is-loading .plannerSlotPlayer {
+  width: 78%;
+  min-height: 12px;
+}
+
+.plannerSlot.is-loading .plannerSlotOverall {
+  width: 52%;
+  min-height: 9px;
+}
+
 .plannerRosterHeader {
   justify-content: space-between;
   gap: 10px;
@@ -14744,6 +14766,37 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
 .plannerPlayerOverall {
   font-size: 14px;
   font-weight: 800;
+}
+
+.plannerPlayerSkeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.plannerPlayerSkeletonIdentity {
+  display: grid;
+  gap: 5px;
+}
+
+.plannerPlayerSkeletonLine {
+  display: block;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.plannerPlayerSkeletonName {
+  width: min(78%, 170px);
+  height: 12px;
+}
+
+.plannerPlayerSkeletonMeta {
+  width: min(48%, 100px);
+  height: 9px;
+}
+
+.plannerPlayerSkeletonOverall {
+  width: 24px;
+  height: 14px;
 }
 
 .plannerStatus {

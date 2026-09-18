@@ -6,34 +6,56 @@
   const BASE_PATH = "/planner";
   const DEFAULT_FORMATION = "4-3-3";
   const PLANS_API = "/api/planner-plans";
-  const formations = Object.freeze({
-    "4-3-3": Object.freeze([
-      ["GK", "GK", 50, 90], ["LW", "LW", 25, 15], ["ST", "ST", 50, 15], ["RW", "RW", 75, 15],
-      ["LCM", "CM", 25, 45], ["CM", "CM", 50, 45], ["RCM", "CM", 75, 45],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "4-2-3-1": Object.freeze([
-      ["GK", "GK", 50, 90], ["ST", "ST", 50, 15],
-      ["LAM", "CAM", 25, 35], ["CAM", "CAM", 50, 35], ["RAM", "CAM", 75, 35],
-      ["LDM", "CDM", 33.33, 55], ["RDM", "CDM", 66.67, 55],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "4-4-2": Object.freeze([
-      ["GK", "GK", 50, 90], ["LST", "ST", 33.33, 15], ["RST", "ST", 66.67, 15],
-      ["LM", "LM", 20, 45], ["LCM", "CM", 40, 45], ["RCM", "CM", 60, 45], ["RM", "RM", 80, 45],
-      ["LB", "LB", 20, 75], ["LCB", "CB", 40, 75], ["RCB", "CB", 60, 75], ["RB", "RB", 80, 75],
-    ]),
-    "3-5-2": Object.freeze([
-      ["GK", "GK", 50, 90], ["LST", "ST", 33.33, 15], ["RST", "ST", 66.67, 15],
-      ["LWB", "LB", 16.67, 45], ["LCM", "CM", 33.33, 45], ["CM", "CM", 50, 45], ["RCM", "CM", 66.67, 45], ["RWB", "RB", 83.33, 45],
-      ["LCB", "CB", 25, 75], ["CB", "CB", 50, 75], ["RCB", "CB", 75, 75],
-    ]),
-    "3-4-3": Object.freeze([
-      ["GK", "GK", 50, 90], ["LW", "LW", 25, 15], ["ST", "ST", 50, 15], ["RW", "RW", 75, 15],
-      ["LM", "LM", 20, 45], ["LCM", "CM", 40, 45], ["RCM", "CM", 60, 45], ["RM", "RM", 80, 45],
-      ["LCB", "CB", 25, 75], ["CB", "CB", 50, 75], ["RCB", "CB", 75, 75],
-    ]),
-  });
+  const FORMATIONS_URL = "/planner-formations.json";
+  let formations = Object.freeze({});
+  let formationLoadPromise = null;
+
+  function normalizeFormationData(payload) {
+    const items = Array.isArray(payload) ? payload : [];
+    const entries = items.map((formation) => {
+      const id = String(formation?.id || "").trim();
+      const name = String(formation?.name || id).trim() || id;
+      const slots = Array.isArray(formation?.slots)
+        ? formation.slots.map((slot) => Object.freeze({
+            id: String(slot?.id || "").trim(),
+            position: String(slot?.position || "").trim(),
+            x: Number(slot?.x),
+            y: Number(slot?.y),
+          }))
+        : [];
+      if (!id || slots.length !== 11 || slots.some((slot) => (
+        !slot.id
+        || !slot.position
+        || !Number.isFinite(slot.x)
+        || !Number.isFinite(slot.y)
+      ))) {
+        throw new Error("Planner formation data is invalid.");
+      }
+      return [id, Object.freeze({ id, name, slots: Object.freeze(slots) })];
+    });
+    const next = Object.freeze(Object.fromEntries(entries));
+    if (!next[DEFAULT_FORMATION]) throw new Error("Planner default formation is unavailable.");
+    return next;
+  }
+
+  async function ensureFormations() {
+    if (formations[DEFAULT_FORMATION]) return formations;
+    if (formationLoadPromise) return formationLoadPromise;
+    formationLoadPromise = (async () => {
+      const response = await window.__mflDataClient.fetch(FORMATIONS_URL, {
+        cache: "force-cache",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Could not load Planner formations.");
+      formations = normalizeFormationData(payload);
+      return formations;
+    })().catch((error) => {
+      formationLoadPromise = null;
+      throw error;
+    });
+    return formationLoadPromise;
+  }
 
   const page = document.getElementById("plannerPage");
   const workspace = document.getElementById("plannerWorkspace");
@@ -63,6 +85,7 @@
     formationId: DEFAULT_FORMATION,
     assignments: new Map(),
     selectedPlayerId: "",
+    selectedFromSlotId: "",
     requestSequence: 0,
     planId: "",
     planName: "My plan",
@@ -71,6 +94,7 @@
     revision: 0,
     dirty: false,
     savedPlans: [],
+    loading: false,
   };
 
   const PITCH_LINE_CLASSES = Object.freeze([
@@ -103,7 +127,7 @@
   }
 
   function editable() {
-    return !plannerState.planId || plannerState.canEdit;
+    return !plannerState.loading && (!plannerState.planId || plannerState.canEdit);
   }
 
   function columnIndex(name) {
@@ -239,10 +263,10 @@
   function renderFormationOptions() {
     if (!(formationSelect instanceof HTMLSelectElement)) return;
     if (!formationSelect.options.length) {
-      Object.keys(formations).forEach((formationId) => {
+      Object.values(formations).forEach((formation) => {
         const option = document.createElement("option");
-        option.value = formationId;
-        option.textContent = formationId;
+        option.value = formation.id;
+        option.textContent = formation.name;
         formationSelect.appendChild(option);
       });
     }
@@ -251,7 +275,8 @@
 
   function renderPitch() {
     if (!(pitch instanceof HTMLElement)) return;
-    const slots = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
+    const formation = formations[plannerState.formationId] || formations[DEFAULT_FORMATION];
+    const slots = formation?.slots || [];
     const fragment = document.createDocumentFragment();
     const fieldLines = PITCH_LINE_CLASSES.map((className) => {
       const line = document.createElement("span");
@@ -260,14 +285,15 @@
       return line;
     });
 
-    slots.forEach(([slotId, position, x, y]) => {
+    slots.forEach(({ id: slotId, position, x, y }) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "plannerSlot";
       button.dataset.slotId = slotId;
       button.style.setProperty("--planner-x", x + "%");
       button.style.setProperty("--planner-y", y + "%");
-      button.disabled = !editable();
+      button.disabled = plannerState.loading || !editable();
+      if (plannerState.loading) button.classList.add("is-loading");
 
       const labelNode = document.createElement("span");
       labelNode.className = "plannerSlotLabel";
@@ -280,7 +306,11 @@
       const overallNode = document.createElement("span");
       overallNode.className = "plannerSlotOverall";
 
-      if (assignedId) {
+      if (plannerState.loading) {
+        playerNode.textContent = "Loading player";
+        overallNode.textContent = "Loading";
+        button.setAttribute("aria-label", "Loading " + position + " position");
+      } else if (assignedId) {
         const name = row ? playerName(row) : "Player " + assignedId;
         playerNode.textContent = name;
         const overall = row ? playerOverall(row) : null;
@@ -294,25 +324,49 @@
       }
 
       button.append(labelNode, playerNode, overallNode);
+      if (plannerState.selectedFromSlotId === slotId) button.classList.add("is-selected");
       button.addEventListener("click", () => {
         if (!editable()) return;
         if (plannerState.selectedPlayerId) {
-          for (const [assignedSlotId, assignedPlayerId] of plannerState.assignments.entries()) {
-            if (assignedPlayerId === plannerState.selectedPlayerId) plannerState.assignments.delete(assignedSlotId);
+          const selectedPlayerId = plannerState.selectedPlayerId;
+          const sourceSlotId = plannerState.selectedFromSlotId;
+          const targetPlayerId = String(plannerState.assignments.get(slotId) || "");
+
+          if (sourceSlotId) {
+            if (slotId === sourceSlotId) {
+              plannerState.assignments.delete(sourceSlotId);
+              setStatus("Player returned to the available roster.");
+            } else {
+              plannerState.assignments.set(slotId, selectedPlayerId);
+              if (targetPlayerId && targetPlayerId !== selectedPlayerId) {
+                plannerState.assignments.set(sourceSlotId, targetPlayerId);
+                setStatus("Players swapped. Select another player to continue.");
+              } else {
+                plannerState.assignments.delete(sourceSlotId);
+                setStatus("Player moved. Select another player to continue.");
+              }
+            }
+          } else {
+            for (const [assignedSlotId, assignedPlayerId] of plannerState.assignments.entries()) {
+              if (assignedPlayerId === selectedPlayerId) plannerState.assignments.delete(assignedSlotId);
+            }
+            plannerState.assignments.set(slotId, selectedPlayerId);
+            setStatus(targetPlayerId
+              ? "Player assigned; the previous player returned to the available roster."
+              : "Player assigned. Select another player to continue.");
           }
-          plannerState.assignments.set(slotId, plannerState.selectedPlayerId);
+
           plannerState.selectedPlayerId = "";
+          plannerState.selectedFromSlotId = "";
           markDirty();
-          setStatus("Player assigned. Select another player to continue.");
           renderWorkspace();
           return;
         }
 
         if (assignedId) {
-          plannerState.assignments.delete(slotId);
           plannerState.selectedPlayerId = assignedId;
-          markDirty();
-          setStatus("Player selected. Choose another position, or select the player in the roster to leave the slot empty.");
+          plannerState.selectedFromSlotId = slotId;
+          setStatus("Player selected. Choose another position to move or swap, or select this position again to remove the player.");
           renderWorkspace();
         }
       });
@@ -325,6 +379,31 @@
 
   function renderRoster() {
     if (!(roster instanceof HTMLElement)) return;
+    if (plannerState.loading) {
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 8; index += 1) {
+        const row = document.createElement("div");
+        row.className = "plannerPlayer plannerPlayerSkeleton";
+        row.setAttribute("aria-hidden", "true");
+
+        const identity = document.createElement("span");
+        identity.className = "plannerPlayerSkeletonIdentity";
+        const name = document.createElement("span");
+        name.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonName";
+        const meta = document.createElement("span");
+        meta.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonMeta";
+        identity.append(name, meta);
+
+        const overall = document.createElement("span");
+        overall.className = "plannerPlayerSkeletonLine plannerPlayerSkeletonOverall";
+        row.append(identity, overall);
+        fragment.appendChild(row);
+      }
+      roster.replaceChildren(fragment);
+      if (rosterCount instanceof HTMLElement) rosterCount.textContent = "—";
+      return;
+    }
+
     const assigned = assignedPlayerIds();
     const available = plannerState.rows
       .filter((row) => {
@@ -364,9 +443,11 @@
       button.append(identity, overall);
       button.addEventListener("click", () => {
         if (!editable()) return;
-        plannerState.selectedPlayerId = plannerState.selectedPlayerId === id ? "" : id;
+        const nextSelectedPlayerId = plannerState.selectedPlayerId === id && !plannerState.selectedFromSlotId ? "" : id;
+        plannerState.selectedPlayerId = nextSelectedPlayerId;
+        plannerState.selectedFromSlotId = "";
         setStatus(plannerState.selectedPlayerId ? "Player selected. Choose a position on the pitch." : "Player selection cleared.");
-        renderRoster();
+        renderWorkspace();
       });
       fragment.appendChild(button);
     });
@@ -380,8 +461,28 @@
     renderFormationOptions();
     renderPitch();
     renderRoster();
-    if (workspace instanceof HTMLElement) workspace.hidden = !plannerState.clubId;
+    if (workspace instanceof HTMLElement) {
+      workspace.hidden = !plannerState.clubId;
+      if (plannerState.loading) workspace.setAttribute("aria-busy", "true");
+      else workspace.removeAttribute("aria-busy");
+    }
     syncPlanControls();
+  }
+
+  function renderPlannerLoadingState(clubId, { resetAssignments = true } = {}) {
+    const normalizedClubId = String(clubId || "").trim();
+    plannerState.loading = true;
+    plannerState.clubId = normalizedClubId;
+    plannerState.club = { clubId: normalizedClubId };
+    plannerState.columns = [];
+    plannerState.rows = [];
+    plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
+    if (resetAssignments) {
+      plannerState.assignments.clear();
+      plannerState.formationId = DEFAULT_FORMATION;
+    }
+    renderWorkspace();
   }
 
   function resetPlanIdentity({ preserveClub = true } = {}) {
@@ -391,14 +492,17 @@
     plannerState.visibility = "private";
     plannerState.revision = 0;
     plannerState.dirty = false;
+    plannerState.loading = false;
     plannerState.assignments.clear();
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
     plannerState.formationId = DEFAULT_FORMATION;
     if (!preserveClub) {
       plannerState.clubId = "";
       plannerState.club = null;
       plannerState.columns = [];
       plannerState.rows = [];
+      plannerState.loading = false;
       if (searchInput instanceof HTMLInputElement) searchInput.value = "";
     }
   }
@@ -418,6 +522,8 @@
       plannerState.columns = [];
       plannerState.rows = [];
       if (resetAssignments) plannerState.assignments.clear();
+      plannerState.selectedPlayerId = "";
+      plannerState.selectedFromSlotId = "";
       renderWorkspace();
       if (updateUrl) setCanonicalUrl({ planId: "", clubId: "" });
       return false;
@@ -425,31 +531,31 @@
 
     const sequence = ++plannerState.requestSequence;
     setStatus("Loading Club…");
-    workspace?.setAttribute("aria-busy", "true");
     try {
-      const query = new URLSearchParams({
-        mode: "page",
-        scope: "club",
-        view: "attributes",
-        page: "1",
-        pageSize: "5000",
-        sortKey: "positions",
-        sortDirection: "asc",
-        access: "public-database",
-        clubId: normalizedClubId,
-      });
-      const response = await window.__mflDataClient.fetch("/api/data?" + query.toString(), {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload?.error || "Could not load this Club.");
+      const routeCache = Reflect.get(window, "__mflRouteDataCache");
+      const cachedPayload = routeCache?.readClubPayload?.(normalizedClubId) || null;
+      let payload = cachedPayload;
+
+      if (!payload) {
+        renderPlannerLoadingState(normalizedClubId, { resetAssignments });
+        const requestPath = String(routeCache?.clubRequestPath?.(normalizedClubId) || "");
+        if (!requestPath) throw new Error("Canonical Club request is unavailable.");
+        const response = await window.__mflDataClient.fetch(requestPath, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || "Could not load this Club.");
+        routeCache?.rememberClubPayload?.(normalizedClubId, payload);
+      }
+
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
 
       const rows = Array.isArray(payload?.rows) ? payload.rows : [];
       const columns = Array.isArray(payload?.columns) ? payload.columns : [];
       if (!rows.length && !payload?.club) throw new Error("Club not found.");
 
+      plannerState.loading = false;
       plannerState.clubId = normalizedClubId;
       plannerState.club = payload?.club && typeof payload.club === "object"
         ? { ...payload.club, clubId: normalizedClubId }
@@ -459,6 +565,7 @@
       if (resetAssignments) {
         plannerState.assignments.clear();
         plannerState.selectedPlayerId = "";
+        plannerState.selectedFromSlotId = "";
         plannerState.formationId = DEFAULT_FORMATION;
         markDirty();
       }
@@ -468,9 +575,12 @@
       return true;
     } catch (error) {
       if (sequence !== plannerState.requestSequence || state.currentPage !== PAGE) return false;
+      plannerState.loading = false;
+      renderWorkspace();
       setStatus(error?.message || "Could not load this Club.");
       return false;
     } finally {
+      if (sequence === plannerState.requestSequence) plannerState.loading = false;
       workspace?.removeAttribute("aria-busy");
     }
   }
@@ -581,6 +691,7 @@
     plannerState.revision = Number.isSafeInteger(plan?.revision) ? plan.revision : 1;
     plannerState.dirty = false;
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
   }
 
   async function loadPlan(planId, { updateUrl = true } = {}) {
@@ -709,6 +820,14 @@
     syncNavigation();
     if (page instanceof HTMLElement) showOnly(page);
 
+    try {
+      await ensureFormations();
+    } catch (error) {
+      setStatus(error?.message || "Could not load Planner formations.");
+      syncPlanControls();
+      return false;
+    }
+
     const requestedPlanId = String(options.planId || "").trim();
     const requestedClubId = String(options.clubId || queryClubId() || "").trim();
     await refreshSavedPlans();
@@ -747,6 +866,7 @@
     plannerState.formationId = next;
     plannerState.assignments.clear();
     plannerState.selectedPlayerId = "";
+    plannerState.selectedFromSlotId = "";
     markDirty();
     renderWorkspace();
     setStatus("Formation changed. Player assignments were reset.");
