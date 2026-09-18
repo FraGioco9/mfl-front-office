@@ -29,6 +29,11 @@
     border-right: var(--mfl-responsive-table-sort-arrow-half-width) solid transparent;
     border-top: var(--mfl-responsive-table-sort-arrow-height) solid var(--text);
   }
+
+  #progressionPage .playerTableScroller .retirementMarker::before {
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+  }
 }
 
 /* The full intermediate 901-1366px shell shares compact table presentation.
