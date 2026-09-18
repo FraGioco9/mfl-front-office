@@ -15,7 +15,7 @@
   const PLAYER_TABLE_NAME_STUCK_CLASS = "mflPlayerTableNameStuck";
   const VIEW_SCROLL_EPSILON = 2;
   const PLAYER_TABLE_SCROLL_EPSILON = 2;
-  const HEADER_LABEL_OVERFLOW_EPSILON = 1;
+  const HEADER_LABEL_COMPACT_MEDIA = window.matchMedia("(max-width: 1366px)");
   const MOBILE_STYLE_ID = "mflInitialMobileTableStyle";
   const CONTROL_SELECTOR = `#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, .${VIEW_SCROLL_BUTTON_CLASS}, #sidebar .navButton[data-page], #filtersModal button`;
   const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
@@ -232,7 +232,7 @@
     margin-right: 1px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.75);
+    transform: none;
     transform-origin: center;
   }
   #progressionPage nav.pager {
@@ -417,7 +417,7 @@
     margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.62);
+    transform: none;
   }
 }
 @media (max-width: 380px) {
@@ -503,7 +503,7 @@
     margin-right: 3px;
   }
   #progressionPage .playerTableScroller .sortArrow {
-    transform: scale(0.54);
+    transform: none;
   }
 }`;
     document.head.appendChild(style);
@@ -888,47 +888,22 @@
 
   function syncWidthAwareHeaderLabels() {
     const mobile = MOBILE_TABLE_MEDIA.matches;
+    const compactHeader = HEADER_LABEL_COMPACT_MEDIA.matches;
     const labels = Array.from(document.querySelectorAll("#progressionPage #tableHead [data-mfl-full-table-label][data-mfl-compact-table-label]"))
       .filter((label) => label instanceof HTMLElement);
 
-    if (mobile) {
-      labels.forEach((label) => {
-        const header = label.closest("th");
-        if (!(header instanceof HTMLTableCellElement)) return;
-        const full = String(label.dataset.mflFullTableLabel || "").trim();
-        const short = String(label.dataset.mflCompactTableLabel || "").trim();
-        if (!full) return;
-        const column = String(header.dataset.tableColumn || "");
-        if (mobile && column === "listing_price") {
-          label.textContent = "";
-          return;
-        }
-        if (mobile && short) {
-          label.textContent = short;
-          return;
-        }
-        label.textContent = full;
-      });
-      return;
-    }
-
     labels.forEach((label) => {
-      const full = String(label.dataset.mflFullTableLabel || "").trim();
-      if (full) label.textContent = full;
-    });
-
-    const useCompact = labels.some((label) => {
-      const full = String(label.dataset.mflFullTableLabel || "").trim();
-      const short = String(label.dataset.mflCompactTableLabel || "").trim();
-      if (!full || !short || short === full || label.getClientRects().length === 0 || label.clientWidth <= 0) return false;
-      return label.scrollWidth - label.clientWidth > HEADER_LABEL_OVERFLOW_EPSILON;
-    });
-
-    labels.forEach((label) => {
+      const header = label.closest("th");
+      if (!(header instanceof HTMLTableCellElement)) return;
       const full = String(label.dataset.mflFullTableLabel || "").trim();
       const short = String(label.dataset.mflCompactTableLabel || "").trim();
       if (!full) return;
-      const desired = useCompact && short ? short : full;
+      const column = String(header.dataset.tableColumn || "");
+      if (mobile && column === "listing_price") {
+        label.textContent = "";
+        return;
+      }
+      const desired = compactHeader && short ? short : full;
       if (label.textContent !== desired) label.textContent = desired;
     });
   }
@@ -1187,6 +1162,7 @@
     scrollContainer?.removeEventListener("scroll", onScroll);
     document.removeEventListener("scroll", onEvaluationTableScroll, true);
     MOBILE_TABLE_MEDIA.removeEventListener("change", onMobileTableMediaChange);
+    HEADER_LABEL_COMPACT_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     PHONE_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     TINY_TABLE_MEDIA.removeEventListener("change", onResponsiveSizeChange);
     boundViewScrollers.forEach((handler, scroller) => scroller.removeEventListener("scroll", handler));
@@ -1223,6 +1199,7 @@
   scrollContainer?.addEventListener("scroll", onScroll, { passive: true });
   document.addEventListener("scroll", onEvaluationTableScroll, true);
   MOBILE_TABLE_MEDIA.addEventListener("change", onMobileTableMediaChange);
+  HEADER_LABEL_COMPACT_MEDIA.addEventListener("change", onResponsiveSizeChange);
   PHONE_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
   TINY_TABLE_MEDIA.addEventListener("change", onResponsiveSizeChange);
 
