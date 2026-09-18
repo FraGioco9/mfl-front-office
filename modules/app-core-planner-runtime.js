@@ -53,7 +53,38 @@
     if(!Number.isFinite(numeric))return 0;
     return Math.min(20,Math.max(0,Math.round(numeric*100)/100));
   }
+  function contractValueFromDatabase(value){
+    const numeric=Number(value);
+    return normalizeContractValue(Number.isFinite(numeric)?numeric/100:0);
+  }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
+  function plannerAgeMarker(player){
+    const retirementYears=player?.retirement_years===null||player?.retirement_years===undefined||String(player.retirement_years).trim()===""?null:Number(player.retirement_years);
+    if([1,2,3].includes(retirementYears)){
+      return {type:"retirement",status:"retiring-"+retirementYears,label:retirementYears+" year"+(retirementYears===1?"":"s")+" left"};
+    }
+    if(Number(player?.player_seasons)===1)return {type:"newMint",label:"New mint"};
+    return null;
+  }
+  function appendPlannerAgeMarker(host,player){
+    const marker=plannerAgeMarker(player);
+    if(!marker||!(host instanceof HTMLElement))return;
+    const element=document.createElement("span");
+    if(marker.type==="retirement"){
+      element.className="retirementMarker plannerAgeMarker retirementMarker--"+marker.status;
+    }else{
+      element.className="newMintMarker plannerAgeMarker";
+      const icon=document.createElementNS("http://www.w3.org/2000/svg","svg");
+      icon.setAttribute("class","newMintIcon");
+      icon.setAttribute("viewBox","0 0 24 24");
+      icon.setAttribute("aria-hidden","true");
+      icon.innerHTML='<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path><path d="M5 3v4"></path><path d="M3 5h4"></path>';
+      element.appendChild(icon);
+    }
+    element.dataset.tooltip=marker.label;
+    element.setAttribute("aria-label",marker.label);
+    host.appendChild(element);
+  }
   function clearPlayerResults(){
     playerSearchSequence+=1;
     if(playerSearchResults instanceof HTMLElement){playerSearchResults.hidden=true;playerSearchResults.replaceChildren();}
@@ -72,7 +103,7 @@
     if(!Number.isSafeInteger(playerId)||playerId<=0)return false;
     if(Number(player?.retirement_years)===0)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
-    roster.push({...player,planned_contract_value:0});
+    roster.push({...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)});
     roster.sort((a,b)=>(Number(b?.overall)||0)-(Number(a?.overall)||0)||Number(b?.player_id||0)-Number(a?.player_id||0));
     renderRoster();
     closePlayerAdder({focusButton:true});
@@ -132,12 +163,30 @@
     for(const player of roster){
       const row=document.createElement("tr");
       row.dataset.playerId=String(player.player_id);
-      for(const value of [player.name,player.positions,player.age,player.overall]){
+      for(const value of [player.name,player.positions]){
         const cell=document.createElement("td");
         cell.textContent=value===null||value===undefined||value===""?"—":String(value);
         row.appendChild(cell);
       }
+      const ageCell=document.createElement("td");
+      const ageContent=document.createElement("span");
+      ageContent.className="plannerAgeContent";
+      const ageValue=document.createElement("span");
+      ageValue.className="plannerAgeValue";
+      ageValue.textContent=player.age===null||player.age===undefined||player.age===""?"—":String(player.age);
+      ageContent.appendChild(ageValue);
+      appendPlannerAgeMarker(ageContent,player);
+      ageCell.appendChild(ageContent);
+      row.appendChild(ageCell);
+      const overallCell=document.createElement("td");
+      overallCell.textContent=player.overall===null||player.overall===undefined||player.overall===""?"—":String(player.overall);
+      row.appendChild(overallCell);
       const contractCell=document.createElement("td");
+      const contractControl=document.createElement("span");
+      contractControl.className="plannerContractControl";
+      const contractValue=document.createElement("span");
+      contractValue.className="plannerContractValue";
+      contractValue.textContent=contractText(player.planned_contract_value);
       const contractInput=document.createElement("input");
       contractInput.type="number";
       contractInput.className="plannerContractInput";
@@ -147,22 +196,52 @@
       contractInput.inputMode="decimal";
       contractInput.setAttribute("aria-label","Contract value for "+String(player.name||"player"));
       contractInput.value=contractText(player.planned_contract_value);
+      contractInput.hidden=true;
+      const editContract=document.createElement("button");
+      editContract.type="button";
+      editContract.className="plannerContractEditButton";
+      editContract.textContent="✎";
+      editContract.setAttribute("aria-label","Edit contract for "+String(player.name||"player"));
+      const finishContractEdit=(commit)=>{
+        if(commit){
+          const raw=contractInput.value.trim();
+          const numeric=Number(raw);
+          if(raw&&Number.isFinite(numeric))player.planned_contract_value=normalizeContractValue(numeric);
+        }
+        contractValue.textContent=contractText(player.planned_contract_value);
+        contractInput.value=contractText(player.planned_contract_value);
+        contractValue.hidden=false;
+        contractInput.hidden=true;
+        editContract.textContent="✎";
+        editContract.setAttribute("aria-label","Edit contract for "+String(player.name||"player"));
+      };
+      editContract.addEventListener("click",()=>{
+        if(contractInput.hidden){
+          contractValue.hidden=true;
+          contractInput.hidden=false;
+          contractInput.value=contractText(player.planned_contract_value);
+          editContract.textContent="✓";
+          editContract.setAttribute("aria-label","Confirm contract for "+String(player.name||"player"));
+          contractInput.focus();
+          contractInput.select?.();
+        }else{
+          finishContractEdit(true);
+        }
+      });
       contractInput.addEventListener("input",()=>{
         const raw=contractInput.value.trim();
         if(!raw)return;
         const numeric=Number(raw);
         if(!Number.isFinite(numeric))return;
         const normalized=normalizeContractValue(numeric);
-        player.planned_contract_value=normalized;
         if(numeric!==normalized)contractInput.value=contractText(normalized);
       });
-      const commitContract=()=>{
-        player.planned_contract_value=normalizeContractValue(contractInput.value);
-        contractInput.value=contractText(player.planned_contract_value);
-      };
-      contractInput.addEventListener("change",commitContract);
-      contractInput.addEventListener("blur",commitContract);
-      contractCell.appendChild(contractInput);
+      contractInput.addEventListener("keydown",event=>{
+        if(event.key==="Enter"){event.preventDefault();finishContractEdit(true);}
+        else if(event.key==="Escape"){event.preventDefault();finishContractEdit(false);editContract.focus();}
+      });
+      contractControl.append(contractValue,contractInput,editContract);
+      contractCell.appendChild(contractControl);
       row.appendChild(contractCell);
       const action=document.createElement("td");
       const remove=document.createElement("button");
@@ -219,7 +298,7 @@
       if(Number(payload.totalRows)>payload.rows.length)throw new Error("The full squad could not be loaded.");
       roster=payload.rows.map(values=>{
         const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
-        return {...player,planned_contract_value:normalizeContractValue(player.active_contract_revenue_share)};
+        return {...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)};
       });
       renderRoster();
     }catch(error){
