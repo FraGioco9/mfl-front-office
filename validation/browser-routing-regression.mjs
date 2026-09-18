@@ -391,7 +391,7 @@ const browserTestSource = String.raw`(() => {
         ".playerStack",
         ".playerPanel",
         ".pitchPanel",
-        ".pitch",
+        "#playerDetail .pitch",
       ];
       if (main.scrollWidth > main.clientWidth + 1) {
         const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
