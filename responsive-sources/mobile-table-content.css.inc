@@ -124,14 +124,6 @@
     padding: 0;
   }
 
-  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) {
-    align-items: center;
-  }
-
-  #progressionPage #tableBody :is(.tableControlCellContent, .tableOverallCellContent) > * {
-    align-self: center;
-  }
-
   #progressionPage .playerTableScroller :is(th, td).selectionCell input,
   #progressionPage .quickFilters input[type="checkbox"] {
     box-sizing: border-box;
