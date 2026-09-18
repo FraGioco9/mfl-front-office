@@ -89,7 +89,7 @@ assert.match(tableSource, /function compactMobilePlayerName\(value\)/, "Player n
 assert.match(tableSource, /function compactMobileJoinedAgency\(value\) \{[\s\S]*split\(\/\\s\+\/, 1\)\[0\]/, "Joined Agency must retain one canonical compact date-only formatter.");
 
 for (const [contract, label] of [
-  ["--mfl-responsive-table-age-marker-size: clamp(8px, calc(5.791411px + 0.613497vw), 16px);", "Age status markers"],
+  ["--mfl-responsive-table-age-marker-size: clamp(8px, calc(6.666667px + 0.370370vw), 10px);", "Age status markers"],
   ["--mfl-responsive-table-listing-icon-size: clamp(6px, calc(4.343558px + 0.460123vw), 12px);", "Listing icons"],
   ["--mfl-responsive-table-flag-size: clamp(10px, calc(7.791411px + 0.613497vw), 18px);", "nationality flags"],
   ["--mfl-responsive-table-note-icon-size: clamp(7px, calc(5.067485px + 0.536810vw), 14px);", "Note icons"],
@@ -105,13 +105,13 @@ for (const [contract, label] of [
 
 assert.match(
   responsiveSource,
-  /@media \(max-width: 1664px\) \{[\s\S]*--mfl-responsive-table-listing-icon-size: clamp\(6px,[\s\S]*12px\);[\s\S]*--mfl-responsive-table-flag-size: clamp\(10px,[\s\S]*18px\);[\s\S]*--mfl-responsive-table-age-marker-size: clamp\(8px,[\s\S]*16px\);/,
-  "Responsive table icons must share one continuous small-phone-to-large-desktop scale through 1664px.",
+  /@media \(max-width: 1664px\) \{[\s\S]*--mfl-responsive-table-listing-icon-size: clamp\(6px,[\s\S]*12px\);[\s\S]*--mfl-responsive-table-flag-size: clamp\(10px,[\s\S]*18px\);[\s\S]*--mfl-responsive-table-age-marker-size: clamp\(8px, calc\(6\.666667px \+ 0\.370370vw\), 10px\);/,
+  "Responsive table icons must keep their responsive tokens, with Age markers starting on a continuous 8-10px small-screen ramp.",
 );
-assert.match(
+assert.doesNotMatch(
   responsiveSource,
-  /@media \(min-width: 701px\) and \(max-width: 900px\) \{[\s\S]*--mfl-responsive-table-age-marker-size: 10px;/,
-  "Age status markers must stop growing above their <=700px mobile size before the compact-shell band.",
+  /@media \(min-width: 701px\) and \(max-width: 900px\) \{[\s\S]*--mfl-responsive-table-age-marker-size:\s*10px;/,
+  "Age status markers must not plateau between 701px and 900px; they must keep scaling from very small screens.",
 );
 assert.match(
   responsiveSource,
