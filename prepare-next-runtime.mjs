@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { materializeDeploymentCommit } from "./deployment-commit.mjs";
+
 const require = createRequire(import.meta.url);
 const { listLegacyPublicAssetPaths } = require("./legacy-public-assets.cjs");
 
@@ -10,6 +12,8 @@ const root = dirname(fileURLToPath(import.meta.url));
 const publicRoot = resolve(root, "public");
 
 export async function prepareNextRuntime() {
+  materializeDeploymentCommit({ root });
+
   await rm(publicRoot, { recursive: true, force: true });
   await mkdir(publicRoot, { recursive: true });
 
