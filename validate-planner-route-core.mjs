@@ -71,6 +71,11 @@ invariant(
     && html.includes('aria-modal="true"')
     && html.includes('id="plannerPlayerSearchInput"')
     && html.includes('id="plannerPlayerSearchResults"')
+    && html.includes('id="plannerPlayerSearchBody"')
+    && html.includes('class="plannerPlayerSearchTable"')
+    && html.includes('<th scope="col">Name</th>')
+    && html.includes('<th scope="col">Position(s)</th>')
+    && html.includes('<th scope="col">OVR</th>')
     && html.includes('id="plannerPlayerSelectionList"')
     && html.includes('id="plannerPlayerDiscardButton"')
     && html.includes('id="plannerPlayerConfirmButton"'),
@@ -117,7 +122,24 @@ invariant(
   "Planner Remove hover must tint only the row red while the X itself remains transparent.",
 );
 invariant(planner.includes("plannerAgeMarker") && planner.includes('retirementMarker--"+marker.status') && planner.includes('Number(player?.player_seasons)===1') && planner.includes('label:"New mint"'), "Planner Age must preserve canonical retirement and New mint marker semantics.");
-invariant(planner.includes('type:"players"') && planner.includes("retirement_years") && planner.includes("addPlayerToRoster"), "Planner Add player must reuse canonical non-retired player search with a client guard.");
+invariant(
+  planner.includes('type:"players"')
+    && planner.includes('limit:"25"')
+    && planner.includes("retirement_years")
+    && planner.includes("addPlayerToRoster"),
+  "Planner Add player must reuse canonical non-retired player search with a 25-result search window and client guard.",
+);
+invariant(
+  planner.includes("const inSquad=roster.some")
+    && planner.includes('button.textContent=inSquad?"In squad":selected?"Selected":atCapacity?"Squad full":"Select"')
+    && !planner.includes('retirement_years)===0||roster.some'),
+  "Planner search must keep matching current-squad players visible as disabled In squad rows instead of filtering them out.",
+);
+invariant(
+  planner.includes('typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null')
+    && planner.includes('row.append(flagCell,nameCell,positionsCell,ageCell,overallCell,actionCell)'),
+  "Planner player-search table must render flag, name, positions, age, overall and action columns.",
+);
 invariant(
   planner.includes("const MAX_SQUAD_SIZE=25")
     && planner.includes("pendingPlayers=new Map()")
@@ -133,10 +155,21 @@ invariant(
   "Planner Add player modal must enter and leave the site's canonical modalOpen state.",
 );
 invariant(
-  styles.includes(".plannerPlayerDialog")
+  styles.includes(".plannerPlayerDialog{width:min(1040px,calc(100vw - 48px));height:min(760px,calc(100vh - 48px))")
+    && styles.includes(".plannerPlayerSearchTable{width:100%;table-layout:fixed")
     && styles.includes(".plannerPlayerSelectionList")
     && styles.includes(".plannerPlayerModalFooter"),
-  "Planner Add player modal must own dedicated dialog, selection-list and footer styling.",
+  "Planner Add player modal must use the enlarged table-based dialog with selection-list and footer styling.",
+);
+invariant(
+  styles.includes(".plannerPlayerSearchControl:hover #plannerPlayerSearchInput:not(:disabled),#plannerPlayerSearchInput:focus:not(:disabled),#plannerPlayerSearchInput:focus-visible:not(:disabled)")
+    && styles.includes("border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none"),
+  "Planner player search input must use the site's standard search highlight.",
+);
+invariant(
+  styles.includes(".plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0 0 4px")
+    && styles.includes("#plannerAddPlayerButton{align-self:center"),
+  "Planner Depth and Squad headings must align while the Depth pitch sits directly below its heading.",
 );
 invariant(
   planner.includes("PLANNER_POSITION_ORDER")
