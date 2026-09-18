@@ -7574,27 +7574,41 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterPanel,.plannerPitchPanel{min-width:0}
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerRosterHeader h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
-.plannerPitchPanel h3{margin:0 0 12px;font-size:16px;font-weight:800}
+.plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0 0 4px;font-size:16px;font-weight:800}
 #plannerAddPlayerButton{align-self:center;flex-shrink:0}
 .plannerPlayerModalBackdrop{z-index:var(--mfl-z-modal)}
-.plannerPlayerDialog{width:min(560px,calc(100vw - 24px));max-height:min(680px,calc(100vh - 24px))}
-.plannerPlayerModalBody{display:grid;gap:10px;min-height:0;padding:14px;overflow:auto}
+.plannerPlayerDialog{width:min(1040px,calc(100vw - 48px));height:min(760px,calc(100vh - 48px));max-width:calc(100vw - 48px);max-height:calc(100vh - 48px)}
+.plannerPlayerModalBody{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px;min-height:0;padding:16px 18px;overflow:hidden}
 .plannerPlayerSearchControl{position:relative;width:100%}
-#plannerPlayerSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px}
+#plannerPlayerSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px;transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}
+.plannerPlayerSearchControl:hover #plannerPlayerSearchInput:not(:disabled),#plannerPlayerSearchInput:focus:not(:disabled),#plannerPlayerSearchInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}
 .plannerPlayerSearchClearButton{position:absolute;top:50%;right:4px;width:30px;height:30px;transform:translateY(-50%);border-color:transparent;background:transparent;box-shadow:none}
 .plannerPlayerSelectionStatus{margin:0;color:var(--text-soft);font-size:12px}
-.plannerPlayerSearchResults{display:grid;gap:6px;max-height:280px;padding:0;overflow-y:auto}
+.plannerPlayerSearchResults{min-height:0;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
 .plannerPlayerSearchResults[hidden]{display:none}
-.plannerPlayerSearchResult{position:relative;width:100%;padding-right:76px}
-.plannerPlayerSearchResult.selected{border-color:var(--primary-hover);background:var(--row-hover)}
-.plannerPlayerSearchResult:disabled{cursor:not-allowed;opacity:.45}
-.plannerPlayerResultSelection{position:absolute;top:50%;right:10px;color:var(--text-soft);font-size:11px;font-weight:700;transform:translateY(-50%)}
-.plannerPlayerSearchResult.selected .plannerPlayerResultSelection{color:var(--primary)}
+.plannerPlayerSearchTable{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}
+.plannerPlayerSearchTable .plannerPlayerSearchFlagColumn{width:7%}
+.plannerPlayerSearchTable .plannerPlayerSearchNameColumn{width:34%}
+.plannerPlayerSearchTable .plannerPlayerSearchPositionsColumn{width:21%}
+.plannerPlayerSearchTable .plannerPlayerSearchAgeColumn{width:10%}
+.plannerPlayerSearchTable .plannerPlayerSearchOverallColumn{width:10%}
+.plannerPlayerSearchTable .plannerPlayerSearchSelectColumn{width:18%}
+.plannerPlayerSearchTable th{position:sticky;top:0;z-index:1;height:34px;padding:0 10px;background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);line-height:34px;text-align:left;text-transform:uppercase}
+.plannerPlayerSearchTable td{height:38px;padding:0 10px;border-bottom:1px solid var(--mfl-table-border-color);line-height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerPlayerSearchTable th:nth-child(1),.plannerPlayerSearchTable td:nth-child(1),.plannerPlayerSearchTable th:nth-child(4),.plannerPlayerSearchTable td:nth-child(4),.plannerPlayerSearchTable th:nth-child(5),.plannerPlayerSearchTable td:nth-child(5),.plannerPlayerSearchTable th:nth-child(6),.plannerPlayerSearchTable td:nth-child(6){text-align:center}
+.plannerPlayerSearchResult.selected td{background:var(--row-hover)}
+.plannerPlayerSearchResult.inSquad td{color:var(--text-soft)}
+.plannerPlayerSearchResult:hover td{background:var(--row-hover)}
+.plannerPlayerSearchFlagCell .flagImage{display:block;width:20px;height:20px;margin:0 auto}
+.plannerPlayerSearchNameCell{font-weight:700}
+.plannerPlayerSearchActionCell{overflow:visible}
+.plannerPlayerSelectButton{min-width:92px;height:28px;min-height:28px;padding:0 10px}
+#plannerPlayerSearchEmpty{padding:18px 12px;text-align:center}
 .plannerPlayerSelection{display:grid;gap:6px;min-height:0}
 .plannerPlayerSelection[hidden]{display:none}
 .plannerPlayerSelection h3{margin:0;font-size:13px}
-.plannerPlayerSelectionList{display:grid;gap:4px;max-height:150px;overflow-y:auto}
-.plannerPendingPlayer{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:32px;padding:5px 8px;text-align:left}
+.plannerPlayerSelectionList{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px;max-height:104px;overflow-y:auto}
+.plannerPendingPlayer{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:30px;padding:4px 8px;border-color:var(--border);background:var(--surface-muted);text-align:left}
 .plannerPendingPlayerRemove{flex:0 0 auto;color:var(--danger);font-size:18px;line-height:1}
 .plannerPlayerModalFooter{margin-top:2px}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
@@ -7633,7 +7647,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterTable td:first-child .plannerRosterSkeleton{margin-left:0}
 .plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:640px;height:auto;aspect-ratio:360/498;margin:0 auto}
 #plannerRosterRetryButton{margin-top:8px}
-@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerRosterTable .plannerPlayerColumn{width:36%}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:14%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:8%}.plannerRosterTable th,.plannerRosterTable td{padding:3px 3px}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
+@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:4px}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerPlayerSearchTable{min-width:700px}.plannerRosterTable .plannerPlayerColumn{width:36%}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:14%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:8%}.plannerRosterTable th,.plannerRosterTable td{padding:3px 3px}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
