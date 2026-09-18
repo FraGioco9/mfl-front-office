@@ -1063,8 +1063,8 @@
             <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
               <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
               <table class="plannerRosterTable" aria-label="Planned squad">
-                <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerRemoveColumn"></colgroup>
-                <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
+                <thead><tr><th scope="col">Player</th><th scope="col">Pos.</th><th scope="col">Age</th><th scope="col">OVR</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
                 <tbody id="plannerRosterBody"></tbody>
               </table>
               <p id="plannerRosterStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
@@ -1114,7 +1114,7 @@
               for (let index = 0; index < 8; index += 1) {
                 const row = document.createElement("tr");
                 row.setAttribute("aria-hidden", "true");
-                for (let column = 0; column < 5; column += 1) {
+                for (let column = 0; column < 6; column += 1) {
                   const cell = document.createElement("td");
                   const skeleton = document.createElement("span");
                   skeleton.className = "plannerRosterSkeleton";
