@@ -133,7 +133,9 @@ const browserTestSource = String.raw`(() => {
                     : "myclubs-out")
             : window.location.pathname === "/mfl/stats"
               ? "mflstats"
-              : "unknown";
+              : window.location.pathname === "/planner"
+                ? "planner"
+                : "unknown";
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
@@ -249,6 +251,9 @@ const browserTestSource = String.raw`(() => {
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
+      plannerHidden: hidden("#plannerPage"),
+      plannerTitle: text("#plannerPage .tablePageTitle"),
+      bodyPage: String(document.body.dataset.page || ""),
       filterCount: text("#filterSummary"),
       sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
       sortDirection: String(document.querySelector("#tableHead th[aria-sort]")?.getAttribute("aria-sort") || ""),
@@ -510,6 +515,12 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "stats", "MFL Stats first paint has the wrong view.");
+    } else if (scenario === "planner") {
+      assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
+      assert(parserSnapshot.bodyPage === "planner", "Planner first paint has the wrong body page owner: " + parserSnapshot.bodyPage);
+      assert(parserSnapshot.plannerHidden === false, "Planner page is still hidden at parser-time first paint.");
+      assert(parserSnapshot.plannerTitle === "Planner", "Planner parser-time heading is wrong: " + parserSnapshot.plannerTitle);
+      assert(parserSnapshot.title === "Planner - MFL Front Office", "Planner parser-time browser title is wrong: " + parserSnapshot.title);
     }
   }
 
@@ -589,6 +600,15 @@ const browserTestSource = String.raw`(() => {
         clubText: text("#myClubsGrid"),
         statusText: text("#myClubsStatus"),
         walletAddress: typeof state !== "undefined" ? String(state.linkedWalletAddress || "") : "",
+      };
+    }
+    if (scenario === "planner") {
+      return {
+        path: window.location.pathname,
+        title: document.title,
+        page: String(document.body.dataset.page || ""),
+        plannerHidden: hidden("#plannerPage"),
+        plannerTitle: text("#plannerPage .tablePageTitle"),
       };
     }
     return {
@@ -743,6 +763,12 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.statsHidden === false, "MFL Stats page remained hidden after readiness.");
       assert(stateValue.distributionSkeleton === false, "MFL Stats kept its skeleton after authoritative data rendered.");
       assert(stateValue.distributionColumns > 0, "MFL Stats did not restore real histogram columns after navigation.");
+    } else if (scenario === "planner") {
+      assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
+      assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
+      assert(stateValue.plannerHidden === false, "Planner page became hidden after route readiness.");
+      assert(stateValue.plannerTitle === "Planner", "Planner heading changed after route readiness: " + stateValue.plannerTitle);
+      assert(stateValue.title === "Planner - MFL Front Office", "Planner browser title changed after route readiness: " + stateValue.title);
     }
   }
 
@@ -1880,6 +1906,7 @@ const regressionScenarios = Object.freeze([
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["mflstats", "/mfl/stats"],
+  ["planner", "/planner"],
 ]);
 
 const server = await createRegressionServer();
