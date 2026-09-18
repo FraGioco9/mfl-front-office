@@ -89,7 +89,8 @@ invariant(
     && planner.includes('contractInput.setAttribute("data-min","0")')
     && planner.includes('contractInput.setAttribute("data-max","20")')
     && planner.includes('replace(/,/g,".")')
-    && planner.includes("toFixed(2)"),
+    && planner.includes("toFixed(2)")
+    && planner.includes('contractDisplayText(value){return contractText(value)+"%";'),
   "Planner Contract must use dot-decimal text editing while preserving the 0.00 through 20.00 formatted range.",
 );
 invariant(planner.includes("contractValueFromDatabase") && planner.includes("numeric/100") && planner.includes("active_contract_revenue_share"), "Planner Contract must seed from the database value divided by 100.");
@@ -143,6 +144,7 @@ invariant(
     && planner.includes('["GK","RB","CB","LB","RWB","LWB","CDM","RM","CM","LM","CAM","RW","CF","LW","ST"]'),
   "Planner roster must use the canonical primary-position order.",
 );
+invariant(html.includes('<h3 id="plannerPitchHeading">Depth</h3>') && html.includes('aria-label="Squad depth pitch"'), "Planner pitch section must be labeled Depth.");
 invariant(
   html.includes('id="plannerAverageAge"')
     && html.includes('id="plannerAverageOverall"')
@@ -152,9 +154,10 @@ invariant(
 );
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:38%}")
-    && styles.includes("max-width:560px")
+    && styles.includes("max-width:640px")
+    && styles.includes("width:calc(100% - 16px)")
     && styles.includes("gap:32px"),
-  "Planner desktop layout must shorten the Player column and enlarge the pitch while keeping a safe table/pitch gutter.",
+  "Planner desktop layout must shorten the Player column and enlarge the Depth pitch while keeping a safe gutter and internal panel margin.",
 );
 invariant(
   styles.includes(".plannerTeamSearchResult:hover,.plannerTeamSearchResult:focus-visible")
