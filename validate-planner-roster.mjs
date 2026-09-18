@@ -134,11 +134,12 @@ assert.equal(route.confirmPendingPlayers(), true, "Add selected must commit the 
 assert.equal(body.children.some(row => row.dataset.playerId === "9"), true, "Confirmed staged player must enter the squad");
 assert.equal(body.children.some(row => row.dataset.playerId === "10"), true, "All staged players must be committed together");
 for(let id=20;id<39;id+=1){
-  assert.equal(route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5 }, { render:false }), true);
+  assert.equal(route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5, active_contract_revenue_share:2000 }, { render:false }), true);
 }
 assert.equal(route.togglePendingPlayer({ player_id: 90, name: "Final Slot", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), true, "Modal selection must allow the final available squad slot");
 assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Modal selection must stop when staged squad size reaches 25");
 assert.equal(route.confirmPendingPlayers(), true, "Final available slot must be confirmable");
+assert.equal(elements.get("plannerTotalContracts").textContent, "Total 100.00%", "Planner total Contract must never exceed 100%");
 assert.equal(route.addPlayer({ player_id: 92, name: "Twenty Six", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Planner squad must never exceed 25 players");
 
 elements.get("plannerPlayerSearchInput").value = "Final";
@@ -167,7 +168,8 @@ assert.equal(searchBody.children[0].children[2].textContent, "CB", "Search table
 assert.equal(searchBody.children[0].children[3].textContent, "22", "Search table must show player age");
 assert.equal(searchBody.children[0].children[4].textContent, "60", "Search table must show player overall");
 assert.equal(searchBody.children[0].children[5].children[0].textContent, "In squad", "Current-squad players must be shown with an In squad action instead of disappearing");
-assert.equal(searchBody.children[0].children[5].children[0].disabled, true, "Current-squad players must not be selectable twice");
+assert.equal(searchBody.children[0].children[5].children[0].attributes["aria-disabled"], "true", "Current-squad players must not be selectable twice");
 assert.equal(searchBody.children[1].children[5].children[0].textContent, "Squad full", "Non-squad players must respect the 25-player cap");
+assert.equal(elements.get("plannerPlayerSelectionBody").children.length, 0, "Confirmed selections must clear the selected-player table");
 
-console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
+console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, selected table, 100% contract cap, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
