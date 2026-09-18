@@ -70,16 +70,19 @@ function playerSearchRows(query, limit, options = {}) {
   const prefix = literalLikePattern(query, true);
   const surnamePrefix = `% ${prefix}`;
   const surnameExact = surnamePrefix.slice(0, -1);
+  const nameTokens = String(query || "").split(/\s+/).filter(Boolean);
+  const nameTokenPatterns = nameTokens.map((token) => literalLikePattern(token));
   const useRuntimeSearch = tableExists("runtime_player_search");
   const fromSql = useRuntimeSearch
     ? "runtime_player_search s JOIN players p ON p.player_id = s.player_id"
     : "players p";
   const normalizedName = useRuntimeSearch ? "s.normalized_name" : "normalize_search(p.name)";
+  const nameMatch = nameTokenPatterns.map(() => `${normalizedName} LIKE ? ESCAPE '\\'`).join(" AND ");
   const rows = queryRows(
     `SELECT ${qualifiedSelectList("p", columns)}
      FROM ${fromSql}
      WHERE (CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\'
-        OR ${normalizedName} LIKE ? ESCAPE '\\')
+        OR (${nameMatch}))
        ${activeCondition}
      ORDER BY CASE
        WHEN CAST(p.player_id AS TEXT) = ? THEN 0
@@ -92,7 +95,7 @@ function playerSearchRows(query, limit, options = {}) {
      p.overall DESC,
      p.player_id DESC
      LIMIT ?`,
-    [contains, contains, query, query, surnameExact, surnamePrefix, prefix, prefix, limit],
+    [contains, ...nameTokenPatterns, query, query, surnameExact, surnamePrefix, prefix, prefix, limit],
   );
   return { columns, rows: rowsAsArrays(rows, columns) };
 }
