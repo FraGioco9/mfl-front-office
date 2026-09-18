@@ -1,0 +1,14 @@
+        <section id="plannerPage" class="pageView plannerPage" hidden>
+          <h2 class="tablePageTitle">Planner</h2>
+          <section class="plannerTeamSelector" aria-label="Team selection">
+            <label class="plannerTeamSearchLabel" for="plannerTeamSearchInput">Team</label>
+            <div class="plannerTeamSearch">
+              <div class="plannerTeamSearchControl">
+                <input id="plannerTeamSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by team ID or name" aria-autocomplete="list" aria-controls="plannerTeamSearchResults">
+                <button id="plannerTeamSearchClearButton" class="iconButton popupCloseButton plannerTeamSearchClearButton" type="button" aria-label="Clear team search" hidden></button>
+              </div>
+              <div id="plannerTeamSearchResults" class="plannerTeamSearchResults" role="listbox" hidden></div>
+            </div>
+          </section>
+          <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
+        </section>
