@@ -320,6 +320,12 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   return;
 }
 
+if (pageName === "planner") {
+    const plannerOwner = Reflect.get(window, "__mflRenderPlannerPageOwner");
+    if (typeof plannerOwner !== "function") throw new Error("Planner route owner is unavailable.");
+    return plannerOwner.call(this, updateHash, options);
+  }
+
 if (pageName === "my-clubs") {
     const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
     if (typeof myClubsOwner !== "function") throw new Error("My Clubs route owner is unavailable.");

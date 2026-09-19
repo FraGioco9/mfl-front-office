@@ -64,22 +64,26 @@ function literalLikePattern(value, prefixOnly = false) {
 function playerSearchRows(query, limit, options = {}) {
   const columns = SEARCH_PLAYER_COLUMNS;
   const activeCondition = options.excludeRetired
-    ? "AND coalesce(CAST(p.retirement_years AS INTEGER), -1) <> 0"
+    ? "AND coalesce(CAST(NULLIF(trim(p.retirement_years), '') AS INTEGER), -1) <> 0"
     : "";
   const contains = literalLikePattern(query);
   const prefix = literalLikePattern(query, true);
   const surnamePrefix = `% ${prefix}`;
   const surnameExact = surnamePrefix.slice(0, -1);
+  const nameTokens = String(query || "").split(/\s+/).filter(Boolean);
+  const nameTokenPatterns = nameTokens.map((token) => literalLikePattern(token));
   const useRuntimeSearch = tableExists("runtime_player_search");
   const fromSql = useRuntimeSearch
-    ? "runtime_player_search s JOIN players p ON p.player_id = s.player_id"
+    ? "players p LEFT JOIN runtime_player_search s ON s.player_id = p.player_id"
     : "players p";
-  const normalizedName = useRuntimeSearch ? "s.normalized_name" : "normalize_search(p.name)";
+  const normalizedName = useRuntimeSearch ? "coalesce(s.normalized_name, normalize_search(p.name))" : "normalize_search(p.name)";
+  const offset = Math.max(0, Math.min(100000, Math.trunc(Number(options.offset) || 0)));
+  const nameMatch = nameTokenPatterns.map(() => `${normalizedName} LIKE ? ESCAPE '\\'`).join(" AND ");
   const rows = queryRows(
     `SELECT ${qualifiedSelectList("p", columns)}
      FROM ${fromSql}
      WHERE (CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\'
-        OR ${normalizedName} LIKE ? ESCAPE '\\')
+        OR (${nameMatch}))
        ${activeCondition}
      ORDER BY CASE
        WHEN CAST(p.player_id AS TEXT) = ? THEN 0
@@ -91,10 +95,10 @@ function playerSearchRows(query, limit, options = {}) {
      END,
      p.overall DESC,
      p.player_id DESC
-     LIMIT ?`,
-    [contains, contains, query, query, surnameExact, surnamePrefix, prefix, prefix, limit],
+     LIMIT ? OFFSET ?`,
+    [contains, ...nameTokenPatterns, query, query, surnameExact, surnamePrefix, prefix, prefix, limit + 1, offset],
   );
-  return { columns, rows: rowsAsArrays(rows, columns) };
+  return { columns, rows: rowsAsArrays(rows.slice(0, limit), columns), hasMore: rows.length > limit, offset };
 }
 
 function agentSearchRows(query, limit) {
@@ -291,7 +295,7 @@ function searchData(request) {
   }
   if (type === "agents") return agentSearchRows(query, limit);
   if (type === "clubs") return { results: clubSearchRows(query, limit) };
-  return playerSearchRows(query, limit, { excludeRetired: true });
+  return playerSearchRows(query, limit, { excludeRetired: true, offset: request.query?.offset });
 }
 
 function summaryData() {

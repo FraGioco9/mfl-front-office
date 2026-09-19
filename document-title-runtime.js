@@ -9,6 +9,7 @@
     database: "Database",
     mfl: "MFL",
     progression: "Progression",
+    planner: "Planner",
     evaluation: "Evaluation",
     watchlist: "Watchlist",
     myplayers: "My Players",
@@ -55,16 +56,16 @@
   }
 
   function fallbackRoutePageName() {
-    if (document.body?.dataset.page === "notfound") return "notfound";
     const firstPart = String(window.location.pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
     if (!firstPart) return "home";
     if (firstPart === "my-players") return "myplayers";
     if (firstPart === "my-clubs" || firstPart === "myclubs") return "my-clubs";
     if (["club", "clubs"].includes(firstPart)) return "club";
     if (firstPart === "players") return "player";
-    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
+    if (["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
+    if (document.body?.dataset.page === "notfound") return "notfound";
     return "notfound";
   }
 
@@ -194,6 +195,7 @@
     const currentTitle = cleanText(document.title);
     const usable = pageName === "home" ? currentTitle === APP_NAME : Boolean(currentTitle && currentTitle !== APP_NAME);
     if (!usable) return;
+    if (pageName !== "notfound" && currentTitle === withAppName(GENERIC_PAGE_LABELS.notfound)) return;
     stableRouteIdentity = routeIdentityForRequest(request);
     stableTitle = currentTitle;
   }

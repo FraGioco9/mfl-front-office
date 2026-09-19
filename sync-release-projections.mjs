@@ -156,6 +156,7 @@ function firstPaintDocumentTitleProjectionSource() {
           database: "Database",
           mfl: "MFL",
           progression: "Progression",
+          planner: "Planner",
           "my-players": "My Players",
           myplayers: "My Players",
           "my-clubs": "My Clubs",

@@ -285,6 +285,20 @@ function pageTargetFromPath(path) {
     };
   }
 
+  if (cleanPath === "/planner") {
+    const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const clubId = String(params.get("club") || "").trim();
+    const canonicalPath = clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+    return {
+      pageName: "planner",
+      options: {
+        path: canonicalPath,
+        ...(clubId ? { clubId } : {}),
+        ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
+    };
+  }
+
   if (cleanPath === "/evaluation") {
     const queryIndex = requestedPath.indexOf("?");
     const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";
@@ -446,12 +460,21 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "planner", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
 
 function pagePath(pageName, options = {}) {
+  if (pageName === "planner") {
+    const explicitPath = String(options.path || "");
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
+    const clubId = String(options.clubId || (window.location.pathname === "/planner"
+      ? new URLSearchParams(window.location.search).get("club")
+      : "") || "").trim();
+    return clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+  }
+
   if (pageName === "club") {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);

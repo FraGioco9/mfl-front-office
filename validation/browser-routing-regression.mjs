@@ -23,7 +23,7 @@ const testPlayer = Object.freeze({
   nationality: "Italy",
   retirement_years: 5,
   owned_since: 1700000000,
-  player_seasons: 1,
+  player_seasons: 5,
   overall: 80,
   pace: 90,
   shooting: 82,
@@ -34,7 +34,8 @@ const testPlayer = Object.freeze({
   goalkeeping: 10,
   height: 185,
   preferred_foot: "Right",
-  active_contract_revenue_share: 10,
+  active_contract_revenue_share: 1250,
+  active_contract_nb_matches: 12,
   active_contract_club_id: "browser-club",
   active_contract_club_name: "Browser FC",
   active_contract_club_division: 2,
@@ -50,6 +51,9 @@ const searchColumns = [
   "wallet_name",
   "active_contract_club_id",
   "active_contract_club_name",
+  "retirement_years",
+  "player_seasons",
+  "active_contract_revenue_share",
 ];
 const publicColumns = [
   "player_id",
@@ -73,6 +77,7 @@ const publicColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -100,6 +105,7 @@ const pageColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -133,7 +139,9 @@ const browserTestSource = String.raw`(() => {
                     : "myclubs-out")
             : window.location.pathname === "/mfl/stats"
               ? "mflstats"
-              : "unknown";
+              : window.location.pathname === "/planner"
+                ? (window.location.search === "?club=9001" ? "planner-selected" : "planner")
+                : "unknown";
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
@@ -143,7 +151,7 @@ const browserTestSource = String.raw`(() => {
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
+    if (!["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
     return originalFetch(input, { ...init, headers });
@@ -249,6 +257,21 @@ const browserTestSource = String.raw`(() => {
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
+      plannerHidden: hidden("#plannerPage"),
+      plannerTitle: text("#plannerPage .tablePageTitle"),
+      plannerTeamSelectorHidden: hidden("#plannerTeamSelector"),
+      plannerSelectedTeamHidden: hidden("#plannerSelectedTeam"),
+      plannerWorkspaceHidden: hidden("#plannerWorkspace"),
+      plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
+      plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
+      plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
+      plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
+      plannerTeamCardBottom: document.getElementById("plannerTeamCard")?.getBoundingClientRect().bottom || 0,
+      plannerTeamCardHeight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().height || 0,
+      plannerClearButtonLeft: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().left || 0,
+      plannerClearButtonTop: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().top || 0,
+      plannerClearButtonRight: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().right || 0,
+      bodyPage: String(document.body.dataset.page || ""),
       filterCount: text("#filterSummary"),
       sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
       sortDirection: String(document.querySelector("#tableHead th[aria-sort]")?.getAttribute("aria-sort") || ""),
@@ -373,7 +396,7 @@ const browserTestSource = String.raw`(() => {
         ".playerStack",
         ".playerPanel",
         ".pitchPanel",
-        ".pitch",
+        "#playerDetail .pitch",
       ];
       if (main.scrollWidth > main.clientWidth + 1) {
         const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
@@ -510,6 +533,30 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "stats", "MFL Stats first paint has the wrong view.");
+    } else if (scenario === "planner" || scenario === "planner-selected") {
+      assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
+      assert(parserSnapshot.bodyPage === "planner", "Planner first paint has the wrong body page owner: " + parserSnapshot.bodyPage);
+      assert(parserSnapshot.plannerHidden === false, "Planner page is still hidden at parser-time first paint.");
+      assert(parserSnapshot.plannerTitle === "Planner", "Planner parser-time heading is wrong: " + parserSnapshot.plannerTitle);
+      assert(parserSnapshot.title === "Planner - MFL Front Office", "Planner parser-time browser title is wrong: " + parserSnapshot.title);
+      if (scenario === "planner-selected") {
+        assert(parserSnapshot.plannerTeamSelectorHidden === true, "Selected Planner first paint exposed the Team search.");
+        assert(parserSnapshot.plannerSelectedTeamHidden === false, "Selected Planner first paint did not expose the club identity.");
+        assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
+        assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
+        assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
+        assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
+        assert(parserSnapshot.plannerTeamCardHeight <= 145, "Selected Planner club card must use the compact height at first paint.");
+        if (innerWidth > 600) {
+          assert(parserSnapshot.plannerClearButtonLeft - parserSnapshot.plannerTeamCardRight >= 8, "Selected Planner Clear must sit outside the club card on desktop at first paint.");
+        } else {
+          assert(parserSnapshot.plannerClearButtonTop >= parserSnapshot.plannerTeamCardBottom - 1, "Selected Planner Clear must sit below the club card on phone at first paint.");
+        }
+      } else {
+        assert(parserSnapshot.plannerTeamSelectorHidden === false, "Empty Planner first paint hid the Team search.");
+        assert(parserSnapshot.plannerSelectedTeamHidden === true, "Empty Planner first paint exposed a selected club.");
+        assert(parserSnapshot.plannerWorkspaceHidden === true, "Empty Planner first paint exposed the workspace.");
+      }
     }
   }
 
@@ -589,6 +636,20 @@ const browserTestSource = String.raw`(() => {
         clubText: text("#myClubsGrid"),
         statusText: text("#myClubsStatus"),
         walletAddress: typeof state !== "undefined" ? String(state.linkedWalletAddress || "") : "",
+      };
+    }
+    if (scenario === "planner" || scenario === "planner-selected") {
+      return {
+        path: window.location.pathname,
+        search: window.location.search,
+        title: document.title,
+        page: String(document.body.dataset.page || ""),
+        plannerHidden: hidden("#plannerPage"),
+        plannerTitle: text("#plannerPage .tablePageTitle"),
+        teamSelectorHidden: hidden("#plannerTeamSelector"),
+        selectedTeamHidden: hidden("#plannerSelectedTeam"),
+        workspaceHidden: hidden("#plannerWorkspace"),
+        teamName: text("#plannerTeamName"),
       };
     }
     return {
@@ -743,6 +804,18 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.statsHidden === false, "MFL Stats page remained hidden after readiness.");
       assert(stateValue.distributionSkeleton === false, "MFL Stats kept its skeleton after authoritative data rendered.");
       assert(stateValue.distributionColumns > 0, "MFL Stats did not restore real histogram columns after navigation.");
+    } else if (scenario === "planner" || scenario === "planner-selected") {
+      assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
+      assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
+      assert(stateValue.plannerHidden === false, "Planner page became hidden after route readiness.");
+      assert(stateValue.plannerTitle === "Planner", "Planner heading changed after route readiness: " + stateValue.plannerTitle);
+      assert(stateValue.title === "Planner - MFL Front Office", "Planner browser title changed after route readiness: " + stateValue.title);
+      if (scenario === "planner-selected") {
+        assert(stateValue.search === "?club=9001", "Selected Planner query state was not preserved: " + stateValue.search);
+        assert(stateValue.teamSelectorHidden === true, "Selected Planner exposed the Team search after readiness.");
+        assert(stateValue.selectedTeamHidden === false && stateValue.workspaceHidden === false, "Selected Planner did not keep the club workspace visible.");
+        assert(stateValue.teamName === "Browser Club", "Selected Planner did not restore the club identity.");
+      }
     }
   }
 
@@ -1310,11 +1383,252 @@ const browserTestSource = String.raw`(() => {
       document.querySelectorAll("#myClubsGrid .myClubCardCompetitionUnavailable").forEach((card) => {
         assert(card.querySelector(".myClubCompetitions") === null, "My Clubs direct failure fallback kept its separator.");
       });
+    } else if (scenario === "planner-selected") {
+      await waitFor(
+        () => text("#plannerTeamName") === "Browser Club"
+          && document.querySelector("#plannerRosterBody tr[data-player-id]"),
+        "Selected Planner direct refresh",
+      );
     } else {
       await delay(80);
     }
     const directState = routeState();
     assertRouteState(directState);
+
+    if (scenario === "planner-selected") {
+      assert(hidden("#plannerTeamSelector"), "Selected Planner refresh must keep the Team search hidden.");
+      assert(!hidden("#plannerSelectedTeam"), "Selected Planner refresh must show the club identity.");
+      assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
+      assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
+      assert(text("#plannerTeamDivision") === "Diamond", "Selected Planner refresh must restore the division.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
+      assert(text("#plannerTeamId") === "#9001", "Selected Planner card must show its club ID.");
+      assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
+      const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
+      const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
+      const cardBox = document.getElementById("plannerTeamCard").getBoundingClientRect();
+      assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay right-aligned outside its card after hydration.");
+      assert(cardBox.height <= 145, "Selected Planner club card must remain compact after hydration.");
+      if (innerWidth > 600) {
+        assert(clearBox.left - cardBox.right >= 8, "Selected Planner Clear must stay outside the club card on desktop.");
+      } else {
+        assert(clearBox.top >= cardBox.bottom - 1, "Selected Planner Clear must stay below the club card on phone.");
+      }
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Planner club name must reuse the Club page identity position.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityMeta"), "Planner club division/location must reuse the Club page identity position.");
+      assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected Planner refresh must show the club logo.");
+      assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Selected Planner refresh must restore the roster.");
+      assert(document.documentElement.scrollWidth <= innerWidth, "Selected Planner must not overflow horizontally.");
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", "planner-selected: selected club workspace replaced search from parser-time first paint through hydration.");
+      return;
+    }
+
+    if (scenario === "planner") {
+      const input = document.getElementById("plannerTeamSearchInput");
+      assert(input.getBoundingClientRect().width <= 520, "Planner search must stay within its widened 520px limit.");
+      input.value = "Browser";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector(".plannerTeamSearchResult"), "Planner team search");
+      const teamResult = document.querySelector(".plannerTeamSearchResult");
+      assert(teamResult instanceof HTMLButtonElement, "Planner team result is missing.");
+      assert(teamResult.classList.contains("searchResult"), "Planner club results must retain the canonical searchResult highlight owner.");
+      document.querySelector(".tablePageTitle").click();
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Team results must remain open after clicking outside a non-empty search.");
+      input.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Escape must preserve results while the team query is non-empty.");
+
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert(hidden("#plannerTeamSelector"), "Selected team must replace the search.");
+      assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
+      assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
+      assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
+      assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");
+      assert(text("#plannerTeamId") === "#9001", "Selected team card must show its ID.");
+      assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
+      assert(location.search === "?club=9001", "Selected team URL is incorrect.");
+      assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
+      assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(4)") === "23", "Planner must show player age.");
+      const squadPlayer = document.querySelector("#plannerRosterBody tr[data-player-id]");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
+      }
+      assert(squadPlayer.querySelector("td:nth-child(5) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
+      assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
+      assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
+      assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
+      const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
+      assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
+      const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
+      assert(ageMarker instanceof HTMLElement && ageMarker.classList.contains("retirementMarker--retiring-2"), "Planner must show the canonical retirement marker beside Age.");
+      const contractValue = document.querySelector("#plannerRosterBody .plannerContractValue");
+      const contractEditor = document.querySelector("#plannerRosterBody .plannerContractEditor");
+      const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
+      const contractEdit = document.querySelector("#plannerRosterBody .plannerContractEditButton");
+      assert(contractValue instanceof HTMLElement && contractValue.textContent === "12.50%", "Planner Contract must display database revenue share divided by 100.");
+      assert(contractEditor instanceof HTMLElement && contractEditor.hidden, "Planner Contract editor must be hidden outside edit mode.");
+      assert(contractInput instanceof HTMLInputElement, "Planner Contract input is missing.");
+      assert(contractEdit instanceof HTMLButtonElement && contractEdit.textContent === "✎", "Planner Contract must expose an Edit button beside the normal value.");
+      contractEdit.click();
+      assert(!contractEditor.hidden && contractEdit.textContent === "✓", "Planner Contract Edit must reveal the editor and become Confirm.");
+      assert(contractInput.getAttribute("data-min") === "0" && contractInput.getAttribute("data-max") === "20", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
+      assert(document.activeElement === contractInput, "Planner Contract must focus the active editor.");
+      contractInput.value = "20.75";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "20.00", "Planner Contract must clamp values above 20.00.");
+      contractInput.value = "18,25";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "18.25", "Planner Contract editor must normalize decimals to a dot separator.");
+      const firstStepperButtons = contractEditor.querySelectorAll(".plannerContractStepper button");
+      assert(firstStepperButtons.length === 2 && firstStepperButtons[0].textContent === "▲" && firstStepperButtons[1].textContent === "▼", "Planner Contract must use the site-style custom stepper.");
+      firstStepperButtons[0].click();
+      assert(contractInput.value === "19.25", "Planner Contract increase arrow must increment by 1.00.");
+      firstStepperButtons[1].click();
+      assert(contractInput.value === "18.25", "Planner Contract decrease arrow must decrement by 1.00.");
+      const removeButton = document.querySelector(".plannerRosterRemove");
+      const removeStyle = getComputedStyle(removeButton);
+      assert(removeButton.textContent === "×", "Planner Remove must render as a red X glyph.");
+      assert(removeStyle.backgroundColor === "rgba(0, 0, 0, 0)" && parseFloat(removeStyle.borderTopWidth) === 0, "Planner Remove must have no surrounding box.");
+      assert(removeStyle.color !== getComputedStyle(document.body).color, "Planner Remove must use destructive coloring.");
+      removeButton.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(removeButton).backgroundColor === "rgba(0, 0, 0, 0)", "Planner Remove hover must keep the X background transparent.");
+      const addPlayerButton = document.getElementById("plannerAddPlayerButton");
+      addPlayerButton.click();
+      assert(!hidden("#plannerPlayerModal"), "Add player must open the Add players modal.");
+      assert(document.getElementById("plannerPlayerModal").classList.contains("modalOpen"), "Add players modal must enter the canonical modalOpen state.");
+      assert(document.getElementById("plannerPlayerModal").parentElement === document.body, "Add players modal must portal to body so it paints above the fixed header.");
+      const playerSearch = document.getElementById("plannerPlayerSearchInput");
+      const playerModalBox = document.querySelector(".plannerPlayerDialog").getBoundingClientRect();
+      assert(playerModalBox.width >= Math.min(900, innerWidth - 60), "Planner Add players modal must use the enlarged table layout.");
+      playerSearch.value = "Player Browser";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]'), "Planner current-squad player search");
+      const ownPlayerSearchRow = document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]');
+      assert(ownPlayerSearchRow.children.length === 6, "Planner player search must use the six-column result table.");
+      assert(ownPlayerSearchRow.querySelector(".plannerPlayerSearchFlag"), "Planner player search must render the nationality flag.");
+      assert(ownPlayerSearchRow.children[1].textContent === "Browser Player", "Planner player-search table must show the player name.");
+      assert(ownPlayerSearchRow.children[2].textContent === "ST", "Planner player-search table must show positions.");
+      assert(ownPlayerSearchRow.children[3].textContent === "23", "Planner player-search table must show age.");
+      assert(ownPlayerSearchRow.children[4].textContent === "80", "Planner player-search table must show overall.");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(ownPlayerSearchRow.children[index]).textAlign === "left", "Popup Position, Age and Overall must align left.");
+      }
+      assert(ownPlayerSearchRow.querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Popup search Overall must show the rarity dot.");
+      const inSquadAction = ownPlayerSearchRow.querySelector(".plannerPlayerActionText");
+      assert(inSquadAction instanceof HTMLSpanElement && inSquadAction.getAttribute("aria-disabled") === "true" && inSquadAction.textContent === "In squad", "Matching current-squad players must remain visible as disabled In squad text.");
+      assert(document.getElementById("plannerPlayerConfirmButton").textContent.trim() === "Add", "The modal confirmation action must be Add.");
+      const modalFooter = document.querySelector(".plannerPlayerModalFooter");
+      const footerButtons = modalFooter.querySelectorAll("button");
+      assert(footerButtons.length === 2 && footerButtons[0].textContent.trim() === "Discard" && footerButtons[1].textContent.trim() === "Add", "Discard and Add must be grouped in the footer.");
+      const actionStyle = getComputedStyle(inSquadAction);
+      assert(actionStyle.display === "inline-flex" && actionStyle.alignItems === "center" && actionStyle.justifyContent === "center", "Planner action text must be vertically centered.");
+      const footerStyle = getComputedStyle(modalFooter);
+      assert(footerStyle.justifyContent === "flex-end", "Discard and Add must stay at the bottom right.");
+      assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Search must hide Load more when all matching players were returned.");
+      assert(ownPlayerSearchRow.getBoundingClientRect().height <= 32, "Planner player-search rows must use the reduced compact height.");
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
+      const selectAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
+      assert(selectAction.textContent === "Select", "Eligible search results must expose Select as text.");
+      selectAction.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(selectAction).textDecorationLine === "none", "Select hover must not underline.");
+      assert(!document.getElementById("plannerPlayerSearchMore").hidden, "Broad name search must offer more matching players.");
+      document.getElementById("plannerPlayerSearchMore").click();
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 3, "Additional player search page");
+      assert(document.querySelector('.plannerPlayerSearchResult[data-player-id="4"]'), "Additional matching players must be accessible through pagination.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Load more must disappear after the final page.");
+      selectAction.click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
+      assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
+      const selectedRows = document.querySelectorAll("#plannerPlayerSelectionBody .plannerPendingPlayer");
+      assert(selectedRows.length === 2, "Selected players must render in the table below search results.");
+      assert(selectedRows[0].children.length === 6 && selectedRows[1].children.length === 6, "Selected-player rows must mirror the six-column search table.");
+      assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
+      assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(selectedRows[0].children[index]).textAlign === "left", "Selected table Position, Age and Overall must align left.");
+      }
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Staged modal selections must not mutate the squad.");
+      document.getElementById("plannerPlayerDiscardButton").click();
+      assert(hidden("#plannerPlayerModal"), "Discard must close the Add players modal.");
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Discard must leave the squad unchanged.");
+
+      addPlayerButton.click();
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search after discard");
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
+      document.getElementById("plannerPlayerConfirmButton").click();
+      assert(hidden("#plannerPlayerModal"), "Add selected must close the modal.");
+      const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
+      const addedDefenderRow = document.querySelector('#plannerRosterBody tr[data-player-id="3"]');
+      assert(addedRow && addedDefenderRow, "Add selected must append every staged eligible player.");
+      const sortedPlannerIds = Array.from(document.querySelectorAll("#plannerRosterBody tr[data-player-id]")).map(row => row.dataset.playerId);
+      assert(JSON.stringify(sortedPlannerIds) === JSON.stringify(["3","2","1"]), "Planner roster must sort by canonical primary-position order.");
+      assert(text("#plannerAverageAge") === "Avg 22.00", "Planner totals row must update average age after multi-add.");
+      assert(text("#plannerAverageOverall") === "Avg 77.67", "Planner totals row must update average overall after multi-add.");
+      assert(text("#plannerTotalContracts") === "Total 20.75%", "Planner totals row must update total contracts after multi-add.");
+      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75%", "Added player Contract must also use database value divided by 100.");
+      assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
+      const addedContractValue = addedRow.querySelector(".plannerContractValue");
+      const addedContractEditor = addedRow.querySelector(".plannerContractEditor");
+      const addedContractEdit = addedRow.querySelector(".plannerContractEditButton");
+      assert(addedContractEdit instanceof HTMLButtonElement, "Added player Contract Edit is missing.");
+      addedContractEdit.click();
+      assert(contractEditor.hidden, "Opening another Contract must close the previous editor.");
+      assert(contractValue.textContent === "12.50%", "Opening another Contract must discard the previous unsaved draft.");
+      assert(addedContractEditor instanceof HTMLElement && !addedContractEditor.hidden, "The newly selected Contract must become the only active editor.");
+      assert(addedContractValue?.textContent === "3.75%", "Switching editors must preserve the new Contract's committed value.");
+      addedContractEdit.click();
+      contractEdit.click();
+      contractInput.value = "18.25";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      contractEdit.click();
+      assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+      assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
+      const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
+      const depthHeadingBox = document.getElementById("plannerPitchHeading").getBoundingClientRect();
+      assert(Math.abs(squadHeadingBox.top - depthHeadingBox.top) <= 1, "Depth heading must align vertically with Squad.");
+      const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
+      const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
+      const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
+      if (innerWidth > 800) {
+        assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
+        assert(pitchSurfaceBox.width > 440, "Desktop Planner Depth pitch must use the enlarged available width.");
+        assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
+        assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 8, "Planner Depth pitch must sit directly below the Depth heading.");
+      }
+      else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
+      document.querySelector('#plannerRosterBody tr[data-player-id="3"] .plannerRosterRemove').click();
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Remove must update the planned squad.");
+      assert(document.querySelector('#plannerRosterBody tr[data-player-id="1"]'), "Removing added players must keep the original planned player.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="1"] .plannerRosterRemove').click();
+      assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Removing the remaining player must empty the planned squad.");
+      assert(text("#plannerRosterStatus") === "No players in this squad.", "Empty planned squad must be explicit.");
+      document.getElementById("plannerTeamClearButton").click();
+      assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
+      assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
+      assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
+      history.replaceState({}, "", "/planner?club=9001");
+      await window.__mflPlannerRoute.render(false);
+      assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Restored Planner roster");
+      assert(document.documentElement.scrollWidth <= innerWidth, "Planner must not overflow horizontally.");
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish(
+        "passed",
+        "planner: stable first paint, selected-team identity, current roster/removal and responsive pitch workspace.",
+      );
+      return;
+    }
 
     if (scenario.endsWith("-empty")) {
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
@@ -1440,7 +1754,7 @@ function writeJson(response, data, status = 200) {
   response.end(JSON.stringify(data));
 }
 
-function pageDataStub(url) {
+function pageDataStub(url, scenario = "") {
   const scope = String(url.searchParams.get("scope") || "database").toLowerCase();
   let rules = [];
   try {
@@ -1481,7 +1795,10 @@ function pageDataStub(url) {
       logoUrl: browserClubLogo9002,
     },
   };
-  const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const plannerRow = pageColumns.map((column) => (
+    column === "retirement_years" ? 2 : (testPlayer[column] ?? null)
+  ));
+  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -1503,7 +1820,7 @@ function pageDataStub(url) {
   };
 }
 
-function dataStub(url) {
+function dataStub(url, scenario = "") {
   const mode = String(url.searchParams.get("mode") || "bootstrap");
   if (mode === "bootstrap") {
     return {
@@ -1592,6 +1909,32 @@ function dataStub(url) {
       source: "browser-regression-summary",
     };
   }
+  if (mode === "search" && url.searchParams.get("type") === "clubs") {
+    return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
+  }
+  if (mode === "search" && url.searchParams.get("type") === "players") {
+    const q = String(url.searchParams.get("q") || "").toLowerCase();
+    const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
+    if (q.includes("player browser")) {
+      return { columns, rows: [], hasMore: false };
+    }
+    if (q.includes("browser")) {
+      return { columns, rows: [[1, "Browser Player", 80, 23, "Italy", "ST", 2, 5, 1250]], hasMore: false };
+    }
+    if (q.includes("added")) {
+      const offset = Number(url.searchParams.get("offset") || 0);
+      return offset > 0
+        ? { columns, rows: [[4, "More Browser Player", 74, 25, "Spain", "CM", 5, 3, 200]], hasMore: false }
+        : {
+            columns,
+            rows: [
+              [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
+              [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
+            ],
+            hasMore: true,
+          };
+    }
+  }
   if (mode === "search") {
     const playerIds = new Set(
       String(url.searchParams.get("playerIds") || "")
@@ -1608,7 +1951,7 @@ function dataStub(url) {
       clubs: [],
     };
   }
-  if (mode === "page") return pageDataStub(url);
+  if (mode === "page") return pageDataStub(url, scenario);
   return {};
 }
 
@@ -1670,7 +2013,7 @@ async function createRegressionServer() {
           ? { error: "Invalid wallet proof." }
           : competitionBatchFailure
             ? { error: "Fixture competition batch unavailable." }
-            : dataStub(url),
+            : dataStub(url, String(request.headers["x-browser-regression-scenario"] || "")),
         invalidMyClubsProof ? 401 : competitionBatchFailure ? 500 : 200,
       );
       return;
@@ -1880,6 +2223,8 @@ const regressionScenarios = Object.freeze([
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["mflstats", "/mfl/stats"],
+  ["planner", "/planner"],
+  ["planner-selected", "/planner?club=9001"],
 ]);
 
 const server = await createRegressionServer();
