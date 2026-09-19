@@ -8,6 +8,10 @@
   const results=document.getElementById("plannerTeamSearchResults");
   const selector=document.getElementById("plannerTeamSelector");
   const selectedTeam=document.getElementById("plannerSelectedTeam");
+  const teamCard=document.getElementById("plannerTeamCard");
+  const teamLogoFrame=document.getElementById("plannerTeamLogoFrame");
+  const teamId=document.getElementById("plannerTeamId");
+  const teamLocation=document.getElementById("plannerTeamLocation");
   const teamLogo=document.getElementById("plannerTeamLogo");
   const teamName=document.getElementById("plannerTeamName");
   const teamDivision=document.getElementById("plannerTeamDivision");
@@ -37,7 +41,7 @@
   const playerDiscardButton=document.getElementById("plannerPlayerDiscardButton");
   const playerConfirmButton=document.getElementById("plannerPlayerConfirmButton");
   let roster=[],rosterSequence=0,rosterController=null;
-  let searchTimer=0,searchSequence=0,selectedTeamId="";
+  let searchTimer=0,searchSequence=0,selectedTeamId="",selectedTeamData=null;
   let playerSearchTimer=0,playerSearchSequence=0;
   let playerSearchPayload=null,clubSearchPlayers=[];
   let pendingPlayers=new Map();
@@ -190,6 +194,22 @@
     }
     return cell;
   }
+  function appendPlannerOverall(cell,overall){
+    const content=document.createElement("span");
+    content.className="plannerOverallContent";
+    if(overall!==null&&overall!==undefined&&overall!==""){
+      const rarity=document.createElement("span");
+      rarity.className="tableOverallRarityCircle plannerOverallRarityCircle";
+      rarity.setAttribute("aria-hidden","true");
+      const color=typeof rarityColorForOverall==="function"?rarityColorForOverall(overall):"#bebebe";
+      rarity.style.backgroundColor=color;
+      content.appendChild(rarity);
+    }
+    const value=document.createElement("span");
+    value.textContent=overall===null||overall===undefined||overall===""?"—":String(overall);
+    content.appendChild(value);
+    cell.appendChild(content);
+  }
   function appendPlannerPlayerTableCells(row,player){
     const flagCell=plannerNationalityCell(player);
     const nameCell=document.createElement("td");
@@ -200,7 +220,7 @@
     const ageCell=document.createElement("td");
     ageCell.textContent=player?.age===null||player?.age===undefined||player?.age===""?"—":String(player.age);
     const overallCell=document.createElement("td");
-    overallCell.textContent=player?.overall===null||player?.overall===undefined||player?.overall===""?"—":String(player.overall);
+    appendPlannerOverall(overallCell,player?.overall);
     row.append(flagCell,nameCell,positionCell,ageCell,overallCell);
   }
   function renderPendingPlayers(){
@@ -396,7 +416,7 @@
       ageCell.appendChild(ageContent);
       row.appendChild(ageCell);
       const overallCell=document.createElement("td");
-      overallCell.textContent=player.overall===null||player.overall===undefined||player.overall===""?"—":String(player.overall);
+      appendPlannerOverall(overallCell,player.overall);
       row.appendChild(overallCell);
       const contractCell=document.createElement("td");
       const contractControl=document.createElement("span");
@@ -554,6 +574,9 @@
         remainingContract=Math.max(0,Math.round((remainingContract-plannedContract)*100)/100);
         return {...player,planned_contract_value:plannedContract};
       });
+      if(payload.club&&String(payload.club.clubId||payload.club.id||clubId)===clubId){
+        showTeam({...selectedTeamData,...payload.club,clubId});
+      }
       sortPlannerRoster();
       renderRoster();
     }catch(error){
@@ -568,12 +591,48 @@
     if(selector instanceof HTMLElement)selector.hidden=Boolean(team);
     if(selectedTeam instanceof HTMLElement)selectedTeam.hidden=!team;
     if(workspace instanceof HTMLElement)workspace.hidden=!team;
-    if(!team){resetRoster();return;}
+    if(!team){selectedTeamData=null;resetRoster();return;}
     const id=String(team.clubId||team.id||""),name=String(team.name||team.clubName||"");
+    const data={...(selectedTeamData&&String(selectedTeamData.clubId||selectedTeamData.id||"")===id?selectedTeamData:{}),...team,clubId:id};
+    selectedTeamData=data;
+    if(teamId instanceof HTMLElement)teamId.textContent=id?"#"+id:"";
     if(teamName)teamName.textContent=name;
-    if(teamLogo instanceof HTMLImageElement){teamLogo.hidden=false;teamLogo.src="https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";}
-    const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;
+    if(teamLogo instanceof HTMLImageElement){
+      const logoUrl=String(data.logoUrl||"").trim();
+      teamLogo.alt=name+" logo";
+      teamLogo.hidden=false;
+      teamLogo.src=logoUrl||"https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";
+    }
+    if(teamLogoFrame instanceof HTMLElement)teamLogoFrame.hidden=false;
+    teamCard?.classList.toggle("myClubCardNoLogo",false);
+    const color=(value)=>/^#[0-9a-f]{6}$/iu.test(String(value||"").trim())?String(value).trim().toLowerCase():"";
+    const primary=color(data.primaryColor),secondary=color(data.secondaryColor);
+    if(teamCard instanceof HTMLElement&&typeof teamCard.style?.setProperty==="function"){
+      if(primary||secondary){
+        teamCard.style.setProperty("--my-club-primary",primary||secondary);
+        teamCard.style.setProperty("--my-club-secondary",secondary||primary);
+      }else{
+        teamCard.style.removeProperty("--my-club-primary");
+        teamCard.style.removeProperty("--my-club-secondary");
+      }
+    }
+    const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(data?.division):null;
     if(teamDivision instanceof HTMLElement){teamDivision.textContent=divisionInfo?.name||"";teamDivision.style.color=divisionInfo?.color||"";teamDivision.hidden=!divisionInfo;}
+    if(teamLocation instanceof HTMLElement){
+      const city=String(data?.city||"").trim(),nation=String(data?.nation||"").trim();
+      const country=nation?(typeof formatNationality==="function"?formatNationality(nation):nation):"";
+      const location=[city,country].filter(Boolean).join(", ");
+      teamLocation.replaceChildren();
+      if(nation&&typeof countryFlagElement==="function"){
+        const flag=countryFlagElement(nation,"clubLocationFlag");
+        if(flag)teamLocation.appendChild(flag);
+      }
+      const label=document.createElement("span");
+      label.className="clubLocationText";
+      label.textContent=location;
+      teamLocation.appendChild(label);
+      teamLocation.hidden=!location;
+    }
   }
   function selectTeam(team,{updateUrl=true,replaceUrl=false}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;selectedTeamId=id;input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed)void loadRoster(id);return true;}
   function renderResults(clubs,query=""){if(!(results instanceof HTMLElement))return;const fragment=document.createDocumentFragment();(Array.isArray(clubs)?clubs:[]).slice(0,10).forEach(team=>{const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name)return;const button=document.createElement("button");button.type="button";button.className="searchResult clubSearchResult plannerTeamSearchResult";button.setAttribute("role","option");button.dataset.clubId=id;const title=document.createElement("strong");title.textContent=name;const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;if(divisionInfo){meta.append(document.createTextNode(" · "));const division=document.createElement("span");division.className="clubSearchDivision";division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;meta.appendChild(division);}button.append(title,meta);button.addEventListener("click",()=>selectTeam(team));fragment.appendChild(button);});if(!fragment.childNodes.length&&query){const empty=document.createElement("div");empty.className="searchHint";empty.textContent="No teams found.";fragment.appendChild(empty);}results.replaceChildren(fragment);results.hidden=!results.childNodes.length;}
@@ -642,7 +701,11 @@
       closePlayerModal({focusButton:true});
     }
   });
-  teamLogo?.addEventListener("error",()=>{if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;});
+  teamLogo?.addEventListener("error",()=>{
+    if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;
+    if(teamLogoFrame instanceof HTMLElement)teamLogoFrame.hidden=true;
+    teamCard?.classList.toggle("myClubCardNoLogo",true);
+  });
   // Header scroll positions follow horizontal body scrolling without exposing their own scrollbars.
   document.querySelectorAll(".plannerPlayerSearchTable").forEach(table=>{
     const body=table.querySelector("tbody");
