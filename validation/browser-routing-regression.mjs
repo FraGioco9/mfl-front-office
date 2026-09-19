@@ -1540,7 +1540,7 @@ const browserTestSource = String.raw`(() => {
       const footerButtons = modalFooter.querySelectorAll("button");
       assert(footerButtons.length === 2 && footerButtons[0].textContent.trim() === "Discard" && footerButtons[1].textContent.trim() === "Add", "Discard and Add must be grouped in the footer.");
       const actionStyle = getComputedStyle(inSquadAction);
-      assert(actionStyle.display === "inline-flex" && actionStyle.alignItems === "center" && actionStyle.justifyContent === "center", "Planner action text must be vertically centered.");
+      assert(actionStyle.display === "inline-flex" && actionStyle.alignItems === "center" && actionStyle.justifyContent === "center", "Planner action text must be vertically centered: " + JSON.stringify({ display: actionStyle.display, alignItems: actionStyle.alignItems, justifyContent: actionStyle.justifyContent, className: inSquadAction.className }));
       const footerStyle = getComputedStyle(modalFooter);
       assert(footerStyle.justifyContent === "flex-end", "Discard and Add must stay at the bottom right.");
       assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
