@@ -64,7 +64,7 @@ function literalLikePattern(value, prefixOnly = false) {
 function playerSearchRows(query, limit, options = {}) {
   const columns = SEARCH_PLAYER_COLUMNS;
   const activeCondition = options.excludeRetired
-    ? "AND coalesce(CAST(p.retirement_years AS INTEGER), -1) <> 0"
+    ? "AND coalesce(CAST(NULLIF(trim(p.retirement_years), '') AS INTEGER), -1) <> 0"
     : "";
   const contains = literalLikePattern(query);
   const prefix = literalLikePattern(query, true);

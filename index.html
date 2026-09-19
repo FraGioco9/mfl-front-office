@@ -1063,23 +1063,27 @@
             <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
               <div class="plannerRosterHeader">
                 <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
-                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player</button>
+                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player(s)</button>
               </div>
-              <table class="plannerRosterTable" aria-label="Planned squad">
-                <colgroup><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
-                <thead><tr><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
-                <tbody id="plannerRosterBody"></tbody>
-                <tfoot>
-                  <tr class="plannerRosterTotalsRow">
-                    <th scope="row" colspan="2">Squad totals</th>
-                    <td></td>
-                    <td id="plannerAverageAge">—</td>
-                    <td id="plannerAverageOverall">—</td>
-                    <td id="plannerTotalContracts">—</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
+              <section class="tableShell" aria-label="Planned squad table">
+                <div class="playerTableScroller">
+                  <table class="plannerRosterTable" aria-label="Planned squad">
+                    <colgroup><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
+                    <thead><tr><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                    <tbody id="plannerRosterBody"></tbody>
+                    <tfoot>
+                      <tr class="plannerRosterTotalsRow">
+                        <th scope="row" colspan="2">Squad totals</th>
+                        <td></td>
+                        <td id="plannerAverageAge">—</td>
+                        <td id="plannerAverageOverall">—</td>
+                        <td id="plannerTotalContracts">—</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </section>
               <p id="plannerRosterStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
               <button id="plannerRosterRetryButton" class="compactButton" type="button" hidden>Retry</button>
             </section>
@@ -2320,7 +2324,7 @@
         <footer class="siteFooterDetails" aria-labelledby="siteFooterDetailsTitle">
           <div class="siteFooterDetailsInner">
             <div class="siteFooterDetailsIdentity">
-              <a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v1.128.3</a>
+              <a id="siteFooterDetailsTitle" class="siteFooterDetailsTitle" href="/changelog" data-page="changelog">MFL Front Office v1.127.10</a>
               <p>Management, scouting, progression, and evaluation tools for MFL.</p>
             </div>
 

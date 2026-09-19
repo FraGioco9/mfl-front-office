@@ -93,6 +93,10 @@
   }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
   function contractDisplayText(value){return contractText(value)+"%";}
+  function plannerPlayerIsRetired(player){
+    const years=player?.retirement_years;
+    return years!==null&&years!==undefined&&String(years).trim()!==""&&Number(years)===0;
+  }
   function plannerAgeMarker(player){
     const retirementYears=player?.retirement_years===null||player?.retirement_years===undefined||String(player.retirement_years).trim()===""?null:Number(player.retirement_years);
     if([1,2,3].includes(retirementYears)){
@@ -257,7 +261,7 @@
   function addPlayerToRoster(player,{render=true}={}){
     const playerId=Number(player?.player_id);
     if(!Number.isSafeInteger(playerId)||playerId<=0)return false;
-    if(Number(player?.retirement_years)===0)return false;
+    if(plannerPlayerIsRetired(player))return false;
     if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
     const availableContract=Math.max(0,Math.round((100-totalPlannedContracts())*100)/100);
@@ -269,7 +273,7 @@
   }
   function togglePendingPlayer(player){
     const playerId=Number(player?.player_id);
-    if(!Number.isSafeInteger(playerId)||playerId<=0||Number(player?.retirement_years)===0)return false;
+    if(!Number.isSafeInteger(playerId)||playerId<=0||plannerPlayerIsRetired(player))return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
     if(pendingPlayers.has(playerId)){
       pendingPlayers.delete(playerId);
@@ -307,7 +311,7 @@
     let visibleRows=0;
     for(const player of combinedPlayers){
       const playerId=Number(player?.player_id);
-      if(!Number.isSafeInteger(playerId)||playerId<=0||seenIds.has(playerId)||Number(player?.retirement_years)===0)continue;
+      if(!Number.isSafeInteger(playerId)||playerId<=0||seenIds.has(playerId)||plannerPlayerIsRetired(player))continue;
       seenIds.add(playerId);
       const inSquad=roster.some(candidate=>Number(candidate.player_id)===playerId);
       const selected=pendingPlayers.has(playerId);
