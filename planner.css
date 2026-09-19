@@ -40,8 +40,8 @@
 .plannerPlayerSearchResult:hover td{background:var(--row-hover)}
 .plannerPlayerSearchFlagCell .flagImage{display:block;width:20px;height:20px;margin:0 auto}
 .plannerPlayerSearchNameCell{font-weight:700}
-.plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}
-.plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px;vertical-align:middle;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:700;line-height:1;cursor:pointer;user-select:none;text-decoration:none}
+.plannerPlayerSearchTable td.plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}
+.plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:24px;vertical-align:middle;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:700;line-height:1;cursor:pointer;user-select:none;text-decoration:none}
 .plannerPlayerActionText:hover:not([aria-disabled="true"]),.plannerPlayerActionText:focus-visible:not([aria-disabled="true"]){color:var(--primary-hover);text-decoration:none;outline:0}
 .plannerPlayerActionText[aria-disabled="true"]{color:var(--text-soft);cursor:default}
 #plannerPlayerSearchEmpty{padding:14px 12px;text-align:center}
