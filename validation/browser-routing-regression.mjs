@@ -1390,6 +1390,9 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
       assert(text("#plannerTeamDivision") === "Diamond", "Selected Planner refresh must restore the division.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
+      assert(text("#plannerTeamId") === "#9001", "Selected Planner card must show its club ID.");
+      assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
       assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay pinned to the right after hydration.");
@@ -1420,12 +1423,19 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
       assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
+      assert(text("#plannerTeamId") === "#9001", "Selected team card must show its ID.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(4)") === "23", "Planner must show player age.");
+      const squadPlayer = document.querySelector("#plannerRosterBody tr[data-player-id]");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
+      }
+      assert(squadPlayer.querySelector("td:nth-child(5) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
       assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
       assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
       assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
@@ -1482,6 +1492,10 @@ const browserTestSource = String.raw`(() => {
       assert(ownPlayerSearchRow.children[2].textContent === "ST", "Planner player-search table must show positions.");
       assert(ownPlayerSearchRow.children[3].textContent === "23", "Planner player-search table must show age.");
       assert(ownPlayerSearchRow.children[4].textContent === "80", "Planner player-search table must show overall.");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(ownPlayerSearchRow.children[index]).textAlign === "left", "Popup Position, Age and Overall must align left.");
+      }
+      assert(ownPlayerSearchRow.querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Popup search Overall must show the rarity dot.");
       const inSquadAction = ownPlayerSearchRow.querySelector(".plannerPlayerActionText");
       assert(inSquadAction instanceof HTMLSpanElement && inSquadAction.getAttribute("aria-disabled") === "true" && inSquadAction.textContent === "In squad", "Matching current-squad players must remain visible as disabled In squad text.");
       assert(document.getElementById("plannerPlayerConfirmButton").textContent.trim() === "Add", "The modal confirmation action must be Add.");
@@ -1514,6 +1528,10 @@ const browserTestSource = String.raw`(() => {
       assert(selectedRows.length === 2, "Selected players must render in the table below search results.");
       assert(selectedRows[0].children.length === 6 && selectedRows[1].children.length === 6, "Selected-player rows must mirror the six-column search table.");
       assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
+      assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(selectedRows[0].children[index]).textAlign === "left", "Selected table Position, Age and Overall must align left.");
+      }
       assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Staged modal selections must not mutate the squad.");
       document.getElementById("plannerPlayerDiscardButton").click();
       assert(hidden("#plannerPlayerModal"), "Discard must close the Add players modal.");
