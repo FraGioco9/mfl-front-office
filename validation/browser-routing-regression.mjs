@@ -1409,7 +1409,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerSelectedTeam"), "Selected Planner refresh must show the club identity.");
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
-      assert(text("#plannerTeamDivision") === "Diamond", "Selected Planner refresh must restore the division.");
+      assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
       assert(text("#plannerTeamId") === "#9001", "Selected Planner card must show its club ID.");
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
@@ -1457,7 +1457,7 @@ const browserTestSource = String.raw`(() => {
       assert(hidden("#plannerTeamSelector"), "Selected team must replace the search.");
       assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
-      assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
+      assert(text("#plannerTeamDivision") === "Gold", "Selected team division is missing.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
       assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
       assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");
@@ -1925,7 +1925,7 @@ function dataStub(url, scenario = "") {
     };
   }
   if (mode === "search" && url.searchParams.get("type") === "clubs") {
-    return { results: [{ clubId: "9001", name: "Browser Club", division: 1 }] };
+    return { results: [{ clubId: "9001", name: "Browser Club", division: 3 }] };
   }
   if (mode === "search" && url.searchParams.get("type") === "players") {
     const q = String(url.searchParams.get("q") || "").toLowerCase();
