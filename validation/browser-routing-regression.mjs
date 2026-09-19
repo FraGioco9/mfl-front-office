@@ -540,7 +540,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
-        assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear was not pinned to the right at first paint.");
+        assert(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight >= 8 && parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight <= 40, "Selected Planner Clear must be right-aligned inside its padded club card at first paint.");
       } else {
         assert(parserSnapshot.plannerTeamSelectorHidden === false, "Empty Planner first paint hid the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === true, "Empty Planner first paint exposed a selected club.");
@@ -1395,7 +1395,7 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
-      assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay pinned to the right after hydration.");
+      assert(selectedBox.right - clearBox.right >= 8 && selectedBox.right - clearBox.right <= 40, "Selected Planner Clear must stay right-aligned inside its padded club card after hydration.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected Planner refresh must show the club logo.");
       assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Selected Planner refresh must restore the roster.");
       assert(document.documentElement.scrollWidth <= innerWidth, "Selected Planner must not overflow horizontally.");
