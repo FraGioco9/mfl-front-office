@@ -702,7 +702,13 @@
       const clubs=ownedClubs===null?await ownedRequest:ownedClubs;
       if(ownedWallet===wallet)ownedClubs=clubs;
       if(seq!==searchSequence||!hasWalletOptIn()||input.value.trim()||selectedTeamId||selector?.hidden||String(state.linkedWalletAddress||"").trim().toLowerCase()!==wallet)return [];
-      const sorted=clubs.slice().sort((a,b)=>String(a?.name||"").localeCompare(String(b?.name||"")));
+      const divisionRank=club=>{
+        const division=Number(club?.division);
+        return division>=1&&division<=10?division:999;
+      };
+      const sorted=clubs.slice().sort((a,b)=>divisionRank(a)-divisionRank(b)
+        ||String(a?.name||"").localeCompare(String(b?.name||""))
+        ||Number(a?.clubId||0)-Number(b?.clubId||0));
       renderResults(sorted,"",{owned:true});
       return sorted;
     }catch(error){

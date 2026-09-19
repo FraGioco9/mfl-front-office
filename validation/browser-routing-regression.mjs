@@ -281,6 +281,8 @@ const browserTestSource = String.raw`(() => {
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
       plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
+      plannerTeamFlagSrc: document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("src") || "",
+      plannerTeamFlagTooltip: document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("data-tooltip") || "",
       plannerTeamNameText: text("#plannerTeamName"),
       plannerTeamDivisionText: text("#plannerTeamDivision"),
       plannerTeamDivisionColor: document.getElementById("plannerTeamDivision")?.style.color || "",
@@ -579,6 +581,8 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
         assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
         assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
+        assert(parserSnapshot.plannerTeamFlagSrc.endsWith("/1f1ee-1f1f9.svg"), "Planner must render the real cached Italian flag at first paint.");
+        assert(parserSnapshot.plannerTeamFlagTooltip === "Italy", "Planner first-paint flag must preserve the canonical nationality tooltip.");
         assert(parserSnapshot.plannerTeamNameText === "Browser Club", "Planner first paint must use the cached Club name.");
         assert(parserSnapshot.plannerTeamDivisionText === "Gold", "Planner first paint must use the cached Club division.");
         assert(parserSnapshot.plannerTeamDivisionColor === "rgb(255, 210, 62)", "Planner first paint must use the cached division colour.");
@@ -1462,6 +1466,7 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamId") === "Club #9001", "Selected Planner card must show its club ID.");
        assert(Math.abs(document.getElementById("plannerTeamId").getBoundingClientRect().top - parserSnapshot.plannerTeamIdTop) <= 2, "Selected Planner Club #ID must not move vertically between first paint and hydrated identity.");
       assert(text("#plannerTeamLocation") === parserSnapshot.plannerTeamLocationText, "Planner first-paint city and nation must persist after hydration.");
+      assert(document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("src") === parserSnapshot.plannerTeamFlagSrc, "Planner flag must keep the canonical first-paint image through hydration.");
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
@@ -1493,6 +1498,7 @@ const browserTestSource = String.raw`(() => {
       const input = document.getElementById("plannerTeamSearchInput");
       assert(input.getBoundingClientRect().width <= 520, "Planner search must stay within its widened 520px limit.");
       await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner empty search owned-club results");
+      assert(Array.from(document.querySelectorAll(".plannerTeamSearchResult")).map(el => el.dataset.clubId).join(",") === "9002,9001,9003", "Owned clubs must sort Diamond to Flint, then alphabetically inside divisions.");
       assert(text("#plannerTeamSearchResults").includes("Browser Club") && myClubsRequests.ownership >= 1, "Empty Planner search must show authenticated My Clubs results.");
       input.value = "Browser";
       input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1686,6 +1692,7 @@ const browserTestSource = String.raw`(() => {
       assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
       assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
       await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner owned clubs after Clear");
+      assert(Array.from(document.querySelectorAll(".plannerTeamSearchResult")).map(el => el.dataset.clubId).join(",") === "9002,9001,9003", "Clear must restore division-sorted owned clubs.");
       history.replaceState({}, "", "/planner?club=9001");
       await window.__mflPlannerRoute.render(false);
       assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
@@ -1924,7 +1931,7 @@ function dataStub(url, scenario = "") {
       }, {
         clubId: "9002",
         name: "Second Browser Club",
-        division: 4,
+        division: scenario === "planner" ? 1 : 4,
         city: "Rome",
         nation: "ITALY",
         logoUrl: browserClubLogo9002,
@@ -1933,7 +1940,7 @@ function dataStub(url, scenario = "") {
       }, {
         clubId: "9003",
         name: "Unavailable Competition Club",
-        division: 5,
+        division: scenario === "planner" ? 3 : 5,
         city: "Turin",
         nation: "ITALY",
         logoUrl: "",
