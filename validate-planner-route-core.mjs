@@ -89,14 +89,20 @@ invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrom
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
 invariant(
   html.includes('id="plannerTeamCard" class="myClubCard plannerTeamCard"')
-    && html.includes('class="myClubLogoFrame plannerTeamLogoFrame"')
-    && html.includes('id="plannerTeamId" class="myClubId"')
-    && html.includes('id="plannerTeamName" class="myClubName"')
-    && html.includes('id="plannerTeamDivision" class="myClubDivision"')
-    && html.includes('id="plannerTeamLocation" class="myClubLocation"')
-    && styles.includes(".plannerTeamCardBody{display:flex;flex-direction:row;align-items:center;justify-content:space-between")
-    && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"),
-  "Selected club must reuse the canonical My Clubs card and keep Clear on its right.",
+    && html.includes('class="myClubLogoFrame clubIdentityLogoFrame plannerTeamLogoFrame"')
+    && html.includes('class="clubIdentityMain plannerTeamCardBody"')
+    && html.includes('class="clubIdentityPrimary plannerTeamCardInfo"')
+    && html.includes('id="plannerTeamId" class="clubIdentityId"')
+    && html.includes('id="plannerTeamName" class="clubIdentityName"')
+    && html.includes('id="plannerTeamDivision" class="clubIdentityDivision"')
+    && html.includes('id="plannerTeamLocation" class="clubIdentityLocation"')
+    && /<\/div>\s*<button id="plannerTeamClearButton" class="compactButton" type="button">Clear<\/button>\s*<\/div>/.test(html)
+    && styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px")
+    && styles.includes(".plannerTeamCard{flex:1 1 0;width:auto;min-width:0;min-height:116px;grid-template-columns:116px minmax(0,1fr)")
+    && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;font-size:26px")
+    && styles.includes(".plannerTeamCard .clubIdentityMeta{gap:5px 12px;margin-top:7px")
+    && styles.includes("@media(max-width:600px){.plannerSelectedTeam{flex-direction:column;align-items:stretch;gap:10px}"),
+  "Planner must reuse Club page identity positions in a shorter branded card, with Clear outside the card.",
 );
 invariant(
   html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "#" + clubId;')
