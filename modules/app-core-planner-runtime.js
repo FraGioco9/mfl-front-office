@@ -647,6 +647,10 @@
   document.querySelectorAll(".plannerPlayerSearchTable").forEach(table=>{
     const body=table.querySelector("tbody");
     if(!(body instanceof HTMLElement))return;
+    const syncBodyDividers=()=>body.classList.toggle("plannerTableNoVerticalScroll",body.scrollHeight<=body.clientHeight);
+    if(typeof ResizeObserver==="function")new ResizeObserver(syncBodyDividers).observe(body);
+    if(typeof MutationObserver==="function")new MutationObserver(syncBodyDividers).observe(body,{childList:true});
+    syncBodyDividers();
     body.addEventListener("scroll",()=>{
       for(const group of table.querySelectorAll("thead,tfoot"))group.scrollLeft=body.scrollLeft;
     },{passive:true});
