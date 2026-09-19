@@ -1477,11 +1477,30 @@ const browserTestSource = String.raw`(() => {
       assert(ownPlayerSearchRow.children[4].textContent === "80", "Planner player-search table must show overall.");
       const inSquadAction = ownPlayerSearchRow.querySelector(".plannerPlayerActionText");
       assert(inSquadAction instanceof HTMLSpanElement && inSquadAction.getAttribute("aria-disabled") === "true" && inSquadAction.textContent === "In squad", "Matching current-squad players must remain visible as disabled In squad text.");
+      assert(document.getElementById("plannerPlayerConfirmButton").textContent.trim() === "Add", "The modal confirmation action must be Add.");
+      const modalFooter = document.querySelector(".plannerPlayerModalFooter");
+      const footerButtons = modalFooter.querySelectorAll("button");
+      assert(footerButtons.length === 2 && footerButtons[0].textContent.trim() === "Discard" && footerButtons[1].textContent.trim() === "Add", "Discard and Add must be grouped in the footer.");
+      const actionStyle = getComputedStyle(inSquadAction);
+      assert(actionStyle.display === "inline-flex" && actionStyle.alignItems === "center" && actionStyle.justifyContent === "center", "Planner action text must be vertically centered.");
+      const footerStyle = getComputedStyle(modalFooter);
+      assert(footerStyle.justifyContent === "flex-end", "Discard and Add must stay at the bottom right.");
+      assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Search must hide Load more when all matching players were returned.");
       assert(ownPlayerSearchRow.getBoundingClientRect().height <= 32, "Planner player-search rows must use the reduced compact height.");
       playerSearch.value = "Added";
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
-      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText').click();
+      const selectAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
+      assert(selectAction.textContent === "Select", "Eligible search results must expose Select as text.");
+      selectAction.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(selectAction).textDecorationLine === "none", "Select hover must not underline.");
+      assert(!document.getElementById("plannerPlayerSearchMore").hidden, "Broad name search must offer more matching players.");
+      document.getElementById("plannerPlayerSearchMore").click();
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 3, "Additional player search page");
+      assert(document.querySelector('.plannerPlayerSearchResult[data-player-id="4"]'), "Additional matching players must be accessible through pagination.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Load more must disappear after the final page.");
+      selectAction.click();
       document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
       assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
       const selectedRows = document.querySelectorAll("#plannerPlayerSelectionBody .plannerPendingPlayer");
@@ -1849,17 +1868,24 @@ function dataStub(url, scenario = "") {
   if (mode === "search" && url.searchParams.get("type") === "players") {
     const q = String(url.searchParams.get("q") || "").toLowerCase();
     const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
+    if (q.includes("player browser")) {
+      return { columns, rows: [], hasMore: false };
+    }
     if (q.includes("browser")) {
-      return { columns, rows: [[1, "Browser Player", 80, 23, "Italy", "ST", 2, 5, 1250]] };
+      return { columns, rows: [[1, "Browser Player", 80, 23, "Italy", "ST", 2, 5, 1250]], hasMore: false };
     }
     if (q.includes("added")) {
-      return {
-        columns,
-        rows: [
-          [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
-          [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
-        ],
-      };
+      const offset = Number(url.searchParams.get("offset") || 0);
+      return offset > 0
+        ? { columns, rows: [[4, "More Browser Player", 74, 25, "Spain", "CM", 5, 3, 200]], hasMore: false }
+        : {
+            columns,
+            rows: [
+              [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
+              [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
+            ],
+            hasMore: true,
+          };
     }
   }
   if (mode === "search") {
