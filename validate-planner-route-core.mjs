@@ -98,11 +98,16 @@ invariant(
     && html.includes('id="plannerTeamLocation" class="clubIdentityLocation"')
     && /<\/div>\s*<button id="plannerTeamClearButton" class="compactButton" type="button">Clear<\/button>\s*<\/div>/.test(html)
     && styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px")
-    && styles.includes(".plannerTeamCard{flex:1 1 0;width:auto;min-width:0;min-height:116px;grid-template-columns:116px minmax(0,1fr)")
-    && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;font-size:26px")
-    && styles.includes(".plannerTeamCard .clubIdentityMeta{gap:5px 12px;margin-top:7px")
+    && styles.includes(".plannerTeamCard{--mfl-club-identity-logo-width:132px;--mfl-club-identity-logo-height:144px;flex:1 1 0;width:auto;min-width:0;min-height:184px;grid-template-columns:168px minmax(0,1fr);transition:none}")
+    && styles.includes(".plannerTeamCard .plannerTeamLogoFrame{padding:16px}")
+    && styles.includes(".plannerTeamCard .plannerTeamCardBody{display:flex;align-items:center;min-width:0;padding:24px 28px}")
+    && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;font-size:34px;line-height:1.08")
+    && styles.includes(".plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;font-size:16px}")
+    && styles.includes("@media(max-width:900px){.plannerTeamCard{--mfl-club-identity-logo-width:110px;--mfl-club-identity-logo-height:120px;grid-template-columns:140px minmax(0,1fr);min-height:156px}")
+    && styles.includes("@media(max-width:520px){.plannerTeamCard{--mfl-club-identity-logo-width:88px;--mfl-club-identity-logo-height:96px;grid-template-columns:112px minmax(0,1fr);min-height:136px}")
+    && styles.includes(".plannerTeamCard:hover,.plannerTeamCard:focus-visible{border:var(--mfl-panel-border-strong);box-shadow:none;outline:0}")
     && styles.includes("@media(max-width:600px){.plannerSelectedTeam{flex-direction:column;align-items:stretch;gap:10px}"),
-  "Planner must reuse Club page identity positions in a shorter branded card, with Clear outside the card.",
+  "Planner must match Club-page identity sizes at each breakpoint, keep Clear outside and avoid card hover highlights.",
 );
 invariant(
   html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "#" + clubId;')
