@@ -603,7 +603,7 @@
       teamLogo.src=logoUrl||"https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";
     }
     if(teamLogoFrame instanceof HTMLElement)teamLogoFrame.hidden=false;
-    teamCard?.classList.remove("myClubCardNoLogo");
+    teamCard?.classList.toggle("myClubCardNoLogo",false);
     const color=(value)=>/^#[0-9a-f]{6}$/iu.test(String(value||"").trim())?String(value).trim().toLowerCase():"";
     const primary=color(data.primaryColor),secondary=color(data.secondaryColor);
     if(teamCard instanceof HTMLElement&&typeof teamCard.style?.setProperty==="function"){
@@ -703,7 +703,7 @@
   teamLogo?.addEventListener("error",()=>{
     if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;
     if(teamLogoFrame instanceof HTMLElement)teamLogoFrame.hidden=true;
-    teamCard?.classList.add("myClubCardNoLogo");
+    teamCard?.classList.toggle("myClubCardNoLogo",true);
   });
   // Header scroll positions follow horizontal body scrolling without exposing their own scrollbars.
   document.querySelectorAll(".plannerPlayerSearchTable").forEach(table=>{
