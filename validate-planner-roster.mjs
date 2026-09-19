@@ -148,7 +148,8 @@ assert.equal(requests.length > 0, true, "Planner player search must issue a requ
 const playerSearchRequest = requests.at(-1);
 const playerSearchQuery = new URL(playerSearchRequest.url, "https://example.test").searchParams;
 assert.equal(playerSearchQuery.get("type"), "players");
-assert.equal(playerSearchQuery.get("limit"), "25", "Planner player search must use the enlarged 25-result window");
+assert.equal(playerSearchQuery.get("limit"), "50", "Planner player search must use the full 50-result search window");
+assert.equal(playerSearchQuery.get("offset"), "0", "The first search page must start at offset zero");
 playerSearchRequest.resolve({
   ok: true,
   json: async () => ({
@@ -157,6 +158,7 @@ playerSearchRequest.resolve({
       [90, "Final Slot", 60, 22, "Italy", "CB", 5, 2, 300],
       [93, "Outside Player", 61, 23, "France", "CM", 5, 2, 350],
     ],
+    hasMore: true,
   }),
 });
 await playerSearchPromise;
@@ -170,6 +172,33 @@ assert.equal(searchBody.children[0].children[4].textContent, "60", "Search table
 assert.equal(searchBody.children[0].children[5].children[0].textContent, "In squad", "Current-squad players must be shown with an In squad action instead of disappearing");
 assert.equal(searchBody.children[0].children[5].children[0].attributes["aria-disabled"], "true", "Current-squad players must not be selectable twice");
 assert.equal(searchBody.children[1].children[5].children[0].textContent, "Squad full", "Non-squad players must respect the 25-player cap");
+assert.equal(elements.get("plannerPlayerSearchMore").hidden, false, "Search must offer more matches instead of truncating results");
+elements.get("plannerPlayerSearchMore").click();
+const moreRequest=requests.at(-1);
+assert.equal(new URL(moreRequest.url,"https://example.test").searchParams.get("offset"),"2","Load more must advance past the API results already fetched");
+moreRequest.resolve({
+  ok:true,
+  json:async()=>({
+    columns:["player_id","name","overall","age","nationality","positions","retirement_years","player_seasons","active_contract_revenue_share"],
+    rows:[[94,"Another Player",65,24,"Spain","CM",5,2,200]],
+    hasMore:false,
+  }),
+});
+await tick();
+assert.equal(searchBody.children.length,3,"Load more must append players rather than replace previous matches");
+assert.equal(elements.get("plannerPlayerSearchMore").hidden,true,"Load more must disappear after the last page");
+
+elements.get("plannerPlayerSearchInput").value="First";
+const ownedSearch=route.searchPlayers("First");
+const ownedRequest=requests.at(-1);
+ownedRequest.resolve({
+  ok:true,
+  json:async()=>({columns:["player_id","name","overall","age","nationality","positions","retirement_years"],rows:[],hasMore:false}),
+});
+await ownedSearch;
+assert.equal(searchBody.children.length,1,"The originally loaded club player must remain searchable even when the separate search index returns nothing");
+assert.equal(searchBody.children[0].children[1].textContent,"First Player","Owned roster fallback must preserve the player's name");
+assert.equal(searchBody.children[0].children[5].children[0].textContent,"In squad","Owned roster fallback must avoid duplicate additions");
 assert.equal(elements.get("plannerPlayerSelectionBody").children.length, 0, "Confirmed selections must clear the selected-player table");
 
 // Loaded contracts must obey the same budget as edits and additions.
