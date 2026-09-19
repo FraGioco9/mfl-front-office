@@ -579,10 +579,29 @@
   function renderResults(clubs,query=""){if(!(results instanceof HTMLElement))return;const fragment=document.createDocumentFragment();(Array.isArray(clubs)?clubs:[]).slice(0,10).forEach(team=>{const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name)return;const button=document.createElement("button");button.type="button";button.className="searchResult clubSearchResult plannerTeamSearchResult";button.setAttribute("role","option");button.dataset.clubId=id;const title=document.createElement("strong");title.textContent=name;const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;if(divisionInfo){meta.append(document.createTextNode(" · "));const division=document.createElement("span");division.className="clubSearchDivision";division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;meta.appendChild(division);}button.append(title,meta);button.addEventListener("click",()=>selectTeam(team));fragment.appendChild(button);});if(!fragment.childNodes.length&&query){const empty=document.createElement("div");empty.className="searchHint";empty.textContent="No teams found.";fragment.appendChild(empty);}results.replaceChildren(fragment);results.hidden=!results.childNodes.length;}
   async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence)return[];renderResults([],q);setStatus(error?.message||"Could not search teams.");return[];}}
   async function restoreSelectedTeam(clubId){const id=String(clubId||"").trim();if(!id||!(input instanceof HTMLInputElement))return false;input.value=id;syncClearButton();const teams=await requestTeams(id);const exact=teams.find(team=>String(team?.clubId||team?.id||"").trim()===id);if(exact)return selectTeam(exact,{updateUrl:false});if(input.value!==id)return false;showTeam();setStatus("Team not found.");return false;}
-  async function renderRoute(updateHash=true,options={}){state.currentPage=PAGE;document.body.dataset.page=PAGE;if(page instanceof HTMLElement)showOnly(page);syncNavigation();const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId||input?.value){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
+  async function renderRoute(updateHash=true,options={}){state.currentPage=PAGE;document.body.dataset.page=PAGE;if(page instanceof HTMLElement)showOnly(page);syncNavigation();const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
-  input?.addEventListener("input",()=>{syncClearButton();setStatus("");clearTimeout(searchTimer);if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}const q=input.value.trim();if(!q){clearResults();return;}searchTimer=setTimeout(()=>void requestTeams(q),140);});
-  input?.addEventListener("keydown",event=>{if(event.key==="Enter"){const first=results?.querySelector(".plannerTeamSearchResult");if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}}else if(event.key==="Escape"){clearResults();input.blur();}});
+  input?.addEventListener("input",()=>{
+    syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
+    if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}
+    const q=input.value.trim();
+    if(!q){clearResults();return;}
+    if(results instanceof HTMLElement){
+      const loading=document.createElement("div");
+      loading.className="searchHint";loading.textContent="Searching teams…";
+      results.replaceChildren(loading);results.hidden=false;
+    }
+    searchTimer=setTimeout(()=>void requestTeams(q),140);
+  });
+  input?.addEventListener("focus",()=>{
+    if(input.value.trim()&&results?.hidden&&!selectedTeamId)void requestTeams(input.value.trim());
+  });
+  input?.addEventListener("keydown",event=>{
+    if(event.key==="Enter"){
+      const first=results?.querySelector(".plannerTeamSearchResult");
+      if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
+    }else if(event.key==="Escape"){input.blur();}
+  });
   function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerModal();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   rosterRetry?.addEventListener("click",()=>{if(selectedTeamId)void loadRoster(selectedTeamId);});
@@ -624,7 +643,14 @@
     }
   });
   teamLogo?.addEventListener("error",()=>{if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;});
-  document.addEventListener("click",event=>{if(!(results instanceof HTMLElement)||results.hidden)return;const target=event.target;if(target===input||(target instanceof Node&&results.contains(target)))return;results.hidden=true;});
+  // Header scroll positions follow horizontal body scrolling without exposing their own scrollbars.
+  document.querySelectorAll(".plannerRosterTable,.plannerPlayerSearchTable").forEach(table=>{
+    const body=table.querySelector("tbody");
+    if(!(body instanceof HTMLElement))return;
+    body.addEventListener("scroll",()=>{
+      for(const group of table.querySelectorAll("thead,tfoot"))group.scrollLeft=body.scrollLeft;
+    },{passive:true});
+  });
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
   Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers}));
 })();

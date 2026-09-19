@@ -16,6 +16,8 @@ class Element {
   addEventListener(name, listener) { this.events[name] = listener; }
   click() { this.events.click?.({ target: this }); }
   focus() {}
+  blur() {}
+  get childNodes() { return this.children; }
   select() {}
   querySelectorAll() { return []; }
 }
@@ -27,7 +29,7 @@ const html = await readFile(new URL("./html-sources/planner.html", import.meta.u
 const elements = new Map([...html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"/g)].map(([, tag, id]) => [id, tag === "input" ? new Input(tag) : tag === "img" ? new Image(tag) : tag === "button" ? new Button(tag) : new Element(tag)]));
 const requests = [];
 const location = { pathname: "/planner", search: "" };
-const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
+const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createTextNode: text => { const node = new Element(); node.textContent = text; return node; }, createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
 const window = { __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } } };
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
 vm.runInNewContext(source, { window, document, location, history, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }) });
@@ -229,5 +231,23 @@ assert.equal(searchBody.children.length,2,"Unknown retirement values must remain
 assert.equal(route.togglePendingPlayer({player_id:400,name:"Unknown Player",retirement_years:null}),true,"Unknown retirement must be selectable");
 assert.equal(route.confirmPendingPlayers(),true,"Unknown retirement must be addable");
 assert.equal(route.addPlayer({player_id:401,name:"Retired Player",retirement_years:0}),false,"Known retired players must remain blocked");
+
+elements.get("plannerTeamClearButton").click();
+const teamInput=elements.get("plannerTeamSearchInput");
+const teamResults=elements.get("plannerTeamSearchResults");
+teamInput.value="Visible Club";
+teamInput.events.input();
+assert.equal(teamResults.hidden,false,"A non-empty query must immediately show the result area");
+teamInput.events.keydown({key:"Escape"});
+assert.equal(teamResults.hidden,false,"Escape must not hide results while a query remains");
+await new Promise(resolve=>setTimeout(resolve,160));
+await complete(requests.at(-1),{results:[{clubId:"501",name:"Visible Club",division:1}]});
+assert.equal(teamResults.children[0].dataset.clubId,"501","Search must show the matching team without requiring focus");
+await route.render(false);
+assert.equal(teamInput.value,"Visible Club","Rendering Planner must preserve an unselected team query");
+assert.equal(teamResults.hidden,false);
+teamInput.value="";
+teamInput.events.input();
+assert.equal(teamResults.hidden,true,"Clearing the query must hide results");
 
 console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, selected table, 100% contract cap, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");

@@ -1403,13 +1403,18 @@ const browserTestSource = String.raw`(() => {
 
     if (scenario === "planner") {
       const input = document.getElementById("plannerTeamSearchInput");
-      assert(input.getBoundingClientRect().width <= 360, "Planner search must remain compact.");
+      assert(input.getBoundingClientRect().width <= 520, "Planner search must stay within its widened 520px limit.");
       input.value = "Browser";
       input.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelector(".plannerTeamSearchResult"), "Planner team search");
       const teamResult = document.querySelector(".plannerTeamSearchResult");
       assert(teamResult instanceof HTMLButtonElement, "Planner team result is missing.");
       assert(teamResult.classList.contains("searchResult"), "Planner club results must retain the canonical searchResult highlight owner.");
+      document.querySelector(".tablePageTitle").click();
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Team results must remain open after clicking outside a non-empty search.");
+      input.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Escape must preserve results while the team query is non-empty.");
+
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       assert(hidden("#plannerTeamSelector"), "Selected team must replace the search.");
       assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
