@@ -538,7 +538,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerTeamSelectorHidden === true, "Selected Planner first paint exposed the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === false, "Selected Planner first paint did not expose the club identity.");
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
-        assert(parserSnapshot.plannerRosterSkeletons === 48, "Selected Planner first paint did not expose the full roster loading skeleton.");
+        assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear was not pinned to the right at first paint.");
       } else {
@@ -1419,11 +1419,13 @@ const browserTestSource = String.raw`(() => {
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
-      assert(text("#plannerRosterBody td").includes("Browser Player"), "Planner must display the canonical current squad.");
-      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(3)") === "23", "Planner must show player age.");
+      assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(4)") === "23", "Planner must show player age.");
       assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
       assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
       assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
+      const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
+      assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
       assert(ageMarker instanceof HTMLElement && ageMarker.classList.contains("retirementMarker--retiring-2"), "Planner must show the canonical retirement marker beside Age.");
       const contractValue = document.querySelector("#plannerRosterBody .plannerContractValue");
