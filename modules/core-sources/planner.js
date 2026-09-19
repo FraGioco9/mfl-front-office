@@ -643,7 +643,7 @@
   });
   teamLogo?.addEventListener("error",()=>{if(teamLogo instanceof HTMLElement)teamLogo.hidden=true;});
   // Header scroll positions follow horizontal body scrolling without exposing their own scrollbars.
-  document.querySelectorAll(".plannerRosterTable,.plannerPlayerSearchTable").forEach(table=>{
+  document.querySelectorAll(".plannerPlayerSearchTable").forEach(table=>{
     const body=table.querySelector("tbody");
     if(!(body instanceof HTMLElement))return;
     body.addEventListener("scroll",()=>{
