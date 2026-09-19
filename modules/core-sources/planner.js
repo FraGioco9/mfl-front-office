@@ -18,6 +18,7 @@
   const status=document.getElementById("plannerStatus");
   const workspace=document.getElementById("plannerWorkspace");
   const rosterBody=document.getElementById("plannerRosterBody");
+  const formationSelect=document.getElementById("plannerFormationSelect");
   const rosterCount=document.getElementById("plannerRosterCount");
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
@@ -615,12 +616,19 @@
       if(rosterRetry instanceof HTMLElement)rosterRetry.hidden=false;
     }
   }
+  function syncFormationForClub(clubId){
+    const preview=Reflect.get(window,"__mflPlannerFormationPreview");
+    const code=preview?.selectedForClub?.(clubId)||"442";
+    if(formationSelect&&"value" in formationSelect)formationSelect.value=code;
+    preview?.render?.(code);
+  }
   function showTeam(team=null){
     if(selector instanceof HTMLElement)selector.hidden=Boolean(team);
     if(selectedTeam instanceof HTMLElement)selectedTeam.hidden=!team;
     if(workspace instanceof HTMLElement)workspace.hidden=!team;
-    if(!team){selectedTeamData=null;resetRoster();return;}
+    if(!team){selectedTeamData=null;resetRoster();syncFormationForClub("");return;}
     const id=String(team.clubId||team.id||"");
+    syncFormationForClub(id);
     const cached=cachedPlannerClub(id);
     const data={...cached,...(selectedTeamData&&String(selectedTeamData.clubId||selectedTeamData.id||"")===id?selectedTeamData:{}),...team,clubId:id};
     // Club search returns only name/division: retain cached colours and location.
@@ -734,6 +742,15 @@
     }
     if(page instanceof HTMLElement)showOnly(page);const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(!routeClubId&&!selectedTeamId&&!(input?.value.trim()))void requestOwnedClubs();if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
+  formationSelect?.addEventListener("change",()=>{
+    const code=String(formationSelect.value||"");
+    const preview=Reflect.get(window,"__mflPlannerFormationPreview");
+    if(!preview?.codes?.includes(code))return;
+    preview.render(code);
+    if(selectedTeamId){
+      try{localStorage.setItem("mfl-planner-formation-v1:"+selectedTeamId,code);}catch{}
+    }
+  });
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
     if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}

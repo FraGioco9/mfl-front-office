@@ -278,6 +278,8 @@ const browserTestSource = String.raw`(() => {
       plannerWorkspaceHidden: hidden("#plannerWorkspace"),
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
+      plannerFormation: String(document.getElementById("plannerFormationSelect")?.value || ""),
+      plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
       plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
@@ -578,6 +580,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
+        assert(parserSnapshot.plannerFormation === "442" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must draw the default 4-4-2 before hydration.");
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
         assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
         assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
@@ -1460,6 +1463,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerSelectedTeam"), "Selected Planner refresh must show the club identity.");
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
+      assert(document.getElementById("plannerFormationSelect")?.value === parserSnapshot.plannerFormation, "Planner formation must not flash back to default during hydration.");
       assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
       assert(document.getElementById("plannerTeamCard").style.getPropertyValue("--my-club-primary") === parserSnapshot.plannerTeamPrimaryColor, "Planner first-paint Club colours must persist through hydration.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
@@ -1524,6 +1528,18 @@ const browserTestSource = String.raw`(() => {
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
+      const formation = document.getElementById("plannerFormationSelect");
+      const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+      assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
+      assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
+      assert(formation.value === "442", "Planner must start in the default 4-4-2.");
+      const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
+      assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
+      formation.value = "4231";
+      formation.dispatchEvent(new Event("change", { bubbles: true }));
+      const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
+      assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
+      assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(4)") === "23", "Planner must show player age.");
@@ -1675,9 +1691,9 @@ const browserTestSource = String.raw`(() => {
       const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
       if (innerWidth > 800) {
         assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
-        assert(pitchSurfaceBox.width > 440, "Desktop Planner Depth pitch must use the enlarged available width.");
+        assert(pitchSurfaceBox.width > 280 && pitchSurfaceBox.width <= 420, "Desktop Planner Depth pitch must remain centered at the reduced 420px maximum.");
         assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
-        assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 8, "Planner Depth pitch must sit directly below the Depth heading.");
+        assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 18, "Planner Depth pitch must sit just below its formation controls.");
       }
       else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
       document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
@@ -1690,6 +1706,7 @@ const browserTestSource = String.raw`(() => {
       document.getElementById("plannerTeamClearButton").click();
       assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
       assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
+      assert(formation.value === "442", "Clearing a club must reset the visible formation preview.");
       assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
       await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner owned clubs after Clear");
       assert(Array.from(document.querySelectorAll(".plannerTeamSearchResult")).map(el => el.dataset.clubId).join(",") === "9002,9001,9003", "Clear must restore division-sorted owned clubs.");

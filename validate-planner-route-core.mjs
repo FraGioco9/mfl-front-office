@@ -241,9 +241,10 @@ invariant(
   "Planner player search input must use the site's standard search highlight.",
 );
 invariant(
-  styles.includes(".plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0 0 4px")
+  styles.includes(".plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px")
+    && styles.includes(".plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px")
     && styles.includes("#plannerAddPlayerButton{align-self:center"),
-  "Planner Depth and Squad headings must align while the Depth pitch sits directly below its heading.",
+  "Planner Depth and Squad headings must align while the Depth formation selector sits beside the heading.",
 );
 invariant(
   planner.includes("PLANNER_POSITION_ORDER")
@@ -252,6 +253,19 @@ invariant(
   "Planner roster must use the canonical primary-position order.",
 );
 invariant(html.includes('<h3 id="plannerPitchHeading">Depth</h3>') && html.includes('aria-label="Squad depth pitch"'), "Planner pitch section must be labeled Depth.");
+const formations = ["3421", "343", "343b", "352", "352b", "41212", "41212narrow", "4132", "4141", "4222", "4231", "424", "4312", "4321", "433", "433a", "433d", "433cf", "4411", "442", "442b", "523", "532", "541", "541f"];
+const formationMarkup = html.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
+const formationOptions = Array.from(formationMarkup.matchAll(/<option value="([0-9]+[a-z]*)"(?: selected)?>/g), ([,code]) => code);
+invariant(JSON.stringify(formationOptions) === JSON.stringify(formations), "Planner formation dropdown must contain exactly the requested 25 MFL formations in order.");
+invariant(html.includes('<select id="plannerFormationSelect" class="plannerFormationSelect">')
+    && html.includes('id="plannerFormationPositions" class="plannerFormationPositions"')
+    && html.includes('const renderFormation = code => {')
+    && html.includes('selectedFormationForClub(clubId)')
+    && generatedHtml.includes('selectedFormationForClub(clubId)')
+    && planner.includes('formationSelect?.addEventListener("change"')
+    && planner.includes('syncFormationForClub(id);')
+    && styles.includes('.plannerFormationSpot{position:absolute;'),
+  "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   html.includes('id="plannerAverageAge"')
     && html.includes('id="plannerAverageOverall"')
@@ -262,10 +276,10 @@ invariant(
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:26%}")
     && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
-    && styles.includes("max-width:640px")
+    && styles.includes("max-width:420px")
     && styles.includes("width:calc(100% - 16px)")
     && styles.includes("gap:32px"),
-  "Planner desktop layout must shorten the Player column and enlarge the Depth pitch while keeping a safe gutter and internal panel margin.",
+  "Planner desktop layout must keep a smaller centered Depth pitch and safe gutter beside the squad table.",
 );
 invariant(
   styles.includes(".plannerTeamSearchResults .plannerTeamSearchResult:hover,.plannerTeamSearchResults .plannerTeamSearchResult:focus-visible")

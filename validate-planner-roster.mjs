@@ -35,7 +35,15 @@ const localStorage = {
 };
 const location = { pathname: "/planner", search: "" };
 const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createTextNode: text => { const node = new Element(); node.textContent = text; return node; }, createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
-const window = { __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } } };
+const formationRenders = [];
+const window = {
+  __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } },
+  __mflPlannerFormationPreview: {
+    codes: ["442", "4231"],
+    selectedForClub: id => localStorage.getItem("mfl-planner-formation-v1:" + id) || "442",
+    render: code => formationRenders.push(code),
+  },
+};
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
 vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
 const route = window.__mflPlannerRoute;
@@ -49,11 +57,18 @@ assert.equal(query.get("scope"), "club");
 assert.equal(query.get("clubId"), "9001");
 assert.equal(query.get("pageSize"), "5000", "Load the complete club roster, not the default first 100 rows");
 assert.equal(elements.get("plannerWorkspace").hidden, false);
+assert.equal(elements.get("plannerFormationSelect").value, "442", "Planner starts with the default 4-4-2 formation");
+assert.deepEqual(formationRenders, ["442"], "Team selection must render the selected formation");
 await complete(requests[0]);
 assert.ok(elements.has("plannerTeamCard"), "Planner must expose the canonical My Clubs card container");
 assert.equal(elements.get("plannerTeamId").textContent, "Club #9001", "Planner card must show the canonical Club #ID label");
 assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Planner card must preserve the selected club name");
 assert.equal(elements.get("plannerTeamLocation").textContent, "Rome, Italy", "Planner card must show location from the loaded club");
+elements.get("plannerFormationSelect").value = "4231";
+elements.get("plannerFormationSelect").events.change();
+assert.equal(localStorage.getItem("mfl-planner-formation-v1:9001"), "4231", "Formation selection must be stored for this club");
+assert.equal(formationRenders.at(-1), "4231", "Formation selection must update the pitch preview without changing the roster");
+assert.equal(elements.get("plannerRosterBody").children.length, 2, "Changing formation must preserve the squad");
 const plannerCachedClub = JSON.parse(localStorage.getItem("mfl-club-display-data-v1"))["9001"];
 assert.equal(plannerCachedClub.name, "First Club", "Planner must cache selected Club name for refresh.");
 assert.equal(plannerCachedClub.divisionName, "Diamond", "Planner must cache selected Club division for refresh.");
