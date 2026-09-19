@@ -87,7 +87,39 @@ invariant(html.includes("column < 7"), "Planner selected-club first paint must r
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
-invariant(styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%") && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"), "Selected-team Clear must be pinned to the right from first paint.");
+invariant(
+  html.includes('id="plannerTeamCard" class="myClubCard plannerTeamCard"')
+    && html.includes('class="myClubLogoFrame plannerTeamLogoFrame"')
+    && html.includes('id="plannerTeamId" class="myClubId"')
+    && html.includes('id="plannerTeamName" class="myClubName"')
+    && html.includes('id="plannerTeamDivision" class="myClubDivision"')
+    && html.includes('id="plannerTeamLocation" class="myClubLocation"')
+    && styles.includes(".plannerTeamCardBody{display:flex;flex-direction:row;align-items:center;justify-content:space-between")
+    && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"),
+  "Selected club must reuse the canonical My Clubs card and keep Clear on its right.",
+);
+invariant(
+  html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "#" + clubId;')
+    && planner.includes('showTeam({...selectedTeamData,...payload.club,clubId});')
+    && planner.includes('teamCard.style.setProperty("--my-club-primary"')
+    && planner.includes('countryFlagElement(nation,"clubLocationFlag")'),
+  "Selected club must show its ID at first paint and hydrate branded color and location from club data.",
+);
+invariant(
+  planner.includes("function appendPlannerOverall(cell,overall)")
+    && planner.includes('rarity.className="tableOverallRarityCircle plannerOverallRarityCircle"')
+    && planner.includes('rarityColorForOverall(overall)')
+    && planner.includes("appendPlannerOverall(overallCell,player?.overall)")
+    && planner.includes("appendPlannerOverall(overallCell,player.overall)"),
+  "Squad and both modal tables must show the canonical colored Overall rarity dot.",
+);
+invariant(
+  styles.includes(".plannerOverallContent{display:inline-flex;align-items:center;justify-content:flex-start")
+    && styles.includes(".plannerRosterTable :is(th,td):nth-child(3)")
+    && styles.includes(".plannerPlayerSearchTable :is(th,td):nth-child(3)")
+    && styles.includes(".plannerRosterTable .plannerAgeContent{justify-content:flex-start}"),
+  "Position, Age and Overall must be left-aligned across Squad and modal tables.",
+);
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
 invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("background-color:transparent"), "Planner Contract editor must stay compact and roster Remove must remain visually unfilled on hover.");
 invariant(html.includes('class="tableShell" aria-label="Planned squad table"') && styles.includes(".plannerRosterTable td{line-height:1.2}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster must reuse the standard table shell and preserve compact remove controls.");
