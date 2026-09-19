@@ -83,7 +83,7 @@ invariant(
     && html.includes('id="plannerPlayerConfirmButton"'),
   "Planner Add player must use a modal with staged multi-selection and explicit discard/confirm actions.",
 );
-invariant(html.includes("column < 6"), "Planner selected-club first paint must reserve all six roster columns.");
+invariant(html.includes("column < 7"), "Planner selected-club first paint must reserve all seven roster columns.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
@@ -191,7 +191,7 @@ invariant(
   "Planner roster must expose and maintain average Age, average Overall and total Contract values in the table footer.",
 );
 invariant(
-  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:32%}")
+  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:26%}")
     && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
     && styles.includes("max-width:640px")
     && styles.includes("width:calc(100% - 16px)")

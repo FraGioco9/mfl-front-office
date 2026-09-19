@@ -171,12 +171,23 @@
     }
     return action;
   }
-  function appendPlannerPlayerTableCells(row,player){
-    const flagCell=document.createElement("td");
-    flagCell.className="plannerPlayerSearchFlagCell";
+  function plannerNationalityCell(player){
+    const cell=document.createElement("td");
+    cell.className="plannerPlayerSearchFlagCell";
     const flag=typeof countryFlagElement==="function"?countryFlagElement(player?.nationality,"plannerPlayerSearchFlag"):null;
-    if(flag)flagCell.appendChild(flag);
-    else flagCell.textContent="—";
+    if(flag)cell.appendChild(flag);
+    else{
+      const fallback=document.createElement("span");
+      fallback.textContent="—";
+      const label=typeof formatNationality==="function"?formatNationality(player?.nationality):String(player?.nationality||"Unknown nationality");
+      fallback.dataset.tooltip=label;
+      fallback.setAttribute("aria-label",label);
+      cell.appendChild(fallback);
+    }
+    return cell;
+  }
+  function appendPlannerPlayerTableCells(row,player){
+    const flagCell=plannerNationalityCell(player);
     const nameCell=document.createElement("td");
     nameCell.className="plannerPlayerSearchNameCell";
     nameCell.textContent=String(player?.name||"Unknown player");
@@ -364,6 +375,7 @@
     for(const player of roster){
       const row=document.createElement("tr");
       row.dataset.playerId=String(player.player_id);
+      row.appendChild(plannerNationalityCell(player));
       for(const value of [player.name,player.positions]){
         const cell=document.createElement("td");
         cell.textContent=value===null||value===undefined||value===""?"—":String(value);
@@ -512,7 +524,7 @@
       for(let index=0;index<8;index+=1){
         const row=document.createElement("tr");
         row.setAttribute("aria-hidden","true");
-        for(let column=0;column<6;column+=1){
+        for(let column=0;column<7;column+=1){
           const cell=document.createElement("td");
           const skeleton=document.createElement("span");
           skeleton.className="plannerRosterSkeleton";

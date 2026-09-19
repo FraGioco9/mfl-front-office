@@ -1066,12 +1066,12 @@
                 <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player</button>
               </div>
               <table class="plannerRosterTable" aria-label="Planned squad">
-                <colgroup><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
-                <thead><tr><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                <colgroup><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
+                <thead><tr><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
                 <tbody id="plannerRosterBody"></tbody>
                 <tfoot>
                   <tr class="plannerRosterTotalsRow">
-                    <th scope="row">Squad totals</th>
+                    <th scope="row" colspan="2">Squad totals</th>
                     <td></td>
                     <td id="plannerAverageAge">—</td>
                     <td id="plannerAverageOverall">—</td>
@@ -1197,7 +1197,7 @@
               for (let index = 0; index < 8; index += 1) {
                 const row = document.createElement("tr");
                 row.setAttribute("aria-hidden", "true");
-                for (let column = 0; column < 6; column += 1) {
+                for (let column = 0; column < 7; column += 1) {
                   const cell = document.createElement("td");
                   const skeleton = document.createElement("span");
                   skeleton.className = "plannerRosterSkeleton";
