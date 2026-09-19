@@ -76,7 +76,7 @@ invariant(
     && html.includes('class="plannerPlayerSearchTable"')
     && html.includes('<th scope="col">Name</th>')
     && html.includes('<th scope="col">Position</th>')
-    && html.includes('<th scope="col">OVR</th>')
+    && html.includes('<th scope="col">Overall</th>')
     && html.includes('id="plannerPlayerSelectionBody"')
     && html.includes('class="plannerPlayerSearchTable plannerPlayerSelectionTable"')
     && html.includes('id="plannerPlayerDiscardButton"')
@@ -190,7 +190,7 @@ invariant(
   "Planner roster must expose and maintain average Age, average Overall and total Contract values in the table footer.",
 );
 invariant(
-  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:38%}")
+  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:32%}")
     && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
     && styles.includes("max-width:640px")
     && styles.includes("width:calc(100% - 16px)")
@@ -227,13 +227,13 @@ invariant(
 invariant(
   planner.includes("contractLimitForPlayer")
     && planner.includes("100-totalPlannedContracts")
-    && planner.includes('Math.min(100,contracts.reduce'),
+    && planner.includes('remainingContract-plannedContract'),
   "Planner Contract editing/additions and footer total must enforce a 100% aggregate ceiling.",
 );
 invariant(
-  html.includes('<th scope="col">POS</th>')
+  html.includes('<th scope="col">Position</th>')
     && !html.includes('<th scope="col">Pos.</th>'),
-  "Planner squad must use the requested POS header label.",
+  "Planner squad must use the requested Position header label.",
 );
 invariant(
   styles.includes(".plannerRosterHeader h3{display:flex;align-items:center;gap:6px")
