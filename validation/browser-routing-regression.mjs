@@ -268,6 +268,9 @@ const browserTestSource = String.raw`(() => {
       plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
       plannerTeamCardBottom: document.getElementById("plannerTeamCard")?.getBoundingClientRect().bottom || 0,
       plannerTeamCardHeight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().height || 0,
+      plannerTeamNameFontSize: getComputedStyle(document.getElementById("plannerTeamName")).fontSize,
+      plannerTeamLogoMaxWidth: getComputedStyle(document.getElementById("plannerTeamLogo")).maxWidth,
+      plannerTeamLogoMaxHeight: getComputedStyle(document.getElementById("plannerTeamLogo")).maxHeight,
       plannerClearButtonLeft: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().left || 0,
       plannerClearButtonTop: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().top || 0,
       plannerClearButtonRight: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().right || 0,
@@ -546,7 +549,13 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
-        assert(parserSnapshot.plannerTeamCardHeight <= 145, "Selected Planner club card must use the compact height at first paint.");
+        const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
+        const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
+        const expectedClubLogoWidth = innerWidth <= 520 ? "88px" : innerWidth <= 900 ? "110px" : "132px";
+        const expectedClubLogoHeight = innerWidth <= 520 ? "96px" : innerWidth <= 900 ? "120px" : "144px";
+        assert(parserSnapshot.plannerTeamCardHeight >= expectedClubHeight - 1 && parserSnapshot.plannerTeamCardHeight <= expectedClubHeight + 24, "Planner card must have the Club-page height at first paint.");
+        assert(parserSnapshot.plannerTeamNameFontSize === expectedClubNameSize, "Planner club name must have the Club-page font size at first paint.");
+        assert(parserSnapshot.plannerTeamLogoMaxWidth === expectedClubLogoWidth && parserSnapshot.plannerTeamLogoMaxHeight === expectedClubLogoHeight, "Planner club logo must have the Club-page size at first paint.");
         if (innerWidth > 600) {
           assert(parserSnapshot.plannerClearButtonLeft - parserSnapshot.plannerTeamCardRight >= 8, "Selected Planner Clear must sit outside the club card on desktop at first paint.");
         } else {
@@ -1408,7 +1417,13 @@ const browserTestSource = String.raw`(() => {
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
       const cardBox = document.getElementById("plannerTeamCard").getBoundingClientRect();
       assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay right-aligned outside its card after hydration.");
-      assert(cardBox.height <= 145, "Selected Planner club card must remain compact after hydration.");
+      const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
+      const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
+      const expectedClubLogoWidth = innerWidth <= 520 ? "88px" : innerWidth <= 900 ? "110px" : "132px";
+      const expectedClubLogoHeight = innerWidth <= 520 ? "96px" : innerWidth <= 900 ? "120px" : "144px";
+      assert(cardBox.height >= expectedClubHeight - 1 && cardBox.height <= expectedClubHeight + 24, "Planner club card must match the Club-page height after hydration.");
+      assert(getComputedStyle(document.getElementById("plannerTeamName")).fontSize === expectedClubNameSize, "Planner name must match Club-page font size after hydration.");
+      assert(getComputedStyle(document.getElementById("plannerTeamLogo")).maxWidth === expectedClubLogoWidth && getComputedStyle(document.getElementById("plannerTeamLogo")).maxHeight === expectedClubLogoHeight, "Planner logo must match Club-page size after hydration.");
       if (innerWidth > 600) {
         assert(clearBox.left - cardBox.right >= 8, "Selected Planner Clear must stay outside the club card on desktop.");
       } else {
