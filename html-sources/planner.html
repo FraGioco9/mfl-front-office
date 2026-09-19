@@ -167,7 +167,7 @@
               teamLogo.hidden = false;
               teamLogo.src = "https://d13e14gtps4iwl.cloudfront.net/u/clubs/" + encodeURIComponent(clubId) + "/logo.webp";
             }
-            if (teamId instanceof HTMLElement) teamId.textContent = "#" + clubId;
+            if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;
             if (rosterBody instanceof HTMLElement && !rosterBody.childElementCount) {
               rosterBody.setAttribute("aria-busy", "true");
               for (let index = 0; index < 8; index += 1) {

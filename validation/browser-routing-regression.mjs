@@ -264,6 +264,8 @@ const browserTestSource = String.raw`(() => {
       plannerWorkspaceHidden: hidden("#plannerWorkspace"),
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
+      plannerTeamIdText: text("#plannerTeamId"),
+      plannerTeamIdTop: document.getElementById("plannerTeamId")?.getBoundingClientRect().top || 0,
       plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
       plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
       plannerTeamCardBottom: document.getElementById("plannerTeamCard")?.getBoundingClientRect().bottom || 0,
@@ -548,6 +550,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
+        assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
         assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
         const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
         const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
@@ -1411,7 +1414,8 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
       assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
-      assert(text("#plannerTeamId") === "#9001", "Selected Planner card must show its club ID.");
+      assert(text("#plannerTeamId") === "Club #9001", "Selected Planner card must show its club ID.");
+       assert(Math.abs(document.getElementById("plannerTeamId").getBoundingClientRect().top - parserSnapshot.plannerTeamIdTop) <= 2, "Selected Planner Club #ID must not move vertically between first paint and hydrated identity.");
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
@@ -1461,7 +1465,7 @@ const browserTestSource = String.raw`(() => {
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
       assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
       assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");
-      assert(text("#plannerTeamId") === "#9001", "Selected team card must show its ID.");
+      assert(text("#plannerTeamId") === "Club #9001", "Selected team card must show its ID.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");

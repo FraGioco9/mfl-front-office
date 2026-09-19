@@ -11,8 +11,8 @@
 .plannerTeamCard .plannerTeamCardBody{display:flex;align-items:center;min-width:0;padding:24px 28px}
 .plannerTeamCardInfo{min-width:0}
 .plannerTeamCard .clubIdentityId{font-size:14px}
-.plannerTeamCard .clubIdentityName{margin-top:4px;font-size:34px;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;font-size:16px}
+.plannerTeamCard .clubIdentityName{margin-top:4px;min-height:1.08em;font-size:34px;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;min-height:1.3em;font-size:16px}
 .plannerTeamCard .clubIdentityLocation .clubLocationFlag{width:18px;height:18px}
 .plannerTeamCard .clubIdentityLocation[hidden]{display:none}
 #plannerTeamClearButton{flex:0 0 auto;margin-left:0}

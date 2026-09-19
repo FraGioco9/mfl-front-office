@@ -594,7 +594,7 @@
     const id=String(team.clubId||team.id||""),name=String(team.name||team.clubName||"");
     const data={...(selectedTeamData&&String(selectedTeamData.clubId||selectedTeamData.id||"")===id?selectedTeamData:{}),...team,clubId:id};
     selectedTeamData=data;
-    if(teamId instanceof HTMLElement)teamId.textContent=id?"#"+id:"";
+    if(teamId instanceof HTMLElement)teamId.textContent=id?"Club #"+id:"";
     if(teamName)teamName.textContent=name;
     if(teamLogo instanceof HTMLImageElement){
       const logoUrl="https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";

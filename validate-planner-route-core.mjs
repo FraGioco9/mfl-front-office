@@ -110,7 +110,10 @@ invariant(
   "Planner must match Club-page identity sizes at each breakpoint, keep Clear outside and avoid card hover highlights.",
 );
 invariant(
-  html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "#" + clubId;')
+  html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;')
+    && planner.includes('teamId.textContent=id?"Club #"+id:"";')
+    && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;min-height:1.08em")
+    && styles.includes(".plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;min-height:1.3em")
     && planner.includes('showTeam({...selectedTeamData,...payload.club,clubId});')
     && planner.includes('teamCard.style.setProperty("--my-club-primary"')
     && planner.includes('countryFlagElement(nation,"clubLocationFlag")'),
