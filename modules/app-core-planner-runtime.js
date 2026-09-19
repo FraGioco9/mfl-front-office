@@ -598,10 +598,10 @@
     if(teamId instanceof HTMLElement)teamId.textContent=id?"#"+id:"";
     if(teamName)teamName.textContent=name;
     if(teamLogo instanceof HTMLImageElement){
-      const logoUrl=String(data.logoUrl||"").trim();
+      const logoUrl="https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";
       teamLogo.alt=name+" logo";
       teamLogo.hidden=false;
-      teamLogo.src=logoUrl||"https://d13e14gtps4iwl.cloudfront.net/u/clubs/"+encodeURIComponent(id)+"/logo.webp";
+      if(teamLogo.src!==logoUrl)teamLogo.src=logoUrl;
     }
     if(teamLogoFrame instanceof HTMLElement)teamLogoFrame.hidden=false;
     teamCard?.classList.toggle("myClubCardNoLogo",false);
