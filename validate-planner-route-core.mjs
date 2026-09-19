@@ -245,7 +245,7 @@ invariant(
 invariant(
   planner.includes('makePlannerActionText')
     && !planner.includes('plannerPlayerSelectButton')
-    && styles.includes(".plannerPlayerActionText{display:inline-block"),
+    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px"),
   "Planner player selection must render as text actions rather than boxed buttons.",
 );
 invariant(
