@@ -111,6 +111,12 @@ invariant(
 );
 invariant(
   html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;')
+    && html.includes('localStorage.getItem("mfl-club-display-data-v1")')
+    && html.includes('teamName.textContent = name;')
+    && html.includes('teamCard.style.setProperty("--my-club-primary"')
+    && planner.includes('function cachedPlannerClub(clubId)')
+    && planner.includes('function savePlannerClub(data,divisionInfo)')
+    && planner.includes('savePlannerClub(data,divisionInfo);')
     && planner.includes('teamId.textContent=id?"Club #"+id:"";')
     && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;min-height:1.08em")
     && styles.includes(".plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;min-height:1.3em")

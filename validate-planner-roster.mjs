@@ -28,11 +28,16 @@ const source = await readFile(new URL("./modules/core-sources/planner.js", impor
 const html = await readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8");
 const elements = new Map([...html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"/g)].map(([, tag, id]) => [id, tag === "input" ? new Input(tag) : tag === "img" ? new Image(tag) : tag === "button" ? new Button(tag) : new Element(tag)]));
 const requests = [];
+const savedClubs = new Map();
+const localStorage = {
+  getItem(key) { return savedClubs.get(key) ?? null; },
+  setItem(key, value) { savedClubs.set(key, String(value)); },
+};
 const location = { pathname: "/planner", search: "" };
 const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createTextNode: text => { const node = new Element(); node.textContent = text; return node; }, createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
 const window = { __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } } };
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
-vm.runInNewContext(source, { window, document, location, history, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
+vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
 const route = window.__mflPlannerRoute;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const payload = { columns: ["player_id", "name", "positions", "age", "overall", "retirement_years", "player_seasons", "active_contract_revenue_share"], rows: [[1, "First Player", "GK", 23, 80, 2, 5, 1250], [2, "Second Player", "ST", 25, 75, 5, 1, 800]], totalRows: 2, club: { clubId: "9001", name: "First Club", division: 1, city: "Rome", nation: "Italy", primaryColor: "#112233", secondaryColor: "#445566" } };
@@ -49,6 +54,10 @@ assert.ok(elements.has("plannerTeamCard"), "Planner must expose the canonical My
 assert.equal(elements.get("plannerTeamId").textContent, "Club #9001", "Planner card must show the canonical Club #ID label");
 assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Planner card must preserve the selected club name");
 assert.equal(elements.get("plannerTeamLocation").textContent, "Rome, Italy", "Planner card must show location from the loaded club");
+const plannerCachedClub = JSON.parse(localStorage.getItem("mfl-club-display-data-v1"))["9001"];
+assert.equal(plannerCachedClub.name, "First Club", "Planner must cache selected Club name for refresh.");
+assert.equal(plannerCachedClub.divisionName, "Diamond", "Planner must cache selected Club division for refresh.");
+assert.equal(plannerCachedClub.primaryColor, "#112233", "Planner must cache selected Club colours for refresh.");
 const body = elements.get("plannerRosterBody");
 assert.equal(body.children.length, 2);
 assert.equal(body.children[0].children.length, 7, "Squad rows must include the nationality column");

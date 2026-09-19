@@ -143,6 +143,17 @@ const browserTestSource = String.raw`(() => {
                 ? (window.location.search === "?club=9001" ? "planner-selected" : "planner")
                 : "unknown";
 
+  if (scenario === "planner-selected") {
+    localStorage.setItem("mfl-club-display-data-v1", JSON.stringify({
+      "9001": {
+        clubId: "9001", name: "Browser Club",
+        divisionName: "Gold", divisionColor: "#ffd23e",
+        primaryColor: "#112233", secondaryColor: "#445566",
+        city: "Bologna", nation: "ITALY",
+      },
+    }));
+  }
+
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
   const originalFetch = window.fetch.bind(window);
@@ -265,6 +276,11 @@ const browserTestSource = String.raw`(() => {
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
       plannerTeamIdText: text("#plannerTeamId"),
+      plannerTeamNameText: text("#plannerTeamName"),
+      plannerTeamDivisionText: text("#plannerTeamDivision"),
+      plannerTeamDivisionColor: document.getElementById("plannerTeamDivision")?.style.color || "",
+      plannerTeamPrimaryColor: document.getElementById("plannerTeamCard")?.style.getPropertyValue("--my-club-primary") || "",
+      plannerTeamSecondaryColor: document.getElementById("plannerTeamCard")?.style.getPropertyValue("--my-club-secondary") || "",
       plannerTeamIdTop: document.getElementById("plannerTeamId")?.getBoundingClientRect().top || 0,
       plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
       plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
@@ -551,6 +567,10 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
+        assert(parserSnapshot.plannerTeamNameText === "Browser Club", "Planner first paint must use the cached Club name.");
+        assert(parserSnapshot.plannerTeamDivisionText === "Gold", "Planner first paint must use the cached Club division.");
+        assert(parserSnapshot.plannerTeamDivisionColor === "rgb(255, 210, 62)", "Planner first paint must use the cached division colour.");
+        assert(parserSnapshot.plannerTeamPrimaryColor === "#112233" && parserSnapshot.plannerTeamSecondaryColor === "#445566", "Planner first paint must apply both cached Club colours.");
         assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
         const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
         const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
@@ -1413,6 +1433,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
       assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
+      assert(document.getElementById("plannerTeamCard").style.getPropertyValue("--my-club-primary") === parserSnapshot.plannerTeamPrimaryColor, "Planner first-paint Club colours must persist through hydration.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
       assert(text("#plannerTeamId") === "Club #9001", "Selected Planner card must show its club ID.");
        assert(Math.abs(document.getElementById("plannerTeamId").getBoundingClientRect().top - parserSnapshot.plannerTeamIdTop) <= 2, "Selected Planner Club #ID must not move vertically between first paint and hydrated identity.");
@@ -1462,6 +1483,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
       assert(text("#plannerTeamDivision") === "Gold", "Selected team division is missing.");
+      assert(JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}")["9001"]?.name === "Browser Club", "Planner selection must cache the Club identity for direct-refresh first paint.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
       assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
       assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");

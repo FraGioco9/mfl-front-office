@@ -1209,6 +1209,39 @@
               teamLogo.src = "https://d13e14gtps4iwl.cloudfront.net/u/clubs/" + encodeURIComponent(clubId) + "/logo.webp";
             }
             if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;
+
+            // Reuse the Club page's persisted identity before the first visible paint.
+            // A new or uncached Club remains empty rather than displaying guessed details.
+            try {
+              const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
+              const cached = stored && typeof stored === "object" && !Array.isArray(stored) ? stored[clubId] : null;
+              if (cached && String(cached.clubId || clubId).trim() === clubId) {
+                const name = String(cached.name || "").trim();
+                const divisionName = String(cached.divisionName || "").trim();
+                const divisionColor = String(cached.divisionColor || "").trim();
+                const validColor = value => /^#[0-9a-f]{6}$/iu.test(String(value || "").trim())
+                  ? String(value).trim().toLowerCase() : "";
+                const teamName = document.getElementById("plannerTeamName");
+                const teamDivision = document.getElementById("plannerTeamDivision");
+                const teamCard = document.getElementById("plannerTeamCard");
+                if (name && teamName instanceof HTMLElement) teamName.textContent = name;
+                if (divisionName && teamDivision instanceof HTMLElement) {
+                  teamDivision.textContent = divisionName;
+                  teamDivision.hidden = false;
+                  teamDivision.style.color = validColor(divisionColor);
+                }
+                if (teamCard instanceof HTMLElement) {
+                  const primary = validColor(cached.primaryColor);
+                  const secondary = validColor(cached.secondaryColor);
+                  if (primary || secondary) {
+                    teamCard.style.setProperty("--my-club-primary", primary || secondary);
+                    teamCard.style.setProperty("--my-club-secondary", secondary || primary);
+                  }
+                }
+              }
+            } catch {
+              // Storage can be unavailable, corrupt or empty without blocking Planner.
+            }
             if (rosterBody instanceof HTMLElement && !rosterBody.childElementCount) {
               rosterBody.setAttribute("aria-busy", "true");
               for (let index = 0; index < 8; index += 1) {

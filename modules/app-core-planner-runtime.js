@@ -47,6 +47,35 @@
   let pendingPlayers=new Map();
   let activeContractEditor=null;
   const MAX_SQUAD_SIZE=25;
+  const CLUB_DISPLAY_DATA_STORAGE_KEY="mfl-club-display-data-v1";
+  function cachedPlannerClub(clubId){
+    const id=String(clubId||"").trim();
+    if(!id)return null;
+    try{
+      const stored=JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY)||"{}");
+      const club=stored&&typeof stored==="object"&&!Array.isArray(stored)?stored[id]:null;
+      return club&&String(club.clubId||id).trim()===id&&String(club.name||"").trim()?club:null;
+    }catch{return null;}
+  }
+  function savePlannerClub(data,divisionInfo){
+    const id=String(data?.clubId||data?.id||"").trim(),name=String(data?.name||data?.clubName||"").trim();
+    if(!id||!name)return;
+    try{
+      const stored=JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY)||"{}");
+      const all=stored&&typeof stored==="object"&&!Array.isArray(stored)?stored:{};
+      const old=all[id]&&typeof all[id]==="object"&&String(all[id].clubId||id).trim()===id?all[id]:{};
+      all[id]={
+        ...old,clubId:id,name,
+        divisionName:divisionInfo?.name||String(data.divisionName||old.divisionName||""),
+        divisionColor:divisionInfo?.color||String(data.divisionColor||old.divisionColor||""),
+        primaryColor:String(data.primaryColor||old.primaryColor||""),
+        secondaryColor:String(data.secondaryColor||old.secondaryColor||""),
+        city:String(data.city||old.city||""),
+        nation:String(data.nation||data.country||old.nation||""),
+      };
+      localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY,JSON.stringify(all));
+    }catch{/* Identity storage is optional; never block Planner. */}
+  }
   const PLANNER_POSITION_ORDER=["GK","RB","CB","LB","RWB","LWB","CDM","RM","CM","LM","CAM","RW","CF","LW","ST"];
   const PLANNER_POSITION_RANK=new Map(PLANNER_POSITION_ORDER.map((position,index)=>[position,index]));
 
@@ -592,8 +621,14 @@
     if(selectedTeam instanceof HTMLElement)selectedTeam.hidden=!team;
     if(workspace instanceof HTMLElement)workspace.hidden=!team;
     if(!team){selectedTeamData=null;resetRoster();return;}
-    const id=String(team.clubId||team.id||""),name=String(team.name||team.clubName||"");
-    const data={...(selectedTeamData&&String(selectedTeamData.clubId||selectedTeamData.id||"")===id?selectedTeamData:{}),...team,clubId:id};
+    const id=String(team.clubId||team.id||"");
+    const cached=cachedPlannerClub(id);
+    const data={...cached,...(selectedTeamData&&String(selectedTeamData.clubId||selectedTeamData.id||"")===id?selectedTeamData:{}),...team,clubId:id};
+    // Club search returns only name/division: retain cached colours and location.
+    for(const key of ["name","primaryColor","secondaryColor","city","nation","divisionName","divisionColor"]){
+      if(!data[key]&&cached?.[key])data[key]=cached[key];
+    }
+    const name=String(data.name||data.clubName||"");
     selectedTeamData=data;
     if(teamId instanceof HTMLElement)teamId.textContent=id?"Club #"+id:"";
     if(teamName)teamName.textContent=name;
@@ -616,7 +651,9 @@
         teamCard.style.removeProperty("--my-club-secondary");
       }
     }
-    const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(data?.division):null;
+    const resolvedDivision=typeof contractDivisionInfo==="function"?contractDivisionInfo(data?.division):null;
+    const divisionInfo=resolvedDivision||(data.divisionName?{name:String(data.divisionName),color:String(data.divisionColor||"")}:null);
+    savePlannerClub(data,divisionInfo);
     if(teamDivision instanceof HTMLElement){teamDivision.textContent=divisionInfo?.name||"";teamDivision.style.color=divisionInfo?.color||"";teamDivision.hidden=!divisionInfo;}
     if(teamLocation instanceof HTMLElement){
       const city=String(data?.city||"").trim(),nation=String(data?.nation||"").trim();
