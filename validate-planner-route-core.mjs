@@ -232,8 +232,8 @@ invariant(
   "Planner must include loaded club players and paginate results without duplicates.",
 );
 invariant(
-  styles.includes(".plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}")
-    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px")
+  styles.includes(".plannerPlayerSearchTable td.plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}")
+    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:24px")
     && styles.includes("color:var(--primary-hover);text-decoration:none;outline:0"),
   "Planner Select/Selected actions must be centered without an underline on hover.",
 );
@@ -245,7 +245,7 @@ invariant(
 invariant(
   planner.includes('makePlannerActionText')
     && !planner.includes('plannerPlayerSelectButton')
-    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px"),
+    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:24px"),
   "Planner player selection must render as text actions rather than boxed buttons.",
 );
 invariant(
