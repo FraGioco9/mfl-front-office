@@ -147,12 +147,24 @@
 
             document.body.dataset.page = "planner";
             if (root.dataset.storedWalletOptIn !== "true") {
-              const locked = document.getElementById("myPlayersLockedPage");
-              const title = document.getElementById("optInLockedTitle");
-              const message = document.getElementById("optInLockedMessage");
-              if (title instanceof HTMLElement) title.textContent = "Planner";
-              if (message instanceof HTMLElement) message.textContent = "In order to use Planner, you need to opt in.";
-              if (locked instanceof HTMLElement) locked.hidden = false;
+              // The shared opt-in shell is parsed after Planner. Prepare it as
+              // soon as it enters the DOM, before the browser can paint.
+              const showLockedPlanner = () => {
+                const locked = document.getElementById("myPlayersLockedPage");
+                const title = document.getElementById("optInLockedTitle");
+                const message = document.getElementById("optInLockedMessage");
+                if (!(locked instanceof HTMLElement) || !(title instanceof HTMLElement) || !(message instanceof HTMLElement)) return false;
+                title.textContent = "Planner";
+                message.textContent = "In order to use Planner, you need to opt in.";
+                locked.hidden = false;
+                return true;
+              };
+              if (!showLockedPlanner()) {
+                const observer = new MutationObserver(() => {
+                  if (showLockedPlanner()) observer.disconnect();
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+              }
               return;
             }
             page.hidden = false;
