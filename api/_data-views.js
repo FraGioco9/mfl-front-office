@@ -74,9 +74,10 @@ function playerSearchRows(query, limit, options = {}) {
   const nameTokenPatterns = nameTokens.map((token) => literalLikePattern(token));
   const useRuntimeSearch = tableExists("runtime_player_search");
   const fromSql = useRuntimeSearch
-    ? "runtime_player_search s JOIN players p ON p.player_id = s.player_id"
+    ? "players p LEFT JOIN runtime_player_search s ON s.player_id = p.player_id"
     : "players p";
-  const normalizedName = useRuntimeSearch ? "s.normalized_name" : "normalize_search(p.name)";
+  const normalizedName = useRuntimeSearch ? "coalesce(s.normalized_name, normalize_search(p.name))" : "normalize_search(p.name)";
+  const offset = Math.max(0, Math.min(100000, Math.trunc(Number(options.offset) || 0)));
   const nameMatch = nameTokenPatterns.map(() => `${normalizedName} LIKE ? ESCAPE '\\'`).join(" AND ");
   const rows = queryRows(
     `SELECT ${qualifiedSelectList("p", columns)}
@@ -94,10 +95,10 @@ function playerSearchRows(query, limit, options = {}) {
      END,
      p.overall DESC,
      p.player_id DESC
-     LIMIT ?`,
-    [contains, ...nameTokenPatterns, query, query, surnameExact, surnamePrefix, prefix, prefix, limit],
+     LIMIT ? OFFSET ?`,
+    [contains, ...nameTokenPatterns, query, query, surnameExact, surnamePrefix, prefix, prefix, limit + 1, offset],
   );
-  return { columns, rows: rowsAsArrays(rows, columns) };
+  return { columns, rows: rowsAsArrays(rows.slice(0, limit), columns), hasMore: rows.length > limit, offset };
 }
 
 function agentSearchRows(query, limit) {
@@ -294,7 +295,7 @@ function searchData(request) {
   }
   if (type === "agents") return agentSearchRows(query, limit);
   if (type === "clubs") return { results: clubSearchRows(query, limit) };
-  return playerSearchRows(query, limit, { excludeRetired: true });
+  return playerSearchRows(query, limit, { excludeRetired: true, offset: request.query?.offset });
 }
 
 function summaryData() {
