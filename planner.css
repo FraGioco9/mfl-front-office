@@ -40,18 +40,21 @@
 .plannerPlayerSearchResult:hover td{background:var(--row-hover)}
 .plannerPlayerSearchFlagCell .flagImage{display:block;width:20px;height:20px;margin:0 auto}
 .plannerPlayerSearchNameCell{font-weight:700}
-.plannerPlayerSearchActionCell{overflow:visible}
-.plannerPlayerActionText{display:inline-block;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:700;line-height:1;cursor:pointer;user-select:none}
-.plannerPlayerActionText:hover:not([aria-disabled="true"]),.plannerPlayerActionText:focus-visible:not([aria-disabled="true"]){color:var(--primary-hover);text-decoration:underline;outline:0}
+.plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}
+.plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px;vertical-align:middle;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:700;line-height:1;cursor:pointer;user-select:none;text-decoration:none}
+.plannerPlayerActionText:hover:not([aria-disabled="true"]),.plannerPlayerActionText:focus-visible:not([aria-disabled="true"]){color:var(--primary-hover);text-decoration:none;outline:0}
 .plannerPlayerActionText[aria-disabled="true"]{color:var(--text-soft);cursor:default}
 #plannerPlayerSearchEmpty{padding:14px 12px;text-align:center}
+.plannerPlayerSearchMore{display:block;width:100%;min-height:32px;height:32px;border:0;border-top:1px solid var(--border);border-radius:0;background:var(--surface-muted);color:var(--primary);font-size:12px;font-weight:700;text-align:center}
+.plannerPlayerSearchMore:hover:not(:disabled),.plannerPlayerSearchMore:focus-visible:not(:disabled){border-color:var(--border);background:var(--row-hover);color:var(--primary-hover);box-shadow:none}
+.plannerPlayerSearchMore[hidden]{display:none}
 .plannerPlayerSelection{display:grid;gap:6px;min-height:0}
 .plannerPlayerSelection[hidden]{display:none}
 .plannerPlayerSelection h3{margin:0;font-size:13px}
 .plannerPlayerSelectionTableShell{max-height:142px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
 .plannerPlayerSelectionTable th{position:sticky;top:0}
 .plannerPendingPlayer:hover td{background:var(--row-hover)}
-.plannerPlayerModalFooter{margin-top:2px}
+.plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
 .plannerRosterTable .plannerPlayerColumn{width:32%}
