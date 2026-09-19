@@ -2,18 +2,18 @@
 
 .plannerTeamSelector[hidden],.plannerSelectedTeam[hidden]{display:none}
 .plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%;max-width:100%;min-width:0}
-.plannerTeamCard{flex:1 1 0;width:auto;min-width:0;min-height:116px;grid-template-columns:116px minmax(0,1fr)}
-.plannerTeamCard:hover{border:var(--mfl-panel-border-strong)}
+.plannerTeamCard{--mfl-club-identity-logo-width:132px;--mfl-club-identity-logo-height:144px;flex:1 1 0;width:auto;min-width:0;min-height:184px;grid-template-columns:168px minmax(0,1fr);transition:none}
+.plannerTeamCard:hover,.plannerTeamCard:focus-visible{border:var(--mfl-panel-border-strong);box-shadow:none;outline:0}
 .plannerTeamCard:hover .clubIdentityMain{background-color:var(--mfl-panel-background)}
-.plannerTeamCard .plannerTeamLogoFrame{padding:12px}
+.plannerTeamCard .plannerTeamLogoFrame{padding:16px}
 .plannerTeamLogoFrame[hidden]{display:none}
-.plannerTeamCard .plannerTeamLogo{width:100%;max-width:88px;height:88px;max-height:88px;object-fit:contain}
-.plannerTeamCard .plannerTeamCardBody{display:flex;align-items:center;min-width:0;padding:14px 24px}
+.plannerTeamCard .plannerTeamLogo{width:100%;max-width:var(--mfl-club-identity-logo-width);height:100%;max-height:var(--mfl-club-identity-logo-height);object-fit:contain}
+.plannerTeamCard .plannerTeamCardBody{display:flex;align-items:center;min-width:0;padding:24px 28px}
 .plannerTeamCardInfo{min-width:0}
-.plannerTeamCard .clubIdentityId{font-size:12px}
-.plannerTeamCard .clubIdentityName{margin-top:4px;font-size:26px;line-height:1.1;white-space:normal;overflow-wrap:anywhere}
-.plannerTeamCard .clubIdentityMeta{gap:5px 12px;margin-top:7px;font-size:14px}
-.plannerTeamCard .clubIdentityLocation .clubLocationFlag{width:16px;height:16px}
+.plannerTeamCard .clubIdentityId{font-size:14px}
+.plannerTeamCard .clubIdentityName{margin-top:4px;font-size:34px;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plannerTeamCard .clubIdentityMeta{gap:5px 14px;margin-top:10px;font-size:16px}
+.plannerTeamCard .clubIdentityLocation .clubLocationFlag{width:18px;height:18px}
 .plannerTeamCard .clubIdentityLocation[hidden]{display:none}
 #plannerTeamClearButton{flex:0 0 auto;margin-left:0}
 
@@ -136,6 +136,6 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerRosterTable .plannerAgeContent{justify-content:flex-start}
 .plannerRosterTable tfoot td:nth-child(4),.plannerRosterTable tfoot td:nth-child(5){text-align:left}
 .plannerPlayerSearchTable :is(th,td):nth-child(3),.plannerPlayerSearchTable :is(th,td):nth-child(4),.plannerPlayerSearchTable :is(th,td):nth-child(5){text-align:left;justify-items:start}
-@media(max-width:800px){.plannerTeamCard{grid-template-columns:100px minmax(0,1fr);min-height:108px}.plannerTeamCard .plannerTeamCardBody{padding:10px 14px}.plannerTeamCard .plannerTeamLogoFrame{padding:8px}.plannerTeamCard .plannerTeamLogo{max-width:76px;height:76px;max-height:76px}.plannerTeamCard .clubIdentityName{font-size:22px}.plannerTeamCard .clubIdentityMeta{margin-top:5px;font-size:12px}}
+@media(max-width:900px){.plannerTeamCard{--mfl-club-identity-logo-width:110px;--mfl-club-identity-logo-height:120px;grid-template-columns:140px minmax(0,1fr);min-height:156px}.plannerTeamCard .plannerTeamLogoFrame{padding:14px}.plannerTeamCard .plannerTeamCardBody{padding:18px 20px}.plannerTeamCard .clubIdentityId{font-size:13px}.plannerTeamCard .clubIdentityName{font-size:30px}.plannerTeamCard .clubIdentityMeta{margin-top:8px;font-size:15px}}
 @media(max-width:600px){.plannerSelectedTeam{flex-direction:column;align-items:stretch;gap:10px}.plannerTeamCard{flex:none;width:100%}#plannerTeamClearButton{align-self:flex-end}}
-@media(max-width:520px){.plannerTeamCard{grid-template-columns:88px minmax(0,1fr);min-height:100px}.plannerTeamCard .plannerTeamCardBody{padding:10px 12px}.plannerTeamCard .clubIdentityName{font-size:19px}.plannerTeamCard .clubIdentityMeta{font-size:12px}.plannerTeamCard .plannerTeamLogo{max-width:70px;height:70px;max-height:70px}}
+@media(max-width:520px){.plannerTeamCard{--mfl-club-identity-logo-width:88px;--mfl-club-identity-logo-height:96px;grid-template-columns:112px minmax(0,1fr);min-height:136px}.plannerTeamCard .plannerTeamLogoFrame{padding:12px}.plannerTeamCard .plannerTeamCardBody{padding:14px}.plannerTeamCard .clubIdentityId{font-size:11px}.plannerTeamCard .clubIdentityName{font-size:24px}.plannerTeamCard .clubIdentityMeta{gap:4px 9px;margin-top:6px;font-size:13px}}
