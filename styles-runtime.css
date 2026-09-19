@@ -7664,21 +7664,17 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 
 .plannerRosterTable tfoot th[scope="row"]{text-align:left}
 
-/* Keep native scrollbars inside row groups; hidden header scrollports reserve the same gutter. */
+/* Only popup table bodies scroll. Header backgrounds also fill the reserved gutter. */
 .plannerPlayerSearchResults{display:flex;flex-direction:column;overflow:hidden}
 .plannerPlayerSelectionTableShell{overflow:hidden}
-.plannerRosterPanel .playerTableScroller{overflow:hidden}
-.plannerRosterTable,.plannerPlayerSearchTable{display:flex;flex-direction:column;min-height:0;max-height:100%}
-.plannerRosterTable{--planner-columns:6% 26% 16% 10% 14% 20% 8%;--planner-row-width:580px;max-height:min(640px,65vh)}
-.plannerPlayerSearchTable{--planner-columns:7% 34% 21% 10% 10% 18%;--planner-row-width:700px;flex:1}
+.plannerRosterPanel .playerTableScroller{overflow:visible}
+.plannerPlayerSearchTable{display:flex;flex-direction:column;min-height:0;max-height:100%;--planner-columns:7% 34% 21% 10% 10% 18%;--planner-row-width:700px;flex:1}
 .plannerPlayerSelectionTable{max-height:142px}
-.plannerRosterTable colgroup,.plannerPlayerSearchTable colgroup{display:none}
-.plannerRosterTable thead,.plannerRosterTable tfoot,.plannerPlayerSearchTable thead{display:block;flex:none;overflow:hidden;scrollbar-gutter:stable}
-.plannerRosterTable tbody,.plannerPlayerSearchTable tbody{display:block;min-height:0;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
-.plannerRosterTable tr,.plannerPlayerSearchTable tr{display:grid;grid-template-columns:var(--planner-columns);min-width:var(--planner-row-width);width:100%}
-.plannerRosterTable th,.plannerRosterTable td,.plannerPlayerSearchTable th,.plannerPlayerSearchTable td{box-sizing:border-box;min-width:0;display:grid;align-content:center}
-.plannerRosterTable tfoot th[scope="row"]{grid-column:span 2}
-@media(max-width:800px){.plannerRosterTable{--planner-columns:6% 22% 16% 14% 14% 20% 8%}}
+.plannerPlayerSearchTable colgroup{display:none}
+.plannerPlayerSearchTable thead{display:block;flex:none;overflow:hidden;scrollbar-gutter:stable;background:var(--mfl-table-header-background)}
+.plannerPlayerSearchTable tbody{display:block;min-height:0;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
+.plannerPlayerSearchTable tr{display:grid;grid-template-columns:var(--planner-columns);min-width:var(--planner-row-width);width:100%}
+.plannerPlayerSearchTable th,.plannerPlayerSearchTable td{box-sizing:border-box;min-width:0;display:grid;align-content:center}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
