@@ -7562,11 +7562,15 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPage{width:100%;max-width:none;margin:0}.plannerTeamSelector{display:grid;gap:5px;width:100%;max-width:520px}.plannerTeamSearchLabel{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}.plannerTeamSearch,.plannerTeamSearchControl{position:relative;width:100%}#plannerTeamSearchInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);padding-right:42px;transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}.plannerTeamSearchControl:hover #plannerTeamSearchInput:not(:disabled),#plannerTeamSearchInput:focus:not(:disabled),#plannerTeamSearchInput:focus-visible:not(:disabled){outline:0;border-color:var(--primary-hover);background:var(--row-hover);color:var(--text);box-shadow:none}.plannerTeamSearchClearButton{position:absolute;top:50%;right:4px;width:30px;height:30px;transform:translateY(-50%);outline:0;border-color:transparent;background:transparent;box-shadow:none}.plannerTeamSearchClearButton:hover:not(:disabled),.plannerTeamSearchClearButton:focus:not(:disabled),.plannerTeamSearchClearButton:focus-visible:not(:disabled){outline:0;border-color:transparent;background:transparent;box-shadow:none}#plannerTeamSearchInput:placeholder-shown+.plannerTeamSearchClearButton{visibility:hidden;opacity:0;pointer-events:none}.plannerTeamSearchResults{position:absolute;top:calc(100% + 6px);right:0;left:0;z-index:var(--mfl-z-dropdown);display:grid;gap:8px;max-height:362px;padding:8px;overflow-y:auto;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.18)}.plannerTeamSearchResults[hidden],.plannerStatus[hidden]{display:none}.plannerTeamSearchResult{width:100%}.plannerTeamSearchResults .plannerTeamSearchResult:hover,.plannerTeamSearchResults .plannerTeamSearchResult:focus-visible{border-color:var(--primary);background:var(--row-hover);color:var(--text);box-shadow:inset 0 0 0 1px var(--primary)}.plannerTeamSearchResult strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plannerStatus{margin:10px 0 0;color:var(--text-soft);font-size:12px}
 
 .plannerTeamSelector[hidden],.plannerSelectedTeam[hidden]{display:none}
-.plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%;max-width:100%;min-height:72px}
-.plannerTeamLogo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
-.plannerTeamIdentity{display:grid;gap:4px;min-width:0}
-#plannerTeamName{overflow-wrap:anywhere;font-size:24px;font-weight:800}
-#plannerTeamDivision{font-size:12px;font-weight:700}
+.plannerSelectedTeam{display:block;width:100%;max-width:100%;min-width:0}
+.plannerTeamCard{width:100%;min-height:156px}
+.plannerTeamCard:hover{border:var(--mfl-panel-border-strong)}
+.plannerTeamCard:hover .myClubCardBody{background-color:var(--mfl-panel-background)}
+.plannerTeamLogoFrame[hidden]{display:none}
+.plannerTeamLogo{width:100%;max-width:100px;max-height:108px;object-fit:contain}
+.plannerTeamCardBody{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
+.plannerTeamCardInfo{min-width:0}
+.plannerTeamCard .myClubName{white-space:normal;overflow-wrap:anywhere}
 #plannerTeamClearButton{flex-shrink:0;margin-left:auto}
 
 .plannerWorkspace{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:start;gap:32px;margin-top:24px}
@@ -7680,6 +7684,15 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 
 /* Continue row dividers through the reserved gutter when the body fits without scrolling. */
 .plannerPlayerSearchTable tbody.plannerTableNoVerticalScroll{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 30px,var(--mfl-table-border-color) 30px,var(--mfl-table-border-color) 31px);background-size:100% calc(100% - 31px);background-position:left top;background-repeat:no-repeat}
+
+/* Canonical Overall rarity marker and left-aligned numeric/position columns. */
+.plannerOverallContent{display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;min-width:0;white-space:nowrap}
+.plannerOverallRarityCircle{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%}
+.plannerRosterTable :is(th,td):nth-child(3),.plannerRosterTable :is(th,td):nth-child(4),.plannerRosterTable :is(th,td):nth-child(5){text-align:left}
+.plannerRosterTable .plannerAgeContent{justify-content:flex-start}
+.plannerRosterTable tfoot td:nth-child(4),.plannerRosterTable tfoot td:nth-child(5){text-align:left}
+.plannerPlayerSearchTable :is(th,td):nth-child(3),.plannerPlayerSearchTable :is(th,td):nth-child(4),.plannerPlayerSearchTable :is(th,td):nth-child(5){text-align:left;justify-items:start}
+@media(max-width:520px){.plannerTeamCard{grid-template-columns:96px minmax(0,1fr);min-height:130px}.plannerTeamCardBody{gap:8px;padding:12px}.plannerTeamCard .myClubName{font-size:17px}.plannerTeamCard .myClubMeta{font-size:12px}.plannerTeamCard .myClubLogoFrame{padding:8px}}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
