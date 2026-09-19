@@ -265,6 +265,11 @@ const browserTestSource = String.raw`(() => {
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
       plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
+      plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
+      plannerTeamCardBottom: document.getElementById("plannerTeamCard")?.getBoundingClientRect().bottom || 0,
+      plannerTeamCardHeight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().height || 0,
+      plannerClearButtonLeft: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().left || 0,
+      plannerClearButtonTop: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().top || 0,
       plannerClearButtonRight: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().right || 0,
       bodyPage: String(document.body.dataset.page || ""),
       filterCount: text("#filterSummary"),
@@ -540,7 +545,13 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
-        assert(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight >= 8 && parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight <= 40, "Selected Planner Clear must be right-aligned inside its padded club card at first paint.");
+        assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
+        assert(parserSnapshot.plannerTeamCardHeight <= 145, "Selected Planner club card must use the compact height at first paint.");
+        if (innerWidth > 600) {
+          assert(parserSnapshot.plannerClearButtonLeft - parserSnapshot.plannerTeamCardRight >= 8, "Selected Planner Clear must sit outside the club card on desktop at first paint.");
+        } else {
+          assert(parserSnapshot.plannerClearButtonTop >= parserSnapshot.plannerTeamCardBottom - 1, "Selected Planner Clear must sit below the club card on phone at first paint.");
+        }
       } else {
         assert(parserSnapshot.plannerTeamSelectorHidden === false, "Empty Planner first paint hid the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === true, "Empty Planner first paint exposed a selected club.");
@@ -1395,7 +1406,16 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
-      assert(selectedBox.right - clearBox.right >= 8 && selectedBox.right - clearBox.right <= 40, "Selected Planner Clear must stay right-aligned inside its padded club card after hydration.");
+      const cardBox = document.getElementById("plannerTeamCard").getBoundingClientRect();
+      assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay right-aligned outside its card after hydration.");
+      assert(cardBox.height <= 145, "Selected Planner club card must remain compact after hydration.");
+      if (innerWidth > 600) {
+        assert(clearBox.left - cardBox.right >= 8, "Selected Planner Clear must stay outside the club card on desktop.");
+      } else {
+        assert(clearBox.top >= cardBox.bottom - 1, "Selected Planner Clear must stay below the club card on phone.");
+      }
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Planner club name must reuse the Club page identity position.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityMeta"), "Planner club division/location must reuse the Club page identity position.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected Planner refresh must show the club logo.");
       assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Selected Planner refresh must restore the roster.");
       assert(document.documentElement.scrollWidth <= innerWidth, "Selected Planner must not overflow horizontally.");
@@ -1424,6 +1444,8 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
       assert(text("#plannerTeamDivision") === "Diamond", "Selected team division is missing.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
+      assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");
       assert(text("#plannerTeamId") === "#9001", "Selected team card must show its ID.");
       assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
       assert(location.search === "?club=9001", "Selected team URL is incorrect.");
