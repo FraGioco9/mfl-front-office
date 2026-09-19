@@ -46,7 +46,7 @@ assert.equal(query.get("pageSize"), "5000", "Load the complete club roster, not 
 assert.equal(elements.get("plannerWorkspace").hidden, false);
 await complete(requests[0]);
 assert.ok(elements.has("plannerTeamCard"), "Planner must expose the canonical My Clubs card container");
-assert.equal(elements.get("plannerTeamId").textContent, "#9001", "Planner card must show its club ID");
+assert.equal(elements.get("plannerTeamId").textContent, "Club #9001", "Planner card must show the canonical Club #ID label");
 assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Planner card must preserve the selected club name");
 assert.equal(elements.get("plannerTeamLocation").textContent, "Rome, Italy", "Planner card must show location from the loaded club");
 const body = elements.get("plannerRosterBody");
