@@ -143,7 +143,7 @@
     const contracts=roster.map(player=>Number(player?.planned_contract_value)).filter(Number.isFinite);
     if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(2):"—";
     if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(2):"—";
-    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+Math.min(100,contracts.reduce((sum,value)=>sum+value,0)).toFixed(2)+"%":"—";
+    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2)+"%":"—";
   }
   function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
   function updateAddPlayerAvailability(){
@@ -242,7 +242,7 @@
     if(Number(player?.retirement_years)===0)return false;
     if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
-    const availableContract=Math.max(0,100-totalPlannedContracts());
+    const availableContract=Math.max(0,Math.round((100-totalPlannedContracts())*100)/100);
     const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
     roster.push({...player,planned_contract_value:plannedContract});
     sortPlannerRoster();
@@ -504,9 +504,12 @@
       if(!response.ok)throw new Error("Could not load the squad.");
       if(!Array.isArray(payload.columns)||!Array.isArray(payload.rows)||!payload.columns.includes("player_id")||!payload.columns.includes("name"))throw new Error("Could not read the squad.");
       if(Number(payload.totalRows)>payload.rows.length)throw new Error("The full squad could not be loaded.");
+      let remainingContract=100;
       roster=payload.rows.map(values=>{
         const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
-        return {...player,planned_contract_value:contractValueFromDatabase(player.active_contract_revenue_share)};
+        const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),remainingContract);
+        remainingContract=Math.max(0,Math.round((remainingContract-plannedContract)*100)/100);
+        return {...player,planned_contract_value:plannedContract};
       });
       sortPlannerRoster();
       renderRoster();

@@ -172,4 +172,17 @@ assert.equal(searchBody.children[0].children[5].children[0].attributes["aria-dis
 assert.equal(searchBody.children[1].children[5].children[0].textContent, "Squad full", "Non-squad players must respect the 25-player cap");
 assert.equal(elements.get("plannerPlayerSelectionBody").children.length, 0, "Confirmed selections must clear the selected-player table");
 
+// Loaded contracts must obey the same budget as edits and additions.
+route.select({ clubId: "budget-check", name: "Budget Club", division: 1 });
+const overBudgetRows = Array.from({ length: 6 }, (_, index) => [200 + index, "Budget " + index, "CM", 23, 80, 5, 2, 2000]);
+await complete(requests.at(-1), { columns: payload.columns, rows: overBudgetRows, totalRows: 6 });
+const displayedContractTotal = () => body.children.reduce((sum, row) => sum + Number.parseFloat(row.children[4].children[0].children[0].textContent), 0);
+assert.equal(displayedContractTotal(), 100, "Loaded row allocations must actually total 100%, rather than only capping the footer");
+assert.equal(overBudgetRows[5][7], 2000, "Budget normalization must not change canonical contracts");
+const budgetControl = body.children[5].children[4].children[0];
+budgetControl.children[2].click();
+budgetControl.children[1].children[0].value = "20";
+budgetControl.children[2].click();
+assert.equal(displayedContractTotal(), 100, "Confirming a contract must respect the remaining squad budget");
+
 console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, selected table, 100% contract cap, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
