@@ -126,10 +126,11 @@ invariant(
 invariant(planner.includes("plannerAgeMarker") && planner.includes('retirementMarker--"+marker.status') && planner.includes('Number(player?.player_seasons)===1') && planner.includes('label:"New mint"'), "Planner Age must preserve canonical retirement and New mint marker semantics.");
 invariant(
   planner.includes('type:"players"')
-    && planner.includes('limit:"25"')
+    && planner.includes('limit:"50"')
+    && planner.includes('offset:String(offset)')
     && planner.includes("retirement_years")
     && planner.includes("addPlayerToRoster"),
-  "Planner Add player must reuse canonical non-retired player search with a 25-result search window and client guard.",
+  "Planner Add player must reuse canonical non-retired search with 50-result pages and client guard.",
 );
 invariant(
   planner.includes("const inSquad=roster.some")
@@ -213,6 +214,33 @@ invariant(
 invariant(
   planner.includes('normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q)'),
   "Planner player-search stale-response checks must use normalized name semantics.",
+);
+invariant(
+  dataViews.includes('players p LEFT JOIN runtime_player_search s ON s.player_id = p.player_id')
+    && dataViews.includes('coalesce(s.normalized_name, normalize_search(p.name))')
+    && dataViews.includes('limit + 1, offset')
+    && dataViews.includes('hasMore: rows.length > limit')
+    && dataViews.includes('offset: request.query?.offset'),
+  "Planner search must include unindexed player owners and expose additional result pages.",
+);
+invariant(
+  planner.includes("clubSearchPlayers=payload.rows.map")
+    && planner.includes("clubSearchPlayers.filter(matches)")
+    && planner.includes("seenIds.has(playerId)")
+    && planner.includes("playerSearchPayload.rows.length")
+    && html.includes('id="plannerPlayerSearchMore"'),
+  "Planner must include loaded club players and paginate results without duplicates.",
+);
+invariant(
+  styles.includes(".plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}")
+    && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:28px")
+    && styles.includes("color:var(--primary-hover);text-decoration:none;outline:0"),
+  "Planner Select/Selected actions must be centered without an underline on hover.",
+);
+invariant(
+  html.includes('id="plannerPlayerConfirmButton" type="button" disabled>Add</button>')
+    && styles.includes(".plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto"),
+  "Planner Discard and Add must be grouped at the bottom right.",
 );
 invariant(
   planner.includes('makePlannerActionText')
