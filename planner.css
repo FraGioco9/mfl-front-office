@@ -14,6 +14,7 @@
 .plannerTeamCard .clubIdentityName{margin-top:4px;font-size:26px;line-height:1.1;white-space:normal;overflow-wrap:anywhere}
 .plannerTeamCard .clubIdentityMeta{gap:5px 12px;margin-top:7px;font-size:14px}
 .plannerTeamCard .clubIdentityLocation .clubLocationFlag{width:16px;height:16px}
+.plannerTeamCard .clubIdentityLocation[hidden]{display:none}
 #plannerTeamClearButton{flex:0 0 auto;margin-left:0}
 
 .plannerWorkspace{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:start;gap:32px;margin-top:24px}
