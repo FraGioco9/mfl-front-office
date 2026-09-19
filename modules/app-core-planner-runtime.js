@@ -672,16 +672,68 @@
     }
   }
   function selectTeam(team,{updateUrl=true,replaceUrl=false}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;selectedTeamId=id;input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed)void loadRoster(id);return true;}
-  function renderResults(clubs,query=""){if(!(results instanceof HTMLElement))return;const fragment=document.createDocumentFragment();(Array.isArray(clubs)?clubs:[]).slice(0,10).forEach(team=>{const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name)return;const button=document.createElement("button");button.type="button";button.className="searchResult clubSearchResult plannerTeamSearchResult";button.setAttribute("role","option");button.dataset.clubId=id;const title=document.createElement("strong");title.textContent=name;const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;if(divisionInfo){meta.append(document.createTextNode(" · "));const division=document.createElement("span");division.className="clubSearchDivision";division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;meta.appendChild(division);}button.append(title,meta);button.addEventListener("click",()=>selectTeam(team));fragment.appendChild(button);});if(!fragment.childNodes.length&&query){const empty=document.createElement("div");empty.className="searchHint";empty.textContent="No teams found.";fragment.appendChild(empty);}results.replaceChildren(fragment);results.hidden=!results.childNodes.length;}
+  let ownedClubs=null,ownedWallet="",ownedRequest=null;
+  async function requestOwnedClubs(){
+    if(typeof hasWalletOptIn!=="function"||!hasWalletOptIn())return [];
+    if(!(input instanceof HTMLInputElement)||input.value.trim()||selectedTeamId||selector?.hidden)return [];
+    const seq=++searchSequence;
+    const wallet=String(state.linkedWalletAddress||"").trim().toLowerCase();
+    if(ownedWallet!==wallet){ownedWallet=wallet;ownedClubs=null;ownedRequest=null;}
+    if(results instanceof HTMLElement&&ownedClubs===null){
+      const loading=document.createElement("div");loading.className="searchHint";loading.textContent="Loading your clubs…";
+      results.replaceChildren(loading);results.hidden=false;
+    }
+    try{
+      if(!ownedRequest&&ownedClubs===null){
+        ownedRequest=(async()=>{
+          const owner=Reflect.get(window,"__mflMyClubsRoute");
+          if(typeof owner?.listOwnedClubs==="function")return owner.listOwnedClubs();
+          const response=await window.__mflDataClient.fetch("/api/data?mode=my-clubs",{
+            cache:"no-store",headers:{Accept:"application/json",...walletProofHeaders(true)},
+          });
+          const payload=await response.json().catch(()=>({}));
+          if(response.status===401){
+            if(typeof optOutWallet==="function")optOutWallet({toastMessage:"Dapper opt-in expired. Opt in again to use Planner."});
+            throw new Error("Opt in again to use Planner.");
+          }
+          if(!response.ok)throw new Error(payload?.error||"Could not load your clubs.");
+          return Array.isArray(payload.clubs)?payload.clubs:[];
+        })().finally(()=>{ownedRequest=null;});
+      }
+      const clubs=ownedClubs===null?await ownedRequest:ownedClubs;
+      if(ownedWallet===wallet)ownedClubs=clubs;
+      if(seq!==searchSequence||!hasWalletOptIn()||input.value.trim()||selectedTeamId||selector?.hidden||String(state.linkedWalletAddress||"").trim().toLowerCase()!==wallet)return [];
+      const sorted=clubs.slice().sort((a,b)=>String(a?.name||"").localeCompare(String(b?.name||"")));
+      renderResults(sorted,"",{owned:true});
+      return sorted;
+    }catch(error){
+      if(seq!==searchSequence||!hasWalletOptIn())return [];
+      renderResults([],"",{owned:true,error:error?.message||"Could not load your clubs."});
+      return [];
+    }
+  }
+  function renderResults(clubs,query="",{owned=false,error=""}={}){if(!(results instanceof HTMLElement))return;const fragment=document.createDocumentFragment();(Array.isArray(clubs)?clubs:[]).slice(0,10).forEach(team=>{const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name)return;const button=document.createElement("button");button.type="button";button.className="searchResult clubSearchResult plannerTeamSearchResult";button.setAttribute("role","option");button.dataset.clubId=id;const title=document.createElement("strong");title.textContent=name;const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;if(divisionInfo){meta.append(document.createTextNode(" · "));const division=document.createElement("span");division.className="clubSearchDivision";division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;meta.appendChild(division);}button.append(title,meta);button.addEventListener("click",()=>selectTeam(team));fragment.appendChild(button);});if(!fragment.childNodes.length&&(query||owned)){const empty=document.createElement("div");empty.className="searchHint";empty.textContent=error||(owned?"No clubs found for this wallet.":"No teams found.");fragment.appendChild(empty);}results.replaceChildren(fragment);results.hidden=!results.childNodes.length;}
   async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence)return[];renderResults([],q);setStatus(error?.message||"Could not search teams.");return[];}}
   async function restoreSelectedTeam(clubId){const id=String(clubId||"").trim();if(!id||!(input instanceof HTMLInputElement))return false;input.value=id;syncClearButton();const teams=await requestTeams(id);const exact=teams.find(team=>String(team?.clubId||team?.id||"").trim()===id);if(exact)return selectTeam(exact,{updateUrl:false});if(input.value!==id)return false;showTeam();setStatus("Team not found.");return false;}
-  async function renderRoute(updateHash=true,options={}){state.currentPage=PAGE;document.body.dataset.page=PAGE;if(page instanceof HTMLElement)showOnly(page);syncNavigation();const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
+  async function renderRoute(updateHash=true,options={}){
+    state.currentPage=PAGE;document.body.dataset.page=PAGE;syncNavigation();
+    if(typeof hasWalletOptIn==="function"&&!hasWalletOptIn()){
+      clearResults();selectedTeamId="";showTeam();ownedClubs=null;ownedWallet="";ownedRequest=null;
+      const locked=document.getElementById("myPlayersLockedPage");
+      const title=document.getElementById("optInLockedTitle"),message=document.getElementById("optInLockedMessage");
+      if(title instanceof HTMLElement)title.textContent="Planner";
+      if(message instanceof HTMLElement)message.textContent="In order to use Planner, you need to opt in.";
+      if(locked instanceof HTMLElement)showOnly(locked);
+      if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();
+      return null;
+    }
+    if(page instanceof HTMLElement)showOnly(page);const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(!routeClubId&&!selectedTeamId&&!(input?.value.trim()))void requestOwnedClubs();if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
     if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}
     const q=input.value.trim();
-    if(!q){clearResults();return;}
+    if(!q){clearResults();void requestOwnedClubs();return;}
     if(results instanceof HTMLElement){
       const loading=document.createElement("div");
       loading.className="searchHint";loading.textContent="Searching teams…";
@@ -691,6 +743,7 @@
   });
   input?.addEventListener("focus",()=>{
     if(input.value.trim()&&results?.hidden&&!selectedTeamId)void requestTeams(input.value.trim());
+    else if(!input.value.trim()&&results?.hidden&&!selectedTeamId)void requestOwnedClubs();
   });
   input?.addEventListener("keydown",event=>{
     if(event.key==="Enter"){
@@ -698,7 +751,7 @@
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){input.blur();}
   });
-  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerModal();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement))return;clearTimeout(searchTimer);closePlayerModal();selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   rosterRetry?.addEventListener("click",()=>{if(selectedTeamId)void loadRoster(selectedTeamId);});
   addPlayerButton?.addEventListener("click",openPlayerModal);

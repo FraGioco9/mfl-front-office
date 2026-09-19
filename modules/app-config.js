@@ -41,6 +41,7 @@ export const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
 export const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
   "my-clubs": "/my-clubs/opted-out",
+  planner: "/planner/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });

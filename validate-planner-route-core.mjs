@@ -5,7 +5,7 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, dataViews, releaseJson, vercelJson] = await Promise.all([
+const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, myClubs, firstPaint, dataViews, releaseJson, vercelJson] = await Promise.all([
   read("./modules/core-sources/planner.js"),
   read("./html-sources/planner.html"),
   read("./index.html"),
@@ -13,6 +13,8 @@ const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, dataVie
   read("./planner.css"),
   read("./modules/core-sources/shared-routing.js"),
   read("./modules/core-sources/shared-page-lifecycle.js"),
+  read("./modules/core-sources/my-clubs.js"),
+  read("./html-sources/first-paint.html"),
   read("./api/_data-views.js"),
   read("./release.json"),
   read("./vercel.json"),
@@ -37,11 +39,14 @@ invariant(coreSourceByDomain.planner?.source === "planner.js", "Planner must hav
 invariant(coreSourceByDomain.planner?.runtime === "app-core-planner-runtime.js", "Planner must generate a dedicated route runtime.");
 invariant(routes?.canonicalRequest("/planner")?.pageName === "planner", "Canonical routing must resolve /planner.");
 invariant(routes?.routeShellId("planner") === "plannerPage", "Planner must own plannerPage as its route shell.");
+invariant(routes?.routeShellId("planner",{walletOptedIn:false}) === "myPlayersLockedPage", "Planner must use the opt-in shell before login.");
+invariant(routes?.canonicalRequest("/planner/opted-out")?.pageName === "planner", "Planner must have a canonical opted-out route.");
 invariant(routes?.routeDependencyPlan("planner")?.core?.includes("planner"), "Planner navigation must load the Planner route core.");
 invariant(html.includes('id="plannerPage"') && html.includes('id="plannerTeamSearchInput"'), "Planner must expose its dedicated page and team search.");
 invariant(
   html.includes('if (initialPage !== "planner") return;')
     && html.includes('document.body.dataset.page = "planner";')
+    && html.includes('root.dataset.storedWalletOptIn !== "true"')
     && html.includes("page.hidden = false;"),
   "Planner direct refresh must expose the Planner shell synchronously during HTML parsing.",
 );
@@ -57,6 +62,7 @@ invariant(
 invariant(
   generatedHtml.includes('if (initialPage !== "planner") return;')
     && generatedHtml.includes('document.body.dataset.page = "planner";')
+    && generatedHtml.includes('root.dataset.storedWalletOptIn !== "true"')
     && generatedHtml.includes("page.hidden = false;")
     && generatedHtml.includes('new URLSearchParams(location.search).get("club")')
     && generatedHtml.includes("selector.hidden = true;")
@@ -113,9 +119,17 @@ invariant(
   html.includes('if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;')
     && html.includes('localStorage.getItem("mfl-club-display-data-v1")')
     && html.includes('teamName.textContent = name;')
+    && html.includes('teamLocation.replaceChildren();')
+    && html.includes('locationText.textContent = location;')
     && html.includes('teamCard.style.setProperty("--my-club-primary"')
     && planner.includes('function cachedPlannerClub(clubId)')
     && planner.includes('function savePlannerClub(data,divisionInfo)')
+    && planner.includes('async function requestOwnedClubs()')
+    && planner.includes('renderResults(sorted,"",{owned:true});')
+    && myClubs.includes('async listOwnedClubs() {')
+    && routing.includes('planner: "/planner/opted-out"')
+    && lifecycle.includes('planner: ["Planner", "In order to use Planner, you need to opt in."]')
+    && firstPaint.includes('firstPart === "planner"')
     && planner.includes('savePlannerClub(data,divisionInfo);')
     && planner.includes('teamId.textContent=id?"Club #"+id:"";')
     && styles.includes(".plannerTeamCard .clubIdentityName{margin-top:4px;min-height:1.08em")

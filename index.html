@@ -455,7 +455,7 @@
             ? "player"
             : "";
         if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
-        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist" || firstPart === "planner"
           ? tablePage
           : firstPart === "my-clubs" || firstPart === "myclubs"
             ? "my-clubs"
@@ -580,7 +580,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
       }
@@ -589,7 +590,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) #myPlayersLockedPage {
         display: grid;
         place-items: center;
@@ -1187,6 +1189,15 @@
             if (!(page instanceof HTMLElement)) return;
 
             document.body.dataset.page = "planner";
+            if (root.dataset.storedWalletOptIn !== "true") {
+              const locked = document.getElementById("myPlayersLockedPage");
+              const title = document.getElementById("optInLockedTitle");
+              const message = document.getElementById("optInLockedMessage");
+              if (title instanceof HTMLElement) title.textContent = "Planner";
+              if (message instanceof HTMLElement) message.textContent = "In order to use Planner, you need to opt in.";
+              if (locked instanceof HTMLElement) locked.hidden = false;
+              return;
+            }
             page.hidden = false;
 
             const clubId = String(new URLSearchParams(location.search).get("club") || "").trim();
@@ -1237,6 +1248,27 @@
                     teamCard.style.setProperty("--my-club-primary", primary || secondary);
                     teamCard.style.setProperty("--my-club-secondary", secondary || primary);
                   }
+                }
+                const city = String(cached.city || "").trim();
+                const nation = String(cached.nation || "").trim();
+                const country = nation.toLowerCase().replaceAll("_", " ").split(" ")
+                  .filter(Boolean).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                const location = [city, country].filter(Boolean).join(", ");
+                const teamLocation = document.getElementById("plannerTeamLocation");
+                if (location && teamLocation instanceof HTMLElement) {
+                  teamLocation.replaceChildren();
+                  if (nation) {
+                    const flagSlot = document.createElement("span");
+                    flagSlot.className = "clubLocationFlag";
+                    flagSlot.setAttribute("aria-hidden", "true");
+                    flagSlot.style.cssText = "display:inline-block;flex:0 0 18px;width:18px;height:18px";
+                    teamLocation.appendChild(flagSlot);
+                  }
+                  const locationText = document.createElement("span");
+                  locationText.className = "clubLocationText";
+                  locationText.textContent = location;
+                  teamLocation.appendChild(locationText);
+                  teamLocation.hidden = false;
                 }
               }
             } catch {

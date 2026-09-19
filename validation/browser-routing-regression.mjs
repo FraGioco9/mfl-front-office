@@ -140,10 +140,10 @@ const browserTestSource = String.raw`(() => {
             : window.location.pathname === "/mfl/stats"
               ? "mflstats"
               : window.location.pathname === "/planner"
-                ? (window.location.search === "?club=9001" ? "planner-selected" : "planner")
+                ? (window.location.search === "?club=9001" ? "planner-selected" : window.location.hash === "#opted-out" ? "planner-out" : "planner")
                 : "unknown";
 
-  if (scenario === "planner-selected") {
+  if (scenario === "planner-selected" || scenario === "planner-out") {
     localStorage.setItem("mfl-club-display-data-v1", JSON.stringify({
       "9001": {
         clubId: "9001", name: "Browser Club",
@@ -197,7 +197,7 @@ const browserTestSource = String.raw`(() => {
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
-  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
+  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) {
     const proof = {
       type: "session",
       address: testWallet,
@@ -269,6 +269,9 @@ const browserTestSource = String.raw`(() => {
       myClubsHidden: hidden("#myClubsPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
       plannerHidden: hidden("#plannerPage"),
+      plannerLockedTitle: text("#optInLockedTitle"),
+      plannerLockedMessage: text("#optInLockedMessage"),
+      plannerLockedHidden: hidden("#myPlayersLockedPage"),
       plannerTitle: text("#plannerPage .tablePageTitle"),
       plannerTeamSelectorHidden: hidden("#plannerTeamSelector"),
       plannerSelectedTeamHidden: hidden("#plannerSelectedTeam"),
@@ -276,6 +279,8 @@ const browserTestSource = String.raw`(() => {
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
       plannerTeamIdText: text("#plannerTeamId"),
+      plannerTeamLocationText: text("#plannerTeamLocation"),
+      plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
       plannerTeamNameText: text("#plannerTeamName"),
       plannerTeamDivisionText: text("#plannerTeamDivision"),
       plannerTeamDivisionColor: document.getElementById("plannerTeamDivision")?.style.color || "",
@@ -554,6 +559,11 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "stats", "MFL Stats first paint has the wrong view.");
+    } else if (scenario === "planner-out") {
+      assert(parserSnapshot.initialPage === "planner", "Opted-out Planner first paint resolved the wrong route.");
+      assert(parserSnapshot.storedWalletOptIn === "false" && parserSnapshot.initialRouteShell === "myPlayersLockedPage", "Opted-out Planner must choose the locked shell at first paint.");
+      assert(parserSnapshot.plannerHidden && !parserSnapshot.plannerLockedHidden && parserSnapshot.plannerLockedTitle === "Planner", "Opted-out Planner displayed its private workspace at first paint.");
+      assert(parserSnapshot.plannerTeamIdText === "" && parserSnapshot.plannerTeamNameText === "", "Opted-out Planner exposed cached club identity.");
     } else if (scenario === "planner" || scenario === "planner-selected") {
       assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
       assert(parserSnapshot.bodyPage === "planner", "Planner first paint has the wrong body page owner: " + parserSnapshot.bodyPage);
@@ -567,6 +577,8 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
+        assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
+        assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
         assert(parserSnapshot.plannerTeamNameText === "Browser Club", "Planner first paint must use the cached Club name.");
         assert(parserSnapshot.plannerTeamDivisionText === "Gold", "Planner first paint must use the cached Club division.");
         assert(parserSnapshot.plannerTeamDivisionColor === "rgb(255, 210, 62)", "Planner first paint must use the cached division colour.");
@@ -669,6 +681,9 @@ const browserTestSource = String.raw`(() => {
         statusText: text("#myClubsStatus"),
         walletAddress: typeof state !== "undefined" ? String(state.linkedWalletAddress || "") : "",
       };
+    }
+    if (scenario === "planner-out") {
+      return {path: window.location.pathname, page: String(document.body.dataset.page || ""), lockedHidden: hidden("#myPlayersLockedPage"), plannerHidden: hidden("#plannerPage"), clubId: text("#plannerTeamId")};
     }
     if (scenario === "planner" || scenario === "planner-selected") {
       return {
@@ -836,6 +851,10 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.statsHidden === false, "MFL Stats page remained hidden after readiness.");
       assert(stateValue.distributionSkeleton === false, "MFL Stats kept its skeleton after authoritative data rendered.");
       assert(stateValue.distributionColumns > 0, "MFL Stats did not restore real histogram columns after navigation.");
+    } else if (scenario === "planner-out") {
+      assert(stateValue.path === "/planner/opted-out", "Opted-out Planner must use its canonical locked route.");
+      assert(stateValue.page === "planner" && !stateValue.lockedHidden && stateValue.plannerHidden && !stateValue.clubId, "Opted-out Planner must not reveal its club identity or workspace.");
+      assert(myClubsRequests.ownership === 0, "Opted-out Planner must never request private clubs.");
     } else if (scenario === "planner" || scenario === "planner-selected") {
       assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
       assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
@@ -1427,6 +1446,11 @@ const browserTestSource = String.raw`(() => {
     const directState = routeState();
     assertRouteState(directState);
 
+    if (scenario === "planner-out") {
+      assert(hidden("#plannerPage") && !hidden("#myPlayersLockedPage"), "Opted-out Planner must show only the opt-in shell.");
+      finish("passed", "planner-out: first paint and route hydration remain locked without fetching private clubs.");
+      return;
+    }
     if (scenario === "planner-selected") {
       assert(hidden("#plannerTeamSelector"), "Selected Planner refresh must keep the Team search hidden.");
       assert(!hidden("#plannerSelectedTeam"), "Selected Planner refresh must show the club identity.");
@@ -1437,6 +1461,7 @@ const browserTestSource = String.raw`(() => {
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
       assert(text("#plannerTeamId") === "Club #9001", "Selected Planner card must show its club ID.");
        assert(Math.abs(document.getElementById("plannerTeamId").getBoundingClientRect().top - parserSnapshot.plannerTeamIdTop) <= 2, "Selected Planner Club #ID must not move vertically between first paint and hydrated identity.");
+      assert(text("#plannerTeamLocation") === parserSnapshot.plannerTeamLocationText, "Planner first-paint city and nation must persist after hydration.");
       assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
       const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
       const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
@@ -1467,6 +1492,8 @@ const browserTestSource = String.raw`(() => {
     if (scenario === "planner") {
       const input = document.getElementById("plannerTeamSearchInput");
       assert(input.getBoundingClientRect().width <= 520, "Planner search must stay within its widened 520px limit.");
+      await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner empty search owned-club results");
+      assert(text("#plannerTeamSearchResults").includes("Browser Club") && myClubsRequests.ownership >= 1, "Empty Planner search must show authenticated My Clubs results.");
       input.value = "Browser";
       input.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelector(".plannerTeamSearchResult"), "Planner team search");
@@ -1658,6 +1685,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
       assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
       assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
+      await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner owned clubs after Clear");
       history.replaceState({}, "", "/planner?club=9001");
       await window.__mflPlannerRoute.render(false);
       assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
@@ -2265,6 +2293,7 @@ const regressionScenarios = Object.freeze([
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["mflstats", "/mfl/stats"],
   ["planner", "/planner"],
+  ["planner-out", "/planner#opted-out"],
   ["planner-selected", "/planner?club=9001"],
 ]);
 

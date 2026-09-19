@@ -246,7 +246,7 @@ function setView() {
 }
 
 function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -254,6 +254,7 @@ function renderProtectedOptOutShell(pageName) {
   const copy = {
     myplayers: ["My Players", "In order to see your players, you need to opt in."],
     "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    planner: ["Planner", "In order to use Planner, you need to opt in."],
     watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
     settings: ["Settings", "In order to view settings, you need to opt in."],
   }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
@@ -264,6 +265,8 @@ function renderProtectedOptOutShell(pageName) {
   progressionPage.hidden = true;
   mflStatsPage.hidden = true;
   myPlayersLockedPage.hidden = false;
+  const protectedPlannerPage = document.getElementById("plannerPage");
+  if (protectedPlannerPage instanceof HTMLElement) protectedPlannerPage.hidden = true;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
   settingsPage.hidden = true;

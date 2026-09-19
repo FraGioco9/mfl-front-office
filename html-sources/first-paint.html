@@ -455,7 +455,7 @@
             ? "player"
             : "";
         if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
-        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist" || firstPart === "planner"
           ? tablePage
           : firstPart === "my-clubs" || firstPart === "myclubs"
             ? "my-clubs"
@@ -580,7 +580,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
       }
@@ -589,7 +590,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) #myPlayersLockedPage {
         display: grid;
         place-items: center;
