@@ -218,4 +218,16 @@ budgetControl.children[1].children[0].value = "20";
 budgetControl.children[2].click();
 assert.equal(displayedContractTotal(), 100, "Confirming a contract must respect the remaining squad budget");
 
+// Missing retirement data is unknown, not retired (zero).
+route.select({ clubId: "unknown-retirement", name: "Unknown Club", division: 1 });
+await complete(requests.at(-1), { columns: payload.columns, rows: [], totalRows: 0 });
+elements.get("plannerPlayerSearchInput").value="Unknown";
+const unknownSearch=route.searchPlayers("Unknown");
+await complete(requests.at(-1), {columns:payload.columns,rows:[[400,"Unknown Player","CM",23,80,null,2,500],[401,"Unknown Retired","CM",23,80,0,2,500],[402,"Unknown Blank","CM",23,80,"",2,500]]});
+await unknownSearch;
+assert.equal(searchBody.children.length,2,"Unknown retirement values must remain searchable; only explicit zero is retired");
+assert.equal(route.togglePendingPlayer({player_id:400,name:"Unknown Player",retirement_years:null}),true,"Unknown retirement must be selectable");
+assert.equal(route.confirmPendingPlayers(),true,"Unknown retirement must be addable");
+assert.equal(route.addPlayer({player_id:401,name:"Retired Player",retirement_years:0}),false,"Known retired players must remain blocked");
+
 console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, selected table, 100% contract cap, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");

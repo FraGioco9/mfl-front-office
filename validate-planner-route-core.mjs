@@ -90,7 +90,7 @@ invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearch
 invariant(styles.includes(".plannerSelectedTeam{display:flex;align-items:center;gap:12px;width:100%") && styles.includes("#plannerTeamClearButton{flex-shrink:0;margin-left:auto}"), "Selected-team Clear must be pinned to the right from first paint.");
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
 invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("background-color:transparent"), "Planner Contract editor must stay compact and roster Remove must remain visually unfilled on hover.");
-invariant(styles.includes(".plannerRosterTable th,.plannerRosterTable td{padding:4px 5px;line-height:1.15}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster rows and remove control must use compact geometry.");
+invariant(html.includes('class="tableShell" aria-label="Planned squad table"') && styles.includes(".plannerRosterTable td{line-height:1.2}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster must reuse the standard table shell and preserve compact remove controls.");
 invariant(
   planner.includes('contractInput.type="text"')
     && planner.includes('contractInput.setAttribute("data-min","0")')
@@ -234,7 +234,7 @@ invariant(
 invariant(
   styles.includes(".plannerPlayerSearchTable td.plannerPlayerSearchActionCell{overflow:visible;vertical-align:middle;line-height:1}")
     && styles.includes(".plannerPlayerActionText{display:inline-flex;align-items:center;justify-content:center;min-height:24px")
-    && styles.includes("color:var(--primary-hover);text-decoration:none;outline:0"),
+    && styles.includes("color:#fff;text-decoration:none;outline:0"),
   "Planner Select/Selected actions must be centered without an underline on hover.",
 );
 invariant(
