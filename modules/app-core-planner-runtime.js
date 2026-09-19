@@ -29,6 +29,7 @@
   const playerSearchResults=document.getElementById("plannerPlayerSearchResults");
   const playerSearchBody=document.getElementById("plannerPlayerSearchBody");
   const playerSearchEmpty=document.getElementById("plannerPlayerSearchEmpty");
+  const playerSearchMore=document.getElementById("plannerPlayerSearchMore");
   const playerSelection=document.getElementById("plannerPlayerSelection");
   const playerSelectionStatus=document.getElementById("plannerPlayerSelectionStatus");
   const playerSelectionCount=document.getElementById("plannerPlayerSelectionCount");
@@ -38,6 +39,7 @@
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="";
   let playerSearchTimer=0,playerSearchSequence=0;
+  let playerSearchPayload=null,clubSearchPlayers=[];
   let pendingPlayers=new Map();
   let activeContractEditor=null;
   const MAX_SQUAD_SIZE=25;
@@ -58,6 +60,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    clubSearchPlayers=[];
     renderRosterTotals();
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
     rosterBody?.replaceChildren();
@@ -122,8 +125,10 @@
   }
   function clearPlayerResults(){
     playerSearchSequence+=1;
+    playerSearchPayload=null;
     if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
     if(playerSearchEmpty instanceof HTMLElement)playerSearchEmpty.hidden=true;
+    if(playerSearchMore instanceof HTMLElement)playerSearchMore.hidden=true;
     if(playerSearchResults instanceof HTMLElement)playerSearchResults.hidden=true;
   }
   function primaryPlannerPosition(player){
@@ -205,7 +210,8 @@
         pendingPlayers.delete(Number(player.player_id));
         renderPendingPlayers();
         const q=playerSearchInput?.value.trim()||"";
-        if(q)void requestPlayers(q);
+        if(q&&playerSearchPayload)renderPlayerResults(playerSearchPayload,q);
+        else if(q)void requestPlayers(q);
       }}));
       row.appendChild(actionCell);
       fragment.appendChild(row);
@@ -278,11 +284,20 @@
     const columns=Array.isArray(payload?.columns)?payload.columns:[];
     const rows=Array.isArray(payload?.rows)?payload.rows:[];
     const fragment=document.createDocumentFragment();
+    const tokens=normalizePlannerSearchQuery(query).split(" ").filter(Boolean);
+    const matches=(player)=>{
+      const name=normalizePlannerSearchQuery(player?.name);
+      const id=String(player?.player_id||"");
+      return tokens.length>0&&(id.includes(tokens.join(" "))||tokens.every(token=>name.includes(token)));
+    };
+    const apiPlayers=rows.map(values=>Object.fromEntries(columns.map((column,index)=>[column,values[index]])));
+    const combinedPlayers=[...clubSearchPlayers.filter(matches),...apiPlayers];
+    const seenIds=new Set();
     let visibleRows=0;
-    for(const values of rows){
-      const player=Object.fromEntries(columns.map((column,index)=>[column,values[index]]));
+    for(const player of combinedPlayers){
       const playerId=Number(player?.player_id);
-      if(Number(player?.retirement_years)===0)continue;
+      if(!Number.isSafeInteger(playerId)||playerId<=0||seenIds.has(playerId)||Number(player?.retirement_years)===0)continue;
+      seenIds.add(playerId);
       const inSquad=roster.some(candidate=>Number(candidate.player_id)===playerId);
       const selected=pendingPlayers.has(playerId);
       const atCapacity=!selected&&!inSquad&&pendingPlayers.size>=availablePlayerSlots();
@@ -311,22 +326,33 @@
       playerSearchEmpty.hidden=visibleRows>0;
     }
     playerSearchResults.hidden=false;
+    if(playerSearchMore instanceof HTMLButtonElement){
+      playerSearchMore.hidden=!payload?.hasMore;
+      playerSearchMore.disabled=false;
+    }
   }
-  async function requestPlayers(query){
+  async function requestPlayers(query,{append=false}={}){
     const q=String(query||"").trim();
     if(!q){clearPlayerResults();return null;}
+    if(append&&(!playerSearchPayload?.hasMore||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q)))return null;
     const seq=++playerSearchSequence;
-    const params=new URLSearchParams({mode:"search",type:"players",limit:"25",q});
+    const offset=append&&Array.isArray(playerSearchPayload?.rows)?playerSearchPayload.rows.length:0;
+    const params=new URLSearchParams({mode:"search",type:"players",limit:"50",offset:String(offset),q});
+    if(append&&playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=true;
     try{
       const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(payload?.error||"Could not search players.");
       if(seq!==playerSearchSequence||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q))return null;
-      renderPlayerResults(payload,q);
-      return payload;
+      playerSearchPayload=append&&playerSearchPayload
+        ? {...payload,columns:playerSearchPayload.columns,rows:[...playerSearchPayload.rows,...(Array.isArray(payload.rows)?payload.rows:[])]}
+        : payload;
+      renderPlayerResults(playerSearchPayload,q);
+      return playerSearchPayload;
     }catch(error){
       if(seq!==playerSearchSequence)return null;
-      renderPlayerResults({},q);
+      if(!append){playerSearchPayload=null;renderPlayerResults({},q);}
+      else if(playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=false;
       rosterMessage(error?.message||"Could not search players.");
       return null;
     }
@@ -506,8 +532,8 @@
       if(!Array.isArray(payload.columns)||!Array.isArray(payload.rows)||!payload.columns.includes("player_id")||!payload.columns.includes("name"))throw new Error("Could not read the squad.");
       if(Number(payload.totalRows)>payload.rows.length)throw new Error("The full squad could not be loaded.");
       let remainingContract=100;
-      roster=payload.rows.map(values=>{
-        const player=Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]]));
+      clubSearchPlayers=payload.rows.map(values=>Object.fromEntries(payload.columns.map((column,index)=>[column,values[index]])));
+      roster=clubSearchPlayers.map(player=>{
         const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),remainingContract);
         remainingContract=Math.max(0,Math.round((remainingContract-plannedContract)*100)/100);
         return {...player,planned_contract_value:plannedContract};
@@ -562,6 +588,10 @@
       const first=playerSearchResults?.querySelector('.plannerPlayerActionText:not([aria-disabled="true"])');
       if(first instanceof HTMLElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){event.preventDefault();closePlayerModal({focusButton:true});}
+  });
+  playerSearchMore?.addEventListener("click",()=>{
+    const q=playerSearchInput?.value.trim()||"";
+    if(q)void requestPlayers(q,{append:true});
   });
   playerSearchClearButton?.addEventListener("click",()=>{
     if(!(playerSearchInput instanceof HTMLInputElement))return;
