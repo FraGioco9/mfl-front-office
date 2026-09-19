@@ -18,7 +18,7 @@
   const status=document.getElementById("plannerStatus");
   const workspace=document.getElementById("plannerWorkspace");
   const rosterBody=document.getElementById("plannerRosterBody");
-  const formationSelect=document.getElementById("plannerFormationSelect");
+  const formationSelect=/** @type {HTMLSelectElement|null} */(document.getElementById("plannerFormationSelect"));
   const rosterCount=document.getElementById("plannerRosterCount");
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
