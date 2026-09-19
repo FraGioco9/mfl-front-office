@@ -1347,6 +1347,7 @@ function normalizedPageName(pageName) {
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
   "my-clubs": "/my-clubs/opted-out",
+  planner: "/planner/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -1364,6 +1365,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
   if (normalizedPage === "my-clubs") return "/my-clubs";
+  if (normalizedPage === "planner") return "/planner";
   if (normalizedPage === "settings") return "/settings";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
@@ -1475,6 +1477,7 @@ function pageTargetFromPath(path) {
   }
 
   if (cleanPath === "/planner") {
+    if (!hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
     const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
     const clubId = String(params.get("club") || "").trim();
     const canonicalPath = clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
@@ -1656,6 +1659,7 @@ function pageTargetFromPath(path) {
 
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
+    if (!hasWalletOptIn()) return optedOutPathForPage("planner");
     const explicitPath = String(options.path || "");
     if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
     const clubId = String(options.clubId || (window.location.pathname === "/planner"
@@ -2382,7 +2386,7 @@ function setView() {
 }
 
 function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -2390,6 +2394,7 @@ function renderProtectedOptOutShell(pageName) {
   const copy = {
     myplayers: ["My Players", "In order to see your players, you need to opt in."],
     "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    planner: ["Planner", "In order to use Planner, you need to opt in."],
     watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
     settings: ["Settings", "In order to view settings, you need to opt in."],
   }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
@@ -2400,6 +2405,8 @@ function renderProtectedOptOutShell(pageName) {
   progressionPage.hidden = true;
   mflStatsPage.hidden = true;
   myPlayersLockedPage.hidden = false;
+  const protectedPlannerPage = document.getElementById("plannerPage");
+  if (protectedPlannerPage instanceof HTMLElement) protectedPlannerPage.hidden = true;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
   settingsPage.hidden = true;
