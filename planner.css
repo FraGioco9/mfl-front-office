@@ -110,7 +110,12 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerPlayerSearchTable{display:flex;flex-direction:column;min-height:0;max-height:100%;--planner-columns:7% 34% 21% 10% 10% 18%;--planner-row-width:700px;flex:1}
 .plannerPlayerSelectionTable{max-height:142px}
 .plannerPlayerSearchTable colgroup{display:none}
-.plannerPlayerSearchTable thead{display:block;flex:none;overflow:hidden;scrollbar-gutter:stable;background:var(--mfl-table-header-background)}
+.plannerPlayerSearchTable thead{display:block;flex:none;overflow:hidden;scrollbar-gutter:stable;background:var(--mfl-table-header-background);border-bottom:1px solid var(--mfl-table-border-color)}
 .plannerPlayerSearchTable tbody{display:block;min-height:0;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
 .plannerPlayerSearchTable tr{display:grid;grid-template-columns:var(--planner-columns);min-width:var(--planner-row-width);width:100%}
 .plannerPlayerSearchTable th,.plannerPlayerSearchTable td{box-sizing:border-box;min-width:0;display:grid;align-content:center}
+
+.plannerPlayerSearchTable thead th{border-bottom:0}
+
+/* Continue row dividers through the reserved gutter when the body fits without scrolling. */
+.plannerPlayerSearchTable tbody.plannerTableNoVerticalScroll{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 30px,var(--mfl-table-border-color) 30px,var(--mfl-table-border-color) 31px);background-size:100% calc(100% - 31px);background-position:left top;background-repeat:no-repeat}
