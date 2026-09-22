@@ -281,6 +281,8 @@ const browserTestSource = String.raw`(() => {
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
       plannerFormation: String(document.getElementById("plannerFormationSelect")?.value || ""),
       plannerFormationEnhanced: document.getElementById("plannerFormationSelect")?.getAttribute("data-mfl-dropdown-enhanced") || "",
+      plannerFormationAlignment: getComputedStyle(document.getElementById("plannerFormationSelect")).alignItems,
+      plannerFormationPaddingRight: getComputedStyle(document.getElementById("plannerFormationSelect")).paddingRight,
       plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
@@ -584,6 +586,8 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
         assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
+        assert(parserSnapshot.plannerFormationAlignment === "center", "The selected Formation label must be vertically centered from first paint.");
+        assert(parserSnapshot.plannerFormationPaddingRight === "10px", "The Formation chevron must use the standard right inset from first paint.");
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
         assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
         assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
@@ -1467,6 +1471,7 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
       assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
       assert(document.getElementById("plannerFormationSelect")?.value === parserSnapshot.plannerFormation, "Planner formation must not flash back to default during hydration.");
+      assert(getComputedStyle(document.getElementById("plannerFormationSelect")).paddingRight === parserSnapshot.plannerFormationPaddingRight, "Formation chevron must not shift during hydration.");
       assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
       assert(document.getElementById("plannerTeamCard").style.getPropertyValue("--my-club-primary") === parserSnapshot.plannerTeamPrimaryColor, "Planner first-paint Club colours must persist through hydration.");
       assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
