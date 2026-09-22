@@ -257,7 +257,12 @@ const formations = ["3421", "343", "343b", "352", "352b", "41212", "41212narrow"
 const formationMarkup = html.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
 const formationOptions = Array.from(formationMarkup.matchAll(/<option value="([0-9]+[a-z]*)"(?: selected)?>/g), ([,code]) => code);
 invariant(JSON.stringify(formationOptions) === JSON.stringify(formations), "Planner formation dropdown must contain exactly the requested 25 MFL formations in order.");
-invariant(html.includes('<select id="plannerFormationSelect" class="plannerFormationSelect">')
+invariant(html.includes('<select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">')
+    && generatedHtml.includes('<select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">')
+    && html.includes('const saved = localStorage.getItem("mfl-planner-formation-v1:" + clubId);')
+    && html.includes('select.value = saved;')
+    && generatedHtml.includes('select.value = saved;')
+    && !styles.includes('.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);font-size:13px}')
     && html.includes('id="plannerFormationPositions" class="plannerFormationPositions"')
     && html.includes('const renderFormation = code => {')
     && html.includes('selectedFormationForClub(clubId)')

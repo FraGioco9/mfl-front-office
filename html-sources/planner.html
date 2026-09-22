@@ -61,7 +61,7 @@
                 <h3 id="plannerPitchHeading">Depth</h3>
                 <label class="plannerFormationControl" for="plannerFormationSelect">
                   <span>Formation</span>
-                  <select id="plannerFormationSelect" class="plannerFormationSelect">
+                  <select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">
                   <option value="3421">3-4-2-1</option>
                   <option value="343">3-4-3</option>
                   <option value="343b">3-4-3 B</option>
@@ -88,6 +88,25 @@
                   <option value="541">5-4-1</option>
                   <option value="541f">5-4-1 F</option>
                   </select>
+                  <script>
+                    // Match the saved club selection while parsing this control,
+                    // before the first paint and the shared dropdown runtime.
+                    (() => {
+                      if (document.documentElement.dataset.storedWalletOptIn !== "true") return;
+                      const select = document.getElementById("plannerFormationSelect");
+                      if (!(select instanceof HTMLSelectElement)) return;
+                      const clubId = String(new URLSearchParams(location.search).get("club") || "").trim();
+                      if (!clubId) return;
+                      try {
+                        const saved = localStorage.getItem("mfl-planner-formation-v1:" + clubId);
+                        if (saved && Array.from(select.options).some(option => option.value === saved)) {
+                          select.value = saved;
+                        }
+                      } catch {
+                        // Unavailable storage must not interrupt the 4-4-2 default.
+                      }
+                    })();
+                  </script>
                 </label>
               </div>
               <div class="pitch plannerPitch" role="img" aria-label="Squad depth pitch">

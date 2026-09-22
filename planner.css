@@ -25,7 +25,7 @@
 .plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
 .plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
-.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);font-size:13px}
+.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height)}
 .plannerFormationPositions{position:absolute;inset:0;z-index:2;pointer-events:none}
 .plannerFormationSpot{position:absolute;display:block;box-sizing:border-box;width:clamp(20px,8%,32px);aspect-ratio:1;border:2px solid rgba(255,255,255,.92);border-radius:50%;background:rgba(255,255,255,.19);box-shadow:0 1px 4px rgba(0,0,0,.22);transform:translate(-50%,-50%)}
 .plannerFormationGoalkeeper{background:rgba(255,255,255,.34)}

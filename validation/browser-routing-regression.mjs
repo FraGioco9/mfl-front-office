@@ -144,6 +144,7 @@ const browserTestSource = String.raw`(() => {
                 : "unknown";
 
   if (scenario === "planner-selected" || scenario === "planner-out") {
+    if (scenario === "planner-selected") localStorage.setItem("mfl-planner-formation-v1:9001", "4231");
     localStorage.setItem("mfl-club-display-data-v1", JSON.stringify({
       "9001": {
         clubId: "9001", name: "Browser Club",
@@ -279,6 +280,7 @@ const browserTestSource = String.raw`(() => {
       plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
       plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
       plannerFormation: String(document.getElementById("plannerFormationSelect")?.value || ""),
+      plannerFormationEnhanced: document.getElementById("plannerFormationSelect")?.getAttribute("data-mfl-dropdown-enhanced") || "",
       plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
@@ -580,7 +582,8 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
-        assert(parserSnapshot.plannerFormation === "442" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must draw the default 4-4-2 before hydration.");
+        assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
+        assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
         assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
         assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
         assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
@@ -1533,6 +1536,7 @@ const browserTestSource = String.raw`(() => {
       assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
       assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
       assert(formation.value === "442", "Planner must start in the default 4-4-2.");
+      assert(formation.getAttribute("data-mfl-dropdown-enhanced") === "true", "Planner must use the canonical dropdown styling before hydration.");
       const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
       formation.value = "4231";
