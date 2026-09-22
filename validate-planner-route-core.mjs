@@ -257,6 +257,12 @@ const formations = ["3421", "343", "343b", "352", "352b", "41212", "41212narrow"
 const formationMarkup = html.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
 const formationOptions = Array.from(formationMarkup.matchAll(/<option value="([0-9]+[a-z]*)"(?: selected)?>/g), ([,code]) => code);
 invariant(JSON.stringify(formationOptions) === JSON.stringify(formations), "Planner formation dropdown must contain exactly the requested 25 MFL formations in order.");
+const formationLabels = {"343":"3-4-3","352":"3-5-2","424":"4-2-4","433":"4-3-3","442":"4-4-2","523":"5-2-3","532":"5-3-2","541":"5-4-1","3421":"3-4-2-1","4132":"4-1-3-2","4141":"4-1-4-1","4222":"4-2-2-2","4231":"4-2-3-1","4312":"4-3-1-2","4321":"4-3-2-1","4411":"4-4-1-1","41212":"4-1-2-1-2","343b":"3-4-3 (B)","352b":"3-5-2 (B)","41212narrow":"4-1-2-1-2 (narrow)","433a":"4-3-3 (att)","433d":"4-3-3 (def)","433cf":"4-3-3 (CF)","442b":"4-4-2 (B)","541f":"5-4-1 (flat)"};
+for (const markup of [html, generatedHtml]) {
+  const optionsMarkup = markup.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
+  const options = Array.from(optionsMarkup.matchAll(/<option value="([0-9]+[a-z]*)"(?: selected)?>([^<]+)<\/option>/g), ([, code, label]) => [code, label]);
+  invariant(JSON.stringify(options) === JSON.stringify(formations.map(code => [code, formationLabels[code]])), "Planner's 25 formation display names must match the confirmed labels in canonical and generated HTML.");
+}
 invariant(html.includes('<select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">')
     && generatedHtml.includes('<select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">')
     && html.includes('const saved = localStorage.getItem("mfl-planner-formation-v1:" + clubId);')
