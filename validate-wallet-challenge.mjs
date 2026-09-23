@@ -15,7 +15,7 @@ const challenge = service.issue();
 const verify = (token = challenge.token, binding = challenge.browserBinding) => service.verify(token, binding);
 assert.match(challenge.nonce, /^[0-9a-f]{64}$/);
 assert.match(challenge.browserBinding, /^[0-9a-f]{64}$/);
-assert.equal(challenge.appIdentifier, walletAccessMessage());
+assert.equal(challenge.appIdentifier, origin);
 assert.equal(challenge.expiresAt, issuedAt + WALLET_CHALLENGE_TTL_MS);
 assert.equal(WALLET_CHALLENGE_TTL_MS, 300000);
 assert.notEqual(challenge.nonce, challenge.browserBinding);
