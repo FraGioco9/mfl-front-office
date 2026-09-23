@@ -1730,6 +1730,45 @@ const browserTestSource = String.raw`(() => {
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
       contractEdit.click();
       assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+      // Clickable starters and backup lists use the same roster-derived depth source.
+      const fixture = [
+        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:"CB "+overall,positions:"CB",overall,retirement_years:5})),
+        {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
+        {player_id:108,name:"GK 82",positions:"GK",overall:82,retirement_years:5},
+        {player_id:109,name:"Retired CB",positions:"CB",overall:99,retirement_years:0},
+      ];
+      const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
+      formationPreview.setRoster(fixture);
+      formationPreview.render("442");
+      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>44, "Planner circles must be enlarged.");
+      const fillButton = document.getElementById("plannerAutoFillDepthButton");
+      const depthPicker = document.getElementById("plannerDepthPicker");
+      assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(!depthPicker.hidden, "Clicking an empty circle must open the position selector.");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105,106","Picker must include every eligible non-retired player in Overall order.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
+      assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(slot("CB#1").querySelector(".plannerFormationPlayerPhoto")?.src.includes("/103/photo.webp"),"Filled circle must display player portrait.");
+      assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
+      assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
+      fillButton.click();
+      assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
+      assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(depthPicker.querySelector(".plannerDepthPickerClear") && !depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]'),"Occupied circle must allow clearing/replacement without selecting another starter.");
+      depthPicker.querySelector(".plannerDepthPickerClear").click();
+      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Clear must affect the selected circle only.");
+      formationPreview.render("433");
+      assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
+      formationPreview.setRoster([{player_id:107,name:"ST 93",positions:"ST",overall:93}]);
+      assert(!slot("CB#2")?.dataset.playerId,"Removed players must be dropped from depth assignments.");
+      formationPreview.setRoster([
+        {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
+        {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
+        {player_id:3,name:"Added Browser Defender",positions:"CB",overall:76,retirement_years:5},
+      ]);
+      formationPreview.render("4231");
       assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
       const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
       const depthHeadingBox = document.getElementById("plannerPitchHeading").getBoundingClientRect();
