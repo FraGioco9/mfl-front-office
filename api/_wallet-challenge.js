@@ -63,7 +63,7 @@ function createWalletChallengeService({ secret, origin, now = Date.now }) {
     return {
       token: encoded + "." + mac(encoded).toString("base64url"),
       nonce: payload.nonce,
-      appIdentifier: walletAccessMessage(),
+      appIdentifier: origin,
       message: challengeMessage(payload),
       expiresAt: payload.expiresAt,
       // For a future HttpOnly cookie; never include in the public JSON response.
@@ -95,7 +95,7 @@ function createWalletChallengeService({ secret, origin, now = Date.now }) {
       if (currentTime < payload.issuedAt || currentTime >= payload.expiresAt) return null;
       return Object.freeze({
         nonce: payload.nonce,
-        appIdentifier: walletAccessMessage(),
+        appIdentifier: origin,
         message: challengeMessage(payload),
         issuedAt: payload.issuedAt,
         expiresAt: payload.expiresAt,
