@@ -1,4 +1,5 @@
-import { access, cp, mkdir } from "node:fs/promises";
+import { access, copyFile, mkdir, rename, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -33,7 +34,23 @@ export async function projectLegacyPublicAssets({ assets, sourceRoot, destinatio
     const source = resolve(sourceRoot, relativePath);
     const destination = resolve(destinationRoot, relativePath);
     await mkdir(dirname(destination), { recursive: true });
-    await cp(source, destination);
+    // Independent dev/watch and CI projection calls can copy the same asset
+    // concurrently. fs.cp(force) may unlink another copy's destination just
+    // before its chmod, causing ENOENT. Copy to a unique sibling and rename
+    // atomically instead, without ever removing the live public directory.
+    const temporary = destination + ".mfl-copy-" + randomUUID();
+    try {
+      await copyFile(source, temporary);
+      try {
+        await rename(temporary, destination);
+      } catch (error) {
+        if (!["EPERM", "EACCES", "EBUSY"].includes(error.code)) throw error;
+        // Windows can prevent replacing a file Next already has open.
+        await copyFile(temporary, destination);
+      }
+    } finally {
+      await rm(temporary, { force: true });
+    }
   }
 }
 
