@@ -275,6 +275,15 @@ invariant(html.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
     && html.includes('goalkeeper.dataset.position = "GK";')
     && generatedHtml.includes('goalkeeper.dataset.position = "GK";'),
   "Planner must label every circle with its approved position at first paint with the goalkeeper unchanged.");
+const expectedRingSegments = 12;
+for (const markup of [html, generatedHtml]) {
+  const start = markup.indexOf("const slotRingSegments = ");
+  const end = markup.indexOf(";\n            const slotSvgNamespace", start);
+  invariant(start >= 0 && end > start, "Planner must render the reference segmented token ring.");
+  const segments = JSON.parse(markup.slice(start + "const slotRingSegments = ".length, end));
+  invariant(segments.length === expectedRingSegments && segments.every(segment => segment.includes("A 47 47 0 0 1")),
+    "Planner token ring must have the twelve approved rounded arc segments.");
+}
 const formationLabels = {"343":"3-4-3","352":"3-5-2","424":"4-2-4","433":"4-3-3","442":"4-4-2","523":"5-2-3","532":"5-3-2","541":"5-4-1","3421":"3-4-2-1","4132":"4-1-3-2","4141":"4-1-4-1","4222":"4-2-2-2","4231":"4-2-3-1","4312":"4-3-1-2","4321":"4-3-2-1","4411":"4-4-1-1","41212":"4-1-2-1-2","343b":"3-4-3 (B)","352b":"3-5-2 (B)","41212narrow":"4-1-2-1-2 (narrow)","433a":"4-3-3 (att)","433d":"4-3-3 (def)","433cf":"4-3-3 (CF)","442b":"4-4-2 (B)","541f":"5-4-1 (flat)"};
 for (const markup of [html, generatedHtml]) {
   const optionsMarkup = markup.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
@@ -294,7 +303,22 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && planner.includes('formationSelect?.addEventListener("change"')
     && planner.includes('syncFormationForClub(id);')
     && styles.includes('.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}')
-    && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;'),
+    && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;')
+    && styles.includes('.plannerFormationToken{position:relative;display:flex;align-items:center;justify-content:center;width:70%;')
+    && styles.includes('.plannerFormationTokenRing{position:absolute;inset:0;width:100%;height:100%;color:rgba(255,255,255,.4);')
+    && styles.includes('.plannerFormationTokenPlus{width:45%;height:45%;')
+    && styles.includes('.plannerFormationInstructionsBadge{position:absolute;top:-2px;left:-4px;')
+    && styles.includes('.plannerFormationPositionLabel{position:absolute;top:calc(85% + 1px);')
+    && html.includes('const makeFormationSpot = (position, goalkeeper = false) => {')
+    && generatedHtml.includes('const makeFormationSpot = (position, goalkeeper = false) => {')
+    && html.includes('token.dataset.slotToken = "true";')
+    && generatedHtml.includes('token.dataset.slotToken = "true";')
+    && html.includes('slotRingSegments.forEach(d => {')
+    && generatedHtml.includes('slotRingSegments.forEach(d => {')
+    && html.includes('plus.append(')
+    && generatedHtml.includes('plus.append(')
+    && html.includes('const goalkeeper = makeFormationSpot("GK", true);')
+    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", true);'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   html.includes('id="plannerAverageAge"')

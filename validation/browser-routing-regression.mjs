@@ -286,6 +286,10 @@ const browserTestSource = String.raw`(() => {
       plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
       plannerFormationSpotRows: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.top),
       plannerFormationSpotPositions: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.dataset.position),
+      plannerFormationTokenCount: document.querySelectorAll("#plannerFormationPositions [data-slot-token='true']").length,
+      plannerFormationRingSegments: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length,
+      plannerFormationPlusPaths: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length,
+      plannerFormationBadgeCount: document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge").length,
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
       plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
@@ -589,6 +593,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
         assert(parserSnapshot.plannerFormationSpotRows[0] === "78.00%" && parserSnapshot.plannerFormationSpotRows[9] === "18.00%" && parserSnapshot.plannerFormationSpotRows[10] === "92%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
         assert(JSON.stringify(parserSnapshot.plannerFormationSpotPositions) === JSON.stringify(["LB","CB","CB","RB","CDM","CDM","LM","CAM","RM","ST","GK"]), "4-2-3-1 first paint must label the confirmed position slots.");
+        assert(parserSnapshot.plannerFormationTokenCount === 11 && parserSnapshot.plannerFormationRingSegments === 132 && parserSnapshot.plannerFormationPlusPaths === 22 && parserSnapshot.plannerFormationBadgeCount === 11, "Planner first paint must include all segmented-plus circles and visual instruction badges.");
         assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
         assert(parserSnapshot.plannerFormationAlignment === "center", "The selected Formation label must be vertically centered from first paint.");
         assert(parserSnapshot.plannerFormationPaddingRight === "10px", "The Formation chevron must use the standard right inset from first paint.");
@@ -1549,6 +1554,11 @@ const browserTestSource = String.raw`(() => {
       const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(JSON.stringify(Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.textContent)) === JSON.stringify(["LB","CB","CB","RB","LM","CM","CM","RM","ST","ST","GK"]), "4-4-2 must render all confirmed position labels.");
       assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
+      const initialToken = document.querySelector("#plannerFormationPositions [data-slot-token='true']");
+      assert(getComputedStyle(initialToken).backgroundColor === "rgba(0, 0, 0, 0.2)", "Planner slot background must match the translucent black reference token.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length === 132, "Each Planner ring must have twelve segmented arcs.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length === 22, "Each Planner token must contain the centered plus icon.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsIcon").length === 11, "Each Planner token must include the visual instructions badge.");
       assert(initialSpots[0].endsWith(":78.00%") && initialSpots[8].endsWith(":18.00%") && initialSpots[10].endsWith(":92%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
       formation.value = "4231";
       formation.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1562,7 +1572,9 @@ const browserTestSource = String.raw`(() => {
         formationPreview.render(code);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
-        assert(spots.every(spot => spot.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
+        assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
+        assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
+        assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
         assert(spots.at(-1)?.style.top === "92%", "Goalkeeper must remain in place for formation " + code);
       }
       for (const code of ["343b","352b","541"]) {

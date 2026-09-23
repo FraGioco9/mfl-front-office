@@ -1723,6 +1723,57 @@
                 return clubId && formationCodes.includes(saved) ? saved : "442";
               } catch { return "442"; }
             };
+
+            // The hollow slot design mirrors MFL's segmented ring, plus and settings badge.
+            // Icons are visual placeholders until slot assignment/instructions are supported.
+            const slotRingSegments = ["M 96.64966912714213 44.27214085995807 A 47 47 0 0 1 96.64966912714213 55.72785914004193","M 93.2637281122647 68.36436303899586 A 47 47 0 0 1 87.53586897222277 78.28530608814627","M 78.28530608814627 87.53586897222277 A 47 47 0 0 1 68.36436303899588 93.26372811226469","M 55.72785914004193 96.64966912714213 A 47 47 0 0 1 44.27214085995807 96.64966912714215","M 31.635636961004142 93.2637281122647 A 47 47 0 0 1 21.714693911853725 87.53586897222276","M 12.464131027777235 78.28530608814626 A 47 47 0 0 1 6.736271887735313 68.36436303899589","M 3.3503308728578673 55.727859140041936 A 47 47 0 0 1 3.3503308728578673 44.27214085995806","M 6.736271887735299 31.635636961004142 A 47 47 0 0 1 12.464131027777228 21.714693911853743","M 21.714693911853733 12.464131027777235 A 47 47 0 0 1 31.63563696100413 6.736271887735306","M 44.272140859958085 3.3503308728578602 A 47 47 0 0 1 55.72785914004194 3.3503308728578673","M 68.36436303899586 6.736271887735299 A 47 47 0 0 1 78.28530608814626 12.464131027777228","M 87.53586897222277 21.714693911853733 A 47 47 0 0 1 93.26372811226469 31.63563696100409"];
+            const slotSvgNamespace = "http://www.w3.org/2000/svg";
+            const makeSlotIcon = (name, attributes) => {
+              const element = document.createElementNS(slotSvgNamespace, name);
+              Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+              return element;
+            };
+            const makeFormationSpot = (position, goalkeeper = false) => {
+              const spot = document.createElement("span");
+              spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
+              spot.dataset.position = position;
+              const token = document.createElement("span");
+              token.className = "plannerFormationToken";
+              token.dataset.slotToken = "true";
+              const ring = makeSlotIcon("svg", { viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenRing" });
+              slotRingSegments.forEach(d => {
+                ring.appendChild(makeSlotIcon("path", {
+                  d, fill: "none", stroke: "currentColor", "stroke-width": "4", "stroke-linecap": "round",
+                }));
+              });
+              const plus = makeSlotIcon("svg", {
+                viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationTokenPlus",
+                fill: "none", stroke: "currentColor", "stroke-width": "2.5",
+                "stroke-linecap": "round", "stroke-linejoin": "round",
+              });
+              plus.append(
+                makeSlotIcon("path", { d: "M5 12h14" }),
+                makeSlotIcon("path", { d: "M12 5v14" }),
+              );
+              token.append(ring, plus);
+              const instructions = document.createElement("span");
+              instructions.className = "plannerFormationInstructionsBadge";
+              instructions.setAttribute("aria-hidden", "true");
+              const sliders = makeSlotIcon("svg", {
+                viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationInstructionsIcon",
+                fill: "none", stroke: "currentColor", "stroke-width": "2.5",
+                "stroke-linecap": "round", "stroke-linejoin": "round",
+              });
+              ["M10 5H3","M12 19H3","M14 3v4","M16 17v4","M21 12h-9","M21 19h-5","M21 5h-7","M8 10v4","M8 12H3"].forEach(d => {
+                sliders.appendChild(makeSlotIcon("path", { d }));
+              });
+              instructions.appendChild(sliders);
+              const label = document.createElement("span");
+              label.className = "plannerFormationPositionLabel";
+              label.textContent = position;
+              spot.append(token, instructions, label);
+              return spot;
+            };
             const renderFormation = code => {
               const selected = formationCodes.includes(code) ? code : "442";
               const lines = formationSlots[selected];
@@ -1737,10 +1788,7 @@
                 const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
                 const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 58 : 38) * spread;
                 positions.forEach((position, column) => {
-                  const spot = document.createElement("span");
-                  spot.className = "plannerFormationSpot";
-                  spot.dataset.position = position;
-                  spot.textContent = position;
+                  const spot = makeFormationSpot(position);
                   const x = count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
                   const offset = position === "CDM" && count > 1 ? 5
                     : position === "CAM" && count > 1 ? -5
@@ -1750,10 +1798,7 @@
                   fragment.appendChild(spot);
                 });
               });
-              const goalkeeper = document.createElement("span");
-              goalkeeper.className = "plannerFormationSpot plannerFormationGoalkeeper";
-              goalkeeper.dataset.position = "GK";
-              goalkeeper.textContent = "GK";
+              const goalkeeper = makeFormationSpot("GK", true);
               goalkeeper.style.left = "50%";
               goalkeeper.style.top = "92%";
               fragment.appendChild(goalkeeper);
