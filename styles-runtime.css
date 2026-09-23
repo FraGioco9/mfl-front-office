@@ -7681,6 +7681,10 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
 @media(max-width:520px){.plannerFormationSpot{width:clamp(58px,18%,72px)}.plannerFormationBackups{width:64px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+
+/* GK backups extend below the field: keep them visible without overlapping detail cards. */
+.plannerPitchPanel .plannerPitch{overflow:visible}
+.plannerDepthDetails{margin-top:44px}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
@@ -14510,7 +14514,3 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   display: grid;
   place-items: center;
 }
-
-/* GK backups extend below the field: keep them visible without overlapping detail cards. */
-.plannerPitchPanel .plannerPitch{overflow:visible}
-.plannerDepthDetails{margin-top:44px}
