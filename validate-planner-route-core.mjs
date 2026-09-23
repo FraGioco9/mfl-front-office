@@ -272,8 +272,8 @@ invariant(html.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
     && generatedHtml.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
     && html.includes('spot.dataset.position = position;')
     && generatedHtml.includes('spot.dataset.position = position;')
-    && html.includes('const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);')
-    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);'),
+    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
+    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);'),
   "Planner must label every circle with its approved position at first paint with the goalkeeper unchanged.");
 const expectedRingSegments = 12;
 for (const markup of [html, generatedHtml]) {
@@ -320,8 +320,8 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && generatedHtml.includes('slotRingSegments.forEach(d => {')
     && html.includes('plus.append(')
     && generatedHtml.includes('plus.append(')
-    && html.includes('const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);')
-    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);'),
+    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
+    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   html.includes('id="plannerAverageAge"')
