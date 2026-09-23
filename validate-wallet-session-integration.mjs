@@ -137,7 +137,7 @@ const binding = "cd".repeat(32);
 const challenge = {
   token: "signed-challenge",
   nonce,
-  appIdentifier: "MFL Front Office Dapper Opt-In",
+  appIdentifier: "https://wallet-test.example",
   message: "server-bound challenge message",
   expiresAt: now + 5 * 60 * 1000,
   browserBinding: binding,
