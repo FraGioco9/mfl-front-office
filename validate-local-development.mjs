@@ -54,6 +54,19 @@ invariant(
 invariant(nextConfig.includes('"/api/data": ["./api/data-files/mfl_database.db"]'), "Next tracing must retain the SQLite database for the data API.");
 invariant(prepareRuntime.includes("export async function prepareNextRuntime()"), "Next public compatibility projection must expose a reusable development/build sync function.");
 invariant(prepareRuntime.includes("listLegacyPublicAssetPaths(root)"), "Next public projection must consume the shared legacy asset owner.");
+invariant(
+  prepareRuntime.includes("await restoreMissingIndex();")
+    && prepareRuntime.includes('await assembleFragments(indexFragments, ".html")')
+    && prepareRuntime.includes("await writeGeneratedFragmentFile(indexPath,")
+    && prepareRuntime.includes('if (error.code !== "ENOENT") throw error;'),
+  "Next development must regenerate a missing tracked index.html from canonical fragments before projecting assets.",
+);
+invariant(
+  prepareRuntime.includes("await Promise.all(assets.map((relativePath) => access(resolve(root, relativePath))))")
+    && prepareRuntime.indexOf("await Promise.all(assets.map(") < prepareRuntime.indexOf("await rm(publicRoot,")
+    && prepareRuntime.includes("preparation = prepareAssets().finally("),
+  "Next development must preflight source assets and deduplicate overlapping public projection runs.",
+);
 invariant(legacyAssetOwnership.includes("isLegacyPublicAssetRelativePath") && legacyAssetOwnership.includes("listLegacyPublicAssetPaths"), "Legacy public projection scope must have one shared owner.");
 invariant(legacyDevLoader.includes("this.addDependency(absolutePath)") && legacyDevLoader.includes('createHash("sha256")'), "Next development must watch projected legacy assets through a content-sensitive Webpack dependency.");
 invariant(legacyDevBridge.includes("compiler.hooks.watchRun.tapPromise") && legacyDevBridge.includes("prepareNextRuntime()"), "Next development must resync public compatibility assets before rebuilding after a watched legacy change.");
