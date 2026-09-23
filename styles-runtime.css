@@ -14510,3 +14510,7 @@ html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):not(.mflIn
   display: grid;
   place-items: center;
 }
+
+/* GK backups extend below the field: keep them visible without overlapping detail cards. */
+.plannerPitchPanel .plannerPitch{overflow:visible}
+.plannerDepthDetails{margin-top:44px}
