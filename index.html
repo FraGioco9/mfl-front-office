@@ -1756,22 +1756,10 @@
                 makeSlotIcon("path", { d: "M12 5v14" }),
               );
               token.append(ring, plus);
-              const instructions = document.createElement("span");
-              instructions.className = "plannerFormationInstructionsBadge";
-              instructions.setAttribute("aria-hidden", "true");
-              const sliders = makeSlotIcon("svg", {
-                viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationInstructionsIcon",
-                fill: "none", stroke: "currentColor", "stroke-width": "2.5",
-                "stroke-linecap": "round", "stroke-linejoin": "round",
-              });
-              ["M10 5H3","M12 19H3","M14 3v4","M16 17v4","M21 12h-9","M21 19h-5","M21 5h-7","M8 10v4","M8 12H3"].forEach(d => {
-                sliders.appendChild(makeSlotIcon("path", { d }));
-              });
-              instructions.appendChild(sliders);
               const label = document.createElement("span");
               label.className = "plannerFormationPositionLabel";
               label.textContent = position;
-              spot.append(token, instructions, label);
+              spot.append(token, label);
               return spot;
             };
             const renderFormation = code => {

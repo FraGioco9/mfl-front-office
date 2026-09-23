@@ -7592,8 +7592,6 @@ html.mflDataLoading #pageSizeSelect {
 .plannerFormationToken{position:relative;display:flex;align-items:center;justify-content:center;width:70%;aspect-ratio:1;flex-shrink:0;border-radius:50%;background:rgba(0,0,0,.2);color:rgba(255,255,255,.7)}
 .plannerFormationTokenRing{position:absolute;inset:0;width:100%;height:100%;color:rgba(255,255,255,.4);pointer-events:none}
 .plannerFormationTokenPlus{width:45%;height:45%;color:inherit;pointer-events:none}
-.plannerFormationInstructionsBadge{position:absolute;top:-2px;left:-4px;z-index:2;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:17px;height:17px;border-radius:50%;background:var(--primary);color:var(--text-soft);box-shadow:0 1px 4px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.5);pointer-events:none}
-.plannerFormationInstructionsIcon{width:10px;height:10px}
 .plannerFormationPositionLabel{position:absolute;top:calc(85% + 1px);left:50%;max-width:60px;color:#fff;font-size:9px;font-weight:800;letter-spacing:-.15px;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.75);white-space:nowrap;transform:translateX(-50%)}
 .plannerFormationGoalkeeper{color:rgba(255,255,255,.7)}
 #plannerAddPlayerButton{align-self:center;flex-shrink:0}
