@@ -137,12 +137,12 @@ for (const type of ["account-proof", "user-signature"]) {
     signingAddress: wallet,
     message: challengeMessage,
     proofType: type,
-    appIdentifier: message,
+    appIdentifier: "https://wallet-test.example",
     nonce: challengeNonce,
     signatures: [signature],
   }, {
     expectedMessage: challengeMessage,
-    expectedAppIdentifier: message,
+    expectedAppIdentifier: "https://wallet-test.example",
     expectedNonce: challengeNonce,
   }), wallet);
   assert.equal(valid.calls.length, 1);
@@ -157,13 +157,32 @@ for (const type of ["account-proof", "user-signature"]) {
       signingAddress: wallet,
       message: challengeMessage,
       proofType: type,
-      appIdentifier: message,
+      appIdentifier: "https://wallet-test.example",
       nonce: challengeNonce,
       signatures: [signature],
-    }, { expectedMessage, expectedAppIdentifier: message, expectedNonce }), "");
+    }, { expectedMessage, expectedAppIdentifier: "https://wallet-test.example", expectedNonce }), "");
     assert.equal(denied.calls.length, 0);
   }
 }
+
+
+// Even with a valid nonce and signatures, the old descriptive account-proof
+// identifier must not pass an origin-bound challenge exchange.
+const legacyAccountProof = harness();
+assert.equal(await legacyAccountProof.proof.verifyWalletProof({
+  walletAddress: wallet,
+  signingAddress: wallet,
+  message: challengeMessage,
+  proofType: "account-proof",
+  appIdentifier: message,
+  nonce: challengeNonce,
+  signatures: [signature],
+}, {
+  expectedMessage: challengeMessage,
+  expectedAppIdentifier: "https://wallet-test.example",
+  expectedNonce: challengeNonce,
+}), "");
+assert.equal(legacyAccountProof.calls.length, 0);
 
 // Exercise the former fail-open consumers using the real canonical verifier.
 for (const result of [true, false, new Error("Verifier unavailable")]) {

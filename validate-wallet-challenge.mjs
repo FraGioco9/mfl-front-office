@@ -15,17 +15,18 @@ const challenge = service.issue();
 const verify = (token = challenge.token, binding = challenge.browserBinding) => service.verify(token, binding);
 assert.match(challenge.nonce, /^[0-9a-f]{64}$/);
 assert.match(challenge.browserBinding, /^[0-9a-f]{64}$/);
-assert.equal(challenge.appIdentifier, walletAccessMessage());
+assert.equal(challenge.appIdentifier, origin);
 assert.equal(challenge.expiresAt, issuedAt + WALLET_CHALLENGE_TTL_MS);
 assert.equal(WALLET_CHALLENGE_TTL_MS, 300000);
 assert.notEqual(challenge.nonce, challenge.browserBinding);
 assert.deepEqual(verify(), {
   nonce: challenge.nonce,
-  appIdentifier: walletAccessMessage(),
+  appIdentifier: origin,
   message: challenge.message,
   issuedAt,
   expiresAt: challenge.expiresAt,
 });
+assert.ok(challenge.message.startsWith(walletAccessMessage()));
 assert.ok(challenge.message.includes("Origin: " + origin));
 assert.ok(challenge.message.includes("Nonce: " + challenge.nonce));
 assert.ok(challenge.message.includes(new Date(challenge.expiresAt).toISOString()));
