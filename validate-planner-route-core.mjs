@@ -294,7 +294,7 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && planner.includes('formationSelect?.addEventListener("change"')
     && planner.includes('syncFormationForClub(id);')
     && styles.includes('.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}')
-    && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;')
+    && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   html.includes('id="plannerAverageAge"')
