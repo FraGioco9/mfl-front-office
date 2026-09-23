@@ -21,7 +21,7 @@ assert.equal(WALLET_CHALLENGE_TTL_MS, 300000);
 assert.notEqual(challenge.nonce, challenge.browserBinding);
 assert.deepEqual(verify(), {
   nonce: challenge.nonce,
-  appIdentifier: walletAccessMessage(),
+  appIdentifier: origin,
   message: challenge.message,
   issuedAt,
   expiresAt: challenge.expiresAt,
