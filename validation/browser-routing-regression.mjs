@@ -1546,7 +1546,7 @@ const browserTestSource = String.raw`(() => {
       assert(formation.getAttribute("data-mfl-dropdown-enhanced") === "true", "Planner must use the canonical dropdown styling before hydration.");
       const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
-      assert(initialSpots[0].endsWith(":78.00%") && initialSpots[7].endsWith(":18.00%") && initialSpots[10].endsWith(":92%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
+      assert(initialSpots[0].endsWith(":78.00%") && initialSpots[8].endsWith(":18.00%") && initialSpots[10].endsWith(":92%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
       formation.value = "4231";
       formation.dispatchEvent(new Event("change", { bubbles: true }));
       const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
