@@ -242,11 +242,26 @@ function response() {
   };
 }
 
+const originalWalletConnectProjectId = process.env.WALLETCONNECT_PROJECT_ID;
+process.env.WALLETCONNECT_PROJECT_ID = "";
 const issuedResponse = response();
 await handler(request("GET"), issuedResponse);
 assert.equal(issuedResponse.code, 200);
 assert.equal(issuedResponse.body.token, challenge.token);
 assert.equal(issuedResponse.body.nonce, nonce);
+assert.equal(issuedResponse.body.appIdentifier, "https://wallet-test.example");
+assert.equal(issuedResponse.body.walletConnectProjectId, "", "Do not invent a WalletConnect project ID.");
+process.env.WALLETCONNECT_PROJECT_ID = "ab".repeat(16);
+const configuredWalletConnectResponse = response();
+await handler(request("GET", { ip: "203.0.113.11" }), configuredWalletConnectResponse);
+assert.equal(configuredWalletConnectResponse.code, 200);
+assert.equal(configuredWalletConnectResponse.body.walletConnectProjectId, "ab".repeat(16));
+process.env.WALLETCONNECT_PROJECT_ID = "invalid-placeholder";
+const invalidWalletConnectResponse = response();
+await handler(request("GET", { ip: "203.0.113.12" }), invalidWalletConnectResponse);
+assert.equal(invalidWalletConnectResponse.body.walletConnectProjectId, "");
+if (originalWalletConnectProjectId === undefined) delete process.env.WALLETCONNECT_PROJECT_ID;
+else process.env.WALLETCONNECT_PROJECT_ID = originalWalletConnectProjectId;
 assert.ok(!Object.hasOwn(issuedResponse.body, "browserBinding"), "Raw browser binding must never be returned in public JSON.");
 assert.match(String(issuedResponse.headers["set-cookie"]), /mfl_wallet_challenge=/);
 assert.match(String(issuedResponse.headers["set-cookie"]), /HttpOnly/);
