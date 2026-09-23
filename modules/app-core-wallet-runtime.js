@@ -281,7 +281,7 @@ function walletAccountProofFromUser(user, accountProof, message = walletAccessMe
     address,
     signingAddress: address,
     message,
-    appIdentifier: accountProof.appIdentifier,
+    appIdentifier: proofData?.appIdentifier || accountProof.appIdentifier,
     nonce: accountProof.nonce,
     signatures,
   };
@@ -301,7 +301,7 @@ async function signWalletMessage(fcl, message) {
   return currentUser.signUserMessage(stringToHex(message));
 }
 
-function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl || window.fcl) {
+function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl || window.fcl, walletConnectProjectId = "") {
   if (!fcl?.config) {
     return null;
   }
@@ -318,6 +318,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
     "app.detail.icon": `${appOrigin()}/favicon.ico`,
     "app.detail.url": appOrigin(),
     "app.detail.description": "MFL Front Office player database and club management tools",
+    ...(walletConnectProjectId ? { "walletconnect.projectId": walletConnectProjectId } : {}),
   });
   state.flowWalletModule = fcl;
   return fcl;
@@ -328,8 +329,8 @@ async function importFlowWalletModule(src) {
   return module?.default || module;
 }
 
-async function ensureFlowWallet() {
-  const configuredWallet = configureFlowWallet();
+async function ensureFlowWallet(walletConnectProjectId = "") {
+  const configuredWallet = configureFlowWallet(undefined, walletConnectProjectId);
   if (configuredWallet) {
     return configuredWallet;
   }
@@ -339,7 +340,7 @@ async function ensureFlowWallet() {
       for (const src of FLOW_WALLET_MODULE_URLS) {
         try {
           const module = await importFlowWalletModule(src);
-          const fcl = configureFlowWallet(module);
+          const fcl = configureFlowWallet(module, walletConnectProjectId);
           if (fcl) {
             return fcl;
           }
@@ -489,7 +490,7 @@ async function authenticateWithDapper(fcl, challenge) {
   };
 
   if (fcl?.config?.put) {
-    fcl.config().put("fcl.accountProof.resolver", async () => accountProof);
+    fcl.config().put("fcl.accountProof.resolver", async () => ({ nonce: accountProof.nonce }));
   }
 
   const service = await dapperAuthnService(fcl);
@@ -561,17 +562,16 @@ async function walletLinkOwner() {
   linkWalletButton.disabled = true;
   linkWalletButton.textContent = "Loading...";
 
-  const fcl = await ensureFlowWallet();
-  if (!fcl) {
-    finishWalletOptIn();
-    showToast("Dapper opt-in could not load. Try again in a moment.");
-    return;
-  }
-
-  linkWalletButton.textContent = "Linking...";
-
   try {
+    // The server issues the trusted origin and optional public WalletConnect project ID.
+    // Load/configure FCL only after receiving that configuration.
     const challenge = await issueWalletChallenge();
+    if (challenge.appIdentifier !== appOrigin()) {
+      throw new Error("Wallet authentication origin does not match this site.");
+    }
+    const fcl = await ensureFlowWallet(challenge.walletConnectProjectId || "");
+    if (!fcl) throw new Error("Dapper opt-in could not load. Try again in a moment.");
+    linkWalletButton.textContent = "Linking...";
     const authenticated = await authenticateWithDapper(fcl, challenge);
     const authenticatedUser = await authenticatedWalletUser(fcl, authenticated.user);
     let linkedWalletProof = walletAccountProofFromUser(
