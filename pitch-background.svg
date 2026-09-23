@@ -1,0 +1,30 @@
+<svg id="pitch" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 109">
+  <defs>
+    <clipPath id="inner-pitch"><rect x="0" y="0" width="105" height="68"/></clipPath>
+  </defs>
+  <g transform="translate(0 109)">
+    <g transform="rotate(-90)">
+      <g transform="translate(2 2)">
+        <g clip-path="url(#inner-pitch)"></g>
+        <g opacity="0.6">
+          <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <circle cx="52.5" cy="34" r="0.6" fill="#ceffd8"/>
+          <path d="M 16.5 41.3 A 9.15 9.15 0 0 0 16.5 26.7" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <circle cx="11" cy="34" r="0.4" fill="#ceffd8"/>
+          <path d="M 88.5 26.7 A 9.15 9.15 0 0 0 88.5 41.3" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <circle cx="94" cy="34" r="0.4" fill="#ceffd8"/>
+          <rect x="0" y="13.84" width="16.5" height="40.32" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="#ceffd8" stroke-width="0.2"/>
+          <path d="M 1.8 0 A 1.8 1.8 0 0 1 0 1.8" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <path d="M 105 1.8 A 1.8 1.8 0 0 1 103.2 0" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <path d="M 0 66.2 A 1.8 1.8 0 0 1 1.8 68" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <path d="M 103.2 68 A 1.8 1.8 0 0 1 105 66.2" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+          <rect x="0" y="0" width="105" height="68" fill="none" stroke="#ceffd8" stroke-width="0.2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

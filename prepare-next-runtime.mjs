@@ -1,4 +1,4 @@
-import { access, cp, mkdir, rm } from "node:fs/promises";
+import { access, cp, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -26,22 +26,26 @@ async function restoreMissingIndex() {
   }
 }
 
+// Idempotent even across independent Node processes; never removes the live directory.
+export async function projectLegacyPublicAssets({ assets, sourceRoot, destinationRoot }) {
+  await mkdir(destinationRoot, { recursive: true });
+  for (const relativePath of assets) {
+    const source = resolve(sourceRoot, relativePath);
+    const destination = resolve(destinationRoot, relativePath);
+    await mkdir(dirname(destination), { recursive: true });
+    await cp(source, destination);
+  }
+}
+
 async function prepareAssets() {
   materializeDeploymentCommit({ root });
   await restoreMissingIndex();
 
-  // Never discard the working public projection before checking its sources.
+  // Keep the live public directory in place: Next may read it while another
+  // dev process or Webpack watch run is preparing the same compatibility assets.
   const assets = listLegacyPublicAssetPaths(root);
   await Promise.all(assets.map((relativePath) => access(resolve(root, relativePath))));
-  await rm(publicRoot, { recursive: true, force: true });
-  await mkdir(publicRoot, { recursive: true });
-
-  for (const relativePath of assets) {
-    const source = resolve(root, relativePath);
-    const destination = resolve(publicRoot, relativePath);
-    await mkdir(dirname(destination), { recursive: true });
-    await cp(source, destination);
-  }
+  await projectLegacyPublicAssets({ assets, sourceRoot: root, destinationRoot: publicRoot });
 
   if (process.env.MFL_BUILD_VERBOSE === "1") {
     console.log("Prepared Next.js public compatibility assets.");

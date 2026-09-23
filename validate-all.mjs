@@ -22,6 +22,8 @@ const validators = [
   "validate-data-client-runtime-ownership.mjs",
   "validate-site-date-picker.mjs",
   "validate-local-development.mjs",
+  "validate-public-projection.mjs",
+  "validate-pitch-background.mjs",
   "validate-performance-foundations.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",

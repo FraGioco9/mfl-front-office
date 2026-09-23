@@ -290,6 +290,7 @@ const browserTestSource = String.raw`(() => {
       plannerFormationRingSegments: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length,
       plannerFormationPlusPaths: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length,
       plannerFormationBadgeCount: document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge, #plannerFormationPositions .plannerFormationInstructionsIcon").length,
+      plannerPitchBackground: getComputedStyle(document.querySelector(".plannerPitch")).backgroundImage,
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
       plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
@@ -594,6 +595,7 @@ const browserTestSource = String.raw`(() => {
         assert(Number.parseFloat(parserSnapshot.plannerFormationSpotRows[0]) === 78 && Number.parseFloat(parserSnapshot.plannerFormationSpotRows[9]) === 18 && parserSnapshot.plannerFormationSpotRows[10] === "92%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
         assert(JSON.stringify(parserSnapshot.plannerFormationSpotPositions) === JSON.stringify(["LB","CB","CB","RB","CDM","CDM","LM","CAM","RM","ST","GK"]), "4-2-3-1 first paint must label the confirmed position slots.");
         assert(parserSnapshot.plannerFormationTokenCount === 11 && parserSnapshot.plannerFormationRingSegments === 132 && parserSnapshot.plannerFormationPlusPaths === 22 && parserSnapshot.plannerFormationBadgeCount === 0, "Planner first paint must include eleven segmented-plus circles without instruction badges.");
+        assert(parserSnapshot.plannerPitchBackground.includes("pitch-background.svg"), "Planner must paint the shared SVG pitch before hydration.");
         assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
         assert(parserSnapshot.plannerFormationAlignment === "center", "The selected Formation label must be vertically centered from first paint.");
         assert(parserSnapshot.plannerFormationPaddingRight === "10px", "The Formation chevron must use the standard right inset from first paint.");
@@ -1735,6 +1737,8 @@ const browserTestSource = String.raw`(() => {
       const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
       const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
       const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
+      assert(getComputedStyle(document.querySelector(".plannerPitch")).backgroundImage.includes("pitch-background.svg"), "Hydrated Planner must retain the shared SVG pitch.");
+      assert(Math.abs(pitchSurfaceBox.width / pitchSurfaceBox.height - 72 / 109) < 0.01, "Planner pitch must keep the supplied SVG proportions.");
       if (innerWidth > 800) {
         assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
         assert(pitchSurfaceBox.width > 280 && pitchSurfaceBox.width <= 420, "Desktop Planner Depth pitch must remain centered at the reduced 420px maximum.");

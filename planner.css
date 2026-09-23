@@ -107,7 +107,7 @@
 .plannerRosterRemove:focus-visible{text-decoration:underline}
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
 .plannerRosterTable td:nth-child(2) .plannerRosterSkeleton{margin-left:0}
-.plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:420px;height:auto;aspect-ratio:360/498;margin:0 auto}
+.plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:420px;height:auto;aspect-ratio:72/109;margin:0 auto}
 #plannerRosterRetryButton{margin-top:8px}
 @media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerPlayerColumn{width:22%}.plannerRosterTable .plannerPositionColumn{width:16%}.plannerRosterTable .plannerAgeColumn{width:14%}.plannerRosterTable .plannerOverallColumn{width:14%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:8%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 

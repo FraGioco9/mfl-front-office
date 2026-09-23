@@ -1585,9 +1585,8 @@
   }
 
   function playerLoadingPitchHtml() {
-    const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
     const rowLengths = [1, 3, 1, 3, 3, 3, 1];
-    return pitchLines + rowLengths.map((columnCount) => (
+    return rowLengths.map((columnCount) => (
       `<div class="pitchRow pitchRow${columnCount}" style="--pitch-columns: ${columnCount}">${Array.from({ length: columnCount }, () => '<div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div>').join("")}</div>`
     )).join("");
   }

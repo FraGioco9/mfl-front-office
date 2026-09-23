@@ -3048,14 +3048,16 @@ button.playerIdText:active {
   position: relative;
   width: 360px;
   min-height: 0;
-  height: 498px;
+  height: auto;
+  aspect-ratio: 72 / 109;
   margin: 8px auto 0;
   padding: 10px 8px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 0;
   border-radius: 8px;
-  background: linear-gradient(180deg, #2d8f57 0 50%, #27824f 50% 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  background: url("/pitch-background.svg") center / 100% 100% no-repeat,
+    linear-gradient(180deg, #2d8f57 0 50%, #27824f 50% 100%);
+  box-shadow: none;
 }
 
 .pitchRow {
@@ -3118,88 +3120,6 @@ button.playerIdText:active {
   display: block;
   width: 50px;
   height: 50px;
-}
-
-.pitch::before,
-.pitch::after {
-  position: absolute;
-  left: 50%;
-  content: "";
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.pitch::before {
-  top: 50%;
-  width: 82px;
-  height: 82px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.pitch::after {
-  top: 50%;
-  width: 100%;
-  border-top: 1px solid rgba(255, 255, 255, 0.56);
-}
-
-.pitchLine {
-  position: absolute;
-  left: 50%;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.pitchBoxTop,
-.pitchBoxBottom {
-  width: 68%;
-  height: 18%;
-  border: 1px solid rgba(255, 255, 255, 0.58);
-}
-
-.pitchBoxTop {
-  top: 0;
-  border-top: 0;
-}
-
-.pitchBoxBottom {
-  bottom: 0;
-  border-bottom: 0;
-}
-
-.pitchGoalTop,
-.pitchGoalBottom {
-  width: 36%;
-  height: 7%;
-  border: 1px solid rgba(255, 255, 255, 0.52);
-}
-
-.pitchArcTop,
-.pitchArcBottom {
-  width: 28%;
-  height: 11%;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-}
-
-.pitchArcTop {
-  top: 12.5%;
-  clip-path: inset(50% 0 0 0);
-}
-
-.pitchArcBottom {
-  bottom: 12.5%;
-  clip-path: inset(0 0 50% 0);
-}
-.pitchGoalTop {
-  top: 0;
-  border-top: 0;
-}
-
-.pitchGoalBottom {
-  bottom: 0;
-  border-bottom: 0;
 }
 
 .evaluationPage {

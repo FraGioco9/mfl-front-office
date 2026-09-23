@@ -186,7 +186,7 @@ html:not(.mflInitialRouteResolved):is(
   .pitch {
     width: 330px;
     height: auto;
-    aspect-ratio: 360 / 498;
+    aspect-ratio: 72 / 109;
   }
 }
 

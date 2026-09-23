@@ -63,9 +63,12 @@ invariant(
 );
 invariant(
   prepareRuntime.includes("await Promise.all(assets.map((relativePath) => access(resolve(root, relativePath))))")
-    && prepareRuntime.indexOf("await Promise.all(assets.map(") < prepareRuntime.indexOf("await rm(publicRoot,")
+    && prepareRuntime.includes("await projectLegacyPublicAssets({ assets, sourceRoot: root, destinationRoot: publicRoot });")
+    && prepareRuntime.includes("export async function projectLegacyPublicAssets(")
+    && prepareRuntime.includes("await mkdir(destinationRoot, { recursive: true });")
+    && !prepareRuntime.includes("rm(publicRoot")
     && prepareRuntime.includes("preparation = prepareAssets().finally("),
-  "Next development must preflight source assets and deduplicate overlapping public projection runs.",
+  "Next development must preflight source assets, preserve live public/, and deduplicate overlapping sync runs.",
 );
 invariant(legacyAssetOwnership.includes("isLegacyPublicAssetRelativePath") && legacyAssetOwnership.includes("listLegacyPublicAssetPaths"), "Legacy public projection scope must have one shared owner.");
 invariant(legacyDevLoader.includes("this.addDependency(absolutePath)") && legacyDevLoader.includes('createHash("sha256")'), "Next development must watch projected legacy assets through a content-sensitive Webpack dependency.");
