@@ -1151,11 +1151,13 @@
                     })();
                   </script>
                 </label>
+                <button id="plannerAutoFillDepthButton" class="compactButton plannerAutoFillDepthButton" type="button" disabled>Auto-fill</button>
               </div>
               <div class="pitch plannerPitch" role="img" aria-label="Squad depth pitch">
 
-                <div id="plannerFormationPositions" class="plannerFormationPositions" aria-hidden="true"></div>
+                <div id="plannerFormationPositions" class="plannerFormationPositions" role="group" aria-label="Formation starting positions"></div>
               </div>
+              <div id="plannerDepthPicker" class="plannerDepthPicker" role="dialog" aria-label="Select a player for the position" hidden></div>
               <div id="plannerDepthDetails" class="plannerDepthDetails" aria-label="Players by formation position" hidden></div>
             </section>
           </div>
@@ -1766,12 +1768,51 @@
             };
             // END PLANNER DEPTH
             let depthRoster = [];
+            let depthClubId = "";
+            const depthAssignments = new Map();
             const depthDetails = document.getElementById("plannerDepthDetails");
+            const depthPicker = document.getElementById("plannerDepthPicker");
+            const depthAutoFill = document.getElementById("plannerAutoFillDepthButton");
+            let openPickerButton = null;
             const depthPlayerName = player => String(player.name || "Player #" + player.player_id);
             const depthPlayerOverall = player => {
               const value = player.overall;
               return value === null || value === undefined || String(value).trim() === "" || !Number.isFinite(Number(value))
                 ? "—" : String(value);
+            };
+            const rankDepthPlayers = (players, position) => (Array.isArray(players) ? players : [])
+              .filter(player => {
+                const id = Number(player?.player_id);
+                const years = player?.retirement_years;
+                const eligible = (Array.isArray(player?.positions) ? player.positions : String(player?.positions || "").split(/[,/]/))
+                  .map(value => String(value).trim().toUpperCase());
+                return Number.isSafeInteger(id) && id > 0 && eligible.includes(position)
+                  && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+              })
+              .sort((a, b) => {
+                const overall = player => Number.isFinite(Number(player.overall)) && player.overall !== null && String(player.overall).trim() !== ""
+                  ? Number(player.overall) : -Infinity;
+                return overall(b) - overall(a)
+                  || depthPlayerName(a).localeCompare(depthPlayerName(b), undefined, { sensitivity: "base" })
+                  || Number(a.player_id) - Number(b.player_id);
+              });
+            const slotKeysFor = positions => {
+              const counts = new Map();
+              return positions.map(position => {
+                const count = (counts.get(position) || 0) + 1;
+                counts.set(position, count);
+                return position + "#" + count;
+              });
+            };
+            const closeDepthPicker = ({ restoreFocus = false } = {}) => {
+              const previous = openPickerButton;
+              openPickerButton = null;
+              if (depthPicker instanceof HTMLElement) {
+                depthPicker.hidden = true;
+                depthPicker.replaceChildren();
+              }
+              if (previous instanceof HTMLElement) previous.setAttribute("aria-expanded", "false");
+              if (restoreFocus && previous?.isConnected) previous.focus();
             };
             const renderDepthDetails = (positions, buckets) => {
               if (!(depthDetails instanceof HTMLElement)) return;
@@ -1814,94 +1855,237 @@
                 card.append(heading, list);
                 fragment.appendChild(card);
               };
-              // Read the columns from goalkeeper through defence to attack.
               addCard(positions.length - 1);
               for (let index = 0; index < positions.length - 1; index += 1) addCard(index);
               depthDetails.replaceChildren(fragment);
             };
-            const makeFormationSpot = (position, goalkeeper = false, depth = [], slotLabel = position) => {
-              const spot = document.createElement("span");
-              spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
-              spot.dataset.position = position;
-              const token = document.createElement("span");
-              token.className = "plannerFormationToken";
-              token.dataset.slotToken = "true";
-              const ring = makeSlotIcon("svg", { viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenRing" });
-              slotRingSegments.forEach(d => {
-                ring.appendChild(makeSlotIcon("path", {
-                  d, fill: "none", stroke: "currentColor", "stroke-width": "4", "stroke-linecap": "round",
-                }));
-              });
-              const plus = makeSlotIcon("svg", {
-                viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationTokenPlus",
-                fill: "none", stroke: "currentColor", "stroke-width": "2.5",
-                "stroke-linecap": "round", "stroke-linejoin": "round",
-              });
-              plus.append(
-                makeSlotIcon("path", { d: "M5 12h14" }),
-                makeSlotIcon("path", { d: "M12 5v14" }),
-              );
-              if (depth.length) {
-                const overall = document.createElement("span");
-                overall.className = "plannerFormationLeaderOverall";
-                overall.textContent = depthPlayerOverall(depth[0]);
-                token.append(ring, overall);
-              } else {
-                token.append(ring, plus);
-              }
-              spot.dataset.depthCount = String(depth.length);
-              spot.title = slotLabel + ": " + (depth.length
-                ? depth.map(player => depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")").join(" · ")
-                : "No eligible players");
-              const label = document.createElement("span");
-              label.className = "plannerFormationPositionLabel";
-              label.textContent = position + (depth.length ? " · " + depth.length : "");
-              spot.append(token, label);
-              return spot;
-            };
             const renderFormation = code => {
+              closeDepthPicker();
               const selected = formationCodes.includes(code) ? code : "442";
               const lines = formationSlots[selected];
               const positions = lines.flat().concat("GK");
-              const buckets = distributeFormationDepth(lines, depthRoster);
+              const keys = slotKeysFor(positions);
+              const rosterById = new Map(depthRoster.map(player => [Number(player.player_id), player]));
+              const claimed = new Set();
+              // Keep manually selected starters across formation changes where the
+              // position/ordinal still exists, and never keep removed/retired players.
+              for (const [key, id] of depthAssignments) {
+                const player = rosterById.get(id);
+                if (!keys.includes(key) || !player || claimed.has(id)
+                  || !rankDepthPlayers([player], key.split("#")[0]).length) {
+                  depthAssignments.delete(key);
+                } else {
+                  claimed.add(id);
+                }
+              }
+              const available = depthRoster.filter(player => !claimed.has(Number(player.player_id)));
+              const alternatives = distributeFormationDepth(lines, available);
+              const starters = keys.map(key => rosterById.get(depthAssignments.get(key)) || null);
+              const buckets = alternatives.map((players, index) => starters[index] ? [starters[index], ...players] : players);
               if (formationSelect instanceof HTMLSelectElement) formationSelect.value = selected;
               if (!(formationPositions instanceof HTMLElement)) return;
+              const openDepthPicker = (key, position, button) => {
+                if (!(depthPicker instanceof HTMLElement) || !depthRoster.length) return;
+                if (openPickerButton === button && !depthPicker.hidden) { closeDepthPicker({restoreFocus:true}); return; }
+                closeDepthPicker();
+                openPickerButton = button;
+                button.setAttribute("aria-expanded", "true");
+                const assignedElsewhere = new Set([...depthAssignments].filter(([other]) => other !== key).map(([, id]) => id));
+                const eligible = rankDepthPlayers(depthRoster, position)
+                  .filter(player => !assignedElsewhere.has(Number(player.player_id)));
+                const currentId = depthAssignments.get(key);
+                const heading = document.createElement("h4");
+                heading.textContent = "Select " + position;
+                depthPicker.appendChild(heading);
+                if (currentId) {
+                  const clear = document.createElement("button");
+                  clear.type = "button";
+                  clear.className = "plannerDepthPickerClear";
+                  clear.textContent = "Clear starter";
+                  clear.addEventListener("click", () => { depthAssignments.delete(key); renderFormation(selected); });
+                  depthPicker.appendChild(clear);
+                }
+                if (!eligible.length) {
+                  const empty = document.createElement("p");
+                  empty.textContent = "No available players for " + position + ".";
+                  depthPicker.appendChild(empty);
+                }
+                for (const player of eligible) {
+                  const row = document.createElement("button");
+                  row.type = "button";
+                  row.className = "plannerDepthPickerPlayer";
+                  row.dataset.playerId = String(player.player_id);
+                  row.setAttribute("aria-pressed", String(currentId === Number(player.player_id)));
+                  const photo = document.createElement("img");
+                  photo.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(player.player_id) + "/photo.webp";
+                  photo.alt = "";
+                  photo.loading = "lazy";
+                  photo.addEventListener("error", () => { photo.hidden = true; });
+                  const name = document.createElement("span");
+                  name.textContent = depthPlayerName(player);
+                  const overall = document.createElement("strong");
+                  overall.textContent = depthPlayerOverall(player);
+                  row.append(photo, name, overall);
+                  row.addEventListener("click", () => { depthAssignments.set(key, Number(player.player_id)); renderFormation(selected); });
+                  depthPicker.appendChild(row);
+                }
+                depthPicker.hidden = false;
+                const rect = button.getBoundingClientRect();
+                const width = Math.min(320, window.innerWidth - 20);
+                depthPicker.style.left = Math.max(10, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 10)) + "px";
+                const height = depthPicker.getBoundingClientRect().height;
+                depthPicker.style.top = Math.max(10, Math.min(
+                  rect.bottom + 8 + height <= window.innerHeight - 10 ? rect.bottom + 8 : rect.top - height - 8,
+                  window.innerHeight - height - 10)) + "px";
+                depthPicker.querySelector("button")?.focus();
+              };
+              const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position) => {
+                const spot = document.createElement("span");
+                spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
+                spot.dataset.position = position;
+                spot.dataset.slotKey = key;
+                spot.dataset.depthCount = String((starter ? 1 : 0) + backups.length);
+                if (starter) spot.dataset.playerId = String(starter.player_id);
+                const button = document.createElement("button");
+                button.className = "plannerFormationSlotButton";
+                button.type = "button";
+                button.disabled = !depthRoster.length;
+                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter) : "empty") + ". Select player");
+                button.setAttribute("aria-haspopup", "dialog");
+                button.setAttribute("aria-expanded", "false");
+                button.addEventListener("click", () => openDepthPicker(key, position, button));
+                const token = document.createElement("span");
+                token.className = "plannerFormationToken" + (starter ? " plannerFormationTokenAssigned" : "");
+                token.dataset.slotToken = "true";
+                const ring = makeSlotIcon("svg", { viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenRing" });
+                slotRingSegments.forEach(d => {
+                  ring.appendChild(makeSlotIcon("path", { d, fill: "none", stroke: "currentColor", "stroke-width": "4", "stroke-linecap": "round" }));
+                });
+                if (starter) {
+                  const gradient = document.createElement("span");
+                  gradient.className = "plannerFormationPlayerGradient";
+                  const shade = document.createElement("span");
+                  shade.className = "plannerFormationPlayerShade";
+                  const portrait = document.createElement("img");
+                  portrait.className = "plannerFormationPlayerPhoto";
+                  portrait.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(starter.player_id) + "/photo.webp";
+                  portrait.alt = "";
+                  portrait.draggable = false;
+                  portrait.loading = "lazy";
+                  portrait.addEventListener("error", () => { portrait.hidden = true; });
+                  const sliders = makeSlotIcon("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationPlayerSliders", fill: "none", stroke: "currentColor", "stroke-width": "2.5", "stroke-linecap": "round" });
+                  ["M10 5H3", "M12 19H3", "M14 3v4", "M16 17v4", "M21 12h-9", "M21 19h-5", "M21 5h-7", "M8 10v4", "M8 12H3"].forEach(d => sliders.appendChild(makeSlotIcon("path", { d })));
+                  token.append(gradient, shade, portrait, sliders);
+                  const badge = document.createElement("span");
+                  badge.className = "plannerFormationPlayerBadge";
+                  const overall = document.createElement("span");
+                  overall.className = "plannerFormationPlayerOverall";
+                  overall.textContent = depthPlayerOverall(starter);
+                  const pos = document.createElement("span");
+                  pos.className = "plannerFormationPlayerPosition";
+                  pos.textContent = position;
+                  badge.append(overall, pos);
+                  button.append(token, badge);
+                } else {
+                  const plus = makeSlotIcon("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationTokenPlus", fill: "none", stroke: "currentColor", "stroke-width": "2.5", "stroke-linecap": "round", "stroke-linejoin": "round" });
+                  plus.append(makeSlotIcon("path", { d: "M5 12h14" }), makeSlotIcon("path", { d: "M12 5v14" }));
+                  token.append(ring, plus);
+                  button.appendChild(token);
+                }
+                spot.title = slotLabel + ": " + (starter ? depthPlayerName(starter) + " (" + depthPlayerOverall(starter) + ")" : "empty");
+                const label = document.createElement("span");
+                label.className = "plannerFormationPositionLabel";
+                label.textContent = position;
+                spot.append(button, label);
+                if (starter && backups.length) {
+                  const list = document.createElement("span");
+                  list.className = "plannerFormationBackups";
+                  backups.slice(0, 2).forEach((player, index) => {
+                    const entry = document.createElement("span");
+                    entry.className = "plannerFormationBackup";
+                    entry.textContent = (index + 2) + ". " + depthPlayerName(player) + " " + depthPlayerOverall(player);
+                    entry.title = (index + 2) + "nd/3rd alternative: " + depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")";
+                    list.appendChild(entry);
+                  });
+                  spot.appendChild(list);
+                }
+                return spot;
+              };
               const fragment = document.createDocumentFragment();
               let slotIndex = 0;
               const slotCounts = new Map();
-              lines.forEach((positions, lineIndex) => {
-                // Defenders sit nearest GK; attackers remain towards the top.
+              lines.forEach((linePositions, lineIndex) => {
                 const y = 78 - lineIndex * (60 / (lines.length - 1));
-                const count = positions.length;
+                const count = linePositions.length;
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
                 const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
                 const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 58 : 38) * spread;
-                positions.forEach((position, column) => {
+                linePositions.forEach((position, column) => {
                   const occurrence = (slotCounts.get(position) || 0) + 1;
                   slotCounts.set(position, occurrence);
-                  const repeated = lines.flat().filter(value => value === position).length > 1;
-                  const spot = makeFormationSpot(position, false, buckets[slotIndex++], position + (repeated ? " " + occurrence : ""));
+                  const repeated = positions.filter(value => value === position).length > 1;
+                  const spot = makeFormationSpot(position, keys[slotIndex], false, starters[slotIndex], alternatives[slotIndex], position + (repeated ? " " + occurrence : ""));
+                  slotIndex += 1;
                   const x = count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
                   const offset = position === "CDM" && count > 1 ? 5
                     : position === "CAM" && count > 1 ? -5
-                      : position === "CF" && (positions.includes("LW") || positions.includes("RW")) ? 4 : 0;
+                      : position === "CF" && (linePositions.includes("LW") || linePositions.includes("RW")) ? 4 : 0;
                   spot.style.left = x.toFixed(2) + "%";
                   spot.style.top = (y + offset).toFixed(2) + "%";
                   fragment.appendChild(spot);
                 });
               });
-              const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);
+              const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);
               goalkeeper.style.left = "50%";
               goalkeeper.style.top = "92%";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
               renderDepthDetails(positions, buckets);
+              if (depthAutoFill instanceof HTMLButtonElement) {
+                depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>
+                  !depthAssignments.has(key) && alternatives[index].length);
+              }
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
               formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
             };
+            const autoFillDepth = () => {
+              const selected = formationCodes.includes(formationSelect?.value) ? formationSelect.value : "442";
+              const keys = slotKeysFor(formationSlots[selected].flat().concat("GK"));
+              const claimed = new Set(depthAssignments.values());
+              for (const key of keys) {
+                if (depthAssignments.has(key)) continue;
+                const position = key.split("#")[0];
+                const player = rankDepthPlayers(depthRoster, position).find(candidate => !claimed.has(Number(candidate.player_id)));
+                if (!player) continue;
+                const id = Number(player.player_id);
+                depthAssignments.set(key, id);
+                claimed.add(id);
+              }
+              renderFormation(selected);
+            };
+            depthAutoFill?.addEventListener("click", autoFillDepth);
+            document.addEventListener("pointerdown", event => {
+              if (depthPicker?.hidden || depthPicker?.contains(event.target) || openPickerButton?.contains(event.target)) return;
+              closeDepthPicker();
+            });
+            document.addEventListener("keydown", event => {
+              if (event.key !== "Escape" || depthPicker?.hidden) return;
+              event.preventDefault();
+              event.stopPropagation();
+              closeDepthPicker({restoreFocus:true});
+            }, true);
+            window.addEventListener("resize", () => closeDepthPicker());
+            window.addEventListener("scroll", event => {
+              if (!depthPicker?.contains(event.target)) closeDepthPicker();
+            }, true);
             Reflect.set(window, "__mflPlannerFormationPreview", Object.freeze({
               render: renderFormation, selectedForClub: selectedFormationForClub, codes: formationCodes,
+              setClub(clubId) {
+                const id = String(clubId || "");
+                if (depthClubId !== id) { depthClubId = id; depthAssignments.clear(); closeDepthPicker(); }
+              },
+              autoFill: autoFillDepth,
               setRoster(players) { depthRoster = Array.isArray(players) ? players.slice() : []; renderFormation(formationSelect?.value || "442"); },
             }));
             const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");

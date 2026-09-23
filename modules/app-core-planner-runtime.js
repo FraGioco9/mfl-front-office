@@ -622,6 +622,7 @@
   function syncFormationForClub(clubId){
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
     const code=preview?.selectedForClub?.(clubId)||"442";
+    preview?.setClub?.(clubId);
     if(formationSelect&&"value" in formationSelect)formationSelect.value=code;
     preview?.render?.(code);
   }
@@ -652,6 +653,10 @@
     teamCard?.classList.toggle("myClubCardNoLogo",false);
     const color=(value)=>/^#[0-9a-f]{6}$/iu.test(String(value||"").trim())?String(value).trim().toLowerCase():"";
     const primary=color(data.primaryColor),secondary=color(data.secondaryColor);
+    if(workspace instanceof HTMLElement&&typeof workspace.style?.setProperty==="function"){
+      workspace.style.setProperty("--planner-depth-primary",primary||secondary||"var(--primary)");
+      workspace.style.setProperty("--planner-depth-secondary",secondary||primary||"var(--primary-hover)");
+    }
     if(teamCard instanceof HTMLElement&&typeof teamCard.style?.setProperty==="function"){
       if(primary||secondary){
         teamCard.style.setProperty("--my-club-primary",primary||secondary);

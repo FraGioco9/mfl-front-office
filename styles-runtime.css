@@ -7643,6 +7643,44 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthCardList li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthCardList li strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthCardList .plannerDepthEmpty{color:var(--text-soft)}
+
+/* Interactive depth: keep the original empty MFL ring, but make every slot a
+   usable button and place two compact alternatives directly below a starter. */
+.plannerDepthHeader{flex-wrap:wrap}
+.plannerAutoFillDepthButton{flex:0 0 auto}
+.plannerFormationSpot{width:clamp(64px,19%,80px);pointer-events:none}
+.plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
+.plannerFormationSlotButton:hover:not(:disabled),.plannerFormationSlotButton:focus-visible{background:transparent;box-shadow:none;outline:2px solid #fff;outline-offset:2px}
+.plannerFormationSlotButton:disabled{cursor:default}
+.plannerFormationSlotButton .plannerFormationToken{width:78%}
+.plannerFormationTokenAssigned{isolation:isolate;overflow:hidden;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)),var(--planner-depth-secondary,var(--primary-hover)));box-shadow:inset 0 0 0 1px var(--planner-depth-primary,var(--primary)),0 2px 6px rgba(0,0,0,.4)}
+.plannerFormationPlayerGradient,.plannerFormationPlayerShade,.plannerFormationPlayerPhoto{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;pointer-events:none}
+.plannerFormationPlayerGradient{background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)) 5%,var(--planner-depth-secondary,var(--primary-hover)) 95%)}
+.plannerFormationPlayerShade{background:linear-gradient(0deg,rgba(0,0,0,.68),rgba(0,0,0,.04) 75%)}
+.plannerFormationPlayerPhoto{object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top;clip-path:circle(50% at 50% 50%)}
+.plannerFormationPlayerPhoto[hidden]{display:none}
+.plannerFormationPlayerSliders{position:absolute;top:2px;left:2px;z-index:3;width:12px;height:12px;padding:2px;border-radius:50%;background:var(--planner-depth-primary,var(--primary));color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.plannerFormationPlayerBadge{position:absolute;z-index:4;bottom:7px;left:50%;display:flex;align-items:stretch;overflow:hidden;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;transform:translate(-50%,50%);pointer-events:none}
+.plannerFormationPlayerOverall,.plannerFormationPlayerPosition{padding:1px 4px;color:#fff;font-size:10px;font-weight:700;line-height:15px;font-variant-numeric:tabular-nums}
+.plannerFormationPlayerOverall{background:#262626}
+.plannerFormationPlayerPosition{background:var(--planner-depth-primary,var(--primary))}
+.plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}
+.plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
+.plannerFormationBackups{position:absolute;top:calc(100% + 11px);left:50%;display:grid;gap:1px;width:96px;transform:translateX(-50%);pointer-events:none}
+.plannerFormationBackup{display:block;overflow:hidden;color:#fff;font-size:9px;font-weight:700;line-height:12px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap}
+.plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;display:grid;gap:3px;width:min(320px,calc(100vw - 20px));max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
+.plannerDepthPicker[hidden]{display:none}
+.plannerDepthPicker h4{margin:0 0 4px;color:var(--text);font-size:13px}
+.plannerDepthPicker p{margin:4px;color:var(--text-soft);font-size:12px}
+.plannerDepthPickerPlayer,.plannerDepthPickerClear{display:flex;align-items:center;gap:9px;width:100%;min-height:39px;padding:4px 8px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.plannerDepthPickerPlayer:hover,.plannerDepthPickerPlayer:focus-visible,.plannerDepthPickerClear:hover,.plannerDepthPickerClear:focus-visible{border-color:var(--primary);background:var(--row-hover);outline:0}
+.plannerDepthPickerPlayer[aria-pressed="true"]{border-color:var(--primary)}
+.plannerDepthPickerPlayer img{width:30px;height:30px;flex:0 0 auto;object-fit:contain;border-radius:50%;background:var(--row-hover)}
+.plannerDepthPickerPlayer img[hidden]{visibility:hidden}
+.plannerDepthPickerPlayer span{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(58px,18%,72px)}.plannerFormationBackups{width:76px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 
