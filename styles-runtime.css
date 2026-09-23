@@ -7630,6 +7630,19 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 @media(max-width:900px){.myClubCard.plannerTeamCard{--mfl-club-identity-logo-width:110px;--mfl-club-identity-logo-height:120px;grid-template-columns:140px minmax(0,1fr);min-height:156px}.plannerTeamCard .plannerTeamLogoFrame{padding:14px}.plannerTeamCard .plannerTeamCardBody{padding:18px 20px}.plannerTeamCard .clubIdentityId{font-size:13px}.plannerTeamCard .clubIdentityName{font-size:30px}.plannerTeamCard .clubIdentityMeta{margin-top:8px;font-size:15px}}
 @media(max-width:600px){.plannerSelectedTeam{flex-direction:column;align-items:stretch;gap:10px}.myClubCard.plannerTeamCard{flex:none;width:100%}#plannerTeamClearButton{align-self:flex-end}}
 @media(max-width:520px){.myClubCard.plannerTeamCard{--mfl-club-identity-logo-width:88px;--mfl-club-identity-logo-height:96px;grid-template-columns:112px minmax(0,1fr);min-height:136px}.plannerTeamCard .plannerTeamLogoFrame{padding:12px}.plannerTeamCard .plannerTeamCardBody{padding:14px}.plannerTeamCard .clubIdentityId{font-size:11px}.plannerTeamCard .clubIdentityName{font-size:24px}.plannerTeamCard .clubIdentityMeta{gap:4px 9px;margin-top:6px;font-size:13px}}
+
+.plannerFormationSpot{pointer-events:auto}
+.plannerFormationLeaderOverall{font-size:12px;font-weight:800;line-height:1;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.plannerDepthDetails{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:8px;margin-top:12px}
+.plannerDepthDetails[hidden]{display:none}
+.plannerDepthCard{min-width:0;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.plannerDepthCard h4{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px;font-size:12px;font-weight:800;color:var(--text)}
+.plannerDepthCount{font-size:11px;font-weight:700;color:var(--text-soft)}
+.plannerDepthCardList{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.plannerDepthCardList li{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0;font-size:12px;line-height:1.3;color:var(--text)}
+.plannerDepthCardList li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerDepthCardList li strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.plannerDepthCardList .plannerDepthEmpty{color:var(--text-soft)}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
 

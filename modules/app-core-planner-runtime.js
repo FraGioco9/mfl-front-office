@@ -94,6 +94,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.([]);
     clubSearchPlayers=[];
     renderRosterTotals();
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
@@ -566,6 +567,7 @@
     rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="("+roster.length+")";
     renderRosterTotals();
+    Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.(roster);
     rosterMessage(roster.length?"":"No players in this squad.");
   }
   async function loadRoster(clubId){

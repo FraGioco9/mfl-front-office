@@ -113,6 +113,7 @@
 
                 <div id="plannerFormationPositions" class="plannerFormationPositions" aria-hidden="true"></div>
               </div>
+              <div id="plannerDepthDetails" class="plannerDepthDetails" aria-label="Players by formation position" hidden></div>
             </section>
           </div>
           <div id="plannerPlayerModal" class="modalBackdrop plannerPlayerModalBackdrop" hidden>
@@ -689,7 +690,93 @@
               Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
               return element;
             };
-            const makeFormationSpot = (position, goalkeeper = false) => {
+
+            // BEGIN PLANNER DEPTH
+            // Multi-position players contribute to every eligible position; repeated
+            // formation slots distribute eligible players, rather than duplicate them.
+            const distributeFormationDepth = (lines, players) => {
+              const positions = lines.flat().concat("GK");
+              const buckets = positions.map(() => []);
+              const ranked = (Array.isArray(players) ? players : [])
+                .filter(player => {
+                  const id = Number(player?.player_id);
+                  const years = player?.retirement_years;
+                  return Number.isSafeInteger(id) && id > 0
+                    && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+                })
+                .map(player => ({
+                  ...player,
+                  eligiblePositions: (Array.isArray(player.positions) ? player.positions : String(player.positions || "").split(/[,/]/))
+                    .map(value => String(value).trim().toUpperCase()).filter(Boolean),
+                }))
+                .sort((a, b) => {
+                  const overall = player => player.overall === null || player.overall === undefined || String(player.overall).trim() === ""
+                    ? -Infinity : (Number.isFinite(Number(player.overall)) ? Number(player.overall) : -Infinity);
+                  return overall(b) - overall(a) || Number(a.player_id) - Number(b.player_id);
+                });
+              for (const position of new Set(positions)) {
+                const indexes = positions.flatMap((value, index) => value === position ? [index] : []);
+                const eligible = ranked.filter(player => player.eligiblePositions.includes(position));
+                eligible.forEach((player, index) => buckets[indexes[index % indexes.length]].push(player));
+              }
+              return buckets;
+            };
+            // END PLANNER DEPTH
+            let depthRoster = [];
+            const depthDetails = document.getElementById("plannerDepthDetails");
+            const depthPlayerName = player => String(player.name || "Player #" + player.player_id);
+            const depthPlayerOverall = player => {
+              const value = player.overall;
+              return value === null || value === undefined || String(value).trim() === "" || !Number.isFinite(Number(value))
+                ? "—" : String(value);
+            };
+            const renderDepthDetails = (positions, buckets) => {
+              if (!(depthDetails instanceof HTMLElement)) return;
+              depthDetails.hidden = !depthRoster.length;
+              if (!depthRoster.length) { depthDetails.replaceChildren(); return; }
+              const fragment = document.createDocumentFragment();
+              const occurrences = new Map();
+              const addCard = index => {
+                const position = positions[index];
+                const count = (occurrences.get(position) || 0) + 1;
+                occurrences.set(position, count);
+                const repeated = positions.filter(value => value === position).length > 1;
+                const card = document.createElement("section");
+                card.className = "plannerDepthCard";
+                const heading = document.createElement("h4");
+                heading.textContent = position + (repeated ? " " + count : "");
+                const total = document.createElement("span");
+                total.className = "plannerDepthCount";
+                total.textContent = String(buckets[index].length);
+                heading.appendChild(total);
+                const list = document.createElement("ol");
+                list.className = "plannerDepthCardList";
+                if (!buckets[index].length) {
+                  const empty = document.createElement("li");
+                  empty.className = "plannerDepthEmpty";
+                  empty.textContent = "No eligible players";
+                  list.appendChild(empty);
+                }
+                for (const player of buckets[index]) {
+                  const entry = document.createElement("li");
+                  const name = document.createElement("span");
+                  name.textContent = depthPlayerName(player);
+                  name.title = depthPlayerName(player);
+                  const overall = document.createElement("strong");
+                  overall.textContent = depthPlayerOverall(player);
+                  overall.setAttribute("aria-label", "Overall " + depthPlayerOverall(player));
+                  entry.append(name, overall);
+                  list.appendChild(entry);
+                }
+                card.append(heading, list);
+                fragment.appendChild(card);
+              };
+              // Read the columns from goalkeeper through defence to attack.
+              addCard(positions.length - 1);
+              for (let index = 0; index < positions.length - 1; index += 1) addCard(index);
+              depthDetails.replaceChildren(fragment);
+            };
+            const makeFormationSpot = (position, goalkeeper = false, depth = [], slotLabel = position) => {
               const spot = document.createElement("span");
               spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
               spot.dataset.position = position;
@@ -711,19 +798,34 @@
                 makeSlotIcon("path", { d: "M5 12h14" }),
                 makeSlotIcon("path", { d: "M12 5v14" }),
               );
-              token.append(ring, plus);
+              if (depth.length) {
+                const overall = document.createElement("span");
+                overall.className = "plannerFormationLeaderOverall";
+                overall.textContent = depthPlayerOverall(depth[0]);
+                token.append(ring, overall);
+              } else {
+                token.append(ring, plus);
+              }
+              spot.dataset.depthCount = String(depth.length);
+              spot.title = slotLabel + ": " + (depth.length
+                ? depth.map(player => depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")").join(" · ")
+                : "No eligible players");
               const label = document.createElement("span");
               label.className = "plannerFormationPositionLabel";
-              label.textContent = position;
+              label.textContent = position + (depth.length ? " · " + depth.length : "");
               spot.append(token, label);
               return spot;
             };
             const renderFormation = code => {
               const selected = formationCodes.includes(code) ? code : "442";
               const lines = formationSlots[selected];
+              const positions = lines.flat().concat("GK");
+              const buckets = distributeFormationDepth(lines, depthRoster);
               if (formationSelect instanceof HTMLSelectElement) formationSelect.value = selected;
               if (!(formationPositions instanceof HTMLElement)) return;
               const fragment = document.createDocumentFragment();
+              let slotIndex = 0;
+              const slotCounts = new Map();
               lines.forEach((positions, lineIndex) => {
                 // Defenders sit nearest GK; attackers remain towards the top.
                 const y = 78 - lineIndex * (60 / (lines.length - 1));
@@ -732,7 +834,10 @@
                 const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
                 const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 58 : 38) * spread;
                 positions.forEach((position, column) => {
-                  const spot = makeFormationSpot(position);
+                  const occurrence = (slotCounts.get(position) || 0) + 1;
+                  slotCounts.set(position, occurrence);
+                  const repeated = lines.flat().filter(value => value === position).length > 1;
+                  const spot = makeFormationSpot(position, false, buckets[slotIndex++], position + (repeated ? " " + occurrence : ""));
                   const x = count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
                   const offset = position === "CDM" && count > 1 ? 5
                     : position === "CAM" && count > 1 ? -5
@@ -742,17 +847,19 @@
                   fragment.appendChild(spot);
                 });
               });
-              const goalkeeper = makeFormationSpot("GK", true);
+              const goalkeeper = makeFormationSpot("GK", true, buckets[slotIndex]);
               goalkeeper.style.left = "50%";
               goalkeeper.style.top = "92%";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
+              renderDepthDetails(positions, buckets);
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
-              formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": GK; " + lines.map(line => line.join(", ")).join("; "));
+              formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
             };
             Reflect.set(window, "__mflPlannerFormationPreview", Object.freeze({
               render: renderFormation, selectedForClub: selectedFormationForClub, codes: formationCodes,
+              setRoster(players) { depthRoster = Array.isArray(players) ? players.slice() : []; renderFormation(formationSelect?.value || "442"); },
             }));
             const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
             if (initialPage !== "planner") return;

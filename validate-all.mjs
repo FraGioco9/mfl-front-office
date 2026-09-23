@@ -24,6 +24,7 @@ const validators = [
   "validate-local-development.mjs",
   "validate-public-projection.mjs",
   "validate-pitch-background.mjs",
+  "validate-planner-depth.mjs",
   "validate-performance-foundations.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",
