@@ -106,9 +106,9 @@ for (const token of [
   'if (!positions.length) {',
   'const overallValue = cachedAttributeValue("overall");',
 ]) assert.ok(indexHtml.includes(token), `Parser-first Player Attribute labels/Overall must stay synchronized to known cached data throughout loading: ${token}`);
-for (const pitchLine of ["pitchBoxTop", "pitchGoalTop", "pitchArcTop", "pitchBoxBottom", "pitchGoalBottom", "pitchArcBottom"]) {
-  assert.ok(indexHtml.includes(`class="pitchLine ${pitchLine}"`), `Static Player first paint must include ${pitchLine}.`);
-}
+assert.ok(indexHtml.includes('class="playerPanel pitchPanel"') && indexHtml.includes('class="pitch"'), "Static Player first paint must retain its pitch and slots.");
+assert.ok(generated.includes('background: url("/pitch-background.svg") center / 100% 100% no-repeat,'), "Static Player first paint must use the shared SVG pitch background.");
+assert.ok(!indexHtml.includes('class="pitchLine pitchBoxTop"'), "Obsolete CSS pitch markings must not return.");
 assert.ok((indexHtml.match(/class="pitchRow pitchRow[13]"/g) || []).length >= 7, "Static Player first paint must include all seven pitch rows before Player data loads.");
 assert.ok(bootstrap.includes('function playerLoadingAttributeLabels(context = firstPaintPlayerContext()) {'), "Bootstrap fallback Player shell must derive Attribute labels from cached position data.");
 assert.ok(bootstrap.includes('function playerLoadingPitchHtml() {'), "Bootstrap fallback Player shell must draw the complete pitch before Player data loads.");
