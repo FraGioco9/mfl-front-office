@@ -49,6 +49,29 @@ npm run dev
 
 Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
+
+## Flow account proofs and WalletConnect
+
+Dapper opt-in uses the trusted `WALLET_CHALLENGE_ORIGIN` (the exact browser origin,
+including scheme and any local development port) as FCL's account-proof app
+identifier. The signed challenge message remains
+`MFL Front Office Dapper Opt-In` with the origin, nonce and expiry attached.
+Set `WALLET_CHALLENGE_ORIGIN` to the actual site origin in production; local
+`http://localhost:4000` is supported by the existing challenge handler.
+
+To support wallets using WalletConnect, [register the app with WalletConnect](https://cloud.walletconnect.com)
+and set `WALLETCONNECT_PROJECT_ID` (a 32-character hexadecimal **public
+project ID**) in Vercel's Production and Preview environment settings, and
+in the root `.env.local` for local testing. Redeploy after changing Vercel
+settings. This value is intentionally included in the public wallet-challenge
+response so the browser can configure `walletconnect.projectId` before
+authenticating with FCL. Do not commit a made-up or borrowed project ID.
+
+Dapper authentication can still work without WalletConnect configuration, but
+FCL may warn that some WalletConnect wallets are not available until a real
+project ID is supplied.
+
+
 For repository checks:
 
 ```powershell
