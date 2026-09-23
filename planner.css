@@ -27,7 +27,7 @@
 .plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
 .plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}
 .plannerFormationPositions{position:absolute;inset:0;z-index:2;pointer-events:none}
-.plannerFormationSpot{position:absolute;display:block;box-sizing:border-box;width:clamp(20px,8%,32px);aspect-ratio:1;border:2px solid rgba(255,255,255,.92);border-radius:50%;background:rgba(255,255,255,.19);box-shadow:0 1px 4px rgba(0,0,0,.22);transform:translate(-50%,-50%)}
+.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:clamp(24px,8%,34px);aspect-ratio:1;border:2px solid rgba(255,255,255,.92);border-radius:50%;background:rgba(255,255,255,.24);color:#fff;font-size:9px;font-weight:800;letter-spacing:-.15px;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.75);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.22);transform:translate(-50%,-50%)}
 .plannerFormationGoalkeeper{background:rgba(255,255,255,.34)}
 #plannerAddPlayerButton{align-self:center;flex-shrink:0}
 .plannerPlayerModalBackdrop{z-index:var(--mfl-z-modal)}

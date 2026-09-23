@@ -193,6 +193,483 @@
             const root = document.documentElement;
             // Keep the pitch preview available before hydration and on SPA navigation.
             const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+            // Approved outfield slots for all 25 formations, defence to attack.
+            const formationSlots = {
+              "343": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "352": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "424": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "442": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "523": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "532": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "541": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "3421": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "CF",
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4132": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4141": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4222": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM",
+                  "CDM"
+                ],
+                [
+                  "CAM",
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4231": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM",
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4312": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4321": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CF",
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4411": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "41212": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "RM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "343b": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "352b": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "41212narrow": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "433a": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CAM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433d": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CDM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433cf": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "CF",
+                  "RW"
+                ]
+              ],
+              "442b": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CDM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "541f": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ]
+            };
             const formationSelect = document.getElementById("plannerFormationSelect");
             const formationPositions = document.getElementById("plannerFormationPositions");
             const formationPitch = document.querySelector(".plannerPitch");
@@ -205,40 +682,42 @@
             };
             const renderFormation = code => {
               const selected = formationCodes.includes(code) ? code : "442";
-              const groups = selected.match(/^\d+/)[0].split("").map(Number);
-              const suffix = selected.replace(/^\d+/, "");
+              const lines = formationSlots[selected];
               if (formationSelect instanceof HTMLSelectElement) formationSelect.value = selected;
               if (!(formationPositions instanceof HTMLElement)) return;
               const fragment = document.createDocumentFragment();
-              groups.forEach((count, groupIndex) => {
-                // MFL formations list defenders first; render them above the goalkeeper.
-                let y = 78 - groupIndex * (60 / (groups.length - 1));
-                if (suffix === "d" && groupIndex > 0 && groupIndex < groups.length - 1) y += 2;
-                if (suffix === "a" && groupIndex > 0 && groupIndex < groups.length - 1) y -= 2;
-                if (suffix === "f" && groupIndex === groups.length - 1) y -= 3;
-                const midfield = groupIndex > 0 && groupIndex < groups.length - 1;
-                const spread = suffix === "narrow" && midfield ? 0.68
-                  : suffix === "b" && midfield ? 0.82
-                    : suffix === "cf" && groupIndex === groups.length - 1 ? 0.78 : 1;
+              lines.forEach((positions, lineIndex) => {
+                // Defenders sit nearest GK; attackers remain towards the top.
+                const y = 78 - lineIndex * (60 / (lines.length - 1));
+                const count = positions.length;
+                const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
+                const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
                 const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 58 : 38) * spread;
-                for (let column = 0; column < count; column += 1) {
+                positions.forEach((position, column) => {
                   const spot = document.createElement("span");
                   spot.className = "plannerFormationSpot";
+                  spot.dataset.position = position;
+                  spot.textContent = position;
                   const x = count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
+                  const offset = position === "CDM" && count > 1 ? 5
+                    : position === "CAM" && count > 1 ? -5
+                      : position === "CF" && (positions.includes("LW") || positions.includes("RW")) ? 4 : 0;
                   spot.style.left = x.toFixed(2) + "%";
-                  spot.style.top = y.toFixed(2) + "%";
+                  spot.style.top = (y + offset).toFixed(2) + "%";
                   fragment.appendChild(spot);
-                }
+                });
               });
               const goalkeeper = document.createElement("span");
               goalkeeper.className = "plannerFormationSpot plannerFormationGoalkeeper";
+              goalkeeper.dataset.position = "GK";
+              goalkeeper.textContent = "GK";
               goalkeeper.style.left = "50%";
               goalkeeper.style.top = "92%";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
-              formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name);
+              formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": GK; " + lines.map(line => line.join(", ")).join("; "));
             };
             Reflect.set(window, "__mflPlannerFormationPreview", Object.freeze({
               render: renderFormation, selectedForClub: selectedFormationForClub, codes: formationCodes,

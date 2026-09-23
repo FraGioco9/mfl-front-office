@@ -257,7 +257,24 @@ const formations = ["3421", "343", "343b", "352", "352b", "41212", "41212narrow"
 const formationMarkup = html.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
 const formationOptions = Array.from(formationMarkup.matchAll(/<option value="([0-9]+[a-z]*)"(?: selected)?>/g), ([,code]) => code);
 invariant(JSON.stringify(formationOptions) === JSON.stringify(formations), "Planner formation dropdown must contain exactly the requested 25 MFL formations in order.");
-invariant(html.includes("let y = 78 - groupIndex * (60 / (groups.length - 1));") && generatedHtml.includes("let y = 78 - groupIndex * (60 / (groups.length - 1));") && !html.includes("const fromAttack = groups.length - 1 - groupIndex;"), "Planner must display defenders at the bottom, attackers at the top and keep the goalkeeper unchanged.");
+const expectedFormationSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
+for (const markup of [html, generatedHtml]) {
+  const mapStart = markup.indexOf("const formationSlots = ");
+  const mapEnd = markup.indexOf(";\n            const formationSelect", mapStart);
+  invariant(mapStart >= 0 && mapEnd > mapStart, "Planner must declare the explicit position map for all formations.");
+  const actual = JSON.parse(markup.slice(mapStart + "const formationSlots = ".length, mapEnd));
+  invariant(JSON.stringify(Object.keys(actual).sort()) === JSON.stringify(formations.slice().sort())
+    && formations.every(code => JSON.stringify(actual[code]) === JSON.stringify(expectedFormationSlots[code]))
+    && formations.every(code => actual[code].flat().length === 10),
+    "Planner position slots must match all 25 approved formations, each with ten outfield players.");
+}
+invariant(html.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
+    && generatedHtml.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
+    && html.includes('spot.dataset.position = position;')
+    && generatedHtml.includes('spot.dataset.position = position;')
+    && html.includes('goalkeeper.dataset.position = "GK";')
+    && generatedHtml.includes('goalkeeper.dataset.position = "GK";'),
+  "Planner must label every circle with its approved position at first paint with the goalkeeper unchanged.");
 const formationLabels = {"343":"3-4-3","352":"3-5-2","424":"4-2-4","433":"4-3-3","442":"4-4-2","523":"5-2-3","532":"5-3-2","541":"5-4-1","3421":"3-4-2-1","4132":"4-1-3-2","4141":"4-1-4-1","4222":"4-2-2-2","4231":"4-2-3-1","4312":"4-3-1-2","4321":"4-3-2-1","4411":"4-4-1-1","41212":"4-1-2-1-2","343b":"3-4-3 (B)","352b":"3-5-2 (B)","41212narrow":"4-1-2-1-2 (narrow)","433a":"4-3-3 (att)","433d":"4-3-3 (def)","433cf":"4-3-3 (CF)","442b":"4-4-2 (B)","541f":"5-4-1 (flat)"};
 for (const markup of [html, generatedHtml]) {
   const optionsMarkup = markup.split('id="plannerFormationSelect"')[1]?.split("</select>")[0] || "";
@@ -277,7 +294,7 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && planner.includes('formationSelect?.addEventListener("change"')
     && planner.includes('syncFormationForClub(id);')
     && styles.includes('.plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}')
-    && styles.includes('.plannerFormationSpot{position:absolute;'),
+    && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;')
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   html.includes('id="plannerAverageAge"')
