@@ -157,7 +157,7 @@ for (const type of ["account-proof", "user-signature"]) {
       signingAddress: wallet,
       message: challengeMessage,
       proofType: type,
-      appIdentifier: message,
+      appIdentifier: "https://wallet-test.example",
       nonce: challengeNonce,
       signatures: [signature],
     }, { expectedMessage, expectedAppIdentifier: "https://wallet-test.example", expectedNonce }), "");
