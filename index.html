@@ -1254,8 +1254,8 @@
               if (!(formationPositions instanceof HTMLElement)) return;
               const fragment = document.createDocumentFragment();
               groups.forEach((count, groupIndex) => {
-                const fromAttack = groups.length - 1 - groupIndex;
-                let y = 78 - fromAttack * (60 / (groups.length - 1));
+                // MFL formations list defenders first; render them above the goalkeeper.
+                let y = 78 - groupIndex * (60 / (groups.length - 1));
                 if (suffix === "d" && groupIndex > 0 && groupIndex < groups.length - 1) y += 2;
                 if (suffix === "a" && groupIndex > 0 && groupIndex < groups.length - 1) y -= 2;
                 if (suffix === "f" && groupIndex === groups.length - 1) y -= 3;

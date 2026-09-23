@@ -284,6 +284,7 @@ const browserTestSource = String.raw`(() => {
       plannerFormationAlignment: getComputedStyle(document.getElementById("plannerFormationSelect")).alignItems,
       plannerFormationPaddingRight: getComputedStyle(document.getElementById("plannerFormationSelect")).paddingRight,
       plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
+      plannerFormationSpotRows: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.top),
       plannerTeamIdText: text("#plannerTeamId"),
       plannerTeamLocationText: text("#plannerTeamLocation"),
       plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
@@ -585,6 +586,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
+        assert(parserSnapshot.plannerFormationSpotRows[0] === "78.00%" && parserSnapshot.plannerFormationSpotRows[9] === "18.00%" && parserSnapshot.plannerFormationSpotRows[10] === "92%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
         assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
         assert(parserSnapshot.plannerFormationAlignment === "center", "The selected Formation label must be vertically centered from first paint.");
         assert(parserSnapshot.plannerFormationPaddingRight === "10px", "The Formation chevron must use the standard right inset from first paint.");
@@ -1544,10 +1546,12 @@ const browserTestSource = String.raw`(() => {
       assert(formation.getAttribute("data-mfl-dropdown-enhanced") === "true", "Planner must use the canonical dropdown styling before hydration.");
       const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
+      assert(initialSpots[0].endsWith(":78.00%") && initialSpots[7].endsWith(":18.00%") && initialSpots[10].endsWith(":92%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
       formation.value = "4231";
       formation.dispatchEvent(new Event("change", { bubbles: true }));
       const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
+      assert(changedSpots[0].endsWith(":78.00%") && changedSpots[9].endsWith(":18.00%") && changedSpots[10].endsWith(":92%"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
