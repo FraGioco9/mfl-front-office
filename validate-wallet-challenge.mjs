@@ -26,6 +26,7 @@ assert.deepEqual(verify(), {
   issuedAt,
   expiresAt: challenge.expiresAt,
 });
+assert.ok(challenge.message.startsWith(walletAccessMessage()));
 assert.ok(challenge.message.includes("Origin: " + origin));
 assert.ok(challenge.message.includes("Nonce: " + challenge.nonce));
 assert.ok(challenge.message.includes(new Date(challenge.expiresAt).toISOString()));
