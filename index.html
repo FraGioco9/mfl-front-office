@@ -1902,7 +1902,11 @@
                   clear.type = "button";
                   clear.className = "plannerDepthPickerClear";
                   clear.textContent = "Clear starter";
-                  clear.addEventListener("click", () => { depthAssignments.delete(key); renderFormation(selected); });
+                  clear.addEventListener("click", () => {
+                    depthAssignments.delete(key);
+                    renderFormation(selected);
+                    formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
+                  });
                   depthPicker.appendChild(clear);
                 }
                 if (!eligible.length) {
@@ -1926,7 +1930,11 @@
                   const overall = document.createElement("strong");
                   overall.textContent = depthPlayerOverall(player);
                   row.append(photo, name, overall);
-                  row.addEventListener("click", () => { depthAssignments.set(key, Number(player.player_id)); renderFormation(selected); });
+                  row.addEventListener("click", () => {
+                    depthAssignments.set(key, Number(player.player_id));
+                    renderFormation(selected);
+                    formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
+                  });
                   depthPicker.appendChild(row);
                 }
                 depthPicker.hidden = false;
@@ -2004,7 +2012,7 @@
                     const entry = document.createElement("span");
                     entry.className = "plannerFormationBackup";
                     entry.textContent = (index + 2) + ". " + depthPlayerName(player) + " " + depthPlayerOverall(player);
-                    entry.title = (index + 2) + "nd/3rd alternative: " + depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")";
+                    entry.title = (index === 0 ? "2nd" : "3rd") + " alternative: " + depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")";
                     list.appendChild(entry);
                   });
                   spot.appendChild(list);
@@ -2043,7 +2051,8 @@
               renderDepthDetails(positions, buckets);
               if (depthAutoFill instanceof HTMLButtonElement) {
                 depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>
-                  !depthAssignments.has(key) && alternatives[index].length);
+                  !depthAssignments.has(key) && rankDepthPlayers(depthRoster, key.split("#")[0])
+                    .some(player => !claimed.has(Number(player.player_id))));
               }
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;

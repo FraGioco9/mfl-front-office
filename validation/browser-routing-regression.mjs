@@ -1761,6 +1761,18 @@ const browserTestSource = String.raw`(() => {
       assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Clear must affect the selected circle only.");
       formationPreview.render("433");
       assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
+      // Auto-fill must stay available for a repeated slot even if round-robin backups
+      // currently land in its occupied sibling's depth column.
+      formationPreview.setRoster([
+        {player_id:201,name:"CB 95",positions:"CB",overall:95,retirement_years:5},
+        {player_id:202,name:"CB 90",positions:"CB",overall:90,retirement_years:5},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="201"]').click();
+      assert(!fillButton.disabled,"Auto-fill must remain available when CB #2 has one eligible player.");
+      fillButton.click();
+      assert(slot("CB#2")?.dataset.playerId==="202","Auto-fill must use the remaining eligible player in the repeated slot.");
       formationPreview.setRoster([{player_id:107,name:"ST 93",positions:"ST",overall:93}]);
       assert(!slot("CB#2")?.dataset.playerId,"Removed players must be dropped from depth assignments.");
       formationPreview.setRoster([
