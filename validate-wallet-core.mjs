@@ -68,6 +68,14 @@ for (const required of [
 excludes(walletCore, "function restoreLinkedWalletProof() {", "Startup wallet-proof restoration must not become Wallet-only.");
 excludes(walletCore, "function optOutWallet(options = {}) {", "Opt-out and invalid-session recovery must not depend on loading the Wallet core.");
 
+includes(walletCore, 'fcl.config().put("fcl.accountProof.resolver", async () => ({ nonce: accountProof.nonce }));', "FCL account-proof resolver must return only the server-issued nonce and let FCL bind the app origin.");
+excludes(walletCore, 'fcl.config().put("fcl.accountProof.resolver", async () => accountProof);', "FCL must not supply a deprecated manual appIdentifier.");
+includes(walletCore, '"walletconnect.projectId": walletConnectProjectId', "FCL must accept the public WalletConnect project ID.");
+includes(walletCore, 'const challenge = await issueWalletChallenge();', "The trusted wallet challenge must precede FCL setup.");
+includes(walletCore, 'const fcl = await ensureFlowWallet(challenge.walletConnectProjectId || "");', "WalletConnect project ID must be configured before wallet authentication.");
+includes(walletCore, 'if (challenge.appIdentifier !== appOrigin()) {', "Wallet authentication must refuse a mismatch between trusted challenge and application origin.");
+
+
 includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical app config must map the Wallet action core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "Route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'ensure("wallet")', "Wallet core must not be eagerly primed during startup.");
