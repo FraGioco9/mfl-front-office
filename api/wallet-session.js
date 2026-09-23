@@ -85,12 +85,16 @@ function clearCookie(name, { origin, path = "/" }) {
 }
 
 function publicChallenge(issued) {
+  // A WalletConnect project ID is a public browser identifier, not a credential.
+  // Only expose a real configured ID; never send a placeholder into FCL.
+  const projectId = String(process.env.WALLETCONNECT_PROJECT_ID || "").trim();
   return {
     token: issued.token,
     nonce: issued.nonce,
     appIdentifier: issued.appIdentifier,
     message: issued.message,
     expiresAt: issued.expiresAt,
+    walletConnectProjectId: /^[0-9a-f]{32}$/i.test(projectId) ? projectId : "",
   };
 }
 
