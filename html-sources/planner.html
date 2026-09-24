@@ -977,11 +977,11 @@
               let slotIndex = 0;
               const slotCounts = new Map();
               lines.forEach((linePositions, lineIndex) => {
-                const y = 78 - lineIndex * (60 / (lines.length - 1));
+                const y = 76 - lineIndex * (66 / (lines.length - 1));
                 const count = linePositions.length;
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
                 const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
-                const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 58 : 38) * spread;
+                const width = (count >= 5 ? 82 : count === 4 ? 80 : count === 3 ? 68 : 48) * spread;
                 linePositions.forEach((position, column) => {
                   const occurrence = (slotCounts.get(position) || 0) + 1;
                   slotCounts.set(position, occurrence);
@@ -999,7 +999,7 @@
               });
               const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);
               goalkeeper.style.left = "50%";
-              goalkeeper.style.top = "92%";
+              goalkeeper.style.top = "94%";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
               renderDepthDetails(positions, buckets);

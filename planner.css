@@ -167,7 +167,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
    usable button and place two compact alternatives directly below a starter. */
 .plannerDepthHeader{flex-wrap:wrap}
 .plannerAutoFillDepthButton{flex:0 0 auto}
-.plannerFormationSpot{width:clamp(64px,19%,80px);pointer-events:none}
+.plannerFormationSpot{width:clamp(48px,14%,62px);pointer-events:none}
 .plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
 .plannerFormationSlotButton:hover:not(:disabled),.plannerFormationSlotButton:focus-visible{background:transparent;box-shadow:none;outline:2px solid #fff;outline-offset:2px}
 .plannerFormationSlotButton:disabled{cursor:default}
@@ -182,7 +182,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerPosition{background:var(--planner-depth-primary,var(--primary))}
 .plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
-.plannerFormationBackups{position:absolute;top:calc(100% + 11px);left:50%;display:grid;gap:1px;width:76px;transform:translateX(-50%);pointer-events:none}
+.plannerFormationBackups{position:absolute;top:calc(100% + 6px);left:50%;display:grid;gap:1px;width:76px;transform:translateX(-50%);pointer-events:none}
 .plannerFormationBackup{display:block;overflow:hidden;color:#fff;font-size:9px;font-weight:700;line-height:12px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap}
 .plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;display:grid;gap:3px;width:min(320px,calc(100vw - 20px));max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
 .plannerDepthPicker[hidden]{display:none}
@@ -196,7 +196,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer span{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
-@media(max-width:520px){.plannerFormationSpot{width:clamp(58px,18%,72px)}.plannerFormationBackups{width:64px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(44px,14%,56px)}.plannerFormationBackups{width:60px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 
 /* GK backups extend below the field: keep them visible without overlapping detail cards. */
 .plannerPitchPanel .plannerPitch{overflow:visible}

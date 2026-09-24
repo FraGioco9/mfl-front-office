@@ -592,7 +592,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
-        assert(Number.parseFloat(parserSnapshot.plannerFormationSpotRows[0]) === 78 && Number.parseFloat(parserSnapshot.plannerFormationSpotRows[9]) === 18 && parserSnapshot.plannerFormationSpotRows[10] === "92%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
+        assert(Number.parseFloat(parserSnapshot.plannerFormationSpotRows[0]) === 76 && Number.parseFloat(parserSnapshot.plannerFormationSpotRows[9]) === 10 && parserSnapshot.plannerFormationSpotRows[10] === "94%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
         assert(JSON.stringify(parserSnapshot.plannerFormationSpotPositions) === JSON.stringify(["LB","CB","CB","RB","CDM","CDM","LM","CAM","RM","ST","GK"]), "4-2-3-1 first paint must label the confirmed position slots.");
         assert(parserSnapshot.plannerFormationTokenCount === 11 && parserSnapshot.plannerFormationRingSegments === 132 && parserSnapshot.plannerFormationPlusPaths === 22 && parserSnapshot.plannerFormationBadgeCount === 0, "Planner first paint must include eleven segmented-plus circles without instruction badges.");
         assert(parserSnapshot.plannerPitchBackground.includes("pitch-background.svg"), "Planner must paint the shared SVG pitch before hydration.");
@@ -1556,17 +1556,19 @@ const browserTestSource = String.raw`(() => {
       const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(JSON.stringify(Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent)) === JSON.stringify(["LB","CB","CB","RB","LM","CM","CM","RM","ST","ST","GK"]), "4-4-2 must render all confirmed position labels.");
       assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
+      assert(Number.parseFloat(initialSpots[0].split(":")[0]) === 10 && Number.parseFloat(initialSpots[3].split(":")[0]) === 90, "Planner defenders must use the playable pitch width.");
+      assert(Number.parseFloat(initialSpots[8].split(":")[1]) === 10 && initialSpots[10].endsWith(":94%"), "Planner formation must extend from the upper pitch to the goalkeeper at the bottom.");
       const initialToken = document.querySelector("#plannerFormationPositions [data-slot-token='true']");
       assert(getComputedStyle(initialToken).backgroundColor === "rgba(0, 0, 0, 0.2)", "Planner slot background must match the translucent black reference token.");
       assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length === 132, "Each Planner ring must have twelve segmented arcs.");
       assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length === 22, "Each Planner token must contain the centered plus icon.");
       assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge, #plannerFormationPositions .plannerFormationInstructionsIcon").length === 0, "Planner tokens must not render instruction badges.");
-      assert(Number.parseFloat(initialSpots[0].split(":")[1]) === 78 && Number.parseFloat(initialSpots[8].split(":")[1]) === 18 && initialSpots[10].endsWith(":92%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
+      assert(Number.parseFloat(initialSpots[0].split(":")[1]) === 76 && Number.parseFloat(initialSpots[8].split(":")[1]) === 10 && initialSpots[10].endsWith(":94%"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
       formation.value = "4231";
       formation.dispatchEvent(new Event("change", { bubbles: true }));
       const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
-      assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 78 && Number.parseFloat(changedSpots[9].split(":")[1]) === 18 && changedSpots[10].endsWith(":92%"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
+      assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 76 && Number.parseFloat(changedSpots[9].split(":")[1]) === 10 && changedSpots[10].endsWith(":94%"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
       const formationPreview = window.__mflPlannerFormationPreview;
@@ -1577,7 +1579,7 @@ const browserTestSource = String.raw`(() => {
         assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
         assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
-        assert(spots.at(-1)?.style.top === "92%", "Goalkeeper must remain in place for formation " + code);
+        assert(spots.at(-1)?.style.top === "94%", "Goalkeeper must remain in place for formation " + code);
       }
       for (const code of ["343b","352b","541"]) {
         formationPreview.render(code);
@@ -1740,7 +1742,7 @@ const browserTestSource = String.raw`(() => {
       const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
       formationPreview.setRoster(fixture);
       formationPreview.render("442");
-      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>44, "Planner circles must be enlarged.");
+      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=32 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=50, "Planner player tokens must be smaller but still usable.");
       const fillButton = document.getElementById("plannerAutoFillDepthButton");
       const depthPicker = document.getElementById("plannerDepthPicker");
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
