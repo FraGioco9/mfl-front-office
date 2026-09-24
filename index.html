@@ -2084,7 +2084,7 @@
                   // interpreting its slot order as a straight five-player row.
                   // 4-2-2-2 CDMs stay narrower than the 30%-wide striker pair.
                   const x = selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
-                    : selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 34 : 66)
+                    : selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 30 : 70)
                     : selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)
                     : selected === "352b" && midfield && position === "CAM" ? 50
                     : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
@@ -2097,7 +2097,7 @@
                   const diamond41212 = selected === "41212" || selected === "41212narrow";
                   const offset = diamond41212 && position === "CDM" ? 54 - y
                     : diamond41212 && position === "CAM" ? 30 - y
-                    : selected === "41212narrow" && position === "CM" ? 40 - y
+                    : selected === "41212narrow" && position === "CM" ? 42 - y
                     : flatFourMidfield && selected === "442b" && position === "CDM" ? 6
                     : flatFourMidfield ? 0
                       : selected === "352b" && midfield && position === "CDM" ? 8
