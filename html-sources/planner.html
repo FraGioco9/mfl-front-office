@@ -979,6 +979,18 @@
                   pos.textContent = position;
                   badge.append(overall, pos);
                   button.append(token, badge);
+                  const surname = document.createElement("span");
+                  surname.className = "plannerFormationPlayerSurname";
+                  surname.title = depthPlayerName(starter);
+                  surname.setAttribute("aria-hidden", "true");
+                  const flag = typeof countryFlagElement === "function"
+                    ? countryFlagElement(starter.nationality, "plannerFormationSurnameFlag") : null;
+                  if (flag) surname.appendChild(flag);
+                  const surnameText = document.createElement("span");
+                  surnameText.className = "plannerFormationSurnameText";
+                  surnameText.textContent = depthPlayerSurname(starter);
+                  surname.appendChild(surnameText);
+                  spot.appendChild(surname);
                 } else {
                   // Match the ring's exact 100×100 coordinate system and viewport.
                   // The plus is centered at (50,50) at rest and throughout hover.
