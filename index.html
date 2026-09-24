@@ -2067,7 +2067,11 @@
                   : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
                 const spread = selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1;
-                const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;
+                // Keep the two external CMs slightly tighter in each 4-3-3 variant,
+                // without changing the center role or the forward/defensive lines.
+                const compact433Midfield = ["433", "433a", "433d", "433cf"].includes(selected)
+                  && midfield && count === 3 && linePositions.includes("CM");
+                const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;
                 const wideForwardLine = linePositions.includes("ST") || linePositions.includes("CF");
                 linePositions.forEach((position, column) => {
                   const occurrence = (slotCounts.get(position) || 0) + 1;
@@ -2098,6 +2102,7 @@
                               : (selected === "433a" || selected === "433d") && position === "CM" ? 0
                             : hasHoldingAndCentralMidfield && position === "CM" ? 6
                             : hasHoldingAndCentralMidfield && position === "CDM" ? 9
+                              : selected === "4141" && position === "CDM" ? 3
                               : position === "CDM" && count > 1 ? 2
                                 : selected === "4312" && position === "CAM" ? -4
                                 : selected === "4231" && position === "CAM" ? 0
