@@ -1721,6 +1721,22 @@ const browserTestSource = String.raw`(() => {
       formationPreview.render("433");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
         "Normal 4-3-3 winger heights must remain unchanged.");
+      for (const code of ["433", "433a", "433d", "433cf"]) {
+        formationPreview.render(code);
+        const outerCMs = formationSpot("CM");
+        assert(outerCMs.length === (code === "433" || code === "433cf" ? 3 : 2)
+          && JSON.stringify(outerCMs.map(spot => spot.style.left).filter(left => left !== "50%")) === JSON.stringify(["23%", "77%"]),
+          "All 4-3-3 variants must bring only the external CMs inward: " + code);
+        assert(outerCMs.every(spot => spot.style.top === "40%")
+          && (code === "433" || code === "433cf" ? outerCMs[1].style.left === "50%" : true),
+          "4-3-3 variants must retain the central role and regular CM line: " + code);
+      }
+      formationPreview.render("4141");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.top === "54%"
+        && formationSpot("CDM")[0].style.left === "50%",
+        "4-1-4-1 CDM must stay central on the 4-3-3 (def) 54% CDM line.");
+      assert(formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-1-4-1 must retain the flat four-player midfield line.");
       formationPreview.render("4312");
       assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-3-1-2 midfield must match the regular 4-4-2 midfield height.");
