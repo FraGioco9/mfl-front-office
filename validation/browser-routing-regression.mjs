@@ -2169,9 +2169,11 @@ const browserTestSource = String.raw`(() => {
         "The existing Overall/position badge must retain its original bottom anchor and horizontal center.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
       const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
-      assert(getComputedStyle(emptyToken).transitionProperty.includes("transform")
-        && getComputedStyle(assignedToken).transitionProperty.includes("transform"),
-        "Both empty and filled depth circles must animate on hover and keyboard focus.");
+      assert(getComputedStyle(emptyToken).transitionProperty.includes("box-shadow")
+        && getComputedStyle(assignedToken).transitionProperty.includes("box-shadow")
+        && !getComputedStyle(emptyToken).transitionProperty.includes("transform")
+        && !getComputedStyle(assignedToken).transitionProperty.includes("transform"),
+        "Both empty and filled depth circles must animate only the border on hover and keyboard focus.");
       assert(getComputedStyle(assignedToken).transform === "none"
         && getComputedStyle(assignedToken).filter === "none",
         "An occupied player circle must never zoom or brighten when selected or focused.");
