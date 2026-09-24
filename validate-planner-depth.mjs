@@ -159,7 +159,11 @@ assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidat
   && shell.includes('if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);')
   && !shell.includes("row.disabled = Boolean(assignedSlot);")
   && shell.includes('removeText.textContent = "Remove";')
-  && shell.includes('removeIcon.textContent = "×";')
+  && shell.includes('const removeIcon = makeSlotIcon("svg", {')
+  && shell.includes('removeIcon.appendChild(makeSlotIcon("path", { d: "M6 6L18 18M18 6L6 18" }));')
+  && shell.includes('row.appendChild(overall);')
+  && shell.includes('row.appendChild(status);')
+  && !shell.includes("row.append(photoFrame, name, overall);")
   && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')),
   "Canonical and generated pickers must hide the current starter, move assigned players atomically, and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
@@ -179,10 +183,10 @@ assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerF
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
   && sheet.includes('.plannerDepthPickerSelected{flex:0 0 auto;')
-  && sheet.includes('.plannerDepthPickerRemoveIcon{display:inline-flex;')
+  && sheet.includes('.plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;align-self:center;overflow:visible}')
   && sheet.includes('.plannerDepthPickerClear{min-height:44px;align-items:center;')
   && sheet.includes('.plannerDepthPickerClear>span{display:inline-flex;align-items:center;min-height:20px;line-height:20px}')),
-  "Picker portraits must match the pitch zoom; Remove icon and label must be vertically centered in generated CSS.");
+  "Picker portraits must match the pitch zoom; the SVG Remove icon and label must be vertically centered in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px)')
   && sheet.includes('max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px')
