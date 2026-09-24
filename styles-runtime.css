@@ -7686,6 +7686,9 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationBackup{display:block;overflow:hidden;color:#fff;font-size:9px;font-weight:700;line-height:12px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap}
 .plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;display:grid;gap:3px;width:min(320px,calc(100vw - 20px));max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
 .plannerDepthPicker[hidden]{display:none}
+.plannerDepthPickerPointer{position:fixed;z-index:var(--mfl-z-modal);width:16px;height:10px;pointer-events:none;background:var(--border-strong);clip-path:polygon(50% 0,0 100%,100% 100%)}
+.plannerDepthPickerPointer::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:8px;background:var(--surface);clip-path:polygon(50% 0,0 100%,100% 100%)}
+.plannerDepthPickerPointerAbove{transform:rotate(180deg)}
 .plannerDepthPicker h4{margin:0 0 4px;color:var(--text);font-size:13px}
 .plannerDepthPicker p{margin:4px;color:var(--text-soft);font-size:12px}
 .plannerDepthPickerPlayer,.plannerDepthPickerClear{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:4px 8px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
@@ -7694,8 +7697,8 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px;width:36px;height:36px;overflow:hidden;border-radius:50%;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)) 5%,var(--planner-depth-secondary,var(--primary-hover)) 95%)}
 .plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top;pointer-events:none}
 .plannerDepthPickerPhoto img[hidden]{display:none}
-.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;align-self:center;overflow:hidden;font-size:12px;line-height:36px;text-overflow:ellipsis;white-space:nowrap}
+.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;line-height:20px;font-variant-numeric:tabular-nums}
 .plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap}
 .plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;align-self:center;overflow:visible}
 .plannerDepthPickerClear{min-height:44px;align-items:center;color:var(--danger);font-size:12px;font-weight:700;line-height:20px}
