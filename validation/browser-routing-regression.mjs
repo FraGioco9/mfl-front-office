@@ -1681,7 +1681,17 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("LWB")[0].style.top === "69%" && formationSpot("RWB")[0].style.top === "69%" && formationSpot("CB").every(spot => spot.style.top === "76%"), "Back-five wingbacks must push slightly ahead of the centre backs.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
       formationPreview.render("433cf");
-      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("CF")[0].style.top === "6%", "The 4-3-3 (CF) central forward must sit higher than before while the wingers stay put.");
+      assert(formationSpot("LW")[0].style.top === "12%" && formationSpot("RW")[0].style.top === "12%"
+        && formationSpot("CF")[0].style.top === "16%",
+        "4-3-3 (CF) must have raised, level wingers with the CF one step behind them.");
+      assert(Number.parseFloat(formationSpot("CF")[0].style.top) > Number.parseFloat(formationSpot("LW")[0].style.top),
+        "4-3-3 (CF) central forward must sit below the advanced wingers.");
+      formationPreview.render("433");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
+        "Normal 4-3-3 winger heights must remain unchanged.");
+      formationPreview.render("4321");
+      assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-3-2-1 midfield must use the normal 4-4-2 height with all three CMs aligned.");
       for (const code of ["3421", "4321", "4411"]) {
         formationPreview.render(code);
         const centralForwards = formationSpot("CF");
