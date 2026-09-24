@@ -1730,7 +1730,7 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "40%,60%", "Paired strikers must also narrow between wingers in 4-2-4.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%" && formationSpot("ST").every(spot => spot.style.top === "10%"), "Wingers must sit slightly behind paired strikers.");
       formationPreview.render("523");
-      assert(formationSpot("LWB")[0].style.top === "69%" && formationSpot("RWB")[0].style.top === "69%" && formationSpot("CB").every(spot => spot.style.top === "76%"), "Back-five wingbacks must push slightly ahead of the centre backs.");
+      assert(formationSpot("LWB")[0].style.top === "63%" && formationSpot("RWB")[0].style.top === "63%" && formationSpot("CB").every(spot => spot.style.top === "70%"), "Back-five wingbacks must remain seven points ahead of the lifted centre-back line.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
       formationPreview.render("433cf");
       assert(formationSpot("LW")[0].style.top === "12%" && formationSpot("RW")[0].style.top === "12%"
