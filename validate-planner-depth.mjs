@@ -182,8 +182,8 @@ assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidat
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok([source, generated].every(shell => shell.includes('plannerFormationPlayerGradient') && shell.includes('plannerFormationPlayerBadge')
   && shell.includes('button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter)')
-  && !shell.includes('backups.slice(0, 2)') && !shell.includes('plannerFormationPlayerSurname')),
-  "Occupied circles must keep gradient, OVR and accessible full name without extra text or backups below.");
+  && !shell.includes('backups.slice(0, 2)') && shell.includes('plannerFormationPlayerSurname')),
+  "Occupied circles must keep gradient, OVR, surname and accessible full name without backup text below.");
 assert.ok(source.includes('token.append(gradient, portrait);') && source.includes('portrait.addEventListener("error", () => { portrait.hidden = true; });'), "Assigned circles must show a portrait over the gradient and keep the gradient when the photo is unavailable.");
 assert.ok(!source.includes('plannerFormationPlayerSliders') && !source.includes('plannerFormationPlayerShade'), "Assigned circles must not restore sliders icons or dark overlays.");
 assert.ok(generated.includes('token.append(gradient, portrait);') && !generated.includes('plannerFormationPlayerSliders'), "Generated shell must include the portrait but no clipped icon.");
