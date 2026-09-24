@@ -1775,7 +1775,8 @@ const browserTestSource = String.raw`(() => {
       const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
       formationPreview.setRoster(fixture);
       formationPreview.render("442");
-      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=40 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=58, "Planner face tokens must have a balanced medium size.");
+      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
+      assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
       const fillButton = document.getElementById("plannerAutoFillDepthButton");
       const depthPicker = document.getElementById("plannerDepthPicker");
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
@@ -1784,6 +1785,7 @@ const browserTestSource = String.raw`(() => {
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105,106","Picker must include every eligible non-retired player in Overall order.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
       const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
       assert(getComputedStyle(emptyToken).transitionProperty.includes("transform")
