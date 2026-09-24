@@ -1577,7 +1577,7 @@ const browserTestSource = String.raw`(() => {
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
-        assert(spots.every(spot => { const style = getComputedStyle(spot.querySelector(".plannerFormationPositionLabel")); return style.backgroundColor === "rgb(162, 162, 162)" && style.borderRadius === "5px" && style.lineHeight === "16px" && style.textShadow === "none"; }), "Each empty formation position must have the requested compact grey badge: " + code);
+        assert(spots.every(spot => { const style = getComputedStyle(spot.querySelector(".plannerFormationPositionLabel")); return style.backgroundColor === "rgb(162, 162, 162)" && style.color === "rgb(0, 0, 0)" && style.borderRadius === "5px" && style.lineHeight === "16px" && style.textShadow === "none"; }), "Each empty formation position must have the requested compact grey badge: " + code);
         assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
         // Check the actual geometry of every empty position, not just the two 4-4-2 CMs.
