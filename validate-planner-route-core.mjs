@@ -334,8 +334,9 @@ invariant(
     && !shell.includes('id="plannerAverageOverall"')
     && !shell.includes('id="plannerTotalContracts"')
     && !shell.includes('id="plannerDepthDetails"')
-    && !shell.includes('plannerFormationPlayerSurname')),
-  "Planner must omit squad totals, depth cards and occupied-circle names from both shells.",
+    && shell.includes('plannerFormationPlayerSurname')
+    && !shell.includes('plannerFormationBackups')),
+  "Planner must preserve selected player names while omitting squad totals, depth cards and backup lists from both shells.",
 );
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}")
