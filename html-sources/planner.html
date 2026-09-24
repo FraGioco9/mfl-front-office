@@ -797,6 +797,33 @@
                 return rating !== "—" && (threshold === null || Number(rating) >= threshold);
               });
             };
+            // Count genuine spare options: no starter, no player borrowed from another
+            // assigned slot. For repeated roles, split each player across those slots
+            // so one available CB never appears as two separate backups.
+            const depthSpareCounts = (keys, players, assignments) => {
+              const counts = keys.map(() => 0);
+              const claimed = new Set(assignments.values());
+              for (const position of new Set(keys.map(key => key.split("#")[0]))) {
+                const indexes = keys.flatMap((key, index) => key.split("#")[0] === position ? [index] : []);
+                const choices = indexes.map(index => depthPickerCandidates(
+                  players, position, new Set(), assignments.get(keys[index]))
+                  .filter(player => !claimed.has(Number(player.player_id))));
+                const unique = new Map();
+                choices.forEach(candidates => candidates.forEach(player => unique.set(Number(player.player_id), player)));
+                let nextIndex = 0;
+                for (const player of rankDepthPlayers([...unique.values()], position)) {
+                  const id = Number(player.player_id);
+                  for (let attempt = 0; attempt < indexes.length; attempt += 1) {
+                    const localIndex = (nextIndex + attempt) % indexes.length;
+                    if (!choices[localIndex].some(candidate => Number(candidate.player_id) === id)) continue;
+                    counts[indexes[localIndex]] += 1;
+                    nextIndex = (localIndex + 1) % indexes.length;
+                    break;
+                  }
+                }
+              }
+              return counts;
+            };
             const slotKeysFor = positions => {
               const counts = new Map();
               return positions.map(position => {
@@ -841,6 +868,7 @@
               const alternatives = distributeFormationDepth(lines, available);
               const starters = keys.map(key => rosterById.get(depthAssignments.get(key)) || null);
               const buckets = alternatives.map((players, index) => starters[index] ? [starters[index], ...players] : players);
+              const spareCounts = depthSpareCounts(keys, depthRoster, depthAssignments);
               if (formationSelect instanceof HTMLSelectElement) formationSelect.value = selected;
               if (!(formationPositions instanceof HTMLElement)) return;
               const openDepthPicker = (key, position, button) => {
@@ -946,18 +974,18 @@
                 depthPicker.appendChild(pointer);
                 depthPicker.querySelector("button")?.focus();
               };
-              const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position) => {
+              const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position, spareCount = 0) => {
                 const spot = document.createElement("span");
                 spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
                 spot.dataset.position = position;
                 spot.dataset.slotKey = key;
-                spot.dataset.depthCount = String((starter ? 1 : 0) + backups.length);
+                spot.dataset.depthCount = String(spareCount);
                 if (starter) spot.dataset.playerId = String(starter.player_id);
                 const button = document.createElement("button");
                 button.className = "plannerFormationSlotButton";
                 button.type = "button";
                 button.disabled = !depthRoster.length;
-                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". Select player");
+                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". " + spareCount + " available alternative" + (spareCount === 1 ? "" : "s") + ". Select player");
                 button.setAttribute("aria-haspopup", "dialog");
                 button.setAttribute("aria-expanded", "false");
                 button.addEventListener("click", () => openDepthPicker(key, position, button));
@@ -1012,6 +1040,11 @@
                   token.append(ring, plus);
                   button.appendChild(token);
                 }
+                const depthBadge = document.createElement("span");
+                depthBadge.className = "plannerFormationDepthBadge " + (spareCount === 0 ? "empty" : spareCount === 1 ? "single" : "multiple");
+                depthBadge.textContent = String(spareCount);
+                depthBadge.setAttribute("aria-hidden", "true");
+                button.appendChild(depthBadge);
                 const label = document.createElement("span");
                 label.className = "plannerFormationPositionLabel";
                 label.textContent = position;
@@ -1048,7 +1081,7 @@
                   const occurrence = (slotCounts.get(position) || 0) + 1;
                   slotCounts.set(position, occurrence);
                   const repeated = positions.filter(value => value === position).length > 1;
-                  const spot = makeFormationSpot(position, keys[slotIndex], false, starters[slotIndex], alternatives[slotIndex], position + (repeated ? " " + occurrence : ""));
+                  const spot = makeFormationSpot(position, keys[slotIndex], false, starters[slotIndex], alternatives[slotIndex], position + (repeated ? " " + occurrence : ""), spareCounts[slotIndex]);
                   slotIndex += 1;
                   // 3-5-2 (B) uses a symmetric CDM-CAM-CDM triangle, rather than
                   // interpreting its slot order as a straight five-player row.
@@ -1102,7 +1135,7 @@
                   fragment.appendChild(spot);
                 });
               });
-              const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);
+              const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);
               goalkeeper.style.left = "50%";
               // Keep the surname/badge within the bottom touchline at every viewport width.
               goalkeeper.style.top = "calc(100% - 72px)";
