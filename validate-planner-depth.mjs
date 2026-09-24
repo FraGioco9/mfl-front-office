@@ -179,12 +179,10 @@ assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidat
   && shell.includes('previous.classList.remove("plannerFormationSlotButtonPickerOpen");')),
   "Canonical and generated pickers must hide the current starter, move assigned players atomically, and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
-assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
-assert.ok(source.includes('surnameText.textContent = depthPlayerSurname(starter);') && generated.includes('surnameText.textContent = depthPlayerSurname(starter);')
-  && source.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")')
-  && generated.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")')
-  && source.includes('surname.title = depthPlayerName(starter);') && source.includes('surname.setAttribute("aria-hidden", "true");'),
-  "Occupied Planner circles must pair a canonical nationality flag with the surname while retaining full-name accessibility.");
+assert.ok([source, generated].every(shell => shell.includes('plannerFormationPlayerGradient') && shell.includes('plannerFormationPlayerBadge')
+  && shell.includes('button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter)')
+  && !shell.includes('backups.slice(0, 2)') && !shell.includes('plannerFormationPlayerSurname')),
+  "Occupied circles must keep gradient, OVR and accessible full name without extra text or backups below.");
 assert.ok(source.includes('token.append(gradient, portrait);') && source.includes('portrait.addEventListener("error", () => { portrait.hidden = true; });'), "Assigned circles must show a portrait over the gradient and keep the gradient when the photo is unavailable.");
 assert.ok(!source.includes('plannerFormationPlayerSliders') && !source.includes('plannerFormationPlayerShade'), "Assigned circles must not restore sliders icons or dark overlays.");
 assert.ok(generated.includes('token.append(gradient, portrait);') && !generated.includes('plannerFormationPlayerSliders'), "Generated shell must include the portrait but no clipped icon.");
