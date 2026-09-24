@@ -1572,6 +1572,12 @@ const browserTestSource = String.raw`(() => {
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
       const formationPreview = window.__mflPlannerFormationPreview;
+      formationPreview.render("442");
+      const fourMidfieldReference = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"))
+        .slice(4, 8).map(spot => [spot.style.left, spot.style.top]);
+      assert(fourMidfieldReference.every(([, top]) => top === "40%"),
+        "The reference 4-4-2 midfield must be aligned on the 40% pitch line.");
+      const observedFlatFourMidfields = new Set();
       for (const code of formationCodes) {
         formationPreview.render(code);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
@@ -1600,6 +1606,12 @@ const browserTestSource = String.raw`(() => {
           "Empty goalkeeper position label must fit inside the pitch in formation " + code);
         let lineStart = 0;
         for (const line of approvedPositionSlots[code]) {
+          if (line.length === 4 && line.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position))) {
+            const coordinates = spots.slice(lineStart, lineStart + 4).map(spot => [spot.style.left, spot.style.top]);
+            assert(JSON.stringify(coordinates) === JSON.stringify(fourMidfieldReference),
+              "Four-man midfield must exactly match the flat 4-4-2 row in " + code + ": " + JSON.stringify(coordinates));
+            observedFlatFourMidfields.add(code);
+          }
           if (line.length >= 3) {
             const left = Number.parseFloat(spots[lineStart].style.left);
             const right = Number.parseFloat(spots[lineStart + line.length - 1].style.left);
@@ -1609,6 +1621,8 @@ const browserTestSource = String.raw`(() => {
           lineStart += line.length;
         }
       }
+      assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "541", "3421", "4141", "4411", "343b", "442b", "541f"].sort()),
+        "The flat 4-4-2 midfield contract must cover all nine four-player midfield formations.");
 
       // Measure the + against its OWN ring at rest and while animating, not its
       // viewport coordinates: a hover can independently expose a page scrollbar.
@@ -1647,7 +1661,7 @@ const browserTestSource = String.raw`(() => {
         assert(finalOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
           "Empty pitch plus changes its circle alignment after hover in 4-4-2 " + spot.dataset.slotKey);
       });
-      for (const code of ["343b","352b","541"]) {
+      for (const code of ["352b"]) {
         formationPreview.render(code);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         const cdms = spots.filter(spot => spot.dataset.position === "CDM");
