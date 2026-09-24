@@ -976,6 +976,7 @@
               const fragment = document.createDocumentFragment();
               let slotIndex = 0;
               const slotCounts = new Map();
+              const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");
               lines.forEach((linePositions, lineIndex) => {
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
                 const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);
@@ -990,13 +991,21 @@
                   const repeated = positions.filter(value => value === position).length > 1;
                   const spot = makeFormationSpot(position, keys[slotIndex], false, starters[slotIndex], alternatives[slotIndex], position + (repeated ? " " + occurrence : ""));
                   slotIndex += 1;
-                  const x = pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
-                    : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
-                  const offset = (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
-                    : (position === "LW" || position === "RW") && wideForwardLine ? 6
-                      : position === "CDM" && count > 1 ? 2
-                        : position === "CAM" && count > 1 ? -4
-                          : position === "CF" && (linePositions.includes("LW") || linePositions.includes("RW")) ? -2 : 0;
+                  // 3-5-2 (B) uses a symmetric CDM-CAM-CDM triangle, rather than
+                  // interpreting its slot order as a straight five-player row.
+                  const x = selected === "352b" && midfield && position === "CAM" ? 50
+                    : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
+                      : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
+                        : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
+                  const offset = selected === "352b" && midfield && position === "CDM" ? 8
+                    : selected === "352b" && midfield && position === "CAM" ? -8
+                      : (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
+                        : (position === "LW" || position === "RW") && wideForwardLine ? 6
+                          : hasHoldingAndCentralMidfield && position === "CM" ? 6
+                            : hasHoldingAndCentralMidfield && position === "CDM" ? 9
+                              : position === "CDM" && count > 1 ? 2
+                                : position === "CAM" && count > 1 ? -4
+                                  : position === "CF" && (linePositions.includes("LW") || linePositions.includes("RW")) ? -2 : 0;
                   spot.style.left = x.toFixed(2) + "%";
                   spot.style.top = (y + offset).toFixed(2) + "%";
                   fragment.appendChild(spot);

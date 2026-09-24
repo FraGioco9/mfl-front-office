@@ -1602,6 +1602,18 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("CF")[0].style.top === "8%", "Wingers must trail a central forward as well as strikers.");
       formationPreview.render("41212narrow");
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "39.8%,60.2%", "Narrow diamond paired strikers must preserve the formation width modifier.");
+      formationPreview.render("352");
+      assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 3-5-2 midfield must be lower, with CDM behind both CMs.");
+      formationPreview.render("433d");
+      assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 4-3-3 (def) midfield must sit deeper than the standard 4-3-3.");
+      formationPreview.render("4132");
+      assert(formationSpot("CM")[0].style.top === "35%" && Number.parseFloat(formationSpot("CDM")[0].style.top) > 55, "4-1-3-2 central midfield must sit lower while CDM protects the defence.");
+      formationPreview.render("41212narrow");
+      assert(formationSpot("CM").every(spot => spot.style.top === "46%") && Number.parseFloat(formationSpot("CDM")[0].style.top) > 62, "Narrow diamond CMs must sit lower behind CAM and ahead of CDM.");
+      formationPreview.render("352b");
+      assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
+      assert(formationSpot("CDM").every(spot => spot.style.top === "48%") && formationSpot("CAM")[0].style.top === "32%", "3-5-2 (B) CAM must be more advanced and CDMs deeper.");
+
       formationPreview.render("4231");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
