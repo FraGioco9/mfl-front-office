@@ -227,6 +227,12 @@ assert.ok([source, generated].every(shell => shell.includes('const compact433Mid
   "All four 4-3-3 variants must bring outer CMs inward and prioritize 4-1-4-1 and 4-1-3-2 CDM offsets ahead of the shared holding-midfielder rule.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4132" && ["LM", "CM", "RM"].includes(position) ? -4')),
   "4-1-3-2 LM, CM and RM must all receive the same four-point forward offset before the shared holding-midfield adjustment.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)')
+  && shell.includes('selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 40 : 60)')
+  && shell.includes('const diamond41212 = selected === "41212" || selected === "41212narrow";')
+  && shell.includes('const offset = diamond41212 && position === "CDM" ? 54 - y')
+  && shell.includes('diamond41212 && position === "CAM" ? 30 - y')),
+  "Both 4-1-2-1-2 diamonds share 4-3-3 defensive/attacking reference depths, with wider LM/RM and tighter narrow CMs.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
