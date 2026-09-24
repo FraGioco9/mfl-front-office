@@ -1638,7 +1638,7 @@ const browserTestSource = String.raw`(() => {
           "Empty goalkeeper position label must fit inside the pitch in formation " + code);
         let lineStart = 0;
         for (const line of approvedPositionSlots[code]) {
-          if (code !== "343b" && line.length === 4 && line.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position))) {
+          if (code !== "343b" && code !== "541" && line.length === 4 && line.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position))) {
             const coordinates = spots.slice(lineStart, lineStart + 4).map(spot => [spot.style.left, spot.style.top]);
             const expected = fourMidfieldReference.map(([left, top], index) =>
               [left, code === "442b" && (index === 1 || index === 2) ? "46%" : top]);
@@ -1655,8 +1655,8 @@ const browserTestSource = String.raw`(() => {
           lineStart += line.length;
         }
       }
-      assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "541", "3421", "4141", "4411", "442b", "541f"].sort()),
-        "The flat four-man midfield contract covers eight formations; 3-4-3 (B) is a diamond.");
+      assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "3421", "4141", "4411", "442b", "541f"].sort()),
+        "The flat four-man midfield contract covers seven formations; 3-4-3 (B) and 5-4-1 are diamonds.");
 
       // Measure the + against its OWN ring at rest and while animating, not its
       // viewport coordinates: a hover can independently expose a page scrollbar.
@@ -1797,6 +1797,21 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("LW")[0].style.left === "19%" && formationSpot("ST")[0].style.left === "50%"
         && formationSpot("RW")[0].style.left === "81%",
         "3-4-3 (B) must preserve its defensive and attacking rows.");
+      formationPreview.render("541");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CAM").length === 1
+        && formationSpot("CDM")[0].style.left === "50%" && formationSpot("CAM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
+        && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
+        "5-4-1 must form a central CDM/CAM axis matching the usual 54%/30% heights.");
+      assert(JSON.stringify(["LM", "RM"].map(position => [formationSpot(position)[0].style.left, formationSpot(position)[0].style.top]))
+        === JSON.stringify([["18%", "42%"], ["82%", "42%"]])
+        && Number.parseFloat(formationSpot("LM")[0].style.top) ===
+          (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2,
+        "5-4-1 LM/RM must form the midpoint of the midfield diamond at 18%/82%.");
+      assert(formationSpot("LWB").length === 1 && formationSpot("RWB").length === 1
+        && formationSpot("CB").length === 3 && formationSpot("ST").length === 1
+        && formationSpot("ST")[0].style.left === "50%" && formationSpot("ST")[0].style.top === "10%",
+        "5-4-1 must preserve its back five and lone striker.");
       formationPreview.render("41212");
       const regularDiamondStrikerSpacing = formationSpot("ST").map(spot => spot.style.left);
       assert(JSON.stringify(regularDiamondStrikerSpacing) === JSON.stringify(["35%", "65%"]),
