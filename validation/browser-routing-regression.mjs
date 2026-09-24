@@ -1782,12 +1782,15 @@ const browserTestSource = String.raw`(() => {
         "Regular diamond strikers must retain their expected spacing.");
       assert(JSON.stringify([formationSpot("LM")[0].style.left, formationSpot("RM")[0].style.left])
         === JSON.stringify(["18%", "82%"])
-        && formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%",
-        "Wide diamond LM/RM must move wider while staying at the usual midfield height.");
+        && ["LM", "RM"].every(position => formationSpot(position)[0].style.top === "42%"
+          && Number.parseFloat(formationSpot(position)[0].style.top) ===
+            (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
+        "Wide diamond LM/RM must stay wide at 18%/82% and halfway between CDM and CAM heights.");
+      const regularDiamondMidfieldHeight = formationSpot("LM")[0].style.top;
       formationPreview.render("41212narrow");
       assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
         === JSON.stringify(["30%", "70%"])
-        && formationSpot("CM").every(spot => spot.style.top === "42%")
+        && formationSpot("CM").every(spot => spot.style.top === regularDiamondMidfieldHeight)
         && formationSpot("CM").every(spot => Number.parseFloat(spot.style.top) ===
           (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
         "Narrow diamond CMs must sit at 30%/70% and halfway between CDM and CAM heights.");
