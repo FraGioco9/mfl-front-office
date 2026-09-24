@@ -1767,7 +1767,7 @@ const browserTestSource = String.raw`(() => {
       assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
       // Clickable starters and backup lists use the same roster-derived depth source.
       const fixture = [
-        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:"CB "+overall,positions:"CB",overall,retirement_years:5})),
+        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,positions:"CB",overall,retirement_years:5})),
         {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
         {player_id:108,name:"GK 82",positions:"GK",overall:82,retirement_years:5},
         {player_id:109,name:"Retired CB",positions:"CB",overall:99,retirement_years:0},
@@ -1795,7 +1795,19 @@ const browserTestSource = String.raw`(() => {
       assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 0%" && getComputedStyle(assignedPortrait).transform !== "none","Player portrait must use the original face-focused zoom inside the gradient circle.");
       assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
+      const starterSurname = slot("CB#1").querySelector(".plannerFormationPlayerSurname");
+      assert(starterSurname?.textContent==="De Rossi" && starterSurname.title==="Marco De Rossi",
+        "Assigned circle must show only the player's family name beneath the OVR/position badge.");
+      assert(starterSurname.getAttribute("aria-hidden")==="true"
+        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
+        "Surname is visual-only; button must retain the accessible full player name.");
+      assert(!slot("CB#2").querySelector(".plannerFormationPlayerSurname")
+        && slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB",
+        "Empty circles must keep their position label instead of a surname.");
       assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
+      assert(slot("CB#1").querySelector(".plannerFormationBackups").getBoundingClientRect().top
+        >= starterSurname.getBoundingClientRect().bottom,
+        "Backup names must appear beneath the new surname without overlapping.");
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
       assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
