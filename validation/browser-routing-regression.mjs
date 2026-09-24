@@ -1859,9 +1859,19 @@ const browserTestSource = String.raw`(() => {
         "An already-picked player must remain clickable with its previous slot marked.");
       const assignedSlotLabel = assignedOtherSlot.querySelector(".plannerDepthPickerSelected");
       const assignedOverall = assignedOtherSlot.querySelector("strong");
+      const selectedRowBox = assignedOtherSlot.getBoundingClientRect();
+      const selectedLabelBox = assignedSlotLabel.getBoundingClientRect();
+      const selectedLabelStyle = getComputedStyle(assignedSlotLabel);
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
-        && assignedSlotLabel.getBoundingClientRect().right <= assignedOverall.getBoundingClientRect().left,
-        "The selected slot label must come before the positional Overall in the picker.");
+        && selectedLabelBox.right <= assignedOverall.getBoundingClientRect().left
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && selectedLabelStyle.display==="inline-flex" && selectedLabelStyle.alignItems==="center",
+        "The selected slot label must precede Overall and be vertically centered in its menu row.");
+      const removeHoverStyle = getComputedStyle(removeStarter);
+      const playerHoverStyle = getComputedStyle(assignedOtherSlot);
+      assert(removeHoverStyle.borderTopWidth===playerHoverStyle.borderTopWidth
+        && removeHoverStyle.borderTopStyle===playerHoverStyle.borderTopStyle,
+        "Remove and player rows must share the same border geometry before the shared hover highlight.");
       assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]'),
         "The starter occupying this exact slot must be omitted from its own selection menu.");
       assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="106"]'),
