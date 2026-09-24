@@ -7507,6 +7507,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
 .plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
 .plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}
+select.plannerFormationSelect.plannerFormationSelectCommitted:not(:open){outline:0;border-color:var(--mfl-control-border-color);background:var(--mfl-control-background);color:var(--mfl-control-text-color);box-shadow:none}
 .plannerFormationPositions{position:absolute;inset:0;z-index:2;pointer-events:none}
 .plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:clamp(44px,12%,56px);aspect-ratio:1;color:rgba(255,255,255,.7);transform:translate(-50%,-50%)}
 .plannerFormationToken{position:relative;display:flex;align-items:center;justify-content:center;width:70%;aspect-ratio:1;flex-shrink:0;border-radius:50%;background:rgba(0,0,0,.2);color:rgba(255,255,255,.7)}
