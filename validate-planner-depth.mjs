@@ -225,8 +225,8 @@ assert.ok([source, generated].every(shell => shell.includes('const compact433Mid
   && shell.includes('const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;')
   && shell.includes('(selected === "4141" || selected === "4132") && position === "CDM" ? 3\n                            : hasHoldingAndCentralMidfield && position === "CDM" ? 9')),
   "All four 4-3-3 variants must bring outer CMs inward and prioritize 4-1-4-1 and 4-1-3-2 CDM offsets ahead of the shared holding-midfielder rule.");
-assert.ok([source, generated].every(shell => shell.includes('selected === "4132" && position === "CM" ? 0')),
-  "4-1-3-2 must keep its CM on the same 40% line as LM and RM before the shared holding-midfield adjustment.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "4132" && ["LM", "CM", "RM"].includes(position) ? -4')),
+  "4-1-3-2 LM, CM and RM must all receive the same four-point forward offset before the shared holding-midfield adjustment.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
