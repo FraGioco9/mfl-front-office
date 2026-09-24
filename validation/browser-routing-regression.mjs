@@ -2063,6 +2063,24 @@ const browserTestSource = String.raw`(() => {
       formationPreview.render("442");
       assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
       assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
+      const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
+      assert(depthIndicator("CB#1")?.textContent === "3" && depthIndicator("CB#2")?.textContent === "2"
+        && depthIndicator("CB#1")?.classList.contains("multiple")
+        && depthIndicator("ST#1")?.textContent === "1" && depthIndicator("ST#1")?.classList.contains("single")
+        && depthIndicator("LM#1")?.textContent === "0" && depthIndicator("LM#1")?.classList.contains("empty"),
+        "Empty pitch circles must show unique spare depth per repeated role with grey/amber/green bands.");
+      assert(Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot")).every(spot =>
+        spot.querySelectorAll(".plannerFormationDepthBadge").length === 1
+        && spot.querySelector(".plannerFormationSlotButton > .plannerFormationDepthBadge[aria-hidden='true']")
+        && Number(spot.dataset.depthCount) === Number(spot.querySelector(".plannerFormationDepthBadge").textContent)),
+        "Each pitch circle, including GK, must have exactly one visible, aria-hidden depth badge.");
+      const badgeRect = depthIndicator("CB#1").getBoundingClientRect();
+      const circleRect = slot("CB#1").querySelector(".plannerFormationToken").getBoundingClientRect();
+      assert(badgeRect.width >= 16 && badgeRect.width <= 20
+        && badgeRect.height >= 16 && badgeRect.height <= 20
+        && badgeRect.left >= circleRect.left + circleRect.width / 2
+        && badgeRect.top < circleRect.top + circleRect.height / 2,
+        "The 18px depth badge must overlap the upper-right quadrant of the player circle.");
       const fillButton = document.getElementById("plannerAutoFillDepthButton");
       const clearButton = document.getElementById("plannerClearDepthButton");
       const depthPicker = document.getElementById("plannerDepthPicker");
@@ -2102,6 +2120,9 @@ const browserTestSource = String.raw`(() => {
         "Picker portraits must use the same face-focused crop as the pitch portraits.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(depthIndicator("CB#1")?.textContent === "2" && depthIndicator("CB#2")?.textContent === "2"
+        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("2 available alternatives"),
+        "After assignment the starter must not count as depth; repeat-role spare players must not be duplicated.");
       assert(!clearButton.disabled, "Clear must become available as soon as a pitch starter is selected.");
       assert(!document.getElementById("plannerDepthPickerPointer"),"Closing the position picker must remove its floating pointer.");
       assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
@@ -2257,6 +2278,8 @@ const browserTestSource = String.raw`(() => {
       ]);
       formationPreview.render("442");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(depthIndicator("CB#1")?.textContent === "1" && depthIndicator("CB#2")?.textContent === "0",
+        "Only one repeated CB circle may count the below-threshold strongest positional fallback.");
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="502",
         "Without anyone within 10%, the CB picker must offer only the highest positional OVR.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="502"]').click();
@@ -2266,6 +2289,8 @@ const browserTestSource = String.raw`(() => {
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="503"]').click();
       assert(slot("CB#1")?.dataset.playerId==="503",
         "The next-best fallback must remain selectable when replacing the current starter.");
+      assert(depthIndicator("CB#1")?.textContent === "1" && depthIndicator("CB#2")?.textContent === "0",
+        "After replacing the starter the strongest remaining positional fallback must still count as spare depth.");
       formationPreview.setRoster([
         {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
