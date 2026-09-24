@@ -7643,7 +7643,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthHeader{flex-wrap:wrap}
 .plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}.plannerAutoFillDepthButton,.plannerClearDepthButton{flex:0 0 auto}
 .plannerFormationSpot{width:clamp(58px,17%,74px);pointer-events:none}
-.plannerFormationSlotButton{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
+.plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
 .plannerFormationDepthBadge{position:absolute;z-index:6;top:7%;right:5%;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:18px;height:18px;border:2px solid #14241d;border-radius:50%;background:#757f8d;color:#fff;font-size:10px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.65);pointer-events:none}
 .plannerFormationDepthBadge.single{background:#f1b833;color:#141414}
 .plannerFormationDepthBadge.multiple{background:#05f82c;color:#071509}
