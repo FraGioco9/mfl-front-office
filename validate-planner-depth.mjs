@@ -195,7 +195,6 @@ assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('-
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes(".plannerFormationTokenPlus{position:absolute;top:50%;left:50%;display:block;flex:none;width:45%;height:45%;color:inherit;pointer-events:none;transform:translate(-50%,-50%)}")), "All empty pitch plus icons must be absolutely centered, regardless of hover animation or flex layout.");
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}')
-  && sheet.includes('.plannerFormationSlotButtonPickerOpen .plannerFormationToken{') === false
   && sheet.includes('.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken,.plannerFormationSlotButtonPickerOpen .plannerFormationToken{transform:scale(1.1);box-shadow:0 0 0 2px var(--primary-hover)')
   && sheet.includes('.plannerDepthPickerContent{display:grid;gap:3px;max-height:min(370px,60dvh);overflow-y:auto;padding:10px;')
   && sheet.includes('.plannerDepthPickerPointer{position:absolute;top:-9px;width:16px;height:10px;pointer-events:none;')
