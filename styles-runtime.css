@@ -7682,14 +7682,14 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px;width:36px;height:36px;overflow:hidden;border-radius:50%;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)) 5%,var(--planner-depth-secondary,var(--primary-hover)) 95%)}
 .plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top;pointer-events:none}
 .plannerDepthPickerPhoto img[hidden]{display:none}
-.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;align-self:center;overflow:hidden;font-size:12px;line-height:36px;text-overflow:ellipsis;white-space:nowrap}
-.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;line-height:20px;font-variant-numeric:tabular-nums}
-.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap}
+.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){display:block;flex:1 1 0;align-self:center;min-width:0;height:20px;overflow:hidden;font-size:12px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
+.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;height:20px;line-height:20px;font-variant-numeric:tabular-nums}
+.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;height:20px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap}
 .plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}
 .plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;overflow:visible}
 .plannerDepthPickerClear{min-height:44px;align-items:center;color:var(--danger);font-size:12px;font-weight:700;line-height:20px}
 .plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{color:var(--danger)}
-.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;min-width:0;min-height:36px;line-height:20px}
+.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;align-self:center;min-width:0;height:20px;line-height:20px}
 @media(max-width:520px){.plannerFormationSpot{width:clamp(54px,16%,68px)}.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:16px;width:16px;height:16px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
