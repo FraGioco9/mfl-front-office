@@ -2101,8 +2101,9 @@
                             : selected === "433d" && position === "CDM" ? 14
                               : (selected === "433a" || selected === "433d") && position === "CM" ? 0
                             : hasHoldingAndCentralMidfield && position === "CM" ? 6
+                            // 4-1-4-1 shares 4-3-3 (def)'s 54% holding-midfielder depth.
+                            : selected === "4141" && position === "CDM" ? 3
                             : hasHoldingAndCentralMidfield && position === "CDM" ? 9
-                              : selected === "4141" && position === "CDM" ? 3
                               : position === "CDM" && count > 1 ? 2
                                 : selected === "4312" && position === "CAM" ? -4
                                 : selected === "4231" && position === "CAM" ? 0
