@@ -2246,6 +2246,26 @@ const browserTestSource = String.raw`(() => {
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="402" && slot("CB#2")?.dataset.playerId==="401",
         "Auto-fill must rank by CB Overall and use each player only once.");
+      // Neither CB meets 90% of this squad's Overall average. Offer the
+      // strongest CB and, once selected, fall back to the next CB in that slot.
+      formationPreview.setRoster([
+        {player_id:501,name:"Other ST",positions:"ST",overall:100,retirement_years:5},
+        {player_id:502,name:"Highest CB",positions:"CB",overall:60,retirement_years:5},
+        {player_id:503,name:"Next CB",positions:"CB",overall:55,retirement_years:5},
+        {player_id:504,name:"Other CM",positions:"CM",overall:100,retirement_years:5},
+        {player_id:505,name:"Other GK",positions:"GK",overall:100,retirement_years:5},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="502",
+        "Without anyone within 10%, the CB picker must offer only the highest positional OVR.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="502"]').click();
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="503",
+        "The current starter must be omitted before choosing the next-best below-threshold CB fallback.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="503"]').click();
+      assert(slot("CB#1")?.dataset.playerId==="503",
+        "The next-best fallback must remain selectable when replacing the current starter.");
       formationPreview.setRoster([
         {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
