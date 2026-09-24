@@ -272,12 +272,13 @@ for (const markup of [html, generatedHtml]) {
     && formations.every(code => actual[code].flat().length === 10),
     "Planner position slots must match all 25 approved formations, each with ten outfield players.");
 }
-invariant(html.includes('const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);')
-    && generatedHtml.includes('const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);')
+invariant(html.includes('const y = 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
+    && generatedHtml.includes('const y = 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
     && html.includes('spot.dataset.position = position;')
     && generatedHtml.includes('spot.dataset.position = position;')
     && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
     && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);'),
+    && [html, generatedHtml].every(shell => shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;") && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";'))
   "Planner must label every circle with its approved position at first paint with the goalkeeper unchanged.");
 const expectedRingSegments = 12;
 for (const markup of [html, generatedHtml]) {
