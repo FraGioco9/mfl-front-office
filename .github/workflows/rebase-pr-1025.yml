@@ -23,5 +23,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main feat/914-planner-team-selection
           git checkout -B feat/914-planner-team-selection origin/feat/914-planner-team-selection
-          git rebase --rebase-merges origin/main
+          git rebase origin/main
           git push origin HEAD:feat/914-planner-team-selection --force-with-lease=refs/heads/feat/914-planner-team-selection:8d26de57961f47786964628e9952ac3e74836ee8
