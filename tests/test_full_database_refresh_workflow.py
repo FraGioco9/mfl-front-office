@@ -108,6 +108,12 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         for checkpoint in ("core", "player-seasons", "player-data", "final"):
             self.assertIn(f"{publisher} {checkpoint} ", self.workflow)
 
+    def test_checkpoint_publisher_retries_transient_uploads(self) -> None:
+        publisher = Path("scripts/workflows/full-database-refresh-publish-checkpoint.sh").read_text(encoding="utf-8")
+        self.assertIn("for attempt in 1 2 3; do", publisher)
+        self.assertIn("Transient Vercel upload failure", publisher)
+        self.assertIn("verify-live-production-deployment.sh", publisher)
+
     def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
         for checkpoint_path in (
             "core",
