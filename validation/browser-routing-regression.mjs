@@ -1761,6 +1761,21 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
       assert(formationSpot("CDM").every(spot => spot.style.top === "48%") && formationSpot("CAM")[0].style.top === "32%", "3-5-2 (B) CAM must be more advanced and CDMs deeper.");
 
+      formationPreview.render("4222");
+      const holdingPair = formationSpot("CDM");
+      const attackingPair = formationSpot("CAM");
+      const strikerPair = formationSpot("ST");
+      assert(holdingPair.length === 2 && attackingPair.length === 2 && strikerPair.length === 2,
+        "4-2-2-2 must preserve its two-CDM, two-CAM and two-ST lines.");
+      assert(JSON.stringify(holdingPair.map(spot => spot.style.left)) === JSON.stringify(["40%", "60%"])
+        && JSON.stringify(strikerPair.map(spot => spot.style.left)) === JSON.stringify(["35%", "65%"]),
+        "4-2-2-2 CDMs must be closer together than its unchanged striker pair.");
+      assert(holdingPair.every(spot => spot.style.top === "53%")
+        && attackingPair.every(spot => spot.style.top === "31.5%")
+        && strikerPair.every(spot => spot.style.top === "10%")
+        && Number.parseFloat(attackingPair[0].style.top) ===
+          (Number.parseFloat(holdingPair[0].style.top) + Number.parseFloat(strikerPair[0].style.top)) / 2,
+        "4-2-2-2 CAMs must be precisely halfway from CDMs to STs without moving those lines.");
       formationPreview.render("4231");
       assert(formationSpot("CAM").length === 1 && formationSpot("LM").length === 1 && formationSpot("RM").length === 1
         && formationSpot("CAM")[0].style.top === "29%"
