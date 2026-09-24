@@ -1828,7 +1828,12 @@ const browserTestSource = String.raw`(() => {
         "Narrow diamond CMs must remain equidistant from CAM at 30% and CDM at 54%.");
       formationPreview.render("352b");
       assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
-      assert(formationSpot("CDM").every(spot => spot.style.top === "48%") && formationSpot("CAM")[0].style.top === "32%", "3-5-2 (B) CAM must be more advanced and CDMs deeper.");
+      assert(formationSpot("CDM").every(spot => spot.style.top === referenceDiamondCDMTop)
+        && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
+        "3-5-2 (B) CDMs must match 4-3-3 (def) at 54% and CAM match 4-3-3 (att) at 30%.");
+      assert(formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%"
+        && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "3-5-2 (B) wide mids and strikers must keep their former heights.");
 
       formationPreview.render("4222");
       const holdingPair = formationSpot("CDM");
