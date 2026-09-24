@@ -276,13 +276,13 @@ invariant(html.includes('const y = standardMidfieldLine ? 40\n                  
     && generatedHtml.includes('const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
     && html.includes('spot.dataset.position = position;')
     && generatedHtml.includes('spot.dataset.position = position;')
-    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
-    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
-    && [html, generatedHtml].every(shell => shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;")
+    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);')
+    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);')
+    && [html, generatedHtml].every(shell => shell.includes("const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;")
       && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')
       && shell.includes('const flatFourMidfield = midfield && count === 4')
-      && shell.includes('const standardMidfieldLine = flatFourMidfield || (selected === "4321" && midfield')
-      && shell.includes('count === 3 && linePositions.every(position => position === "CM"));')
+      && shell.includes('const standardMidfieldLine = flatFourMidfield || (midfield && count === 3')
+      && shell.includes('linePositions.every(position => position === "CM"))')
       && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
       && shell.includes('flatFourMidfield ? 0')
       && shell.includes('(selected === "433a" || selected === "433d") && position === "CM" ? 0')
@@ -347,8 +347,8 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && generatedHtml.includes('slotRingSegments.forEach(d => {')
     && html.includes('plus.append(')
     && generatedHtml.includes('plus.append(')
-    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
-    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);'),
+    && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);')
+    && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
   [html, generatedHtml].every(shell => !shell.includes('id="plannerAverageAge"')
