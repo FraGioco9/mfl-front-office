@@ -7679,8 +7679,8 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerPosition.some{background:#ff5722;color:#000}
 .plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
-.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px);left:50%;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:4px;width:max-content;max-width:108px;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;text-shadow:0 1px 3px #000;white-space:nowrap;transform:translateX(-50%);pointer-events:none}
-.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 20px;width:20px;height:20px;border:1px solid rgba(255,255,255,.65);border-radius:2px;object-fit:contain}
+.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px);left:50%;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:4px;width:max-content;max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px;text-align:center;text-shadow:0 1px 3px #000;white-space:nowrap;transform:translateX(-50%);pointer-events:none}
+.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 20px;width:20px;height:20px;border:0;border-radius:0;object-fit:contain;filter:drop-shadow(1px 0 0 rgba(255,255,255,.7)) drop-shadow(-1px 0 0 rgba(255,255,255,.7)) drop-shadow(0 1px 0 rgba(255,255,255,.7)) drop-shadow(0 -1px 0 rgba(255,255,255,.7))}
 .plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerFormationBackups{position:absolute;top:calc(100% + 40px);left:50%;display:grid;gap:1px;width:86px;transform:translateX(-50%);pointer-events:none}
 .plannerFormationBackup{display:block;overflow:hidden;color:#fff;font-size:9px;font-weight:700;line-height:12px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap}
@@ -7696,7 +7696,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer span{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
-@media(max-width:520px){.plannerFormationSpot{width:clamp(50px,15%,64px)}.plannerFormationPlayerSurname{max-width:92px;font-size:9px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:18px;width:18px;height:18px}.plannerFormationBackups{width:70px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(50px,15%,64px)}.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:18px;width:18px;height:18px}.plannerFormationBackups{width:70px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 
 /* GK backups extend below the field: keep them visible without overlapping detail cards. */
 .plannerPitchPanel .plannerPitch{overflow:visible}
