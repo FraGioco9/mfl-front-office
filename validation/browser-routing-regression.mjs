@@ -1762,6 +1762,14 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("CDM").every(spot => spot.style.top === "48%") && formationSpot("CAM")[0].style.top === "32%", "3-5-2 (B) CAM must be more advanced and CDMs deeper.");
 
       formationPreview.render("4231");
+      assert(formationSpot("CAM").length === 1 && formationSpot("LM").length === 1 && formationSpot("RM").length === 1
+        && formationSpot("CAM")[0].style.top === "29%"
+        && formationSpot("CAM")[0].style.top === formationSpot("LM")[0].style.top
+        && formationSpot("CAM")[0].style.top === formationSpot("RM")[0].style.top,
+        "4-2-3-1 CAM must align with both wide midfielders at 29%.");
+      assert(formationSpot("CDM").length === 2 && formationSpot("CDM").every(spot => spot.style.top === "53%")
+        && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
+        "4-2-3-1 must preserve both deeper CDMs and the striker.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
