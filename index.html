@@ -1810,6 +1810,24 @@
                   || depthPlayerName(a).localeCompare(depthPlayerName(b), undefined, { sensitivity: "base" })
                   || Number(a.player_id) - Number(b.player_id);
               });
+            // Compare positional OVR against the squad's average Overall, not a
+            // candidate pool that changes when a player is assigned elsewhere.
+            const depthPickerCandidates = (players, position, selectedIds = new Set()) => {
+              const active = (Array.isArray(players) ? players : []).filter(player => {
+                const years = player?.retirement_years;
+                return Number.isSafeInteger(Number(player?.player_id)) && Number(player.player_id) > 0
+                  && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+              });
+              const ratings = active.map(player => Number(player.overall))
+                .filter(value => Number.isFinite(value) && value > 0);
+              const threshold = ratings.length
+                ? ratings.reduce((total, value) => total + value, 0) / ratings.length * 0.9 : null;
+              return rankDepthPlayers(active, position).filter(player => {
+                if (selectedIds.has(Number(player.player_id))) return true;
+                const rating = depthPlayerOverall(player, position);
+                return rating !== "—" && (threshold === null || Number(rating) >= threshold);
+              });
+            };
             const slotKeysFor = positions => {
               const counts = new Map();
               return positions.map(position => {
@@ -1904,9 +1922,8 @@
                 closeDepthPicker();
                 openPickerButton = button;
                 button.setAttribute("aria-expanded", "true");
-                const assignedElsewhere = new Set([...depthAssignments].filter(([other]) => other !== key).map(([, id]) => id));
-                const eligible = rankDepthPlayers(depthRoster, position)
-                  .filter(player => !assignedElsewhere.has(Number(player.player_id)));
+                const assignmentByPlayer = new Map([...depthAssignments].map(([slot, id]) => [id, slot]));
+                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()));
                 const currentId = depthAssignments.get(key);
                 const heading = document.createElement("h4");
                 heading.textContent = "Select " + position;
@@ -1915,7 +1932,13 @@
                   const clear = document.createElement("button");
                   clear.type = "button";
                   clear.className = "plannerDepthPickerClear";
-                  clear.textContent = "Clear starter";
+                  const removeIcon = document.createElement("span");
+                  removeIcon.className = "plannerDepthPickerRemoveIcon";
+                  removeIcon.setAttribute("aria-hidden", "true");
+                  removeIcon.textContent = "×";
+                  const removeText = document.createElement("span");
+                  removeText.textContent = "Remove";
+                  clear.append(removeIcon, removeText);
                   clear.addEventListener("click", () => {
                     depthAssignments.delete(key);
                     renderFormation(selected);
@@ -1925,7 +1948,7 @@
                 }
                 if (!eligible.length) {
                   const empty = document.createElement("p");
-                  empty.textContent = "No available players for " + position + ".";
+                  empty.textContent = "No players within 10% of the team average for " + position + ".";
                   depthPicker.appendChild(empty);
                 }
                 for (const player of eligible) {
@@ -1933,17 +1956,33 @@
                   row.type = "button";
                   row.className = "plannerDepthPickerPlayer";
                   row.dataset.playerId = String(player.player_id);
-                  row.setAttribute("aria-pressed", String(currentId === Number(player.player_id)));
+                  const assignedSlot = assignmentByPlayer.get(Number(player.player_id));
+                  const selectedHere = currentId === Number(player.player_id);
+                  row.disabled = Boolean(assignedSlot);
+                  row.setAttribute("aria-pressed", String(selectedHere));
+                  if (assignedSlot) {
+                    row.dataset.assignedSlot = assignedSlot;
+                    row.setAttribute("aria-label", depthPlayerName(player) + ", selected at " + assignedSlot.split("#")[0]);
+                  }
+                  const photoFrame = document.createElement("span");
+                  photoFrame.className = "plannerDepthPickerPhoto";
                   const photo = document.createElement("img");
                   photo.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(player.player_id) + "/photo.webp";
                   photo.alt = "";
                   photo.loading = "lazy";
                   photo.addEventListener("error", () => { photo.hidden = true; });
+                  photoFrame.appendChild(photo);
                   const name = document.createElement("span");
                   name.textContent = depthPlayerName(player);
                   const overall = document.createElement("strong");
                   overall.textContent = depthPlayerOverall(player, position);
-                  row.append(photo, name, overall);
+                  row.append(photoFrame, name, overall);
+                  if (assignedSlot) {
+                    const status = document.createElement("span");
+                    status.className = "plannerDepthPickerSelected";
+                    status.textContent = selectedHere ? "Selected" : "Selected · " + assignedSlot.split("#")[0];
+                    row.appendChild(status);
+                  }
                   row.addEventListener("click", () => {
                     depthAssignments.set(key, Number(player.player_id));
                     renderFormation(selected);
