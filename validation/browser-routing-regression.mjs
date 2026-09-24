@@ -1800,7 +1800,7 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
         && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop,
         "3-5-2 CDM must be central and match 4-3-3 (def) at 54%.");
-      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left)) === JSON.stringify(["35%", "65%"])
+      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left)) === JSON.stringify(["33%", "67%"])
         && formationSpot("CM").every(spot => spot.style.top === "46%"),
         "3-5-2 CMs must flank the central CDM symmetrically without changing their height.");
       assert(formationSpot("LM")[0].style.left === "12%" && formationSpot("RM")[0].style.left === "88%"
