@@ -1011,8 +1011,13 @@
               const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");
               lines.forEach((linePositions, lineIndex) => {
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
-                const y = 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const count = linePositions.length;
+                // A four-player midfield always shares the 4-4-2's flat 40% row.
+                // Do not flatten a four-player attacking line (e.g. 4-2-4).
+                const flatFourMidfield = midfield && count === 4
+                  && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
+                const y = flatFourMidfield ? 40
+                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
                 const spread = selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1;
                 const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;
@@ -1029,7 +1034,8 @@
                     : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
                       : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
                         : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
-                  const offset = selected === "352b" && midfield && position === "CDM" ? 8
+                  const offset = flatFourMidfield ? 0
+                    : selected === "352b" && midfield && position === "CDM" ? 8
                     : selected === "352b" && midfield && position === "CAM" ? -8
                       : (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
                         : (position === "LW" || position === "RW") && wideForwardLine ? 6
