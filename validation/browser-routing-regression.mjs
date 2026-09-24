@@ -1778,23 +1778,32 @@ const browserTestSource = String.raw`(() => {
       assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
       assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
       const fillButton = document.getElementById("plannerAutoFillDepthButton");
+      const clearButton = document.getElementById("plannerClearDepthButton");
       const depthPicker = document.getElementById("plannerDepthPicker");
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
+      assert(clearButton instanceof HTMLButtonElement && clearButton.disabled, "Clear must be disabled while the pitch has no selected players.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(!depthPicker.hidden, "Clicking an empty circle must open the position selector.");
+      const openingButton = slot("CB#1").querySelector(".plannerFormationSlotButton");
+      const openingToken = openingButton.querySelector(".plannerFormationToken");
+      assert(openingButton.classList.contains("plannerFormationSlotButtonPickerOpen")
+        && getComputedStyle(openingToken).boxShadow.includes(getComputedStyle(document.documentElement).getPropertyValue("--primary-hover").trim()),
+        "The pitch circle that opened the menu must keep the standard highlight-colour hover treatment.");
       const assertPickerPointer = key => {
         const pointer = document.getElementById("plannerDepthPickerPointer");
         const anchor = slot(key).querySelector(".plannerFormationSlotButton").getBoundingClientRect();
         const menu = depthPicker.getBoundingClientRect();
         const arrow = pointer?.getBoundingClientRect();
-        assert(pointer && !depthPicker.contains(pointer)
+        assert(pointer && depthPicker.contains(pointer)
+          && pointer.parentElement===depthPicker
+          && getComputedStyle(pointer).position==="absolute"
           && getComputedStyle(pointer).pointerEvents==="none"
           && ["above","below"].includes(pointer.dataset.side)
           && Math.abs(arrow.left + arrow.width/2 - Math.max(menu.left + 16,Math.min(anchor.left + anchor.width/2,menu.right - 16)))<=1
           && (pointer.dataset.side==="below"
             ? Math.abs(arrow.bottom-menu.top)<=2 && getComputedStyle(pointer).transform==="none"
             : Math.abs(arrow.top-(menu.bottom-1))<=2 && getComputedStyle(pointer).transform!=="none"),
-          "The scroll-safe triangular menu tail must point toward its opening pitch circle, whether above or below.");
+          "The triangle must be part of the menu and point toward its opening pitch circle, whether above or below.");
       };
       assertPickerPointer("CB#1");
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105","Picker must include only positional CB ratings within 10% of the team average, in positional Overall order.");
