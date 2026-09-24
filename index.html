@@ -2077,8 +2077,11 @@
                     : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
                       : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
                         : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
-                  const offset = flatFourMidfield ? 0
-                    : selected === "352b" && midfield && position === "CDM" ? 8
+                  // 4-4-2 (B) keeps the wide midfielders on the 4-4-2 line,
+                  // with its paired CDMs one step deeper.
+                  const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6
+                    : flatFourMidfield ? 0
+                      : selected === "352b" && midfield && position === "CDM" ? 8
                     : selected === "352b" && midfield && position === "CAM" ? -8
                       : (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
                         : (position === "LW" || position === "RW") && wideForwardLine ? 6
