@@ -153,9 +153,12 @@ for (const stylesheet of [css, styles]) {
     "Empty and occupied circles must share a reduced-motion-aware hover animation.");
 }
 
-assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill and the slot player picker.");
+assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerClearDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill, Clear and the slot player picker.");
 assert.ok(source.includes('const depthAssignments = new Map()') && source.includes('const autoFillDepth = () =>'), "Depth must preserve unique explicit assignments and auto-fill.");
-assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)') && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill and slots must be interactive.");
+assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)')
+  && source.includes('depthClear?.addEventListener("click", () => {')
+  && source.includes('depthAssignments.clear();')
+  && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill, Clear and slots must be interactive.");
 assert.ok(!source.includes("spot.title =") && !generated.includes("spot.title ="), "Hovering an empty or occupied Planner circle must never open a native tooltip.");
 assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))")
   && shell.includes('.filter(player => Number(player.player_id) !== currentId);')
@@ -170,9 +173,11 @@ assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidat
   && !shell.includes("row.append(photoFrame, name, overall);")
   && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')
   && shell.includes('name.textContent = depthPlayerShortName(player);')
-  && shell.includes('document.getElementById("plannerDepthPickerPointer")?.remove();')
+  && shell.includes('pickerContent.className = "plannerDepthPickerContent";')
   && shell.includes('pointer.dataset.side = opensBelow ? "below" : "above";')
-  && shell.includes('depthPicker.after(pointer);')),
+  && shell.includes('depthPicker.appendChild(pointer);')
+  && shell.includes('button.classList.add("plannerFormationSlotButtonPickerOpen");')
+  && shell.includes('previous.classList.remove("plannerFormationSlotButtonPickerOpen");')),
   "Canonical and generated pickers must hide the current starter, move assigned players atomically, and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
@@ -188,8 +193,12 @@ assert.ok(css.includes('.plannerFormationPlayerPhoto{') && styles.includes('.pla
 assert.ok(css.includes('.plannerFormationPlayerPhoto[hidden]{display:none}') && styles.includes('.plannerFormationPlayerPhoto[hidden]{display:none}'), "Failed player photos must leave the gradient visible.");
 assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('--planner-depth-primary') && planner.includes('--planner-depth-secondary'), "Changing Clubs must clear depth selection and set the branded gradient.");
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
-assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPointer{position:fixed;z-index:var(--mfl-z-modal);width:16px;height:10px;pointer-events:none;')
-  && sheet.includes('.plannerDepthPickerPointerAbove{transform:rotate(180deg)}')
+assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}')
+  && sheet.includes('.plannerFormationSlotButtonPickerOpen .plannerFormationToken{') === false
+  && sheet.includes('.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken,.plannerFormationSlotButtonPickerOpen .plannerFormationToken{transform:scale(1.1);box-shadow:0 0 0 2px var(--primary-hover)')
+  && sheet.includes('.plannerDepthPickerContent{display:grid;gap:3px;max-height:min(370px,60dvh);overflow-y:auto;padding:10px;')
+  && sheet.includes('.plannerDepthPickerPointer{position:absolute;top:-9px;width:16px;height:10px;pointer-events:none;')
+  && sheet.includes('.plannerDepthPickerPointerAbove{top:auto;bottom:-9px;transform:rotate(180deg)}')
   && sheet.includes('.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;align-self:center;overflow:hidden;font-size:12px;line-height:36px')
   && sheet.includes('.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;line-height:20px')
   && sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
