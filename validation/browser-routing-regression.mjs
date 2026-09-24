@@ -1681,7 +1681,14 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("LWB")[0].style.top === "69%" && formationSpot("RWB")[0].style.top === "69%" && formationSpot("CB").every(spot => spot.style.top === "76%"), "Back-five wingbacks must push slightly ahead of the centre backs.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
       formationPreview.render("433cf");
-      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("CF")[0].style.top === "8%", "Wingers must trail a central forward as well as strikers.");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("CF")[0].style.top === "6%", "The 4-3-3 (CF) central forward must sit higher than before while the wingers stay put.");
+      for (const code of ["3421", "4321", "4411"]) {
+        formationPreview.render(code);
+        const centralForwards = formationSpot("CF");
+        assert(centralForwards.length === (code === "4411" ? 1 : 2)
+          && centralForwards.every(spot => spot.style.top === "26%"),
+          "All secondary CF lines must advance toward the opposing goal in " + code);
+      }
       formationPreview.render("41212narrow");
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "39.8%,60.2%", "Narrow diamond paired strikers must preserve the formation width modifier.");
       formationPreview.render("352");
