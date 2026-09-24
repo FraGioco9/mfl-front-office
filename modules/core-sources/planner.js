@@ -769,14 +769,14 @@
     if(selectedTeamId){
       try{localStorage.setItem("mfl-planner-formation-v1:"+selectedTeamId,code);}catch{}
     }
-    // Dismiss the just-chosen control's focus/hover highlight without changing
-    // the shared dropdown appearance or its highlighting on the next interaction.
+    // Native select may restore focus and keep :hover after a choice; retain
+    // the resting style until an intentional new interaction with the control.
     formationSelect.classList.add("plannerFormationSelectCommitted");
     formationSelect.blur();
   });
-  formationSelect?.addEventListener("pointerleave",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
+  formationSelect?.addEventListener("pointerenter",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
   formationSelect?.addEventListener("pointerdown",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
-  formationSelect?.addEventListener("focus",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
+  formationSelect?.addEventListener("keydown",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
     if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}
