@@ -1658,6 +1658,10 @@ const browserTestSource = String.raw`(() => {
       assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "3421", "4141", "4411", "442b", "541f"].sort()),
         "The flat four-man midfield contract covers seven formations; 3-4-3 (B) and 5-4-1 are diamonds.");
 
+      // Wait for roster hydration before holding DOM references through hover
+      // frames: the route redraws the pitch once when the squad arrives.
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"),
+        "Planner roster ready before hover geometry");
       // Measure the + against its OWN ring at rest and while animating, not its
       // viewport coordinates: a hover can independently expose a page scrollbar.
       formationPreview.render("442");
@@ -1687,6 +1691,7 @@ const browserTestSource = String.raw`(() => {
       for (let frame = 0; frame < 15; frame++) {
         await new Promise(resolve => setTimeout(resolve, 16));
         hoverSpots.forEach((spot, index) => {
+          assert(spot.isConnected, "The hydrated Planner should not replace pitch markers during the hover animation.");
           const currentOffsets = assertRestingPlus(spot, "during hover frame " + frame);
           const rect = spot.querySelector(".plannerFormationToken").getBoundingClientRect();
           const style = getComputedStyle(spot.querySelector(".plannerFormationToken"));
