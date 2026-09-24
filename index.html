@@ -1778,6 +1778,12 @@
               while (start > 0 && /^(?:de|del|della|dello|dei|degli|di|da|do|dos|das|du|van|von|der|den|la|le|al|el|bin|ibn|ten|ter)$/i.test(words[start - 1])) start -= 1;
               return words.slice(start).join(" ");
             };
+            const depthPlayerShortName = player => {
+              const full = depthPlayerName(player).trim();
+              const surname = depthPlayerSurname(player);
+              const given = full.slice(0, Math.max(0, full.length - surname.length)).trim();
+              return given ? given.charAt(0).toLocaleUpperCase() + ". " + surname : surname;
+            };
             const depthPlayerFamiliarity = (player, position) => typeof familiarityForPosition === "function"
               ? familiarityForPosition(player, position) : null;
             const depthPlayerOverall = (player, position) => {
@@ -1843,6 +1849,7 @@
                 depthPicker.hidden = true;
                 depthPicker.replaceChildren();
               }
+              document.getElementById("plannerDepthPickerPointer")?.remove();
               if (previous instanceof HTMLElement) previous.setAttribute("aria-expanded", "false");
               if (restoreFocus && previous?.isConnected) previous.focus();
             };
@@ -1974,7 +1981,8 @@
                   photo.addEventListener("error", () => { photo.hidden = true; });
                   photoFrame.appendChild(photo);
                   const name = document.createElement("span");
-                  name.textContent = depthPlayerName(player);
+                  name.textContent = depthPlayerShortName(player);
+                  if (!assignedSlot) row.setAttribute("aria-label", depthPlayerName(player) + ", " + depthPlayerOverall(player, position) + " Overall at " + position);
                   const overall = document.createElement("strong");
                   overall.textContent = depthPlayerOverall(player, position);
                   row.append(photoFrame, name);
@@ -1999,9 +2007,21 @@
                 const width = Math.min(320, window.innerWidth - 20);
                 depthPicker.style.left = Math.max(10, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 10)) + "px";
                 const height = depthPicker.getBoundingClientRect().height;
+                const opensBelow = rect.bottom + 8 + height <= window.innerHeight - 10;
                 depthPicker.style.top = Math.max(10, Math.min(
-                  rect.bottom + 8 + height <= window.innerHeight - 10 ? rect.bottom + 8 : rect.top - height - 8,
+                  opensBelow ? rect.bottom + 8 : rect.top - height - 8,
                   window.innerHeight - height - 10)) + "px";
+                // Keep the triangular tail outside the scrollable menu, including when
+                // the picker flips above a slot or shifts near the viewport edges.
+                const menuRect = depthPicker.getBoundingClientRect();
+                const pointer = document.createElement("span");
+                pointer.id = "plannerDepthPickerPointer";
+                pointer.className = "plannerDepthPickerPointer" + (opensBelow ? "" : " plannerDepthPickerPointerAbove");
+                pointer.dataset.side = opensBelow ? "below" : "above";
+                pointer.setAttribute("aria-hidden", "true");
+                pointer.style.left = Math.max(menuRect.left + 16, Math.min(rect.left + rect.width / 2, menuRect.right - 16)) - 8 + "px";
+                pointer.style.top = (opensBelow ? menuRect.top - 9 : menuRect.bottom - 1) + "px";
+                depthPicker.after(pointer);
                 depthPicker.querySelector("button")?.focus();
               };
               const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position) => {
