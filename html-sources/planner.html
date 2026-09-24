@@ -1160,7 +1160,9 @@
             };
             depthAutoFill?.addEventListener("click", autoFillDepth);
             depthClear?.addEventListener("click", () => {
+              if (!depthAssignments.size) return;
               depthAssignments.clear();
+              closeDepthPicker();
               renderFormation(formationSelect?.value || "442");
             });
             document.addEventListener("pointerdown", event => {
