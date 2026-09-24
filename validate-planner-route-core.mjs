@@ -158,7 +158,7 @@ invariant(
   "Position, Age and Overall must be left-aligned across Squad and modal tables.",
 );
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
-invariant(html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons, aligned footer and canonical roster rows.");
+invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
 invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
 invariant(styles.includes("color-mix(in srgb,#05f82c 22%,transparent)") && styles.includes("color:#05f82c") && styles.includes("border-radius:5px") && styles.includes(".plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}"), "Slot chip must match the supplied rounded, translucent green example.");
 invariant(styles.includes(".plannerRosterTable .plannerSlotColumn{width:48px}") && styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}") && styles.includes(".plannerRosterTable .plannerContractColumn{width:21%}") && styles.includes(".plannerRosterTable .plannerSlotColumn{width:44px}"), "All squad column widths must be recomputed for desktop and mobile.");
@@ -330,11 +330,12 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
-  html.includes('id="plannerAverageAge"')
-    && html.includes('id="plannerAverageOverall"')
-    && html.includes('id="plannerTotalContracts"')
-    && planner.includes("renderRosterTotals()"),
-  "Planner roster must expose and maintain average Age, average Overall and total Contract values in the table footer.",
+  [html, generatedHtml].every(shell => !shell.includes('id="plannerAverageAge"')
+    && !shell.includes('id="plannerAverageOverall"')
+    && !shell.includes('id="plannerTotalContracts"')
+    && !shell.includes('id="plannerDepthDetails"')
+    && !shell.includes('plannerFormationPlayerSurname')),
+  "Planner must omit squad totals, depth cards and occupied-circle names from both shells.",
 );
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}")
