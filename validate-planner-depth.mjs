@@ -274,17 +274,17 @@ assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{disp
   && sheet.includes('.plannerDepthPickerPointerAbove{top:auto;bottom:-9px;transform:rotate(180deg)}')
   && !sheet.includes('clip-path:polygon(50% 0,0 100%,100% 100%)')
   && sheet.includes('.plannerDepthPickerPlayer,.plannerDepthPickerClear{display:flex;align-items:center;box-sizing:border-box;gap:9px;width:100%;height:44px;min-height:44px;padding:3px 8px;')
-  && sheet.includes('.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;align-self:center;overflow:hidden;font-size:12px;line-height:36px')
-  && sheet.includes('.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;line-height:20px')
+  && sheet.includes('.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){display:block;flex:1 1 0;align-self:center;min-width:0;height:20px;overflow:hidden;font-size:12px;line-height:20px')
+  && sheet.includes('.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;height:20px;line-height:20px')
   && sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
-  && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;')
+  && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;height:20px;')
   && sheet.includes('.plannerDepthPicker .plannerDepthPickerPlayer:hover:not(:disabled),.plannerDepthPicker .plannerDepthPickerPlayer:focus-visible,.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{border-color:var(--primary);background:var(--row-hover);background-image:none;box-shadow:none;outline:0}')
   && sheet.includes('.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{color:var(--danger)}')
   && sheet.includes('.plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}')
   && sheet.includes('.plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;overflow:visible}')
   && sheet.includes('.plannerDepthPickerClear{min-height:44px;align-items:center;')
-  && sheet.includes('.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;min-width:0;min-height:36px;line-height:20px}')), 
+  && sheet.includes('.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;align-self:center;min-width:0;height:20px;line-height:20px}')), 
   "Picker portraits must match the pitch zoom; the SVG Remove icon and label must be vertically centered in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}')
