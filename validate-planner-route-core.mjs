@@ -268,8 +268,8 @@ for (const markup of [html, generatedHtml]) {
     && formations.every(code => actual[code].flat().length === 10),
     "Planner position slots must match all 25 approved formations, each with ten outfield players.");
 }
-invariant(html.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
-    && generatedHtml.includes('const y = 78 - lineIndex * (60 / (lines.length - 1));')
+invariant(html.includes('const y = 76 - lineIndex * (66 / (lines.length - 1));')
+    && generatedHtml.includes('const y = 76 - lineIndex * (66 / (lines.length - 1));')
     && html.includes('spot.dataset.position = position;')
     && generatedHtml.includes('spot.dataset.position = position;')
     && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
