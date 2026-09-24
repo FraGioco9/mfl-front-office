@@ -1785,6 +1785,10 @@ const browserTestSource = String.raw`(() => {
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
+      const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
+      assert(getComputedStyle(emptyToken).transitionProperty.includes("transform")
+        && getComputedStyle(assignedToken).transitionProperty.includes("transform"),
+        "Both empty and filled depth circles must animate on hover and keyboard focus.");
       const assignedPortrait = assignedToken?.querySelector(".plannerFormationPlayerPhoto");
       assert(assignedToken?.children.length === 2 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient and player portrait.");
       assert(assignedPortrait?.src.includes("/103/photo.webp") && assignedPortrait.alt === "","The assigned portrait must match the chosen player.");
@@ -1828,6 +1832,17 @@ const browserTestSource = String.raw`(() => {
       fillButton.click();
       assert(slot("CB#2").querySelector(".plannerFormationPlayerOverall")?.textContent === "80", "Natural position must use the player-page rating.");
       assert(getComputedStyle(slot("CB#2").querySelector(".plannerFormationPlayerPosition")).backgroundColor === "rgb(5, 248, 44)", "Natural position must use the player-page green.");
+      // A higher base Overall must lose to the better rating at the actual CB slot.
+      formationPreview.setRoster([
+        {player_id:401,name:"Secondary with higher base",positions:"CM, CB",overall:98,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+        {player_id:402,name:"Natural with lower base",positions:"CB",overall:76,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+      ]);
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="402,401",
+        "Picker must rank by positional CB Overall, not main Overall.");
+      fillButton.click();
+      assert(slot("CB#1")?.dataset.playerId==="402" && slot("CB#2")?.dataset.playerId==="401",
+        "Auto-fill must rank by CB Overall and use each player only once.");
       formationPreview.setRoster([
         {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
