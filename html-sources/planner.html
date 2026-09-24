@@ -806,7 +806,6 @@
                 depthPicker.hidden = true;
                 depthPicker.replaceChildren();
               }
-              document.getElementById("plannerDepthPickerPointer")?.remove();
               if (previous instanceof HTMLElement) previous.setAttribute("aria-expanded", "false");
               if (restoreFocus && previous?.isConnected) previous.focus();
             };
@@ -886,13 +885,16 @@
                 closeDepthPicker();
                 openPickerButton = button;
                 button.setAttribute("aria-expanded", "true");
+                const pickerContent = document.createElement("div");
+                pickerContent.className = "plannerDepthPickerContent";
+                depthPicker.appendChild(pickerContent);
                 const assignmentByPlayer = new Map([...depthAssignments].map(([slot, id]) => [id, slot]));
                 const currentId = depthAssignments.get(key);
                 const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))
                   .filter(player => Number(player.player_id) !== currentId);
                 const heading = document.createElement("h4");
                 heading.textContent = "Select " + position;
-                depthPicker.appendChild(heading);
+                pickerContent.appendChild(heading);
                 if (currentId) {
                   const clear = document.createElement("button");
                   clear.type = "button";
@@ -911,12 +913,12 @@
                     renderFormation(selected);
                     formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
                   });
-                  depthPicker.appendChild(clear);
+                  pickerContent.appendChild(clear);
                 }
                 if (!eligible.length) {
                   const empty = document.createElement("p");
                   empty.textContent = "No players within 10% of the team average for " + position + ".";
-                  depthPicker.appendChild(empty);
+                  pickerContent.appendChild(empty);
                 }
                 for (const player of eligible) {
                   const row = document.createElement("button");
@@ -957,7 +959,7 @@
                     renderFormation(selected);
                     formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
                   });
-                  depthPicker.appendChild(row);
+                  pickerContent.appendChild(row);
                 }
                 depthPicker.hidden = false;
                 const rect = button.getBoundingClientRect();
@@ -968,17 +970,16 @@
                 depthPicker.style.top = Math.max(10, Math.min(
                   opensBelow ? rect.bottom + 8 : rect.top - height - 8,
                   window.innerHeight - height - 10)) + "px";
-                // Keep the triangular tail outside the scrollable menu, including when
-                // the picker flips above a slot or shifts near the viewport edges.
+                // The pointer belongs to the menu, but stays outside its scrollable
+                // content so it is never clipped when the player list scrolls.
                 const menuRect = depthPicker.getBoundingClientRect();
                 const pointer = document.createElement("span");
                 pointer.id = "plannerDepthPickerPointer";
                 pointer.className = "plannerDepthPickerPointer" + (opensBelow ? "" : " plannerDepthPickerPointerAbove");
                 pointer.dataset.side = opensBelow ? "below" : "above";
                 pointer.setAttribute("aria-hidden", "true");
-                pointer.style.left = Math.max(menuRect.left + 16, Math.min(rect.left + rect.width / 2, menuRect.right - 16)) - 8 + "px";
-                pointer.style.top = (opensBelow ? menuRect.top - 9 : menuRect.bottom - 1) + "px";
-                depthPicker.after(pointer);
+                pointer.style.left = Math.max(16, Math.min(rect.left + rect.width / 2 - menuRect.left, menuRect.width - 16)) - 8 + "px";
+                depthPicker.appendChild(pointer);
                 depthPicker.querySelector("button")?.focus();
               };
               const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position) => {
