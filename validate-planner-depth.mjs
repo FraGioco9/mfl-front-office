@@ -215,9 +215,12 @@ for (const stylesheet of [css, styles]) {
     "Flag columns must fit flags, Player gains leftover width, and Slot stays unchanged.");
   assert.ok(stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken")
     && stylesheet.includes(".plannerFormationSlotButton:focus-visible .plannerFormationToken")
-    && stylesheet.includes("transform:scale(1.1)")
-    && stylesheet.includes("prefers-reduced-motion:reduce"),
-    "Empty and occupied circles must share a reduced-motion-aware hover animation.");
+    && stylesheet.includes(".plannerFormationSlotButtonPickerOpen .plannerFormationToken{box-shadow:0 0 0 2px var(--primary-hover)}")
+    && stylesheet.includes(".plannerFormationSlotButton .plannerFormationToken{width:78%;transition:box-shadow 180ms ease}")
+    && stylesheet.includes("@media(prefers-reduced-motion:reduce){.plannerFormationSlotButton .plannerFormationToken{transition:none}}")
+    && !stylesheet.includes("transform:scale(1.1)")
+    && !stylesheet.includes(".plannerFormationSlotButtonPickerOpen .plannerFormationTokenPlus{color:#fff}"),
+    "Empty and occupied circles must highlight their border without zooming, brightening, or recolouring their content.");
 }
 
 assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerClearDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill, Clear and the slot player picker.");
@@ -261,7 +264,7 @@ assert.ok([css, styles].every(sheet => sheet.includes(".plannerFormationTokenPlu
 assert.ok([css, styles].every(sheet => sheet.includes(".plannerFormationPositionLabel{position:absolute;top:calc(100% + 8px);left:50%;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;max-width:70px;min-height:16px;padding:0 5px;overflow:hidden;border-radius:5px;background:rgb(162,162,162);color:#000;font-size:12px;font-weight:700;letter-spacing:.4px;line-height:16px;text-align:center;text-overflow:ellipsis;text-shadow:none;white-space:nowrap;transform:translateX(-50%);pointer-events:none}") && !sheet.includes(".plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}")), "All empty slots must use compact grey position badges at the occupied surname distance.");
 assert.ok([source, generated].every(shell => shell.includes('viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenPlus"') && shell.includes('plus.append(makeSlotIcon("path", { d: "M37 50h26" }), makeSlotIcon("path", { d: "M50 37v26" }));')), "Ring and plus must share one centered SVG coordinate system.");
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}')
-  && sheet.includes('.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken,.plannerFormationSlotButtonPickerOpen .plannerFormationToken{transform:scale(1.1);box-shadow:0 0 0 2px var(--primary-hover)')
+  && sheet.includes('.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken,.plannerFormationSlotButtonPickerOpen .plannerFormationToken{box-shadow:0 0 0 2px var(--primary-hover)')
   && sheet.includes('.plannerDepthPickerContent{display:grid;gap:3px;max-height:min(370px,60dvh);overflow-y:auto;padding:10px;')
   && sheet.includes('.plannerDepthPickerPointer{position:absolute;top:-9px;width:16px;height:10px;pointer-events:none;')
   && sheet.includes('.plannerDepthPickerPointerAbove{top:auto;bottom:-9px;transform:rotate(180deg)}')
