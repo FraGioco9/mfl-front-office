@@ -7598,6 +7598,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
 .plannerRosterTable td:nth-child(3) .plannerRosterSkeleton{margin-left:0}
 .plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:500px;height:auto;aspect-ratio:72/109;margin:0 auto}
+.plannerPitchPanel .plannerPitch{overflow:visible}
 #plannerRosterRetryButton{margin-top:8px}
 @media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerSlotColumn{width:44px}.plannerRosterTable .plannerNationalityColumn{width:26px}.plannerRosterTable .plannerPlayerColumn{width:auto}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:10%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:7%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 
@@ -7667,7 +7668,6 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerPosition.fair{background:#ffc107;color:#000}
 .plannerFormationPlayerPosition.some{background:#ff5722;color:#000}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
-.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 18px;width:18px;height:18px;border:0;border-radius:3px;object-fit:contain;filter:drop-shadow(0 0 1px rgba(255,255,255,.85))}
 .plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;width:min(320px,calc(100vw - 20px));overflow:visible;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
 .plannerDepthPickerContent{display:grid;gap:3px;max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border-radius:8px;background:var(--surface)}
 .plannerDepthPicker[hidden]{display:none}
