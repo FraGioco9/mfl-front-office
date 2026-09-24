@@ -1,0 +1,27 @@
+name: Rebase Planner PR 1025
+
+on:
+  push:
+    branches: [ops/rebase-pr-1025]
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Rebase original Planner commits onto main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main feat/914-planner-team-selection
+          git checkout -B feat/914-planner-team-selection origin/feat/914-planner-team-selection
+          git rebase --rebase-merges origin/main
+          git push origin HEAD:feat/914-planner-team-selection --force-with-lease=refs/heads/feat/914-planner-team-selection:8d26de57961f47786964628e9952ac3e74836ee8
