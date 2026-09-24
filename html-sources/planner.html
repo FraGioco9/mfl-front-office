@@ -1011,11 +1011,11 @@
               const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");
               lines.forEach((linePositions, lineIndex) => {
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
-                const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);
+                const y = 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const count = linePositions.length;
                 const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
                 const spread = selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1;
-                const width = (count >= 5 ? 82 : count === 4 ? 80 : count === 3 ? 68 : pairedStrikers ? 30 : 48) * spread;
+                const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;
                 const wideForwardLine = linePositions.includes("ST") || linePositions.includes("CF");
                 linePositions.forEach((position, column) => {
                   const occurrence = (slotCounts.get(position) || 0) + 1;
@@ -1045,7 +1045,8 @@
               });
               const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);
               goalkeeper.style.left = "50%";
-              goalkeeper.style.top = "94%";
+              // Keep the surname/badge within the bottom touchline at every viewport width.
+              goalkeeper.style.top = "calc(100% - 72px)";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
               // Reflect only valid Depth starters in the first squad-table column.
