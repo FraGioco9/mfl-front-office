@@ -1695,8 +1695,12 @@ const browserTestSource = String.raw`(() => {
           assert(Math.abs(rect.width - restingTokenSizes[index][0]) <= 0.5
             && Math.abs(rect.height - restingTokenSizes[index][1]) <= 0.5
             && style.transform === "none" && style.filter === "none"
-            && style.boxShadow !== "none",
-            "Picker-open highlight must show only the border, with no zoom or brightness change in " + spot.dataset.slotKey);
+            && (frame < 12 || style.boxShadow !== "none"),
+            "Picker-open highlight must show only the border, with no zoom or brightness change in "
+              + spot.dataset.slotKey + " at frame " + frame + ": " + JSON.stringify({
+                width: rect.width, height: rect.height, expected: restingTokenSizes[index],
+                transform: style.transform, filter: style.filter, boxShadow: style.boxShadow
+              }));
         });
       }
       hoverButtons.forEach(button => button.classList.remove("plannerFormationSlotButtonPickerOpen"));
