@@ -106,6 +106,23 @@ assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set
   "Already assigned players stay visible even when they fall below the eligibility threshold.");
 assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set([26])),p=>p.player_id),[24,21,22],
   "A retired player must not be made available through a stale selected ID.");
+const belowThresholdFixtures = [
+  {player_id:31,name:"ST 100",positions:"ST",overall:100},
+  {player_id:32,name:"GK 100",positions:"GK",overall:100},
+  {player_id:33,name:"Best LB",positions:"LB",overall:60},
+  {player_id:34,name:"Lower LB",positions:"LB",overall:55},
+  {player_id:35,name:"Retired LB",positions:"LB",overall:110,retirement_years:0},
+];
+assert.deepEqual(Array.from(ratings.pickerCandidates(belowThresholdFixtures,"LB"),p=>p.player_id),[33],
+  "When no one reaches 90% of squad average, offer only the strongest positional player and exclude retired players.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(belowThresholdFixtures,"LB",new Set(),33),p=>p.player_id),[34],
+  "When the strongest LB occupies this slot, offer the next strongest eligible LB rather than an empty menu.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(belowThresholdFixtures,"LB",new Set([34])),p=>p.player_id),[33,34],
+  "A selected LB remains transferable alongside the strongest positional fallback.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(belowThresholdFixtures,"LW"),p=>p.player_id),[],
+  "Do not offer someone at a position they cannot play.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set(),24),p=>p.player_id),[21,22],
+  "Excluding the current starter must retain the regular 10% eligibility rule for other players.");
 vm.runInContext(helper + "\nthis.distribute = distributeFormationDepth;", ratings);
 const distribute = ratings.distribute;
 assert.deepEqual(Array.from(distribute([["CB"]],ratingFixtures)[0],p=>p.player_id),[14,15,16],
@@ -260,6 +277,12 @@ assert.ok(source.includes('position === "RW") && wideForwardLine ? 6') && genera
 assert.ok([source, generated].every(shell => shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
   && shell.includes('selected === "433cf" && position === "CF" ? 6')
   && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')), "4-3-3 (CF) wingers must rise to 12% and the CF sit beneath them at 16%, leaving other CF formations unchanged.");
+assert.ok([source, generated].every(shell => shell.includes('const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null) => {')
+  && shell.includes('const meetsThreshold = ranked.some(player => {')
+  && shell.includes('const strongest = meetsThreshold ? null')
+  && shell.includes('if (!meetsThreshold) return player === strongest;')
+  && shell.includes('new Set(assignmentByPlayer.keys()), currentId);')),
+  "Position pickers must show the best positional player when no other option reaches the 10% threshold, excluding the current starter.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "352" && position === "CDM" ? 50')
   && shell.includes('selected === "352" && position === "CM" ? (occurrence === 1 ? 33 : 67)')
   && shell.includes('const offset = selected === "352" && position === "CDM" ? 54 - y')),
