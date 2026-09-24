@@ -20,6 +20,13 @@
   const rosterBody=document.getElementById("plannerRosterBody");
   const formationSelect=/** @type {HTMLSelectElement|null} */(document.getElementById("plannerFormationSelect"));
   const rosterCount=document.getElementById("plannerRosterCount");
+  const squadSummary={
+    contracts:document.getElementById("plannerTotalContracts"),
+    overall:document.getElementById("plannerAverageOverall"),
+    best16:document.getElementById("plannerBest16Overall"),
+    best11:document.getElementById("plannerBest11OverallSum"),
+    age:document.getElementById("plannerAverageAge"),
+  };
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
   const addPlayerButton=document.getElementById("plannerAddPlayerButton");
@@ -83,6 +90,21 @@
   function clearResults(){searchSequence+=1;if(results instanceof HTMLElement){results.hidden=true;results.replaceChildren();}}
   function plannerPath(clubId=""){const id=String(clubId||"").trim();return id?"/planner?club="+encodeURIComponent(id):"/planner";}
   function updatePlannerUrl(clubId="",{replace=false}={}){const next=plannerPath(clubId);if(location.pathname+location.search===next)return;history[replace?"replaceState":"pushState"]({},"",next);Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();}
+  function renderSquadSummary(){
+    const numerical=key=>roster.map(player=>{
+      const raw=player?.[key];
+      return raw===null||raw===undefined||String(raw).trim()===""?NaN:Number(raw);
+    }).filter(value=>Number.isFinite(value)&&value>0);
+    const overall=numerical("overall").sort((a,b)=>b-a);
+    const ages=numerical("age");
+    const mean=values=>values.length?(values.reduce((total,value)=>total+value,0)/values.length).toFixed(2):"—";
+    const set=(element,value)=>{if(element)element.textContent=value;};
+    set(squadSummary.contracts,totalPlannedContracts().toFixed(2)+"%");
+    set(squadSummary.overall,mean(overall));
+    set(squadSummary.best16,mean(overall.slice(0,16)));
+    set(squadSummary.best11,overall.length?overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(2):"—");
+    set(squadSummary.age,mean(ages));
+  }
   function resetRoster(){
     activeContractEditor?.cancel?.();
     activeContractEditor=null;
@@ -91,6 +113,7 @@
     rosterController=null;
     roster=[];
     rosterSlots=new Map();
+    renderSquadSummary();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.([]);
     clubSearchPlayers=[];
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
@@ -510,6 +533,7 @@
         editContract.textContent="✎";
         editContract.setAttribute("aria-label","Edit contract for "+String(player.name||"player"));
         if(activeContractEditor?.playerId===player.player_id)activeContractEditor=null;
+        if(commit)renderSquadSummary();
       };
       const openContractEdit=()=>{
         if(activeContractEditor&&activeContractEditor.playerId!==player.player_id){
@@ -578,6 +602,7 @@
     rosterBody.replaceChildren(fragment);
     rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="("+roster.length+")";
+    renderSquadSummary();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.(roster);
     rosterMessage(roster.length?"":"No players in this squad.");
   }
@@ -848,7 +873,11 @@
   document.querySelectorAll(".plannerPlayerSearchTable").forEach(table=>{
     const body=table.querySelector("tbody");
     if(!(body instanceof HTMLElement))return;
-    const syncBodyDividers=()=>body.classList.toggle("plannerTableNoVerticalScroll",body.scrollHeight<=body.clientHeight);
+    const syncBodyDividers=()=>{
+      const noVerticalScroll=body.scrollHeight<=body.clientHeight;
+      body.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll);
+      table.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll);
+    };
     if(typeof ResizeObserver==="function")new ResizeObserver(syncBodyDividers).observe(body);
     if(typeof MutationObserver==="function")new MutationObserver(syncBodyDividers).observe(body,{childList:true});
     syncBodyDividers();
