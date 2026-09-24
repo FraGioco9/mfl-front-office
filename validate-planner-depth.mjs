@@ -53,8 +53,11 @@ assert.ok(css.includes(".plannerDepthCardList") && styles.includes(".plannerDept
 assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill and the slot player picker.");
 assert.ok(source.includes('const depthAssignments = new Map()') && source.includes('const autoFillDepth = () =>'), "Depth must preserve unique explicit assignments and auto-fill.");
 assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)') && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill and slots must be interactive.");
-assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerPhoto') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show a portrait/badge and up to two backups.");
+assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show a club gradient/badge and up to two backups.");
+assert.ok(!source.includes('plannerFormationPlayerPhoto') && !source.includes('plannerFormationPlayerSliders') && !source.includes('plannerFormationPlayerShade'), "Assigned circles must not overlay photos, sliders, or shade on the club gradient.");
+assert.ok(!generated.includes('plannerFormationPlayerPhoto') && !generated.includes('plannerFormationPlayerSliders'), "Generated shell must not restore the clipped icon or starter portrait.");
+assert.ok(!css.includes('.plannerFormationPlayerPhoto') && !styles.includes('.plannerFormationPlayerPhoto'), "Remove obsolete starter photo and sliders CSS from both bundles.");
 assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('--planner-depth-primary') && planner.includes('--planner-depth-secondary'), "Changing Clubs must clear depth selection and set the branded gradient.");
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
-assert.ok(generated.includes('const autoFillDepth = () =>') && generated.includes('plannerFormationPlayerPhoto'), "Generated shell must include interactive depth.");
+assert.ok(generated.includes('const autoFillDepth = () =>') && generated.includes('plannerFormationPlayerGradient'), "Generated shell must include interactive gradient depth.");
 console.log("Planner depth: repeated slots, Overall, multi-position, retirement, empty slots, reset and generated assets passed.");
