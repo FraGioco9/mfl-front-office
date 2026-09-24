@@ -710,15 +710,11 @@
                   ...player,
                   eligiblePositions: (Array.isArray(player.positions) ? player.positions : String(player.positions || "").split(/[,/]/))
                     .map(value => String(value).trim().toUpperCase()).filter(Boolean),
-                }))
-                .sort((a, b) => {
-                  const overall = player => player.overall === null || player.overall === undefined || String(player.overall).trim() === ""
-                    ? -Infinity : (Number.isFinite(Number(player.overall)) ? Number(player.overall) : -Infinity);
-                  return overall(b) - overall(a) || Number(a.player_id) - Number(b.player_id);
-                });
+                }));
               for (const position of new Set(positions)) {
                 const indexes = positions.flatMap((value, index) => value === position ? [index] : []);
-                const eligible = ranked.filter(player => player.eligiblePositions.includes(position));
+                // Backups and depth cards use the same positional rating as Auto-fill.
+                const eligible = rankDepthPlayers(ranked, position);
                 eligible.forEach((player, index) => buckets[indexes[index % indexes.length]].push(player));
               }
               return buckets;
@@ -755,9 +751,12 @@
                   && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
               })
               .sort((a, b) => {
-                const overall = player => Number.isFinite(Number(player.overall)) && player.overall !== null && String(player.overall).trim() !== ""
-                  ? Number(player.overall) : -Infinity;
-                return overall(b) - overall(a)
+                // Main Overall must not outrank the player's actual rating at this slot.
+                const positionalOverall = player => {
+                  const rating = depthPlayerOverall(player, position);
+                  return rating === "—" ? -Infinity : Number(rating);
+                };
+                return positionalOverall(b) - positionalOverall(a)
                   || depthPlayerName(a).localeCompare(depthPlayerName(b), undefined, { sensitivity: "base" })
                   || Number(a.player_id) - Number(b.player_id);
               });
