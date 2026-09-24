@@ -254,6 +254,23 @@ try {
   const state = await waitForRenderedShell(cdp);
   initialDevAssetToken = state.devAssetToken;
   assert(initialDevAssetToken && initialDevAssetToken !== "production-static", "Development document did not receive the Webpack legacy-asset watch token.");
+  if (new URL(targetUrl).pathname === "/planner") {
+    const check = await cdp.send("Runtime.evaluate", {
+      expression: `(() => {
+        const planner = document.querySelector(".navPlannerIcon");
+        return {
+          hasPlanner: Boolean(document.querySelector("#plannerPage")),
+          navFill: planner ? getComputedStyle(planner).fill : "",
+          hasNotFound: Boolean(document.querySelector("#notFoundPage:not([hidden])")),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    assert(check?.result?.value?.hasPlanner, "Planner Next route must include the full Planner document.");
+    assert.equal(check.result.value.navFill, "none", "Planner sidebar glyph must not render as a filled black square.");
+    assert(!check.result.value.hasNotFound, "Planner direct navigation must not show the Page not found shell.");
+  }
+
   const targetPathname = new URL(targetUrl).pathname;
   const expectedDocumentTitle = targetPathname === "/planner"
     ? "Planner - MFL Front Office"

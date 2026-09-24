@@ -56,6 +56,15 @@ jobs:
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
 
+      - name: Verify Planner is a first-class Next route
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --output /tmp/mfl-planner-direct.html --write-out '%{http_code}' http://localhost:4000/planner)"
+          test "$status" = "200"
+          grep -q 'id="plannerPage"' /tmp/mfl-planner-direct.html
+          grep -q 'class="navEmoji navPlannerIcon"' /tmp/mfl-planner-direct.html
+
       - name: Verify Planner refresh title stays stable
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/planner
 
