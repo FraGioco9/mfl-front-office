@@ -233,7 +233,11 @@ assert.ok([source, generated].every(shell => shell.includes('selected === "433cf
   && shell.includes('selected === "433cf" && position === "CF" ? 6')
   && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')), "4-3-3 (CF) wingers must rise to 12% and the CF sit beneath them at 16%, leaving other CF formations unchanged.");
 assert.ok(source.includes('const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");') && generated.includes('const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");'), "Mixed CDM/CM formations must opt into position-specific midfield depth.");
-assert.ok(source.includes('hasHoldingAndCentralMidfield && position === "CM" ? 6') && generated.includes('hasHoldingAndCentralMidfield && position === "CM" ? 6') && source.includes('hasHoldingAndCentralMidfield && position === "CDM" ? 9') && generated.includes('hasHoldingAndCentralMidfield && position === "CDM" ? 9'), "Lower both CM and CDM slots in mixed midfield formations while keeping CDMs deeper.");
+assert.ok([source, generated].every(shell => shell.includes('(selected === "433a" || selected === "433d") && position === "CM" ? 0')
+  && shell.includes('hasHoldingAndCentralMidfield && position === "CM" ? 6')
+  && shell.includes('hasHoldingAndCentralMidfield && position === "CDM" ? 9')
+  && shell.includes('position === "CAM" && count > 1 ? -4')),
+  "4-3-3 (att/def) CMs stay on the usual midfield line, with CAM higher and CDM lower; other mixed midfields retain their depths.");
 assert.ok(source.includes('selected === "352b" && midfield && position === "CAM" ? 50') && generated.includes('selected === "352b" && midfield && position === "CAM" ? 50') && source.includes('occurrence === 1 ? 38 : 62') && generated.includes('occurrence === 1 ? 38 : 62'), "3-5-2 (B) must centre CAM between the two CDMs.");
 assert.ok(source.includes('selected === "352b" && midfield && position === "CDM" ? 8') && generated.includes('selected === "352b" && midfield && position === "CDM" ? 8') && source.includes('selected === "352b" && midfield && position === "CAM" ? -8') && generated.includes('selected === "352b" && midfield && position === "CAM" ? -8'), "3-5-2 (B) CDMs must sit deeper while CAM sits farther forward.");
 assert.ok(generated.includes('const autoFillDepth = () =>') && generated.includes('plannerFormationPlayerGradient'), "Generated shell must include interactive gradient depth.");
