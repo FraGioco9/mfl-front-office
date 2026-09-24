@@ -77,7 +77,7 @@
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
 .plannerRosterTable .plannerSlotColumn{width:48px}
-.plannerRosterTable .plannerNationalityColumn{width:6%}
+.plannerRosterTable .plannerNationalityColumn{width:28px}
 .plannerRosterTable .plannerPlayerColumn{width:auto}
 .plannerRosterTable .plannerPositionColumn{width:12%}
 .plannerRosterTable .plannerAgeColumn{width:9%}
