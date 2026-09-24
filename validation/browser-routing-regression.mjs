@@ -1845,17 +1845,36 @@ const browserTestSource = String.raw`(() => {
       assert(removeStarter?.textContent==="×Remove"
         && removeStarter.querySelector(".plannerDepthPickerRemoveIcon")?.getAttribute("aria-hidden")==="true",
         "The clear-starter control must read Remove with a decorative x to its left.");
+      const removeIcon = removeStarter.querySelector(".plannerDepthPickerRemoveIcon");
+      const removeText = removeStarter.querySelector("span:last-child");
+      const removeMidpoint = removeStarter.getBoundingClientRect().top + removeStarter.getBoundingClientRect().height / 2;
+      assert(Math.abs(removeIcon.getBoundingClientRect().top + removeIcon.getBoundingClientRect().height / 2 - removeMidpoint) <= 1
+        && Math.abs(removeText.getBoundingClientRect().top + removeText.getBoundingClientRect().height / 2 - removeMidpoint) <= 1,
+        "Remove x and label must both be vertically centered in their menu row.");
       const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
-      const currentStarterRow = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]');
-      assert(assignedOtherSlot?.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
+      assert(assignedOtherSlot && !assignedOtherSlot.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
         && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
-        "Players assigned in another slot must stay visible, marked Selected with their slot, and unavailable for duplicate selection.");
-      assert(currentStarterRow?.disabled && currentStarterRow.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected",
-        "The current starter must remain visible and identified as selected.");
+        "An already-picked player must remain clickable with its previous slot marked.");
+      assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]'),
+        "The starter occupying this exact slot must be omitted from its own selection menu.");
       assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="106"]'),
         "Players more than 10% below team average must not appear in a position picker.");
+      assignedOtherSlot.click();
+      assert(slot("CB#1")?.dataset.playerId==="101" && !slot("CB#2")?.dataset.playerId
+        && !depthPicker.querySelector('.plannerDepthPickerPlayer'),
+        "Moving a selected player must occupy the new slot and clear its previous slot without duplication.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      const returnPlayer = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
+      assert(returnPlayer && !returnPlayer.disabled && returnPlayer.dataset.assignedSlot==="CB#1",
+        "Moved players must remain transferable back to their original slot.");
+      returnPlayer.click();
+      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101",
+        "Moving back must clear the temporary slot.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       depthPicker.querySelector(".plannerDepthPickerClear").click();
-      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Clear must affect the selected circle only.");
+      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Remove must affect the selected circle only.");
       formationPreview.render("433");
       assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
       // Auto-fill must stay available for a repeated slot even if round-robin backups
