@@ -60,6 +60,15 @@ assert.equal(ratings.depthOverall({positions: "GK", overall: 80, goalkeeping: 83
 assert.equal(ratings.depthOverall({positions: "CM, CDM", overall: 80}, "CDM"), "—", "Missing attributes must never masquerade as base OVR for a different position");
 assert.equal(ratings.depthOverall({positions: "CM", overall: 80}, "CM"), "80");
 assert.equal(ratings.depthOverall(player, "ST"), "—");
+const surnames = {};
+vm.createContext(surnames);
+vm.runInContext(source.slice(source.indexOf("const depthPlayerName ="), source.indexOf("const depthPlayerFamiliarity ="))
+  + "\nthis.surname = depthPlayerSurname;", surnames);
+assert.equal(surnames.surname({name:"Marco De Rossi"}), "De Rossi", "Surname label must preserve a multiword family name.");
+assert.equal(surnames.surname({name:"Virgil van Dijk"}), "van Dijk");
+assert.equal(surnames.surname({name:"Rossi"}), "Rossi", "Single-name players must remain readable.");
+assert.equal(surnames.surname({name:"Marco Rossi"}), "Rossi", "Given name must not be displayed beneath the pitch circle.");
+assert.ok(generated.includes("const depthPlayerSurname = player =>"), "Generated Planner must include surname extraction.");
 const endMarker = "// END PLANNER DEPTH";
 const start = source.indexOf(startMarker);
 const end = source.indexOf(endMarker, start);
@@ -131,6 +140,9 @@ assert.ok(source.includes('const depthAssignments = new Map()') && source.includ
 assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)') && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill and slots must be interactive.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
+assert.ok(source.includes('surname.textContent = depthPlayerSurname(starter);') && generated.includes('surname.textContent = depthPlayerSurname(starter);')
+  && source.includes('surname.title = depthPlayerName(starter);') && source.includes('surname.setAttribute("aria-hidden", "true");'),
+  "Occupied Planner circles must show the surname while preserving a full-name tooltip and button accessibility.");
 assert.ok(source.includes('token.append(gradient, portrait);') && source.includes('portrait.addEventListener("error", () => { portrait.hidden = true; });'), "Assigned circles must show a portrait over the gradient and keep the gradient when the photo is unavailable.");
 assert.ok(!source.includes('plannerFormationPlayerSliders') && !source.includes('plannerFormationPlayerShade'), "Assigned circles must not restore sliders icons or dark overlays.");
 assert.ok(generated.includes('token.append(gradient, portrait);') && !generated.includes('plannerFormationPlayerSliders'), "Generated shell must include the portrait but no clipped icon.");
@@ -138,6 +150,10 @@ assert.ok(css.includes('.plannerFormationPlayerPhoto{') && styles.includes('.pla
 assert.ok(css.includes('.plannerFormationPlayerPhoto[hidden]{display:none}') && styles.includes('.plannerFormationPlayerPhoto[hidden]{display:none}'), "Failed player photos must leave the gradient visible.");
 assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('--planner-depth-primary') && planner.includes('--planner-depth-secondary'), "Changing Clubs must clear depth selection and set the branded gradient.");
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
+assert.ok([css, styles].every(sheet => sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 1px)')
+  && sheet.includes('.plannerFormationBackups{position:absolute;top:calc(100% + 19px)')
+  && sheet.includes('.plannerDepthDetails{margin-top:60px}')),
+  "Surname and backups must use separate rows, leaving room beneath the goalkeeper.");
 assert.ok(source.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && generated.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && source.includes('goalkeeper.style.top = "94%";'), "All formations must use the upper and lower pitch evenly in canonical and generated shells.");
 assert.ok(css.includes("width:clamp(54px,16%,70px)") && styles.includes("width:clamp(54px,16%,70px)") && css.includes("width:clamp(50px,15%,64px)") && styles.includes("width:clamp(50px,15%,64px)"), "Balanced circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 48") && generated.includes("pairedStrikers ? 30 : 48") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
