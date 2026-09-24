@@ -246,8 +246,8 @@ assert.ok([source, generated].every(shell => shell.includes('selected === "4231"
   "4-2-3-1 must align its CAM with LM and RM without moving the CDMs or striker.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4312" && position === "CAM" ? -4')),
   "4-3-1-2 must move its CAM forward to 25% without shifting its two strikers or other formations.");
-assert.ok([source, generated].every(shell => shell.includes('selected === "4321" && position === "CF" ? -9')),
-  "4-3-2-1 must bring both CFs to 20% while keeping other formations at their existing CF heights.");
+assert.ok([source, generated].every(shell => shell.includes('(selected === "4321" || selected === "3421") && position === "CF" ? -9')),
+  "3-4-2-1 and 4-3-2-1 must share a 20% CF line while other CF formations retain their heights.");
 assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4')
   && shell.includes('linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));')
   && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
