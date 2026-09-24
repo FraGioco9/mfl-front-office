@@ -1767,7 +1767,7 @@ const browserTestSource = String.raw`(() => {
       assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
       // Clickable starters and backup lists use the same roster-derived depth source.
       const fixture = [
-        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,positions:"CB",overall,retirement_years:5})),
+        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,nationality:index===2?"Italy":"",positions:"CB",overall,retirement_years:5})),
         {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
         {player_id:108,name:"GK 82",positions:"GK",overall:82,retirement_years:5},
         {player_id:109,name:"Retired CB",positions:"CB",overall:99,retirement_years:0},
@@ -1796,8 +1796,18 @@ const browserTestSource = String.raw`(() => {
       assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
       const starterSurname = slot("CB#1").querySelector(".plannerFormationPlayerSurname");
-      assert(starterSurname?.textContent==="De Rossi" && starterSurname.title==="Marco De Rossi",
-        "Assigned circle must show only the player's family name beneath the OVR/position badge.");
+      assert(starterSurname?.querySelector(".plannerFormationSurnameText")?.textContent==="De Rossi"
+        && starterSurname.title==="Marco De Rossi",
+        "Assigned circle must show the surname below the pitch circle and keep the full name on hover.");
+      const starterFlag = starterSurname.querySelector(".plannerFormationSurnameFlag.flagImage");
+      assert(starterFlag?.getAttribute("data-tooltip")==="Italy"
+        && starterFlag.getAttribute("src").endsWith("/1f1ee-1f1f9.svg"),
+        "Pitch surname must show the same Italy flag and tooltip as the Planner squad.");
+      assert(starterFlag.getBoundingClientRect().right <= starterSurname.querySelector(".plannerFormationSurnameText").getBoundingClientRect().left,
+        "Nationality flag must be to the left of the starter's surname.");
+      assert(starterSurname.getBoundingClientRect().top
+        >= slot("CB#1").querySelector(".plannerFormationPlayerBadge").getBoundingClientRect().bottom + 9,
+        "Keep a visible gap between the badge/circle and the flagged surname.");
       assert(starterSurname.getAttribute("aria-hidden")==="true"
         && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
         "Surname is visual-only; button must retain the accessible full player name.");
@@ -1806,8 +1816,8 @@ const browserTestSource = String.raw`(() => {
         "Empty circles must keep their position label instead of a surname.");
       assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
       assert(slot("CB#1").querySelector(".plannerFormationBackups").getBoundingClientRect().top
-        >= starterSurname.getBoundingClientRect().bottom,
-        "Backup names must appear beneath the new surname without overlapping.");
+        >= starterSurname.getBoundingClientRect().bottom + 10,
+        "Backup names must have their own separated rows beneath the flagged surname.");
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
       assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
@@ -1897,7 +1907,9 @@ const browserTestSource = String.raw`(() => {
       assert(Math.abs(pitchSurfaceBox.width / pitchSurfaceBox.height - 72 / 109) < 0.01, "Planner pitch must keep the supplied SVG proportions.");
       if (innerWidth > 800) {
         assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
-        assert(pitchSurfaceBox.width > 280 && pitchSurfaceBox.width <= 420, "Desktop Planner Depth pitch must remain centered at the reduced 420px maximum.");
+        assert(pitchSurfaceBox.width > 280 && pitchSurfaceBox.width <= 500, "Desktop Planner Depth pitch may expand to the new 500px maximum.");
+        if (pitchBox.width >= 516) assert(pitchSurfaceBox.width > 420,
+          "Wide desktop Planner must show a larger pitch than its previous 420px limit.");
         assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
         assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 18, "Planner Depth pitch must sit just below its formation controls.");
       }
