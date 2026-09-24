@@ -589,7 +589,7 @@ const browserTestSource = String.raw`(() => {
         assert(parserSnapshot.plannerTeamSelectorHidden === true, "Selected Planner first paint exposed the Team search.");
         assert(parserSnapshot.plannerSelectedTeamHidden === false, "Selected Planner first paint did not expose the club identity.");
         assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
-        assert(parserSnapshot.plannerRosterSkeletons === 56, "Selected Planner first paint did not expose the full roster loading skeleton.");
+        assert(parserSnapshot.plannerRosterSkeletons === 64, "Selected Planner first paint did not expose the full roster loading skeleton.");
         assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
         assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
         assert(Number.parseFloat(parserSnapshot.plannerFormationSpotRows[0]) === 76 && Number.parseFloat(parserSnapshot.plannerFormationSpotRows[9]) === 10 && parserSnapshot.plannerFormationSpotRows[10] === "94%", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
@@ -1617,13 +1617,20 @@ const browserTestSource = String.raw`(() => {
       formationPreview.render("4231");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
-      assert(text("#plannerRosterBody td:nth-child(2)").includes("Browser Player"), "Planner must display the canonical current squad.");
-      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(4)") === "23", "Planner must show player age.");
+      assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(5)") === "23", "Planner must show player age.");
       const squadPlayer = document.querySelector("#plannerRosterBody tr[data-player-id]");
-      for (const index of [2, 3, 4]) {
+      assert(document.querySelector(".plannerRosterTable thead th:first-child")?.textContent === "Slot", "Squad Slot must be the first column.");
+      assert(squadPlayer.children.length === 8 && squadPlayer.firstElementChild?.classList.contains("plannerRosterSlotCell"), "Every squad row must have eight ordered cells.");
+      assert(squadPlayer.querySelector(".plannerRosterSlotBadge")?.hidden && squadPlayer.querySelector(".plannerRosterSlotEmpty")?.textContent === "—", "Unassigned players must show an empty Slot, not an invented position.");
+      const rosterTable = document.querySelector(".plannerRosterTable");
+      const columnWidths = Array.from(rosterTable.querySelectorAll("col"), col => col.getBoundingClientRect().width);
+      assert(columnWidths.length === 8 && columnWidths.every(value => value > 0) && Math.abs(columnWidths.reduce((sum, value) => sum + value, 0) - rosterTable.getBoundingClientRect().width) < 8, "Rebalanced eight-column squad layout must fill the table width.");
+
+      for (const index of [3, 4, 5]) {
         assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
       }
-      assert(squadPlayer.querySelector("td:nth-child(5) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
+      assert(squadPlayer.querySelector("td:nth-child(6) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
       assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
       assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
       assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
@@ -1813,6 +1820,24 @@ const browserTestSource = String.raw`(() => {
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
         {player_id:3,name:"Added Browser Defender",positions:"CB",overall:76,retirement_years:5},
       ]);
+      const squadSlot = playerId => document.querySelector('#plannerRosterBody tr[data-player-id="' + playerId + '"]');
+      const slotBadge = playerId => squadSlot(playerId)?.querySelector(".plannerRosterSlotBadge");
+      const slotEmpty = playerId => squadSlot(playerId)?.querySelector(".plannerRosterSlotEmpty");
+      assert(slotBadge(3)?.hidden && !slotEmpty(3)?.hidden, "An unassigned squad player must have an empty Slot.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="3"]').click();
+      assert(slotBadge(3)?.textContent === "CB" && !slotBadge(3).hidden && slotEmpty(3).hidden, "Repeated Depth positions must show CB, never CB2 or CB#2.");
+      const chipStyle = getComputedStyle(slotBadge(3));
+      assert(chipStyle.color === "rgb(5, 248, 44)" && chipStyle.borderRadius === "5px" && chipStyle.backgroundColor !== "rgba(0, 0, 0, 0)", "Slot badge must match the translucent rounded green example.");
+      formationPreview.render("433");
+      assert(slotBadge(3)?.textContent === "CB", "Slot badges must survive compatible formation changes.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector(".plannerDepthPickerClear").click();
+      assert(slotBadge(3)?.hidden && !slotEmpty(3)?.hidden, "Clearing the starter must immediately clear the squad Slot.");
+      fillButton.click();
+      assert(slotBadge(1)?.textContent === "ST" && slotBadge(2)?.textContent === "RW" && slotBadge(3)?.textContent === "CB", "Auto-fill must refresh Slot labels for all starters.");
+      formationPreview.render("442");
+      assert(slotBadge(2)?.hidden && !slotEmpty(2)?.hidden && slotBadge(1)?.textContent === "ST", "Formation changes must clear obsolete RW assignments while keeping compatible ST.");
       formationPreview.render("4231");
       assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
       const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
