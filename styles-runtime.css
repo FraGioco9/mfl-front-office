@@ -7575,9 +7575,6 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterTable td{line-height:1.2}
 .plannerRosterTable td:not(:nth-child(3)),.plannerRosterTable th:not(:nth-child(3)){text-align:center}
 .plannerRosterTable tbody tr:hover{background:var(--row-hover)}
-.plannerRosterTable tfoot th,.plannerRosterTable tfoot td{padding:7px 5px;border-top:1px solid var(--border-strong);background:var(--surface-muted);font-weight:800}
-.plannerRosterTable tfoot th{text-align:left}
-.plannerRosterTable tfoot td{text-align:center;font-variant-numeric:tabular-nums}
 .plannerAgeContent{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0}
 .plannerAgeMarker.retirementMarker,.plannerAgeMarker.newMintMarker{margin-left:0}
 .plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:14px;height:14px;flex-basis:14px}
@@ -7605,12 +7602,10 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterTable :is(th,td):nth-child(2){padding-inline:4px}.plannerRosterTable td:nth-child(3),.plannerRosterTable th:nth-child(3){text-align:left}
 .plannerRosterTable .plannerPlayerSearchFlagCell .flagImage{width:20px;height:20px;max-width:100%;object-fit:contain}@media(max-width:800px){.plannerRosterTable .plannerPlayerSearchFlagCell .flagImage{width:18px;height:18px}}
 .plannerRosterTable tbody tr:last-child td,.plannerPlayerSearchTable tbody tr:last-child td{border-bottom:0}
-.plannerRosterTable tfoot th,.plannerRosterTable tfoot td{border-bottom:0}
 body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl-z-modal) + 1)}
 #plannerPlayerSearchClearButton,#plannerPlayerSearchClearButton:hover:not(:disabled),#plannerPlayerSearchClearButton:focus-visible:not(:disabled){border:0;background:transparent;box-shadow:none}
 .plannerRosterTable .plannerRosterRemove{border:0;background:transparent;box-shadow:none}
 
-.plannerRosterTable tfoot th[scope="row"]{text-align:left}
 
 /* Only popup table bodies scroll. Header backgrounds also fill the reserved gutter. */
 .plannerPlayerSearchResults{display:flex;flex-direction:column;overflow:hidden}
