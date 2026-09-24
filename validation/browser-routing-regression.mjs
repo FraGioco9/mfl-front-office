@@ -1772,8 +1772,21 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
         && formationSpot("CDM")[0]?.style.top === "54%",
         "4-3-3 (def) CMs must stay on the usual line while CDM drops back.");
+      formationPreview.render("433d");
+      const referenceDefensiveCDMTop = formationSpot("CDM")[0]?.style.top;
+      assert(referenceDefensiveCDMTop === "54%", "4-3-3 (def) must retain the reference holding-midfielder depth.");
       formationPreview.render("4132");
-      assert(formationSpot("CM")[0].style.top === "35%" && Number.parseFloat(formationSpot("CDM")[0].style.top) > 55, "4-1-3-2 central midfield must sit lower while CDM protects the defence.");
+      assert(["LM", "CM", "RM"].every(position => formationSpot(position).length === 1
+        && formationSpot(position)[0].style.top === "40%")
+        && formationSpot("CM")[0].style.left === "50%",
+        "4-1-3-2 LM, CM and RM must all share the regular 40% midfield line.");
+      assert(formationSpot("CDM").length === 1
+        && formationSpot("CDM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDefensiveCDMTop,
+        "4-1-3-2 CDM must match the actual 4-3-3 (def) 54% holding-midfielder level.");
+      assert(formationSpot("ST").length === 2
+        && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "4-1-3-2 must preserve both strikers.");
       formationPreview.render("41212narrow");
       assert(formationSpot("CM").every(spot => spot.style.top === "46%") && Number.parseFloat(formationSpot("CDM")[0].style.top) > 62, "Narrow diamond CMs must sit lower behind CAM and ahead of CDM.");
       formationPreview.render("352b");
