@@ -81,7 +81,7 @@ const helper = source.slice(start + startMarker.length, end);
 // Run the actual positional ranking used by Auto-fill and the depth cards.
 vm.runInContext('const depthPlayerName = player => String(player.name || "Player #" + player.player_id);\n'
   + source.slice(source.indexOf("const rankDepthPlayers ="), source.indexOf("const slotKeysFor ="))
-  + "\nthis.rankDepthPlayers = rankDepthPlayers; this.pickerCandidates = depthPickerCandidates;", ratings);
+  + "\nthis.rankDepthPlayers = rankDepthPlayers; this.pickerCandidates = depthPickerCandidates; this.spareCounts = depthSpareCounts;", ratings);
 const ratingFixtures = [
   {...player,player_id:14,name:"Natural CB",positions:"CB",overall:76},
   {...player,player_id:15,name:"Secondary CB",positions:"CM, CB",overall:98},
@@ -123,6 +123,26 @@ assert.deepEqual(Array.from(ratings.pickerCandidates(belowThresholdFixtures,"LW"
   "Do not offer someone at a position they cannot play.");
 assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set(),24),p=>p.player_id),[21,22],
   "Excluding the current starter must retain the regular 10% eligibility rule for other players.");
+assert.deepEqual(Array.from(ratings.spareCounts(["CB#1","CB#2","ST#1","GK#1"],[
+  {player_id:41,name:"First CB",positions:"CB",overall:95},
+  {player_id:42,name:"Second CB",positions:"CB",overall:90},
+  {player_id:43,name:"Third CB",positions:"CB",overall:88},
+  {player_id:44,name:"ST",positions:"ST",overall:95},
+  {player_id:45,name:"GK",positions:"GK",overall:95},
+],new Map())),[2,1,1,1],
+  "Repeated CBs must divide three spare players without double-counting; other positions count their own choices.");
+assert.deepEqual(Array.from(ratings.spareCounts(["CB#1","CB#2"],[
+  {player_id:41,name:"First CB",positions:"CB",overall:95},
+  {player_id:42,name:"Second CB",positions:"CB",overall:90},
+  {player_id:43,name:"Third CB",positions:"CB",overall:88},
+],new Map([["CB#1",41],["CB#2",42]]))),[1,0],
+  "A spare CB may count under only one occupied CB circle, never either starter.");
+assert.deepEqual(Array.from(ratings.spareCounts(["LB#1","ST#1"],belowThresholdFixtures,new Map())),[1,1],
+  "The depth count must include the positional fallback when no player meets the threshold.");
+assert.deepEqual(Array.from(ratings.spareCounts(["LB#1"],belowThresholdFixtures,new Map([["LB#1",33]]))),[1],
+  "Replacing a chosen fallback counts the next-best unassigned positional player.");
+assert.deepEqual(Array.from(ratings.spareCounts(["LW#1"],belowThresholdFixtures,new Map())),[0],
+  "An unavailable position should display zero depth.");
 vm.runInContext(helper + "\nthis.distribute = distributeFormationDepth;", ratings);
 const distribute = ratings.distribute;
 assert.deepEqual(Array.from(distribute([["CB"]],ratingFixtures)[0],p=>p.player_id),[14,15,16],
@@ -153,6 +173,20 @@ assert.equal(distribute([["RW"]], players)[0].length, 0, "Empty position must re
 assert.ok(generated.includes(helper), "Generated shell must contain the exact canonical depth algorithm.");
 assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && !shell.includes('plannerRosterTotalsRow')), "Keep the selected player's name but omit depth cards, backup lists and squad totals.");
 assert.ok([source, generated].every(shell => shell.includes('surnameText.textContent = depthPlayerSurname(starter);') && shell.includes('surname.title = depthPlayerName(starter);') && shell.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")') && shell.includes('surname.setAttribute("aria-hidden", "true");')), "Selected circle must display the abbreviated player surname and flag while retaining accessible full name.");
+assert.ok([source, generated].every(shell => shell.includes('const depthSpareCounts = (keys, players, assignments) => {')
+  && shell.includes('const spareCounts = depthSpareCounts(keys, depthRoster, depthAssignments);')
+  && shell.includes('const claimed = new Set(assignments.values());')
+  && shell.includes('const unique = new Map();')
+  && shell.includes('spareCounts[slotIndex]')
+  && shell.includes('depthBadge.className = "plannerFormationDepthBadge "')
+  && shell.includes('spot.dataset.depthCount = String(spareCount);')
+  && shell.includes('button.appendChild(depthBadge);')),
+  "Every circle must show deduplicated, unassigned spare depth based on the picker and current assignments.");
+assert.ok([css, styles].every(sheet => sheet.includes('.plannerFormationDepthBadge{position:absolute;z-index:6;top:7%;right:5%;')
+  && sheet.includes('.plannerFormationDepthBadge.single{background:#f1b833;')
+  && sheet.includes('.plannerFormationDepthBadge.multiple{background:#05f82c;')
+  && sheet.includes('.plannerFormationSlotButton{position:relative;display:flex;')),
+  "Depth indicators must be legible small circles attached to the pitch slot on desktop and mobile.");
 assert.ok(source.includes("setRoster(players)") && planner.includes('setRoster?.(roster)') && planner.includes('setRoster?.([])'), "Roster changes and Clear must redraw depth.");
 assert.ok(runtime.includes('setRoster?.(roster)') && runtime.includes('setRoster?.([])'), "Generated route core must redraw depth.");
 assert.ok([css, styles].every(sheet => !sheet.includes(".plannerDepthCardList") && !sheet.includes(".plannerDepthDetails{") && !sheet.includes(".plannerFormationBackups{") && sheet.includes(".plannerFormationPlayerSurname{")), "Obsolete depth summary and occupied-circle label styles must be removed.");
@@ -177,8 +211,7 @@ assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDept
   && source.includes('depthAssignments.clear();')
   && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill, Clear and slots must be interactive.");
 assert.ok(!source.includes("spot.title =") && !generated.includes("spot.title ="), "Hovering an empty or occupied Planner circle must never open a native tooltip.");
-assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))")
-  && shell.includes('.filter(player => Number(player.player_id) !== currentId);')
+assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()), currentId);")
   && shell.includes('status.textContent = "Selected · " + assignedSlot.split("#")[0];')
   && shell.includes('if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);')
   && !shell.includes("row.disabled = Boolean(assignedSlot);")
