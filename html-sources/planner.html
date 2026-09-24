@@ -1013,8 +1013,8 @@
                 const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
                 const count = linePositions.length;
                 // Flat four-player midfields share 4-4-2's 40% row; 3-4-3 (B)
-                // is a diamond, not a flat four. Do not flatten 4-2-4's attack.
-                const flatFourMidfield = midfield && count === 4 && selected !== "343b"
+                // and 5-4-1 are diamonds. Do not flatten 4-2-4's attack.
+                const flatFourMidfield = midfield && count === 4 && selected !== "343b" && selected !== "541"
                   && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
                 // The three CMs in 4-3-1-2/4-3-2-1 share the 4-4-2 midfield height.
                 // 4-1-3-2 uses that baseline with a small forward offset for LM/CM/RM.
@@ -1041,8 +1041,8 @@
                   // interpreting its slot order as a straight five-player row.
                   // 4-2-2-2 CDMs stay narrower than the 30%-wide striker pair.
                   // 3-5-2 holds its CDM centrally between two symmetric CMs.
-                  const x = selected === "343b" && (position === "CDM" || position === "CAM") ? 50
-                    : selected === "343b" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
+                  const x = (selected === "343b" || selected === "541") && (position === "CDM" || position === "CAM") ? 50
+                    : (selected === "343b" || selected === "541") && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
                     : selected === "352" && position === "CDM" ? 50
                     : selected === "352" && position === "CM" ? (occurrence === 1 ? 33 : 67)
                     : selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
@@ -1056,7 +1056,7 @@
                   // with its paired CDMs one step deeper.
                   // Diamond midfields match the 4-3-3 (def) CDM and 4-3-3 (att) CAM.
                   // Override before generic mixed-CDM/CM positioning can intercept them.
-                  const diamondMidfield = selected === "343b" || selected === "41212" || selected === "41212narrow";
+                  const diamondMidfield = selected === "343b" || selected === "541" || selected === "41212" || selected === "41212narrow";
                   const offset = selected === "352" && position === "CDM" ? 54 - y
                     : diamondMidfield && position === "CDM" ? 54 - y
                     : diamondMidfield && position === "CAM" ? 30 - y
