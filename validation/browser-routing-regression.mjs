@@ -2123,7 +2123,7 @@ const browserTestSource = String.raw`(() => {
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
       assert(depthIndicator("CB#1")?.textContent === "4" && depthIndicator("CB#2")?.textContent === "4"
-        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("2 available alternatives"),
+        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("4 available alternatives"),
         "After assignment both CB slots must count all four unassigned CBs, excluding the starter.");
       assert(!clearButton.disabled, "Clear must become available as soon as a pitch starter is selected.");
       assert(!document.getElementById("plannerDepthPickerPointer"),"Closing the position picker must remove its floating pointer.");
@@ -2303,7 +2303,7 @@ const browserTestSource = String.raw`(() => {
         "After replacement both CB slots must count the remaining strongest positional fallback.");
       // One versatile free player contributes to every position they can play.
       formationPreview.setRoster([
-        {player_id:601,name:"CM CAM",positions:"CM, CAM",overall:94},
+        {player_id:601,name:"CM CAM",positions:"CM, CAM",overall:94,passing:94,shooting:94,defense:94,dribbling:94,pace:94,physical:94,goalkeeping:20},
         {player_id:602,name:"GK",positions:"GK",overall:92},
       ]);
       formationPreview.render("433");
