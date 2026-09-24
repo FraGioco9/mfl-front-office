@@ -1753,13 +1753,15 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("CF").every(spot => spot.style.top === "20%")
         && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
         "4-3-2-1 must place both CFs forward at 20%, below its unchanged striker at 10%.");
-      for (const code of ["3421", "4411"]) {
-        formationPreview.render(code);
-        const centralForwards = formationSpot("CF");
-        assert(centralForwards.length === (code === "4411" ? 1 : 2)
-          && centralForwards.every(spot => spot.style.top === "26%"),
-          "All secondary CF lines must advance toward the opposing goal in " + code);
-      }
+      formationPreview.render("3421");
+      assert(formationSpot("CF").length === 2
+        && formationSpot("CF").every(spot => spot.style.top === "20%")
+        && formationSpot("CF").map(spot => spot.style.left).join(",") === "28%,72%"
+        && formationSpot("ST")[0].style.top === "10%",
+        "3-4-2-1 must match 4-3-2-1 CF height at 20% without changing CF width or ST height.");
+      formationPreview.render("4411");
+      assert(formationSpot("CF").length === 1 && formationSpot("CF")[0].style.top === "26%",
+        "4-4-1-1 CF must retain its existing 26% height.");
       formationPreview.render("433d");
       const referenceDiamondCDMTop = formationSpot("CDM")[0].style.top;
       formationPreview.render("433a");
