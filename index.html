@@ -2097,7 +2097,7 @@
                   const diamond41212 = selected === "41212" || selected === "41212narrow";
                   const offset = diamond41212 && position === "CDM" ? 54 - y
                     : diamond41212 && position === "CAM" ? 30 - y
-                    : selected === "41212narrow" && position === "CM" ? 42 - y
+                    : diamond41212 && ["LM", "RM", "CM"].includes(position) ? 42 - y
                     : flatFourMidfield && selected === "442b" && position === "CDM" ? 6
                     : flatFourMidfield ? 0
                       : selected === "352b" && midfield && position === "CDM" ? 8
