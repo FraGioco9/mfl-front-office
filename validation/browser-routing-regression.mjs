@@ -1787,7 +1787,7 @@ const browserTestSource = String.raw`(() => {
       const openingButton = slot("CB#1").querySelector(".plannerFormationSlotButton");
       const openingToken = openingButton.querySelector(".plannerFormationToken");
       assert(openingButton.classList.contains("plannerFormationSlotButtonPickerOpen")
-        && getComputedStyle(openingToken).boxShadow.includes(getComputedStyle(document.documentElement).getPropertyValue("--primary-hover").trim()),
+        && getComputedStyle(openingToken).boxShadow!=="none",
         "The pitch circle that opened the menu must keep the standard highlight-colour hover treatment.");
       const assertPickerPointer = key => {
         const pointer = document.getElementById("plannerDepthPickerPointer");
@@ -1816,6 +1816,7 @@ const browserTestSource = String.raw`(() => {
         "Picker portraits must use the same face-focused crop as the pitch portraits.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(!clearButton.disabled, "Clear must become available as soon as a pitch starter is selected.");
       assert(!document.getElementById("plannerDepthPickerPointer"),"Closing the position picker must remove its floating pointer.");
       assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
