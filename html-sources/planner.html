@@ -767,7 +767,7 @@
               });
             // Compare positional OVR against the squad's average Overall, not a
             // candidate pool that changes when a player is assigned elsewhere.
-            const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null) => {
+            const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null, unavailableIds = new Set()) => {
               const active = (Array.isArray(players) ? players : []).filter(player => {
                 const years = player?.retirement_years;
                 return Number.isSafeInteger(Number(player?.player_id)) && Number(player.player_id) > 0
@@ -780,7 +780,8 @@
               // Exclude the player occupying this exact slot before deciding
               // whether any other player reaches the 10% threshold.
               const ranked = rankDepthPlayers(active, position)
-                .filter(player => Number(player.player_id) !== Number(excludedId));
+                .filter(player => Number(player.player_id) !== Number(excludedId)
+                  && !unavailableIds.has(Number(player.player_id)));
               const meetsThreshold = ranked.some(player => {
                 const rating = depthPlayerOverall(player, position);
                 return rating !== "—" && (threshold === null || Number(rating) >= threshold);
@@ -797,32 +798,16 @@
                 return rating !== "—" && (threshold === null || Number(rating) >= threshold);
               });
             };
-            // Count genuine spare options: no starter, no player borrowed from another
-            // assigned slot. For repeated roles, split each player across those slots
-            // so one available CB never appears as two separate backups.
+            // Count spare options independently for each pitch slot. A free
+            // player can cover multiple eligible positions (or either repeated
+            // CB slot), but a player already assigned anywhere is not a spare.
             const depthSpareCounts = (keys, players, assignments) => {
-              const counts = keys.map(() => 0);
               const claimed = new Set(assignments.values());
-              for (const position of new Set(keys.map(key => key.split("#")[0]))) {
-                const indexes = keys.flatMap((key, index) => key.split("#")[0] === position ? [index] : []);
-                const choices = indexes.map(index => depthPickerCandidates(
-                  players, position, new Set(), assignments.get(keys[index]))
-                  .filter(player => !claimed.has(Number(player.player_id))));
-                const unique = new Map();
-                choices.forEach(candidates => candidates.forEach(player => unique.set(Number(player.player_id), player)));
-                let nextIndex = 0;
-                for (const player of rankDepthPlayers([...unique.values()], position)) {
-                  const id = Number(player.player_id);
-                  for (let attempt = 0; attempt < indexes.length; attempt += 1) {
-                    const localIndex = (nextIndex + attempt) % indexes.length;
-                    if (!choices[localIndex].some(candidate => Number(candidate.player_id) === id)) continue;
-                    counts[indexes[localIndex]] += 1;
-                    nextIndex = (localIndex + 1) % indexes.length;
-                    break;
-                  }
-                }
-              }
-              return counts;
+              return keys.map(key => {
+                const position = key.split("#")[0];
+                const choices = depthPickerCandidates(players, position, new Set(), assignments.get(key), claimed);
+                return new Set(choices.map(player => Number(player.player_id))).size;
+              });
             };
             const slotKeysFor = positions => {
               const counts = new Map();
@@ -1044,11 +1029,11 @@
                 depthBadge.className = "plannerFormationDepthBadge " + (spareCount === 0 ? "empty" : spareCount === 1 ? "single" : "multiple");
                 depthBadge.textContent = String(spareCount);
                 depthBadge.setAttribute("aria-hidden", "true");
-                button.appendChild(depthBadge);
                 const label = document.createElement("span");
                 label.className = "plannerFormationPositionLabel";
                 label.textContent = position;
-                spot.append(button, label);
+                // Keep the original OVR/position badge anchored to the outer slot.
+                spot.append(button, depthBadge, label);
                 return spot;
               };
               const fragment = document.createDocumentFragment();
