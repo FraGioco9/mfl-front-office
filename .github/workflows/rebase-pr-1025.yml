@@ -23,5 +23,62 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main feat/914-planner-team-selection
           git checkout -B feat/914-planner-team-selection origin/feat/914-planner-team-selection
+          set +e
           git rebase origin/main
+          rebase_status=$?
+          set -e
+          while (( rebase_status != 0 )); do
+            if [[ ! -d .git/rebase-merge && ! -d .git/rebase-apply ]]; then
+              exit "$rebase_status"
+            fi
+            mapfile -t conflicted < <(git diff --name-only --diff-filter=U)
+            if (( ${#conflicted[@]} == 0 )); then
+              echo "Rebase failed without unresolved files."
+              exit 1
+            fi
+            for file in "${conflicted[@]}"; do
+              case "$file" in
+                table-width-runtime.js|styles-runtime.css|index.html|modules/app-core-*-runtime.js)
+                  echo "Keeping Planner side of generated file: $file"
+                  ;;
+                *)
+                  echo "Refusing to auto-resolve source conflict: $file"
+                  exit 1
+                  ;;
+              esac
+            done
+            git checkout --theirs -- "${conflicted[@]}"
+            git add -- "${conflicted[@]}"
+            set +e
+            GIT_EDITOR=true git rebase --continue
+            rebase_status=$?
+            set -e
+          done
+          original=8d26de57961f47786964628e9952ac3e74836ee8
+          mapfile -t changed < <(git diff --name-only "$original" HEAD)
+          unexpected=()
+          for file in "${changed[@]}"; do
+            case "$file" in
+              api/_operational-health.js|scripts/operations/runtime_health.py|scripts/workflows/full-database-refresh-publish-checkpoint.sh|scripts/workflows/full-database-refresh-write-resume-checkpoint.sh|tests/test_full_database_refresh_workflow.py|tests/test_runtime_health.py)
+                ;;
+              table-width-runtime.js|styles-runtime.css|index.html|modules/app-core-*-runtime.js)
+                echo "Restore final generated asset content from original Planner head: $file"
+                git restore --source="$original" -- "$file"
+                ;;
+              *)
+                unexpected+=("$file")
+                ;;
+            esac
+          done
+          if (( ${#unexpected[@]} != 0 )); then
+            printf 'Unresolved final-tree mismatches: %s\\n' "${unexpected[@]}"
+            exit 1
+          fi
+          if ! git diff --quiet; then
+            git add --all
+            git commit --amend --no-edit
+          fi
+          echo "Final tree changes versus original Planner head:"
+          git diff --name-only "$original" HEAD
+          echo "Rebased commits: $(git rev-list --count origin/main..HEAD)"
           git push origin HEAD:feat/914-planner-team-selection --force-with-lease=refs/heads/feat/914-planner-team-selection:8d26de57961f47786964628e9952ac3e74836ee8
