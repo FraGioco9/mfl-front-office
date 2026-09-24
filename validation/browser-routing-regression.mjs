@@ -1683,9 +1683,8 @@ const browserTestSource = String.raw`(() => {
         assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
       }
       assert(squadPlayer.querySelector("td:nth-child(6) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
-      assert(text("#plannerAverageAge") === "Avg 23.00", "Planner totals row must show average age.");
-      assert(text("#plannerAverageOverall") === "Avg 80.00", "Planner totals row must show average overall.");
-      assert(text("#plannerTotalContracts") === "Total 12.50%", "Planner totals row must show total contracts.");
+      assert(!document.querySelector(".plannerRosterTable tfoot, .plannerRosterTotalsRow, #plannerAverageAge, #plannerAverageOverall, #plannerTotalContracts"),
+        "The squad table must end after the player rows, without a totals footer.");
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
       assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
@@ -1797,9 +1796,8 @@ const browserTestSource = String.raw`(() => {
       assert(addedRow && addedDefenderRow, "Add selected must append every staged eligible player.");
       const sortedPlannerIds = Array.from(document.querySelectorAll("#plannerRosterBody tr[data-player-id]")).map(row => row.dataset.playerId);
       assert(JSON.stringify(sortedPlannerIds) === JSON.stringify(["3","2","1"]), "Planner roster must sort by canonical primary-position order.");
-      assert(text("#plannerAverageAge") === "Avg 22.00", "Planner totals row must update average age after multi-add.");
-      assert(text("#plannerAverageOverall") === "Avg 77.67", "Planner totals row must update average overall after multi-add.");
-      assert(text("#plannerTotalContracts") === "Total 20.75%", "Planner totals row must update total contracts after multi-add.");
+      assert(!document.querySelector(".plannerRosterTable tfoot"),
+        "Adding players must not reintroduce the squad totals footer.");
       assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75%", "Added player Contract must also use database value divided by 100.");
       assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
       const addedContractValue = addedRow.querySelector(".plannerContractValue");
@@ -1882,45 +1880,16 @@ const browserTestSource = String.raw`(() => {
       assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 0%" && getComputedStyle(assignedPortrait).transform !== "none","Player portrait must use the original face-focused zoom inside the gradient circle.");
       assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
-      const starterSurname = slot("CB#1").querySelector(".plannerFormationPlayerSurname");
-      assert(starterSurname?.querySelector(".plannerFormationSurnameText")?.textContent==="De Rossi"
-        && starterSurname.title==="Marco De Rossi",
-        "Assigned circle must show the surname below the pitch circle and keep the full name on hover.");
-      const starterFlag = starterSurname.querySelector(".plannerFormationSurnameFlag.flagImage");
-      assert(starterFlag?.getAttribute("data-tooltip")==="Italy"
-        && starterFlag.getAttribute("src").endsWith("/1f1ee-1f1f9.svg"),
-        "Pitch surname must show the same Italy flag and tooltip as the Planner squad.");
-      assert(starterFlag.getBoundingClientRect().right <= starterSurname.querySelector(".plannerFormationSurnameText").getBoundingClientRect().left,
-        "Nationality flag must be to the left of the starter's surname.");
-      const flagStyle = getComputedStyle(starterFlag);
-      const surnameStyle = getComputedStyle(starterSurname);
-      assert(Math.abs(starterFlag.getBoundingClientRect().width - 18) < 1
-        && Math.abs(starterFlag.getBoundingClientRect().height - 18) < 1
-        && flagStyle.borderTopWidth === "0px"
-        && flagStyle.borderRadius === "3px"
-        && (flagStyle.filter.match(/drop-shadow\(/g) || []).length === 1
-        && flagStyle.filter.includes("255, 255, 255"),
-        "Pitch flags must be slightly smaller, have equally rounded corners and a symmetric alpha-following white outline.");
-      assert(surnameStyle.fontSize === "11px",
-        "Pitch starter surname should use the slightly larger desktop font.");
-      const badgeGap = starterSurname.getBoundingClientRect().top
-        - slot("CB#1").querySelector(".plannerFormationPlayerBadge").getBoundingClientRect().bottom;
-      assert(badgeGap >= 3 && badgeGap <= 10,
-        "Keep the surname closer to the circle/badge without letting them touch.");
-      assert(starterSurname.getAttribute("aria-hidden")==="true"
-        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
-        "Surname is visual-only; button must retain the accessible full player name.");
-      assert(!slot("CB#2").querySelector(".plannerFormationPlayerSurname")
-        && slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB",
-        "Empty circles must keep their position label instead of a surname.");
-      assert(Math.abs(slot("CB#2").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().top - starterSurname.getBoundingClientRect().top) <= 1, "Empty CB badge and occupied CB surname must start at the same distance below their circles.");
-      assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
-      assert(slot("CB#1").querySelector(".plannerFormationBackups").getBoundingClientRect().top
-        >= starterSurname.getBoundingClientRect().bottom + 10,
-        "Backup names must have their own separated rows beneath the flagged surname.");
+      assert(!document.querySelector("#plannerFormationPositions .plannerFormationPlayerSurname, #plannerFormationPositions .plannerFormationBackups, #plannerDepthDetails, .plannerDepthCard"),
+        "The pitch must not show player names, backup names or depth cards.");
+      assert(slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
+        "The assigned player must remain identifiable to assistive technology.");
+      assert(slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB"
+        && !slot("CB#1").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().width,
+        "Empty circles must keep the grey position badge, while filled circles hide it.");
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
-      assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
+      assert(!slot("CB#1").querySelector(".plannerFormationBackups"),"Auto-fill must not reintroduce backup names.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       const removeStarter = depthPicker.querySelector(".plannerDepthPickerClear");
       assert(removeStarter?.textContent==="Remove"
