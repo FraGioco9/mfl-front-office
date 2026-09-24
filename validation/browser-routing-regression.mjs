@@ -1721,6 +1721,12 @@ const browserTestSource = String.raw`(() => {
       formationPreview.render("433");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
         "Normal 4-3-3 winger heights must remain unchanged.");
+      formationPreview.render("4312");
+      assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-3-1-2 midfield must match the regular 4-4-2 midfield height.");
+      assert(formationSpot("CAM").length === 1 && formationSpot("CAM")[0].style.top === "25%"
+        && formationSpot("ST").length === 2 && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "4-3-1-2 must advance the CAM to 25% while leaving its two strikers at 10%.");
       formationPreview.render("4321");
       assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-3-2-1 midfield must use the normal 4-4-2 height with all three CMs aligned.");
