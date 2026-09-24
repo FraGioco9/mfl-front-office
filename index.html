@@ -2059,7 +2059,11 @@
                 // Do not flatten a four-player attacking line (e.g. 4-2-4).
                 const flatFourMidfield = midfield && count === 4
                   && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
-                const y = flatFourMidfield ? 40
+                // The 4-3-2-1's three CMs use the normal midfield height, not the
+                // lower baseline of its four-line formation.
+                const standardMidfieldLine = flatFourMidfield || (selected === "4321" && midfield
+                  && count === 3 && linePositions.every(position => position === "CM"));
+                const y = standardMidfieldLine ? 40
                   : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
                 const spread = selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1;
@@ -2084,7 +2088,9 @@
                       : selected === "352b" && midfield && position === "CDM" ? 8
                     : selected === "352b" && midfield && position === "CAM" ? -8
                       : (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
-                        : (position === "LW" || position === "RW") && wideForwardLine ? 6
+                        : selected === "433cf" && (position === "LW" || position === "RW") ? 2
+                        : selected === "433cf" && position === "CF" ? 6
+                          : (position === "LW" || position === "RW") && wideForwardLine ? 6
                           : hasHoldingAndCentralMidfield && position === "CM" ? 6
                             : hasHoldingAndCentralMidfield && position === "CDM" ? 9
                               : position === "CDM" && count > 1 ? 2
