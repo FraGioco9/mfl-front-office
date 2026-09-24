@@ -1890,7 +1890,13 @@ const browserTestSource = String.raw`(() => {
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && assignedName.textContent==="C. 91"
         && selectedLabelStyle.display==="inline-flex" && selectedLabelStyle.alignItems==="center",
-        "The abbreviated name, selected slot and positional Overall must all be vertically centered in the menu row.");
+        "The abbreviated name, selected slot and positional Overall must all be vertically centered in the menu row: " + JSON.stringify({
+          actualName:assignedName.textContent, selected:assignedSlotLabel.textContent, overall:assignedOverall.textContent,
+          rowMid:selectedRowBox.top + selectedRowBox.height/2, nameMid:assignedNameBox.top+assignedNameBox.height/2,
+          selectedMid:selectedLabelBox.top+selectedLabelBox.height/2, overallMid:assignedOverallBox.top+assignedOverallBox.height/2,
+          labelDisplay:selectedLabelStyle.display, labelAlign:selectedLabelStyle.alignItems,
+          nameLineHeight:getComputedStyle(assignedName).lineHeight, overallLineHeight:getComputedStyle(assignedOverall).lineHeight
+        }));
       const removeHoverStyle = getComputedStyle(removeStarter);
       const playerHoverStyle = getComputedStyle(assignedOtherSlot);
       assert(removeHoverStyle.borderTopWidth===playerHoverStyle.borderTopWidth
