@@ -1939,8 +1939,14 @@ const browserTestSource = String.raw`(() => {
         assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
       }
       assert(squadPlayer.querySelector("td:nth-child(6) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
-      assert(!document.querySelector(".plannerRosterTable tfoot, .plannerRosterTotalsRow, #plannerAverageAge, #plannerAverageOverall, #plannerTotalContracts"),
-        "The squad table must end after the player rows, without a totals footer.");
+      assert(!document.querySelector(".plannerRosterTable tfoot, .plannerRosterTotalsRow")
+        && document.querySelectorAll(".plannerSummaryTable tbody tr").length === 5,
+        "Squad summary must have five rows in a separate table, not a squad totals footer.");
+      assert(document.getElementById("plannerAverageOverall")?.textContent === "80.00"
+        && document.getElementById("plannerBest16Overall")?.textContent === "80.00"
+        && document.getElementById("plannerBest11OverallSum")?.textContent === "80.00"
+        && document.getElementById("plannerAverageAge")?.textContent === "23.00",
+        "The standalone summary must use planned squad data for all five metrics.");
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
       assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
@@ -2005,7 +2011,7 @@ const browserTestSource = String.raw`(() => {
       const footerButtons = modalFooter.querySelectorAll("button");
       assert(footerButtons.length === 2 && footerButtons[0].textContent.trim() === "Discard" && footerButtons[1].textContent.trim() === "Add", "Discard and Add must be grouped in the footer.");
       const actionStyle = getComputedStyle(inSquadAction);
-      assert(["flex", "inline-flex"].includes(actionStyle.display) && actionStyle.alignItems === "center" && actionStyle.justifyContent === "center", "Planner action text must be vertically centered: " + JSON.stringify({ display: actionStyle.display, alignItems: actionStyle.alignItems, justifyContent: actionStyle.justifyContent, className: inSquadAction.className }));
+      assert(["flex", "inline-flex"].includes(actionStyle.display) && actionStyle.alignItems === "center" && actionStyle.justifyContent === "flex-end", "Planner action text must be vertically centered: " + JSON.stringify({ display: actionStyle.display, alignItems: actionStyle.alignItems, justifyContent: actionStyle.justifyContent, className: inSquadAction.className }));
       const footerStyle = getComputedStyle(modalFooter);
       assert(footerStyle.justifyContent === "flex-end", "Discard and Add must stay at the bottom right.");
       assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
@@ -2016,6 +2022,10 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
       const selectAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
       assert(selectAction.textContent === "Select", "Eligible search results must expose Select as text.");
+      assert(getComputedStyle(selectAction.parentElement).textAlign === "right"
+        && getComputedStyle(selectAction.parentElement).justifyItems === "end"
+        && getComputedStyle(selectAction.parentElement).alignItems === "center",
+        "Popup action column must align right and vertically center its content.");
       selectAction.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
       assert(getComputedStyle(selectAction).textDecorationLine === "none", "Select hover must not underline.");
       assert(!document.getElementById("plannerPlayerSearchMore").hidden, "Broad name search must offer more matching players.");
@@ -2024,6 +2034,12 @@ const browserTestSource = String.raw`(() => {
       assert(document.querySelector('.plannerPlayerSearchResult[data-player-id="4"]'), "Additional matching players must be accessible through pagination.");
       assert(document.getElementById("plannerPlayerSearchMore").hidden, "Load more must disappear after the final page.");
       selectAction.click();
+      const selectedAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
+      assert(selectedAction?.textContent === "Selected" && getComputedStyle(selectedAction).color === "rgb(125, 184, 222)",
+        "Selected action must use the usual light blue.");
+      const unscrolled = document.querySelector(".plannerPlayerSearchTable.plannerTableNoVerticalScroll");
+      if (unscrolled) assert(getComputedStyle(unscrolled.querySelector("tbody")).scrollbarGutter === "auto",
+        "A popup table without vertical overflow must not reserve an unhighlighted gutter.");
       document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
       assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
       const selectedRows = document.querySelectorAll("#plannerPlayerSelectionBody .plannerPendingPlayer");

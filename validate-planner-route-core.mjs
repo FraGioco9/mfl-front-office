@@ -161,7 +161,7 @@ invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") 
 invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
 invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
 invariant(styles.includes("color-mix(in srgb,#05f82c 22%,transparent)") && styles.includes("color:#05f82c") && styles.includes("border-radius:5px") && styles.includes(".plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}"), "Slot chip must match the supplied rounded, translucent green example.");
-invariant(styles.includes(".plannerRosterTable .plannerSlotColumn{width:48px}") && styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}") && styles.includes(".plannerRosterTable .plannerContractColumn{width:21%}") && styles.includes(".plannerRosterTable .plannerSlotColumn{width:44px}"), "All squad column widths must be recomputed for desktop and mobile.");
+invariant(styles.includes(".plannerRosterTable .plannerSlotColumn{width:48px}") && styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}") && styles.includes(".plannerRosterTable .plannerContractColumn{width:20%}") && styles.includes(".plannerRosterTable .plannerSlotColumn{width:44px}"), "All squad column widths must be recomputed for desktop and mobile.");
 invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("background-color:transparent"), "Planner Contract editor must stay compact and roster Remove must remain visually unfilled on hover.");
 invariant(html.includes('class="tableShell" aria-label="Planned squad table"') && styles.includes(".plannerRosterTable td{line-height:1.2}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster must reuse the standard table shell and preserve compact remove controls.");
 invariant(
@@ -351,13 +351,15 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && generatedHtml.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);'),
   "Planner must render an eleven-player formation preview at first paint, persist each Club's formation and preserve its selected formation on hydration.");
 invariant(
-  [html, generatedHtml].every(shell => !shell.includes('id="plannerAverageAge"')
-    && !shell.includes('id="plannerAverageOverall"')
-    && !shell.includes('id="plannerTotalContracts"')
+  [html, generatedHtml].every(shell => shell.includes('id="plannerAverageAge"')
+    && shell.includes('id="plannerAverageOverall"')
+    && shell.includes('id="plannerTotalContracts"')
+    && shell.includes('id="plannerBest16Overall"')
+    && shell.includes('id="plannerBest11OverallSum"')
     && !shell.includes('id="plannerDepthDetails"')
     && shell.includes('plannerFormationPlayerSurname')
     && !shell.includes('plannerFormationBackups')),
-  "Planner must preserve selected player names while omitting squad totals, depth cards and backup lists from both shells.",
+  "Planner must keep the standalone squad summary and selected player names without depth cards or backup lists.",
 );
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}")
@@ -448,3 +450,11 @@ const vercel = JSON.parse(vercelJson);
 invariant(vercel.rewrites.some((rule) => String(rule.source || "").includes("|planner)")), "Vercel shell rewrites must include Planner.");
 
 console.log("Planner route, custom pitch icon, and team-selection search validation passed.");
+
+invariant(planner.includes('function renderSquadSummary()') && planner.includes('if(commit)renderSquadSummary()')
+  && planner.includes('renderSquadSummary();') && styles.includes('.plannerSummaryTable{'),
+  "Five summary metrics must update with squad and contract edits.");
+invariant(styles.includes('--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px')
+  && styles.includes('.plannerPlayerSearchTable.plannerTableNoVerticalScroll :is(thead,tbody){scrollbar-gutter:auto}')
+  && planner.includes('table.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll)'),
+  "Popup action width and scrollbar-free full-width row highlights must stay in sync.");

@@ -185,7 +185,7 @@ assert.deepEqual(Array.from(distribute([["ST"]], [
 ])[0], p => p.player_id), [9, 11], "Equal Overall must use stable player ID order.");
 assert.equal(distribute([["RW"]], players)[0].length, 0, "Empty position must remain empty.");
 assert.ok(generated.includes(helper), "Generated shell must contain the exact canonical depth algorithm.");
-assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && !shell.includes('plannerRosterTotalsRow')), "Keep the selected player's name but omit depth cards, backup lists and squad totals.");
+assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && shell.includes('plannerSummaryTable')), "Keep the selected player's name and standalone summary without depth cards or backup lists.");
 assert.ok([source, generated].every(shell => shell.includes('surnameText.textContent = depthPlayerSurname(starter);') && shell.includes('surname.title = depthPlayerName(starter);') && shell.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")') && shell.includes('surname.setAttribute("aria-hidden", "true");')), "Selected circle must display the abbreviated player surname and flag while retaining accessible full name.");
 assert.ok([source, generated].every(shell => shell.includes('const depthSpareCounts = (keys, players, assignments) => {')
   && shell.includes('const spareCounts = depthSpareCounts(keys, depthRoster, depthAssignments);')
@@ -211,7 +211,7 @@ for (const stylesheet of [css, styles]) {
     && stylesheet.includes(".plannerRosterTable .plannerSlotColumn{width:44px}")
     && stylesheet.includes(".plannerRosterTable .plannerNationalityColumn{width:28px}")
     && stylesheet.includes(".plannerRosterTable .plannerNationalityColumn{width:26px}")
-    && stylesheet.includes("--planner-columns:32px minmax(0,1fr) 21% 10% 10% 18%"),
+    && stylesheet.includes("--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px"),
     "Flag columns must fit flags, Player gains leftover width, and Slot stays unchanged.");
   assert.ok(stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken")
     && stylesheet.includes(".plannerFormationSlotButton:focus-visible .plannerFormationToken")
