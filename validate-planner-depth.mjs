@@ -138,13 +138,13 @@ assert.deepEqual(Array.from(ratings.spareCounts(["CB#1","CB#2"],[
 ],new Map([["CB#1",41],["CB#2",42]]))),[1,1],
   "Both occupied CB slots may count the same spare CB, never either starter.");
 assert.deepEqual(Array.from(ratings.spareCounts(["CM#1","CM#2","CAM#1","GK#1"],[
-  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92},
+  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92,passing:92,shooting:92,defense:92,dribbling:92,pace:92,physical:92,goalkeeping:20},
   {player_id:52,name:"Other CM",positions:"CM",overall:90},
   {player_id:53,name:"GK",positions:"GK",overall:90},
 ],new Map())),[2,2,1,1],
   "A free multi-position player must count in both CMs and CAM.");
 assert.deepEqual(Array.from(ratings.spareCounts(["CM#1","CM#2","CAM#1","GK#1"],[
-  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92},
+  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92,passing:92,shooting:92,defense:92,dribbling:92,pace:92,physical:92,goalkeeping:20},
   {player_id:52,name:"Other CM",positions:"CM",overall:90},
   {player_id:53,name:"GK",positions:"GK",overall:90},
 ],new Map([["CM#1",51]]))),[1,1,0,1],
