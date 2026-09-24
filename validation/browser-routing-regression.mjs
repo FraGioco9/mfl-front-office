@@ -1787,10 +1787,10 @@ const browserTestSource = String.raw`(() => {
         "Wide diamond LM/RM must move wider while staying at the usual midfield height.");
       formationPreview.render("41212narrow");
       assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
-        === JSON.stringify(fourMidfieldReference.slice(1, 3).map(([left]) => left))
+        === JSON.stringify(["34%", "66%"])
         && formationSpot("CM").every(spot => spot.style.top === regularDiamondWideMidfieldHeight)
         && regularDiamondWideMidfieldHeight === "40%",
-        "Narrow diamond CMs must match the 4-4-2 central pair in width and regular diamond wide mids in height.");
+        "Narrow diamond CMs must be wider at 34%/66% while matching regular diamond wide mids in height.");
       assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
         "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
       formationPreview.render("352");
