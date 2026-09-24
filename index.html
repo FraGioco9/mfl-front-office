@@ -2059,8 +2059,8 @@
                 // Do not flatten a four-player attacking line (e.g. 4-2-4).
                 const flatFourMidfield = midfield && count === 4
                   && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
-                // The three CMs in 4-3-1-2/4-3-2-1 and the LM/CM/RM in 4-1-3-2
-                // share the normal 4-4-2 midfield height.
+                // The three CMs in 4-3-1-2/4-3-2-1 share the 4-4-2 midfield height.
+                // 4-1-3-2 uses that baseline with a small forward offset for LM/CM/RM.
                 const standardMidfieldLine = flatFourMidfield || (midfield && count === 3
                   && (((selected === "4312" || selected === "4321") && linePositions.every(position => position === "CM"))
                     || (selected === "4132" && linePositions.join(",") === "LM,CM,RM")));
@@ -2101,7 +2101,7 @@
                           : selected === "433a" && position === "CAM" ? -10
                             : selected === "433d" && position === "CDM" ? 14
                               : (selected === "433a" || selected === "433d") && position === "CM" ? 0
-                            : selected === "4132" && position === "CM" ? 0
+                            : selected === "4132" && ["LM", "CM", "RM"].includes(position) ? -4
                             : hasHoldingAndCentralMidfield && position === "CM" ? 6
                             // 4-1-4-1 and 4-1-3-2 share 4-3-3 (def)'s 54% CDM depth.
                             : (selected === "4141" || selected === "4132") && position === "CDM" ? 3
