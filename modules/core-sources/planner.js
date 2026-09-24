@@ -93,6 +93,7 @@
     rosterController?.abort();
     rosterController=null;
     roster=[];
+    rosterSlots=new Map();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.([]);
     clubSearchPlayers=[];
     renderRosterTotals();
@@ -172,14 +173,29 @@
   function primaryPlannerPosition(player){
     return String(player?.positions||"").split(",")[0].trim().toUpperCase();
   }
+  let rosterSlots=new Map();
   function sortPlannerRoster(){
     roster.sort((a,b)=>{
       const aRank=PLANNER_POSITION_RANK.get(primaryPlannerPosition(a))??PLANNER_POSITION_ORDER.length;
       const bRank=PLANNER_POSITION_RANK.get(primaryPlannerPosition(b))??PLANNER_POSITION_ORDER.length;
-      return aRank-bRank
+      const aSlotRank=PLANNER_POSITION_RANK.get(rosterSlots.get(String(a?.player_id)))??PLANNER_POSITION_ORDER.length;
+      const bSlotRank=PLANNER_POSITION_RANK.get(rosterSlots.get(String(b?.player_id)))??PLANNER_POSITION_ORDER.length;
+      return aSlotRank-bSlotRank || aRank-bRank
         || String(a?.name||"").localeCompare(String(b?.name||""),undefined,{sensitivity:"base"})
         || Number(a?.player_id||0)-Number(b?.player_id||0);
     });
+  }
+  function syncSlots(slots){
+    rosterSlots=new Map(slots);
+    sortPlannerRoster();
+    if(!(rosterBody instanceof HTMLElement))return;
+    const rows=Array.from(rosterBody.children).filter(row=>row instanceof HTMLElement);
+    const rowsById=new Map(rows.map(row=>[row.dataset.playerId,row]));
+    if(roster.every((player,index)=>rows[index]?.dataset.playerId===String(player.player_id)))return;
+    for(const player of roster){
+      const row=rowsById.get(String(player.player_id));
+      if(row)rosterBody.appendChild(row);
+    }
   }
   function renderRosterTotals(){
     const ages=roster.map(player=>Number(player?.age)).filter(Number.isFinite);
@@ -402,7 +418,7 @@
     if(append&&(!playerSearchPayload?.hasMore||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q)))return null;
     const seq=++playerSearchSequence;
     const offset=append&&Array.isArray(playerSearchPayload?.rows)?playerSearchPayload.rows.length:0;
-    const params=new URLSearchParams({mode:"search",type:"players",limit:"50",offset:String(offset),q});
+    const params=new URLSearchParams({mode:"search",type:"players",view:"attributes",limit:"50",offset:String(offset),q});
     if(append&&playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=true;
     try{
       const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
@@ -848,5 +864,5 @@
     },{passive:true});
   });
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
-  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers}));
+  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers,syncSlots}));
 })();

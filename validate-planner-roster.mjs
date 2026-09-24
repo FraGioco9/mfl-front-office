@@ -6,7 +6,7 @@ import vm from "node:vm";
 class Element {
   constructor(tag = "div") { this.tagName = tag; this.children = []; this.dataset = {}; this.style = {}; this.hidden = false; this.value = ""; this.events = {}; this.attributes = {}; this.classList = { toggle() {} }; }
   append(...nodes) { this.children.push(...nodes.flatMap(node => node.fragment ? node.children : [node])); }
-  appendChild(node) { this.append(node); return node; }
+  appendChild(node) { this.children = this.children.filter(child => child !== node); this.append(node); return node; }
   replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
   set textContent(value) { this.text = value; this.children = []; }
   get textContent() { return this.text || this.children.map(child => child.textContent || "").join(""); }
@@ -287,4 +287,18 @@ teamInput.value="";
 teamInput.events.input();
 assert.equal(teamResults.hidden,true,"Clearing the query must hide results");
 
-console.log("Planner roster: contract dot/arrows, single edit, staged multi-add, selected table, 100% contract cap, table search visibility, 25-player cap, removal, stale responses, Clear, empty state and retry passed.");
+route.select({ clubId: "slot-sort", name: "Slot Club", division: 1 });
+await complete(requests.at(-1), { columns: payload.columns, rows: [
+  [501, "Keeper", "GK", 23, 80, 5, 2, 100],
+  [502, "Centre back", "CB", 23, 80, 5, 2, 100],
+  [503, "Midfielder", "CM, CB", 23, 80, 5, 2, 100],
+  [504, "Forward", "ST, CB", 23, 80, 5, 2, 100],
+], totalRows: 4 });
+const preservedRows = new Map(body.children.map(row => [row.dataset.playerId, row]));
+route.syncSlots(new Map([["504", "CB"], ["503", "CB"], ["502", "ST"]]));
+assert.deepEqual(body.children.map(row => row.dataset.playerId), ["503", "504", "502", "501"], "Sort by slot first, primary position second, with unassigned players last");
+assert.ok(body.children.every(row => preservedRows.get(row.dataset.playerId) === row), "Slot changes must move existing rows, preserving contract controls");
+route.syncSlots(new Map());
+assert.deepEqual(body.children.map(row => row.dataset.playerId), ["501", "502", "503", "504"], "Clearing assignments must restore primary-position order");
+
+console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state and retry passed.");

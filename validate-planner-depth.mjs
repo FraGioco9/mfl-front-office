@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 
 const read = path => readFile(new URL(path, import.meta.url), "utf8");
 const [source, generated, planner, runtime, css, styles] = await Promise.all([
@@ -12,6 +13,53 @@ const [source, generated, planner, runtime, css, styles] = await Promise.all([
   read("./styles-runtime.css"),
 ]);
 const startMarker = "// BEGIN PLANNER DEPTH";
+// Exercise the same rating helpers with both table arrays and Planner records.
+const foundations = await read("./modules/core-sources/shared-foundations.js");
+const dataSearch = await read("./modules/core-sources/shared-data-search.js");
+const playerDisplay = await read("./modules/core-sources/shared-player-display.js");
+const ratingColumns = ["positions", "overall", "passing", "shooting", "defense", "dribbling", "pace", "physical", "goalkeeping"];
+const ratings = { columnIndex: column => ratingColumns.indexOf(column) };
+vm.createContext(ratings);
+vm.runInContext(foundations.slice(foundations.indexOf("const POSITION_GROUP_WEIGHTS"), foundations.indexOf("const statusText"))
+  + dataSearch.slice(dataSearch.indexOf("function getValue("), dataSearch.indexOf("function getProgressionColumn("))
+  + playerDisplay, ratings);
+const player = { positions: "CM, CDM", overall: 80, passing: 80, shooting: 80, defense: 80, dribbling: 80, pace: 80, physical: 80, goalkeeping: 20 };
+const searchSource = await read("./api/_data-views.js");
+const searchDatabase = new DatabaseSync(":memory:");
+searchDatabase.exec("CREATE TABLE players(player_id INTEGER, name TEXT, positions TEXT, overall REAL, retirement_years INTEGER, passing REAL, shooting REAL, defense REAL, dribbling REAL, pace REAL, physical REAL, goalkeeping REAL)");
+searchDatabase.exec("INSERT INTO players VALUES(1, 'Position Player', 'CM, CDM', 80, 5, 80, 80, 80, 80, 80, 80, 20)");
+searchDatabase.function("normalize_search", value => String(value).toLowerCase());
+const searchRuntime = {
+  SEARCH_PLAYER_COLUMNS: ["player_id", "name", "positions", "overall"],
+  tableExists: () => false,
+  qualifiedSelectList: (alias, columns) => columns.map(column => `${alias}.${column}`).join(", "),
+  queryRows: (sql, parameters) => searchDatabase.prepare(sql).all(...parameters),
+  rowsAsArrays: (rows, columns) => rows.map(row => columns.map(column => row[column])),
+  normalizeSearchText: value => String(value).toLowerCase(),
+};
+vm.createContext(searchRuntime);
+vm.runInContext(searchSource.slice(searchSource.indexOf("function normalizedQueryText("), searchSource.indexOf("function agentSearchRows("))
+  + searchSource.slice(searchSource.indexOf("function searchData("), searchSource.indexOf("function summaryData(")), searchRuntime);
+const searchResult = searchRuntime.searchData({query: {q: "Position Player", type: "players", view: "attributes"}});
+const searchedPlayer = Object.fromEntries(searchResult.columns.map((column, index) => [column, searchResult.rows[0][index]]));
+assert.equal(searchedPlayer.passing, 80, "Planner search must supply attributes so added players receive position-specific ratings");
+assert.equal(searchRuntime.searchData({query: {q: "Position", type: "players"}}).columns.includes("passing"), false, "Other searches must retain the compact projection");
+searchDatabase.close();
+const tableRow = ratingColumns.map(column => player[column]);
+assert.equal(ratings.getValue(player, "passing"), 80, "Planner records must read attributes without changing table column state");
+for (const [position, familiarity, rating] of [["CM", "primary", 80], ["CDM", "secondary", 79], ["CAM", "fair", 75], ["RM", "some", 72], ["ST", null, null]]) {
+  assert.equal(ratings.familiarityForPosition(player, position), familiarity);
+  assert.equal(ratings.positionRating(player, position, familiarity), rating);
+  assert.equal(ratings.positionRating(tableRow, position, familiarity), rating, "Existing player-page array ratings must remain unchanged");
+}
+vm.runInContext(source.slice(source.indexOf("const depthPlayerFamiliarity ="), source.indexOf("const rankDepthPlayers ="))
+  + "\nthis.depthOverall = depthPlayerOverall;", ratings);
+assert.equal(ratings.depthOverall(searchedPlayer, "CDM"), "79", "An added player's pitch OVR must use that slot's weights and penalty");
+assert.equal(ratings.depthOverall(player, "CAM"), "75");
+assert.equal(ratings.depthOverall({positions: "GK", overall: 80, goalkeeping: 83}, "GK"), "83", "GK must use goalkeeping as on the player page");
+assert.equal(ratings.depthOverall({positions: "CM, CDM", overall: 80}, "CDM"), "—", "Missing attributes must never masquerade as base OVR for a different position");
+assert.equal(ratings.depthOverall({positions: "CM", overall: 80}, "CM"), "80");
+assert.equal(ratings.depthOverall(player, "ST"), "—");
 const endMarker = "// END PLANNER DEPTH";
 const start = source.indexOf(startMarker);
 const end = source.indexOf(endMarker, start);

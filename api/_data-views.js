@@ -62,7 +62,9 @@ function literalLikePattern(value, prefixOnly = false) {
 }
 
 function playerSearchRows(query, limit, options = {}) {
-  const columns = SEARCH_PLAYER_COLUMNS;
+  const columns = options.includeAttributes
+    ? [...SEARCH_PLAYER_COLUMNS, "pace", "shooting", "passing", "dribbling", "defense", "physical", "goalkeeping"]
+    : SEARCH_PLAYER_COLUMNS;
   const activeCondition = options.excludeRetired
     ? "AND coalesce(CAST(NULLIF(trim(p.retirement_years), '') AS INTEGER), -1) <> 0"
     : "";
@@ -295,7 +297,7 @@ function searchData(request) {
   }
   if (type === "agents") return agentSearchRows(query, limit);
   if (type === "clubs") return { results: clubSearchRows(query, limit) };
-  return playerSearchRows(query, limit, { excludeRetired: true, offset: request.query?.offset });
+  return playerSearchRows(query, limit, { excludeRetired: true, offset: request.query?.offset, includeAttributes: request.query?.view === "attributes" });
 }
 
 function summaryData() {

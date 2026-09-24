@@ -5115,6 +5115,8 @@ function columnIndex(column) {
 }
 
 function getValue(row, column) {
+  // Planner owns named records; table and Player views retain column-indexed arrays.
+  if (row && !Array.isArray(row) && typeof row === "object") return row[column] ?? null;
   const index = columnIndex(column);
   return index >= 0 ? row[index] : null;
 }

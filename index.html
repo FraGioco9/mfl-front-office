@@ -1775,8 +1775,16 @@
             const depthAutoFill = document.getElementById("plannerAutoFillDepthButton");
             let openPickerButton = null;
             const depthPlayerName = player => String(player.name || "Player #" + player.player_id);
-            const depthPlayerOverall = player => {
-              const value = player.overall;
+            const depthPlayerFamiliarity = (player, position) => typeof familiarityForPosition === "function"
+              ? familiarityForPosition(player, position) : null;
+            const depthPlayerOverall = (player, position) => {
+              const familiarity = depthPlayerFamiliarity(player, position);
+              const weights = typeof POSITION_GROUP_WEIGHTS === "object" ? POSITION_GROUP_WEIGHTS[position] : null;
+              const hasAttributes = weights && Object.entries(weights).every(([attribute, weight]) => !weight
+                || (player[attribute] !== null && player[attribute] !== undefined && String(player[attribute]).trim() !== "" && Number.isFinite(Number(player[attribute]))));
+              const value = familiarity && hasAttributes && typeof positionRating === "function"
+                ? positionRating(player, position, familiarity)
+                : familiarity === "primary" ? player.overall : null;
               return value === null || value === undefined || String(value).trim() === "" || !Number.isFinite(Number(value))
                 ? "—" : String(value);
             };
@@ -1847,8 +1855,8 @@
                   name.textContent = depthPlayerName(player);
                   name.title = depthPlayerName(player);
                   const overall = document.createElement("strong");
-                  overall.textContent = depthPlayerOverall(player);
-                  overall.setAttribute("aria-label", "Overall " + depthPlayerOverall(player));
+                  overall.textContent = depthPlayerOverall(player, position);
+                  overall.setAttribute("aria-label", "Overall " + depthPlayerOverall(player, position));
                   entry.append(name, overall);
                   list.appendChild(entry);
                 }
@@ -1928,7 +1936,7 @@
                   const name = document.createElement("span");
                   name.textContent = depthPlayerName(player);
                   const overall = document.createElement("strong");
-                  overall.textContent = depthPlayerOverall(player);
+                  overall.textContent = depthPlayerOverall(player, position);
                   row.append(photo, name, overall);
                   row.addEventListener("click", () => {
                     depthAssignments.set(key, Number(player.player_id));
@@ -1958,7 +1966,7 @@
                 button.className = "plannerFormationSlotButton";
                 button.type = "button";
                 button.disabled = !depthRoster.length;
-                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter) : "empty") + ". Select player");
+                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". Select player");
                 button.setAttribute("aria-haspopup", "dialog");
                 button.setAttribute("aria-expanded", "false");
                 button.addEventListener("click", () => openDepthPicker(key, position, button));
@@ -1985,9 +1993,11 @@
                   badge.className = "plannerFormationPlayerBadge";
                   const overall = document.createElement("span");
                   overall.className = "plannerFormationPlayerOverall";
-                  overall.textContent = depthPlayerOverall(starter);
+                  overall.textContent = depthPlayerOverall(starter, position);
                   const pos = document.createElement("span");
-                  pos.className = "plannerFormationPlayerPosition";
+                  const familiarity = depthPlayerFamiliarity(starter, position);
+                  pos.className = "plannerFormationPlayerPosition " + (familiarity || "unknown");
+                  pos.setAttribute("aria-label", position + " — " + ({ primary: "Natural", secondary: "Secondary", fair: "Fair familiarity", some: "Unfamiliar" }[familiarity] || "Unknown familiarity"));
                   pos.textContent = position;
                   badge.append(overall, pos);
                   button.append(token, badge);
@@ -1997,7 +2007,7 @@
                   token.append(ring, plus);
                   button.appendChild(token);
                 }
-                spot.title = slotLabel + ": " + (starter ? depthPlayerName(starter) + " (" + depthPlayerOverall(starter) + ")" : "empty");
+                spot.title = slotLabel + ": " + (starter ? depthPlayerName(starter) + " (" + depthPlayerOverall(starter, position) + ")" : "empty");
                 const label = document.createElement("span");
                 label.className = "plannerFormationPositionLabel";
                 label.textContent = position;
@@ -2008,8 +2018,8 @@
                   backups.slice(0, 2).forEach((player, index) => {
                     const entry = document.createElement("span");
                     entry.className = "plannerFormationBackup";
-                    entry.textContent = (index + 2) + ". " + depthPlayerName(player) + " " + depthPlayerOverall(player);
-                    entry.title = (index === 0 ? "2nd" : "3rd") + " alternative: " + depthPlayerName(player) + " (" + depthPlayerOverall(player) + ")";
+                    entry.textContent = (index + 2) + ". " + depthPlayerName(player) + " " + depthPlayerOverall(player, position);
+                    entry.title = (index === 0 ? "2nd" : "3rd") + " alternative: " + depthPlayerName(player) + " (" + depthPlayerOverall(player, position) + ")";
                     list.appendChild(entry);
                   });
                   spot.appendChild(list);
@@ -2075,6 +2085,7 @@
                 badge.hidden = !slot;
                 empty.hidden = Boolean(slot);
               });
+              Reflect.get(window, "__mflPlannerRoute")?.syncSlots?.(assignedSlotByPlayer);
               renderDepthDetails(positions, buckets);
               if (depthAutoFill instanceof HTMLButtonElement) {
                 depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>

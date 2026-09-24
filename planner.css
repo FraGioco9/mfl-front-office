@@ -76,9 +76,9 @@
 .plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
-.plannerRosterTable .plannerSlotColumn{width:12%}
+.plannerRosterTable .plannerSlotColumn{width:48px}
 .plannerRosterTable .plannerNationalityColumn{width:6%}
-.plannerRosterTable .plannerPlayerColumn{width:23%}
+.plannerRosterTable .plannerPlayerColumn{width:auto}
 .plannerRosterTable .plannerPositionColumn{width:12%}
 .plannerRosterTable .plannerAgeColumn{width:9%}
 .plannerRosterTable .plannerOverallColumn{width:10%}
@@ -86,10 +86,11 @@
 .plannerRosterTable .plannerRemoveColumn{width:7%}
 /* Player-page-inspired Depth slot badge. */
 .plannerRosterSlotCell{text-align:center}
-.plannerRosterSlotBadge{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:48px;max-width:100%;padding:0 5px;border-radius:5px;background:color-mix(in srgb,#05f82c 22%,transparent);color:#05f82c;font-size:12px;font-weight:700;line-height:16px;letter-spacing:.4px;white-space:nowrap}
+.plannerRosterTable :is(th,td):first-child:not([colspan]){padding-inline:4px}
+.plannerRosterSlotBadge{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:40px;max-width:100%;padding:0 4px;border-radius:5px;background:color-mix(in srgb,#05f82c 22%,transparent);color:#05f82c;font-size:12px;font-weight:700;line-height:16px;letter-spacing:.4px;white-space:nowrap}
 .plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}
 .plannerRosterSlotEmpty{color:var(--text-soft)}
-@media(max-width:1099px){.plannerRosterSlotBadge{min-width:40px;padding-inline:4px}}
+@media(max-width:1099px){.plannerRosterSlotBadge{min-width:36px;padding-inline:4px}}
 .plannerRosterTable td{line-height:1.2}
 .plannerRosterTable td:not(:nth-child(3)),.plannerRosterTable th:not(:nth-child(3)){text-align:center}
 .plannerRosterTable tbody tr:hover{background:var(--row-hover)}
@@ -117,7 +118,7 @@
 .plannerRosterTable td:nth-child(3) .plannerRosterSkeleton{margin-left:0}
 .plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:420px;height:auto;aspect-ratio:72/109;margin:0 auto}
 #plannerRosterRetryButton{margin-top:8px}
-@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerSlotColumn{width:14%}.plannerRosterTable .plannerPlayerColumn{width:21%}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:10%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:7%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
+@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerSlotColumn{width:44px}.plannerRosterTable .plannerPlayerColumn{width:auto}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:10%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:7%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 
 .plannerRosterTable td:nth-child(3),.plannerRosterTable th:nth-child(3){text-align:left}
 .plannerRosterTable .plannerPlayerSearchFlagCell .flagImage{width:20px;height:20px;max-width:100%;object-fit:contain}
@@ -186,7 +187,11 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerBadge{position:absolute;z-index:4;bottom:7px;left:50%;display:flex;align-items:stretch;overflow:hidden;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;transform:translate(-50%,50%);pointer-events:none}
 .plannerFormationPlayerOverall,.plannerFormationPlayerPosition{padding:1px 4px;color:#fff;font-size:10px;font-weight:700;line-height:15px;font-variant-numeric:tabular-nums}
 .plannerFormationPlayerOverall{background:#262626}
-.plannerFormationPlayerPosition{background:var(--planner-depth-primary,var(--primary))}
+.plannerFormationPlayerPosition{background:var(--surface-muted);color:var(--text-soft)}
+.plannerFormationPlayerPosition.primary{background:#05f82c;color:#000}
+.plannerFormationPlayerPosition.secondary{background:#adff2f;color:#000}
+.plannerFormationPlayerPosition.fair{background:#ffc107;color:#000}
+.plannerFormationPlayerPosition.some{background:#ff5722;color:#000}
 .plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
 .plannerFormationBackups{position:absolute;top:calc(100% + 6px);left:50%;display:grid;gap:1px;width:76px;transform:translateX(-50%);pointer-events:none}

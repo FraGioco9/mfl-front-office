@@ -1816,6 +1816,19 @@ const browserTestSource = String.raw`(() => {
       formationPreview.setRoster([{player_id:107,name:"ST 93",positions:"ST",overall:93}]);
       assert(!slot("CB#2")?.dataset.playerId,"Removed players must be dropped from depth assignments.");
       formationPreview.setRoster([
+        {player_id:301,name:"Natural CB",positions:"CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+        {player_id:302,name:"Secondary CB",positions:"CM, CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(depthPicker.querySelector('[data-player-id="302"] strong')?.textContent === "79", "Picker must display the position-specific rating for a secondary CB.");
+      depthPicker.querySelector('[data-player-id="302"]').click();
+      assert(slot("CB#1").querySelector(".plannerFormationPlayerOverall")?.textContent === "79", "Pitch OVR must include the secondary-position penalty.");
+      assert(getComputedStyle(slot("CB#1").querySelector(".plannerFormationPlayerPosition")).backgroundColor === "rgb(173, 255, 47)", "Secondary position must match the player-page familiarity colour.");
+      fillButton.click();
+      assert(slot("CB#2").querySelector(".plannerFormationPlayerOverall")?.textContent === "80", "Natural position must use the player-page rating.");
+      assert(getComputedStyle(slot("CB#2").querySelector(".plannerFormationPlayerPosition")).backgroundColor === "rgb(5, 248, 44)", "Natural position must use the player-page green.");
+      formationPreview.setRoster([
         {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
         {player_id:3,name:"Added Browser Defender",positions:"CB",overall:76,retirement_years:5},
@@ -1834,8 +1847,15 @@ const browserTestSource = String.raw`(() => {
       slot("CB#2").querySelector(".plannerFormationSlotButton").click();
       depthPicker.querySelector(".plannerDepthPickerClear").click();
       assert(slotBadge(3)?.hidden && !slotEmpty(3)?.hidden, "Clearing the starter must immediately clear the squad Slot.");
+      slot("ST#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="1"]').click();
+      assert(document.querySelector("#plannerRosterBody tr")?.dataset.playerId === "1", "Assigned players must sort above unassigned players regardless of natural position.");
+      const slotCellWidth = squadSlot(1).children[0].getBoundingClientRect().width;
+      assert(slotCellWidth <= (window.innerWidth <= 800 ? 44 : 48) + 1, "Slot must stay compact at desktop and mobile widths.");
+      assert(slotBadge(1).scrollWidth <= slotBadge(1).clientWidth, "Compact Slot must fit the position label.");
       fillButton.click();
       assert(slotBadge(1)?.textContent === "ST" && slotBadge(2)?.textContent === "RW" && slotBadge(3)?.textContent === "CB", "Auto-fill must refresh Slot labels for all starters.");
+      assert(Array.from(document.querySelectorAll("#plannerRosterBody tr"), row => row.dataset.playerId).join(",") === "3,2,1", "Auto-fill must reorder the squad by assigned slot.");
       formationPreview.render("442");
       assert(slotBadge(2)?.hidden && !slotEmpty(2)?.hidden && slotBadge(1)?.textContent === "ST", "Formation changes must clear obsolete RW assignments while keeping compatible ST.");
       formationPreview.render("4231");
