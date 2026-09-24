@@ -1753,7 +1753,7 @@ const browserTestSource = String.raw`(() => {
       const assignedPortrait = assignedToken?.querySelector(".plannerFormationPlayerPhoto");
       assert(assignedToken?.children.length === 2 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient and player portrait.");
       assert(assignedPortrait?.src.includes("/103/photo.webp") && assignedPortrait.alt === "","The assigned portrait must match the chosen player.");
-      assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 100%","Player portrait must fit inside the gradient circle without the old enlarged crop.");
+      assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 0%" && getComputedStyle(assignedPortrait).transform !== "none","Player portrait must use the original face-focused zoom inside the gradient circle.");
       assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
       assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
