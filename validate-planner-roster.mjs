@@ -90,9 +90,7 @@ assert.equal(body.children[0].children[5].children[0].children[0].style.backgrou
 assert.equal(body.children[0].children[4].children[0].children[0].textContent, "23", "Age must remain visible in the planned squad");
 assert.equal(body.children[0].children[4].children[0].children[1].className.includes("retirementMarker--retiring-2"), true, "Retirement marker must match canonical 1–3 year semantics");
 assert.equal(body.children[1].children[4].children[0].children[1].className.includes("newMintMarker"), true, "One-season player must show the New mint marker");
-assert.equal(elements.get("plannerAverageAge").textContent, "Avg 24.00", "Totals row must show average age");
-assert.equal(elements.get("plannerAverageOverall").textContent, "Avg 77.50", "Totals row must show average overall");
-assert.equal(elements.get("plannerTotalContracts").textContent, "Total 20.50%", "Totals row must sum planned contracts");
+assert.equal(elements.has("plannerAverageAge") || elements.has("plannerAverageOverall") || elements.has("plannerTotalContracts"), false, "Squad totals must not appear in the HTML.");
 const contractControl = body.children[0].children[6].children[0];
 const contractValue = contractControl.children[0];
 const contractEditor = contractControl.children[1];
@@ -127,15 +125,13 @@ contractInput.value = "18.25";
 contractInput.events.input?.({ target: contractInput });
 contractEdit.click();
 assert.equal(contractValue.textContent, "18.25%", "Explicit Confirm must restore normal display with the edited value");
-assert.equal(elements.get("plannerTotalContracts").textContent, "Total 26.25%", "Contract edits must update the totals row");
+assert.equal(Number.parseFloat(body.children[0].children[6].children[0].children[0].textContent)+Number.parseFloat(body.children[1].children[6].children[0].children[0].textContent), 26.25, "Contract edits must keep the squad shares accurate without a footer.");
 assert.equal(requests.length, 1, "Editing a planned contract must not write to the server");
 body.children[1].children.at(-1).children[0].click();
 assert.equal(body.children.length, 1, "Remove must update the planned squad");
 assert.equal(body.children[0].children[2].textContent, "First Player");
 assert.equal(body.children[0].children[6].children[0].children[0].textContent, "18.25%", "Confirmed contract must survive local roster re-renders");
-assert.equal(elements.get("plannerAverageAge").textContent, "Avg 23.00", "Removing a player must update average age");
-assert.equal(elements.get("plannerAverageOverall").textContent, "Avg 80.00", "Removing a player must update average overall");
-assert.equal(elements.get("plannerTotalContracts").textContent, "Total 18.25%", "Removing a player must update total contracts");
+assert.equal(body.children[0].children[6].children[0].children[0].textContent, "18.25%", "Removing a player must preserve the remaining contract without a totals footer.");
 assert.equal(payload.rows[0][7], 1250, "Editing a planned contract must not mutate canonical database data");
 assert.equal(payload.rows.length, 2, "Removing a player must not mutate canonical data");
 assert.equal(requests.length, 1, "Removing a player must not write to the server");
@@ -180,7 +176,7 @@ for(let id=20;id<39;id+=1){
 assert.equal(route.togglePendingPlayer({ player_id: 90, name: "Final Slot", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), true, "Modal selection must allow the final available squad slot");
 assert.equal(route.togglePendingPlayer({ player_id: 91, name: "Over Cap", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Modal selection must stop when staged squad size reaches 25");
 assert.equal(route.confirmPendingPlayers(), true, "Final available slot must be confirmable");
-assert.equal(elements.get("plannerTotalContracts").textContent, "Total 100.00%", "Planner total Contract must never exceed 100%");
+assert.equal(body.children.reduce((sum, row) => sum + Number.parseFloat(row.children[6].children[0].children[0].textContent), 0).toFixed(2), "100.00", "Planner contract sum must stay within 100% without a totals footer.");
 assert.equal(route.addPlayer({ player_id: 92, name: "Twenty Six", positions: "CB", age: 22, overall: 60, retirement_years: 5 }), false, "Planner squad must never exceed 25 players");
 
 elements.get("plannerPlayerSearchInput").value = "Final";
