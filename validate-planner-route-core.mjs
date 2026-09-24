@@ -337,10 +337,10 @@ invariant(
 invariant(
   styles.includes(".plannerRosterTable .plannerPlayerColumn{width:auto}")
     && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
-    && styles.includes("max-width:420px")
+    && styles.includes("max-width:500px")
     && styles.includes("width:calc(100% - 16px)")
     && styles.includes("gap:32px"),
-  "Planner desktop layout must keep a smaller centered Depth pitch and safe gutter beside the squad table.",
+  "Planner desktop layout must keep the enlarged centered Depth pitch and safe gutter beside the squad table.",
 );
 invariant(
   styles.includes(".plannerTeamSearchResults .plannerTeamSearchResult:hover,.plannerTeamSearchResults .plannerTeamSearchResult:focus-visible")
