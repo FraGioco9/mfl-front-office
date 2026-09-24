@@ -175,7 +175,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
    usable button and place two compact alternatives directly below a starter. */
 .plannerDepthHeader{flex-wrap:wrap}
 .plannerAutoFillDepthButton{flex:0 0 auto}
-.plannerFormationSpot{width:clamp(54px,16%,70px);pointer-events:none}
+.plannerFormationSpot{width:clamp(58px,17%,74px);pointer-events:none}
 .plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
 .plannerFormationSlotButton:hover:not(:disabled){background:transparent;box-shadow:none;outline:0}.plannerFormationSlotButton:focus-visible{background:transparent;box-shadow:none;outline:2px solid #fff;outline-offset:2px}
 .plannerFormationSlotButton:disabled{cursor:default}
@@ -215,7 +215,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer span{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
-@media(max-width:520px){.plannerFormationSpot{width:clamp(50px,15%,64px)}.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:16px;width:16px;height:16px}.plannerFormationBackups{width:70px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(54px,16%,68px)}.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:16px;width:16px;height:16px}.plannerFormationBackups{width:70px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 
 /* GK backups extend below the field: keep them visible without overlapping detail cards. */
 .plannerPitchPanel .plannerPitch{overflow:visible}
