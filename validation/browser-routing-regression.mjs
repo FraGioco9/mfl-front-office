@@ -1797,7 +1797,15 @@ const browserTestSource = String.raw`(() => {
       assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
         "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
       formationPreview.render("352");
-      assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 3-5-2 midfield must be lower, with CDM behind both CMs.");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop,
+        "3-5-2 CDM must be central and match 4-3-3 (def) at 54%.");
+      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left)) === JSON.stringify(["35%", "65%"])
+        && formationSpot("CM").every(spot => spot.style.top === "46%"),
+        "3-5-2 CMs must flank the central CDM symmetrically without changing their height.");
+      assert(formationSpot("LM")[0].style.left === "12%" && formationSpot("RM")[0].style.left === "88%"
+        && formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%",
+        "3-5-2 wide midfielders must retain their horizontal and vertical placement.");
       formationPreview.render("433a");
       assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
         && formationSpot("CAM")[0]?.style.top === "30%",
