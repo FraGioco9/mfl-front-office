@@ -929,9 +929,15 @@
                 if (starter) {
                   const gradient = document.createElement("span");
                   gradient.className = "plannerFormationPlayerGradient";
-                  // The assigned circle is purely the club-colour gradient.
-                  // Player identity remains on the badge and in the picker.
-                  token.appendChild(gradient);
+                  // Keep the club gradient visible behind the player, without an icon or dark overlay.
+                  const portrait = document.createElement("img");
+                  portrait.className = "plannerFormationPlayerPhoto";
+                  portrait.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(starter.player_id) + "/photo.webp";
+                  portrait.alt = "";
+                  portrait.draggable = false;
+                  portrait.loading = "lazy";
+                  portrait.addEventListener("error", () => { portrait.hidden = true; });
+                  token.append(gradient, portrait);
                   const badge = document.createElement("span");
                   badge.className = "plannerFormationPlayerBadge";
                   const overall = document.createElement("span");

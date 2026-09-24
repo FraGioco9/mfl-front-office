@@ -174,6 +174,8 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationSlotButton .plannerFormationToken{width:78%}
 .plannerFormationTokenAssigned{isolation:isolate;overflow:hidden;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)),var(--planner-depth-secondary,var(--primary-hover)));box-shadow:inset 0 0 0 1px var(--planner-depth-primary,var(--primary)),0 2px 6px rgba(0,0,0,.4)}
 .plannerFormationPlayerGradient{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)) 5%,var(--planner-depth-secondary,var(--primary-hover)) 95%);pointer-events:none}
+.plannerFormationPlayerPhoto{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom;pointer-events:none}
+.plannerFormationPlayerPhoto[hidden]{display:none}
 .plannerFormationPlayerBadge{position:absolute;z-index:4;bottom:7px;left:50%;display:flex;align-items:stretch;overflow:hidden;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;transform:translate(-50%,50%);pointer-events:none}
 .plannerFormationPlayerOverall,.plannerFormationPlayerPosition{padding:1px 4px;color:#fff;font-size:10px;font-weight:700;line-height:15px;font-variant-numeric:tabular-nums}
 .plannerFormationPlayerOverall{background:#262626}
