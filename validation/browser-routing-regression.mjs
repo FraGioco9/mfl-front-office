@@ -1778,7 +1778,6 @@ const browserTestSource = String.raw`(() => {
       }
       formationPreview.render("41212");
       const regularDiamondStrikerSpacing = formationSpot("ST").map(spot => spot.style.left);
-      const regularDiamondWideMidfieldHeight = formationSpot("LM")[0].style.top;
       assert(JSON.stringify(regularDiamondStrikerSpacing) === JSON.stringify(["35%", "65%"]),
         "Regular diamond strikers must retain their expected spacing.");
       assert(JSON.stringify([formationSpot("LM")[0].style.left, formationSpot("RM")[0].style.left])
@@ -1787,10 +1786,11 @@ const browserTestSource = String.raw`(() => {
         "Wide diamond LM/RM must move wider while staying at the usual midfield height.");
       formationPreview.render("41212narrow");
       assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
-        === JSON.stringify(["34%", "66%"])
-        && formationSpot("CM").every(spot => spot.style.top === regularDiamondWideMidfieldHeight)
-        && regularDiamondWideMidfieldHeight === "40%",
-        "Narrow diamond CMs must be wider at 34%/66% while matching regular diamond wide mids in height.");
+        === JSON.stringify(["30%", "70%"])
+        && formationSpot("CM").every(spot => spot.style.top === "42%")
+        && formationSpot("CM").every(spot => Number.parseFloat(spot.style.top) ===
+          (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
+        "Narrow diamond CMs must sit at 30%/70% and halfway between CDM and CAM heights.");
       assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
         "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
       formationPreview.render("352");
@@ -1819,10 +1819,10 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("ST").every(spot => spot.style.top === "10%"),
         "4-1-3-2 must preserve both strikers.");
       formationPreview.render("41212narrow");
-      assert(formationSpot("CM").every(spot => spot.style.top === "40%")
+      assert(formationSpot("CM").every(spot => spot.style.top === "42%")
         && formationSpot("CDM")[0].style.top === "54%"
         && formationSpot("CAM")[0].style.top === "30%",
-        "Narrow diamond CMs must stay between CAM at 30% and CDM at 54%.");
+        "Narrow diamond CMs must remain equidistant from CAM at 30% and CDM at 54%.");
       formationPreview.render("352b");
       assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
       assert(formationSpot("CDM").every(spot => spot.style.top === "48%") && formationSpot("CAM")[0].style.top === "32%", "3-5-2 (B) CAM must be more advanced and CDMs deeper.");
