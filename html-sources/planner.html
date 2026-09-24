@@ -882,9 +882,12 @@
                     "stroke-width": "2.5", "stroke-linecap": "round"
                   });
                   removeIcon.appendChild(makeSlotIcon("path", { d: "M6 6L18 18M18 6L6 18" }));
+                  const removeIconFrame = document.createElement("span");
+                  removeIconFrame.className = "plannerDepthPickerRemoveFrame";
+                  removeIconFrame.appendChild(removeIcon);
                   const removeText = document.createElement("span");
                   removeText.textContent = "Remove";
-                  clear.append(removeIcon, removeText);
+                  clear.append(removeIconFrame, removeText);
                   clear.addEventListener("click", () => {
                     depthAssignments.delete(key);
                     renderFormation(selected);
