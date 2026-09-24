@@ -1579,8 +1579,45 @@ const browserTestSource = String.raw`(() => {
         assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
         assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
+        // Check the actual geometry of every empty position, not just the two 4-4-2 CMs.
+        for (const spot of spots) {
+          const token = spot.querySelector(".plannerFormationToken");
+          const plus = spot.querySelector(".plannerFormationTokenPlus");
+          const tokenRect = token.getBoundingClientRect();
+          const plusRect = plus.getBoundingClientRect();
+          assert(getComputedStyle(plus).position === "absolute", "Pitch plus must not participate in flex layout: " + code + " " + spot.dataset.slotKey);
+          assert(Math.abs(plusRect.left + plusRect.width / 2 - tokenRect.left - tokenRect.width / 2) < 0.75
+            && Math.abs(plusRect.top + plusRect.height / 2 - tokenRect.top - tokenRect.height / 2) < 0.75,
+            "Pitch plus must be centered in " + code + " " + spot.dataset.slotKey);
+        }
         assert(spots.at(-1)?.style.top === "94%", "Goalkeeper must remain in place for formation " + code);
       }
+
+      // Animate the same highlight state used by pointer hover/focus, checking
+      // both CMs and every other 4-4-2 spot during (not only after) the transition.
+      formationPreview.render("442");
+      const hoverSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
+      const center = rect => [rect.left + rect.width / 2, rect.top + rect.height / 2];
+      const hoverCenters = hoverSpots.map(spot => center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect()));
+      const hoverButtons = hoverSpots.map(spot => spot.querySelector(".plannerFormationSlotButton"));
+      hoverButtons.forEach(button => button.classList.add("plannerFormationSlotButtonPickerOpen"));
+      for (let frame = 0; frame < 15; frame++) {
+        await new Promise(resolve => setTimeout(resolve, 16));
+        hoverSpots.forEach((spot, index) => {
+          const plus = center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect());
+          const token = center(spot.querySelector(".plannerFormationToken").getBoundingClientRect());
+          assert(plus.every((value, axis) => Math.abs(value - token[axis]) < 0.75
+            && Math.abs(value - hoverCenters[index][axis]) < 0.75),
+            "Empty pitch plus shifted on hover in 4-4-2 " + spot.dataset.slotKey + " frame " + frame);
+        });
+      }
+      hoverButtons.forEach(button => button.classList.remove("plannerFormationSlotButtonPickerOpen"));
+      await new Promise(resolve => setTimeout(resolve, 220));
+      hoverSpots.forEach((spot, index) => {
+        const plus = center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect());
+        assert(plus.every((value, axis) => Math.abs(value - hoverCenters[index][axis]) < 0.75),
+          "Empty pitch plus shifted after hover in 4-4-2 " + spot.dataset.slotKey);
+      });
       for (const code of ["343b","352b","541"]) {
         formationPreview.render(code);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
