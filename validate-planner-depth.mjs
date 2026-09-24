@@ -129,18 +129,32 @@ assert.deepEqual(Array.from(ratings.spareCounts(["CB#1","CB#2","ST#1","GK#1"],[
   {player_id:43,name:"Third CB",positions:"CB",overall:88},
   {player_id:44,name:"ST",positions:"ST",overall:95},
   {player_id:45,name:"GK",positions:"GK",overall:95},
-],new Map())),[2,1,1,1],
-  "Repeated CBs must divide three spare players without double-counting; other positions count their own choices.");
+],new Map())),[3,3,1,1],
+  "Both empty CB slots count all three free CBs, not a divided allocation.");
 assert.deepEqual(Array.from(ratings.spareCounts(["CB#1","CB#2"],[
   {player_id:41,name:"First CB",positions:"CB",overall:95},
   {player_id:42,name:"Second CB",positions:"CB",overall:90},
   {player_id:43,name:"Third CB",positions:"CB",overall:88},
-],new Map([["CB#1",41],["CB#2",42]]))),[1,0],
-  "A spare CB may count under only one occupied CB circle, never either starter.");
+],new Map([["CB#1",41],["CB#2",42]]))),[1,1],
+  "Both occupied CB slots may count the same spare CB, never either starter.");
+assert.deepEqual(Array.from(ratings.spareCounts(["CM#1","CM#2","CAM#1","GK#1"],[
+  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92},
+  {player_id:52,name:"Other CM",positions:"CM",overall:90},
+  {player_id:53,name:"GK",positions:"GK",overall:90},
+],new Map())),[2,2,1,1],
+  "A free multi-position player must count in both CMs and CAM.");
+assert.deepEqual(Array.from(ratings.spareCounts(["CM#1","CM#2","CAM#1","GK#1"],[
+  {player_id:51,name:"CM/CAM",positions:"CM, CAM",overall:92},
+  {player_id:52,name:"Other CM",positions:"CM",overall:90},
+  {player_id:53,name:"GK",positions:"GK",overall:90},
+],new Map([["CM#1",51]]))),[1,1,0,1],
+  "An assigned versatile player must leave every position's spare-depth count.");
 assert.deepEqual(Array.from(ratings.spareCounts(["LB#1","ST#1"],belowThresholdFixtures,new Map())),[1,1],
   "The depth count must include the positional fallback when no player meets the threshold.");
 assert.deepEqual(Array.from(ratings.spareCounts(["LB#1"],belowThresholdFixtures,new Map([["LB#1",33]]))),[1],
   "Replacing a chosen fallback counts the next-best unassigned positional player.");
+assert.deepEqual(Array.from(ratings.spareCounts(["LB#1","LB#2"],belowThresholdFixtures,new Map())),[1,1],
+  "A sole below-threshold fallback may cover either repeated vacant position.");
 assert.deepEqual(Array.from(ratings.spareCounts(["LW#1"],belowThresholdFixtures,new Map())),[0],
   "An unavailable position should display zero depth.");
 vm.runInContext(helper + "\nthis.distribute = distributeFormationDepth;", ratings);
@@ -176,17 +190,19 @@ assert.ok([source, generated].every(shell => shell.includes('surnameText.textCon
 assert.ok([source, generated].every(shell => shell.includes('const depthSpareCounts = (keys, players, assignments) => {')
   && shell.includes('const spareCounts = depthSpareCounts(keys, depthRoster, depthAssignments);')
   && shell.includes('const claimed = new Set(assignments.values());')
-  && shell.includes('const unique = new Map();')
+  && shell.includes('depthPickerCandidates(players, position, new Set(), assignments.get(key), claimed)')
+  && shell.includes('new Set(choices.map(player => Number(player.player_id))).size;')
   && shell.includes('spareCounts[slotIndex]')
   && shell.includes('depthBadge.className = "plannerFormationDepthBadge "')
   && shell.includes('spot.dataset.depthCount = String(spareCount);')
-  && shell.includes('button.appendChild(depthBadge);')),
-  "Every circle must show deduplicated, unassigned spare depth based on the picker and current assignments.");
+  && shell.includes('spot.append(button, depthBadge, label);')),
+  "Count each free multi-position backup for all eligible slots without moving the OVR/position badge.");
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerFormationDepthBadge{position:absolute;z-index:6;top:7%;right:5%;')
   && sheet.includes('.plannerFormationDepthBadge.single{background:#f1b833;')
   && sheet.includes('.plannerFormationDepthBadge.multiple{background:#05f82c;')
-  && sheet.includes('.plannerFormationSlotButton{position:relative;display:flex;')),
-  "Depth indicators must be legible small circles attached to the pitch slot on desktop and mobile.");
+  && sheet.includes('.plannerFormationSlotButton{display:flex;')
+  && !sheet.includes('.plannerFormationSlotButton{position:relative;')),
+  "Depth circles must attach to the outer slot while preserving the original OVR/position badge anchor.");
 assert.ok(source.includes("setRoster(players)") && planner.includes('setRoster?.(roster)') && planner.includes('setRoster?.([])'), "Roster changes and Clear must redraw depth.");
 assert.ok(runtime.includes('setRoster?.(roster)') && runtime.includes('setRoster?.([])'), "Generated route core must redraw depth.");
 assert.ok([css, styles].every(sheet => !sheet.includes(".plannerDepthCardList") && !sheet.includes(".plannerDepthDetails{") && !sheet.includes(".plannerFormationBackups{") && sheet.includes(".plannerFormationPlayerSurname{")), "Obsolete depth summary and occupied-circle label styles must be removed.");
@@ -310,7 +326,7 @@ assert.ok(source.includes('position === "RW") && wideForwardLine ? 6') && genera
 assert.ok([source, generated].every(shell => shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
   && shell.includes('selected === "433cf" && position === "CF" ? 6')
   && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')), "4-3-3 (CF) wingers must rise to 12% and the CF sit beneath them at 16%, leaving other CF formations unchanged.");
-assert.ok([source, generated].every(shell => shell.includes('const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null) => {')
+assert.ok([source, generated].every(shell => shell.includes('const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null, unavailableIds = new Set()) => {')
   && shell.includes('const meetsThreshold = ranked.some(player => {')
   && shell.includes('const strongest = meetsThreshold ? null')
   && shell.includes('if (!meetsThreshold) return player === strongest;')
