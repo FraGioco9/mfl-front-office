@@ -1082,7 +1082,7 @@
                                 : selected === "4231" && position === "CAM" ? 0
                                 : selected === "4222" && position === "CAM" ? 2.5
                                 : position === "CAM" && count > 1 ? -4
-                                  : selected === "4321" && position === "CF" ? -9
+                                  : (selected === "4321" || selected === "3421") && position === "CF" ? -9
                                   : position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;
                   spot.style.left = x.toFixed(2) + "%";
                   spot.style.top = (y + offset).toFixed(2) + "%";
