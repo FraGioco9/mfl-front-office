@@ -134,10 +134,11 @@ assert.deepEqual(Array.from(distribute([["ST"]], [
 ])[0], p => p.player_id), [9, 11], "Equal Overall must use stable player ID order.");
 assert.equal(distribute([["RW"]], players)[0].length, 0, "Empty position must remain empty.");
 assert.ok(generated.includes(helper), "Generated shell must contain the exact canonical depth algorithm.");
-assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && !shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && !shell.includes('plannerRosterTotalsRow')), "Depth cards, occupied-circle names, backup lists, and the squad totals footer must no longer be rendered.");
+assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && !shell.includes('plannerRosterTotalsRow')), "Keep the selected player's name but omit depth cards, backup lists and squad totals.");
+assert.ok([source, generated].every(shell => shell.includes('surnameText.textContent = depthPlayerSurname(starter);') && shell.includes('surname.title = depthPlayerName(starter);') && shell.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")') && shell.includes('surname.setAttribute("aria-hidden", "true");')), "Selected circle must display the abbreviated player surname and flag while retaining accessible full name.");
 assert.ok(source.includes("setRoster(players)") && planner.includes('setRoster?.(roster)') && planner.includes('setRoster?.([])'), "Roster changes and Clear must redraw depth.");
 assert.ok(runtime.includes('setRoster?.(roster)') && runtime.includes('setRoster?.([])'), "Generated route core must redraw depth.");
-assert.ok([css, styles].every(sheet => !sheet.includes(".plannerDepthCardList") && !sheet.includes(".plannerDepthDetails{") && !sheet.includes(".plannerFormationBackups{") && !sheet.includes(".plannerFormationPlayerSurname{")), "Obsolete depth summary and occupied-circle label styles must be removed.");
+assert.ok([css, styles].every(sheet => !sheet.includes(".plannerDepthCardList") && !sheet.includes(".plannerDepthDetails{") && !sheet.includes(".plannerFormationBackups{") && sheet.includes(".plannerFormationPlayerSurname{")), "Obsolete depth summary and occupied-circle label styles must be removed.");
 for (const stylesheet of [css, styles]) {
   assert.ok(stylesheet.includes(".plannerRosterTable .plannerSlotColumn{width:48px}")
     && stylesheet.includes(".plannerRosterTable .plannerSlotColumn{width:44px}")
@@ -211,9 +212,11 @@ assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{disp
   "Picker portraits must match the pitch zoom; the SVG Remove icon and label must be vertically centered in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}')
-  && !sheet.includes('.plannerFormationSurnameFlag')
+  && sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px)')
+  && sheet.includes('.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 18px;')
+  && sheet.includes('.plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')
   && !sheet.includes('.plannerFormationBackup{')),
-  "Assigned circle must retain its portrait and in-circle OVR/position badge without names or backups underneath.");
+  "Assigned circles must show the selected player's surname and flag beneath the circle without backup text.");
 assert.ok(source.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && generated.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && source.includes('goalkeeper.style.top = "94%";'), "All formations must use the upper and lower pitch evenly in canonical and generated shells.");
 assert.ok(css.includes("width:clamp(58px,17%,74px)") && styles.includes("width:clamp(58px,17%,74px)") && css.includes("width:clamp(54px,16%,68px)") && styles.includes("width:clamp(54px,16%,68px)"), "Slightly enlarged circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 48") && generated.includes("pairedStrikers ? 30 : 48") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
