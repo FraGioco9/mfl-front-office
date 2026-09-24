@@ -77,7 +77,7 @@ const helper = source.slice(start + startMarker.length, end);
 // Run the actual positional ranking used by Auto-fill and the depth cards.
 vm.runInContext('const depthPlayerName = player => String(player.name || "Player #" + player.player_id);\n'
   + source.slice(source.indexOf("const rankDepthPlayers ="), source.indexOf("const slotKeysFor ="))
-  + "\nthis.rankDepthPlayers = rankDepthPlayers;", ratings);
+  + "\nthis.rankDepthPlayers = rankDepthPlayers; this.pickerCandidates = depthPickerCandidates;", ratings);
 const ratingFixtures = [
   {...player,player_id:14,name:"Natural CB",positions:"CB",overall:76},
   {...player,player_id:15,name:"Secondary CB",positions:"CM, CB",overall:98},
@@ -88,6 +88,20 @@ assert.equal(ratings.depthOverall(ratingFixtures[1],"CB"),"79");
 assert.equal(ratings.depthOverall(ratingFixtures[2],"CB"),"—");
 assert.deepEqual(Array.from(ratings.rankDepthPlayers(ratingFixtures,"CB"),p=>p.player_id),[14,15,16],
   "Auto-fill must rank by positional OVR, not base OVR, and put unrated players last.");
+const pickerFixtures = [
+  {player_id:21,name:"LB 90",positions:"LB",overall:90},
+  {player_id:22,name:"LB 85",positions:"LB",overall:85},
+  {player_id:23,name:"LB 75",positions:"LB",overall:75},
+  {player_id:24,name:"LB 100",positions:"LB",overall:100},
+  {player_id:25,name:"CM 100",positions:"CM",overall:100},
+  {player_id:26,name:"Retired LB",positions:"LB",overall:110,retirement_years:0},
+];
+assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB"),p=>p.player_id),[24,21,22],
+  "At a team average of 90, a position-rated 85 LB must appear but a 75 LB and retired players must not.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set([23])),p=>p.player_id),[24,21,22,23],
+  "Already assigned players stay visible even when they fall below the eligibility threshold.");
+assert.deepEqual(Array.from(ratings.pickerCandidates(pickerFixtures,"LB",new Set([26])),p=>p.player_id),[24,21,22],
+  "A retired player must not be made available through a stale selected ID.");
 vm.runInContext(helper + "\nthis.distribute = distributeFormationDepth;", ratings);
 const distribute = ratings.distribute;
 assert.deepEqual(Array.from(distribute([["CB"]],ratingFixtures)[0],p=>p.player_id),[14,15,16],
@@ -139,6 +153,13 @@ assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes(
 assert.ok(source.includes('const depthAssignments = new Map()') && source.includes('const autoFillDepth = () =>'), "Depth must preserve unique explicit assignments and auto-fill.");
 assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)') && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill and slots must be interactive.");
 assert.ok(!source.includes("spot.title =") && !generated.includes("spot.title ="), "Hovering an empty or occupied Planner circle must never open a native tooltip.");
+assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))")
+  && shell.includes("row.disabled = Boolean(assignedSlot);")
+  && shell.includes('status.textContent = selectedHere ? "Selected" : "Selected · " + assignedSlot.split("#")[0];')
+  && shell.includes('removeText.textContent = "Remove";')
+  && shell.includes('removeIcon.textContent = "×";')
+  && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')),
+  "Canonical and generated pickers must enforce a positional rating cutoff, display assigned starters and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
 assert.ok(source.includes('surnameText.textContent = depthPlayerSurname(starter);') && generated.includes('surnameText.textContent = depthPlayerSurname(starter);')
@@ -153,6 +174,12 @@ assert.ok(css.includes('.plannerFormationPlayerPhoto{') && styles.includes('.pla
 assert.ok(css.includes('.plannerFormationPlayerPhoto[hidden]{display:none}') && styles.includes('.plannerFormationPlayerPhoto[hidden]{display:none}'), "Failed player photos must leave the gradient visible.");
 assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('--planner-depth-primary') && planner.includes('--planner-depth-secondary'), "Changing Clubs must clear depth selection and set the branded gradient.");
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
+assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
+  && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
+  && sheet.includes('.plannerDepthPickerPlayer:disabled{cursor:default;opacity:1')
+  && sheet.includes('.plannerDepthPickerSelected{flex:0 0 auto;')
+  && sheet.includes('.plannerDepthPickerRemoveIcon{display:inline-flex;')),
+  "Picker portraits must match the pitch zoom and selected/remove styles must be preserved in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px)')
   && sheet.includes('max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px')
