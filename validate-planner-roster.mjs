@@ -4,7 +4,7 @@ import vm from "node:vm";
 
 // A small DOM boundary lets the real route run without a browser binary.
 class Element {
-  constructor(tag = "div") { this.tagName = tag; this.children = []; this.dataset = {}; this.style = {}; this.hidden = false; this.value = ""; this.events = {}; this.attributes = {}; this.classList = { toggle() {} }; }
+  constructor(tag = "div") { this.tagName = tag; this.children = []; this.dataset = {}; this.style = {}; this.hidden = false; this.value = ""; this.events = {}; this.attributes = {}; this.classes = new Set(); this.classList = { toggle() {}, add: token => this.classes.add(token), remove: token => this.classes.delete(token), contains: token => this.classes.has(token) }; }
   append(...nodes) { this.children.push(...nodes.flatMap(node => node.fragment ? node.children : [node])); }
   appendChild(node) { this.children = this.children.filter(child => child !== node); this.append(node); return node; }
   replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
@@ -16,7 +16,7 @@ class Element {
   addEventListener(name, listener) { this.events[name] = listener; }
   click() { this.events.click?.({ target: this }); }
   focus() {}
-  blur() {}
+  blur() { this.wasBlurred = true; }
   get childNodes() { return this.children; }
   select() {}
   querySelectorAll() { return []; }
@@ -66,6 +66,9 @@ assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Planner
 assert.equal(elements.get("plannerTeamLocation").textContent, "Rome, Italy", "Planner card must show location from the loaded club");
 elements.get("plannerFormationSelect").value = "4231";
 elements.get("plannerFormationSelect").events.change();
+assert(elements.get("plannerFormationSelect").classList.contains("plannerFormationSelectCommitted")
+  && elements.get("plannerFormationSelect").wasBlurred,
+  "Formation selection must dismiss the committed dropdown highlight.");
 assert.equal(localStorage.getItem("mfl-planner-formation-v1:9001"), "4231", "Formation selection must be stored for this club");
 assert.equal(formationRenders.at(-1), "4231", "Formation selection must update the pitch preview without changing the roster");
 assert.equal(elements.get("plannerRosterBody").children.length, 2, "Changing formation must preserve the squad");
