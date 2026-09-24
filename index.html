@@ -1080,12 +1080,12 @@
               <section class="tableShell" aria-label="Planned squad table">
                 <div class="playerTableScroller">
                   <table class="plannerRosterTable" aria-label="Planned squad">
-                    <colgroup><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
-                    <thead><tr><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                    <colgroup><col class="plannerSlotColumn"><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
+                    <thead><tr><th scope="col">Slot</th><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
                     <tbody id="plannerRosterBody"></tbody>
                     <tfoot>
                       <tr class="plannerRosterTotalsRow">
-                        <th scope="row" colspan="2">Squad totals</th>
+                        <th scope="row" colspan="3">Squad totals</th>
                         <td></td>
                         <td id="plannerAverageAge">—</td>
                         <td id="plannerAverageOverall">—</td>
@@ -2059,6 +2059,22 @@
               goalkeeper.style.top = "94%";
               fragment.appendChild(goalkeeper);
               formationPositions.replaceChildren(fragment);
+              // Reflect only valid Depth starters in the first squad-table column.
+              // Repeated positions retain their plain label (CB#2 -> CB).
+              const assignedSlotByPlayer = new Map();
+              keys.forEach((key, index) => {
+                const starter = starters[index];
+                if (starter) assignedSlotByPlayer.set(String(starter.player_id), key.split("#")[0]);
+              });
+              document.querySelectorAll("#plannerRosterBody tr[data-player-id]").forEach(row => {
+                const badge = row.querySelector(".plannerRosterSlotBadge");
+                const empty = row.querySelector(".plannerRosterSlotEmpty");
+                if (!(badge instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+                const slot = assignedSlotByPlayer.get(row.dataset.playerId) || "";
+                badge.textContent = slot;
+                badge.hidden = !slot;
+                empty.hidden = Boolean(slot);
+              });
               renderDepthDetails(positions, buckets);
               if (depthAutoFill instanceof HTMLButtonElement) {
                 depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>
@@ -2247,7 +2263,7 @@
               for (let index = 0; index < 8; index += 1) {
                 const row = document.createElement("tr");
                 row.setAttribute("aria-hidden", "true");
-                for (let column = 0; column < 7; column += 1) {
+                for (let column = 0; column < 8; column += 1) {
                   const cell = document.createElement("td");
                   const skeleton = document.createElement("span");
                   skeleton.className = "plannerRosterSkeleton";

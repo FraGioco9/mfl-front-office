@@ -7557,14 +7557,22 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
-.plannerRosterTable .plannerPlayerColumn{width:26%}
-.plannerRosterTable .plannerPositionColumn{width:16%}
-.plannerRosterTable .plannerAgeColumn{width:10%}
-.plannerRosterTable .plannerOverallColumn{width:14%}
-.plannerRosterTable .plannerContractColumn{width:20%}
-.plannerRosterTable .plannerRemoveColumn{width:8%}
+.plannerRosterTable .plannerSlotColumn{width:12%}
+.plannerRosterTable .plannerNationalityColumn{width:6%}
+.plannerRosterTable .plannerPlayerColumn{width:23%}
+.plannerRosterTable .plannerPositionColumn{width:12%}
+.plannerRosterTable .plannerAgeColumn{width:9%}
+.plannerRosterTable .plannerOverallColumn{width:10%}
+.plannerRosterTable .plannerContractColumn{width:21%}
+.plannerRosterTable .plannerRemoveColumn{width:7%}
+/* Player-page-inspired Depth slot badge. */
+.plannerRosterSlotCell{text-align:center}
+.plannerRosterSlotBadge{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:48px;max-width:100%;padding:0 5px;border-radius:5px;background:color-mix(in srgb,#05f82c 22%,transparent);color:#05f82c;font-size:12px;font-weight:700;line-height:16px;letter-spacing:.4px;white-space:nowrap}
+.plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}
+.plannerRosterSlotEmpty{color:var(--text-soft)}
+@media(max-width:1099px){.plannerRosterSlotBadge{min-width:40px;padding-inline:4px}}
 .plannerRosterTable td{line-height:1.2}
-.plannerRosterTable td:not(:nth-child(2)),.plannerRosterTable th:not(:nth-child(2)){text-align:center}
+.plannerRosterTable td:not(:nth-child(3)),.plannerRosterTable th:not(:nth-child(3)){text-align:center}
 .plannerRosterTable tbody tr:hover{background:var(--row-hover)}
 .plannerRosterTable tfoot th,.plannerRosterTable tfoot td{padding:7px 5px;border-top:1px solid var(--border-strong);background:var(--surface-muted);font-weight:800}
 .plannerRosterTable tfoot th{text-align:left}
@@ -7587,13 +7595,12 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterRemove:hover:not(:disabled),.plannerRosterRemove:focus-visible:not(:disabled){border-color:transparent;background-color:transparent;background-image:none;box-shadow:none;color:var(--danger);outline:0}
 .plannerRosterRemove:focus-visible{text-decoration:underline}
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
-.plannerRosterTable td:nth-child(2) .plannerRosterSkeleton{margin-left:0}
+.plannerRosterTable td:nth-child(3) .plannerRosterSkeleton{margin-left:0}
 .plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:420px;height:auto;aspect-ratio:72/109;margin:0 auto}
 #plannerRosterRetryButton{margin-top:8px}
-@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerPlayerColumn{width:22%}.plannerRosterTable .plannerPositionColumn{width:16%}.plannerRosterTable .plannerAgeColumn{width:14%}.plannerRosterTable .plannerOverallColumn{width:14%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:8%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
+@media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerSlotColumn{width:14%}.plannerRosterTable .plannerPlayerColumn{width:21%}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:10%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:7%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 
-.plannerRosterTable .plannerNationalityColumn{width:6%}
-.plannerRosterTable td:nth-child(2),.plannerRosterTable th:nth-child(2){text-align:left}
+.plannerRosterTable td:nth-child(3),.plannerRosterTable th:nth-child(3){text-align:left}
 .plannerRosterTable .plannerPlayerSearchFlagCell .flagImage{width:20px;height:20px;max-width:100%;object-fit:contain}
 .plannerRosterTable tbody tr:last-child td,.plannerPlayerSearchTable tbody tr:last-child td{border-bottom:0}
 .plannerRosterTable tfoot th,.plannerRosterTable tfoot td{border-bottom:0}
@@ -7623,9 +7630,9 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 /* Canonical Overall rarity marker and left-aligned numeric/position columns. */
 .plannerOverallContent{display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;min-width:0;white-space:nowrap}
 .plannerOverallRarityCircle{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%}
-.plannerRosterTable :is(th,td):nth-child(3),.plannerRosterTable :is(th,td):nth-child(4),.plannerRosterTable :is(th,td):nth-child(5){text-align:left}
+.plannerRosterTable :is(th,td):nth-child(4),.plannerRosterTable :is(th,td):nth-child(5),.plannerRosterTable :is(th,td):nth-child(6){text-align:left}
 .plannerRosterTable .plannerAgeContent{justify-content:flex-start}
-.plannerRosterTable tfoot td:nth-child(4),.plannerRosterTable tfoot td:nth-child(5){text-align:left}
+.plannerRosterTable :is(#plannerAverageAge,#plannerAverageOverall){text-align:left}
 .plannerPlayerSearchTable :is(th,td):nth-child(3),.plannerPlayerSearchTable :is(th,td):nth-child(4),.plannerPlayerSearchTable :is(th,td):nth-child(5){text-align:left;justify-items:start}
 @media(max-width:900px){.myClubCard.plannerTeamCard{--mfl-club-identity-logo-width:110px;--mfl-club-identity-logo-height:120px;grid-template-columns:140px minmax(0,1fr);min-height:156px}.plannerTeamCard .plannerTeamLogoFrame{padding:14px}.plannerTeamCard .plannerTeamCardBody{padding:18px 20px}.plannerTeamCard .clubIdentityId{font-size:13px}.plannerTeamCard .clubIdentityName{font-size:30px}.plannerTeamCard .clubIdentityMeta{margin-top:8px;font-size:15px}}
 @media(max-width:600px){.plannerSelectedTeam{flex-direction:column;align-items:stretch;gap:10px}.myClubCard.plannerTeamCard{flex:none;width:100%}#plannerTeamClearButton{align-self:flex-end}}

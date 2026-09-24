@@ -430,6 +430,16 @@
     for(const player of roster){
       const row=document.createElement("tr");
       row.dataset.playerId=String(player.player_id);
+      const slotCell=document.createElement("td");
+      slotCell.className="plannerRosterSlotCell";
+      const slotBadge=document.createElement("span");
+      slotBadge.className="plannerRosterSlotBadge";
+      slotBadge.hidden=true;
+      const slotEmpty=document.createElement("span");
+      slotEmpty.className="plannerRosterSlotEmpty";
+      slotEmpty.textContent="—";
+      slotCell.append(slotBadge,slotEmpty);
+      row.appendChild(slotCell);
       row.appendChild(plannerNationalityCell(player));
       for(const value of [player.name,player.positions]){
         const cell=document.createElement("td");
@@ -580,7 +590,7 @@
       for(let index=0;index<8;index+=1){
         const row=document.createElement("tr");
         row.setAttribute("aria-hidden","true");
-        for(let column=0;column<7;column+=1){
+        for(let column=0;column<8;column+=1){
           const cell=document.createElement("td");
           const skeleton=document.createElement("span");
           skeleton.className="plannerRosterSkeleton";
