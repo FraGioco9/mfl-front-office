@@ -1777,9 +1777,9 @@ const browserTestSource = String.raw`(() => {
       assert(referenceDefensiveCDMTop === "54%", "4-3-3 (def) must retain the reference holding-midfielder depth.");
       formationPreview.render("4132");
       assert(["LM", "CM", "RM"].every(position => formationSpot(position).length === 1
-        && formationSpot(position)[0].style.top === "40%")
+        && formationSpot(position)[0].style.top === "36%")
         && formationSpot("CM")[0].style.left === "50%",
-        "4-1-3-2 LM, CM and RM must all share the regular 40% midfield line.");
+        "4-1-3-2 LM, CM and RM must advance together to a flat 36% midfield line.");
       assert(formationSpot("CDM").length === 1
         && formationSpot("CDM")[0].style.left === "50%"
         && formationSpot("CDM")[0].style.top === referenceDefensiveCDMTop,
