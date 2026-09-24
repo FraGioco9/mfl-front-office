@@ -154,12 +154,14 @@ assert.ok(source.includes('const depthAssignments = new Map()') && source.includ
 assert.ok(source.includes('depthAutoFill?.addEventListener("click", autoFillDepth)') && source.includes('button.addEventListener("click", () => openDepthPicker('), "Auto-fill and slots must be interactive.");
 assert.ok(!source.includes("spot.title =") && !generated.includes("spot.title ="), "Hovering an empty or occupied Planner circle must never open a native tooltip.");
 assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))")
-  && shell.includes("row.disabled = Boolean(assignedSlot);")
-  && shell.includes('status.textContent = selectedHere ? "Selected" : "Selected · " + assignedSlot.split("#")[0];')
+  && shell.includes('.filter(player => Number(player.player_id) !== currentId);')
+  && shell.includes('status.textContent = "Selected · " + assignedSlot.split("#")[0];')
+  && shell.includes('if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);')
+  && !shell.includes("row.disabled = Boolean(assignedSlot);")
   && shell.includes('removeText.textContent = "Remove";')
   && shell.includes('removeIcon.textContent = "×";')
   && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')),
-  "Canonical and generated pickers must enforce a positional rating cutoff, display assigned starters and use matching portrait frames and Remove.");
+  "Canonical and generated pickers must hide the current starter, move assigned players atomically, and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
 assert.ok(source.includes('surnameText.textContent = depthPlayerSurname(starter);') && generated.includes('surnameText.textContent = depthPlayerSurname(starter);')
@@ -176,10 +178,11 @@ assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('-
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
-  && sheet.includes('.plannerDepthPickerPlayer:disabled{cursor:default;opacity:1')
   && sheet.includes('.plannerDepthPickerSelected{flex:0 0 auto;')
-  && sheet.includes('.plannerDepthPickerRemoveIcon{display:inline-flex;')),
-  "Picker portraits must match the pitch zoom and selected/remove styles must be preserved in generated CSS.");
+  && sheet.includes('.plannerDepthPickerRemoveIcon{display:inline-flex;')
+  && sheet.includes('.plannerDepthPickerClear{min-height:44px;align-items:center;')
+  && sheet.includes('.plannerDepthPickerClear>span{display:inline-flex;align-items:center;min-height:20px;line-height:20px}')),
+  "Picker portraits must match the pitch zoom; Remove icon and label must be vertically centered in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px)')
   && sheet.includes('max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px')
