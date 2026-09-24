@@ -1731,8 +1731,11 @@ const browserTestSource = String.raw`(() => {
           && (code === "433" || code === "433cf" ? outerCMs[1].style.left === "50%" : true),
           "4-3-3 variants must retain the central role and regular CM line: " + code);
       }
+      formationPreview.render("433d");
+      const defensive433CDMTop = formationSpot("CDM")[0]?.style.top;
+      assert(defensive433CDMTop === "54%", "4-3-3 (def) CDM remains on the reference 54% line.");
       formationPreview.render("4141");
-      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.top === "54%"
+      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.top === defensive433CDMTop
         && formationSpot("CDM")[0].style.left === "50%",
         "4-1-4-1 CDM must stay central on the 4-3-3 (def) 54% CDM line.");
       assert(formationSpot("CM").every(spot => spot.style.top === "40%"),
