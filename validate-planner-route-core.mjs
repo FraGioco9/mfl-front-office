@@ -287,7 +287,7 @@ invariant(html.includes('const y = standardMidfieldLine ? 40\n                  
       && shell.includes('flatFourMidfield ? 0')
       && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')
       && shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
-      && shell.includes('selected === "433cf" && position === "CF" ? 6')),,
+      && shell.includes('selected === "433cf" && position === "CF" ? 6')),
   "Planner must preserve the 25 formations, compact wide slots, lift the defence and keep the goalkeeper label inside the pitch.");
 const expectedRingSegments = 12;
 for (const markup of [html, generatedHtml]) {
