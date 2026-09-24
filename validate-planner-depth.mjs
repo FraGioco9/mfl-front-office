@@ -182,7 +182,9 @@ assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('-
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
-  && sheet.includes('.plannerDepthPickerSelected{flex:0 0 auto;')
+  && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;')
+  && sheet.includes('.plannerDepthPicker .plannerDepthPickerPlayer:hover:not(:disabled),.plannerDepthPicker .plannerDepthPickerPlayer:focus-visible,.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{border-color:var(--primary);background:var(--row-hover);background-image:none;box-shadow:none;outline:0}')
+  && sheet.includes('.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{color:var(--danger)}')
   && sheet.includes('.plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;align-self:center;overflow:visible}')
   && sheet.includes('.plannerDepthPickerClear{min-height:44px;align-items:center;')
   && sheet.includes('.plannerDepthPickerClear>span{display:inline-flex;align-items:center;min-height:20px;line-height:20px}')),
