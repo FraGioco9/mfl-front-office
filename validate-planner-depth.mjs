@@ -284,7 +284,7 @@ assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{disp
   && sheet.includes('.plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}')
   && sheet.includes('.plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;overflow:visible}')
   && sheet.includes('.plannerDepthPickerClear{min-height:44px;align-items:center;')
-  && sheet.includes('.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;min-width:0;min-height:36px;line-height:20px}')),,
+  && sheet.includes('.plannerDepthPickerClear>span:last-child{display:inline-flex;flex:1 1 0;align-items:center;min-width:0;min-height:36px;line-height:20px}')), 
   "Picker portraits must match the pitch zoom; the SVG Remove icon and label must be vertically centered in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}')
