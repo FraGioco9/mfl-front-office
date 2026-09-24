@@ -1585,7 +1585,7 @@ const browserTestSource = String.raw`(() => {
           const plus = spot.querySelector(".plannerFormationTokenPlus");
           const tokenRect = token.getBoundingClientRect();
           const plusRect = plus.getBoundingClientRect();
-          assert(getComputedStyle(plus).position === "absolute", "Pitch plus must not participate in flex layout: " + code + " " + spot.dataset.slotKey);
+          assert(getComputedStyle(plus).position === "absolute" && getComputedStyle(plus).transform === "none", "Pitch plus must use transform-free absolute centering in its resting state: " + code + " " + spot.dataset.slotKey);
           assert(Math.abs(plusRect.left + plusRect.width / 2 - tokenRect.left - tokenRect.width / 2) < 0.75
             && Math.abs(plusRect.top + plusRect.height / 2 - tokenRect.top - tokenRect.height / 2) < 0.75,
             "Pitch plus must be centered in " + code + " " + spot.dataset.slotKey);
@@ -1593,30 +1593,42 @@ const browserTestSource = String.raw`(() => {
         assert(spots.at(-1)?.style.top === "94%", "Goalkeeper must remain in place for formation " + code);
       }
 
-      // Animate the same highlight state used by pointer hover/focus, checking
-      // both CMs and every other 4-4-2 spot during (not only after) the transition.
+      // Measure the + against its OWN ring at rest and while animating, not its
+      // viewport coordinates: a hover can independently expose a page scrollbar.
       formationPreview.render("442");
       const hoverSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
       const center = rect => [rect.left + rect.width / 2, rect.top + rect.height / 2];
-      const hoverCenters = hoverSpots.map(spot => center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect()));
+      const assertRestingPlus = (spot, state) => {
+        const plusElement = spot.querySelector(".plannerFormationTokenPlus");
+        const tokenElement = spot.querySelector(".plannerFormationToken");
+        const ringElement = spot.querySelector(".plannerFormationTokenRing");
+        const plus = center(plusElement.getBoundingClientRect());
+        const token = center(tokenElement.getBoundingClientRect());
+        const ring = center(ringElement.getBoundingClientRect());
+        assert(plus.every((value, axis) => Math.abs(value - token[axis]) <= 0.5
+          && Math.abs(value - ring[axis]) <= 0.5),
+          "Empty pitch plus is off-centre " + state + " in 4-4-2 " + spot.dataset.slotKey);
+        return plus.map((value, axis) => value - token[axis]);
+      };
+      // The reported issue is BEFORE pointer hover, so assert the default state
+      // separately and compare its relative alignment after each animation frame.
+      const restingOffsets = hoverSpots.map(spot => assertRestingPlus(spot, "before hover"));
       const hoverButtons = hoverSpots.map(spot => spot.querySelector(".plannerFormationSlotButton"));
       hoverButtons.forEach(button => button.classList.add("plannerFormationSlotButtonPickerOpen"));
       for (let frame = 0; frame < 15; frame++) {
         await new Promise(resolve => setTimeout(resolve, 16));
         hoverSpots.forEach((spot, index) => {
-          const plus = center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect());
-          const token = center(spot.querySelector(".plannerFormationToken").getBoundingClientRect());
-          assert(plus.every((value, axis) => Math.abs(value - token[axis]) < 0.75
-            && Math.abs(value - hoverCenters[index][axis]) < 0.75),
-            "Empty pitch plus shifted on hover in 4-4-2 " + spot.dataset.slotKey + " frame " + frame);
+          const currentOffsets = assertRestingPlus(spot, "during hover frame " + frame);
+          assert(currentOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
+            "Empty pitch plus changes its circle alignment during hover in 4-4-2 " + spot.dataset.slotKey);
         });
       }
       hoverButtons.forEach(button => button.classList.remove("plannerFormationSlotButtonPickerOpen"));
       await new Promise(resolve => setTimeout(resolve, 220));
       hoverSpots.forEach((spot, index) => {
-        const plus = center(spot.querySelector(".plannerFormationTokenPlus").getBoundingClientRect());
-        assert(plus.every((value, axis) => Math.abs(value - hoverCenters[index][axis]) < 0.75),
-          "Empty pitch plus shifted after hover in 4-4-2 " + spot.dataset.slotKey);
+        const finalOffsets = assertRestingPlus(spot, "after hover");
+        assert(finalOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
+          "Empty pitch plus changes its circle alignment after hover in 4-4-2 " + spot.dataset.slotKey);
       });
       for (const code of ["343b","352b","541"]) {
         formationPreview.render(code);
