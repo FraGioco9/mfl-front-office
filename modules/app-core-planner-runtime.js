@@ -23,9 +23,6 @@
   const rosterCount=document.getElementById("plannerRosterCount");
   const rosterStatus=document.getElementById("plannerRosterStatus");
   const rosterRetry=document.getElementById("plannerRosterRetryButton");
-  const averageAgeCell=document.getElementById("plannerAverageAge");
-  const averageOverallCell=document.getElementById("plannerAverageOverall");
-  const totalContractsCell=document.getElementById("plannerTotalContracts");
   const addPlayerButton=document.getElementById("plannerAddPlayerButton");
   const playerModal=document.getElementById("plannerPlayerModal");
   const playerModalCloseButton=document.getElementById("plannerPlayerModalCloseButton");
@@ -97,7 +94,6 @@
     rosterSlots=new Map();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.([]);
     clubSearchPlayers=[];
-    renderRosterTotals();
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
     rosterBody?.replaceChildren();
     if(rosterBody)rosterBody.removeAttribute("aria-busy");
@@ -197,14 +193,6 @@
       const row=rowsById.get(String(player.player_id));
       if(row)rosterBody.appendChild(row);
     }
-  }
-  function renderRosterTotals(){
-    const ages=roster.map(player=>Number(player?.age)).filter(Number.isFinite);
-    const overalls=roster.map(player=>Number(player?.overall)).filter(Number.isFinite);
-    const contracts=roster.map(player=>Number(player?.planned_contract_value)).filter(Number.isFinite);
-    if(averageAgeCell)averageAgeCell.textContent=ages.length?"Avg "+(ages.reduce((sum,value)=>sum+value,0)/ages.length).toFixed(2):"—";
-    if(averageOverallCell)averageOverallCell.textContent=overalls.length?"Avg "+(overalls.reduce((sum,value)=>sum+value,0)/overalls.length).toFixed(2):"—";
-    if(totalContractsCell)totalContractsCell.textContent=contracts.length?"Total "+contracts.reduce((sum,value)=>sum+value,0).toFixed(2)+"%":"—";
   }
   function availablePlayerSlots(){return Math.max(0,MAX_SQUAD_SIZE-roster.length);}
   function updateAddPlayerAvailability(){
@@ -515,7 +503,6 @@
           const raw=contractInput.value.trim();
           const numeric=Number(raw);
           if(raw&&Number.isFinite(numeric))player.planned_contract_value=Math.min(normalizeContractValue(numeric),contractLimitForPlayer(player.player_id));
-          renderRosterTotals();
         }
         contractValue.textContent=contractDisplayText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
@@ -592,7 +579,6 @@
     rosterBody.replaceChildren(fragment);
     rosterBody.removeAttribute("aria-busy");
     if(rosterCount)rosterCount.textContent="("+roster.length+")";
-    renderRosterTotals();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.(roster);
     rosterMessage(roster.length?"":"No players in this squad.");
   }
