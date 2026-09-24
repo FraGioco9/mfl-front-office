@@ -1810,7 +1810,7 @@
               });
             // Compare positional OVR against the squad's average Overall, not a
             // candidate pool that changes when a player is assigned elsewhere.
-            const depthPickerCandidates = (players, position, selectedIds = new Set()) => {
+            const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null) => {
               const active = (Array.isArray(players) ? players : []).filter(player => {
                 const years = player?.retirement_years;
                 return Number.isSafeInteger(Number(player?.player_id)) && Number(player.player_id) > 0
@@ -1820,8 +1820,22 @@
                 .filter(value => Number.isFinite(value) && value > 0);
               const threshold = ratings.length
                 ? ratings.reduce((total, value) => total + value, 0) / ratings.length * 0.9 : null;
-              return rankDepthPlayers(active, position).filter(player => {
+              // Exclude the player occupying this exact slot before deciding
+              // whether any other player reaches the 10% threshold.
+              const ranked = rankDepthPlayers(active, position)
+                .filter(player => Number(player.player_id) !== Number(excludedId));
+              const meetsThreshold = ranked.some(player => {
+                const rating = depthPlayerOverall(player, position);
+                return rating !== "—" && (threshold === null || Number(rating) >= threshold);
+              });
+              // With no qualifying positional rating, offer the strongest
+              // position-rated player instead of an empty picker. Already assigned
+              // players remain transferable regardless of the threshold.
+              const strongest = meetsThreshold ? null
+                : ranked.find(player => depthPlayerOverall(player, position) !== "—");
+              return ranked.filter(player => {
                 if (selectedIds.has(Number(player.player_id))) return true;
+                if (!meetsThreshold) return player === strongest;
                 const rating = depthPlayerOverall(player, position);
                 return rating !== "—" && (threshold === null || Number(rating) >= threshold);
               });
@@ -1884,8 +1898,7 @@
                 depthPicker.appendChild(pickerContent);
                 const assignmentByPlayer = new Map([...depthAssignments].map(([slot, id]) => [id, slot]));
                 const currentId = depthAssignments.get(key);
-                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))
-                  .filter(player => Number(player.player_id) !== currentId);
+                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()), currentId);
                 const heading = document.createElement("h4");
                 heading.textContent = "Select " + position;
                 pickerContent.appendChild(heading);
@@ -1911,7 +1924,7 @@
                 }
                 if (!eligible.length) {
                   const empty = document.createElement("p");
-                  empty.textContent = "No players within 10% of the team average for " + position + ".";
+                  empty.textContent = "No available players for " + position + ".";
                   pickerContent.appendChild(empty);
                 }
                 for (const player of eligible) {
