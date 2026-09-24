@@ -326,7 +326,7 @@ assert.ok([source, generated].every(shell => shell.includes('(selected === "4321
   "3-4-2-1 and 4-3-2-1 must share a 20% CF line while other CF formations retain their heights.");
 assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4')
   && shell.includes('linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));')
-  && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
+  && shell.includes('flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
   && shell.includes('flatFourMidfield ? 0')), "Flat four-man midfield rows match 4-4-2 except the two deeper CDMs in 4-4-2 (B); 3-4-3 (B) and 5-4-1 are diamonds.");
 assert.ok(css.includes("width:clamp(58px,17%,74px)") && styles.includes("width:clamp(58px,17%,74px)") && css.includes("width:clamp(54px,16%,68px)") && styles.includes("width:clamp(54px,16%,68px)"), "Slightly enlarged circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 44") && generated.includes("pairedStrikers ? 30 : 44") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
