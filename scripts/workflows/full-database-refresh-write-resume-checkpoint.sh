@@ -30,5 +30,6 @@ jq -n   --arg stage "$STAGE"   --arg runId "$GITHUB_RUN_ID"   --arg runAttempt "
 {
   echo "### Refresh resume checkpoint: $STAGE"
   echo
-  echo "Validated checkpoint recorded at `$RECORDED_AT` for run `$GITHUB_RUN_ID` attempt `$GITHUB_RUN_ATTEMPT`."
+  printf 'Validated checkpoint recorded at `%s` for run `%s` attempt `%s`.\n' \
+    "$RECORDED_AT" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 } >> "$GITHUB_STEP_SUMMARY"

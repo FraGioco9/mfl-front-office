@@ -75,9 +75,12 @@ def next_health_marker(
     }
 
 
-def _object_url(supabase_url: str, object_path: str) -> str:
+def _object_url(
+    supabase_url: str, object_path: str, *, authenticated: bool = False
+) -> str:
     encoded = "/".join(quote(part, safe="") for part in object_path.split("/"))
-    return f"{supabase_url.rstrip('/')}/storage/v1/object/{RUNTIME_BUCKET}/{encoded}"
+    access = "authenticated/" if authenticated else ""
+    return f"{supabase_url.rstrip('/')}/storage/v1/object/{access}{RUNTIME_BUCKET}/{encoded}"
 
 
 def read_previous_marker(
@@ -87,7 +90,7 @@ def read_previous_marker(
     object_path: str,
 ) -> dict[str, object]:
     request = Request(
-        _object_url(supabase_url, object_path),
+        _object_url(supabase_url, object_path, authenticated=True),
         headers=request_headers(service_role_key),
         method="GET",
     )

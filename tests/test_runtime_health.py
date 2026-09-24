@@ -50,5 +50,29 @@ class RuntimeHealthMarkerTests(unittest.TestCase):
         self.assertEqual(marker["consecutiveFailures"], 1)
 
 
+    def test_private_marker_uses_authenticated_download_route(self):
+        from scripts.operations.runtime_health import _object_url
+
+        url = _object_url(
+            "https://example.supabase.co",
+            "health/database-refresh.json",
+            authenticated=True,
+        )
+        self.assertEqual(
+            url,
+            "https://example.supabase.co/storage/v1/object/authenticated/"
+            "mfl-runtime/health/database-refresh.json",
+        )
+
+    def test_upload_route_unchanged(self):
+        from scripts.operations.runtime_health import _object_url
+
+        self.assertEqual(
+            _object_url("https://example.supabase.co", "health/database-refresh.json"),
+            "https://example.supabase.co/storage/v1/object/"
+            "mfl-runtime/health/database-refresh.json",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

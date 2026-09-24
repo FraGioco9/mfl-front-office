@@ -64,8 +64,26 @@ printf '{"orgId":"%s","projectId":"%s"}' \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"
-  vercel deploy --prebuilt --prod --yes --force \
-    --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+  # A transient network failure during the large prebuilt upload must not force
+  # the entire database refresh to rebuild the same checkpoint.
+  deployment_log="$(mktemp)"
+  trap 'rm -f "$deployment_log"' EXIT
+  for attempt in 1 2 3; do
+    if vercel deploy --prebuilt --prod --yes --force \
+      --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}" 2>&1 | tee "$deployment_log"; then
+      break
+    fi
+
+    if [ "$attempt" -eq 3 ] || ! grep -Eq \
+      'Error: fetch failed|AbortError: This operation was aborted|ECONNRESET|ETIMEDOUT|EAI_AGAIN' \
+      "$deployment_log"; then
+      echo "Vercel checkpoint deployment failed; no further retry." >&2
+      exit 1
+    fi
+
+    echo "Transient Vercel upload failure (attempt $attempt/3); retrying the same prebuilt checkpoint." >&2
+    sleep "$((attempt * 15))"
+  done
 )
 
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/verify-live-production-deployment.sh"

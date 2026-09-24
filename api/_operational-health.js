@@ -17,7 +17,7 @@ function objectUrl(config, objectPath) {
     .split("/")
     .map(encodeURIComponent)
     .join("/");
-  return `${config.url}/storage/v1/object/${RUNTIME_BUCKET}/${encoded}`;
+  return `${config.url}/storage/v1/object/authenticated/${RUNTIME_BUCKET}/${encoded}`;
 }
 
 async function readRuntimeObject(objectPath) {
