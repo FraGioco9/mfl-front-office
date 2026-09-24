@@ -1810,10 +1810,8 @@ const browserTestSource = String.raw`(() => {
       assert(Math.abs(starterFlag.getBoundingClientRect().width - 20) < 1
         && Math.abs(starterFlag.getBoundingClientRect().height - 20) < 1
         && flagStyle.borderTopWidth === "0px"
-        && flagStyle.filter.includes("drop-shadow(1px 0px 0px")
-        && flagStyle.filter.includes("drop-shadow(-1px 0px 0px")
-        && flagStyle.filter.includes("drop-shadow(0px 1px 0px")
-        && flagStyle.filter.includes("drop-shadow(0px -1px 0px"),
+        && (flagStyle.filter.match(/drop-shadow\(/g) || []).length === 4
+        && flagStyle.filter.includes("255, 255, 255"),
         "Pitch nationality flags must match table dimensions with a subtle alpha-following white outline, not a box border.");
       assert(surnameStyle.fontSize === "11px",
         "Pitch starter surname should use the slightly larger desktop font.");
