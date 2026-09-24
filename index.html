@@ -2083,14 +2083,21 @@
                   // 3-5-2 (B) uses a symmetric CDM-CAM-CDM triangle, rather than
                   // interpreting its slot order as a straight five-player row.
                   // 4-2-2-2 CDMs stay narrower than the 30%-wide striker pair.
-                  const x = selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)
+                  const x = selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
+                    : selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 40 : 60)
+                    : selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)
                     : selected === "352b" && midfield && position === "CAM" ? 50
                     : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
                       : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
                         : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
                   // 4-4-2 (B) keeps the wide midfielders on the 4-4-2 line,
                   // with its paired CDMs one step deeper.
-                  const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6
+                  // Both diamond variants match the 4-3-3 (def) CDM and 4-3-3 (att) CAM.
+                  // Override before generic mixed-CDM/CM positioning can intercept them.
+                  const diamond41212 = selected === "41212" || selected === "41212narrow";
+                  const offset = diamond41212 && position === "CDM" ? 54 - y
+                    : diamond41212 && position === "CAM" ? 30 - y
+                    : flatFourMidfield && selected === "442b" && position === "CDM" ? 6
                     : flatFourMidfield ? 0
                       : selected === "352b" && midfield && position === "CDM" ? 8
                     : selected === "352b" && midfield && position === "CAM" ? -8
