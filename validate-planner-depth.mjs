@@ -229,16 +229,16 @@ assert.ok([source, generated].every(shell => shell.includes('selected === "4132"
   "4-1-3-2 LM, CM and RM must all receive the same four-point forward offset before the shared holding-midfield adjustment.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)')
   && shell.includes('selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 30 : 70)')
-  && shell.includes('const diamondMidfield = selected === "343b" || selected === "41212" || selected === "41212narrow";')
+  && shell.includes('const diamondMidfield = selected === "343b" || selected === "541" || selected === "41212" || selected === "41212narrow";')
   && shell.includes('const offset = selected === "352" && position === "CDM" ? 54 - y')
   && shell.includes('diamondMidfield && position === "CDM" ? 54 - y')
   && shell.includes('diamondMidfield && position === "CAM" ? 30 - y')
   && shell.includes('diamondMidfield && ["LM", "RM", "CM"].includes(position) ? 42 - y')),
-  "3-4-3 (B) and both 4-1-2-1-2 diamonds share CDM/CAM reference heights and a 42% midfield line.");
-assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4 && selected !== "343b"')
-  && shell.includes('selected === "343b" && (position === "CDM" || position === "CAM") ? 50')
-  && shell.includes('selected === "343b" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)')),
-  "3-4-3 (B) must be a centred midfield diamond with LM/RM at 18%/82%, not a flat four.");
+  "3-4-3 (B), 5-4-1 and both 4-1-2-1-2 diamonds share CDM/CAM reference heights and a 42% midfield line.");
+assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4 && selected !== "343b" && selected !== "541"')
+  && shell.includes('(selected === "343b" || selected === "541") && (position === "CDM" || position === "CAM") ? 50')
+  && shell.includes('(selected === "343b" || selected === "541") && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)')),
+  "3-4-3 (B) and 5-4-1 must be centred midfield diamonds with LM/RM at 18%/82%, not flat fours.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
@@ -251,7 +251,7 @@ assert.ok([source, generated].every(shell => shell.includes('(selected === "4321
 assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4')
   && shell.includes('linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));')
   && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
-  && shell.includes('flatFourMidfield ? 0')), "Flat four-man midfield rows match 4-4-2 except the two deeper CDMs in 4-4-2 (B); 3-4-3 (B) is a diamond.");
+  && shell.includes('flatFourMidfield ? 0')), "Flat four-man midfield rows match 4-4-2 except the two deeper CDMs in 4-4-2 (B); 3-4-3 (B) and 5-4-1 are diamonds.");
 assert.ok(css.includes("width:clamp(58px,17%,74px)") && styles.includes("width:clamp(58px,17%,74px)") && css.includes("width:clamp(54px,16%,68px)") && styles.includes("width:clamp(54px,16%,68px)"), "Slightly enlarged circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 44") && generated.includes("pairedStrikers ? 30 : 44") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "41212narrow" && midfield ? 0.68 : 1;')), "Narrow diamond must not shrink its striker pair relative to regular 4-1-2-1-2.");
