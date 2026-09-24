@@ -232,8 +232,8 @@ assert.ok([source, generated].every(shell => shell.includes('selected === "41212
   && shell.includes('const diamond41212 = selected === "41212" || selected === "41212narrow";')
   && shell.includes('const offset = diamond41212 && position === "CDM" ? 54 - y')
   && shell.includes('diamond41212 && position === "CAM" ? 30 - y')
-  && shell.includes('selected === "41212narrow" && position === "CM" ? 42 - y')),
-  "Both diamonds share CDM/CAM reference depths; narrow CMs use 30%/70% spacing and a 42% line midway between CDM and CAM.");
+  && shell.includes('diamond41212 && ["LM", "RM", "CM"].includes(position) ? 42 - y')),
+  "Both diamonds share CDM/CAM reference depths and a midpoint 42% LM/RM/CM line; narrow CMs use 30%/70% spacing.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
