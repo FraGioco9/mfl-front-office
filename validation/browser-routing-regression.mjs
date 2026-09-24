@@ -1724,7 +1724,11 @@ const browserTestSource = String.raw`(() => {
       formationPreview.render("4321");
       assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-3-2-1 midfield must use the normal 4-4-2 height with all three CMs aligned.");
-      for (const code of ["3421", "4321", "4411"]) {
+      assert(formationSpot("CF").length === 2
+        && formationSpot("CF").every(spot => spot.style.top === "20%")
+        && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
+        "4-3-2-1 must place both CFs forward at 20%, below its unchanged striker at 10%.");
+      for (const code of ["3421", "4411"]) {
         formationPreview.render(code);
         const centralForwards = formationSpot("CF");
         assert(centralForwards.length === (code === "4411" ? 1 : 2)
