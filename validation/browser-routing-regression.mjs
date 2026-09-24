@@ -1786,9 +1786,19 @@ const browserTestSource = String.raw`(() => {
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
       const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
+      const assignedButton = slot("CB#1").querySelector(".plannerFormationSlotButton");
+      const emptyButton = slot("CB#2").querySelector(".plannerFormationSlotButton");
+      const halo = button => getComputedStyle(button, "::before");
       assert(getComputedStyle(emptyToken).transitionProperty.includes("transform")
         && getComputedStyle(assignedToken).transitionProperty.includes("transform"),
         "Both empty and filled depth circles must animate on hover and keyboard focus.");
+      assert([emptyButton, assignedButton].every(button =>
+        halo(button).content !== "none"
+        && halo(button).pointerEvents === "none"
+        && halo(button).transitionProperty.includes("opacity")
+        && halo(button).transitionProperty.includes("transform")
+        && halo(button).opacity === "0"),
+      "Both kinds of circle must have a hidden, animated outer halo before hover.");
       const assignedPortrait = assignedToken?.querySelector(".plannerFormationPlayerPhoto");
       assert(assignedToken?.children.length === 2 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient and player portrait.");
       assert(assignedPortrait?.src.includes("/103/photo.webp") && assignedPortrait.alt === "","The assigned portrait must match the chosen player.");
