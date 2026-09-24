@@ -1608,8 +1608,10 @@ const browserTestSource = String.raw`(() => {
         for (const line of approvedPositionSlots[code]) {
           if (line.length === 4 && line.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position))) {
             const coordinates = spots.slice(lineStart, lineStart + 4).map(spot => [spot.style.left, spot.style.top]);
-            assert(JSON.stringify(coordinates) === JSON.stringify(fourMidfieldReference),
-              "Four-man midfield must exactly match the flat 4-4-2 row in " + code + ": " + JSON.stringify(coordinates));
+            const expected = fourMidfieldReference.map(([left, top], index) =>
+              [left, code === "442b" && (index === 1 || index === 2) ? "46%" : top]);
+            assert(JSON.stringify(coordinates) === JSON.stringify(expected),
+              "Four-man midfield must match 4-4-2, except the deeper 4-4-2 (B) CDMs in " + code + ": " + JSON.stringify(coordinates));
             observedFlatFourMidfields.add(code);
           }
           if (line.length >= 3) {
@@ -1622,7 +1624,7 @@ const browserTestSource = String.raw`(() => {
         }
       }
       assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "541", "3421", "4141", "4411", "343b", "442b", "541f"].sort()),
-        "The flat 4-4-2 midfield contract must cover all nine four-player midfield formations.");
+        "The four-man midfield contract must cover all nine formations, including deeper 4-4-2 (B) CDMs.");
 
       // Measure the + against its OWN ring at rest and while animating, not its
       // viewport coordinates: a hover can independently expose a page scrollbar.
