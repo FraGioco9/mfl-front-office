@@ -255,6 +255,10 @@ assert.ok(source.includes('position === "RW") && wideForwardLine ? 6') && genera
 assert.ok([source, generated].every(shell => shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
   && shell.includes('selected === "433cf" && position === "CF" ? 6')
   && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')), "4-3-3 (CF) wingers must rise to 12% and the CF sit beneath them at 16%, leaving other CF formations unchanged.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "352" && position === "CDM" ? 50')
+  && shell.includes('selected === "352" && position === "CM" ? (occurrence === 1 ? 35 : 65)')
+  && shell.includes('const offset = selected === "352" && position === "CDM" ? 54 - y')),
+  "3-5-2 must centre its CDM at 50% and 54%, between symmetrically placed CMs.");
 assert.ok(source.includes('const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");') && generated.includes('const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");'), "Mixed CDM/CM formations must opt into position-specific midfield depth.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "433a" && position === "CAM" ? -10')
   && shell.includes('selected === "433d" && position === "CDM" ? 14')
