@@ -2077,7 +2077,9 @@
                   slotIndex += 1;
                   // 3-5-2 (B) uses a symmetric CDM-CAM-CDM triangle, rather than
                   // interpreting its slot order as a straight five-player row.
-                  const x = selected === "352b" && midfield && position === "CAM" ? 50
+                  // 4-2-2-2 CDMs stay narrower than the 30%-wide striker pair.
+                  const x = selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)
+                    : selected === "352b" && midfield && position === "CAM" ? 50
                     : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
                       : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
                         : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
@@ -2099,6 +2101,7 @@
                               : position === "CDM" && count > 1 ? 2
                                 : selected === "4312" && position === "CAM" ? -4
                                 : selected === "4231" && position === "CAM" ? 0
+                                : selected === "4222" && position === "CAM" ? 2.5
                                 : position === "CAM" && count > 1 ? -4
                                   : selected === "4321" && position === "CF" ? -9
                                   : position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;
