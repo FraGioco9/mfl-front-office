@@ -173,7 +173,11 @@ async function waitForRenderedShell(cdp) {
     });
     const value = evaluation?.result?.value;
     lastValue = value;
-    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge) {
+    // The Next dev-tools portal can appear before Next finishes reconciling the
+    // page-owned title. Probe Planner only after both shell and title are ready.
+    const plannerTitleReady = new URL(targetUrl).pathname !== "/planner"
+      || (value?.documentTitle === "Planner - MFL Front Office" && value?.readyState === "complete");
+    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge && plannerTitleReady) {
       return value;
     }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
