@@ -1151,7 +1151,10 @@
                     })();
                   </script>
                 </label>
-                <button id="plannerAutoFillDepthButton" class="compactButton plannerAutoFillDepthButton" type="button" disabled>Auto-fill</button>
+                <div class="plannerDepthActions">
+                  <button id="plannerAutoFillDepthButton" class="compactButton plannerAutoFillDepthButton" type="button" disabled>Auto-fill</button>
+                  <button id="plannerClearDepthButton" class="compactButton plannerClearDepthButton" type="button" disabled>Clear</button>
+                </div>
               </div>
               <div class="pitch plannerPitch" role="img" aria-label="Squad depth pitch">
 
@@ -1769,6 +1772,7 @@
             const depthDetails = document.getElementById("plannerDepthDetails");
             const depthPicker = document.getElementById("plannerDepthPicker");
             const depthAutoFill = document.getElementById("plannerAutoFillDepthButton");
+            const depthClear = document.getElementById("plannerClearDepthButton");
             let openPickerButton = null;
             const depthPlayerName = player => String(player.name || "Player #" + player.player_id);
             const depthPlayerSurname = player => {
@@ -1849,7 +1853,10 @@
                 depthPicker.hidden = true;
                 depthPicker.replaceChildren();
               }
-              if (previous instanceof HTMLElement) previous.setAttribute("aria-expanded", "false");
+              if (previous instanceof HTMLElement) {
+                previous.setAttribute("aria-expanded", "false");
+                previous.classList.remove("plannerFormationSlotButtonPickerOpen");
+              }
               if (restoreFocus && previous?.isConnected) previous.focus();
             };
             const renderDepthDetails = (positions, buckets) => {
@@ -1928,6 +1935,7 @@
                 closeDepthPicker();
                 openPickerButton = button;
                 button.setAttribute("aria-expanded", "true");
+                button.classList.add("plannerFormationSlotButtonPickerOpen");
                 const pickerContent = document.createElement("div");
                 pickerContent.className = "plannerDepthPickerContent";
                 depthPicker.appendChild(pickerContent);
@@ -2173,6 +2181,7 @@
                   !depthAssignments.has(key) && rankDepthPlayers(depthRoster, key.split("#")[0])
                     .some(player => !claimed.has(Number(player.player_id))));
               }
+              if (depthClear instanceof HTMLButtonElement) depthClear.disabled = !depthAssignments.size;
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
               formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
@@ -2193,6 +2202,10 @@
               renderFormation(selected);
             };
             depthAutoFill?.addEventListener("click", autoFillDepth);
+            depthClear?.addEventListener("click", () => {
+              depthAssignments.clear();
+              renderFormation(formationSelect?.value || "442");
+            });
             document.addEventListener("pointerdown", event => {
               if (depthPicker?.hidden || depthPicker?.contains(event.target) || openPickerButton?.contains(event.target)) return;
               closeDepthPicker();
