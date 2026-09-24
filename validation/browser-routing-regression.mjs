@@ -1564,8 +1564,25 @@ const browserTestSource = String.raw`(() => {
       assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length === 22, "Each Planner token must contain the centered plus icon.");
       assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge, #plannerFormationPositions .plannerFormationInstructionsIcon").length === 0, "Planner tokens must not render instruction badges.");
       assert(Number.parseFloat(initialSpots[0].split(":")[1]) === 70 && Number.parseFloat(initialSpots[8].split(":")[1]) === 10 && initialSpots[10].endsWith(":calc(100% - 72px)"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
+      const defaultFormationBorder = getComputedStyle(formation).borderColor;
+      const defaultFormationBackground = getComputedStyle(formation).backgroundColor;
+      formation.focus();
+      assert(document.activeElement === formation, "Formation selector must remain keyboard focusable.");
       formation.value = "4231";
       formation.dispatchEvent(new Event("change", { bubbles: true }));
+      assert(document.activeElement !== formation && formation.classList.contains("plannerFormationSelectCommitted"),
+        "Choosing a formation must dismiss focus and mark the just-committed dropdown.");
+      await new Promise(resolve => setTimeout(resolve, 200));
+      assert(getComputedStyle(formation).borderColor === defaultFormationBorder
+        && getComputedStyle(formation).backgroundColor === defaultFormationBackground,
+        "Choosing a formation must return the highlighted dropdown to its resting border and background.");
+      formation.dispatchEvent(new PointerEvent("pointerleave"));
+      assert(!formation.classList.contains("plannerFormationSelectCommitted"),
+        "Moving away from the dropdown must restore its normal hover behavior.");
+      formation.classList.add("plannerFormationSelectCommitted");
+      formation.dispatchEvent(new PointerEvent("pointerdown"));
+      assert(!formation.classList.contains("plannerFormationSelectCommitted"),
+        "Reopening the dropdown must restore the usual interactive highlight.");
       const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
       assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
       assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 70 && Number.parseFloat(changedSpots[9].split(":")[1]) === 10 && changedSpots[10].endsWith(":calc(100% - 72px)"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
@@ -1703,8 +1720,14 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "39.8%,60.2%", "Narrow diamond paired strikers must preserve the formation width modifier.");
       formationPreview.render("352");
       assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 3-5-2 midfield must be lower, with CDM behind both CMs.");
+      formationPreview.render("433a");
+      assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
+        && formationSpot("CAM")[0]?.style.top === "36%",
+        "4-3-3 (att) CMs must stay on the usual line while CAM advances.");
       formationPreview.render("433d");
-      assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 4-3-3 (def) midfield must sit deeper than the standard 4-3-3.");
+      assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
+        && formationSpot("CDM")[0]?.style.top === "49%",
+        "4-3-3 (def) CMs must stay on the usual line while CDM drops back.");
       formationPreview.render("4132");
       assert(formationSpot("CM")[0].style.top === "35%" && Number.parseFloat(formationSpot("CDM")[0].style.top) > 55, "4-1-3-2 central midfield must sit lower while CDM protects the defence.");
       formationPreview.render("41212narrow");
