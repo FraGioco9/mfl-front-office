@@ -310,7 +310,7 @@ invariant(html.includes('<select id="plannerFormationSelect" class="plannerForma
     && styles.includes('.plannerFormationSpot{position:absolute;display:flex;align-items:center;justify-content:center;')
     && styles.includes('.plannerFormationToken{position:relative;display:flex;align-items:center;justify-content:center;width:70%;')
     && styles.includes('.plannerFormationTokenRing{position:absolute;inset:0;width:100%;height:100%;color:rgba(255,255,255,.4);')
-    && styles.includes('.plannerFormationTokenPlus{width:45%;height:45%;')
+    && styles.includes('.plannerFormationTokenPlus{position:absolute;top:50%;left:50%;display:block;flex:none;width:45%;height:45%;')
     && !styles.includes('.plannerFormationInstructionsBadge{')
     && !styles.includes('.plannerFormationInstructionsIcon{')
     && !html.includes('plannerFormationInstructionsBadge')
