@@ -1678,14 +1678,25 @@ const browserTestSource = String.raw`(() => {
       // The reported issue is BEFORE pointer hover, so assert the default state
       // separately and compare its relative alignment after each animation frame.
       const restingOffsets = hoverSpots.map(spot => assertRestingPlus(spot, "before hover"));
+      const restingTokenSizes = hoverSpots.map(spot => {
+        const rect = spot.querySelector(".plannerFormationToken").getBoundingClientRect();
+        return [rect.width, rect.height];
+      });
       const hoverButtons = hoverSpots.map(spot => spot.querySelector(".plannerFormationSlotButton"));
       hoverButtons.forEach(button => button.classList.add("plannerFormationSlotButtonPickerOpen"));
       for (let frame = 0; frame < 15; frame++) {
         await new Promise(resolve => setTimeout(resolve, 16));
         hoverSpots.forEach((spot, index) => {
           const currentOffsets = assertRestingPlus(spot, "during hover frame " + frame);
+          const rect = spot.querySelector(".plannerFormationToken").getBoundingClientRect();
+          const style = getComputedStyle(spot.querySelector(".plannerFormationToken"));
           assert(currentOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
             "Empty pitch plus changes its circle alignment during hover in 4-4-2 " + spot.dataset.slotKey);
+          assert(Math.abs(rect.width - restingTokenSizes[index][0]) <= 0.5
+            && Math.abs(rect.height - restingTokenSizes[index][1]) <= 0.5
+            && style.transform === "none" && style.filter === "none"
+            && style.boxShadow !== "none",
+            "Picker-open highlight must show only the border, with no zoom or brightness change in " + spot.dataset.slotKey);
         });
       }
       hoverButtons.forEach(button => button.classList.remove("plannerFormationSlotButtonPickerOpen"));
@@ -2093,8 +2104,10 @@ const browserTestSource = String.raw`(() => {
       const openingButton = slot("CB#1").querySelector(".plannerFormationSlotButton");
       const openingToken = openingButton.querySelector(".plannerFormationToken");
       assert(openingButton.classList.contains("plannerFormationSlotButtonPickerOpen")
-        && getComputedStyle(openingToken).boxShadow!=="none",
-        "The pitch circle that opened the menu must keep the standard highlight-colour hover treatment.");
+        && getComputedStyle(openingToken).boxShadow!=="none"
+        && getComputedStyle(openingToken).transform==="none"
+        && getComputedStyle(openingToken).filter==="none",
+        "The pitch circle that opened the menu must keep a border-only highlight without zoom.");
       const assertPickerPointer = key => {
         const pointer = document.getElementById("plannerDepthPickerPointer");
         const anchor = slot(key).querySelector(".plannerFormationSlotButton").getBoundingClientRect();
@@ -2141,6 +2154,9 @@ const browserTestSource = String.raw`(() => {
       assert(getComputedStyle(emptyToken).transitionProperty.includes("transform")
         && getComputedStyle(assignedToken).transitionProperty.includes("transform"),
         "Both empty and filled depth circles must animate on hover and keyboard focus.");
+      assert(getComputedStyle(assignedToken).transform === "none"
+        && getComputedStyle(assignedToken).filter === "none",
+        "An occupied player circle must never zoom or brighten when selected or focused.");
       const assignedPortrait = assignedToken?.querySelector(".plannerFormationPlayerPhoto");
       assert(assignedToken?.children.length === 2 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient and player portrait.");
       assert(assignedPortrait?.src.includes("/103/photo.webp") && assignedPortrait.alt === "","The assigned portrait must match the chosen player.");
