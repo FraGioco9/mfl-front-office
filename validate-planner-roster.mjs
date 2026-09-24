@@ -248,7 +248,7 @@ assert.equal(elements.get("plannerPlayerSelectionBody").children.length, 0, "Con
 route.select({ clubId: "budget-check", name: "Budget Club", division: 1 });
 const overBudgetRows = Array.from({ length: 6 }, (_, index) => [200 + index, "Budget " + index, "CM", 23, 80, 5, 2, 2000]);
 await complete(requests.at(-1), { columns: payload.columns, rows: overBudgetRows, totalRows: 6 });
-const displayedContractTotal = () => body.children.reduce((sum, row) => sum + Number.parseFloat(row.children[5].children[0].children[0].textContent), 0);
+const displayedContractTotal = () => body.children.reduce((sum, row) => sum + Number.parseFloat(row.children[6].children[0].children[0].textContent), 0);
 assert.equal(displayedContractTotal(), 100, "Loaded row allocations must actually total 100%, rather than only capping the footer");
 assert.equal(overBudgetRows[5][7], 2000, "Budget normalization must not change canonical contracts");
 const budgetControl = body.children[5].children[6].children[0];
