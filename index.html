@@ -2059,10 +2059,11 @@
                 // Do not flatten a four-player attacking line (e.g. 4-2-4).
                 const flatFourMidfield = midfield && count === 4
                   && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
-                // The three CMs in 4-3-1-2 and 4-3-2-1 share the normal 4-4-2
-                // midfield height instead of their four-line formations' lower baseline.
-                const standardMidfieldLine = flatFourMidfield || ((selected === "4312" || selected === "4321") && midfield
-                  && count === 3 && linePositions.every(position => position === "CM"));
+                // The three CMs in 4-3-1-2/4-3-2-1 and the LM/CM/RM in 4-1-3-2
+                // share the normal 4-4-2 midfield height.
+                const standardMidfieldLine = flatFourMidfield || (midfield && count === 3
+                  && (((selected === "4312" || selected === "4321") && linePositions.every(position => position === "CM"))
+                    || (selected === "4132" && linePositions.join(",") === "LM,CM,RM")));
                 const y = standardMidfieldLine ? 40
                   : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
                 const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
@@ -2100,9 +2101,10 @@
                           : selected === "433a" && position === "CAM" ? -10
                             : selected === "433d" && position === "CDM" ? 14
                               : (selected === "433a" || selected === "433d") && position === "CM" ? 0
+                            : selected === "4132" && position === "CM" ? 0
                             : hasHoldingAndCentralMidfield && position === "CM" ? 6
-                            // 4-1-4-1 shares 4-3-3 (def)'s 54% holding-midfielder depth.
-                            : selected === "4141" && position === "CDM" ? 3
+                            // 4-1-4-1 and 4-1-3-2 share 4-3-3 (def)'s 54% CDM depth.
+                            : (selected === "4141" || selected === "4132") && position === "CDM" ? 3
                             : hasHoldingAndCentralMidfield && position === "CDM" ? 9
                               : position === "CDM" && count > 1 ? 2
                                 : selected === "4312" && position === "CAM" ? -4
