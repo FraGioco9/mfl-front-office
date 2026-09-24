@@ -1588,6 +1588,20 @@ const browserTestSource = String.raw`(() => {
         const cams = spots.filter(spot => spot.dataset.position === "CAM");
         assert(cdms.some(cdm => cams.some(cam => Number.parseFloat(cdm.style.top) > Number.parseFloat(cam.style.top))), "Defensive and attacking midfield markers must have distinct depths in " + code);
       }
+      const formationSpot = position => Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot")).filter(spot => spot.dataset.position === position);
+      formationPreview.render("442");
+      assert(formationSpot("CM").every(spot => spot.style.top === "40%"), "The standard midfield must advance slightly without moving the defensive line.");
+      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "35%,65%", "Two strikers must be closer together in 4-4-2.");
+      formationPreview.render("424");
+      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "40%,60%", "Paired strikers must also narrow between wingers in 4-2-4.");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%" && formationSpot("ST").every(spot => spot.style.top === "10%"), "Wingers must sit slightly behind paired strikers.");
+      formationPreview.render("523");
+      assert(formationSpot("LWB")[0].style.top === "69%" && formationSpot("RWB")[0].style.top === "69%" && formationSpot("CB").every(spot => spot.style.top === "76%"), "Back-five wingbacks must push slightly ahead of the centre backs.");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
+      formationPreview.render("433cf");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("CF")[0].style.top === "8%", "Wingers must trail a central forward as well as strikers.");
+      formationPreview.render("41212narrow");
+      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "39.8%,60.2%", "Narrow diamond paired strikers must preserve the formation width modifier.");
       formationPreview.render("4231");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
@@ -1742,7 +1756,7 @@ const browserTestSource = String.raw`(() => {
       const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
       formationPreview.setRoster(fixture);
       formationPreview.render("442");
-      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=32 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=50, "Planner player tokens must be smaller but still usable.");
+      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=40 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=58, "Planner face tokens must have a balanced medium size.");
       const fillButton = document.getElementById("plannerAutoFillDepthButton");
       const depthPicker = document.getElementById("plannerDepthPicker");
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
