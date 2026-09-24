@@ -63,11 +63,15 @@ assert.equal(ratings.depthOverall(player, "ST"), "—");
 const surnames = {};
 vm.createContext(surnames);
 vm.runInContext(source.slice(source.indexOf("const depthPlayerName ="), source.indexOf("const depthPlayerFamiliarity ="))
-  + "\nthis.surname = depthPlayerSurname;", surnames);
+  + "\nthis.surname = depthPlayerSurname; this.shortName = depthPlayerShortName;", surnames);
 assert.equal(surnames.surname({name:"Marco De Rossi"}), "De Rossi", "Surname label must preserve a multiword family name.");
 assert.equal(surnames.surname({name:"Virgil van Dijk"}), "van Dijk");
 assert.equal(surnames.surname({name:"Rossi"}), "Rossi", "Single-name players must remain readable.");
 assert.equal(surnames.surname({name:"Marco Rossi"}), "Rossi", "Given name must not be displayed beneath the pitch circle.");
+assert.equal(surnames.shortName({name:"Marco De Rossi"}), "M. De Rossi");
+assert.equal(surnames.shortName({name:"Virgil van Dijk"}), "V. van Dijk");
+assert.equal(surnames.shortName({name:"Rossi"}), "Rossi", "Single-name players do not get an invented initial.");
+assert.equal(surnames.shortName({name:"Marco Rossi"}), "M. Rossi");
 assert.ok(generated.includes("const depthPlayerSurname = player =>"), "Generated Planner must include surname extraction.");
 const endMarker = "// END PLANNER DEPTH";
 const start = source.indexOf(startMarker);
@@ -164,7 +168,11 @@ assert.ok([source, generated].every(shell => shell.includes("depthPickerCandidat
   && shell.includes('row.appendChild(overall);')
   && shell.includes('row.appendChild(status);')
   && !shell.includes("row.append(photoFrame, name, overall);")
-  && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')),
+  && shell.includes('photoFrame.className = "plannerDepthPickerPhoto";')
+  && shell.includes('name.textContent = depthPlayerShortName(player);')
+  && shell.includes('document.getElementById("plannerDepthPickerPointer")?.remove();')
+  && shell.includes('pointer.dataset.side = opensBelow ? "below" : "above";')
+  && shell.includes('depthPicker.after(pointer);')),
   "Canonical and generated pickers must hide the current starter, move assigned players atomically, and use matching portrait frames and Remove.");
 assert.ok(source.includes("const assignedSlotByPlayer = new Map();") && generated.includes("const assignedSlotByPlayer = new Map();") && source.includes('key.split("#")[0]') && generated.includes('key.split("#")[0]'), "Depth assignments must synchronize position-only squad Slot badges in both source and generated shells.");
 assert.ok(source.includes('backups.slice(0, 2)') && source.includes('plannerFormationPlayerGradient') && source.includes('plannerFormationPlayerBadge'), "Each occupied circle must show the club gradient, player and badge, plus two backups.");
@@ -180,7 +188,11 @@ assert.ok(css.includes('.plannerFormationPlayerPhoto{') && styles.includes('.pla
 assert.ok(css.includes('.plannerFormationPlayerPhoto[hidden]{display:none}') && styles.includes('.plannerFormationPlayerPhoto[hidden]{display:none}'), "Failed player photos must leave the gradient visible.");
 assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('--planner-depth-primary') && planner.includes('--planner-depth-secondary'), "Changing Clubs must clear depth selection and set the branded gradient.");
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
-assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
+assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthPickerPointer{position:fixed;z-index:var(--mfl-z-modal);width:16px;height:10px;pointer-events:none;')
+  && sheet.includes('.plannerDepthPickerPointerAbove{transform:rotate(180deg)}')
+  && sheet.includes('.plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){flex:1 1 0;min-width:0;align-self:center;overflow:hidden;font-size:12px;line-height:36px')
+  && sheet.includes('.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;line-height:20px')
+  && sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
   && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center;min-height:36px;')
   && sheet.includes('.plannerDepthPicker .plannerDepthPickerPlayer:hover:not(:disabled),.plannerDepthPicker .plannerDepthPickerPlayer:focus-visible,.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{border-color:var(--primary);background:var(--row-hover);background-image:none;box-shadow:none;outline:0}')
