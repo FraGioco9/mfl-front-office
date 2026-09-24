@@ -217,9 +217,13 @@ assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:au
   && sheet.includes('.plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')
   && !sheet.includes('.plannerFormationBackup{')),
   "Assigned circles must show the selected player's surname and flag beneath the circle without backup text.");
-assert.ok([source, generated].every(shell => shell.includes("const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);") && shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;") && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')), "All formations must compress their wide positions, raise the back line, and reserve a fixed bottom inset for the goalkeeper name.");
+assert.ok([source, generated].every(shell => shell.includes("const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);") && shell.includes("const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;") && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')), "All formations must compress their wide positions, raise the back line, and reserve a fixed bottom inset for the goalkeeper name.");
 assert.ok([source, generated].every(shell => shell.includes('const standardMidfieldLine = flatFourMidfield || ((selected === "4312" || selected === "4321") && midfield')
   && shell.includes('count === 3 && linePositions.every(position => position === "CM"));')), "4-3-1-2 and 4-3-2-1 must use the 4-4-2 midfield baseline for their three CMs without shifting other formations.");
+assert.ok([source, generated].every(shell => shell.includes('const compact433Midfield = ["433", "433a", "433d", "433cf"].includes(selected)')
+  && shell.includes('const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;')
+  && shell.includes('selected === "4141" && position === "CDM" ? 3')),
+  "All four 4-3-3 variants must bring outer CMs inward and 4-1-4-1 must share the 4-3-3 (def) CDM line.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
