@@ -264,6 +264,8 @@ assert.ok([source, generated].every(shell => shell.includes('selected === "433a"
   && shell.includes('position === "CAM" && count > 1 ? -4')),
   "4-3-3 (att/def) CMs stay on the usual midfield line, with CAM at 30% and CDM at 54%; other mixed midfields retain their depths.");
 assert.ok(source.includes('selected === "352b" && midfield && position === "CAM" ? 50') && generated.includes('selected === "352b" && midfield && position === "CAM" ? 50') && source.includes('occurrence === 1 ? 38 : 62') && generated.includes('occurrence === 1 ? 38 : 62'), "3-5-2 (B) must centre CAM between the two CDMs.");
-assert.ok(source.includes('selected === "352b" && midfield && position === "CDM" ? 8') && generated.includes('selected === "352b" && midfield && position === "CDM" ? 8') && source.includes('selected === "352b" && midfield && position === "CAM" ? -8') && generated.includes('selected === "352b" && midfield && position === "CAM" ? -8'), "3-5-2 (B) CDMs must sit deeper while CAM sits farther forward.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "352b" && midfield && position === "CDM" ? 54 - y')
+  && shell.includes('selected === "352b" && midfield && position === "CAM" ? 30 - y')),
+  "3-5-2 (B) CDMs and CAM must match the 4-3-3 (def/att) reference heights of 54% and 30%.");
 assert.ok(generated.includes('const autoFillDepth = () =>') && generated.includes('plannerFormationPlayerGradient'), "Generated shell must include interactive gradient depth.");
 console.log("Planner depth: repeated slots, Overall, multi-position, retirement, empty slots, reset and generated assets passed.");
