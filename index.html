@@ -1923,8 +1923,9 @@
                 openPickerButton = button;
                 button.setAttribute("aria-expanded", "true");
                 const assignmentByPlayer = new Map([...depthAssignments].map(([slot, id]) => [id, slot]));
-                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()));
                 const currentId = depthAssignments.get(key);
+                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()))
+                  .filter(player => Number(player.player_id) !== currentId);
                 const heading = document.createElement("h4");
                 heading.textContent = "Select " + position;
                 depthPicker.appendChild(heading);
@@ -1957,12 +1958,10 @@
                   row.className = "plannerDepthPickerPlayer";
                   row.dataset.playerId = String(player.player_id);
                   const assignedSlot = assignmentByPlayer.get(Number(player.player_id));
-                  const selectedHere = currentId === Number(player.player_id);
-                  row.disabled = Boolean(assignedSlot);
-                  row.setAttribute("aria-pressed", String(selectedHere));
+                  row.setAttribute("aria-pressed", "false");
                   if (assignedSlot) {
                     row.dataset.assignedSlot = assignedSlot;
-                    row.setAttribute("aria-label", depthPlayerName(player) + ", selected at " + assignedSlot.split("#")[0]);
+                    row.setAttribute("aria-label", depthPlayerName(player) + ", selected at " + assignedSlot.split("#")[0] + ". Move to " + position);
                   }
                   const photoFrame = document.createElement("span");
                   photoFrame.className = "plannerDepthPickerPhoto";
@@ -1980,10 +1979,12 @@
                   if (assignedSlot) {
                     const status = document.createElement("span");
                     status.className = "plannerDepthPickerSelected";
-                    status.textContent = selectedHere ? "Selected" : "Selected · " + assignedSlot.split("#")[0];
+                    status.textContent = "Selected · " + assignedSlot.split("#")[0];
                     row.appendChild(status);
                   }
                   row.addEventListener("click", () => {
+                    // Move an existing starter rather than leaving the same player in two slots.
+                    if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);
                     depthAssignments.set(key, Number(player.player_id));
                     renderFormation(selected);
                     formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
