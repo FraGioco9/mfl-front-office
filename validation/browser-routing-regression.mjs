@@ -1842,19 +1842,26 @@ const browserTestSource = String.raw`(() => {
       assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       const removeStarter = depthPicker.querySelector(".plannerDepthPickerClear");
-      assert(removeStarter?.textContent==="×Remove"
-        && removeStarter.querySelector(".plannerDepthPickerRemoveIcon")?.getAttribute("aria-hidden")==="true",
-        "The clear-starter control must read Remove with a decorative x to its left.");
+      assert(removeStarter?.textContent==="Remove"
+        && removeStarter.querySelector("svg.plannerDepthPickerRemoveIcon[aria-hidden='true'] path")
+          ?.getAttribute("d")==="M6 6L18 18M18 6L6 18",
+        "The Remove action must show a symmetrical decorative x icon to the left of its label.");
       const removeIcon = removeStarter.querySelector(".plannerDepthPickerRemoveIcon");
       const removeText = removeStarter.querySelector("span:last-child");
       const removeMidpoint = removeStarter.getBoundingClientRect().top + removeStarter.getBoundingClientRect().height / 2;
       assert(Math.abs(removeIcon.getBoundingClientRect().top + removeIcon.getBoundingClientRect().height / 2 - removeMidpoint) <= 1
-        && Math.abs(removeText.getBoundingClientRect().top + removeText.getBoundingClientRect().height / 2 - removeMidpoint) <= 1,
-        "Remove x and label must both be vertically centered in their menu row.");
+        && Math.abs(removeText.getBoundingClientRect().top + removeText.getBoundingClientRect().height / 2 - removeMidpoint) <= 1
+        && getComputedStyle(removeIcon).width==="16px" && getComputedStyle(removeIcon).height==="16px",
+        "Remove x and label must both be geometrically centered in their menu row.");
       const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
       assert(assignedOtherSlot && !assignedOtherSlot.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
         && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
         "An already-picked player must remain clickable with its previous slot marked.");
+      const assignedSlotLabel = assignedOtherSlot.querySelector(".plannerDepthPickerSelected");
+      const assignedOverall = assignedOtherSlot.querySelector("strong");
+      assert(assignedSlotLabel?.nextElementSibling===assignedOverall
+        && assignedSlotLabel.getBoundingClientRect().right <= assignedOverall.getBoundingClientRect().left,
+        "The selected slot label must come before the positional Overall in the picker.");
       assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]'),
         "The starter occupying this exact slot must be omitted from its own selection menu.");
       assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="106"]'),
