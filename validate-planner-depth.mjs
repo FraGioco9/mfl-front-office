@@ -65,9 +65,24 @@ const start = source.indexOf(startMarker);
 const end = source.indexOf(endMarker, start);
 assert.ok(start > 0 && end > start, "Planner must have one canonical depth algorithm.");
 const helper = source.slice(start + startMarker.length, end);
-const sandbox = {};
-vm.runInNewContext(helper + "\nthis.distribute = distributeFormationDepth;", sandbox);
-const distribute = sandbox.distribute;
+// Run the actual positional ranking used by Auto-fill and the depth cards.
+vm.runInContext('const depthPlayerName = player => String(player.name || "Player #" + player.player_id);\n'
+  + source.slice(source.indexOf("const rankDepthPlayers ="), source.indexOf("const slotKeysFor ="))
+  + "\nthis.rankDepthPlayers = rankDepthPlayers;", ratings);
+const ratingFixtures = [
+  {...player,player_id:14,name:"Natural CB",positions:"CB",overall:76},
+  {...player,player_id:15,name:"Secondary CB",positions:"CM, CB",overall:98},
+  {...player,player_id:16,name:"Unrated CB",positions:"CM, CB",overall:99,defense:null},
+];
+assert.equal(ratings.depthOverall(ratingFixtures[0],"CB"),"80");
+assert.equal(ratings.depthOverall(ratingFixtures[1],"CB"),"79");
+assert.equal(ratings.depthOverall(ratingFixtures[2],"CB"),"—");
+assert.deepEqual(Array.from(ratings.rankDepthPlayers(ratingFixtures,"CB"),p=>p.player_id),[14,15,16],
+  "Auto-fill must rank by positional OVR, not base OVR, and put unrated players last.");
+vm.runInContext(helper + "\nthis.distribute = distributeFormationDepth;", ratings);
+const distribute = ratings.distribute;
+assert.deepEqual(Array.from(distribute([["CB"]],ratingFixtures)[0],p=>p.player_id),[14,15,16],
+  "Depth alternatives must share the positional OVR order.");
 const lines = [["CB", "CB"], ["CM", "CAM"], ["ST"]];
 const players = [
   { player_id: 3, name: "Third CB", positions: "CB", overall: 70 },
@@ -87,8 +102,8 @@ assert.deepEqual(Array.from(depth[3], p => p.player_id), [4], "Multi-position pl
 assert.deepEqual(Array.from(depth[4], p => p.player_id), [8], "Only explicitly retired players must be omitted.");
 assert.deepEqual(Array.from(depth[5], p => p.player_id), [6], "Goalkeeper depth must be separate.");
 assert.deepEqual(Array.from(distribute([["ST"]], [
-  {player_id: 11, positions: "ST", overall: 81},
-  {player_id: 9, positions: "ST", overall: 81},
+  {player_id: 11, name: "Tie", positions: "ST", overall: 81},
+  {player_id: 9, name: "Tie", positions: "ST", overall: 81},
 ])[0], p => p.player_id), [9, 11], "Equal Overall must use stable player ID order.");
 assert.equal(distribute([["RW"]], players)[0].length, 0, "Empty position must remain empty.");
 assert.ok(generated.includes(helper), "Generated shell must contain the exact canonical depth algorithm.");
@@ -97,6 +112,19 @@ assert.ok(source.includes("renderDepthDetails(positions, buckets);"), "Formation
 assert.ok(source.includes("setRoster(players)") && planner.includes('setRoster?.(roster)') && planner.includes('setRoster?.([])'), "Roster changes and Clear must redraw depth.");
 assert.ok(runtime.includes('setRoster?.(roster)') && runtime.includes('setRoster?.([])'), "Generated route core must redraw depth.");
 assert.ok(css.includes(".plannerDepthCardList") && styles.includes(".plannerDepthCardList"), "Depth styling must be in canonical and generated CSS.");
+for (const stylesheet of [css, styles]) {
+  assert.ok(stylesheet.includes(".plannerRosterTable .plannerSlotColumn{width:48px}")
+    && stylesheet.includes(".plannerRosterTable .plannerSlotColumn{width:44px}")
+    && stylesheet.includes(".plannerRosterTable .plannerNationalityColumn{width:28px}")
+    && stylesheet.includes(".plannerRosterTable .plannerNationalityColumn{width:26px}")
+    && stylesheet.includes("--planner-columns:32px minmax(0,1fr) 21% 10% 10% 18%"),
+    "Flag columns must fit flags, Player gains leftover width, and Slot stays unchanged.");
+  assert.ok(stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken")
+    && stylesheet.includes(".plannerFormationSlotButton:focus-visible .plannerFormationToken")
+    && stylesheet.includes("transform:scale(1.1)")
+    && stylesheet.includes("prefers-reduced-motion:reduce"),
+    "Empty and occupied circles must share a reduced-motion-aware hover animation.");
+}
 
 assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill and the slot player picker.");
 assert.ok(source.includes('const depthAssignments = new Map()') && source.includes('const autoFillDepth = () =>'), "Depth must preserve unique explicit assignments and auto-fill.");
