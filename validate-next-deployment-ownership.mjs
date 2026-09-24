@@ -59,7 +59,9 @@ invariant(
 );
 invariant(
   plannerRoutePage.includes("export default function MflPlannerPage()")
-    && plannerRoutePage.includes("return null;"),
+    && (plannerRoutePage.includes("return null;")
+      || (plannerRoutePage.includes("React.createElement(Head")
+        && plannerRoutePage.includes("Planner - MFL Front Office"))),
   "Planner must be served by an explicit Next page, not only by a static rewrite fallback.",
 );
 invariant(
