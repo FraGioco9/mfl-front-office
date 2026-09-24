@@ -2113,16 +2113,25 @@ const browserTestSource = String.raw`(() => {
         const anchor = slot(key).querySelector(".plannerFormationSlotButton").getBoundingClientRect();
         const menu = depthPicker.getBoundingClientRect();
         const arrow = pointer?.getBoundingClientRect();
+        const tipStyle = pointer ? getComputedStyle(pointer, "::after") : null;
+        const menuStyle = getComputedStyle(depthPicker);
         assert(pointer && depthPicker.contains(pointer)
           && pointer.parentElement===depthPicker
           && getComputedStyle(pointer).position==="absolute"
           && getComputedStyle(pointer).pointerEvents==="none"
+          && getComputedStyle(pointer).clipPath==="none"
+          && tipStyle.backgroundColor===menuStyle.backgroundColor
+          && tipStyle.borderTopColor===menuStyle.borderTopColor
+          && tipStyle.borderLeftColor===menuStyle.borderLeftColor
+          && tipStyle.borderTopWidth==="1px" && tipStyle.borderLeftWidth==="1px"
+          && tipStyle.borderRightWidth==="0px" && tipStyle.borderBottomWidth==="0px"
+          && tipStyle.transform!=="none"
           && ["above","below"].includes(pointer.dataset.side)
           && Math.abs(arrow.left + arrow.width/2 - Math.max(menu.left + 16,Math.min(anchor.left + anchor.width/2,menu.right - 16)))<=1
           && (pointer.dataset.side==="below"
             ? Math.abs(arrow.bottom-menu.top)<=2 && getComputedStyle(pointer).transform==="none"
             : Math.abs(arrow.top-(menu.bottom-1))<=2 && getComputedStyle(pointer).transform!=="none"),
-          "The triangle must be part of the menu and point toward its opening pitch circle, whether above or below.");
+          "The seamless triangle must use the menu's own surface/border and point toward its opening circle on either side.");
       };
       assertPickerPointer("CB#1");
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105","Picker must include only positional CB ratings within 10% of the team average, in positional Overall order.");
@@ -2195,13 +2204,20 @@ const browserTestSource = String.raw`(() => {
         && removeStarter.querySelector("svg.plannerDepthPickerRemoveIcon[aria-hidden='true'] path")
           ?.getAttribute("d")==="M6 6L18 18M18 6L6 18",
         "The Remove action must show a symmetrical decorative x icon to the left of its label.");
-      const removeIcon = removeStarter.querySelector(".plannerDepthPickerRemoveIcon");
+      const removeIconFrame = removeStarter.querySelector(".plannerDepthPickerRemoveFrame");
+      const removeIcon = removeIconFrame?.querySelector(".plannerDepthPickerRemoveIcon");
       const removeText = removeStarter.querySelector("span:last-child");
       const removeMidpoint = removeStarter.getBoundingClientRect().top + removeStarter.getBoundingClientRect().height / 2;
-      assert(Math.abs(removeIcon.getBoundingClientRect().top + removeIcon.getBoundingClientRect().height / 2 - removeMidpoint) <= 1
-        && Math.abs(removeText.getBoundingClientRect().top + removeText.getBoundingClientRect().height / 2 - removeMidpoint) <= 1
-        && getComputedStyle(removeIcon).width==="16px" && getComputedStyle(removeIcon).height==="16px",
-        "Remove x and label must both be geometrically centered in their menu row.");
+      const midX = rect => rect.left + rect.width / 2;
+      const midY = rect => rect.top + rect.height / 2;
+      assert(removeIconFrame && removeIcon && removeText
+        && getComputedStyle(removeStarter).height==="44px"
+        && getComputedStyle(removeIconFrame).width==="36px"
+        && getComputedStyle(removeIcon).width==="16px" && getComputedStyle(removeIcon).height==="16px"
+        && Math.abs(midY(removeIconFrame.getBoundingClientRect()) - removeMidpoint) <= 1
+        && Math.abs(midY(removeIcon.getBoundingClientRect()) - removeMidpoint) <= 1
+        && Math.abs(midY(removeText.getBoundingClientRect()) - removeMidpoint) <= 1,
+        "Remove icon frame, x and label must all be centered in the 44px row.");
       const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
       assert(assignedOtherSlot && !assignedOtherSlot.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
         && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
@@ -2214,6 +2230,19 @@ const browserTestSource = String.raw`(() => {
       const assignedName = assignedOtherSlot.querySelector(":scope > span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected)");
       const assignedNameBox = assignedName.getBoundingClientRect();
       const assignedOverallBox = assignedOverall.getBoundingClientRect();
+      const assignedPhotoBox = assignedOtherSlot.querySelector(".plannerDepthPickerPhoto").getBoundingClientRect();
+      const removeFrameBox = removeIconFrame.getBoundingClientRect();
+      const removeIconBox = removeIcon.getBoundingClientRect();
+      const removeTextBox = removeText.getBoundingClientRect();
+      assert(Math.abs(removeFrameBox.left - assignedPhotoBox.left) <= 1
+        && Math.abs(midX(removeIconBox) - midX(assignedPhotoBox)) <= 1
+        && Math.abs(removeTextBox.left - assignedNameBox.left) <= 1,
+        "Remove x must occupy the portrait column and Remove text must start at the player-name column.");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer")).every(row => {
+        const midpoint = midY(row.getBoundingClientRect());
+        return Math.abs(row.getBoundingClientRect().height - 44) <= 1
+          && Array.from(row.children).every(child => Math.abs(midY(child.getBoundingClientRect()) - midpoint) <= 1);
+      }), "All picker portraits, names, selected labels and positional Overalls must be vertically centered in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
         && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
