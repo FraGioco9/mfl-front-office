@@ -1048,7 +1048,8 @@
                         : selected === "433cf" && (position === "LW" || position === "RW") ? 2
                         : selected === "433cf" && position === "CF" ? 6
                           : (position === "LW" || position === "RW") && wideForwardLine ? 6
-                          : hasHoldingAndCentralMidfield && position === "CM" ? 6
+                          : (selected === "433a" || selected === "433d") && position === "CM" ? 0
+                            : hasHoldingAndCentralMidfield && position === "CM" ? 6
                             : hasHoldingAndCentralMidfield && position === "CDM" ? 9
                               : position === "CDM" && count > 1 ? 2
                                 : position === "CAM" && count > 1 ? -4
