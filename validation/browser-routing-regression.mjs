@@ -1749,7 +1749,9 @@ const browserTestSource = String.raw`(() => {
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105,106","Picker must include every eligible non-retired player in Overall order.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
-      assert(slot("CB#1").querySelector(".plannerFormationPlayerPhoto")?.src.includes("/103/photo.webp"),"Filled circle must display player portrait.");
+      const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
+      assert(assignedToken?.children.length === 1 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient.");
+      assert(!assignedToken.querySelector("img, svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped photo or icon.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
       assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
       fillButton.click();
