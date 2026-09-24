@@ -116,7 +116,7 @@
 .plannerRosterRemove:focus-visible{text-decoration:underline}
 .plannerRosterSkeleton{display:block;width:75%;height:10px;border-radius:3px;background:var(--border-strong);margin:5px auto}
 .plannerRosterTable td:nth-child(3) .plannerRosterSkeleton{margin-left:0}
-.plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:420px;height:auto;aspect-ratio:72/109;margin:0 auto}
+.plannerPitchPanel .plannerPitch{box-sizing:border-box;width:calc(100% - 16px);max-width:500px;height:auto;aspect-ratio:72/109;margin:0 auto}
 #plannerRosterRetryButton{margin-top:8px}
 @media(max-width:800px){.plannerWorkspace{grid-template-columns:minmax(0,1fr);gap:24px}.plannerPitchPanel h3{height:auto;margin-bottom:0}.plannerPlayerDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.plannerPlayerModalBody{padding:12px;overflow:hidden}.plannerRosterTable .plannerSlotColumn{width:44px}.plannerRosterTable .plannerNationalityColumn{width:26px}.plannerRosterTable .plannerPlayerColumn{width:auto}.plannerRosterTable .plannerPositionColumn{width:12%}.plannerRosterTable .plannerAgeColumn{width:10%}.plannerRosterTable .plannerOverallColumn{width:10%}.plannerRosterTable .plannerContractColumn{width:20%}.plannerRosterTable .plannerRemoveColumn{width:7%}.plannerContractInput{width:54px;padding-inline:2px}.plannerAgeContent{gap:3px}.plannerAgeMarker,.plannerAgeMarker::before,.plannerAgeMarker .newMintIcon{width:12px;height:12px;flex-basis:12px}.plannerRosterHeader{gap:8px}}
 
@@ -198,8 +198,10 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerPosition.some{background:#ff5722;color:#000}
 .plannerFormationSpot .plannerFormationPositionLabel{top:calc(86% + 1px)}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
-.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 1px);left:50%;z-index:3;max-width:110px;overflow:hidden;color:#fff;font-size:10px;font-weight:800;line-height:14px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap;transform:translateX(-50%);pointer-events:none}
-.plannerFormationBackups{position:absolute;top:calc(100% + 19px);left:50%;display:grid;gap:1px;width:76px;transform:translateX(-50%);pointer-events:none}
+.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 14px);left:50%;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:4px;width:max-content;max-width:100px;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;text-shadow:0 1px 3px #000;white-space:nowrap;transform:translateX(-50%);pointer-events:none}
+.plannerFormationSurnameFlag.flagImage{display:block;flex:0 0 14px;width:14px;height:14px;object-fit:contain}
+.plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerFormationBackups{position:absolute;top:calc(100% + 45px);left:50%;display:grid;gap:1px;width:86px;transform:translateX(-50%);pointer-events:none}
 .plannerFormationBackup{display:block;overflow:hidden;color:#fff;font-size:9px;font-weight:700;line-height:12px;text-align:center;text-overflow:ellipsis;text-shadow:0 1px 3px #000;white-space:nowrap}
 .plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;display:grid;gap:3px;width:min(320px,calc(100vw - 20px));max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
 .plannerDepthPicker[hidden]{display:none}
@@ -213,8 +215,8 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer span{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .plannerDepthPickerClear{min-height:29px;color:var(--danger);font-size:12px;font-weight:700}
-@media(max-width:520px){.plannerFormationSpot{width:clamp(50px,15%,64px)}.plannerFormationBackups{width:60px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(50px,15%,64px)}.plannerFormationPlayerSurname{max-width:76px;font-size:9px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:12px;width:12px;height:12px}.plannerFormationBackups{width:70px}.plannerFormationBackup{font-size:8px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 
 /* GK backups extend below the field: keep them visible without overlapping detail cards. */
 .plannerPitchPanel .plannerPitch{overflow:visible}
-.plannerDepthDetails{margin-top:60px}
+.plannerDepthDetails{margin-top:88px}
