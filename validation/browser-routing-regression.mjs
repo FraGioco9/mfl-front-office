@@ -1782,7 +1782,12 @@ const browserTestSource = String.raw`(() => {
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(!depthPicker.hidden, "Clicking an empty circle must open the position selector.");
-      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105,106","Picker must include every eligible non-retired player in Overall order.");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105","Picker must include only positional CB ratings within 10% of the team average, in positional Overall order.");
+      const pickerPhoto = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"] .plannerDepthPickerPhoto img');
+      assert(pickerPhoto?.src.includes("/103/photo.webp") && getComputedStyle(pickerPhoto).objectFit==="contain"
+        && getComputedStyle(pickerPhoto).objectPosition==="50% 0%"
+        && getComputedStyle(pickerPhoto).transform===getComputedStyle(document.querySelector(".plannerFormationPlayerPhoto") || pickerPhoto).transform,
+        "Picker portraits must use the same face-focused crop as the pitch portraits.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
       assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
@@ -1836,7 +1841,19 @@ const browserTestSource = String.raw`(() => {
       assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
       assert(!slot("CB#1").querySelector(".plannerFormationBackups")?.textContent.includes("CB 91"),"Alternative list must exclude other starters.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
-      assert(depthPicker.querySelector(".plannerDepthPickerClear") && !depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]'),"Occupied circle must allow clearing/replacement without selecting another starter.");
+      const removeStarter = depthPicker.querySelector(".plannerDepthPickerClear");
+      assert(removeStarter?.textContent==="×Remove"
+        && removeStarter.querySelector(".plannerDepthPickerRemoveIcon")?.getAttribute("aria-hidden")==="true",
+        "The clear-starter control must read Remove with a decorative x to its left.");
+      const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
+      const currentStarterRow = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]');
+      assert(assignedOtherSlot?.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
+        && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
+        "Players assigned in another slot must stay visible, marked Selected with their slot, and unavailable for duplicate selection.");
+      assert(currentStarterRow?.disabled && currentStarterRow.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected",
+        "The current starter must remain visible and identified as selected.");
+      assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="106"]'),
+        "Players more than 10% below team average must not appear in a position picker.");
       depthPicker.querySelector(".plannerDepthPickerClear").click();
       assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Clear must affect the selected circle only.");
       formationPreview.render("433");
@@ -1875,7 +1892,7 @@ const browserTestSource = String.raw`(() => {
       ]);
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="402,401",
-        "Picker must rank by positional CB Overall, not main Overall.");
+        "Picker must rank qualified candidates by positional CB Overall, not main Overall.");
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="402" && slot("CB#2")?.dataset.playerId==="401",
         "Auto-fill must rank by CB Overall and use each player only once.");
