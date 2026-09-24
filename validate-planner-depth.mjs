@@ -220,6 +220,8 @@ assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:au
 assert.ok([source, generated].every(shell => shell.includes("const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);") && shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;") && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')), "All formations must compress their wide positions, raise the back line, and reserve a fixed bottom inset for the goalkeeper name.");
 assert.ok([source, generated].every(shell => shell.includes('const standardMidfieldLine = flatFourMidfield || (selected === "4321" && midfield')
   && shell.includes('count === 3 && linePositions.every(position => position === "CM"));')), "4-3-2-1 must use the 4-4-2 midfield baseline for its three CMs without shifting other formations.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "4321" && position === "CF" ? -9')),
+  "4-3-2-1 must bring both CFs to 20% while keeping other formations at their existing CF heights.");
 assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfield = midfield && count === 4')
   && shell.includes('linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));')
   && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
