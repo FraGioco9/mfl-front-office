@@ -228,11 +228,12 @@ assert.ok([source, generated].every(shell => shell.includes('const compact433Mid
 assert.ok([source, generated].every(shell => shell.includes('selected === "4132" && ["LM", "CM", "RM"].includes(position) ? -4')),
   "4-1-3-2 LM, CM and RM must all receive the same four-point forward offset before the shared holding-midfield adjustment.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)')
-  && shell.includes('selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 40 : 60)')
+  && shell.includes('selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 38 : 62)')
   && shell.includes('const diamond41212 = selected === "41212" || selected === "41212narrow";')
   && shell.includes('const offset = diamond41212 && position === "CDM" ? 54 - y')
-  && shell.includes('diamond41212 && position === "CAM" ? 30 - y')),
-  "Both 4-1-2-1-2 diamonds share 4-3-3 defensive/attacking reference depths, with wider LM/RM and tighter narrow CMs.");
+  && shell.includes('diamond41212 && position === "CAM" ? 30 - y')
+  && shell.includes('selected === "41212narrow" && position === "CM" ? 40 - y')),
+  "Both diamonds share CDM/CAM reference depths; narrow CMs use 4-4-2 spacing and the regular diamond midfield height.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)')
   && shell.includes('selected === "4222" && position === "CAM" ? 2.5')),
   "4-2-2-2 must keep both CDMs closer together than its striker pair and put both CAMs midway between the lines.");
@@ -248,7 +249,7 @@ assert.ok([source, generated].every(shell => shell.includes('const flatFourMidfi
   && shell.includes('flatFourMidfield ? 0')), "Four-man midfield rows match 4-4-2 except the two deeper CDMs in 4-4-2 (B).");
 assert.ok(css.includes("width:clamp(58px,17%,74px)") && styles.includes("width:clamp(58px,17%,74px)") && css.includes("width:clamp(54px,16%,68px)") && styles.includes("width:clamp(54px,16%,68px)"), "Slightly enlarged circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 44") && generated.includes("pairedStrikers ? 30 : 44") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
-assert.ok(source.includes('selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1') && generated.includes('selected === "41212narrow" && (midfield || pairedStrikers) ? 0.68 : 1'), "Narrow diamond must compact its striker pair as well as its midfield.");
+assert.ok([source, generated].every(shell => shell.includes('selected === "41212narrow" && midfield ? 0.68 : 1;')), "Narrow diamond must not shrink its striker pair relative to regular 4-1-2-1-2.");
 assert.ok(source.includes("midfield ? 3 : 0") && generated.includes("midfield ? 3 : 0") && source.includes('position === "RWB") && lineIndex === 0 ? -7') && generated.includes('position === "RWB") && lineIndex === 0 ? -7'), "Advance the midfield and back-five wingbacks in the canonical and generated pitch.");
 assert.ok(source.includes('position === "RW") && wideForwardLine ? 6') && generated.includes('position === "RW") && wideForwardLine ? 6'), "Wingers must sit behind central forwards.");
 assert.ok([source, generated].every(shell => shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
