@@ -1777,15 +1777,22 @@ const browserTestSource = String.raw`(() => {
           "Diamond strikers must retain their attacking height: " + code);
       }
       formationPreview.render("41212");
+      const regularDiamondStrikerSpacing = formationSpot("ST").map(spot => spot.style.left);
+      const regularDiamondWideMidfieldHeight = formationSpot("LM")[0].style.top;
+      assert(JSON.stringify(regularDiamondStrikerSpacing) === JSON.stringify(["35%", "65%"]),
+        "Regular diamond strikers must retain their expected spacing.");
       assert(JSON.stringify([formationSpot("LM")[0].style.left, formationSpot("RM")[0].style.left])
         === JSON.stringify(["18%", "82%"])
         && formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%",
         "Wide diamond LM/RM must move wider while staying at the usual midfield height.");
       formationPreview.render("41212narrow");
-      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left)) === JSON.stringify(["40%", "60%"])
-        && formationSpot("CM").every(spot => spot.style.top === "46%"),
-        "Narrow diamond CMs must come closer together while retaining their existing depth.");
-      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "39.8%,60.2%", "Narrow diamond paired strikers must preserve the formation width modifier.");
+      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
+        === JSON.stringify(fourMidfieldReference.slice(1, 3).map(([left]) => left))
+        && formationSpot("CM").every(spot => spot.style.top === regularDiamondWideMidfieldHeight)
+        && regularDiamondWideMidfieldHeight === "40%",
+        "Narrow diamond CMs must match the 4-4-2 central pair in width and regular diamond wide mids in height.");
+      assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
+        "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
       formationPreview.render("352");
       assert(formationSpot("CM").every(spot => spot.style.top === "46%") && formationSpot("CDM")[0].style.top === "49%", "Mixed 3-5-2 midfield must be lower, with CDM behind both CMs.");
       formationPreview.render("433a");
@@ -1812,7 +1819,7 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("ST").every(spot => spot.style.top === "10%"),
         "4-1-3-2 must preserve both strikers.");
       formationPreview.render("41212narrow");
-      assert(formationSpot("CM").every(spot => spot.style.top === "46%")
+      assert(formationSpot("CM").every(spot => spot.style.top === "40%")
         && formationSpot("CDM")[0].style.top === "54%"
         && formationSpot("CAM")[0].style.top === "30%",
         "Narrow diamond CMs must stay between CAM at 30% and CDM at 54%.");
