@@ -177,9 +177,13 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerAutoFillDepthButton{flex:0 0 auto}
 .plannerFormationSpot{width:clamp(54px,16%,70px);pointer-events:none}
 .plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
-.plannerFormationSlotButton:hover:not(:disabled),.plannerFormationSlotButton:focus-visible{background:transparent;box-shadow:none;outline:2px solid #fff;outline-offset:2px}
+.plannerFormationSlotButton:hover:not(:disabled){background:transparent;box-shadow:none;outline:0}.plannerFormationSlotButton:focus-visible{background:transparent;box-shadow:none;outline:2px solid #fff;outline-offset:2px}
 .plannerFormationSlotButton:disabled{cursor:default}
-.plannerFormationSlotButton .plannerFormationToken{width:78%}
+.plannerFormationSlotButton .plannerFormationToken{width:78%;transition:transform 180ms ease,box-shadow 180ms ease,filter 180ms ease}
+.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken{transform:scale(1.1);box-shadow:0 0 0 2px rgba(255,255,255,.6),0 4px 14px rgba(0,0,0,.55);filter:brightness(1.14)}
+.plannerFormationSlotButton .plannerFormationTokenRing,.plannerFormationSlotButton .plannerFormationTokenPlus{transition:color 180ms ease}
+.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationTokenRing,.plannerFormationSlotButton:hover:not(:disabled) .plannerFormationTokenPlus,.plannerFormationSlotButton:focus-visible .plannerFormationTokenRing,.plannerFormationSlotButton:focus-visible .plannerFormationTokenPlus{color:#fff}
+@media(prefers-reduced-motion:reduce){.plannerFormationSlotButton .plannerFormationToken,.plannerFormationSlotButton .plannerFormationTokenRing,.plannerFormationSlotButton .plannerFormationTokenPlus{transition:none}}
 .plannerFormationTokenAssigned{isolation:isolate;overflow:hidden;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)),var(--planner-depth-secondary,var(--primary-hover)));box-shadow:inset 0 0 0 1px var(--planner-depth-primary,var(--primary)),0 2px 6px rgba(0,0,0,.4)}
 .plannerFormationPlayerGradient{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,var(--planner-depth-primary,var(--primary)) 5%,var(--planner-depth-secondary,var(--primary-hover)) 95%);pointer-events:none}
 .plannerFormationPlayerPhoto{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top;pointer-events:none}
