@@ -281,7 +281,8 @@ invariant(html.includes('const y = flatFourMidfield ? 40\n                  : 76
     && [html, generatedHtml].every(shell => shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;")
       && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')
       && shell.includes('const flatFourMidfield = midfield && count === 4')
-      && shell.includes('const offset = flatFourMidfield ? 0')),
+      && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
+      && shell.includes('flatFourMidfield ? 0')),
   "Planner must preserve the 25 formations, compact wide slots, lift the defence and keep the goalkeeper label inside the pitch.");
 const expectedRingSegments = 12;
 for (const markup of [html, generatedHtml]) {
