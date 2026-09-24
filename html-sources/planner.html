@@ -890,10 +890,12 @@
                   const clear = document.createElement("button");
                   clear.type = "button";
                   clear.className = "plannerDepthPickerClear";
-                  const removeIcon = document.createElement("span");
-                  removeIcon.className = "plannerDepthPickerRemoveIcon";
-                  removeIcon.setAttribute("aria-hidden", "true");
-                  removeIcon.textContent = "×";
+                  const removeIcon = makeSlotIcon("svg", {
+                    viewBox: "0 0 24 24", class: "plannerDepthPickerRemoveIcon",
+                    "aria-hidden": "true", fill: "none", stroke: "currentColor",
+                    "stroke-width": "2.5", "stroke-linecap": "round"
+                  });
+                  removeIcon.appendChild(makeSlotIcon("path", { d: "M6 6L18 18M18 6L6 18" }));
                   const removeText = document.createElement("span");
                   removeText.textContent = "Remove";
                   clear.append(removeIcon, removeText);
@@ -932,13 +934,14 @@
                   name.textContent = depthPlayerName(player);
                   const overall = document.createElement("strong");
                   overall.textContent = depthPlayerOverall(player, position);
-                  row.append(photoFrame, name, overall);
+                  row.append(photoFrame, name);
                   if (assignedSlot) {
                     const status = document.createElement("span");
                     status.className = "plannerDepthPickerSelected";
                     status.textContent = "Selected · " + assignedSlot.split("#")[0];
                     row.appendChild(status);
                   }
+                  row.appendChild(overall);
                   row.addEventListener("click", () => {
                     // Move an existing starter rather than leaving the same player in two slots.
                     if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);
