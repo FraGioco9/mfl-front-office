@@ -272,8 +272,8 @@ for (const markup of [html, generatedHtml]) {
     && formations.every(code => actual[code].flat().length === 10),
     "Planner position slots must match all 25 approved formations, each with ten outfield players.");
 }
-invariant(html.includes('const y = flatFourMidfield ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
-    && generatedHtml.includes('const y = flatFourMidfield ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
+invariant(html.includes('const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
+    && generatedHtml.includes('const y = standardMidfieldLine ? 40\n                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);')
     && html.includes('spot.dataset.position = position;')
     && generatedHtml.includes('spot.dataset.position = position;')
     && html.includes('const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex]);')
@@ -281,9 +281,13 @@ invariant(html.includes('const y = flatFourMidfield ? 40\n                  : 76
     && [html, generatedHtml].every(shell => shell.includes("const width = (count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;")
       && shell.includes('goalkeeper.style.top = "calc(100% - 72px)";')
       && shell.includes('const flatFourMidfield = midfield && count === 4')
+      && shell.includes('const standardMidfieldLine = flatFourMidfield || (selected === "4321" && midfield')
+      && shell.includes('count === 3 && linePositions.every(position => position === "CM"));')
       && shell.includes('const offset = flatFourMidfield && selected === "442b" && position === "CDM" ? 6')
       && shell.includes('flatFourMidfield ? 0')
-      && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')),
+      && shell.includes('position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;')
+      && shell.includes('selected === "433cf" && (position === "LW" || position === "RW") ? 2')
+      && shell.includes('selected === "433cf" && position === "CF" ? 6')),,
   "Planner must preserve the 25 formations, compact wide slots, lift the defence and keep the goalkeeper label inside the pitch.");
 const expectedRingSegments = 12;
 for (const markup of [html, generatedHtml]) {
