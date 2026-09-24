@@ -1782,7 +1782,24 @@ const browserTestSource = String.raw`(() => {
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(!depthPicker.hidden, "Clicking an empty circle must open the position selector.");
+      const assertPickerPointer = key => {
+        const pointer = document.getElementById("plannerDepthPickerPointer");
+        const anchor = slot(key).querySelector(".plannerFormationSlotButton").getBoundingClientRect();
+        const menu = depthPicker.getBoundingClientRect();
+        const arrow = pointer?.getBoundingClientRect();
+        assert(pointer && !depthPicker.contains(pointer)
+          && getComputedStyle(pointer).pointerEvents==="none"
+          && ["above","below"].includes(pointer.dataset.side)
+          && Math.abs(arrow.left + arrow.width/2 - Math.max(menu.left + 16,Math.min(anchor.left + anchor.width/2,menu.right - 16)))<=1
+          && (pointer.dataset.side==="below"
+            ? Math.abs(arrow.bottom-menu.top)<=2 && getComputedStyle(pointer).transform==="none"
+            : Math.abs(arrow.top-(menu.bottom-1))<=2 && getComputedStyle(pointer).transform!=="none"),
+          "The scroll-safe triangular menu tail must point toward its opening pitch circle, whether above or below.");
+      };
+      assertPickerPointer("CB#1");
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105","Picker must include only positional CB ratings within 10% of the team average, in positional Overall order.");
+      assert(depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"] > span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected)')?.textContent==="M. De Rossi",
+        "The menu must display given-name initial and the whole multiword surname.");
       const pickerPhoto = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"] .plannerDepthPickerPhoto img');
       assert(pickerPhoto?.src.includes("/103/photo.webp") && getComputedStyle(pickerPhoto).objectFit==="contain"
         && getComputedStyle(pickerPhoto).objectPosition==="50% 0%"
@@ -1790,6 +1807,7 @@ const browserTestSource = String.raw`(() => {
         "Picker portraits must use the same face-focused crop as the pitch portraits.");
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
       assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(!document.getElementById("plannerDepthPickerPointer"),"Closing the position picker must remove its floating pointer.");
       assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
       const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
       const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
@@ -1862,11 +1880,17 @@ const browserTestSource = String.raw`(() => {
       const selectedRowBox = assignedOtherSlot.getBoundingClientRect();
       const selectedLabelBox = assignedSlotLabel.getBoundingClientRect();
       const selectedLabelStyle = getComputedStyle(assignedSlotLabel);
+      const assignedName = assignedOtherSlot.querySelector(":scope > span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected)");
+      const assignedNameBox = assignedName.getBoundingClientRect();
+      const assignedOverallBox = assignedOverall.getBoundingClientRect();
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
-        && selectedLabelBox.right <= assignedOverall.getBoundingClientRect().left
+        && selectedLabelBox.right <= assignedOverallBox.left
         && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && assignedName.textContent==="C. 91"
         && selectedLabelStyle.display==="inline-flex" && selectedLabelStyle.alignItems==="center",
-        "The selected slot label must precede Overall and be vertically centered in its menu row.");
+        "The abbreviated name, selected slot and positional Overall must all be vertically centered in the menu row.");
       const removeHoverStyle = getComputedStyle(removeStarter);
       const playerHoverStyle = getComputedStyle(assignedOtherSlot);
       assert(removeHoverStyle.borderTopWidth===playerHoverStyle.borderTopWidth
