@@ -154,12 +154,15 @@ assert.ok(planner.includes('preview?.setClub?.(clubId);') && planner.includes('-
 assert.ok(css.includes('.plannerDepthPicker[hidden]') && css.includes('.plannerFormationBackups') && styles.includes('.plannerFormationBackups'), "Responsive depth picker and alternatives must be reflected in generated CSS.");
 assert.ok([css, styles].every(sheet => sheet.includes('max-width:500px;height:auto;aspect-ratio:72/109')
   && sheet.includes('.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px)')
-  && sheet.includes('.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 20px;width:20px;height:20px;border:1px solid rgba(255,255,255,.65);border-radius:2px')
+  && sheet.includes('max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px')
+  && sheet.includes('.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 20px;width:20px;height:20px;border:0;border-radius:0;object-fit:contain;filter:drop-shadow(1px 0 0 rgba(255,255,255,.7))')
+  && sheet.includes('drop-shadow(0 -1px 0 rgba(255,255,255,.7))')
+  && sheet.includes('.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}')
   && sheet.includes('.plannerFormationSurnameFlag.flagImage{flex-basis:18px;width:18px;height:18px}')
   && sheet.includes('.plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis')
   && sheet.includes('.plannerFormationBackups{position:absolute;top:calc(100% + 40px)')
   && sheet.includes('.plannerDepthDetails{margin-top:88px}')),
-  "Larger pitch must place table-sized, white-bordered flags close to surnames while keeping backups separate and goalkeeper clearance.");
+  "Larger pitch must place table-sized, silhouette-outlined flags with slightly larger surnames while keeping backups separate and goalkeeper clearance.");
 assert.ok(source.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && generated.includes("const y = 76 - lineIndex * (66 / (lines.length - 1)) - (midfield ? 3 : 0);") && source.includes('goalkeeper.style.top = "94%";'), "All formations must use the upper and lower pitch evenly in canonical and generated shells.");
 assert.ok(css.includes("width:clamp(54px,16%,70px)") && styles.includes("width:clamp(54px,16%,70px)") && css.includes("width:clamp(50px,15%,64px)") && styles.includes("width:clamp(50px,15%,64px)"), "Balanced circle sizes must match across desktop/mobile and canonical/generated styles.");
 assert.ok(source.includes("pairedStrikers ? 30 : 48") && generated.includes("pairedStrikers ? 30 : 48") && source.includes("occurrence === 1 ? 40 : 60") && generated.includes("occurrence === 1 ? 40 : 60"), "Keep two strikers closer together in two- and four-player attacking lines.");
