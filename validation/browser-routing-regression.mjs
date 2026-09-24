@@ -1577,6 +1577,7 @@ const browserTestSource = String.raw`(() => {
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
+        assert(spots.every(spot => { const style = getComputedStyle(spot.querySelector(".plannerFormationPositionLabel")); return style.backgroundColor === "rgb(162, 162, 162)" && style.borderRadius === "5px" && style.lineHeight === "16px" && style.textShadow === "none"; }), "Each empty formation position must have the requested compact grey badge: " + code);
         assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
         // Check the actual geometry of every empty position, not just the two 4-4-2 CMs.
@@ -1585,7 +1586,9 @@ const browserTestSource = String.raw`(() => {
           const plus = spot.querySelector(".plannerFormationTokenPlus");
           const tokenRect = token.getBoundingClientRect();
           const plusRect = plus.getBoundingClientRect();
-          assert(getComputedStyle(plus).position === "absolute" && getComputedStyle(plus).transform === "none", "Pitch plus must use transform-free absolute centering in its resting state: " + code + " " + spot.dataset.slotKey);
+          const ringRect = spot.querySelector(".plannerFormationTokenRing").getBoundingClientRect();
+          assert(Math.abs(plusRect.width - ringRect.width) <= 0.5 && Math.abs(plusRect.height - ringRect.height) <= 0.5, "Pitch plus and ring must use identical viewports: " + code + " " + spot.dataset.slotKey);
+          assert(getComputedStyle(plus).position === "absolute" && plus.getAttribute("viewBox") === "0 0 100 100" && plus.querySelector("path")?.getAttribute("d") === "M37 50h26" && plus.querySelectorAll("path")[1]?.getAttribute("d") === "M50 37v26", "Pitch plus must use truly centered paths in the same 100×100 SVG space as the ring: " + code + " " + spot.dataset.slotKey);
           assert(Math.abs(plusRect.left + plusRect.width / 2 - tokenRect.left - tokenRect.width / 2) < 0.75
             && Math.abs(plusRect.top + plusRect.height / 2 - tokenRect.top - tokenRect.height / 2) < 0.75,
             "Pitch plus must be centered in " + code + " " + spot.dataset.slotKey);
@@ -1910,6 +1913,7 @@ const browserTestSource = String.raw`(() => {
       assert(!slot("CB#2").querySelector(".plannerFormationPlayerSurname")
         && slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB",
         "Empty circles must keep their position label instead of a surname.");
+      assert(Math.abs(slot("CB#2").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().top - starterSurname.getBoundingClientRect().top) <= 1, "Empty CB badge and occupied CB surname must start at the same distance below their circles.");
       assert(slot("CB#1").querySelectorAll(".plannerFormationBackup").length===2,"Filled circle must show 2nd and 3rd alternatives.");
       assert(slot("CB#1").querySelector(".plannerFormationBackups").getBoundingClientRect().top
         >= starterSurname.getBoundingClientRect().bottom + 10,
