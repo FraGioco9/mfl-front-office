@@ -119,11 +119,13 @@ for (const stylesheet of [css, styles]) {
     && stylesheet.includes(".plannerRosterTable .plannerNationalityColumn{width:26px}")
     && stylesheet.includes("--planner-columns:32px minmax(0,1fr) 21% 10% 10% 18%"),
     "Flag columns must fit flags, Player gains leftover width, and Slot stays unchanged.");
-  assert.ok(stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken")
-    && stylesheet.includes(".plannerFormationSlotButton:focus-visible .plannerFormationToken")
-    && stylesheet.includes("transform:scale(1.1)")
+  assert.ok(stylesheet.includes(".plannerFormationSlotButton::before{content:\"\";position:absolute")
+    && stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled)::before,.plannerFormationSlotButton:focus-visible::before{opacity:1;transform:scale(1.08)")
+    && stylesheet.includes(".plannerFormationSlotButton:hover:not(:disabled) .plannerFormationToken,.plannerFormationSlotButton:focus-visible .plannerFormationToken{transform:translateY(-2px) scale(1.1)")
+    && stylesheet.includes("border-color:rgba(255,255,255,.9)")
+    && stylesheet.includes(".plannerFormationSlotButton::before,.plannerFormationSlotButton .plannerFormationToken")
     && stylesheet.includes("prefers-reduced-motion:reduce"),
-    "Empty and occupied circles must share a reduced-motion-aware hover animation.");
+    "Both empty and filled slots must reveal the external halo and lift on hover/focus, with reduced-motion support.");
 }
 
 assert.ok(source.includes('id="plannerAutoFillDepthButton"') && source.includes('id="plannerDepthPicker"'), "Depth must expose Auto-fill and the slot player picker.");
