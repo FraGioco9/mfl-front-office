@@ -71,7 +71,7 @@ invariant(
   "Generated index.html must preserve parser-time Planner first-paint ownership and selected-club state.",
 );
 invariant(html.includes('id="plannerWorkspace"') && html.includes('id="plannerRosterBody"') && html.includes("pitch plannerPitch"), "Selected teams must expose a squad table and pitch workspace.");
-invariant(html.includes('<th scope="col">Age</th>') && html.includes('<th scope="col">Contract</th>') && html.includes('plannerContractColumn'), "Planner squad must expose Age and editable Contract columns.");
+invariant(html.includes('<th scope="col">Slot</th>') && html.includes('plannerSlotColumn') && html.includes('<th scope="col">Age</th>') && html.includes('<th scope="col">Contract</th>') && html.includes('plannerContractColumn'), "Planner squad must expose Slot, Age and editable Contract columns.");
 invariant(
   html.includes('id="plannerAddPlayerButton"')
     && html.includes('id="plannerPlayerModal"')
@@ -89,7 +89,7 @@ invariant(
     && html.includes('id="plannerPlayerConfirmButton"'),
   "Planner Add player must use a modal with staged multi-selection and explicit discard/confirm actions.",
 );
-invariant(html.includes("column < 7"), "Planner selected-club first paint must reserve all seven roster columns.");
+invariant(html.includes("column < 8"), "Planner selected-club first paint must reserve all eight roster columns.");
 invariant(chrome.includes('href="/planner" data-page="planner"') && chrome.includes("navPlannerIcon"), "Sidebar must expose Planner with its pitch icon.");
 invariant(chrome.includes('<rect x="3" y="2.5" width="18" height="19"') && chrome.includes('<circle cx="12" cy="12" r="2.4"'), "Planner pitch icon must remain locally authored.");
 invariant(styles.includes(".plannerPage") && styles.includes(".plannerTeamSearchResults"), "Planner must own full-width page/search styling.");
@@ -152,12 +152,16 @@ invariant(
 );
 invariant(
   styles.includes(".plannerOverallContent{display:inline-flex;align-items:center;justify-content:flex-start")
-    && styles.includes(".plannerRosterTable :is(th,td):nth-child(3)")
+    && styles.includes(".plannerRosterTable :is(th,td):nth-child(4)")
     && styles.includes(".plannerPlayerSearchTable :is(th,td):nth-child(3)")
     && styles.includes(".plannerRosterTable .plannerAgeContent{justify-content:flex-start}"),
   "Position, Age and Overall must be left-aligned across Squad and modal tables.",
 );
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
+invariant(html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons, aligned footer and canonical roster rows.");
+invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
+invariant(styles.includes("color-mix(in srgb,#05f82c 22%,transparent)") && styles.includes("color:#05f82c") && styles.includes("border-radius:5px") && styles.includes(".plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}"), "Slot chip must match the supplied rounded, translucent green example.");
+invariant(styles.includes(".plannerRosterTable .plannerSlotColumn{width:12%}") && styles.includes(".plannerRosterTable .plannerPlayerColumn{width:23%}") && styles.includes(".plannerRosterTable .plannerContractColumn{width:21%}") && styles.includes(".plannerRosterTable .plannerSlotColumn{width:14%}"), "All squad column widths must be recomputed for desktop and mobile.");
 invariant(styles.includes("width:58px") && styles.includes("color:var(--danger)") && styles.includes("background-color:transparent"), "Planner Contract editor must stay compact and roster Remove must remain visually unfilled on hover.");
 invariant(html.includes('class="tableShell" aria-label="Planned squad table"') && styles.includes(".plannerRosterTable td{line-height:1.2}") && styles.includes(".plannerRosterRemove{display:inline-flex") && styles.includes("width:22px;height:22px"), "Planner roster must reuse the standard table shell and preserve compact remove controls.");
 invariant(
@@ -331,7 +335,7 @@ invariant(
   "Planner roster must expose and maintain average Age, average Overall and total Contract values in the table footer.",
 );
 invariant(
-  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:26%}")
+  styles.includes(".plannerRosterTable .plannerPlayerColumn{width:23%}")
     && styles.includes("grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)")
     && styles.includes("max-width:420px")
     && styles.includes("width:calc(100% - 16px)")
