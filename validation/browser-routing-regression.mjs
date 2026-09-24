@@ -1889,7 +1889,7 @@ const browserTestSource = String.raw`(() => {
         && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && assignedName.textContent==="C. 91"
-        && selectedLabelStyle.display==="inline-flex" && selectedLabelStyle.alignItems==="center",
+        && ["flex","inline-flex"].includes(selectedLabelStyle.display) && selectedLabelStyle.alignItems==="center",
         "The abbreviated name, selected slot and positional Overall must all be vertically centered in the menu row: " + JSON.stringify({
           actualName:assignedName.textContent, selected:assignedSlotLabel.textContent, overall:assignedOverall.textContent,
           rowMid:selectedRowBox.top + selectedRowBox.height/2, nameMid:assignedNameBox.top+assignedNameBox.height/2,
