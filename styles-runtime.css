@@ -7663,6 +7663,9 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerFormationPlayerPosition.fair{background:#ffc107;color:#000}
 .plannerFormationPlayerPosition.some{background:#ff5722;color:#000}
 .plannerFormationSpot:has(.plannerFormationTokenAssigned) .plannerFormationPositionLabel{display:none}
+.plannerFormationPlayerSurname{position:absolute;top:calc(100% + 8px);left:50%;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:4px;width:max-content;max-width:116px;color:#fff;font-size:11px;font-weight:800;line-height:20px;text-align:center;text-shadow:0 1px 3px #000;white-space:nowrap;transform:translateX(-50%);pointer-events:none}
+.plannerFormationSurnameFlag.flagImage{display:block;box-sizing:border-box;flex:0 0 18px;width:18px;height:18px;border:0;border-radius:3px;object-fit:contain;filter:drop-shadow(0 0 1px rgba(255,255,255,.85))}
+.plannerFormationSurnameText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPicker{position:fixed;z-index:var(--mfl-z-modal);box-sizing:border-box;width:min(320px,calc(100vw - 20px));overflow:visible;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.4)}
 .plannerDepthPickerContent{display:grid;gap:3px;max-height:min(370px,60dvh);overflow-y:auto;padding:10px;border-radius:8px;background:var(--surface)}
 .plannerDepthPicker[hidden]{display:none}
@@ -7684,7 +7687,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerClear{min-height:44px;align-items:center;color:var(--danger);font-size:12px;font-weight:700;line-height:20px}
 .plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{color:var(--danger)}
 .plannerDepthPickerClear>span{display:inline-flex;align-items:center;min-height:20px;line-height:20px}
-@media(max-width:520px){.plannerFormationSpot{width:clamp(54px,16%,68px)}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
+@media(max-width:520px){.plannerFormationSpot{width:clamp(54px,16%,68px)}.plannerFormationPlayerSurname{max-width:100px;font-size:10px;gap:3px}.plannerFormationSurnameFlag.flagImage{flex-basis:16px;width:16px;height:16px}.plannerDepthHeader{gap:7px}.plannerFormationControl{gap:4px}}
 
 /* Source: footer.css */
 /* Canonical footer owner for MFL Front Office. */
