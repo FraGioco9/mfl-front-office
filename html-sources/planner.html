@@ -929,18 +929,9 @@
                 if (starter) {
                   const gradient = document.createElement("span");
                   gradient.className = "plannerFormationPlayerGradient";
-                  const shade = document.createElement("span");
-                  shade.className = "plannerFormationPlayerShade";
-                  const portrait = document.createElement("img");
-                  portrait.className = "plannerFormationPlayerPhoto";
-                  portrait.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(starter.player_id) + "/photo.webp";
-                  portrait.alt = "";
-                  portrait.draggable = false;
-                  portrait.loading = "lazy";
-                  portrait.addEventListener("error", () => { portrait.hidden = true; });
-                  const sliders = makeSlotIcon("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "plannerFormationPlayerSliders", fill: "none", stroke: "currentColor", "stroke-width": "2.5", "stroke-linecap": "round" });
-                  ["M10 5H3", "M12 19H3", "M14 3v4", "M16 17v4", "M21 12h-9", "M21 19h-5", "M21 5h-7", "M8 10v4", "M8 12H3"].forEach(d => sliders.appendChild(makeSlotIcon("path", { d })));
-                  token.append(gradient, shade, portrait, sliders);
+                  // The assigned circle is purely the club-colour gradient.
+                  // Player identity remains on the badge and in the picker.
+                  token.appendChild(gradient);
                   const badge = document.createElement("span");
                   badge.className = "plannerFormationPlayerBadge";
                   const overall = document.createElement("span");
