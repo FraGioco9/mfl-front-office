@@ -1805,9 +1805,16 @@ const browserTestSource = String.raw`(() => {
         "Pitch surname must show the same Italy flag and tooltip as the Planner squad.");
       assert(starterFlag.getBoundingClientRect().right <= starterSurname.querySelector(".plannerFormationSurnameText").getBoundingClientRect().left,
         "Nationality flag must be to the left of the starter's surname.");
-      assert(starterSurname.getBoundingClientRect().top
-        >= slot("CB#1").querySelector(".plannerFormationPlayerBadge").getBoundingClientRect().bottom + 9,
-        "Keep a visible gap between the badge/circle and the flagged surname.");
+      const flagStyle = getComputedStyle(starterFlag);
+      assert(Math.abs(starterFlag.getBoundingClientRect().width - 20) < 1
+        && Math.abs(starterFlag.getBoundingClientRect().height - 20) < 1
+        && flagStyle.borderTopWidth === "1px"
+        && flagStyle.borderTopColor === "rgba(255, 255, 255, 0.65)",
+        "Pitch nationality flags must match the table's desktop flag dimensions and have a subtle white border.");
+      const badgeGap = starterSurname.getBoundingClientRect().top
+        - slot("CB#1").querySelector(".plannerFormationPlayerBadge").getBoundingClientRect().bottom;
+      assert(badgeGap >= 3 && badgeGap <= 10,
+        "Keep the surname closer to the circle/badge without letting them touch.");
       assert(starterSurname.getAttribute("aria-hidden")==="true"
         && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
         "Surname is visual-only; button must retain the accessible full player name.");
