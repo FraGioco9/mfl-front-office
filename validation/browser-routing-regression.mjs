@@ -1880,8 +1880,18 @@ const browserTestSource = String.raw`(() => {
       assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 0%" && getComputedStyle(assignedPortrait).transform !== "none","Player portrait must use the original face-focused zoom inside the gradient circle.");
       assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
       assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
-      assert(!document.querySelector("#plannerFormationPositions .plannerFormationPlayerSurname, #plannerFormationPositions .plannerFormationBackups, #plannerDepthDetails, .plannerDepthCard"),
-        "The pitch must not show player names, backup names or depth cards.");
+      const selectedSurname = slot("CB#1").querySelector(".plannerFormationPlayerSurname");
+      assert(selectedSurname?.querySelector(".plannerFormationSurnameText")?.textContent === "De Rossi"
+        && selectedSurname.title === "Marco De Rossi"
+        && selectedSurname.getAttribute("aria-hidden") === "true"
+        && selectedSurname.querySelector(".plannerFormationSurnameFlag"),
+        "Selected player must show their surname and nationality flag below the circle.");
+      assert(!slot("CB#2").querySelector(".plannerFormationPlayerSurname")
+        && !document.querySelector("#plannerFormationPositions .plannerFormationBackups, #plannerDepthDetails, .plannerDepthCard"),
+        "Empty circles must not show a player name, and removed depth information must stay absent.");
+      assert(Math.abs(selectedSurname.getBoundingClientRect().top -
+        slot("CB#2").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().top) <= 1,
+        "Occupied surname and empty-position badge must sit at the same distance below their circles.");
       assert(slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
         "The assigned player must remain identifiable to assistive technology.");
       assert(slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB"
@@ -1889,7 +1899,10 @@ const browserTestSource = String.raw`(() => {
         "Empty circles must keep the grey position badge, while filled circles hide it.");
       fillButton.click();
       assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
-      assert(!slot("CB#1").querySelector(".plannerFormationBackups"),"Auto-fill must not reintroduce backup names.");
+      assert(!slot("CB#1").querySelector(".plannerFormationBackups")
+        && slot("CB#1").querySelector(".plannerFormationSurnameText")?.textContent === "De Rossi"
+        && slot("CB#2").querySelector(".plannerFormationPlayerSurname"),
+        "Auto-fill must preserve selected names without reintroducing backup names.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       const removeStarter = depthPicker.querySelector(".plannerDepthPickerClear");
       assert(removeStarter?.textContent==="Remove"
