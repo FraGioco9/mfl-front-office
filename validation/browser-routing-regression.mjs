@@ -1949,10 +1949,17 @@ const browserTestSource = String.raw`(() => {
         "The standalone summary must use planned squad data for all five metrics.");
       const summaryRow = document.querySelector(".plannerSummaryTable tbody tr");
       assert(summaryRow instanceof HTMLElement, "Planner summary row must exist.");
-      summaryRow.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
-      assert(getComputedStyle(summaryRow).backgroundColor === "rgba(0, 0, 0, 0)"
-        && [...summaryRow.children].every(cell => getComputedStyle(cell).backgroundColor === "rgba(0, 0, 0, 0)"),
-        "Summary rows and cells must not have hover backgrounds in the browser-served stylesheet.");
+      // Browser default table-cell surfaces need not be transparent. Confirm the
+      // served hover rules, without mistaking a synthetic mouseover for :hover.
+      const summaryHoverRules = [...document.styleSheets].flatMap(sheet => {
+        try { return [...sheet.cssRules].filter(rule =>
+          rule.selectorText?.includes(".plannerSummaryTable tbody tr:hover")); }
+        catch { return []; }
+      });
+      assert(summaryHoverRules.some(rule =>
+        rule.selectorText.includes(".plannerSummaryTable tbody tr:hover :is(th,td)")
+        && rule.style.backgroundColor === "transparent"),
+        "Browser-served stylesheet must keep summary rows and cells unhighlighted.");
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
       assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
@@ -2023,6 +2030,23 @@ const browserTestSource = String.raw`(() => {
       assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
       assert(document.getElementById("plannerPlayerSearchMore").hidden, "Search must hide Load more when all matching players were returned.");
       assert(ownPlayerSearchRow.getBoundingClientRect().height <= 32, "Planner player-search rows must use the reduced compact height.");
+      const assertCenteredPopupRow = (row, tableLabel) => {
+        const box = row.getBoundingClientRect();
+        const contentCenter = box.top + (box.height - 1) / 2; // exclude the divider
+        for (const [column, cell] of [...row.cells].entries()) {
+          const element = cell.querySelector(".flagImage, .plannerOverallContent, .plannerPlayerActionText");
+          const rect = element ? element.getBoundingClientRect() : (() => {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            return range.getBoundingClientRect();
+          })();
+          assert(rect.height > 0 && Math.abs(rect.top + rect.height / 2 - contentCenter) <= 3,
+            tableLabel + " column " + (column + 1) + " must visually center its flag/text/OVR/action within the row.");
+        }
+      };
+      assertCenteredPopupRow(ownPlayerSearchRow, "Add player(s) search results");
+      assert(getComputedStyle(ownPlayerSearchRow.cells[1]).lineHeight === "20px",
+        "Compact popup name text must not use the entire row height as its line box.");
       playerSearch.value = "Added";
       playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
@@ -2053,6 +2077,7 @@ const browserTestSource = String.raw`(() => {
       assert(selectedRows[0].children.length === 6 && selectedRows[1].children.length === 6, "Selected-player rows must mirror the six-column search table.");
       assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
       assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
+      assertCenteredPopupRow(selectedRows[0], "Add player(s) staged selection");
       for (const index of [2, 3, 4]) {
         assert(getComputedStyle(selectedRows[0].children[index]).textAlign === "left", "Selected table Position, Age and Overall must align left.");
       }

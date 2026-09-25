@@ -438,8 +438,11 @@ invariant(
 );
 invariant(
   styles.includes(".plannerRosterHeader h3{display:flex;align-items:center;gap:6px")
-    && styles.includes("height:31px")
-    && styles.includes("line-height:31px"),
+    && [styles, generatedStyles].every(css =>
+      css.includes(".plannerPlayerSearchTable td{height:31px;")
+      && css.includes("border-bottom:1px solid var(--mfl-table-border-color);line-height:20px;")
+      && css.includes(".plannerPlayerSearchTable th{position:sticky;")
+      && css.includes("font-size:var(--mfl-table-header-font-size);line-height:20px;")),
   "Planner must separate Squad/count and use reduced player-search row height.",
 );
 invariant(planner.includes('"searchResult clubSearchResult plannerTeamSearchResult"'), "Planner results must reuse canonical search-result presentation.");

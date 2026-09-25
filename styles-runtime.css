@@ -7533,8 +7533,8 @@ select.plannerFormationSelect.plannerFormationSelectCommitted,select.plannerForm
 .plannerPlayerSearchTable .plannerPlayerSearchAgeColumn{width:9%}
 .plannerPlayerSearchTable .plannerPlayerSearchOverallColumn{width:11%}
 .plannerPlayerSearchTable .plannerPlayerSearchSelectColumn{width:100px}
-.plannerPlayerSearchTable th{position:sticky;top:0;z-index:1;height:30px;padding:0 9px;background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);line-height:30px;text-align:left;text-transform:uppercase}
-.plannerPlayerSearchTable td{height:31px;padding:0 9px;border-bottom:1px solid var(--mfl-table-border-color);line-height:31px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plannerPlayerSearchTable th{position:sticky;top:0;z-index:1;height:30px;padding:0 9px;background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);line-height:20px;text-align:left;text-transform:uppercase}
+.plannerPlayerSearchTable td{height:31px;padding:0 9px;border-bottom:1px solid var(--mfl-table-border-color);line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plannerPlayerSearchTable th:nth-child(1),.plannerPlayerSearchTable td:nth-child(1){text-align:center}
 .plannerPlayerSearchResult.selected td{background:var(--row-hover)}
 .plannerPlayerSearchResult.inSquad td{color:var(--text-soft)}
