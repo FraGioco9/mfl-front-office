@@ -1944,7 +1944,7 @@ const browserTestSource = String.raw`(() => {
         "Squad summary must have five rows in a separate table, not a squad totals footer.");
       assert(document.getElementById("plannerAverageOverall")?.textContent === "80.00"
         && document.getElementById("plannerBest16Overall")?.textContent === "80.00"
-        && document.getElementById("plannerBest11OverallSum")?.textContent === "80.00"
+        && document.getElementById("plannerBest11OverallSum")?.textContent === "80"
         && document.getElementById("plannerAverageAge")?.textContent === "23.00",
         "The standalone summary must use planned squad data for all five metrics.");
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");

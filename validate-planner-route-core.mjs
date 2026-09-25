@@ -454,6 +454,9 @@ console.log("Planner route, custom pitch icon, and team-selection search validat
 invariant(planner.includes('function renderSquadSummary()') && planner.includes('if(commit)renderSquadSummary()')
   && planner.includes('renderSquadSummary();') && styles.includes('.plannerSummaryTable{'),
   "Five summary metrics must update with squad and contract edits.");
+invariant(planner.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0)')
+  && styles.includes('.plannerSummaryTable tbody tr:hover :is(th,td){background:transparent}'),
+  "Best eleven sum must display without decimals and summary rows must remain unhighlighted on hover.");
 invariant(styles.includes('--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px')
   && styles.includes('.plannerPlayerSearchTable.plannerTableNoVerticalScroll :is(thead,tbody){scrollbar-gutter:auto}')
   && planner.includes('table.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll)'),

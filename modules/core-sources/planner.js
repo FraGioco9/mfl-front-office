@@ -102,7 +102,7 @@
     set(squadSummary.contracts,totalPlannedContracts().toFixed(2)+"%");
     set(squadSummary.overall,mean(overall));
     set(squadSummary.best16,mean(overall.slice(0,16)));
-    set(squadSummary.best11,overall.length?overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(2):"—");
+    set(squadSummary.best11,overall.length?overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0):"—");
     set(squadSummary.age,mean(ages));
   }
   function resetRoster(){

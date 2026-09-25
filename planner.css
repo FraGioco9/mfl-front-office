@@ -228,5 +228,6 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerSummaryTable thead th{background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);font-weight:800;text-transform:uppercase}
 .plannerSummaryTable :is(th,td):last-child{text-align:right;width:34%;font-variant-numeric:tabular-nums}
 .plannerSummaryTable tbody th{font-weight:600;text-align:left}
-.plannerSummaryTable tbody tr:hover{background:var(--row-hover)}
+.plannerSummaryTable tbody tr:hover,
+.plannerSummaryTable tbody tr:hover :is(th,td){background:transparent}
 .plannerSummaryTable tbody tr:last-child :is(th,td){border-bottom:0}
