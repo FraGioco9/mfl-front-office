@@ -158,6 +158,7 @@ function normalizedPageName(pageName) {
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
   "my-clubs": "/my-clubs/opted-out",
+  planner: "/planner/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -175,6 +176,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
   if (normalizedPage === "my-clubs") return "/my-clubs";
+  if (normalizedPage === "planner") return "/planner";
   if (normalizedPage === "settings") return "/settings";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
@@ -281,6 +283,21 @@ function pageTargetFromPath(path) {
       options: {
         ...(signedInTarget.options || {}),
         replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
+      },
+    };
+  }
+
+  if (cleanPath === "/planner") {
+    if (!hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
+    const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const clubId = String(params.get("club") || "").trim();
+    const canonicalPath = clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+    return {
+      pageName: "planner",
+      options: {
+        path: canonicalPath,
+        ...(clubId ? { clubId } : {}),
+        ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
       },
     };
   }
@@ -446,12 +463,22 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "planner", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
 
 function pagePath(pageName, options = {}) {
+  if (pageName === "planner") {
+    if (!hasWalletOptIn()) return optedOutPathForPage("planner");
+    const explicitPath = String(options.path || "");
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
+    const clubId = String(options.clubId || (window.location.pathname === "/planner"
+      ? new URLSearchParams(window.location.search).get("club")
+      : "") || "").trim();
+    return clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+  }
+
   if (pageName === "club") {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);

@@ -89,6 +89,44 @@ async function connectCdp(webSocketUrl) {
   };
 }
 
+async function verifyRefreshTitleStability(cdp, expectedTitle) {
+  await cdp.send("Page.enable");
+  await cdp.send("Page.reload", { ignoreCache: true });
+
+  const observedTitles = [];
+  const deadline = Date.now() + 15_000;
+  let settled = false;
+  while (Date.now() < deadline) {
+    try {
+      const evaluation = await cdp.send("Runtime.evaluate", {
+        expression: `(() => ({
+          title: document.title,
+          readyState: document.readyState,
+          routeReady: document.documentElement.dataset.mflRouteReady === "true",
+        }))()`,
+        returnByValue: true,
+      });
+      const value = evaluation?.result?.value;
+      const title = String(value?.title || "");
+      if (title && observedTitles.at(-1) !== title) observedTitles.push(title);
+      if (value?.readyState === "complete" && value?.routeReady && title === expectedTitle) {
+        settled = true;
+        break;
+      }
+    } catch {
+      // The previous execution context can disappear briefly during reload.
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+  }
+
+  assert(settled, `Refresh did not settle on ${expectedTitle}. Observed titles: ${JSON.stringify(observedTitles)}`);
+  assert(
+    !observedTitles.some((title) => /page not found/i.test(title)),
+    `Refresh must never expose a Page not found title. Observed titles: ${JSON.stringify(observedTitles)}`,
+  );
+  return observedTitles;
+}
+
 async function waitForRenderedShell(cdp) {
   const deadline = Date.now() + 20_000;
   let lastValue = null;
@@ -135,7 +173,11 @@ async function waitForRenderedShell(cdp) {
     });
     const value = evaluation?.result?.value;
     lastValue = value;
-    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge) {
+    // The Next dev-tools portal can appear before Next finishes reconciling the
+    // page-owned title. Probe Planner only after both shell and title are ready.
+    const plannerTitleReady = new URL(targetUrl).pathname !== "/planner"
+      || (value?.documentTitle === "Planner - MFL Front Office" && value?.readyState === "complete");
+    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge && plannerTitleReady) {
       return value;
     }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
@@ -216,7 +258,29 @@ try {
   const state = await waitForRenderedShell(cdp);
   initialDevAssetToken = state.devAssetToken;
   assert(initialDevAssetToken && initialDevAssetToken !== "production-static", "Development document did not receive the Webpack legacy-asset watch token.");
-  assert.equal(state.documentTitle, "MFL Front Office", "Next-rendered root document title is incorrect.");
+  if (new URL(targetUrl).pathname === "/planner") {
+    const check = await cdp.send("Runtime.evaluate", {
+      expression: `(() => {
+        const planner = document.querySelector(".navPlannerIcon");
+        return {
+          hasPlanner: Boolean(document.querySelector("#plannerPage")),
+          navFill: planner ? getComputedStyle(planner).fill : "",
+          hasNotFound: Boolean(document.querySelector("#notFoundPage:not([hidden])")),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    assert(check?.result?.value?.hasPlanner, "Planner Next route must include the full Planner document.");
+    assert.equal(check.result.value.navFill, "none", "Planner sidebar glyph must not render as a filled black square.");
+    assert(!check.result.value.hasNotFound, "Planner direct navigation must not show the Page not found shell.");
+  }
+
+  const targetPathname = new URL(targetUrl).pathname;
+  const expectedDocumentTitle = targetPathname === "/planner"
+    ? "Planner - MFL Front Office"
+    : "MFL Front Office";
+  assert.equal(state.documentTitle, expectedDocumentTitle, `Next-rendered ${targetPathname} document title is incorrect.`);
+  const refreshTitles = await verifyRefreshTitleStability(cdp, expectedDocumentTitle);
   assert.equal(state.viewportMetaCount, 1, "Next-rendered shell must expose exactly one viewport meta tag.");
   assert.equal(
     state.viewportContent,
@@ -224,15 +288,18 @@ try {
     "Next-rendered viewport metadata does not match the legacy responsive contract.",
   );
 
-  responsiveSource = await readFile(responsivePath, "utf8");
-  await writeFile(responsivePath, `${responsiveSource.trimEnd()}\n${refreshMarker}\n`, "utf8");
-  const refreshed = await waitForLegacyAutoRefresh(cdp, {
-    originalToken: initialDevAssetToken,
-    marker: refreshMarker,
-    expectMarker: true,
-  });
+  let refreshed = null;
+  if (targetPathname === "/") {
+    responsiveSource = await readFile(responsivePath, "utf8");
+    await writeFile(responsivePath, `${responsiveSource.trimEnd()}\n${refreshMarker}\n`, "utf8");
+    refreshed = await waitForLegacyAutoRefresh(cdp, {
+      originalToken: initialDevAssetToken,
+      marker: refreshMarker,
+      expectMarker: true,
+    });
+  }
 
-  console.log(`Next-rendered shell browser probe passed: ${JSON.stringify({ ...state, autoRefresh: refreshed })}`);
+  console.log(`Next-rendered shell browser probe passed: ${JSON.stringify({ ...state, refreshTitles, autoRefresh: refreshed })}`);
 } catch (error) {
   throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
 } finally {

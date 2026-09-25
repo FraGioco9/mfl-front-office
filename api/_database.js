@@ -95,6 +95,8 @@ const SEARCH_PLAYER_COLUMNS = Object.freeze([
   "nationality",
   "positions",
   "retirement_years",
+  "player_seasons",
+  "active_contract_revenue_share",
 ]);
 const VALID_PLAYER_COLUMNS = new Set(PLAYER_COLUMNS);
 const OPTIONAL_PLAYER_COLUMNS = new Set([

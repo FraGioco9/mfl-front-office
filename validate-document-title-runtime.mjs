@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import { includes, excludes } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
@@ -20,6 +21,8 @@ includes(projections, 'else if (firstPaintRouteRoot === "club" || firstPaintRout
 includes(projections, 'else if (firstPaintRouteRoot === "agents") firstPaintDocumentTitle = firstPaintAgentTitle();', "Agent refreshes must become Agent-aware during head parsing.");
 includes(projections, 'else if (firstPaintRouteRoot === "watchlist") firstPaintDocumentTitle = firstPaintWatchlistTitle();', "Watchlist refreshes must become Watchlist-aware during head parsing.");
 includes(projections, 'else if (firstPaintRouteRoot === "evaluation") firstPaintDocumentTitle = firstPaintEvaluationTitle();', "Evaluation refreshes must become Evaluation-aware during head parsing.");
+includes(projections, 'planner: "Planner"', "Planner refreshes must resolve the Planner browser title during head parsing.");
+includes(indexHtml, 'planner: "Planner"', "Generated index.html must preserve the Planner first-paint browser title.");
 includes(projections, 'mfl-player-first-paint-v1:', "Player first paint should upgrade from the generic fallback when canonical cached identity is already known.");
 includes(projections, 'mfl-evaluation-first-paint-name-v2:', "Evaluation first paint should use the full cached Player identity immediately when available.");
 includes(projections, 'root.dataset.initialEvaluationPlayerName = playerName;', "Early Evaluation identity must be handed to the canonical runtime without waiting for panel rendering.");
@@ -32,6 +35,11 @@ includes(runtime, 'const APP_NAME = "MFL Front Office";', "Document titles must 
 includes(runtime, 'window.__mflAppConfig?.routes?.canonicalRequest', "Document titles must derive the active page from the canonical SPA route owner.");
 includes(runtime, 'canonicalRequest(window.location.pathname)', "Document titles must classify the current browser URL instead of startup-only page state.");
 includes(runtime, 'if (document.body?.dataset.page === "notfound") return "notfound";', "The fallback classifier must retain typed not-found state before app config is available.");
+assert.ok(
+  runtime.indexOf('["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)')
+    < runtime.indexOf('if (document.body?.dataset.page === "notfound") return "notfound";'),
+  "Known direct routes such as Planner must win over transient not-found body state during refresh.",
+);
 excludes(runtime, 'document.body?.dataset.page || document.documentElement.dataset.initialPage', "Document titles must not use startup page metadata as the active SPA route owner.");
 includes(runtime, 'database: "Database"', "Database must expose a route-aware browser title.");
 includes(runtime, 'mfl: "MFL"', "MFL must expose a route-aware browser title.");
@@ -95,5 +103,23 @@ for (const [visible, full, busy, expected] of [
 }
 includes(runtime, '"data-player-full-name"', "Browser titles must resync when full identity changes without changing the abbreviated label.");
 includes(runtime, '"data-initial-evaluation-player-name"', "Browser titles must resync if the early full Evaluation identity arrives before the visible panel.");
+
+
+
+// A stale document must not seed a not-found title while a known route is busy.
+for (const initialTitle of ["Planner - MFL Front Office", "Page not found - MFL Front Office"]) {
+  const document = {
+    title: initialTitle,
+    body: { dataset: { page: "notfound" } },
+    documentElement: { dataset: { interactionBusy: "true" } },
+    querySelector: () => null,
+  };
+  vm.runInNewContext(runtime, {
+    document,
+    window: { location: { pathname: "/planner", search: "" }, addEventListener() {} },
+    MutationObserver: class { observe() {} },
+  });
+  assert.equal(document.title, "Planner - MFL Front Office");
+}
 
 console.log("Document-title runtime validation passed: parser-time route fallbacks and canonical SPA ownership keep viewport-independent titles stable through hydration.");

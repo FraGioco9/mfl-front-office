@@ -667,6 +667,15 @@
   });
 
   Reflect.set(window, "__mflMyClubsRoute", Object.freeze({
+    async listOwnedClubs() {
+      const wallet = activeWallet();
+      if (!wallet || !hasWalletOptIn()) return [];
+      if (cachedWallet && cachedWallet !== wallet) clear();
+      const fresh = cacheReady && cachedWallet === wallet
+        && Date.now() - cacheUpdatedAt < CACHE_MAX_AGE_MS;
+      const clubs = fresh ? cachedClubs : await requestClubs(wallet, false);
+      return activeWallet() === wallet && hasWalletOptIn() ? clubs.slice() : [];
+    },
     refresh() {
       clear();
       return state.currentPage === PAGE && hasWalletOptIn()

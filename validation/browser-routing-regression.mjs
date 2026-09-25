@@ -23,7 +23,7 @@ const testPlayer = Object.freeze({
   nationality: "Italy",
   retirement_years: 5,
   owned_since: 1700000000,
-  player_seasons: 1,
+  player_seasons: 5,
   overall: 80,
   pace: 90,
   shooting: 82,
@@ -34,7 +34,8 @@ const testPlayer = Object.freeze({
   goalkeeping: 10,
   height: 185,
   preferred_foot: "Right",
-  active_contract_revenue_share: 10,
+  active_contract_revenue_share: 1250,
+  active_contract_nb_matches: 12,
   active_contract_club_id: "browser-club",
   active_contract_club_name: "Browser FC",
   active_contract_club_division: 2,
@@ -50,6 +51,9 @@ const searchColumns = [
   "wallet_name",
   "active_contract_club_id",
   "active_contract_club_name",
+  "retirement_years",
+  "player_seasons",
+  "active_contract_revenue_share",
 ];
 const publicColumns = [
   "player_id",
@@ -73,6 +77,7 @@ const publicColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -100,6 +105,7 @@ const pageColumns = [
   "height",
   "preferred_foot",
   "active_contract_revenue_share",
+  "active_contract_nb_matches",
   "active_contract_club_id",
   "active_contract_club_name",
   "active_contract_club_division",
@@ -133,7 +139,21 @@ const browserTestSource = String.raw`(() => {
                     : "myclubs-out")
             : window.location.pathname === "/mfl/stats"
               ? "mflstats"
-              : "unknown";
+              : window.location.pathname === "/planner"
+                ? (window.location.search === "?club=9001" ? "planner-selected" : window.location.hash === "#opted-out" ? "planner-out" : "planner")
+                : "unknown";
+
+  if (scenario === "planner-selected" || scenario === "planner-out") {
+    if (scenario === "planner-selected") localStorage.setItem("mfl-planner-formation-v1:9001", "4231");
+    localStorage.setItem("mfl-club-display-data-v1", JSON.stringify({
+      "9001": {
+        clubId: "9001", name: "Browser Club",
+        divisionName: "Gold", divisionColor: "#ffd23e",
+        primaryColor: "#112233", secondaryColor: "#445566",
+        city: "Bologna", nation: "ITALY",
+      },
+    }));
+  }
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
@@ -143,7 +163,7 @@ const browserTestSource = String.raw`(() => {
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (!["myclubs-competition-fail", "myclubs-stale"].includes(scenario)) return originalFetch(input, init);
+    if (!["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
     return originalFetch(input, { ...init, headers });
@@ -178,7 +198,7 @@ const browserTestSource = String.raw`(() => {
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
-  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale"].includes(scenario)) {
+  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) {
     const proof = {
       type: "session",
       address: testWallet,
@@ -249,6 +269,50 @@ const browserTestSource = String.raw`(() => {
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
       myClubsSkeletons: document.querySelectorAll("#myClubsGrid .myClubCardLoading").length,
+      plannerHidden: hidden("#plannerPage"),
+      plannerLockedTitle: text("#optInLockedTitle"),
+      plannerLockedMessage: text("#optInLockedMessage"),
+      plannerLockedHidden: hidden("#myPlayersLockedPage"),
+      plannerTitle: text("#plannerPage .tablePageTitle"),
+      plannerTeamSelectorHidden: hidden("#plannerTeamSelector"),
+      plannerSelectedTeamHidden: hidden("#plannerSelectedTeam"),
+      plannerWorkspaceHidden: hidden("#plannerWorkspace"),
+      plannerRosterSkeletons: document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length,
+      plannerTeamLogoSrc: String(document.getElementById("plannerTeamLogo")?.getAttribute("src") || ""),
+      plannerFormation: String(document.getElementById("plannerFormationSelect")?.value || ""),
+      plannerFormationEnhanced: document.getElementById("plannerFormationSelect")?.getAttribute("data-mfl-dropdown-enhanced") || "",
+      plannerFormationAlignment: getComputedStyle(document.getElementById("plannerFormationSelect")).alignItems,
+      plannerFormationPaddingRight: getComputedStyle(document.getElementById("plannerFormationSelect")).paddingRight,
+      plannerFormationSpots: document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot").length,
+      plannerFormationSpotRows: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.top),
+      plannerFormationSpotPositions: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.dataset.position),
+      plannerFormationTokenCount: document.querySelectorAll("#plannerFormationPositions [data-slot-token='true']").length,
+      plannerFormationRingSegments: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length,
+      plannerFormationPlusPaths: document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length,
+      plannerFormationBadgeCount: document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge, #plannerFormationPositions .plannerFormationInstructionsIcon").length,
+      plannerPitchBackground: getComputedStyle(document.querySelector(".plannerPitch")).backgroundImage,
+      plannerTeamIdText: text("#plannerTeamId"),
+      plannerTeamLocationText: text("#plannerTeamLocation"),
+      plannerTeamFlagSlot: document.querySelector("#plannerTeamLocation .clubLocationFlag") !== null,
+      plannerTeamFlagSrc: document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("src") || "",
+      plannerTeamFlagTooltip: document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("data-tooltip") || "",
+      plannerTeamNameText: text("#plannerTeamName"),
+      plannerTeamDivisionText: text("#plannerTeamDivision"),
+      plannerTeamDivisionColor: document.getElementById("plannerTeamDivision")?.style.color || "",
+      plannerTeamPrimaryColor: document.getElementById("plannerTeamCard")?.style.getPropertyValue("--my-club-primary") || "",
+      plannerTeamSecondaryColor: document.getElementById("plannerTeamCard")?.style.getPropertyValue("--my-club-secondary") || "",
+      plannerTeamIdTop: document.getElementById("plannerTeamId")?.getBoundingClientRect().top || 0,
+      plannerSelectedTeamRight: document.getElementById("plannerSelectedTeam")?.getBoundingClientRect().right || 0,
+      plannerTeamCardRight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().right || 0,
+      plannerTeamCardBottom: document.getElementById("plannerTeamCard")?.getBoundingClientRect().bottom || 0,
+      plannerTeamCardHeight: document.getElementById("plannerTeamCard")?.getBoundingClientRect().height || 0,
+      plannerTeamNameFontSize: getComputedStyle(document.getElementById("plannerTeamName")).fontSize,
+      plannerTeamLogoMaxWidth: getComputedStyle(document.getElementById("plannerTeamLogo")).maxWidth,
+      plannerTeamLogoMaxHeight: getComputedStyle(document.getElementById("plannerTeamLogo")).maxHeight,
+      plannerClearButtonLeft: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().left || 0,
+      plannerClearButtonTop: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().top || 0,
+      plannerClearButtonRight: document.getElementById("plannerTeamClearButton")?.getBoundingClientRect().right || 0,
+      bodyPage: String(document.body.dataset.page || ""),
       filterCount: text("#filterSummary"),
       sortedColumn: String(document.querySelector("#tableHead th[aria-sort]")?.dataset?.tableColumn || ""),
       sortDirection: String(document.querySelector("#tableHead th[aria-sort]")?.getAttribute("aria-sort") || ""),
@@ -373,7 +437,7 @@ const browserTestSource = String.raw`(() => {
         ".playerStack",
         ".playerPanel",
         ".pitchPanel",
-        ".pitch",
+        "#playerDetail .pitch",
       ];
       if (main.scrollWidth > main.clientWidth + 1) {
         const geometry = Object.fromEntries(playerGeometrySelectors.map((selector) => {
@@ -510,6 +574,58 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "mfl/stats", "MFL Stats first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "mfl", "MFL Stats first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "stats", "MFL Stats first paint has the wrong view.");
+    } else if (scenario === "planner-out") {
+      assert(parserSnapshot.initialPage === "planner", "Opted-out Planner first paint resolved the wrong route.");
+      assert(parserSnapshot.storedWalletOptIn === "false" && parserSnapshot.initialRouteShell === "myPlayersLockedPage", "Opted-out Planner must choose the locked shell at first paint.");
+      assert(parserSnapshot.plannerHidden && !parserSnapshot.plannerLockedHidden && parserSnapshot.plannerLockedTitle === "Planner", "Opted-out Planner displayed its private workspace at first paint.");
+      assert(parserSnapshot.plannerTeamIdText === "" && parserSnapshot.plannerTeamNameText === "", "Opted-out Planner exposed cached club identity.");
+    } else if (scenario === "planner" || scenario === "planner-selected") {
+      assert(parserSnapshot.initialPage === "planner", "Planner first paint has the wrong initial path.");
+      assert(parserSnapshot.bodyPage === "planner", "Planner first paint has the wrong body page owner: " + parserSnapshot.bodyPage);
+      assert(parserSnapshot.plannerHidden === false, "Planner page is still hidden at parser-time first paint.");
+      assert(parserSnapshot.plannerTitle === "Planner", "Planner parser-time heading is wrong: " + parserSnapshot.plannerTitle);
+      assert(parserSnapshot.title === "Planner - MFL Front Office", "Planner parser-time browser title is wrong: " + parserSnapshot.title);
+      if (scenario === "planner-selected") {
+        assert(parserSnapshot.plannerTeamSelectorHidden === true, "Selected Planner first paint exposed the Team search.");
+        assert(parserSnapshot.plannerSelectedTeamHidden === false, "Selected Planner first paint did not expose the club identity.");
+        assert(parserSnapshot.plannerWorkspaceHidden === false, "Selected Planner first paint did not expose the workspace.");
+        assert(parserSnapshot.plannerRosterSkeletons === 64, "Selected Planner first paint did not expose the full roster loading skeleton.");
+        assert(parserSnapshot.plannerTeamLogoSrc.includes("/9001/logo.webp"), "Selected Planner first paint did not expose the club logo URL.");
+        assert(parserSnapshot.plannerFormation === "4231" && parserSnapshot.plannerFormationSpots === 11, "Selected Planner first paint must restore the cached 4-2-3-1 before hydration.");
+        assert(Number.parseFloat(parserSnapshot.plannerFormationSpotRows[0]) === 70 && Number.parseFloat(parserSnapshot.plannerFormationSpotRows[9]) === 10 && parserSnapshot.plannerFormationSpotRows[10] === "calc(100% - 72px)", "Planner first paint must draw defenders near the goalkeeper and attackers at the top.");
+        assert(JSON.stringify(parserSnapshot.plannerFormationSpotPositions) === JSON.stringify(["LB","CB","CB","RB","CDM","CDM","LM","CAM","RM","ST","GK"]), "4-2-3-1 first paint must label the confirmed position slots.");
+        assert(parserSnapshot.plannerFormationTokenCount === 11 && parserSnapshot.plannerFormationRingSegments === 132 && parserSnapshot.plannerFormationPlusPaths === 22 && parserSnapshot.plannerFormationBadgeCount === 0, "Planner first paint must include eleven segmented-plus circles without instruction badges.");
+        assert(parserSnapshot.plannerPitchBackground.includes("pitch-background.svg"), "Planner must paint the shared SVG pitch before hydration.");
+        assert(parserSnapshot.plannerFormationEnhanced === "true", "Planner Formation must use the site's canonical dropdown styling from first paint.");
+        assert(parserSnapshot.plannerFormationAlignment === "center", "The selected Formation label must be vertically centered from first paint.");
+        assert(parserSnapshot.plannerFormationPaddingRight === "10px", "The Formation chevron must use the standard right inset from first paint.");
+        assert(parserSnapshot.plannerTeamIdText === "Club #9001", "Selected Planner first paint must render Club #ID in the Club-page position.");
+        assert(parserSnapshot.plannerTeamLocationText === "Bologna, Italy", "Planner first paint must show cached city and normalized nation.");
+        assert(parserSnapshot.plannerTeamFlagSlot, "Planner first paint must reserve the nationality flag position.");
+        assert(parserSnapshot.plannerTeamFlagSrc.endsWith("/1f1ee-1f1f9.svg"), "Planner must render the real cached Italian flag at first paint.");
+        assert(parserSnapshot.plannerTeamFlagTooltip === "Italy", "Planner first-paint flag must preserve the canonical nationality tooltip.");
+        assert(parserSnapshot.plannerTeamNameText === "Browser Club", "Planner first paint must use the cached Club name.");
+        assert(parserSnapshot.plannerTeamDivisionText === "Gold", "Planner first paint must use the cached Club division.");
+        assert(parserSnapshot.plannerTeamDivisionColor === "rgb(255, 210, 62)", "Planner first paint must use the cached division colour.");
+        assert(parserSnapshot.plannerTeamPrimaryColor === "#112233" && parserSnapshot.plannerTeamSecondaryColor === "#445566", "Planner first paint must apply both cached Club colours.");
+        assert(Math.abs(parserSnapshot.plannerSelectedTeamRight - parserSnapshot.plannerClearButtonRight) <= 1, "Selected Planner Clear must be right-aligned outside its club card at first paint.");
+        const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
+        const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
+        const expectedClubLogoWidth = innerWidth <= 520 ? "88px" : innerWidth <= 900 ? "110px" : "132px";
+        const expectedClubLogoHeight = innerWidth <= 520 ? "96px" : innerWidth <= 900 ? "120px" : "144px";
+        assert(parserSnapshot.plannerTeamCardHeight >= expectedClubHeight - 1 && parserSnapshot.plannerTeamCardHeight <= expectedClubHeight + 24, "Planner card must have the Club-page height at first paint.");
+        assert(parserSnapshot.plannerTeamNameFontSize === expectedClubNameSize, "Planner club name must have the Club-page font size at first paint.");
+        assert(parserSnapshot.plannerTeamLogoMaxWidth === expectedClubLogoWidth && parserSnapshot.plannerTeamLogoMaxHeight === expectedClubLogoHeight, "Planner club logo must have the Club-page size at first paint.");
+        if (innerWidth > 600) {
+          assert(parserSnapshot.plannerClearButtonLeft - parserSnapshot.plannerTeamCardRight >= 8, "Selected Planner Clear must sit outside the club card on desktop at first paint.");
+        } else {
+          assert(parserSnapshot.plannerClearButtonTop >= parserSnapshot.plannerTeamCardBottom - 1, "Selected Planner Clear must sit below the club card on phone at first paint.");
+        }
+      } else {
+        assert(parserSnapshot.plannerTeamSelectorHidden === false, "Empty Planner first paint hid the Team search.");
+        assert(parserSnapshot.plannerSelectedTeamHidden === true, "Empty Planner first paint exposed a selected club.");
+        assert(parserSnapshot.plannerWorkspaceHidden === true, "Empty Planner first paint exposed the workspace.");
+      }
     }
   }
 
@@ -589,6 +705,23 @@ const browserTestSource = String.raw`(() => {
         clubText: text("#myClubsGrid"),
         statusText: text("#myClubsStatus"),
         walletAddress: typeof state !== "undefined" ? String(state.linkedWalletAddress || "") : "",
+      };
+    }
+    if (scenario === "planner-out") {
+      return {path: window.location.pathname, page: String(document.body.dataset.page || ""), lockedHidden: hidden("#myPlayersLockedPage"), plannerHidden: hidden("#plannerPage"), clubId: text("#plannerTeamId")};
+    }
+    if (scenario === "planner" || scenario === "planner-selected") {
+      return {
+        path: window.location.pathname,
+        search: window.location.search,
+        title: document.title,
+        page: String(document.body.dataset.page || ""),
+        plannerHidden: hidden("#plannerPage"),
+        plannerTitle: text("#plannerPage .tablePageTitle"),
+        teamSelectorHidden: hidden("#plannerTeamSelector"),
+        selectedTeamHidden: hidden("#plannerSelectedTeam"),
+        workspaceHidden: hidden("#plannerWorkspace"),
+        teamName: text("#plannerTeamName"),
       };
     }
     return {
@@ -743,6 +876,22 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.statsHidden === false, "MFL Stats page remained hidden after readiness.");
       assert(stateValue.distributionSkeleton === false, "MFL Stats kept its skeleton after authoritative data rendered.");
       assert(stateValue.distributionColumns > 0, "MFL Stats did not restore real histogram columns after navigation.");
+    } else if (scenario === "planner-out") {
+      assert(stateValue.path === "/planner/opted-out", "Opted-out Planner must use its canonical locked route.");
+      assert(stateValue.page === "planner" && !stateValue.lockedHidden && stateValue.plannerHidden && !stateValue.clubId, "Opted-out Planner must not reveal its club identity or workspace.");
+      assert(myClubsRequests.ownership === 0, "Opted-out Planner must never request private clubs.");
+    } else if (scenario === "planner" || scenario === "planner-selected") {
+      assert(stateValue.path === "/planner", "Planner canonical path is wrong: " + stateValue.path);
+      assert(stateValue.page === "planner", "Planner body page owner is wrong: " + stateValue.page);
+      assert(stateValue.plannerHidden === false, "Planner page became hidden after route readiness.");
+      assert(stateValue.plannerTitle === "Planner", "Planner heading changed after route readiness: " + stateValue.plannerTitle);
+      assert(stateValue.title === "Planner - MFL Front Office", "Planner browser title changed after route readiness: " + stateValue.title);
+      if (scenario === "planner-selected") {
+        assert(stateValue.search === "?club=9001", "Selected Planner query state was not preserved: " + stateValue.search);
+        assert(stateValue.teamSelectorHidden === true, "Selected Planner exposed the Team search after readiness.");
+        assert(stateValue.selectedTeamHidden === false && stateValue.workspaceHidden === false, "Selected Planner did not keep the club workspace visible.");
+        assert(stateValue.teamName === "Browser Club", "Selected Planner did not restore the club identity.");
+      }
     }
   }
 
@@ -1310,11 +1459,1043 @@ const browserTestSource = String.raw`(() => {
       document.querySelectorAll("#myClubsGrid .myClubCardCompetitionUnavailable").forEach((card) => {
         assert(card.querySelector(".myClubCompetitions") === null, "My Clubs direct failure fallback kept its separator.");
       });
+    } else if (scenario === "planner-selected") {
+      await waitFor(
+        () => text("#plannerTeamName") === "Browser Club"
+          && document.querySelector("#plannerRosterBody tr[data-player-id]"),
+        "Selected Planner direct refresh",
+      );
     } else {
       await delay(80);
     }
     const directState = routeState();
     assertRouteState(directState);
+
+    if (scenario === "planner-out") {
+      assert(hidden("#plannerPage") && !hidden("#myPlayersLockedPage"), "Opted-out Planner must show only the opt-in shell.");
+      finish("passed", "planner-out: first paint and route hydration remain locked without fetching private clubs.");
+      return;
+    }
+    if (scenario === "planner-selected") {
+      assert(hidden("#plannerTeamSelector"), "Selected Planner refresh must keep the Team search hidden.");
+      assert(!hidden("#plannerSelectedTeam"), "Selected Planner refresh must show the club identity.");
+      assert(!hidden("#plannerWorkspace"), "Selected Planner refresh must show the workspace.");
+      assert(text("#plannerTeamName") === "Browser Club", "Selected Planner refresh must restore the team name.");
+      assert(document.getElementById("plannerFormationSelect")?.value === parserSnapshot.plannerFormation, "Planner formation must not flash back to default during hydration.");
+      assert(getComputedStyle(document.getElementById("plannerFormationSelect")).paddingRight === parserSnapshot.plannerFormationPaddingRight, "Formation chevron must not shift during hydration.");
+      assert(text("#plannerTeamDivision") === "Gold", "Selected Planner refresh must restore the division.");
+      assert(document.getElementById("plannerTeamCard").style.getPropertyValue("--my-club-primary") === parserSnapshot.plannerTeamPrimaryColor, "Planner first-paint Club colours must persist through hydration.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected Planner refresh must render the canonical My Clubs card.");
+      assert(text("#plannerTeamId") === "Club #9001", "Selected Planner card must show its club ID.");
+       assert(Math.abs(document.getElementById("plannerTeamId").getBoundingClientRect().top - parserSnapshot.plannerTeamIdTop) <= 2, "Selected Planner Club #ID must not move vertically between first paint and hydrated identity.");
+      assert(text("#plannerTeamLocation") === parserSnapshot.plannerTeamLocationText, "Planner first-paint city and nation must persist after hydration.");
+      assert(document.querySelector("#plannerTeamLocation .clubLocationFlag")?.getAttribute("src") === parserSnapshot.plannerTeamFlagSrc, "Planner flag must keep the canonical first-paint image through hydration.");
+      assert(text("#plannerTeamLocation").includes("Bologna"), "Selected Planner card must hydrate its location.");
+      const selectedBox = document.getElementById("plannerSelectedTeam").getBoundingClientRect();
+      const clearBox = document.getElementById("plannerTeamClearButton").getBoundingClientRect();
+      const cardBox = document.getElementById("plannerTeamCard").getBoundingClientRect();
+      assert(Math.abs(selectedBox.right - clearBox.right) <= 1, "Selected Planner Clear must stay right-aligned outside its card after hydration.");
+      const expectedClubHeight = innerWidth <= 520 ? 136 : innerWidth <= 900 ? 156 : 184;
+      const expectedClubNameSize = innerWidth <= 520 ? "24px" : innerWidth <= 900 ? "30px" : "34px";
+      const expectedClubLogoWidth = innerWidth <= 520 ? "88px" : innerWidth <= 900 ? "110px" : "132px";
+      const expectedClubLogoHeight = innerWidth <= 520 ? "96px" : innerWidth <= 900 ? "120px" : "144px";
+      assert(cardBox.height >= expectedClubHeight - 1 && cardBox.height <= expectedClubHeight + 24, "Planner club card must match the Club-page height after hydration.");
+      assert(getComputedStyle(document.getElementById("plannerTeamName")).fontSize === expectedClubNameSize, "Planner name must match Club-page font size after hydration.");
+      assert(getComputedStyle(document.getElementById("plannerTeamLogo")).maxWidth === expectedClubLogoWidth && getComputedStyle(document.getElementById("plannerTeamLogo")).maxHeight === expectedClubLogoHeight, "Planner logo must match Club-page size after hydration.");
+      if (innerWidth > 600) {
+        assert(clearBox.left - cardBox.right >= 8, "Selected Planner Clear must stay outside the club card on desktop.");
+      } else {
+        assert(clearBox.top >= cardBox.bottom - 1, "Selected Planner Clear must stay below the club card on phone.");
+      }
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Planner club name must reuse the Club page identity position.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityMeta"), "Planner club division/location must reuse the Club page identity position.");
+      assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected Planner refresh must show the club logo.");
+      assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Selected Planner refresh must restore the roster.");
+      assert(document.documentElement.scrollWidth <= innerWidth, "Selected Planner must not overflow horizontally.");
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish("passed", "planner-selected: selected club workspace replaced search from parser-time first paint through hydration.");
+      return;
+    }
+
+    if (scenario === "planner") {
+      const input = document.getElementById("plannerTeamSearchInput");
+      assert(input.getBoundingClientRect().width <= 520, "Planner search must stay within its widened 520px limit.");
+      await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner empty search owned-club results");
+      assert(Array.from(document.querySelectorAll(".plannerTeamSearchResult")).map(el => el.dataset.clubId).join(",") === "9002,9001,9003", "Owned clubs must sort Diamond to Flint, then alphabetically inside divisions.");
+      assert(text("#plannerTeamSearchResults").includes("Browser Club") && myClubsRequests.ownership >= 1, "Empty Planner search must show authenticated My Clubs results.");
+      input.value = "Browser";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector(".plannerTeamSearchResult"), "Planner team search");
+      const teamResult = document.querySelector(".plannerTeamSearchResult");
+      assert(teamResult instanceof HTMLButtonElement, "Planner team result is missing.");
+      assert(teamResult.classList.contains("searchResult"), "Planner club results must retain the canonical searchResult highlight owner.");
+      document.querySelector(".tablePageTitle").click();
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Team results must remain open after clicking outside a non-empty search.");
+      input.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));
+      assert(!document.getElementById("plannerTeamSearchResults").hidden,"Escape must preserve results while the team query is non-empty.");
+
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert(hidden("#plannerTeamSelector"), "Selected team must replace the search.");
+      assert(!hidden("#plannerSelectedTeam"), "Selected team identity must be visible.");
+      assert(text("#plannerTeamName") === "Browser Club", "Selected team name is missing.");
+      assert(text("#plannerTeamDivision") === "Gold", "Selected team division is missing.");
+      assert(JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}")["9001"]?.name === "Browser Club", "Planner selection must cache the Club identity for direct-refresh first paint.");
+      assert(document.querySelector("#plannerSelectedTeam .myClubCard.plannerTeamCard"), "Selected team must use the canonical My Clubs card.");
+      assert(document.querySelector("#plannerTeamCard .clubIdentityPrimary .clubIdentityName"), "Selected club name must match the Club page identity layout.");
+      assert(document.getElementById("plannerTeamClearButton").parentElement === document.getElementById("plannerSelectedTeam"), "Clear must sit outside the selected club card.");
+      assert(text("#plannerTeamId") === "Club #9001", "Selected team card must show its ID.");
+      assert(document.getElementById("plannerTeamLogo").src.includes("/9001/logo.webp"), "Selected team logo is missing.");
+      assert(location.search === "?club=9001", "Selected team URL is incorrect.");
+      assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
+      const formation = document.getElementById("plannerFormationSelect");
+      const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+      assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
+      assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
+      assert(formation.value === "442", "Planner must start in the default 4-4-2.");
+      assert(formation.getAttribute("data-mfl-dropdown-enhanced") === "true", "Planner must use the canonical dropdown styling before hydration.");
+      const initialSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
+      assert(JSON.stringify(Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent)) === JSON.stringify(["LB","CB","CB","RB","LM","CM","CM","RM","ST","ST","GK"]), "4-4-2 must render all confirmed position labels.");
+      assert(initialSpots.length === 11, "Planner formation preview must show ten outfield players plus the goalkeeper.");
+      assert(Number.parseFloat(initialSpots[0].split(":")[0]) === 14 && Number.parseFloat(initialSpots[3].split(":")[0]) === 86, "Planner defenders must use the playable pitch width.");
+      assert(Number.parseFloat(initialSpots[8].split(":")[1]) === 10 && initialSpots[10].endsWith(":calc(100% - 72px)"), "Planner formation must keep the goalkeeper label within the pitch.");
+      const initialToken = document.querySelector("#plannerFormationPositions [data-slot-token='true']");
+      assert(getComputedStyle(initialToken).backgroundColor === "rgba(0, 0, 0, 0.2)", "Planner slot background must match the translucent black reference token.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenRing path").length === 132, "Each Planner ring must have twelve segmented arcs.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationTokenPlus path").length === 22, "Each Planner token must contain the centered plus icon.");
+      assert(document.querySelectorAll("#plannerFormationPositions .plannerFormationInstructionsBadge, #plannerFormationPositions .plannerFormationInstructionsIcon").length === 0, "Planner tokens must not render instruction badges.");
+      assert(Number.parseFloat(initialSpots[0].split(":")[1]) === 70 && Number.parseFloat(initialSpots[8].split(":")[1]) === 10 && initialSpots[10].endsWith(":calc(100% - 72px)"), "4-4-2 must place defenders near the goalkeeper and attackers at the top.");
+      const defaultFormationBorder = getComputedStyle(formation).borderColor;
+      const defaultFormationBackground = getComputedStyle(formation).backgroundColor;
+      formation.focus();
+      assert(document.activeElement === formation, "Formation selector must remain keyboard focusable.");
+      formation.value = "4231";
+      formation.dispatchEvent(new Event("change", { bubbles: true }));
+      assert(document.activeElement !== formation && formation.classList.contains("plannerFormationSelectCommitted"),
+        "Choosing a formation must dismiss focus and mark the just-committed dropdown.");
+      await new Promise(resolve => setTimeout(resolve, 200));
+      assert(getComputedStyle(formation).borderColor === defaultFormationBorder
+        && getComputedStyle(formation).backgroundColor === defaultFormationBackground,
+        "Choosing a formation must return the highlighted dropdown to its resting border and background.");
+      // Native select can regain focus as its picker closes: that must not
+      // restore the blue hover/focus state until a new intentional interaction.
+      formation.focus();
+      assert(formation.classList.contains("plannerFormationSelectCommitted")
+        && getComputedStyle(formation).borderColor === defaultFormationBorder
+        && getComputedStyle(formation).backgroundColor === defaultFormationBackground,
+        "Native focus restoration must not reinstate the selected dropdown's highlight.");
+      formation.blur();
+      formation.dispatchEvent(new PointerEvent("pointerleave"));
+      assert(formation.classList.contains("plannerFormationSelectCommitted"),
+        "Moving off a committed dropdown must not restore its old highlight.");
+      formation.dispatchEvent(new PointerEvent("pointerenter"));
+      assert(!formation.classList.contains("plannerFormationSelectCommitted"),
+        "Hovering the control again must restore its usual interactive highlight.");
+      formation.classList.add("plannerFormationSelectCommitted");
+      formation.dispatchEvent(new PointerEvent("pointerdown"));
+      assert(!formation.classList.contains("plannerFormationSelectCommitted"),
+        "Reopening the dropdown must restore the usual interactive highlight.");
+      formation.classList.add("plannerFormationSelectCommitted");
+      formation.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      assert(!formation.classList.contains("plannerFormationSelectCommitted"),
+        "Keyboard interaction must restore the dropdown's normal focus highlight.");
+      const changedSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), spot => spot.style.left + ":" + spot.style.top);
+      assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
+      assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 70 && Number.parseFloat(changedSpots[9].split(":")[1]) === 10 && changedSpots[10].endsWith(":calc(100% - 72px)"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
+      assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
+      const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
+      const formationPreview = window.__mflPlannerFormationPreview;
+      formationPreview.render("442");
+      const fourMidfieldReference = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"))
+        .slice(4, 8).map(spot => [spot.style.left, spot.style.top]);
+      assert(fourMidfieldReference.every(([, top]) => top === "40%"),
+        "The reference 4-4-2 midfield must be aligned on the 40% pitch line.");
+      const observedFlatFourMidfields = new Set();
+      for (const code of formationCodes) {
+        formationPreview.render(code);
+        const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
+        assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
+        assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
+        assert(spots.every(spot => { const style = getComputedStyle(spot.querySelector(".plannerFormationPositionLabel")); return style.backgroundColor === "rgb(162, 162, 162)" && style.color === "rgb(0, 0, 0)" && style.borderRadius === "5px" && style.lineHeight === "16px" && style.textShadow === "none"; }), "Each empty formation position must have the requested compact grey badge: " + code);
+        assert(spots.every(spot => spot.querySelector("[data-slot-token='true'] .plannerFormationTokenRing")?.childElementCount === 12), "Incorrect segmented ring for formation " + code);
+        assert(spots.every(spot => spot.querySelector(".plannerFormationTokenPlus")?.childElementCount === 2), "Incorrect plus icon for formation " + code);
+        // Check the actual geometry of every empty position, not just the two 4-4-2 CMs.
+        for (const spot of spots) {
+          const token = spot.querySelector(".plannerFormationToken");
+          const plus = spot.querySelector(".plannerFormationTokenPlus");
+          const tokenRect = token.getBoundingClientRect();
+          const plusRect = plus.getBoundingClientRect();
+          const ringRect = spot.querySelector(".plannerFormationTokenRing").getBoundingClientRect();
+          assert(Math.abs(plusRect.width - ringRect.width) <= 0.5 && Math.abs(plusRect.height - ringRect.height) <= 0.5, "Pitch plus and ring must use identical viewports: " + code + " " + spot.dataset.slotKey);
+          assert(getComputedStyle(plus).position === "absolute" && plus.getAttribute("viewBox") === "0 0 100 100" && plus.querySelector("path")?.getAttribute("d") === "M37 50h26" && plus.querySelectorAll("path")[1]?.getAttribute("d") === "M50 37v26", "Pitch plus must use truly centered paths in the same 100×100 SVG space as the ring: " + code + " " + spot.dataset.slotKey);
+          assert(Math.abs(plusRect.left + plusRect.width / 2 - tokenRect.left - tokenRect.width / 2) < 0.75
+            && Math.abs(plusRect.top + plusRect.height / 2 - tokenRect.top - tokenRect.height / 2) < 0.75,
+            "Pitch plus must be centered in " + code + " " + spot.dataset.slotKey);
+        }
+        assert(spots.at(-1)?.style.top === "calc(100% - 72px)", "Goalkeeper must reserve room for the name inside the pitch: " + code);
+        const pitchBottom = document.querySelector(".plannerPitch").getBoundingClientRect().bottom;
+        const goalkeeperCaption = spots.at(-1)?.querySelector(".plannerFormationPositionLabel")?.getBoundingClientRect();
+        assert(goalkeeperCaption && goalkeeperCaption.bottom <= pitchBottom - 1,
+          "Empty goalkeeper position label must fit inside the pitch in formation " + code);
+        let lineStart = 0;
+        for (const line of approvedPositionSlots[code]) {
+          if (code !== "343b" && code !== "541" && line.length === 4 && line.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position))) {
+            const coordinates = spots.slice(lineStart, lineStart + 4).map(spot => [spot.style.left, spot.style.top]);
+            const expected = fourMidfieldReference.map(([left, top], index) =>
+              [left, code === "442b" && (index === 1 || index === 2) ? "46%" : top]);
+            assert(JSON.stringify(coordinates) === JSON.stringify(expected),
+              "Four-man midfield must match 4-4-2, except the deeper 4-4-2 (B) CDMs in " + code + ": " + JSON.stringify(coordinates));
+            observedFlatFourMidfields.add(code);
+          }
+          if (line.length >= 3) {
+            const left = Number.parseFloat(spots[lineStart].style.left);
+            const right = Number.parseFloat(spots[lineStart + line.length - 1].style.left);
+            assert(left >= 12 && right <= 88 && Math.abs(left + right - 100) <= 0.02,
+              "Wide players must be symmetrically closer together in formation " + code);
+          }
+          lineStart += line.length;
+        }
+      }
+      assert(JSON.stringify([...observedFlatFourMidfields].sort()) === JSON.stringify(["343", "442", "3421", "4141", "4411", "442b", "541f"].sort()),
+        "The flat four-man midfield contract covers seven formations; 3-4-3 (B) and 5-4-1 are diamonds.");
+
+      // Wait for roster hydration before holding DOM references through hover
+      // frames: the route redraws the pitch once when the squad arrives.
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"),
+        "Planner roster ready before hover geometry");
+      // Measure the + against its OWN ring at rest and while animating, not its
+      // viewport coordinates: a hover can independently expose a page scrollbar.
+      formationPreview.render("442");
+      const hoverSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
+      const center = rect => [rect.left + rect.width / 2, rect.top + rect.height / 2];
+      const assertRestingPlus = (spot, state) => {
+        const plusElement = spot.querySelector(".plannerFormationTokenPlus");
+        const tokenElement = spot.querySelector(".plannerFormationToken");
+        const ringElement = spot.querySelector(".plannerFormationTokenRing");
+        const plus = center(plusElement.getBoundingClientRect());
+        const token = center(tokenElement.getBoundingClientRect());
+        const ring = center(ringElement.getBoundingClientRect());
+        assert(plus.every((value, axis) => Math.abs(value - token[axis]) <= 0.5
+          && Math.abs(value - ring[axis]) <= 0.5),
+          "Empty pitch plus is off-centre " + state + " in 4-4-2 " + spot.dataset.slotKey);
+        return plus.map((value, axis) => value - token[axis]);
+      };
+      // The reported issue is BEFORE pointer hover, so assert the default state
+      // separately and compare its relative alignment after each animation frame.
+      const restingOffsets = hoverSpots.map(spot => assertRestingPlus(spot, "before hover"));
+      const restingTokenSizes = hoverSpots.map(spot => {
+        const rect = spot.querySelector(".plannerFormationToken").getBoundingClientRect();
+        return [rect.width, rect.height];
+      });
+      const hoverButtons = hoverSpots.map(spot => spot.querySelector(".plannerFormationSlotButton"));
+      hoverButtons.forEach(button => button.classList.add("plannerFormationSlotButtonPickerOpen"));
+      for (let frame = 0; frame < 15; frame++) {
+        await new Promise(resolve => setTimeout(resolve, 16));
+        hoverSpots.forEach((spot, index) => {
+          assert(spot.isConnected, "The hydrated Planner should not replace pitch markers during the hover animation.");
+          const currentOffsets = assertRestingPlus(spot, "during hover frame " + frame);
+          const rect = spot.querySelector(".plannerFormationToken").getBoundingClientRect();
+          const style = getComputedStyle(spot.querySelector(".plannerFormationToken"));
+          assert(currentOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
+            "Empty pitch plus changes its circle alignment during hover in 4-4-2 " + spot.dataset.slotKey);
+          assert(Math.abs(rect.width - restingTokenSizes[index][0]) <= 0.5
+            && Math.abs(rect.height - restingTokenSizes[index][1]) <= 0.5
+            && style.transform === "none" && style.filter === "none"
+            && (frame < 12 || style.boxShadow !== "none"),
+            "Picker-open highlight must show only the border, with no zoom or brightness change in "
+              + spot.dataset.slotKey + " at frame " + frame + ": " + JSON.stringify({
+                width: rect.width, height: rect.height, expected: restingTokenSizes[index],
+                transform: style.transform, filter: style.filter, boxShadow: style.boxShadow
+              }));
+        });
+      }
+      hoverButtons.forEach(button => button.classList.remove("plannerFormationSlotButtonPickerOpen"));
+      await new Promise(resolve => setTimeout(resolve, 220));
+      hoverSpots.forEach((spot, index) => {
+        const finalOffsets = assertRestingPlus(spot, "after hover");
+        assert(finalOffsets.every((value, axis) => Math.abs(value - restingOffsets[index][axis]) <= 0.5),
+          "Empty pitch plus changes its circle alignment after hover in 4-4-2 " + spot.dataset.slotKey);
+      });
+      for (const code of ["352b"]) {
+        formationPreview.render(code);
+        const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
+        const cdms = spots.filter(spot => spot.dataset.position === "CDM");
+        const cams = spots.filter(spot => spot.dataset.position === "CAM");
+        assert(cdms.some(cdm => cams.some(cam => Number.parseFloat(cdm.style.top) > Number.parseFloat(cam.style.top))), "Defensive and attacking midfield markers must have distinct depths in " + code);
+      }
+      const formationSpot = position => Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot")).filter(spot => spot.dataset.position === position);
+      formationPreview.render("442");
+      assert(formationSpot("CM").every(spot => spot.style.top === "40%"), "The standard midfield must advance slightly without moving the defensive line.");
+      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "35%,65%", "Two strikers must be closer together in 4-4-2.");
+      formationPreview.render("424");
+      assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "40%,60%", "Paired strikers must also narrow between wingers in 4-2-4.");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%" && formationSpot("ST").every(spot => spot.style.top === "10%"), "Wingers must sit slightly behind paired strikers.");
+      formationPreview.render("523");
+      assert(formationSpot("LWB")[0].style.top === "63%" && formationSpot("RWB")[0].style.top === "63%" && formationSpot("CB").every(spot => spot.style.top === "70%"), "Back-five wingbacks must remain seven points ahead of the lifted centre-back line.");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
+      formationPreview.render("433cf");
+      assert(formationSpot("LW")[0].style.top === "12%" && formationSpot("RW")[0].style.top === "12%"
+        && formationSpot("CF")[0].style.top === "16%",
+        "4-3-3 (CF) must have raised, level wingers with the CF one step behind them.");
+      assert(Number.parseFloat(formationSpot("CF")[0].style.top) > Number.parseFloat(formationSpot("LW")[0].style.top),
+        "4-3-3 (CF) central forward must sit below the advanced wingers.");
+      formationPreview.render("433");
+      assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
+        "Normal 4-3-3 winger heights must remain unchanged.");
+      for (const code of ["433", "433a", "433d", "433cf"]) {
+        formationPreview.render(code);
+        const outerCMs = formationSpot("CM");
+        assert(outerCMs.length === (code === "433" || code === "433cf" ? 3 : 2)
+          && JSON.stringify(outerCMs.map(spot => spot.style.left).filter(left => left !== "50%")) === JSON.stringify(["23%", "77%"]),
+          "All 4-3-3 variants must bring only the external CMs inward: " + code);
+        assert(outerCMs.every(spot => spot.style.top === "40%")
+          && (code === "433" || code === "433cf" ? outerCMs[1].style.left === "50%" : true),
+          "4-3-3 variants must retain the central role and regular CM line: " + code);
+      }
+      formationPreview.render("433d");
+      const defensive433CDMTop = formationSpot("CDM")[0]?.style.top;
+      assert(defensive433CDMTop === "54%", "4-3-3 (def) CDM remains on the reference 54% line.");
+      formationPreview.render("4141");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.top === defensive433CDMTop
+        && formationSpot("CDM")[0].style.left === "50%",
+        "4-1-4-1 CDM must stay central on the 4-3-3 (def) 54% CDM line.");
+      assert(formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-1-4-1 must retain the flat four-player midfield line.");
+      formationPreview.render("4312");
+      assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-3-1-2 midfield must match the regular 4-4-2 midfield height.");
+      assert(formationSpot("CAM").length === 1 && formationSpot("CAM")[0].style.top === "25%"
+        && formationSpot("ST").length === 2 && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "4-3-1-2 must advance the CAM to 25% while leaving its two strikers at 10%.");
+      formationPreview.render("4321");
+      assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
+        "4-3-2-1 midfield must use the normal 4-4-2 height with all three CMs aligned.");
+      assert(formationSpot("CF").length === 2
+        && formationSpot("CF").every(spot => spot.style.top === "20%")
+        && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
+        "4-3-2-1 must place both CFs forward at 20%, below its unchanged striker at 10%.");
+      formationPreview.render("3421");
+      assert(formationSpot("CF").length === 2
+        && formationSpot("CF").every(spot => spot.style.top === "20%")
+        && formationSpot("CF").map(spot => spot.style.left).join(",") === "28%,72%"
+        && formationSpot("ST")[0].style.top === "10%",
+        "3-4-2-1 must match 4-3-2-1 CF height at 20% without changing CF width or ST height.");
+      formationPreview.render("4411");
+      assert(formationSpot("CF").length === 1 && formationSpot("CF")[0].style.top === "26%",
+        "4-4-1-1 CF must retain its existing 26% height.");
+      formationPreview.render("433d");
+      const referenceDiamondCDMTop = formationSpot("CDM")[0].style.top;
+      formationPreview.render("433a");
+      const referenceDiamondCAMTop = formationSpot("CAM")[0].style.top;
+      assert(referenceDiamondCDMTop === "54%" && referenceDiamondCAMTop === "30%",
+        "Diamond reference CDM and CAM levels must remain at 54% and 30%.");
+      for (const code of ["343b", "41212", "41212narrow"]) {
+        formationPreview.render(code);
+        assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
+          && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
+          && formationSpot("CAM").length === 1 && formationSpot("CAM")[0].style.left === "50%"
+          && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
+          "Diamond CDM and CAM must exactly match the 4-3-3 defensive/attacking heights: " + code);
+        if (code === "343b") {
+          assert(formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%"
+            && formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
+            "3-4-3 (B) must keep its LW, ST and RW heights.");
+        } else {
+          assert(formationSpot("ST").length === 2 && formationSpot("ST").every(spot => spot.style.top === "10%"),
+            "Diamond strikers must retain their attacking height: " + code);
+        }
+      }
+      formationPreview.render("343b");
+      assert(JSON.stringify(["LM", "RM"].map(position => formationSpot(position)[0].style.left))
+        === JSON.stringify(["18%", "82%"])
+        && ["LM", "RM"].every(position => formationSpot(position)[0].style.top === "42%"),
+        "3-4-3 (B) wide mids must form a symmetric 42% diamond line.");
+      assert(formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
+        && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop
+        && formationSpot("CDM")[0].style.left === formationSpot("CAM")[0].style.left,
+        "3-4-3 (B) CAM and CDM must be centered at the usual heights.");
+      assert(formationSpot("CB").length === 3 && formationSpot("CB").every(spot => spot.style.top === "70%")
+        && formationSpot("LW")[0].style.left === "19%" && formationSpot("ST")[0].style.left === "50%"
+        && formationSpot("RW")[0].style.left === "81%",
+        "3-4-3 (B) must preserve its defensive and attacking rows.");
+      formationPreview.render("541");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CAM").length === 1
+        && formationSpot("CDM")[0].style.left === "50%" && formationSpot("CAM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
+        && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
+        "5-4-1 must form a central CDM/CAM axis matching the usual 54%/30% heights.");
+      assert(JSON.stringify(["LM", "RM"].map(position => [formationSpot(position)[0].style.left, formationSpot(position)[0].style.top]))
+        === JSON.stringify([["18%", "42%"], ["82%", "42%"]])
+        && Number.parseFloat(formationSpot("LM")[0].style.top) ===
+          (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2,
+        "5-4-1 LM/RM must form the midpoint of the midfield diamond at 18%/82%.");
+      assert(formationSpot("LWB").length === 1 && formationSpot("RWB").length === 1
+        && formationSpot("CB").length === 3 && formationSpot("ST").length === 1
+        && formationSpot("ST")[0].style.left === "50%" && formationSpot("ST")[0].style.top === "10%",
+        "5-4-1 must preserve its back five and lone striker.");
+      formationPreview.render("41212");
+      const regularDiamondStrikerSpacing = formationSpot("ST").map(spot => spot.style.left);
+      assert(JSON.stringify(regularDiamondStrikerSpacing) === JSON.stringify(["35%", "65%"]),
+        "Regular diamond strikers must retain their expected spacing.");
+      assert(JSON.stringify([formationSpot("LM")[0].style.left, formationSpot("RM")[0].style.left])
+        === JSON.stringify(["18%", "82%"])
+        && ["LM", "RM"].every(position => formationSpot(position)[0].style.top === "42%"
+          && Number.parseFloat(formationSpot(position)[0].style.top) ===
+            (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
+        "Wide diamond LM/RM must stay wide at 18%/82% and halfway between CDM and CAM heights.");
+      const regularDiamondMidfieldHeight = formationSpot("LM")[0].style.top;
+      formationPreview.render("41212narrow");
+      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
+        === JSON.stringify(["30%", "70%"])
+        && formationSpot("CM").every(spot => spot.style.top === regularDiamondMidfieldHeight)
+        && formationSpot("CM").every(spot => Number.parseFloat(spot.style.top) ===
+          (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
+        "Narrow diamond CMs must sit at 30%/70% and halfway between CDM and CAM heights.");
+      assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
+        "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
+      formationPreview.render("352");
+      assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop,
+        "3-5-2 CDM must be central and match 4-3-3 (def) at 54%.");
+      assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left)) === JSON.stringify(["33%", "67%"])
+        && formationSpot("CM").every(spot => spot.style.top === "46%"),
+        "3-5-2 CMs must flank the central CDM symmetrically without changing their height.");
+      assert(formationSpot("LM")[0].style.left === "12%" && formationSpot("RM")[0].style.left === "88%"
+        && formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%",
+        "3-5-2 wide midfielders must retain their horizontal and vertical placement.");
+      formationPreview.render("433a");
+      assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
+        && formationSpot("CAM")[0]?.style.top === "30%",
+        "4-3-3 (att) CMs must stay on the usual line while CAM advances.");
+      formationPreview.render("433d");
+      assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
+        && formationSpot("CDM")[0]?.style.top === "54%",
+        "4-3-3 (def) CMs must stay on the usual line while CDM drops back.");
+      formationPreview.render("433d");
+      const referenceDefensiveCDMTop = formationSpot("CDM")[0]?.style.top;
+      assert(referenceDefensiveCDMTop === "54%", "4-3-3 (def) must retain the reference holding-midfielder depth.");
+      formationPreview.render("4132");
+      assert(["LM", "CM", "RM"].every(position => formationSpot(position).length === 1
+        && formationSpot(position)[0].style.top === "36%")
+        && formationSpot("CM")[0].style.left === "50%",
+        "4-1-3-2 LM, CM and RM must advance together to a flat 36% midfield line.");
+      assert(formationSpot("CDM").length === 1
+        && formationSpot("CDM")[0].style.left === "50%"
+        && formationSpot("CDM")[0].style.top === referenceDefensiveCDMTop,
+        "4-1-3-2 CDM must match the actual 4-3-3 (def) 54% holding-midfielder level.");
+      assert(formationSpot("ST").length === 2
+        && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "4-1-3-2 must preserve both strikers.");
+      formationPreview.render("41212narrow");
+      assert(formationSpot("CM").every(spot => spot.style.top === "42%")
+        && formationSpot("CDM")[0].style.top === "54%"
+        && formationSpot("CAM")[0].style.top === "30%",
+        "Narrow diamond CMs must remain equidistant from CAM at 30% and CDM at 54%.");
+      formationPreview.render("352b");
+      assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
+      assert(formationSpot("CDM").every(spot => spot.style.top === referenceDiamondCDMTop)
+        && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
+        "3-5-2 (B) CDMs must match 4-3-3 (def) at 54% and CAM match 4-3-3 (att) at 30%.");
+      assert(formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%"
+        && formationSpot("ST").every(spot => spot.style.top === "10%"),
+        "3-5-2 (B) wide mids and strikers must keep their former heights.");
+
+      formationPreview.render("4222");
+      const holdingPair = formationSpot("CDM");
+      const attackingPair = formationSpot("CAM");
+      const strikerPair = formationSpot("ST");
+      assert(holdingPair.length === 2 && attackingPair.length === 2 && strikerPair.length === 2,
+        "4-2-2-2 must preserve its two-CDM, two-CAM and two-ST lines.");
+      assert(JSON.stringify(holdingPair.map(spot => spot.style.left)) === JSON.stringify(["40%", "60%"])
+        && JSON.stringify(strikerPair.map(spot => spot.style.left)) === JSON.stringify(["35%", "65%"]),
+        "4-2-2-2 CDMs must be closer together than its unchanged striker pair.");
+      assert(holdingPair.every(spot => spot.style.top === "53%")
+        && attackingPair.every(spot => spot.style.top === "31.5%")
+        && strikerPair.every(spot => spot.style.top === "10%")
+        && Number.parseFloat(attackingPair[0].style.top) ===
+          (Number.parseFloat(holdingPair[0].style.top) + Number.parseFloat(strikerPair[0].style.top)) / 2,
+        "4-2-2-2 CAMs must be precisely halfway from CDMs to STs without moving those lines.");
+      formationPreview.render("4231");
+      assert(formationSpot("CAM").length === 1 && formationSpot("LM").length === 1 && formationSpot("RM").length === 1
+        && formationSpot("CAM")[0].style.top === "29%"
+        && formationSpot("CAM")[0].style.top === formationSpot("LM")[0].style.top
+        && formationSpot("CAM")[0].style.top === formationSpot("RM")[0].style.top,
+        "4-2-3-1 CAM must align with both wide midfielders at 29%.");
+      assert(formationSpot("CDM").length === 2 && formationSpot("CDM").every(spot => spot.style.top === "53%")
+        && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
+        "4-2-3-1 must preserve both deeper CDMs and the striker.");
+      assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
+      assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
+      assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(5)") === "23", "Planner must show player age.");
+      const squadPlayer = document.querySelector("#plannerRosterBody tr[data-player-id]");
+      assert(document.querySelector(".plannerRosterTable thead th:first-child")?.textContent === "Slot", "Squad Slot must be the first column.");
+      assert(squadPlayer.children.length === 8 && squadPlayer.firstElementChild?.classList.contains("plannerRosterSlotCell"), "Every squad row must have eight ordered cells.");
+      assert(squadPlayer.querySelector(".plannerRosterSlotBadge")?.hidden && squadPlayer.querySelector(".plannerRosterSlotEmpty")?.textContent === "—", "Unassigned players must show an empty Slot, not an invented position.");
+      const rosterTable = document.querySelector(".plannerRosterTable");
+      const columnWidths = Array.from(rosterTable.querySelectorAll("col"), col => col.getBoundingClientRect().width);
+      assert(columnWidths.length === 8 && columnWidths.every(value => value > 0) && Math.abs(columnWidths.reduce((sum, value) => sum + value, 0) - rosterTable.getBoundingClientRect().width) < 8, "Rebalanced eight-column squad layout must fill the table width.");
+
+      for (const index of [3, 4, 5]) {
+        assert(getComputedStyle(squadPlayer.children[index]).textAlign === "left", "Squad Position, Age and Overall must align left.");
+      }
+      assert(squadPlayer.querySelector("td:nth-child(6) .tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Squad Overall must show the canonical rarity dot.");
+      assert(!document.querySelector(".plannerRosterTable tfoot, .plannerRosterTotalsRow")
+        && document.querySelectorAll(".plannerSummaryTable tbody tr").length === 5,
+        "Squad summary must have five rows in a separate table, not a squad totals footer.");
+      assert(document.getElementById("plannerAverageOverall")?.textContent === "80.00"
+        && document.getElementById("plannerBest16Overall")?.textContent === "80.00"
+        && document.getElementById("plannerBest11OverallSum")?.textContent === "80"
+        && document.getElementById("plannerAverageAge")?.textContent === "23.00",
+        "The standalone summary must use planned squad data for all five metrics.");
+      const summaryRow = document.querySelector(".plannerSummaryTable tbody tr");
+      assert(summaryRow instanceof HTMLElement, "Planner summary row must exist.");
+      // The generated stylesheet's hover rule is verified by
+      // validate-planner-route-core.mjs; synthetic mouseover does not
+      // activate the browser's :hover pseudo-class.
+      const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
+      assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
+      const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
+      assert(ageMarker instanceof HTMLElement && ageMarker.classList.contains("retirementMarker--retiring-2"), "Planner must show the canonical retirement marker beside Age.");
+      const contractValue = document.querySelector("#plannerRosterBody .plannerContractValue");
+      const contractEditor = document.querySelector("#plannerRosterBody .plannerContractEditor");
+      const contractInput = document.querySelector("#plannerRosterBody .plannerContractInput");
+      const contractEdit = document.querySelector("#plannerRosterBody .plannerContractEditButton");
+      assert(contractValue instanceof HTMLElement && contractValue.textContent === "12.50%", "Planner Contract must display database revenue share divided by 100.");
+      assert(contractEditor instanceof HTMLElement && contractEditor.hidden, "Planner Contract editor must be hidden outside edit mode.");
+      assert(contractInput instanceof HTMLInputElement, "Planner Contract input is missing.");
+      assert(contractEdit instanceof HTMLButtonElement && contractEdit.textContent === "✎", "Planner Contract must expose an Edit button beside the normal value.");
+      contractEdit.click();
+      assert(!contractEditor.hidden && contractEdit.textContent === "✓", "Planner Contract Edit must reveal the editor and become Confirm.");
+      assert(contractInput.getAttribute("data-min") === "0" && contractInput.getAttribute("data-max") === "20", "Planner Contract must expose the 0.00–20.00 decimal boundary.");
+      assert(document.activeElement === contractInput, "Planner Contract must focus the active editor.");
+      contractInput.value = "20.75";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "20.00", "Planner Contract must clamp values above 20.00.");
+      contractInput.value = "18,25";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(contractInput.value === "18.25", "Planner Contract editor must normalize decimals to a dot separator.");
+      const firstStepperButtons = contractEditor.querySelectorAll(".plannerContractStepper button");
+      assert(firstStepperButtons.length === 2 && firstStepperButtons[0].textContent === "▲" && firstStepperButtons[1].textContent === "▼", "Planner Contract must use the site-style custom stepper.");
+      firstStepperButtons[0].click();
+      assert(contractInput.value === "19.25", "Planner Contract increase arrow must increment by 1.00.");
+      firstStepperButtons[1].click();
+      assert(contractInput.value === "18.25", "Planner Contract decrease arrow must decrement by 1.00.");
+      const removeButton = document.querySelector(".plannerRosterRemove");
+      const removeStyle = getComputedStyle(removeButton);
+      assert(removeButton.textContent === "×", "Planner Remove must render as a red X glyph.");
+      assert(removeStyle.backgroundColor === "rgba(0, 0, 0, 0)" && parseFloat(removeStyle.borderTopWidth) === 0, "Planner Remove must have no surrounding box.");
+      assert(removeStyle.color !== getComputedStyle(document.body).color, "Planner Remove must use destructive coloring.");
+      removeButton.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(removeButton).backgroundColor === "rgba(0, 0, 0, 0)", "Planner Remove hover must keep the X background transparent.");
+      const addPlayerButton = document.getElementById("plannerAddPlayerButton");
+      addPlayerButton.click();
+      assert(!hidden("#plannerPlayerModal"), "Add player must open the Add players modal.");
+      assert(document.getElementById("plannerPlayerModal").classList.contains("modalOpen"), "Add players modal must enter the canonical modalOpen state.");
+      assert(document.getElementById("plannerPlayerModal").parentElement === document.body, "Add players modal must portal to body so it paints above the fixed header.");
+      const playerSearch = document.getElementById("plannerPlayerSearchInput");
+      const playerModalBox = document.querySelector(".plannerPlayerDialog").getBoundingClientRect();
+      assert(playerModalBox.width >= Math.min(900, innerWidth - 60), "Planner Add players modal must use the enlarged table layout.");
+      playerSearch.value = "Player Browser";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]'), "Planner current-squad player search");
+      const ownPlayerSearchRow = document.querySelector('.plannerPlayerSearchResult[data-player-id="1"]');
+      assert(ownPlayerSearchRow.children.length === 6, "Planner player search must use the six-column result table.");
+      assert(ownPlayerSearchRow.querySelector(".plannerPlayerSearchFlag"), "Planner player search must render the nationality flag.");
+      assert(ownPlayerSearchRow.children[1].textContent === "Browser Player", "Planner player-search table must show the player name.");
+      assert(ownPlayerSearchRow.children[2].textContent === "ST", "Planner player-search table must show positions.");
+      assert(ownPlayerSearchRow.children[3].textContent === "23", "Planner player-search table must show age.");
+      assert(ownPlayerSearchRow.children[4].textContent === "80", "Planner player-search table must show overall.");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(ownPlayerSearchRow.children[index]).textAlign === "left", "Popup Position, Age and Overall must align left.");
+      }
+      assert(ownPlayerSearchRow.querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Popup search Overall must show the rarity dot.");
+      const inSquadAction = ownPlayerSearchRow.querySelector(".plannerPlayerActionText");
+      assert(inSquadAction instanceof HTMLSpanElement && inSquadAction.getAttribute("aria-disabled") === "true" && inSquadAction.textContent === "In squad", "Matching current-squad players must remain visible as disabled In squad text.");
+      assert(document.getElementById("plannerPlayerConfirmButton").textContent.trim() === "Add", "The modal confirmation action must be Add.");
+      const modalFooter = document.querySelector(".plannerPlayerModalFooter");
+      const footerButtons = modalFooter.querySelectorAll("button");
+      assert(footerButtons.length === 2 && footerButtons[0].textContent.trim() === "Discard" && footerButtons[1].textContent.trim() === "Add", "Discard and Add must be grouped in the footer.");
+      const actionStyle = getComputedStyle(inSquadAction);
+      assert(["flex", "inline-flex"].includes(actionStyle.display) && actionStyle.alignItems === "center" && actionStyle.justifyContent === "flex-end", "Planner action text must be vertically centered: " + JSON.stringify({ display: actionStyle.display, alignItems: actionStyle.alignItems, justifyContent: actionStyle.justifyContent, className: inSquadAction.className }));
+      const footerStyle = getComputedStyle(modalFooter);
+      assert(footerStyle.justifyContent === "flex-end", "Discard and Add must stay at the bottom right.");
+      assert(getComputedStyle(inSquadAction).textDecorationLine === "none", "Planner action text must not underline.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Search must hide Load more when all matching players were returned.");
+      assert(ownPlayerSearchRow.getBoundingClientRect().height <= 32, "Planner player-search rows must use the reduced compact height.");
+      const assertCenteredPopupRow = (row, tableLabel) => {
+        const box = row.getBoundingClientRect();
+        const contentCenter = box.top + (box.height - 1) / 2; // exclude the divider
+        for (const [column, cell] of [...row.cells].entries()) {
+          const element = cell.querySelector(".flagImage, .plannerOverallContent, .plannerPlayerActionText");
+          const rect = element ? element.getBoundingClientRect() : (() => {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            return range.getBoundingClientRect();
+          })();
+          assert(rect.height > 0 && Math.abs(rect.top + rect.height / 2 - contentCenter) <= 3,
+            tableLabel + " column " + (column + 1) + " must visually center its flag/text/OVR/action within the row.");
+        }
+      };
+      assertCenteredPopupRow(ownPlayerSearchRow, "Add player(s) search results");
+      assert(getComputedStyle(ownPlayerSearchRow.cells[1]).lineHeight === "20px",
+        "Compact popup name text must not use the entire row height as its line box.");
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search");
+      const selectAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
+      assert(selectAction.textContent === "Select", "Eligible search results must expose Select as text.");
+      assert(getComputedStyle(selectAction.parentElement).textAlign === "right"
+        && getComputedStyle(selectAction.parentElement).justifyItems === "end"
+        && getComputedStyle(selectAction.parentElement).alignItems === "center",
+        "Popup action column must align right and vertically center its content.");
+      selectAction.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(selectAction).textDecorationLine === "none", "Select hover must not underline.");
+      assert(!document.getElementById("plannerPlayerSearchMore").hidden, "Broad name search must offer more matching players.");
+      document.getElementById("plannerPlayerSearchMore").click();
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 3, "Additional player search page");
+      assert(document.querySelector('.plannerPlayerSearchResult[data-player-id="4"]'), "Additional matching players must be accessible through pagination.");
+      assert(document.getElementById("plannerPlayerSearchMore").hidden, "Load more must disappear after the final page.");
+      selectAction.click();
+      const selectedAction = document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText');
+      assert(selectedAction?.textContent === "Selected" && getComputedStyle(selectedAction).color === "rgb(125, 184, 222)",
+        "Selected action must use the usual light blue.");
+      const unscrolled = document.querySelector(".plannerPlayerSearchTable.plannerTableNoVerticalScroll");
+      if (unscrolled) assert(getComputedStyle(unscrolled.querySelector("tbody")).scrollbarGutter === "auto",
+        "A popup table without vertical overflow must not reserve an unhighlighted gutter.");
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
+      assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
+      const selectedRows = document.querySelectorAll("#plannerPlayerSelectionBody .plannerPendingPlayer");
+      assert(selectedRows.length === 2, "Selected players must render in the table below search results.");
+      assert(selectedRows[0].children.length === 6 && selectedRows[1].children.length === 6, "Selected-player rows must mirror the six-column search table.");
+      assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
+      assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
+      assertCenteredPopupRow(selectedRows[0], "Add player(s) staged selection");
+      for (const index of [2, 3, 4]) {
+        assert(getComputedStyle(selectedRows[0].children[index]).textAlign === "left", "Selected table Position, Age and Overall must align left.");
+      }
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Staged modal selections must not mutate the squad.");
+      document.getElementById("plannerPlayerDiscardButton").click();
+      assert(hidden("#plannerPlayerModal"), "Discard must close the Add players modal.");
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Discard must leave the squad unchanged.");
+
+      addPlayerButton.click();
+      playerSearch.value = "Added";
+      playerSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search after discard");
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText').click();
+      document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
+      document.getElementById("plannerPlayerConfirmButton").click();
+      assert(hidden("#plannerPlayerModal"), "Add selected must close the modal.");
+      const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
+      const addedDefenderRow = document.querySelector('#plannerRosterBody tr[data-player-id="3"]');
+      assert(addedRow && addedDefenderRow, "Add selected must append every staged eligible player.");
+      const sortedPlannerIds = Array.from(document.querySelectorAll("#plannerRosterBody tr[data-player-id]")).map(row => row.dataset.playerId);
+      assert(JSON.stringify(sortedPlannerIds) === JSON.stringify(["3","2","1"]), "Planner roster must sort by canonical primary-position order.");
+      assert(!document.querySelector(".plannerRosterTable tfoot"),
+        "Adding players must not reintroduce the squad totals footer.");
+      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75%", "Added player Contract must also use database value divided by 100.");
+      assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
+      const addedContractValue = addedRow.querySelector(".plannerContractValue");
+      const addedContractEditor = addedRow.querySelector(".plannerContractEditor");
+      const addedContractEdit = addedRow.querySelector(".plannerContractEditButton");
+      assert(addedContractEdit instanceof HTMLButtonElement, "Added player Contract Edit is missing.");
+      addedContractEdit.click();
+      assert(contractEditor.hidden, "Opening another Contract must close the previous editor.");
+      assert(contractValue.textContent === "12.50%", "Opening another Contract must discard the previous unsaved draft.");
+      assert(addedContractEditor instanceof HTMLElement && !addedContractEditor.hidden, "The newly selected Contract must become the only active editor.");
+      assert(addedContractValue?.textContent === "3.75%", "Switching editors must preserve the new Contract's committed value.");
+      addedContractEdit.click();
+      contractEdit.click();
+      contractInput.value = "18.25";
+      contractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      contractEdit.click();
+      assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+      // Clickable starters and backup lists use the same roster-derived depth source.
+      const fixture = [
+        ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,nationality:index===2?"Italy":"",positions:"CB",overall,retirement_years:5})),
+        {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
+        {player_id:108,name:"GK 82",positions:"GK",overall:82,retirement_years:5},
+        {player_id:109,name:"Retired CB",positions:"CB",overall:99,retirement_years:0},
+      ];
+      const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
+      formationPreview.setRoster(fixture);
+      formationPreview.render("442");
+      assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
+      assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
+      const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
+      assert(depthIndicator("CB#1")?.textContent === "5" && depthIndicator("CB#2")?.textContent === "5"
+        && depthIndicator("CB#1")?.classList.contains("multiple")
+        && depthIndicator("ST#1")?.textContent === "1" && depthIndicator("ST#1")?.classList.contains("single")
+        && depthIndicator("LM#1")?.textContent === "0" && depthIndicator("LM#1")?.classList.contains("empty"),
+        "Both repeated CB slots must count all five available CBs, with grey/amber/green bands.");
+      assert(Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot")).every(spot =>
+        spot.querySelectorAll(".plannerFormationDepthBadge").length === 1
+        && spot.querySelector(":scope > .plannerFormationDepthBadge[aria-hidden='true']")
+        && Number(spot.dataset.depthCount) === Number(spot.querySelector(".plannerFormationDepthBadge").textContent)),
+        "Each pitch circle, including GK, must have exactly one visible, aria-hidden depth badge.");
+      assert(getComputedStyle(slot("CB#1").querySelector(".plannerFormationSlotButton")).position === "static",
+        "The small depth badge must not create a new positioning context for the original OVR label.");
+      const badgeRect = depthIndicator("CB#1").getBoundingClientRect();
+      const circleRect = slot("CB#1").querySelector(".plannerFormationToken").getBoundingClientRect();
+      assert(badgeRect.width >= 16 && badgeRect.width <= 20
+        && badgeRect.height >= 16 && badgeRect.height <= 20
+        && badgeRect.left >= circleRect.left + circleRect.width / 2
+        && badgeRect.top < circleRect.top + circleRect.height / 2,
+        "The 18px depth badge must overlap the upper-right quadrant of the player circle.");
+      const fillButton = document.getElementById("plannerAutoFillDepthButton");
+      const clearButton = document.getElementById("plannerClearDepthButton");
+      const depthPicker = document.getElementById("plannerDepthPicker");
+      assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
+      assert(clearButton instanceof HTMLButtonElement && clearButton.disabled, "Clear must be disabled while the pitch has no selected players.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(!depthPicker.hidden, "Clicking an empty circle must open the position selector.");
+      const openingButton = slot("CB#1").querySelector(".plannerFormationSlotButton");
+      const openingToken = openingButton.querySelector(".plannerFormationToken");
+      assert(openingButton.classList.contains("plannerFormationSlotButtonPickerOpen")
+        && getComputedStyle(openingToken).boxShadow!=="none"
+        && getComputedStyle(openingToken).transform==="none"
+        && getComputedStyle(openingToken).filter==="none",
+        "The pitch circle that opened the menu must keep a border-only highlight without zoom.");
+      const assertPickerPointer = key => {
+        const pointer = document.getElementById("plannerDepthPickerPointer");
+        const anchor = slot(key).querySelector(".plannerFormationSlotButton").getBoundingClientRect();
+        const menu = depthPicker.getBoundingClientRect();
+        const arrow = pointer?.getBoundingClientRect();
+        const tipStyle = pointer ? getComputedStyle(pointer, "::after") : null;
+        const menuStyle = getComputedStyle(depthPicker);
+        assert(pointer && depthPicker.contains(pointer)
+          && pointer.parentElement===depthPicker
+          && getComputedStyle(pointer).position==="absolute"
+          && getComputedStyle(pointer).pointerEvents==="none"
+          && getComputedStyle(pointer).clipPath==="none"
+          && tipStyle.backgroundColor===menuStyle.backgroundColor
+          && tipStyle.borderTopColor===menuStyle.borderTopColor
+          && tipStyle.borderLeftColor===menuStyle.borderLeftColor
+          && tipStyle.borderTopWidth==="1px" && tipStyle.borderLeftWidth==="1px"
+          && tipStyle.borderRightWidth==="0px" && tipStyle.borderBottomWidth==="0px"
+          && tipStyle.transform!=="none"
+          && ["above","below"].includes(pointer.dataset.side)
+          && Math.abs(arrow.left + arrow.width/2 - Math.max(menu.left + 16,Math.min(anchor.left + anchor.width/2,menu.right - 16)))<=1
+          && (pointer.dataset.side==="below"
+            ? Math.abs(arrow.bottom-menu.top)<=2 && getComputedStyle(pointer).transform==="none"
+            : Math.abs(arrow.top-(menu.bottom-1))<=2 && getComputedStyle(pointer).transform!=="none"),
+          "The seamless triangle must use the menu's own surface/border and point toward its opening circle on either side.");
+      };
+      assertPickerPointer("CB#1");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="101,102,103,104,105","Picker must include only positional CB ratings within 10% of the team average, in positional Overall order.");
+      assert(depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"] > span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected)')?.textContent==="M. De Rossi",
+        "The menu must display given-name initial and the whole multiword surname.");
+      const pickerPhoto = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"] .plannerDepthPickerPhoto img');
+      assert(pickerPhoto?.src.includes("/103/photo.webp") && getComputedStyle(pickerPhoto).objectFit==="contain"
+        && getComputedStyle(pickerPhoto).objectPosition==="50% 0%"
+        && getComputedStyle(pickerPhoto).transform===getComputedStyle(document.querySelector(".plannerFormationPlayerPhoto") || pickerPhoto).transform,
+        "Picker portraits must use the same face-focused crop as the pitch portraits.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
+      assert(slot("CB#1")?.dataset.playerId==="103" && depthPicker.hidden,"Selecting a player must fill only the chosen circle.");
+      assert(depthIndicator("CB#1")?.textContent === "4" && depthIndicator("CB#2")?.textContent === "4"
+        && slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("4 available alternatives"),
+        "After assignment both CB slots must count all four unassigned CBs, excluding the starter.");
+      assert(!clearButton.disabled, "Clear must become available as soon as a pitch starter is selected.");
+      assert(!document.getElementById("plannerDepthPickerPointer"),"Closing the position picker must remove its floating pointer.");
+      assert(!slot("CB#1").hasAttribute("title"), "Assigning a player must not add a native circle tooltip.");
+      const restoredOvrBadge = slot("CB#1").querySelector(".plannerFormationPlayerBadge");
+      const restoredOvrRect = restoredOvrBadge?.getBoundingClientRect();
+      const restoredSlotRect = slot("CB#1").getBoundingClientRect();
+      assert(getComputedStyle(restoredOvrBadge).position === "absolute"
+        && getComputedStyle(restoredOvrBadge).bottom === "7px"
+        && Math.abs(restoredOvrRect.left + restoredOvrRect.width / 2
+          - (restoredSlotRect.left + restoredSlotRect.width / 2)) <= 1,
+        "The existing Overall/position badge must retain its original bottom anchor and horizontal center.");
+      const assignedToken = slot("CB#1").querySelector(".plannerFormationTokenAssigned");
+      const emptyToken = slot("CB#2").querySelector(".plannerFormationToken");
+      assert(getComputedStyle(emptyToken).transitionProperty.includes("box-shadow")
+        && getComputedStyle(assignedToken).transitionProperty.includes("box-shadow")
+        && !getComputedStyle(emptyToken).transitionProperty.includes("transform")
+        && !getComputedStyle(assignedToken).transitionProperty.includes("transform"),
+        "Both empty and filled depth circles must animate only the border on hover and keyboard focus.");
+      assert(getComputedStyle(assignedToken).transform === "none"
+        && getComputedStyle(assignedToken).filter === "none",
+        "An occupied player circle must never zoom or brighten when selected or focused.");
+      const assignedPortrait = assignedToken?.querySelector(".plannerFormationPlayerPhoto");
+      assert(assignedToken?.children.length === 2 && assignedToken.firstElementChild?.classList.contains("plannerFormationPlayerGradient"),"Assigned circle must contain only the club gradient and player portrait.");
+      assert(assignedPortrait?.src.includes("/103/photo.webp") && assignedPortrait.alt === "","The assigned portrait must match the chosen player.");
+      assert(getComputedStyle(assignedPortrait).objectFit === "contain" && getComputedStyle(assignedPortrait).objectPosition === "50% 0%" && getComputedStyle(assignedPortrait).transform !== "none","Player portrait must use the original face-focused zoom inside the gradient circle.");
+      assert(!assignedToken.querySelector("svg, .plannerFormationPlayerSliders, .plannerFormationPlayerShade"),"Assigned circle must not overlay a clipped icon or dark shade.");
+      assert(slot("CB#1").querySelector(".plannerFormationPlayerBadge")?.textContent==="85CB","Filled circle must show Overall and position.");
+      const selectedSurname = slot("CB#1").querySelector(".plannerFormationPlayerSurname");
+      assert(selectedSurname?.querySelector(".plannerFormationSurnameText")?.textContent === "De Rossi"
+        && selectedSurname.title === "Marco De Rossi"
+        && selectedSurname.getAttribute("aria-hidden") === "true"
+        && selectedSurname.querySelector(".plannerFormationSurnameFlag"),
+        "Selected player must show their surname and nationality flag below the circle.");
+      assert(!slot("CB#2").querySelector(".plannerFormationPlayerSurname")
+        && !document.querySelector("#plannerFormationPositions .plannerFormationBackups, #plannerDepthDetails, .plannerDepthCard"),
+        "Empty circles must not show a player name, and removed depth information must stay absent.");
+      assert(Math.abs(selectedSurname.getBoundingClientRect().top -
+        slot("CB#2").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().top) <= 1,
+        "Occupied surname and empty-position badge must sit at the same distance below their circles.");
+      assert(slot("CB#1").querySelector(".plannerFormationSlotButton").getAttribute("aria-label").includes("Marco De Rossi"),
+        "The assigned player must remain identifiable to assistive technology.");
+      assert(slot("CB#2").querySelector(".plannerFormationPositionLabel")?.textContent==="CB"
+        && !slot("CB#1").querySelector(".plannerFormationPositionLabel").getBoundingClientRect().width,
+        "Empty circles must keep the grey position badge, while filled circles hide it.");
+      fillButton.click();
+      const selectedGoalkeeperName = slot("GK#1")?.querySelector(".plannerFormationPlayerSurname");
+      assert(selectedGoalkeeperName && selectedGoalkeeperName.getBoundingClientRect().bottom <= document.querySelector(".plannerPitch").getBoundingClientRect().bottom - 1,
+        "Selected goalkeeper name and flag must stay fully inside the bottom of the pitch.");
+      assert(slot("CB#1")?.dataset.playerId==="103" && slot("CB#2")?.dataset.playerId==="101","Auto-fill must preserve manual assignment and avoid duplicate starters.");
+      assert(!slot("CB#1").querySelector(".plannerFormationBackups")
+        && slot("CB#1").querySelector(".plannerFormationSurnameText")?.textContent === "De Rossi"
+        && slot("CB#2").querySelector(".plannerFormationPlayerSurname"),
+        "Auto-fill must preserve selected names without reintroducing backup names.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      const removeStarter = depthPicker.querySelector(".plannerDepthPickerClear");
+      assert(removeStarter?.textContent==="Remove"
+        && removeStarter.querySelector("svg.plannerDepthPickerRemoveIcon[aria-hidden='true'] path")
+          ?.getAttribute("d")==="M6 6L18 18M18 6L6 18",
+        "The Remove action must show a symmetrical decorative x icon to the left of its label.");
+      const removeIconFrame = removeStarter.querySelector(".plannerDepthPickerRemoveFrame");
+      const removeIcon = removeIconFrame?.querySelector(".plannerDepthPickerRemoveIcon");
+      const removeText = removeStarter.querySelector("span:last-child");
+      const removeMidpoint = removeStarter.getBoundingClientRect().top + removeStarter.getBoundingClientRect().height / 2;
+      const midX = rect => rect.left + rect.width / 2;
+      const midY = rect => rect.top + rect.height / 2;
+      assert(removeIconFrame && removeIcon && removeText
+        && getComputedStyle(removeStarter).height==="44px"
+        && getComputedStyle(removeIconFrame).width==="36px"
+        && getComputedStyle(removeIcon).width==="16px" && getComputedStyle(removeIcon).height==="16px"
+        && Math.abs(midY(removeIconFrame.getBoundingClientRect()) - removeMidpoint) <= 1
+        && Math.abs(midY(removeIcon.getBoundingClientRect()) - removeMidpoint) <= 1
+        && Math.abs(midY(removeText.getBoundingClientRect()) - removeMidpoint) <= 1
+        && getComputedStyle(removeText).height==="20px"
+        && getComputedStyle(removeText).lineHeight==="20px",
+        "Remove icon frame, x and label must all be centered in the 44px row.");
+      const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
+      assert(assignedOtherSlot && !assignedOtherSlot.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
+        && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
+        "An already-picked player must remain clickable with its previous slot marked.");
+      const assignedSlotLabel = assignedOtherSlot.querySelector(".plannerDepthPickerSelected");
+      const assignedOverall = assignedOtherSlot.querySelector("strong");
+      const selectedRowBox = assignedOtherSlot.getBoundingClientRect();
+      const selectedLabelBox = assignedSlotLabel.getBoundingClientRect();
+      const selectedLabelStyle = getComputedStyle(assignedSlotLabel);
+      const assignedName = assignedOtherSlot.querySelector(":scope > span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected)");
+      const assignedNameBox = assignedName.getBoundingClientRect();
+      const assignedOverallBox = assignedOverall.getBoundingClientRect();
+      const assignedPhotoBox = assignedOtherSlot.querySelector(".plannerDepthPickerPhoto").getBoundingClientRect();
+      const removeFrameBox = removeIconFrame.getBoundingClientRect();
+      const removeIconBox = removeIcon.getBoundingClientRect();
+      const removeTextBox = removeText.getBoundingClientRect();
+      assert(Math.abs(removeFrameBox.left - assignedPhotoBox.left) <= 1
+        && Math.abs(midX(removeIconBox) - midX(assignedPhotoBox)) <= 1
+        && Math.abs(removeTextBox.left - assignedNameBox.left) <= 1,
+        "Remove x must occupy the portrait column and Remove text must start at the player-name column.");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer")).every(row => {
+        const midpoint = midY(row.getBoundingClientRect());
+        return Math.abs(row.getBoundingClientRect().height - 44) <= 1
+          && Array.from(row.children).every(child => Math.abs(midY(child.getBoundingClientRect()) - midpoint) <= 1
+            && (child.classList.contains("plannerDepthPickerPhoto")
+              || getComputedStyle(child).height==="20px" && getComputedStyle(child).lineHeight==="20px"));
+      }), "All picker portraits, names, selected labels and positional Overalls must be vertically centered in 44px rows.");
+      assert(assignedSlotLabel?.nextElementSibling===assignedOverall
+        && selectedLabelBox.right <= assignedOverallBox.left
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && assignedName.textContent==="C. 91"
+        && ["flex","inline-flex"].includes(selectedLabelStyle.display) && selectedLabelStyle.alignItems==="center",
+        "The abbreviated name, selected slot and positional Overall must all be vertically centered in the menu row: " + JSON.stringify({
+          actualName:assignedName.textContent, selected:assignedSlotLabel.textContent, overall:assignedOverall.textContent,
+          rowMid:selectedRowBox.top + selectedRowBox.height/2, nameMid:assignedNameBox.top+assignedNameBox.height/2,
+          selectedMid:selectedLabelBox.top+selectedLabelBox.height/2, overallMid:assignedOverallBox.top+assignedOverallBox.height/2,
+          labelDisplay:selectedLabelStyle.display, labelAlign:selectedLabelStyle.alignItems,
+          nameLineHeight:getComputedStyle(assignedName).lineHeight, overallLineHeight:getComputedStyle(assignedOverall).lineHeight
+        }));
+      const removeHoverStyle = getComputedStyle(removeStarter);
+      const playerHoverStyle = getComputedStyle(assignedOtherSlot);
+      assert(removeHoverStyle.borderTopWidth===playerHoverStyle.borderTopWidth
+        && removeHoverStyle.borderTopStyle===playerHoverStyle.borderTopStyle,
+        "Remove and player rows must share the same border geometry before the shared hover highlight.");
+      assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]'),
+        "The starter occupying this exact slot must be omitted from its own selection menu.");
+      assert(!depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="106"]'),
+        "Players more than 10% below team average must not appear in a position picker.");
+      assignedOtherSlot.click();
+      assert(slot("CB#1")?.dataset.playerId==="101" && !slot("CB#2")?.dataset.playerId
+        && !depthPicker.querySelector('.plannerDepthPickerPlayer'),
+        "Moving a selected player must occupy the new slot and clear its previous slot without duplication.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      const returnPlayer = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
+      assert(returnPlayer && !returnPlayer.disabled && returnPlayer.dataset.assignedSlot==="CB#1",
+        "Moved players must remain transferable back to their original slot.");
+      returnPlayer.click();
+      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101",
+        "Moving back must clear the temporary slot.");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="103"]').click();
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector(".plannerDepthPickerClear").click();
+      assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Remove must affect the selected circle only.");
+      formationPreview.render("433");
+      assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
+      // Auto-fill must stay available for a repeated slot even if round-robin backups
+      // currently land in its occupied sibling's depth column.
+      formationPreview.setRoster([
+        {player_id:201,name:"CB 95",positions:"CB",overall:95,retirement_years:5},
+        {player_id:202,name:"CB 90",positions:"CB",overall:90,retirement_years:5},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="201"]').click();
+      assert(!fillButton.disabled,"Auto-fill must remain available when CB #2 has one eligible player.");
+      fillButton.click();
+      assert(slot("CB#2")?.dataset.playerId==="202","Auto-fill must use the remaining eligible player in the repeated slot.");
+      formationPreview.setRoster([{player_id:107,name:"ST 93",positions:"ST",overall:93}]);
+      assert(!slot("CB#2")?.dataset.playerId,"Removed players must be dropped from depth assignments.");
+      formationPreview.setRoster([
+        {player_id:301,name:"Natural CB",positions:"CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+        {player_id:302,name:"Secondary CB",positions:"CM, CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(depthPicker.querySelector('[data-player-id="302"] strong')?.textContent === "79", "Picker must display the position-specific rating for a secondary CB.");
+      depthPicker.querySelector('[data-player-id="302"]').click();
+      assert(slot("CB#1").querySelector(".plannerFormationPlayerOverall")?.textContent === "79", "Pitch OVR must include the secondary-position penalty.");
+      assert(getComputedStyle(slot("CB#1").querySelector(".plannerFormationPlayerPosition")).backgroundColor === "rgb(173, 255, 47)", "Secondary position must match the player-page familiarity colour.");
+      fillButton.click();
+      assert(slot("CB#2").querySelector(".plannerFormationPlayerOverall")?.textContent === "80", "Natural position must use the player-page rating.");
+      assert(getComputedStyle(slot("CB#2").querySelector(".plannerFormationPlayerPosition")).backgroundColor === "rgb(5, 248, 44)", "Natural position must use the player-page green.");
+      // A higher base Overall must lose to the better rating at the actual CB slot.
+      formationPreview.setRoster([
+        {player_id:401,name:"Secondary with higher base",positions:"CM, CB",overall:98,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+        {player_id:402,name:"Natural with lower base",positions:"CB",overall:76,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
+      ]);
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="402,401",
+        "Picker must rank qualified candidates by positional CB Overall, not main Overall.");
+      fillButton.click();
+      assert(slot("CB#1")?.dataset.playerId==="402" && slot("CB#2")?.dataset.playerId==="401",
+        "Auto-fill must rank by CB Overall and use each player only once.");
+      // Neither CB meets 90% of this squad's Overall average. Offer the
+      // strongest CB and, once selected, fall back to the next CB in that slot.
+      formationPreview.setRoster([
+        {player_id:501,name:"Other ST",positions:"ST",overall:100,retirement_years:5},
+        {player_id:502,name:"Highest CB",positions:"CB",overall:60,retirement_years:5},
+        {player_id:503,name:"Next CB",positions:"CB",overall:55,retirement_years:5},
+        {player_id:504,name:"Other CM",positions:"CM",overall:100,retirement_years:5},
+        {player_id:505,name:"Other GK",positions:"GK",overall:100,retirement_years:5},
+      ]);
+      formationPreview.render("442");
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(depthIndicator("CB#1")?.textContent === "1" && depthIndicator("CB#2")?.textContent === "1",
+        "Both repeated CB circles may count the same unassigned strongest positional fallback.");
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="502",
+        "Without anyone within 10%, the CB picker must offer only the highest positional OVR.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="502"]').click();
+      slot("CB#1").querySelector(".plannerFormationSlotButton").click();
+      assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="503",
+        "The current starter must be omitted before choosing the next-best below-threshold CB fallback.");
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="503"]').click();
+      assert(slot("CB#1")?.dataset.playerId==="503",
+        "The next-best fallback must remain selectable when replacing the current starter.");
+      assert(depthIndicator("CB#1")?.textContent === "1" && depthIndicator("CB#2")?.textContent === "1",
+        "After replacement both CB slots must count the remaining strongest positional fallback.");
+      // One versatile free player contributes to every position they can play.
+      formationPreview.setRoster([
+        {player_id:601,name:"CM CAM",positions:"CM, CAM",overall:94,passing:94,shooting:94,defense:94,dribbling:94,pace:94,physical:94,goalkeeping:20},
+        {player_id:602,name:"GK",positions:"GK",overall:92},
+      ]);
+      formationPreview.render("433");
+      assert(depthIndicator("CM#1")?.textContent === "1"
+        && depthIndicator("CM#2")?.textContent === "1"
+        && depthIndicator("CM#3")?.textContent === "1",
+        "A free multi-position player must count as depth for every matching CM slot.");
+      formationPreview.render("433a");
+      assert(depthIndicator("CAM#1")?.textContent === "1"
+        && depthIndicator("CM#1")?.textContent === "1"
+        && depthIndicator("CM#2")?.textContent === "1",
+        "A free CM/CAM must contribute to both positions in the same formation.");
+      slot("CM#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="601"]').click();
+      assert(depthIndicator("CM#1")?.textContent === "0"
+        && depthIndicator("CM#2")?.textContent === "0"
+        && depthIndicator("CAM#1")?.textContent === "0",
+        "Once selected, the multi-position player cannot count as any position's spare depth.");
+      formationPreview.setRoster([
+        {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
+        {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
+        {player_id:3,name:"Added Browser Defender",positions:"CB",overall:76,retirement_years:5},
+      ]);
+      const squadSlot = playerId => document.querySelector('#plannerRosterBody tr[data-player-id="' + playerId + '"]');
+      const slotBadge = playerId => squadSlot(playerId)?.querySelector(".plannerRosterSlotBadge");
+      const slotEmpty = playerId => squadSlot(playerId)?.querySelector(".plannerRosterSlotEmpty");
+      assert(slotBadge(3)?.hidden && !slotEmpty(3)?.hidden, "An unassigned squad player must have an empty Slot.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="3"]').click();
+      assert(slotBadge(3)?.textContent === "CB" && !slotBadge(3).hidden && slotEmpty(3).hidden, "Repeated Depth positions must show CB, never CB2 or CB#2.");
+      const chipStyle = getComputedStyle(slotBadge(3));
+      assert(chipStyle.color === "rgb(5, 248, 44)" && chipStyle.borderRadius === "5px" && chipStyle.backgroundColor !== "rgba(0, 0, 0, 0)", "Slot badge must match the translucent rounded green example.");
+      formationPreview.render("433");
+      assert(slotBadge(3)?.textContent === "CB", "Slot badges must survive compatible formation changes.");
+      slot("CB#2").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector(".plannerDepthPickerClear").click();
+      assert(slotBadge(3)?.hidden && !slotEmpty(3)?.hidden, "Clearing the starter must immediately clear the squad Slot.");
+      slot("ST#1").querySelector(".plannerFormationSlotButton").click();
+      depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="1"]').click();
+      assert(document.querySelector("#plannerRosterBody tr")?.dataset.playerId === "1", "Assigned players must sort above unassigned players regardless of natural position.");
+      const slotCellWidth = squadSlot(1).children[0].getBoundingClientRect().width;
+      assert(slotCellWidth <= (window.innerWidth <= 800 ? 44 : 48) + 1, "Slot must stay compact at desktop and mobile widths.");
+      assert(slotBadge(1).scrollWidth <= slotBadge(1).clientWidth, "Compact Slot must fit the position label.");
+      fillButton.click();
+      assert(slotBadge(1)?.textContent === "ST" && slotBadge(2)?.textContent === "RW" && slotBadge(3)?.textContent === "CB", "Auto-fill must refresh Slot labels for all starters.");
+      assert(Array.from(document.querySelectorAll("#plannerRosterBody tr"), row => row.dataset.playerId).join(",") === "3,2,1", "Auto-fill must reorder the squad by assigned slot.");
+      formationPreview.render("442");
+      assert(slotBadge(2)?.hidden && !slotEmpty(2)?.hidden && slotBadge(1)?.textContent === "ST", "Formation changes must clear obsolete RW assignments while keeping compatible ST.");
+      formationPreview.render("4231");
+      assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
+      const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
+      const depthHeadingBox = document.getElementById("plannerPitchHeading").getBoundingClientRect();
+      assert(Math.abs(squadHeadingBox.top - depthHeadingBox.top) <= 1, "Depth heading must align vertically with Squad.");
+      const squadBox = document.querySelector(".plannerRosterPanel").getBoundingClientRect();
+      const pitchBox = document.querySelector(".plannerPitchPanel").getBoundingClientRect();
+      const pitchSurfaceBox = document.querySelector(".plannerPitch").getBoundingClientRect();
+      assert(getComputedStyle(document.querySelector(".plannerPitch")).backgroundImage.includes("pitch-background.svg"), "Hydrated Planner must retain the shared SVG pitch.");
+      assert(Math.abs(pitchSurfaceBox.width / pitchSurfaceBox.height - 72 / 109) < 0.01, "Planner pitch must keep the supplied SVG proportions.");
+      if (innerWidth > 800) {
+        assert(pitchBox.left - squadBox.right >= 30, "Pitch must keep a safe gutter from the squad table.");
+        assert(pitchSurfaceBox.width > 280 && pitchSurfaceBox.width <= 500, "Desktop Planner Depth pitch may expand to the new 500px maximum.");
+        if (pitchBox.width >= 516) assert(pitchSurfaceBox.width > 420,
+          "Wide desktop Planner must show a larger pitch than its previous 420px limit.");
+        assert(pitchSurfaceBox.width <= pitchBox.width - 12, "Planner Depth pitch must stay comfortably within plannerPitchPanel.");
+        assert(pitchSurfaceBox.top - depthHeadingBox.bottom <= 18, "Planner Depth pitch must sit just below its formation controls.");
+      }
+      else assert(pitchBox.top >= squadBox.bottom, "Mobile Planner must stack squad and pitch.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="2"] .plannerRosterRemove').click();
+      document.querySelector('#plannerRosterBody tr[data-player-id="3"] .plannerRosterRemove').click();
+      assert(!document.querySelector('#plannerRosterBody tr[data-player-id="2"]') && !document.querySelector('#plannerRosterBody tr[data-player-id="3"]'), "Remove must update the planned squad.");
+      assert(document.querySelector('#plannerRosterBody tr[data-player-id="1"]'), "Removing added players must keep the original planned player.");
+      document.querySelector('#plannerRosterBody tr[data-player-id="1"] .plannerRosterRemove').click();
+      assert(!document.querySelector("#plannerRosterBody tr[data-player-id]"), "Removing the remaining player must empty the planned squad.");
+      assert(text("#plannerRosterStatus") === "No players in this squad.", "Empty planned squad must be explicit.");
+      document.getElementById("plannerTeamClearButton").click();
+      assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Clear must restore search.");
+      assert(input.value === "" && location.search === "", "Clear must reset the team and URL.");
+      assert(formation.value === "442", "Clearing a club must reset the visible formation preview.");
+      assert(hidden("#plannerWorkspace"), "Clear must hide the workspace.");
+      await waitFor(() => document.querySelectorAll(".plannerTeamSearchResult").length === 3, "Planner owned clubs after Clear");
+      assert(Array.from(document.querySelectorAll(".plannerTeamSearchResult")).map(el => el.dataset.clubId).join(",") === "9002,9001,9003", "Clear must restore division-sorted owned clubs.");
+      history.replaceState({}, "", "/planner?club=9001");
+      await window.__mflPlannerRoute.render(false);
+      assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "URL restoration must restore the team identity.");
+      await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Restored Planner roster");
+      assert(document.documentElement.scrollWidth <= innerWidth, "Planner must not overflow horizontally.");
+      assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+      finish(
+        "passed",
+        "planner: stable first paint, selected-team identity, current roster/removal and responsive pitch workspace.",
+      );
+      return;
+    }
 
     if (scenario.endsWith("-empty")) {
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
@@ -1440,7 +2621,7 @@ function writeJson(response, data, status = 200) {
   response.end(JSON.stringify(data));
 }
 
-function pageDataStub(url) {
+function pageDataStub(url, scenario = "") {
   const scope = String(url.searchParams.get("scope") || "database").toLowerCase();
   let rules = [];
   try {
@@ -1481,7 +2662,10 @@ function pageDataStub(url) {
       logoUrl: browserClubLogo9002,
     },
   };
-  const rows = scope === "club" ? [] : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const plannerRow = pageColumns.map((column) => (
+    column === "retirement_years" ? 2 : (testPlayer[column] ?? null)
+  ));
+  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -1503,7 +2687,7 @@ function pageDataStub(url) {
   };
 }
 
-function dataStub(url) {
+function dataStub(url, scenario = "") {
   const mode = String(url.searchParams.get("mode") || "bootstrap");
   if (mode === "bootstrap") {
     return {
@@ -1538,7 +2722,7 @@ function dataStub(url) {
       }, {
         clubId: "9002",
         name: "Second Browser Club",
-        division: 4,
+        division: scenario === "planner" ? 1 : 4,
         city: "Rome",
         nation: "ITALY",
         logoUrl: browserClubLogo9002,
@@ -1547,7 +2731,7 @@ function dataStub(url) {
       }, {
         clubId: "9003",
         name: "Unavailable Competition Club",
-        division: 5,
+        division: scenario === "planner" ? 3 : 5,
         city: "Turin",
         nation: "ITALY",
         logoUrl: "",
@@ -1592,6 +2776,32 @@ function dataStub(url) {
       source: "browser-regression-summary",
     };
   }
+  if (mode === "search" && url.searchParams.get("type") === "clubs") {
+    return { results: [{ clubId: "9001", name: "Browser Club", division: 3 }] };
+  }
+  if (mode === "search" && url.searchParams.get("type") === "players") {
+    const q = String(url.searchParams.get("q") || "").toLowerCase();
+    const columns = ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"];
+    if (q.includes("player browser")) {
+      return { columns, rows: [], hasMore: false };
+    }
+    if (q.includes("browser")) {
+      return { columns, rows: [[1, "Browser Player", 80, 23, "Italy", "ST", 2, 5, 1250]], hasMore: false };
+    }
+    if (q.includes("added")) {
+      const offset = Number(url.searchParams.get("offset") || 0);
+      return offset > 0
+        ? { columns, rows: [[4, "More Browser Player", 74, 25, "Spain", "CM", 5, 3, 200]], hasMore: false }
+        : {
+            columns,
+            rows: [
+              [2, "Added Browser Player", 77, 21, "Italy", "RW", 4, 1, 375],
+              [3, "Added Browser Defender", 76, 22, "France", "CB", 5, 3, 450],
+            ],
+            hasMore: true,
+          };
+    }
+  }
   if (mode === "search") {
     const playerIds = new Set(
       String(url.searchParams.get("playerIds") || "")
@@ -1608,7 +2818,7 @@ function dataStub(url) {
       clubs: [],
     };
   }
-  if (mode === "page") return pageDataStub(url);
+  if (mode === "page") return pageDataStub(url, scenario);
   return {};
 }
 
@@ -1670,7 +2880,7 @@ async function createRegressionServer() {
           ? { error: "Invalid wallet proof." }
           : competitionBatchFailure
             ? { error: "Fixture competition batch unavailable." }
-            : dataStub(url),
+            : dataStub(url, String(request.headers["x-browser-regression-scenario"] || "")),
         invalidMyClubsProof ? 401 : competitionBatchFailure ? 500 : 200,
       );
       return;
@@ -1880,6 +3090,9 @@ const regressionScenarios = Object.freeze([
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["mflstats", "/mfl/stats"],
+  ["planner", "/planner"],
+  ["planner-out", "/planner#opted-out"],
+  ["planner-selected", "/planner?club=9001"],
 ]);
 
 const server = await createRegressionServer();

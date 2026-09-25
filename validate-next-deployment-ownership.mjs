@@ -18,6 +18,7 @@ const [
   siteQualityWorkflow,
   checkpointPublisher,
   deepRoutePage,
+  plannerRoutePage,
   vercelConfigSource,
   identityRecorder,
   deploymentVerifier,
@@ -29,6 +30,7 @@ const [
   read(".github/workflows/site-quality.yml"),
   read("scripts/workflows/full-database-refresh-publish-checkpoint.sh"),
   read("pages/[...path].js"),
+  read("pages/planner.js"),
   read("vercel.json"),
   read("scripts/workflows/record-production-identity.sh"),
   read("scripts/workflows/verify-live-production-deployment.sh"),
@@ -40,7 +42,7 @@ const productionHeaders = createNextHeaders({ production: true });
 const rewrites = createNextRewrites();
 const vercelConfig = JSON.parse(vercelConfigSource);
 const vercelRewrites = Array.isArray(vercelConfig.rewrites) ? vercelConfig.rewrites : [];
-const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation";
+const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation|planner";
 invariant(
   outputFileTracingIncludes["/api/data"]?.some((value) => String(value).includes("api/data-files/mfl_database.db")),
   "Next config must trace the SQLite database into database-backed routes.",
@@ -54,6 +56,13 @@ invariant(
   rewrites.beforeFiles?.some((rule) => rule.source === "/evaluation" && rule.destination === "/api/evaluation-preview")
     && rewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html"),
   "Next config must own Evaluation routing and SPA fallback.",
+);
+invariant(
+  plannerRoutePage.includes("export default function MflPlannerPage()")
+    && (plannerRoutePage.includes("return null;")
+      || (plannerRoutePage.includes("React.createElement(Head")
+        && plannerRoutePage.includes("Planner - MFL Front Office"))),
+  "Planner must be served by an explicit Next page, not only by a static rewrite fallback.",
 );
 invariant(
   deepRoutePage.includes("export function getServerSideProps()")

@@ -1393,8 +1393,7 @@ function stableAttributePanelHtml(row) {
   }
 
   function pendingPitchHtml() {
-    const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
-    return pitchLines + PITCH_ROWS.map((pitchRow) =>
+    return PITCH_ROWS.map((pitchRow) =>
       '\n      <div class="pitchRow pitchRow' + pitchRow.length + '" style="--pitch-columns: ' + pitchRow.length + '">\n        ' +
       pitchRow.map(() => '<div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div>').join("") +
       "\n      </div>"
@@ -1809,8 +1808,7 @@ function createWatchlistStar(playerId, labelText = "player") {
 }
 
 function renderPitch(row) {
-  const pitchLines = `<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>`;
-  return pitchLines + PITCH_ROWS.map((pitchRow) => `
+  return PITCH_ROWS.map((pitchRow) => `
     <div class="pitchRow pitchRow${pitchRow.length}" style="--pitch-columns: ${pitchRow.length}">
       ${pitchRow.map((position) => {
         const familiarity = familiarityForPosition(row, position);

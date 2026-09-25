@@ -121,6 +121,7 @@
           database: "Database",
           mfl: "MFL",
           progression: "Progression",
+          planner: "Planner",
           "my-players": "My Players",
           myplayers: "My Players",
           "my-clubs": "My Clubs",
@@ -454,7 +455,7 @@
             ? "player"
             : "";
         if (initialEntityRoute) root.dataset.initialEntityRoute = initialEntityRoute;
-        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist"
+        const initialLockedPage = tablePage === "myplayers" || tablePage === "watchlist" || firstPart === "planner"
           ? tablePage
           : firstPart === "my-clubs" || firstPart === "myclubs"
             ? "my-clubs"
@@ -560,6 +561,7 @@
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+      html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="planner"] #sidebar .navButton[data-page="planner"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page^="my-clubs"] #sidebar .navButton[data-page="my-clubs"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="myclubs"] #sidebar .navButton[data-page="my-clubs"],
       html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
@@ -578,7 +580,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) main > .pageView:not(#myPlayersLockedPage) {
         display: none;
       }
@@ -587,7 +590,8 @@
         [data-initial-page^="watchlist"],
         [data-initial-page^="my-clubs"],
         [data-initial-page="myclubs"],
-        [data-initial-page="settings"]
+        [data-initial-page="settings"],
+        [data-initial-page="planner"]
       ) #myPlayersLockedPage {
         display: grid;
         place-items: center;
@@ -710,6 +714,7 @@
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
           <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
           <a class="navButton" href="/my-clubs" data-page="my-clubs"><svg class="navEmoji" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><span class="navText">My Clubs</span></a>
+          <a class="navButton" href="/planner" data-page="planner"><svg class="navEmoji navPlannerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2.5" width="18" height="19" rx="1.5"></rect><path d="M3 12h18"></path><circle cx="12" cy="12" r="2.4"></circle><path d="M8 2.5v4h8v-4M8 21.5v-4h8v4"></path></svg><span class="navText">Planner</span></a>
           </div>
           <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon settingsIcon" viewBox="0 0 24 24" aria-hidden="true"><use href="#settingsIconGlyph"></use></svg><span class="navText">Settings</span></a>
           <div id="settingsNavParking" hidden></div>
@@ -1036,7 +1041,1380 @@
             <p id="myClubsStatus" class="myClubsStatus" hidden></p>
             <button id="myClubsRetryButton" class="compactButton myClubsRetryButton" type="button" hidden>Retry</button>
           </div>
+        </section>        <section id="plannerPage" class="pageView plannerPage" hidden>
+          <h2 class="tablePageTitle">Planner</h2>
+          <section id="plannerTeamSelector" class="plannerTeamSelector" aria-label="Team selection">
+            <label class="plannerTeamSearchLabel" for="plannerTeamSearchInput">Team</label>
+            <div class="plannerTeamSearch">
+              <div class="plannerTeamSearchControl">
+                <input id="plannerTeamSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by team ID or name" aria-autocomplete="list" aria-controls="plannerTeamSearchResults">
+                <button id="plannerTeamSearchClearButton" class="iconButton popupCloseButton plannerTeamSearchClearButton" type="button" aria-label="Clear team search" hidden></button>
+              </div>
+              <div id="plannerTeamSearchResults" class="plannerTeamSearchResults" role="listbox" hidden></div>
+            </div>
+          </section>
+          <div id="plannerSelectedTeam" class="plannerSelectedTeam" hidden>
+            <div id="plannerTeamCard" class="myClubCard plannerTeamCard" aria-label="Selected club">
+              <div id="plannerTeamLogoFrame" class="myClubLogoFrame clubIdentityLogoFrame plannerTeamLogoFrame">
+                <img id="plannerTeamLogo" class="myClubLogo clubIdentityLogo plannerTeamLogo" alt="" width="132" height="144">
+              </div>
+              <div class="clubIdentityMain plannerTeamCardBody">
+                <div class="clubIdentityPrimary plannerTeamCardInfo">
+                  <span id="plannerTeamId" class="clubIdentityId"></span>
+                  <h3 id="plannerTeamName" class="clubIdentityName"></h3>
+                  <div class="clubIdentityMeta">
+                    <span id="plannerTeamDivision" class="clubIdentityDivision"></span>
+                    <span id="plannerTeamLocation" class="clubIdentityLocation" hidden></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button id="plannerTeamClearButton" class="compactButton" type="button">Clear</button>
+          </div>
+          <div id="plannerWorkspace" class="plannerWorkspace" hidden>
+            <section class="plannerRosterPanel" aria-labelledby="plannerRosterHeading">
+              <div class="plannerRosterHeader">
+                <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
+                <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player(s)</button>
+              </div>
+              <section class="tableShell" aria-label="Planned squad table">
+                <div class="playerTableScroller">
+                  <table class="plannerRosterTable" aria-label="Planned squad">
+                    <colgroup><col class="plannerSlotColumn"><col class="plannerNationalityColumn"><col class="plannerPlayerColumn"><col class="plannerPositionColumn"><col class="plannerAgeColumn"><col class="plannerOverallColumn"><col class="plannerContractColumn"><col class="plannerRemoveColumn"></colgroup>
+                    <thead><tr><th scope="col">Slot</th><th scope="col" aria-label="Nationality"></th><th scope="col">Player</th><th scope="col">Position</th><th scope="col">Age</th><th scope="col">Overall</th><th scope="col">Contract</th><th scope="col" aria-label="Remove player"></th></tr></thead>
+                    <tbody id="plannerRosterBody"></tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="plannerSummary" aria-label="Squad summary">
+                <h3 class="plannerSummaryHeading">Squad summary</h3>
+                <div class="tableShell">
+                  <table class="plannerSummaryTable" aria-label="Squad summary">
+                    <thead><tr><th scope="col">Metric</th><th scope="col">Value</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">Total contracts</th><td id="plannerTotalContracts">0.00%</td></tr>
+                      <tr><th scope="row">Average overall</th><td id="plannerAverageOverall">—</td></tr>
+                      <tr><th scope="row">Best 16 overall</th><td id="plannerBest16Overall">—</td></tr>
+                      <tr><th scope="row">Best 11 sum of overall</th><td id="plannerBest11OverallSum">—</td></tr>
+                      <tr><th scope="row">Average age</th><td id="plannerAverageAge">—</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <p id="plannerRosterStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
+              <button id="plannerRosterRetryButton" class="compactButton" type="button" hidden>Retry</button>
+            </section>
+            <section class="plannerPitchPanel" aria-labelledby="plannerPitchHeading">
+              <div class="plannerDepthHeader">
+                <h3 id="plannerPitchHeading">Depth</h3>
+                <label class="plannerFormationControl" for="plannerFormationSelect">
+                  <span>Formation</span>
+                  <select id="plannerFormationSelect" class="plannerFormationSelect" data-mfl-dropdown-enhanced="true">
+                  <option value="3421">3-4-2-1</option>
+                  <option value="343">3-4-3</option>
+                  <option value="343b">3-4-3 (B)</option>
+                  <option value="352">3-5-2</option>
+                  <option value="352b">3-5-2 (B)</option>
+                  <option value="41212">4-1-2-1-2</option>
+                  <option value="41212narrow">4-1-2-1-2 (narrow)</option>
+                  <option value="4132">4-1-3-2</option>
+                  <option value="4141">4-1-4-1</option>
+                  <option value="4222">4-2-2-2</option>
+                  <option value="4231">4-2-3-1</option>
+                  <option value="424">4-2-4</option>
+                  <option value="4312">4-3-1-2</option>
+                  <option value="4321">4-3-2-1</option>
+                  <option value="433">4-3-3</option>
+                  <option value="433a">4-3-3 (att)</option>
+                  <option value="433d">4-3-3 (def)</option>
+                  <option value="433cf">4-3-3 (CF)</option>
+                  <option value="4411">4-4-1-1</option>
+                  <option value="442" selected>4-4-2</option>
+                  <option value="442b">4-4-2 (B)</option>
+                  <option value="523">5-2-3</option>
+                  <option value="532">5-3-2</option>
+                  <option value="541">5-4-1</option>
+                  <option value="541f">5-4-1 (flat)</option>
+                  </select>
+                  <script>
+                    // Match the saved club selection while parsing this control,
+                    // before the first paint and the shared dropdown runtime.
+                    (() => {
+                      if (document.documentElement.dataset.storedWalletOptIn !== "true") return;
+                      const select = document.getElementById("plannerFormationSelect");
+                      if (!(select instanceof HTMLSelectElement)) return;
+                      const clubId = String(new URLSearchParams(location.search).get("club") || "").trim();
+                      if (!clubId) return;
+                      try {
+                        const saved = localStorage.getItem("mfl-planner-formation-v1:" + clubId);
+                        if (saved && Array.from(select.options).some(option => option.value === saved)) {
+                          select.value = saved;
+                        }
+                      } catch {
+                        // Unavailable storage must not interrupt the 4-4-2 default.
+                      }
+                    })();
+                  </script>
+                </label>
+                <div class="plannerDepthActions">
+                  <button id="plannerAutoFillDepthButton" class="compactButton plannerAutoFillDepthButton" type="button" disabled>Auto-fill</button>
+                  <button id="plannerClearDepthButton" class="compactButton plannerClearDepthButton" type="button" disabled>Clear</button>
+                </div>
+              </div>
+              <div class="pitch plannerPitch" role="img" aria-label="Squad depth pitch">
+
+                <div id="plannerFormationPositions" class="plannerFormationPositions" role="group" aria-label="Formation starting positions"></div>
+              </div>
+              <div id="plannerDepthPicker" class="plannerDepthPicker" role="dialog" aria-label="Select a player for the position" hidden></div>
+            </section>
+          </div>
+          <div id="plannerPlayerModal" class="modalBackdrop plannerPlayerModalBackdrop" hidden>
+            <section class="mflDialog plannerPlayerDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlayerModalTitle">
+              <header class="mflDialogHeader">
+                <h2 id="plannerPlayerModalTitle">Add players</h2>
+                <button id="plannerPlayerModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close Add players"></button>
+              </header>
+              <section class="plannerPlayerModalBody">
+                <div class="plannerPlayerSearchControl">
+                  <input id="plannerPlayerSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Search by player ID or name" aria-autocomplete="list" aria-controls="plannerPlayerSearchResults">
+                  <button id="plannerPlayerSearchClearButton" class="iconButton popupCloseButton plannerPlayerSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                </div>
+                <p id="plannerPlayerSelectionStatus" class="plannerPlayerSelectionStatus" role="status" aria-live="polite"></p>
+                <div id="plannerPlayerSearchResults" class="plannerPlayerSearchResults" hidden>
+                  <table class="plannerPlayerSearchTable" aria-label="Player search results">
+                    <colgroup>
+                      <col class="plannerPlayerSearchFlagColumn">
+                      <col class="plannerPlayerSearchNameColumn">
+                      <col class="plannerPlayerSearchPositionsColumn">
+                      <col class="plannerPlayerSearchAgeColumn">
+                      <col class="plannerPlayerSearchOverallColumn">
+                      <col class="plannerPlayerSearchSelectColumn">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th scope="col" aria-label="Nationality"></th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Position</th>
+                        <th scope="col">Age</th>
+                        <th scope="col">Overall</th>
+                        <th scope="col">Select</th>
+                      </tr>
+                    </thead>
+                    <tbody id="plannerPlayerSearchBody"></tbody>
+                  </table>
+                  <div id="plannerPlayerSearchEmpty" class="searchHint" hidden>No players found.</div>
+                  <button id="plannerPlayerSearchMore" class="plannerPlayerSearchMore" type="button" hidden>Load more players</button>
+                </div>
+                <section id="plannerPlayerSelection" class="plannerPlayerSelection" aria-label="Selected players" hidden>
+                  <h3>Selected <span id="plannerPlayerSelectionCount">0</span></h3>
+                  <div class="plannerPlayerSelectionTableShell">
+                    <table class="plannerPlayerSearchTable plannerPlayerSelectionTable" aria-label="Selected players">
+                      <colgroup>
+                        <col class="plannerPlayerSearchFlagColumn">
+                        <col class="plannerPlayerSearchNameColumn">
+                        <col class="plannerPlayerSearchPositionsColumn">
+                        <col class="plannerPlayerSearchAgeColumn">
+                        <col class="plannerPlayerSearchOverallColumn">
+                        <col class="plannerPlayerSearchSelectColumn">
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th scope="col" aria-label="Nationality"></th>
+                          <th scope="col">Name</th>
+                          <th scope="col">Position</th>
+                          <th scope="col">Age</th>
+                          <th scope="col">Overall</th>
+                          <th scope="col" aria-label="Remove selected player"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="plannerPlayerSelectionBody"></tbody>
+                    </table>
+                  </div>
+                </section>
+              </section>
+              <footer class="mflDialogFooter plannerPlayerModalFooter">
+                <button id="plannerPlayerDiscardButton" type="button">Discard</button>
+                <button id="plannerPlayerConfirmButton" type="button" disabled>Add</button>
+              </footer>
+            </section>
+          </div>
+          <p id="plannerStatus" class="plannerStatus" role="status" aria-live="polite" hidden></p>
         </section>
+        <script>
+          (() => {
+            const root = document.documentElement;
+            // Keep the pitch preview available before hydration and on SPA navigation.
+            const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+            // Approved outfield slots for all 25 formations, defence to attack.
+            const formationSlots = {
+              "343": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "352": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "424": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "442": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "523": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "532": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "541": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "3421": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "CF",
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4132": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4141": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4222": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM",
+                  "CDM"
+                ],
+                [
+                  "CAM",
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4231": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM",
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4312": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "4321": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CF",
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "4411": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "CF"
+                ],
+                [
+                  "ST"
+                ]
+              ],
+              "41212": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "LM",
+                  "RM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "343b": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "352b": [
+                [
+                  "CB",
+                  "CB",
+                  "CB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CDM",
+                  "CAM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "41212narrow": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CDM"
+                ],
+                [
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "CAM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "433a": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CAM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433d": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CDM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "ST",
+                  "RW"
+                ]
+              ],
+              "433cf": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "CM",
+                  "CM",
+                  "CM"
+                ],
+                [
+                  "LW",
+                  "CF",
+                  "RW"
+                ]
+              ],
+              "442b": [
+                [
+                  "LB",
+                  "CB",
+                  "CB",
+                  "RB"
+                ],
+                [
+                  "LM",
+                  "CDM",
+                  "CDM",
+                  "RM"
+                ],
+                [
+                  "ST",
+                  "ST"
+                ]
+              ],
+              "541f": [
+                [
+                  "LWB",
+                  "CB",
+                  "CB",
+                  "CB",
+                  "RWB"
+                ],
+                [
+                  "LM",
+                  "CM",
+                  "CM",
+                  "RM"
+                ],
+                [
+                  "ST"
+                ]
+              ]
+            };
+            const formationSelect = document.getElementById("plannerFormationSelect");
+            const formationPositions = document.getElementById("plannerFormationPositions");
+            const formationPitch = document.querySelector(".plannerPitch");
+            const formationStoragePrefix = "mfl-planner-formation-v1:";
+            const selectedFormationForClub = clubId => {
+              try {
+                const saved = localStorage.getItem(formationStoragePrefix + clubId);
+                return clubId && formationCodes.includes(saved) ? saved : "442";
+              } catch { return "442"; }
+            };
+
+            // The hollow slot design mirrors MFL's segmented ring, plus and settings badge.
+            // Icons are visual placeholders until slot assignment/instructions are supported.
+            const slotRingSegments = ["M 96.64966912714213 44.27214085995807 A 47 47 0 0 1 96.64966912714213 55.72785914004193","M 93.2637281122647 68.36436303899586 A 47 47 0 0 1 87.53586897222277 78.28530608814627","M 78.28530608814627 87.53586897222277 A 47 47 0 0 1 68.36436303899588 93.26372811226469","M 55.72785914004193 96.64966912714213 A 47 47 0 0 1 44.27214085995807 96.64966912714215","M 31.635636961004142 93.2637281122647 A 47 47 0 0 1 21.714693911853725 87.53586897222276","M 12.464131027777235 78.28530608814626 A 47 47 0 0 1 6.736271887735313 68.36436303899589","M 3.3503308728578673 55.727859140041936 A 47 47 0 0 1 3.3503308728578673 44.27214085995806","M 6.736271887735299 31.635636961004142 A 47 47 0 0 1 12.464131027777228 21.714693911853743","M 21.714693911853733 12.464131027777235 A 47 47 0 0 1 31.63563696100413 6.736271887735306","M 44.272140859958085 3.3503308728578602 A 47 47 0 0 1 55.72785914004194 3.3503308728578673","M 68.36436303899586 6.736271887735299 A 47 47 0 0 1 78.28530608814626 12.464131027777228","M 87.53586897222277 21.714693911853733 A 47 47 0 0 1 93.26372811226469 31.63563696100409"];
+            const slotSvgNamespace = "http://www.w3.org/2000/svg";
+            const makeSlotIcon = (name, attributes) => {
+              const element = document.createElementNS(slotSvgNamespace, name);
+              Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+              return element;
+            };
+
+            // BEGIN PLANNER DEPTH
+            // Multi-position players contribute to every eligible position; repeated
+            // formation slots distribute eligible players, rather than duplicate them.
+            const distributeFormationDepth = (lines, players) => {
+              const positions = lines.flat().concat("GK");
+              const buckets = positions.map(() => []);
+              const ranked = (Array.isArray(players) ? players : [])
+                .filter(player => {
+                  const id = Number(player?.player_id);
+                  const years = player?.retirement_years;
+                  return Number.isSafeInteger(id) && id > 0
+                    && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+                })
+                .map(player => ({
+                  ...player,
+                  eligiblePositions: (Array.isArray(player.positions) ? player.positions : String(player.positions || "").split(/[,/]/))
+                    .map(value => String(value).trim().toUpperCase()).filter(Boolean),
+                }));
+              for (const position of new Set(positions)) {
+                const indexes = positions.flatMap((value, index) => value === position ? [index] : []);
+                // Backups and depth cards use the same positional rating as Auto-fill.
+                const eligible = rankDepthPlayers(ranked, position);
+                eligible.forEach((player, index) => buckets[indexes[index % indexes.length]].push(player));
+              }
+              return buckets;
+            };
+            // END PLANNER DEPTH
+            let depthRoster = [];
+            let depthClubId = "";
+            const depthAssignments = new Map();
+            const depthPicker = document.getElementById("plannerDepthPicker");
+            const depthAutoFill = document.getElementById("plannerAutoFillDepthButton");
+            const depthClear = document.getElementById("plannerClearDepthButton");
+            let openPickerButton = null;
+            const depthPlayerName = player => String(player.name || "Player #" + player.player_id);
+            const depthPlayerSurname = player => {
+              const words = depthPlayerName(player).trim().split(/\s+/);
+              let start = words.length - 1;
+              // Preserve common multiword surnames such as De Rossi and Van Dijk.
+              while (start > 0 && /^(?:de|del|della|dello|dei|degli|di|da|do|dos|das|du|van|von|der|den|la|le|al|el|bin|ibn|ten|ter)$/i.test(words[start - 1])) start -= 1;
+              return words.slice(start).join(" ");
+            };
+            const depthPlayerShortName = player => {
+              const full = depthPlayerName(player).trim();
+              const surname = depthPlayerSurname(player);
+              const given = full.slice(0, Math.max(0, full.length - surname.length)).trim();
+              return given ? given.charAt(0).toLocaleUpperCase() + ". " + surname : surname;
+            };
+            const depthPlayerFamiliarity = (player, position) => typeof familiarityForPosition === "function"
+              ? familiarityForPosition(player, position) : null;
+            const depthPlayerOverall = (player, position) => {
+              const familiarity = depthPlayerFamiliarity(player, position);
+              const weights = typeof POSITION_GROUP_WEIGHTS === "object" ? POSITION_GROUP_WEIGHTS[position] : null;
+              const hasAttributes = weights && Object.entries(weights).every(([attribute, weight]) => !weight
+                || (player[attribute] !== null && player[attribute] !== undefined && String(player[attribute]).trim() !== "" && Number.isFinite(Number(player[attribute]))));
+              const value = familiarity && hasAttributes && typeof positionRating === "function"
+                ? positionRating(player, position, familiarity)
+                : familiarity === "primary" ? player.overall : null;
+              return value === null || value === undefined || String(value).trim() === "" || !Number.isFinite(Number(value))
+                ? "—" : String(value);
+            };
+            const rankDepthPlayers = (players, position) => (Array.isArray(players) ? players : [])
+              .filter(player => {
+                const id = Number(player?.player_id);
+                const years = player?.retirement_years;
+                const eligible = (Array.isArray(player?.positions) ? player.positions : String(player?.positions || "").split(/[,/]/))
+                  .map(value => String(value).trim().toUpperCase());
+                return Number.isSafeInteger(id) && id > 0 && eligible.includes(position)
+                  && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+              })
+              .sort((a, b) => {
+                // Main Overall must not outrank the player's actual rating at this slot.
+                const positionalOverall = player => {
+                  const rating = depthPlayerOverall(player, position);
+                  return rating === "—" ? -Infinity : Number(rating);
+                };
+                return positionalOverall(b) - positionalOverall(a)
+                  || depthPlayerName(a).localeCompare(depthPlayerName(b), undefined, { sensitivity: "base" })
+                  || Number(a.player_id) - Number(b.player_id);
+              });
+            // Compare positional OVR against the squad's average Overall, not a
+            // candidate pool that changes when a player is assigned elsewhere.
+            const depthPickerCandidates = (players, position, selectedIds = new Set(), excludedId = null, unavailableIds = new Set()) => {
+              const active = (Array.isArray(players) ? players : []).filter(player => {
+                const years = player?.retirement_years;
+                return Number.isSafeInteger(Number(player?.player_id)) && Number(player.player_id) > 0
+                  && !(years !== null && years !== undefined && String(years).trim() !== "" && Number(years) === 0);
+              });
+              const ratings = active.map(player => Number(player.overall))
+                .filter(value => Number.isFinite(value) && value > 0);
+              const threshold = ratings.length
+                ? ratings.reduce((total, value) => total + value, 0) / ratings.length * 0.9 : null;
+              // Exclude the player occupying this exact slot before deciding
+              // whether any other player reaches the 10% threshold.
+              const ranked = rankDepthPlayers(active, position)
+                .filter(player => Number(player.player_id) !== Number(excludedId)
+                  && !unavailableIds.has(Number(player.player_id)));
+              const meetsThreshold = ranked.some(player => {
+                const rating = depthPlayerOverall(player, position);
+                return rating !== "—" && (threshold === null || Number(rating) >= threshold);
+              });
+              // With no qualifying positional rating, offer the strongest
+              // position-rated player instead of an empty picker. Already assigned
+              // players remain transferable regardless of the threshold.
+              const strongest = meetsThreshold ? null
+                : ranked.find(player => depthPlayerOverall(player, position) !== "—");
+              return ranked.filter(player => {
+                if (selectedIds.has(Number(player.player_id))) return true;
+                if (!meetsThreshold) return player === strongest;
+                const rating = depthPlayerOverall(player, position);
+                return rating !== "—" && (threshold === null || Number(rating) >= threshold);
+              });
+            };
+            // Count spare options independently for each pitch slot. A free
+            // player can cover multiple eligible positions (or either repeated
+            // CB slot), but a player already assigned anywhere is not a spare.
+            const depthSpareCounts = (keys, players, assignments) => {
+              const claimed = new Set(assignments.values());
+              return keys.map(key => {
+                const position = key.split("#")[0];
+                const choices = depthPickerCandidates(players, position, new Set(), assignments.get(key), claimed);
+                return new Set(choices.map(player => Number(player.player_id))).size;
+              });
+            };
+            const slotKeysFor = positions => {
+              const counts = new Map();
+              return positions.map(position => {
+                const count = (counts.get(position) || 0) + 1;
+                counts.set(position, count);
+                return position + "#" + count;
+              });
+            };
+            const closeDepthPicker = ({ restoreFocus = false } = {}) => {
+              const previous = openPickerButton;
+              openPickerButton = null;
+              if (depthPicker instanceof HTMLElement) {
+                depthPicker.hidden = true;
+                depthPicker.replaceChildren();
+              }
+              if (previous instanceof HTMLElement) {
+                previous.setAttribute("aria-expanded", "false");
+                previous.classList.remove("plannerFormationSlotButtonPickerOpen");
+              }
+              if (restoreFocus && previous?.isConnected) previous.focus();
+            };
+            const renderFormation = code => {
+              closeDepthPicker();
+              const selected = formationCodes.includes(code) ? code : "442";
+              const lines = formationSlots[selected];
+              const positions = lines.flat().concat("GK");
+              const keys = slotKeysFor(positions);
+              const rosterById = new Map(depthRoster.map(player => [Number(player.player_id), player]));
+              const claimed = new Set();
+              // Keep manually selected starters across formation changes where the
+              // position/ordinal still exists, and never keep removed/retired players.
+              for (const [key, id] of depthAssignments) {
+                const player = rosterById.get(id);
+                if (!keys.includes(key) || !player || claimed.has(id)
+                  || !rankDepthPlayers([player], key.split("#")[0]).length) {
+                  depthAssignments.delete(key);
+                } else {
+                  claimed.add(id);
+                }
+              }
+              const available = depthRoster.filter(player => !claimed.has(Number(player.player_id)));
+              const alternatives = distributeFormationDepth(lines, available);
+              const starters = keys.map(key => rosterById.get(depthAssignments.get(key)) || null);
+              const buckets = alternatives.map((players, index) => starters[index] ? [starters[index], ...players] : players);
+              const spareCounts = depthSpareCounts(keys, depthRoster, depthAssignments);
+              if (formationSelect instanceof HTMLSelectElement) formationSelect.value = selected;
+              if (!(formationPositions instanceof HTMLElement)) return;
+              const openDepthPicker = (key, position, button) => {
+                if (!(depthPicker instanceof HTMLElement) || !depthRoster.length) return;
+                if (openPickerButton === button && !depthPicker.hidden) { closeDepthPicker({restoreFocus:true}); return; }
+                closeDepthPicker();
+                openPickerButton = button;
+                button.setAttribute("aria-expanded", "true");
+                button.classList.add("plannerFormationSlotButtonPickerOpen");
+                const pickerContent = document.createElement("div");
+                pickerContent.className = "plannerDepthPickerContent";
+                depthPicker.appendChild(pickerContent);
+                const assignmentByPlayer = new Map([...depthAssignments].map(([slot, id]) => [id, slot]));
+                const currentId = depthAssignments.get(key);
+                const eligible = depthPickerCandidates(depthRoster, position, new Set(assignmentByPlayer.keys()), currentId);
+                const heading = document.createElement("h4");
+                heading.textContent = "Select " + position;
+                pickerContent.appendChild(heading);
+                if (currentId) {
+                  const clear = document.createElement("button");
+                  clear.type = "button";
+                  clear.className = "plannerDepthPickerClear";
+                  const removeIcon = makeSlotIcon("svg", {
+                    viewBox: "0 0 24 24", class: "plannerDepthPickerRemoveIcon",
+                    "aria-hidden": "true", fill: "none", stroke: "currentColor",
+                    "stroke-width": "2.5", "stroke-linecap": "round"
+                  });
+                  removeIcon.appendChild(makeSlotIcon("path", { d: "M6 6L18 18M18 6L6 18" }));
+                  const removeIconFrame = document.createElement("span");
+                  removeIconFrame.className = "plannerDepthPickerRemoveFrame";
+                  removeIconFrame.appendChild(removeIcon);
+                  const removeText = document.createElement("span");
+                  removeText.textContent = "Remove";
+                  clear.append(removeIconFrame, removeText);
+                  clear.addEventListener("click", () => {
+                    depthAssignments.delete(key);
+                    renderFormation(selected);
+                    formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
+                  });
+                  pickerContent.appendChild(clear);
+                }
+                if (!eligible.length) {
+                  const empty = document.createElement("p");
+                  empty.textContent = "No available players for " + position + ".";
+                  pickerContent.appendChild(empty);
+                }
+                for (const player of eligible) {
+                  const row = document.createElement("button");
+                  row.type = "button";
+                  row.className = "plannerDepthPickerPlayer";
+                  row.dataset.playerId = String(player.player_id);
+                  const assignedSlot = assignmentByPlayer.get(Number(player.player_id));
+                  row.setAttribute("aria-pressed", "false");
+                  if (assignedSlot) {
+                    row.dataset.assignedSlot = assignedSlot;
+                    row.setAttribute("aria-label", depthPlayerName(player) + ", selected at " + assignedSlot.split("#")[0] + ". Move to " + position);
+                  }
+                  const photoFrame = document.createElement("span");
+                  photoFrame.className = "plannerDepthPickerPhoto";
+                  const photo = document.createElement("img");
+                  photo.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(player.player_id) + "/photo.webp";
+                  photo.alt = "";
+                  photo.loading = "lazy";
+                  photo.addEventListener("error", () => { photo.hidden = true; });
+                  photoFrame.appendChild(photo);
+                  const name = document.createElement("span");
+                  name.textContent = depthPlayerShortName(player);
+                  if (!assignedSlot) row.setAttribute("aria-label", depthPlayerName(player) + ", " + depthPlayerOverall(player, position) + " Overall at " + position);
+                  const overall = document.createElement("strong");
+                  overall.textContent = depthPlayerOverall(player, position);
+                  row.append(photoFrame, name);
+                  if (assignedSlot) {
+                    const status = document.createElement("span");
+                    status.className = "plannerDepthPickerSelected";
+                    status.textContent = "Selected · " + assignedSlot.split("#")[0];
+                    row.appendChild(status);
+                  }
+                  row.appendChild(overall);
+                  row.addEventListener("click", () => {
+                    // Move an existing starter rather than leaving the same player in two slots.
+                    if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);
+                    depthAssignments.set(key, Number(player.player_id));
+                    renderFormation(selected);
+                    formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
+                  });
+                  pickerContent.appendChild(row);
+                }
+                depthPicker.hidden = false;
+                const rect = button.getBoundingClientRect();
+                const width = Math.min(320, window.innerWidth - 20);
+                depthPicker.style.left = Math.max(10, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 10)) + "px";
+                const height = depthPicker.getBoundingClientRect().height;
+                const opensBelow = rect.bottom + 8 + height <= window.innerHeight - 10;
+                depthPicker.style.top = Math.max(10, Math.min(
+                  opensBelow ? rect.bottom + 8 : rect.top - height - 8,
+                  window.innerHeight - height - 10)) + "px";
+                // The pointer belongs to the menu, but stays outside its scrollable
+                // content so it is never clipped when the player list scrolls.
+                const menuRect = depthPicker.getBoundingClientRect();
+                const pointer = document.createElement("span");
+                pointer.id = "plannerDepthPickerPointer";
+                pointer.className = "plannerDepthPickerPointer" + (opensBelow ? "" : " plannerDepthPickerPointerAbove");
+                pointer.dataset.side = opensBelow ? "below" : "above";
+                pointer.setAttribute("aria-hidden", "true");
+                pointer.style.left = Math.max(16, Math.min(rect.left + rect.width / 2 - menuRect.left, menuRect.width - 16)) - 8 + "px";
+                depthPicker.appendChild(pointer);
+                depthPicker.querySelector("button")?.focus();
+              };
+              const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position, spareCount = 0) => {
+                const spot = document.createElement("span");
+                spot.className = "plannerFormationSpot" + (goalkeeper ? " plannerFormationGoalkeeper" : "");
+                spot.dataset.position = position;
+                spot.dataset.slotKey = key;
+                spot.dataset.depthCount = String(spareCount);
+                if (starter) spot.dataset.playerId = String(starter.player_id);
+                const button = document.createElement("button");
+                button.className = "plannerFormationSlotButton";
+                button.type = "button";
+                button.disabled = !depthRoster.length;
+                button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". " + spareCount + " available alternative" + (spareCount === 1 ? "" : "s") + ". Select player");
+                button.setAttribute("aria-haspopup", "dialog");
+                button.setAttribute("aria-expanded", "false");
+                button.addEventListener("click", () => openDepthPicker(key, position, button));
+                const token = document.createElement("span");
+                token.className = "plannerFormationToken" + (starter ? " plannerFormationTokenAssigned" : "");
+                token.dataset.slotToken = "true";
+                const ring = makeSlotIcon("svg", { viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenRing" });
+                slotRingSegments.forEach(d => {
+                  ring.appendChild(makeSlotIcon("path", { d, fill: "none", stroke: "currentColor", "stroke-width": "4", "stroke-linecap": "round" }));
+                });
+                if (starter) {
+                  const gradient = document.createElement("span");
+                  gradient.className = "plannerFormationPlayerGradient";
+                  // Keep the club gradient visible behind the player, without an icon or dark overlay.
+                  const portrait = document.createElement("img");
+                  portrait.className = "plannerFormationPlayerPhoto";
+                  portrait.src = "https://d13e14gtps4iwl.cloudfront.net/players/v2/" + encodeURIComponent(starter.player_id) + "/photo.webp";
+                  portrait.alt = "";
+                  portrait.draggable = false;
+                  portrait.loading = "lazy";
+                  portrait.addEventListener("error", () => { portrait.hidden = true; });
+                  token.append(gradient, portrait);
+                  const badge = document.createElement("span");
+                  badge.className = "plannerFormationPlayerBadge";
+                  const overall = document.createElement("span");
+                  overall.className = "plannerFormationPlayerOverall";
+                  overall.textContent = depthPlayerOverall(starter, position);
+                  const pos = document.createElement("span");
+                  const familiarity = depthPlayerFamiliarity(starter, position);
+                  pos.className = "plannerFormationPlayerPosition " + (familiarity || "unknown");
+                  pos.setAttribute("aria-label", position + " — " + ({ primary: "Natural", secondary: "Secondary", fair: "Fair familiarity", some: "Unfamiliar" }[familiarity] || "Unknown familiarity"));
+                  pos.textContent = position;
+                  badge.append(overall, pos);
+                  button.append(token, badge);
+                  const surname = document.createElement("span");
+                  surname.className = "plannerFormationPlayerSurname";
+                  surname.title = depthPlayerName(starter);
+                  surname.setAttribute("aria-hidden", "true");
+                  const flag = typeof countryFlagElement === "function"
+                    ? countryFlagElement(starter.nationality, "plannerFormationSurnameFlag") : null;
+                  if (flag) surname.appendChild(flag);
+                  const surnameText = document.createElement("span");
+                  surnameText.className = "plannerFormationSurnameText";
+                  surnameText.textContent = depthPlayerSurname(starter);
+                  surname.appendChild(surnameText);
+                  spot.appendChild(surname);
+                } else {
+                  // Match the ring's exact 100×100 coordinate system and viewport.
+                  // The plus is centered at (50,50) at rest and throughout hover.
+                  const plus = makeSlotIcon("svg", { viewBox: "0 0 100 100", "aria-hidden": "true", class: "plannerFormationTokenPlus", fill: "none", stroke: "currentColor", "stroke-width": "4.7", "stroke-linecap": "round", "stroke-linejoin": "round" });
+                  plus.append(makeSlotIcon("path", { d: "M37 50h26" }), makeSlotIcon("path", { d: "M50 37v26" }));
+                  token.append(ring, plus);
+                  button.appendChild(token);
+                }
+                const depthBadge = document.createElement("span");
+                depthBadge.className = "plannerFormationDepthBadge " + (spareCount === 0 ? "empty" : spareCount === 1 ? "single" : "multiple");
+                depthBadge.textContent = String(spareCount);
+                depthBadge.setAttribute("aria-hidden", "true");
+                const label = document.createElement("span");
+                label.className = "plannerFormationPositionLabel";
+                label.textContent = position;
+                // Keep the original OVR/position badge anchored to the outer slot.
+                spot.append(button, depthBadge, label);
+                return spot;
+              };
+              const fragment = document.createDocumentFragment();
+              let slotIndex = 0;
+              const slotCounts = new Map();
+              const hasHoldingAndCentralMidfield = positions.includes("CDM") && positions.includes("CM");
+              lines.forEach((linePositions, lineIndex) => {
+                const midfield = lineIndex > 0 && lineIndex < lines.length - 1;
+                const count = linePositions.length;
+                // Flat four-player midfields share 4-4-2's 40% row; 3-4-3 (B)
+                // and 5-4-1 are diamonds. Do not flatten 4-2-4's attack.
+                const flatFourMidfield = midfield && count === 4 && selected !== "343b" && selected !== "541"
+                  && linePositions.every(position => ["LM", "RM", "CM", "CDM", "CAM"].includes(position));
+                // The three CMs in 4-3-1-2/4-3-2-1 share the 4-4-2 midfield height.
+                // 4-1-3-2 uses that baseline with a small forward offset for LM/CM/RM.
+                const standardMidfieldLine = flatFourMidfield || (midfield && count === 3
+                  && (((selected === "4312" || selected === "4321") && linePositions.every(position => position === "CM"))
+                    || (selected === "4132" && linePositions.join(",") === "LM,CM,RM")));
+                const y = standardMidfieldLine ? 40
+                  : 76 - lineIndex * (66 / (lines.length - 1)) - (lineIndex === 0 ? 6 : 0) - (midfield ? 3 : 0);
+                const pairedStrikers = linePositions.filter(value => value === "ST").length === 2;
+                const spread = selected === "41212narrow" && midfield ? 0.68 : 1;
+                // Keep the two external CMs slightly tighter in each 4-3-3 variant,
+                // without changing the center role or the forward/defensive lines.
+                const compact433Midfield = ["433", "433a", "433d", "433cf"].includes(selected)
+                  && midfield && count === 3 && linePositions.includes("CM");
+                const width = (compact433Midfield ? 54 : count >= 5 ? 76 : count === 4 ? 72 : count === 3 ? 62 : pairedStrikers ? 30 : 44) * spread;
+                const wideForwardLine = linePositions.includes("ST") || linePositions.includes("CF");
+                linePositions.forEach((position, column) => {
+                  const occurrence = (slotCounts.get(position) || 0) + 1;
+                  slotCounts.set(position, occurrence);
+                  const repeated = positions.filter(value => value === position).length > 1;
+                  const spot = makeFormationSpot(position, keys[slotIndex], false, starters[slotIndex], alternatives[slotIndex], position + (repeated ? " " + occurrence : ""), spareCounts[slotIndex]);
+                  slotIndex += 1;
+                  // 3-5-2 (B) uses a symmetric CDM-CAM-CDM triangle, rather than
+                  // interpreting its slot order as a straight five-player row.
+                  // 4-2-2-2 CDMs stay narrower than the 30%-wide striker pair.
+                  // 3-5-2 holds its CDM centrally between two symmetric CMs.
+                  const x = (selected === "343b" || selected === "541") && (position === "CDM" || position === "CAM") ? 50
+                    : (selected === "343b" || selected === "541") && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
+                    : selected === "352" && position === "CDM" ? 50
+                    : selected === "352" && position === "CM" ? (occurrence === 1 ? 33 : 67)
+                    : selected === "41212" && (position === "LM" || position === "RM") ? (position === "LM" ? 18 : 82)
+                    : selected === "41212narrow" && position === "CM" ? (occurrence === 1 ? 30 : 70)
+                    : selected === "4222" && position === "CDM" ? (occurrence === 1 ? 40 : 60)
+                    : selected === "352b" && midfield && position === "CAM" ? 50
+                    : selected === "352b" && midfield && position === "CDM" ? (occurrence === 1 ? 38 : 62)
+                      : pairedStrikers && count === 4 && position === "ST" ? (occurrence === 1 ? 40 : 60)
+                        : count === 1 ? 50 : 50 - width / 2 + width * column / (count - 1);
+                  // 4-4-2 (B) keeps the wide midfielders on the 4-4-2 line,
+                  // with its paired CDMs one step deeper.
+                  // Diamond midfields match the 4-3-3 (def) CDM and 4-3-3 (att) CAM.
+                  // Override before generic mixed-CDM/CM positioning can intercept them.
+                  const diamondMidfield = selected === "343b" || selected === "541" || selected === "41212" || selected === "41212narrow";
+                  const offset = selected === "352" && position === "CDM" ? 54 - y
+                    : diamondMidfield && position === "CDM" ? 54 - y
+                    : diamondMidfield && position === "CAM" ? 30 - y
+                    : diamondMidfield && ["LM", "RM", "CM"].includes(position) ? 42 - y
+                    : flatFourMidfield && selected === "442b" && position === "CDM" ? 6
+                    : flatFourMidfield ? 0
+                      : selected === "352b" && midfield && position === "CDM" ? 54 - y
+                    : selected === "352b" && midfield && position === "CAM" ? 30 - y
+                      : (position === "LWB" || position === "RWB") && lineIndex === 0 ? -7
+                        : selected === "433cf" && (position === "LW" || position === "RW") ? 2
+                        : selected === "433cf" && position === "CF" ? 6
+                          : (position === "LW" || position === "RW") && wideForwardLine ? 6
+                          : selected === "433a" && position === "CAM" ? -10
+                            : selected === "433d" && position === "CDM" ? 14
+                              : (selected === "433a" || selected === "433d") && position === "CM" ? 0
+                            : selected === "4132" && ["LM", "CM", "RM"].includes(position) ? -4
+                            : hasHoldingAndCentralMidfield && position === "CM" ? 6
+                            // 4-1-4-1 and 4-1-3-2 share 4-3-3 (def)'s 54% CDM depth.
+                            : (selected === "4141" || selected === "4132") && position === "CDM" ? 3
+                            : hasHoldingAndCentralMidfield && position === "CDM" ? 9
+                              : position === "CDM" && count > 1 ? 2
+                                : selected === "4312" && position === "CAM" ? -4
+                                : selected === "4231" && position === "CAM" ? 0
+                                : selected === "4222" && position === "CAM" ? 2.5
+                                : position === "CAM" && count > 1 ? -4
+                                  : (selected === "4321" || selected === "3421") && position === "CF" ? -9
+                                  : position === "CF" ? ((linePositions.includes("LW") || linePositions.includes("RW")) ? -4 : -3) : 0;
+                  spot.style.left = x.toFixed(2) + "%";
+                  spot.style.top = (y + offset).toFixed(2) + "%";
+                  fragment.appendChild(spot);
+                });
+              });
+              const goalkeeper = makeFormationSpot("GK", keys[slotIndex], true, starters[slotIndex], alternatives[slotIndex], "GK", spareCounts[slotIndex]);
+              goalkeeper.style.left = "50%";
+              // Keep the surname/badge within the bottom touchline at every viewport width.
+              goalkeeper.style.top = "calc(100% - 72px)";
+              fragment.appendChild(goalkeeper);
+              formationPositions.replaceChildren(fragment);
+              // Reflect only valid Depth starters in the first squad-table column.
+              // Repeated positions retain their plain label (CB#2 -> CB).
+              const assignedSlotByPlayer = new Map();
+              keys.forEach((key, index) => {
+                const starter = starters[index];
+                if (starter) assignedSlotByPlayer.set(String(starter.player_id), key.split("#")[0]);
+              });
+              document.querySelectorAll("#plannerRosterBody tr[data-player-id]").forEach(row => {
+                const badge = row.querySelector(".plannerRosterSlotBadge");
+                const empty = row.querySelector(".plannerRosterSlotEmpty");
+                if (!(badge instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+                const slot = assignedSlotByPlayer.get(row.dataset.playerId) || "";
+                badge.textContent = slot;
+                badge.hidden = !slot;
+                empty.hidden = Boolean(slot);
+              });
+              Reflect.get(window, "__mflPlannerRoute")?.syncSlots?.(assignedSlotByPlayer);
+              if (depthAutoFill instanceof HTMLButtonElement) {
+                depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>
+                  !depthAssignments.has(key) && rankDepthPlayers(depthRoster, key.split("#")[0])
+                    .some(player => !claimed.has(Number(player.player_id))));
+              }
+              if (depthClear instanceof HTMLButtonElement) depthClear.disabled = !depthAssignments.size;
+              const name = Array.from(formationSelect?.options || [])
+                .find(option => option.value === selected)?.textContent || selected;
+              formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
+            };
+            const autoFillDepth = () => {
+              const selected = formationCodes.includes(formationSelect?.value) ? formationSelect.value : "442";
+              const keys = slotKeysFor(formationSlots[selected].flat().concat("GK"));
+              const claimed = new Set(depthAssignments.values());
+              for (const key of keys) {
+                if (depthAssignments.has(key)) continue;
+                const position = key.split("#")[0];
+                const player = rankDepthPlayers(depthRoster, position).find(candidate => !claimed.has(Number(candidate.player_id)));
+                if (!player) continue;
+                const id = Number(player.player_id);
+                depthAssignments.set(key, id);
+                claimed.add(id);
+              }
+              renderFormation(selected);
+            };
+            depthAutoFill?.addEventListener("click", autoFillDepth);
+            depthClear?.addEventListener("click", () => {
+              if (!depthAssignments.size) return;
+              depthAssignments.clear();
+              closeDepthPicker();
+              renderFormation(formationSelect?.value || "442");
+            });
+            document.addEventListener("pointerdown", event => {
+              if (depthPicker?.hidden || depthPicker?.contains(event.target) || openPickerButton?.contains(event.target)) return;
+              closeDepthPicker();
+            });
+            document.addEventListener("keydown", event => {
+              if (event.key !== "Escape" || depthPicker?.hidden) return;
+              event.preventDefault();
+              event.stopPropagation();
+              closeDepthPicker({restoreFocus:true});
+            }, true);
+            window.addEventListener("resize", () => closeDepthPicker());
+            window.addEventListener("scroll", event => {
+              if (!depthPicker?.contains(event.target)) closeDepthPicker();
+            }, true);
+            Reflect.set(window, "__mflPlannerFormationPreview", Object.freeze({
+              render: renderFormation, selectedForClub: selectedFormationForClub, codes: formationCodes,
+              setClub(clubId) {
+                const id = String(clubId || "");
+                if (depthClubId !== id) { depthClubId = id; depthAssignments.clear(); closeDepthPicker(); }
+              },
+              autoFill: autoFillDepth,
+              setRoster(players) { depthRoster = Array.isArray(players) ? players.slice() : []; renderFormation(formationSelect?.value || "442"); },
+            }));
+            const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
+            if (initialPage !== "planner") return;
+
+            const page = document.getElementById("plannerPage");
+            if (!(page instanceof HTMLElement)) return;
+
+            document.body.dataset.page = "planner";
+            if (root.dataset.storedWalletOptIn !== "true") {
+              // The shared opt-in shell is parsed after Planner. Prepare it as
+              // soon as it enters the DOM, before the browser can paint.
+              const showLockedPlanner = () => {
+                const locked = document.getElementById("myPlayersLockedPage");
+                const title = document.getElementById("optInLockedTitle");
+                const message = document.getElementById("optInLockedMessage");
+                if (!(locked instanceof HTMLElement) || !(title instanceof HTMLElement) || !(message instanceof HTMLElement)) return false;
+                title.textContent = "Planner";
+                message.textContent = "In order to use Planner, you need to opt in.";
+                locked.hidden = false;
+                return true;
+              };
+              if (!showLockedPlanner()) {
+                const observer = new MutationObserver(() => {
+                  if (showLockedPlanner()) observer.disconnect();
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+              }
+              return;
+            }
+            page.hidden = false;
+
+            const clubId = String(new URLSearchParams(location.search).get("club") || "").trim();
+            renderFormation(selectedFormationForClub(clubId));
+            if (!clubId) return;
+
+            const selector = document.getElementById("plannerTeamSelector");
+            const selectedTeam = document.getElementById("plannerSelectedTeam");
+            const workspace = document.getElementById("plannerWorkspace");
+            const teamLogo = document.getElementById("plannerTeamLogo");
+            const teamId = document.getElementById("plannerTeamId");
+
+            const rosterBody = document.getElementById("plannerRosterBody");
+            const rosterStatus = document.getElementById("plannerRosterStatus");
+
+            if (selector instanceof HTMLElement) selector.hidden = true;
+            if (selectedTeam instanceof HTMLElement) selectedTeam.hidden = false;
+            if (workspace instanceof HTMLElement) workspace.hidden = false;
+            if (teamLogo instanceof HTMLImageElement) {
+              teamLogo.hidden = false;
+              teamLogo.src = "https://d13e14gtps4iwl.cloudfront.net/u/clubs/" + encodeURIComponent(clubId) + "/logo.webp";
+            }
+            if (teamId instanceof HTMLElement) teamId.textContent = "Club #" + clubId;
+
+            // Reuse the Club page's persisted identity before the first visible paint.
+            // A new or uncached Club remains empty rather than displaying guessed details.
+            try {
+              const stored = JSON.parse(localStorage.getItem("mfl-club-display-data-v1") || "{}");
+              const cached = stored && typeof stored === "object" && !Array.isArray(stored) ? stored[clubId] : null;
+              if (cached && String(cached.clubId || clubId).trim() === clubId) {
+                const name = String(cached.name || "").trim();
+                const divisionName = String(cached.divisionName || "").trim();
+                const divisionColor = String(cached.divisionColor || "").trim();
+                const validColor = value => /^#[0-9a-f]{6}$/iu.test(String(value || "").trim())
+                  ? String(value).trim().toLowerCase() : "";
+                const teamName = document.getElementById("plannerTeamName");
+                const teamDivision = document.getElementById("plannerTeamDivision");
+                const teamCard = document.getElementById("plannerTeamCard");
+                if (name && teamName instanceof HTMLElement) teamName.textContent = name;
+                if (divisionName && teamDivision instanceof HTMLElement) {
+                  teamDivision.textContent = divisionName;
+                  teamDivision.hidden = false;
+                  teamDivision.style.color = validColor(divisionColor);
+                }
+                if (teamCard instanceof HTMLElement) {
+                  const primary = validColor(cached.primaryColor);
+                  const secondary = validColor(cached.secondaryColor);
+                  if (primary || secondary) {
+                    teamCard.style.setProperty("--my-club-primary", primary || secondary);
+                    teamCard.style.setProperty("--my-club-secondary", secondary || primary);
+                  }
+                }
+                const city = String(cached.city || "").trim();
+                const nation = String(cached.nation || "").trim();
+                const country = nation.toLowerCase().replaceAll("_", " ").split(" ")
+                  .filter(Boolean).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                const location = [city, country].filter(Boolean).join(", ");
+                const teamLocation = document.getElementById("plannerTeamLocation");
+                if (location && teamLocation instanceof HTMLElement) {
+                  teamLocation.replaceChildren();
+                  if (nation) {
+                    // Match the shared Club flag renderer before the Planner route core loads.
+                    const flagCountryCodes = {
+                    ALBANIA: "AL", ALGERIA: "DZ", ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT",
+                    BELGIUM: "BE", BOSNIA_AND_HERZEGOVINA: "BA", BRAZIL: "BR", CAMEROON: "CM",
+                    CANADA: "CA", CAPE_VERDE_ISLANDS: "CV", CHILE: "CL", COLOMBIA: "CO", CONGO_DR: "CD",
+                    COSTA_RICA: "CR", COTE_D_IVOIRE: "CI", CROATIA: "HR", CURACAO: "CW", CZECH_REPUBLIC: "CZ",
+                    CZECHIA: "CZ", DENMARK: "DK", ECUADOR: "EC", EGYPT: "EG",
+                    ENGLAND: "1f3f4-e0067-e0062-e0065-e006e-e0067-e007f", FINLAND: "FI", FRANCE: "FR",
+                    GEORGIA: "GE", GERMANY: "DE", GHANA: "GH", HAITI: "HT", HUNGARY: "HU", IRAN: "IR",
+                    IRAQ: "IQ", ITALY: "IT", IVORY_COAST: "CI", JAPAN: "JP", JORDAN: "JO",
+                    KOREA_REPUBLIC: "KR", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL", NEW_ZEALAND: "NZ",
+                    NIGERIA: "NG", NORWAY: "NO", PANAMA: "PA", PARAGUAY: "PY", PERU: "PE", POLAND: "PL",
+                    PORTUGAL: "PT", QATAR: "QA", REPUBLIC_OF_IRELAND: "IE", ROMANIA: "RO", RUSSIA: "RU",
+                    SAUDI_ARABIA: "SA", SCOTLAND: "1f3f4-e0067-e0062-e0073-e0063-e0074-e007f", SENEGAL: "SN",
+                    SERBIA: "RS", SLOVAKIA: "SK", SLOVENIA: "SI", SOUTH_AFRICA: "ZA", SOUTH_KOREA: "KR",
+                    SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH", TUNISIA: "TN", TURKEY: "TR", UKRAINE: "UA",
+                    UNITED_KINGDOM: "GB", UNITED_STATES: "US", UNITED_STATES_OF_AMERICA: "US", URUGUAY: "UY",
+                    USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e007f"
+                    };
+                    const nationKey = nation.toUpperCase().replaceAll("&", "AND")
+                      .replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+                    const code = flagCountryCodes[nationKey];
+                    if (code) {
+                      const codepoints = code.includes("-") ? code : code.toUpperCase().split("")
+                        .map(character => (127397 + character.charCodeAt(0)).toString(16)).join("-");
+                      const flag = document.createElement("img");
+                      flag.className = "flagImage clubLocationFlag";
+                      flag.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/" + codepoints + ".svg";
+                      flag.alt = "";
+                      flag.dataset.tooltip = country;
+                      flag.setAttribute("aria-label", country);
+                      flag.loading = "eager";
+                      teamLocation.appendChild(flag);
+                    }
+                  }
+                  const locationText = document.createElement("span");
+                  locationText.className = "clubLocationText";
+                  locationText.textContent = location;
+                  teamLocation.appendChild(locationText);
+                  teamLocation.hidden = false;
+                }
+              }
+            } catch {
+              // Storage can be unavailable, corrupt or empty without blocking Planner.
+            }
+            if (rosterBody instanceof HTMLElement && !rosterBody.childElementCount) {
+              rosterBody.setAttribute("aria-busy", "true");
+              for (let index = 0; index < 8; index += 1) {
+                const row = document.createElement("tr");
+                row.setAttribute("aria-hidden", "true");
+                for (let column = 0; column < 8; column += 1) {
+                  const cell = document.createElement("td");
+                  const skeleton = document.createElement("span");
+                  skeleton.className = "plannerRosterSkeleton";
+                  cell.appendChild(skeleton);
+                  row.appendChild(cell);
+                }
+                rosterBody.appendChild(row);
+              }
+            }
+            if (rosterStatus instanceof HTMLElement) {
+              rosterStatus.textContent = "Loading squad…";
+              rosterStatus.hidden = false;
+            }
+          })();
+        </script>
+
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
           <div class="myPlayersLockedContent">
             <h2 id="optInLockedTitle">My Players</h2>
@@ -1263,7 +2641,7 @@
                 </div>
               </div>
               <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">
-                <span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>
+
                 <div class="pitchRow pitchRow1" style="--pitch-columns: 1"><div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div></div>
                 <div class="pitchRow pitchRow3" style="--pitch-columns: 3"><div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div><div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div><div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div></div>
                 <div class="pitchRow pitchRow1" style="--pitch-columns: 1"><div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div></div>
