@@ -5,12 +5,14 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [planner, html, generatedHtml, chrome, styles, routing, lifecycle, myClubs, firstPaint, dataViews, releaseJson, vercelJson] = await Promise.all([
+const [planner, generatedPlanner, html, generatedHtml, chrome, styles, generatedStyles, routing, lifecycle, myClubs, firstPaint, dataViews, releaseJson, vercelJson] = await Promise.all([
   read("./modules/core-sources/planner.js"),
+  read("./modules/app-core-planner-runtime.js"),
   read("./html-sources/planner.html"),
   read("./index.html"),
   read("./html-sources/chrome.html"),
   read("./planner.css"),
+  read("./styles-runtime.css"),
   read("./modules/core-sources/shared-routing.js"),
   read("./modules/core-sources/shared-page-lifecycle.js"),
   read("./modules/core-sources/my-clubs.js"),
@@ -454,9 +456,13 @@ console.log("Planner route, custom pitch icon, and team-selection search validat
 invariant(planner.includes('function renderSquadSummary()') && planner.includes('if(commit)renderSquadSummary()')
   && planner.includes('renderSquadSummary();') && styles.includes('.plannerSummaryTable{'),
   "Five summary metrics must update with squad and contract edits.");
-invariant(planner.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0)')
-  && styles.includes('.plannerSummaryTable tbody tr:hover :is(th,td){background:transparent}'),
-  "Best eleven sum must display without decimals and summary rows must remain unhighlighted on hover.");
+invariant([planner, generatedPlanner].every(source =>
+  source.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0)')
+  && !source.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(2)'))
+  && [styles, generatedStyles].every(source =>
+    source.includes('.plannerSummaryTable tbody tr:hover :is(th,td){background:transparent}')
+    && !source.includes('.plannerSummaryTable tbody tr:hover{background:var(--row-hover)}')),
+  "Canonical and browser-served Planner assets must show an integer Best 11 sum and no summary row/cell hover highlight.");
 invariant(styles.includes('--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px')
   && styles.includes('.plannerPlayerSearchTable.plannerTableNoVerticalScroll :is(thead,tbody){scrollbar-gutter:auto}')
   && planner.includes('table.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll)'),

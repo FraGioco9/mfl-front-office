@@ -1947,6 +1947,12 @@ const browserTestSource = String.raw`(() => {
         && document.getElementById("plannerBest11OverallSum")?.textContent === "80"
         && document.getElementById("plannerAverageAge")?.textContent === "23.00",
         "The standalone summary must use planned squad data for all five metrics.");
+      const summaryRow = document.querySelector(".plannerSummaryTable tbody tr");
+      assert(summaryRow instanceof HTMLElement, "Planner summary row must exist.");
+      summaryRow.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      assert(getComputedStyle(summaryRow).backgroundColor === "rgba(0, 0, 0, 0)"
+        && [...summaryRow.children].every(cell => getComputedStyle(cell).backgroundColor === "rgba(0, 0, 0, 0)"),
+        "Summary rows and cells must not have hover backgrounds in the browser-served stylesheet.");
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
       assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
