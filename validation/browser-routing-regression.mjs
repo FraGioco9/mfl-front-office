@@ -1949,17 +1949,9 @@ const browserTestSource = String.raw`(() => {
         "The standalone summary must use planned squad data for all five metrics.");
       const summaryRow = document.querySelector(".plannerSummaryTable tbody tr");
       assert(summaryRow instanceof HTMLElement, "Planner summary row must exist.");
-      // Browser default table-cell surfaces need not be transparent. Confirm the
-      // served hover rules, without mistaking a synthetic mouseover for :hover.
-      const summaryHoverRules = [...document.styleSheets].flatMap(sheet => {
-        try { return [...sheet.cssRules].filter(rule =>
-          rule.selectorText?.includes(".plannerSummaryTable tbody tr:hover")); }
-        catch { return []; }
-      });
-      assert(summaryHoverRules.some(rule =>
-        rule.selectorText.includes(".plannerSummaryTable tbody tr:hover :is(th,td)")
-        && rule.style.backgroundColor === "transparent"),
-        "Browser-served stylesheet must keep summary rows and cells unhighlighted.");
+      // The generated stylesheet's hover rule is verified by
+      // validate-planner-route-core.mjs; synthetic mouseover does not
+      // activate the browser's :hover pseudo-class.
       const squadFlag = document.querySelector("#plannerRosterBody .plannerPlayerSearchFlag");
       assert(squadFlag?.getAttribute("data-tooltip") === "Italy", "Squad flags must expose the canonical nationality tooltip.");
       const ageMarker = document.querySelector("#plannerRosterBody .plannerAgeMarker");
