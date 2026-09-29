@@ -97,6 +97,9 @@ create table if not exists public.planner_shares (
 create index if not exists planner_shares_expires_at_idx on public.planner_shares (expires_at);
 create index if not exists planner_shares_wallet_active_idx on public.planner_shares (wallet_address, expires_at);
 
+alter table public.planner_plans enable row level security;
+alter table public.planner_shares enable row level security;
+
 revoke all on table public.planner_plans from anon, authenticated;
 revoke all on table public.planner_shares from anon, authenticated;
 grant select, insert, update, delete on table public.planner_plans to service_role;
