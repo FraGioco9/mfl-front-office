@@ -2026,7 +2026,7 @@ const browserTestSource = String.raw`(() => {
         const box = row.getBoundingClientRect();
         const contentCenter = box.top + (box.height - 1) / 2; // exclude the divider
         for (const [column, cell] of [...row.cells].entries()) {
-          const element = cell.querySelector(".flagImage, .plannerOverallContent, .plannerPlayerActionText");
+          const element = cell.querySelector(".flagImage, .plannerOverallContent, .plannerPlayerActionText, .plannerPendingContractControl");
           const rect = element ? element.getBoundingClientRect() : (() => {
             const range = document.createRange();
             range.selectNodeContents(cell);
@@ -2066,7 +2066,12 @@ const browserTestSource = String.raw`(() => {
       assert(text("#plannerPlayerSelectionCount") === "2", "Planner modal must stage multiple players.");
       const selectedRows = document.querySelectorAll("#plannerPlayerSelectionBody .plannerPendingPlayer");
       assert(selectedRows.length === 2, "Selected players must render in the table below search results.");
-      assert(selectedRows[0].children.length === 6 && selectedRows[1].children.length === 6, "Selected-player rows must mirror the six-column search table.");
+      assert(selectedRows[0].children.length === 7 && selectedRows[1].children.length === 7, "Selected-player rows must add a Contract column before Remove.");
+      const stagedContractInput = selectedRows[0].querySelector(".plannerPendingContractInput");
+      assert(stagedContractInput instanceof HTMLInputElement && stagedContractInput.value === "3.75", "Selected players must expose their database Contract as an editable staged value.");
+      stagedContractInput.value = "6,25";
+      stagedContractInput.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(stagedContractInput.value === "6.25", "Selected-player Contract must normalize comma decimals.");
       assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
       assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
       assertCenteredPopupRow(selectedRows[0], "Add player(s) staged selection");
@@ -2084,6 +2089,10 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => document.querySelectorAll(".plannerPlayerSearchResult").length === 2, "Planner player search after discard");
       document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText').click();
       document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
+      const stagedContractBeforeAdd = document.querySelector('#plannerPlayerSelectionBody .plannerPendingPlayer[data-player-id="2"] .plannerPendingContractInput');
+      assert(stagedContractBeforeAdd?.value === "3.75", "Reopening the modal must restore the staged Contract from canonical player data.");
+      stagedContractBeforeAdd.value = "6.25";
+      stagedContractBeforeAdd.dispatchEvent(new Event("input", { bubbles: true }));
       document.getElementById("plannerPlayerConfirmButton").click();
       assert(hidden("#plannerPlayerModal"), "Add selected must close the modal.");
       const addedRow = document.querySelector('#plannerRosterBody tr[data-player-id="2"]');
@@ -2093,7 +2102,7 @@ const browserTestSource = String.raw`(() => {
       assert(JSON.stringify(sortedPlannerIds) === JSON.stringify(["3","2","1"]), "Planner roster must sort by canonical primary-position order.");
       assert(!document.querySelector(".plannerRosterTable tfoot"),
         "Adding players must not reintroduce the squad totals footer.");
-      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "3.75%", "Added player Contract must also use database value divided by 100.");
+      assert(addedRow.querySelector(".plannerContractValue")?.textContent === "6.25%", "Added player Contract must preserve the value entered in the staged selected-player table.");
       assert(addedRow.querySelector(".newMintMarker"), "Added one-season player must show the New mint marker.");
       const addedContractValue = addedRow.querySelector(".plannerContractValue");
       const addedContractEditor = addedRow.querySelector(".plannerContractEditor");
@@ -2299,7 +2308,8 @@ const browserTestSource = String.raw`(() => {
       }), "All picker portraits, names, selected labels and positional Overalls must share the centered 36px content track in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
-        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 1)) <= 1
+        && selectedLabelStyle.transform !== "none"
         && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && assignedName.textContent==="C. 91"
