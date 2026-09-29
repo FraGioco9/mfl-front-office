@@ -1047,12 +1047,13 @@
             <div class="plannerPlanIdentity">
               <span class="plannerPlanEyebrow">Plan</span>
               <strong id="plannerPlanName">Unsaved plan</strong>
-              <span id="plannerPlanMode" class="plannerPlanMode">Draft</span>
+              <span id="plannerPlanMode" class="plannerPlanMode">Unsaved</span>
               <span id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>
             </div>
             <div class="plannerPlanActions">
               <button id="plannerPlansButton" class="compactButton" type="button">Plans</button>
               <button id="plannerSavePlanButton" class="compactButton" type="button" disabled>Save</button>
+              <button id="plannerDuplicatePlanButton" class="compactButton" type="button" disabled>Duplicate</button>
               <button id="plannerSharePlanButton" class="compactButton" type="button" disabled>Share</button>
             </div>
           </div>
@@ -1093,6 +1094,10 @@
               <div class="plannerRosterHeader">
                 <h3 id="plannerRosterHeading">Squad <span id="plannerRosterCount"></span></h3>
                 <button id="plannerAddPlayerButton" class="compactButton" type="button" aria-haspopup="dialog" aria-controls="plannerPlayerModal">Add player(s)</button>
+              </div>
+              <div id="plannerSquadStatusStrip" class="plannerSquadStatusStrip" role="status" aria-live="polite">
+                <span id="plannerSquadStatusPrimary">0/25 players · 0.00% contracts · 0/11 filled</span>
+                <span id="plannerSquadStatusWarnings" class="plannerSquadStatusWarnings"></span>
               </div>
               <section class="tableShell" aria-label="Planned squad table">
                 <div class="playerTableScroller">
@@ -1174,6 +1179,8 @@
                   </script>
                 </label>
                 <div class="plannerDepthActions">
+                  <button id="plannerUndoButton" class="compactButton plannerHistoryButton" type="button" aria-label="Undo Planner change" title="Undo" disabled>↶</button>
+                  <button id="plannerRedoButton" class="compactButton plannerHistoryButton" type="button" aria-label="Redo Planner change" title="Redo" disabled>↷</button>
                   <button id="plannerAutoFillDepthButton" class="compactButton plannerAutoFillDepthButton" type="button" disabled>Auto-fill</button>
                   <button id="plannerClearDepthButton" class="compactButton plannerClearDepthButton" type="button" disabled>Clear</button>
                 </div>
