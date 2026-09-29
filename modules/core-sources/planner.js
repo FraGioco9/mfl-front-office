@@ -673,7 +673,7 @@
         editContract.textContent="✎";
         editContract.setAttribute("aria-label","Edit contract for "+String(player.name||"player"));
         if(activeContractEditor?.playerId===player.player_id)activeContractEditor=null;
-        if(commit){renderSquadSummary();syncPlannerDirtyState();}
+        if(commit){renderSquadSummary();renderSquadStatus();syncPlannerDirtyState();}
       };
       const openContractEdit=()=>{
         if(activeContractEditor&&activeContractEditor.playerId!==player.player_id){
