@@ -2397,9 +2397,11 @@ const browserTestSource = String.raw`(() => {
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="402,401",
         "Picker must rank qualified candidates by positional CB Overall, not main Overall.");
       fillButton.click();
-      const autoFilledCbIds = [slot("CB#1")?.dataset.playerId, slot("CB#2")?.dataset.playerId].filter(Boolean).sort();
-      assert(JSON.stringify(autoFilledCbIds) === JSON.stringify(["401","402"]),
-        "Auto-fill must use each eligible CB exactly once; equivalent repeated CB slots are interchangeable.");
+      const autoFilledCbIds = [slot("CB#1")?.dataset.playerId, slot("CB#2")?.dataset.playerId].filter(Boolean);
+      const autoFilledCmIds = [slot("CM#1")?.dataset.playerId, slot("CM#2")?.dataset.playerId].filter(Boolean);
+      assert(autoFilledCbIds.includes("402") && autoFilledCmIds.includes("401")
+        && !autoFilledCbIds.includes("401"),
+        "Whole-XI Auto-fill must place the versatile player at his stronger CM rating and keep the stronger positional CB at CB.");
       // Neither CB meets 90% of this squad's Overall average. Offer the
       // strongest CB and, once selected, fall back to the next CB in that slot.
       formationPreview.setRoster([
