@@ -4,7 +4,7 @@
             <div class="plannerPlanIdentity">
               <span class="plannerPlanEyebrow">Plan</span>
               <strong id="plannerPlanName">Unsaved plan</strong>
-              <span id="plannerPlanMode" class="plannerPlanMode">Unsaved</span>
+              <span id="plannerPlanMode" class="plannerPlanMode">Draft</span>
               <span id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>
             </div>
             <div class="plannerPlanActions">
@@ -1140,7 +1140,7 @@
                 }
                 button.addEventListener("click", () => {
                   openDepthPicker(key, position, button);
-                  if (starter) Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,true,{flash:true,scroll:"roster"});
+                  if (starter) Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,true,{scroll:"roster"});
                 });
                 const token = document.createElement("span");
                 token.className = "plannerFormationToken" + (starter ? " plannerFormationTokenAssigned" : "");
