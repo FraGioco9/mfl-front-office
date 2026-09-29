@@ -999,8 +999,8 @@
     const share=data?.share;
     if(!share?.id)throw new Error("Could not create share link.");
     const url=new URL("/planner",window.location.origin);url.searchParams.set("share",share.id);
-    try{await navigator.clipboard.writeText(url.toString());if(typeof showToast==="function")showToast("Share link copied.");}
-    catch{window.prompt("Copy share link",url.toString());}
+    await navigator.clipboard.writeText(url.toString());
+    if(typeof showToast==="function")showToast("Plan share link copied.");
     return url.toString();
   }
   async function shareCurrentPlan(){
@@ -1022,7 +1022,7 @@
       const meta=document.createElement("span");meta.className="plannerPlanListMeta";meta.textContent="Club #"+String(plan.clubId||plan.payload?.clubId||"")+" · "+String(plan.payload?.formation||"").toUpperCase();
       main.append(name,meta);
       const actions=document.createElement("div");actions.className="plannerPlanListActions";
-      const action=(label,handler)=>{const button=document.createElement("button");button.type="button";button.className="compactButton";button.textContent=label;button.addEventListener("click",handler);return button;};
+      const action=(label,handler)=>{const button=document.createElement("button");button.type="button";button.className="compactButton";button.textContent=label;button.addEventListener("click",async()=>{button.disabled=true;try{await handler();}catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";}finally{if(button.isConnected)button.disabled=false;}});return button;};
       actions.append(
         action("Open",async()=>{closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});history.pushState({},"","/planner?saved="+encodeURIComponent(plan.id));}),
         action("Rename",async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;await savePlannerPayload(plan.payload,next,{savedId:plan.id});await openPlansModal();}),
