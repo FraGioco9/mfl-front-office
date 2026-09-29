@@ -406,9 +406,7 @@
       return true;
     }
     if(pendingPlayers.size>=availablePlayerSlots())return false;
-    const availableContract=pendingContractLimitForPlayer(playerId);
-    const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
-    pendingPlayers.set(playerId,{...player,planned_contract_value:plannedContract});
+    pendingPlayers.set(playerId,{...player,planned_contract_value:0});
     renderPendingPlayers();
     return true;
   }
