@@ -2070,7 +2070,7 @@ const browserTestSource = String.raw`(() => {
       const stagedContractInput = selectedRows[0].querySelector(".plannerPendingContractInput");
       const stagedContractControl = stagedContractInput?.closest(".plannerPendingContractControl");
       const stagedContractCell = stagedContractInput?.closest(".plannerPendingContractCell");
-      assert(stagedContractInput instanceof HTMLInputElement && stagedContractInput.value === "3.75", "Selected players must expose their database Contract as an editable staged value.");
+      assert(stagedContractInput instanceof HTMLInputElement && stagedContractInput.value === "0.00", "Selected players must start with an editable 0.00% staged Contract.");
       const stagedRowMid = selectedRows[0].getBoundingClientRect().top + selectedRows[0].getBoundingClientRect().height / 2;
       assert(stagedContractControl && stagedContractCell
         && getComputedStyle(stagedContractInput).width === "54px"
@@ -2103,7 +2103,7 @@ const browserTestSource = String.raw`(() => {
       document.querySelector('.plannerPlayerSearchResult[data-player-id="2"] .plannerPlayerActionText').click();
       document.querySelector('.plannerPlayerSearchResult[data-player-id="3"] .plannerPlayerActionText').click();
       const stagedContractBeforeAdd = document.querySelector('#plannerPlayerSelectionBody .plannerPendingPlayer[data-player-id="2"] .plannerPendingContractInput');
-      assert(stagedContractBeforeAdd?.value === "3.75", "Reopening the modal must restore the staged Contract from canonical player data.");
+      assert(stagedContractBeforeAdd?.value === "0.00", "Reopening the modal must reset a newly staged player Contract to 0.00%.");
       stagedContractBeforeAdd.value = "6.25";
       stagedContractBeforeAdd.dispatchEvent(new Event("input", { bubbles: true }));
       document.getElementById("plannerPlayerConfirmButton").click();
@@ -2321,7 +2321,7 @@ const browserTestSource = String.raw`(() => {
       }), "All picker portraits, names, selected labels and positional Overalls must share the centered 36px content track in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
-        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 2)) <= 1
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 3)) <= 1
         && selectedLabelStyle.transform !== "none"
         && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
