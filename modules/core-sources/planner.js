@@ -48,7 +48,6 @@
   const planModeLabel=document.getElementById("plannerPlanMode");
   const plansButton=document.getElementById("plannerPlansButton");
   const savePlanButton=document.getElementById("plannerSavePlanButton");
-  const saveAsPlanButton=document.getElementById("plannerSaveAsPlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
@@ -909,7 +908,6 @@
     if(planModeLabel)planModeLabel.textContent=plannerReadOnly?"Shared":activePlanId?"Saved":"Draft";
     if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn;
     if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId;
-    if(saveAsPlanButton instanceof HTMLButtonElement)saveAsPlanButton.disabled=plannerReadOnly||!selectedTeamId;
     if(sharePlanButton instanceof HTMLButtonElement)sharePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
@@ -1133,7 +1131,6 @@
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
   savePlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:!activePlanId}).catch(error=>setStatus(error?.message||"Could not save plan.")));
-  saveAsPlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:true}).catch(error=>setStatus(error?.message||"Could not save plan.")));
   sharePlanButton?.addEventListener("click",()=>void shareCurrentPlan().catch(error=>setStatus(error?.message||"Could not share plan.")));
   copySharedPlanButton?.addEventListener("click",()=>void copySharedPlannerPlan().catch(error=>setStatus(error?.message||"Could not copy shared plan.")));
   plansModalCloseButton?.addEventListener("click",closePlansModal);
