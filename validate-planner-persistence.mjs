@@ -88,7 +88,7 @@ assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_share
 assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
-assert(html.includes('id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>'));
+assert(html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
