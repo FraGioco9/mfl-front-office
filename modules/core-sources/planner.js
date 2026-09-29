@@ -145,6 +145,16 @@
   function contractLimitForPlayer(playerId){
     return Math.min(20,Math.max(0,Math.round((100-totalPlannedContracts(playerId))*100)/100));
   }
+  function totalPendingContracts(excludedPlayerId=null){
+    return [...pendingPlayers.values()].reduce((sum,player)=>{
+      if(excludedPlayerId!==null&&Number(player?.player_id)===Number(excludedPlayerId))return sum;
+      const value=Number(player?.planned_contract_value);
+      return sum+(Number.isFinite(value)?value:0);
+    },0);
+  }
+  function pendingContractLimitForPlayer(playerId){
+    return Math.min(20,Math.max(0,Math.round((100-totalPlannedContracts()-totalPendingContracts(playerId))*100)/100));
+  }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
   function contractDisplayText(value){return contractText(value)+"%";}
   function plannerPlayerIsRetired(player){
@@ -296,6 +306,38 @@
       row.className="plannerPendingPlayer";
       row.dataset.playerId=String(player.player_id);
       appendPlannerPlayerTableCells(row,player);
+      const contractCell=document.createElement("td");
+      contractCell.className="plannerPendingContractCell";
+      const contractControl=document.createElement("span");
+      contractControl.className="plannerPendingContractControl";
+      const contractInput=document.createElement("input");
+      contractInput.type="text";
+      contractInput.className="plannerContractInput plannerPendingContractInput";
+      contractInput.inputMode="decimal";
+      contractInput.setAttribute("data-min","0");
+      contractInput.setAttribute("data-max","20");
+      contractInput.setAttribute("aria-label","Contract value for "+String(player.name||"player"));
+      contractInput.value=contractText(player.planned_contract_value);
+      const contractSuffix=document.createElement("span");
+      contractSuffix.className="plannerPendingContractSuffix";
+      contractSuffix.textContent="%";
+      contractInput.addEventListener("input",()=>{
+        let raw=contractInput.value.replace(/,/g,".").replace(/[^0-9.]/g,"");
+        const firstDot=raw.indexOf(".");
+        if(firstDot>=0)raw=raw.slice(0,firstDot+1)+raw.slice(firstDot+1).replace(/\./g,"");
+        const parts=raw.split(".");
+        if(parts.length>1)raw=parts[0]+"."+parts[1].slice(0,2);
+        const numeric=Number(raw);
+        const limit=pendingContractLimitForPlayer(player.player_id);
+        if(raw&&Number.isFinite(numeric)&&numeric>limit)raw=limit.toFixed(2);
+        contractInput.value=raw;
+        player.planned_contract_value=raw&&Number.isFinite(Number(raw))?normalizeContractValue(Number(raw)):0;
+      });
+      contractInput.addEventListener("blur",()=>{contractInput.value=contractText(player.planned_contract_value);});
+      contractInput.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();contractInput.blur();}});
+      contractControl.append(contractInput,contractSuffix);
+      contractCell.appendChild(contractControl);
+      row.appendChild(contractCell);
       const actionCell=document.createElement("td");
       actionCell.className="plannerPlayerSearchActionCell";
       actionCell.appendChild(makePlannerActionText("Remove",{onActivate:()=>{
@@ -342,7 +384,8 @@
     if(roster.length>=MAX_SQUAD_SIZE)return false;
     if(roster.some(candidate=>Number(candidate.player_id)===playerId))return false;
     const availableContract=Math.max(0,Math.round((100-totalPlannedContracts())*100)/100);
-    const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
+    const requestedContract=Number(player?.planned_contract_value);
+    const plannedContract=Math.min(Number.isFinite(requestedContract)?normalizeContractValue(requestedContract):contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
     roster.push({...player,planned_contract_value:plannedContract});
     sortPlannerRoster();
     if(render)renderRoster();
@@ -358,7 +401,9 @@
       return true;
     }
     if(pendingPlayers.size>=availablePlayerSlots())return false;
-    pendingPlayers.set(playerId,player);
+    const availableContract=pendingContractLimitForPlayer(playerId);
+    const plannedContract=Math.min(contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
+    pendingPlayers.set(playerId,{...player,planned_contract_value:plannedContract});
     renderPendingPlayers();
     return true;
   }
