@@ -59,10 +59,11 @@ invariant(
   "Planner must use one Save action; Duplicate in the Plans library owns branching instead of a redundant Save as control.",
 );
 invariant(
-  styles.includes("#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled)")
-    && styles.includes("border-color:#7db8de")
+  styles.includes("#plannerPlanNameInput:hover:not(:disabled){outline:0;border-color:#7db8de")
+    && !styles.includes("#plannerPlanNameInput:focus:not(:disabled)")
+    && styles.includes("#plannerPlanNameInput:focus-visible:not(:disabled){outline:var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color)")
     && styles.includes("box-shadow:none"),
-  "Planner plan-name input must use the canonical light-blue interaction highlight.",
+  "Planner plan-name input must highlight only on direct pointer hover while preserving the standard keyboard focus ring.",
 );
 invariant(
   html.includes('if (initialPage !== "planner") return;')
