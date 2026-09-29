@@ -49,7 +49,7 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles] = await Promise.all([
+const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
@@ -60,6 +60,9 @@ const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlann
   readFile(new URL("./modules/app-core-planner-runtime.js", import.meta.url), "utf8"),
   readFile(new URL("./planner.css", import.meta.url), "utf8"),
   readFile(new URL("./styles-runtime.css", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/shared-routing.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/shared-page-lifecycle.js", import.meta.url), "utf8"),
+  readFile(new URL("./bootstrap.js", import.meta.url), "utf8"),
 ]);
 
 for (const source of [schema, migration]) {
@@ -90,5 +93,13 @@ assert(planner.includes("plannerReadOnly") && planner.includes("copySharedPlanne
 assert(generatedPlanner.startsWith("// Generated") && generatedPlanner.includes("currentPlannerPayload"));
 assert(styles.includes(".plannerPlanBar{") && styles.includes(".plannerPlansDialog{") && styles.includes(".plannerSharedBanner{"));
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
+assert(routing.includes('const shareId = String(params.get("share") || "").trim();')
+  && routing.includes('!shareId && !hasWalletOptIn()')
+  && routing.includes('/planner?share='));
+assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})")
+  && lifecycle.includes('explicitPath.startsWith("/planner?share=")')
+  && lifecycle.includes("if (shareId) return false;"));
+assert(bootstrap.includes("const publicPlannerShare = pageName === \"planner\"")
+  && bootstrap.includes("root.dataset.storedWalletOptIn === \"true\" || publicPlannerShare"));
 
 console.log("Planner saved plans and unlisted share persistence validation passed.");
