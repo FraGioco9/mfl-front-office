@@ -865,7 +865,7 @@
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
     if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn;
     if(teamClearButton instanceof HTMLButtonElement)teamClearButton.disabled=plannerReadOnly;
-    if(formationSelect instanceof HTMLSelectElement)formationSelect.disabled=plannerReadOnly;
+    if(formationSelect instanceof HTMLElement)formationSelect.disabled=plannerReadOnly;
     Reflect.get(window,"__mflPlannerFormationPreview")?.setReadOnly?.(plannerReadOnly);
     updateAddPlayerAvailability();
   }
@@ -915,7 +915,7 @@
     const team=await resolvePlannerClub(clubId);
     if(input instanceof HTMLInputElement)input.value=String(team.name||"Club #"+clubId);
     showTeam(team);clearResults();syncClearButton();setStatus("");
-    if(formationSelect instanceof HTMLSelectElement&&Reflect.get(window,"__mflPlannerFormationPreview")?.codes?.includes(payload.formation))formationSelect.value=payload.formation;
+    if(formationSelect instanceof HTMLElement&&Reflect.get(window,"__mflPlannerFormationPreview")?.codes?.includes(payload.formation))formationSelect.value=payload.formation;
     roster=await resolvePlannerPlayers(payload);
     sortPlannerRoster();
     renderRoster();
@@ -933,13 +933,14 @@
   async function saveCurrentPlan({asNew=false,nameOverride=""}={}){
     if(plannerReadOnly||!selectedTeamId)return false;
     const payload=currentPlannerPayload();
-    const name=String(nameOverride||plannerPlanNameInput(asNew?"":activePlanName)).trim();
+    const overwriting=Boolean(activePlanId)&&!asNew;
+    const name=String(nameOverride||(overwriting&&activePlanName?activePlanName:plannerPlanNameInput(asNew?"":activePlanName))).trim();
     if(!payload||!name)return false;
-    const data=await savePlannerPayload(payload,name,{savedId:asNew?"":activePlanId});
+    const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:""});
     const plan=data?.plan;
     if(!plan?.id)throw new Error("Could not save plan.");
     activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;plannerReadOnly=false;syncPlanUi();
-    if(typeof showToast==="function")showToast(asNew||!activePlanId?"Plan saved.":"Plan updated.");
+    if(typeof showToast==="function")showToast(overwriting?"Plan updated.":"Plan saved.");
     return plan;
   }
   async function createPlannerShare(name,payload){
