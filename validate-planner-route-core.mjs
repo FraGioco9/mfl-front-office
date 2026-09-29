@@ -68,6 +68,7 @@ invariant(
   styles.includes(".plannerPlanListActionButton{display:inline-grid;flex:0 0 28px;place-items:center;width:28px;min-width:28px;max-width:28px;height:28px;min-height:28px;max-height:28px")
     && planner.includes('button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"")')
     && styles.includes(".plannerPlanListDeleteButton{border-color:var(--border);background:var(--surface-muted);color:var(--danger)}")
+    && styles.includes(".plannerPlanListDeleteButton svg{transform:translateY(-.5px)}")
     && styles.includes("background:var(--mfl-danger-hover-background)")
     && planner.includes('action("Open plan"')
     && planner.includes('action("Rename plan"')
