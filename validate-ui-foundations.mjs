@@ -83,6 +83,8 @@ for (const token of [
   "--mfl-helper-error-font-weight: 700;",
   "--mfl-helper-text-color: var(--text-soft);",
   "--mfl-helper-error-color: var(--danger);",
+  "--mfl-danger-hover-background: color-mix(in srgb, var(--danger) 82%, #000 18%);",
+  "--mfl-danger-hover-border-color: var(--mfl-danger-hover-background);",
   "--mfl-focus-ring-color: var(--primary);",
   "--mfl-focus-ring-width: 2px;",
   "--mfl-focus-ring-offset: 2px;",
@@ -103,6 +105,10 @@ for (const token of [
 }
 
 includes(stacking, '@import url("/ui-foundations.css");', "Global UI foundations must load before shared stacking/base styles.");
+for (const source of [stylesBase, dropdowns]) {
+  includes(source, "var(--mfl-danger-hover-background)", "Destructive hover states must consume the shared darker danger background.");
+  includes(source, "var(--mfl-danger-hover-border-color)", "Destructive hover states must consume the shared darker danger border.");
+}
 
 const viewControlTypography = exactRule(stylesBase, ".viewButton");
 includes(viewControlTypography, "height: var(--mfl-control-height);", "View controls must consume the shared standard control height.");
