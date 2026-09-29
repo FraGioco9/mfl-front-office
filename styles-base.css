@@ -18,7 +18,8 @@
   --contracts-cell-hover: #dbe8f1;
   --primary: #1d5f8a;
   --primary-hover: #174d70;
-  --danger: #b42318;
+  --danger: #a61f1f;
+  --danger-hover: #741515;
   --pinned-sidebar-width: 190px;
   --pinned-topbar-height: 102px;
   background: var(--page-bg);
@@ -41,7 +42,8 @@
   --contracts-cell-hover: #31404b;
   --primary: #4aa3df;
   --primary-hover: #65b5ea;
-  --danger: #ff8a80;
+  --danger: #df5c55;
+  --danger-hover: #a93a35;
 }
 
 * {
