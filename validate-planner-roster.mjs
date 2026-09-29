@@ -180,10 +180,24 @@ assert.equal(route.addPlayer({ player_id: 8, name: "Retired Player", positions: 
 assert.equal(route.addPlayer({ player_id: 7, name: "Added Player", positions: "RW", age: 21, overall: 77, retirement_years: 4 }), false, "Duplicate planned players must be rejected");
 assert.equal(route.togglePendingPlayer({ player_id: 9, name: "Pending One", positions: "CM", age: 22, overall: 76, retirement_years: 5, active_contract_revenue_share: 400 }), true, "First modal selection must stage without mutating the squad");
 assert.equal(route.togglePendingPlayer({ player_id: 10, name: "Pending Two", positions: "LB", age: 24, overall: 74, retirement_years: 5, active_contract_revenue_share: 500 }), true, "Second modal selection must coexist in the staged batch");
+const stagedRows=elements.get("plannerPlayerSelectionBody").children;
+assert.equal(stagedRows.length,2,"Selected players must render as staged rows.");
+assert.equal(stagedRows[0].children.length,7,"Selected-player rows must add Contract before Remove.");
+const stagedContractInput=stagedRows[0].children[5].children[0].children[0];
+const secondStagedContractInput=stagedRows[1].children[5].children[0].children[0];
+assert.equal(stagedContractInput.value,"4.00","Staged Contract must default from the player's database contract.");
+assert.equal(secondStagedContractInput.value,"5.00","Each staged player must receive its own default Contract.");
+stagedContractInput.value="6,25";
+stagedContractInput.events.input?.({target:stagedContractInput});
+assert.equal(stagedContractInput.value,"6.25","Staged Contract must normalize comma decimals.");
 assert.equal(body.children.some(row => row.dataset.playerId === "9"), false, "Staged players must not enter the squad before confirmation");
 assert.equal(route.confirmPendingPlayers(), true, "Add selected must commit the staged batch");
 assert.equal(body.children.some(row => row.dataset.playerId === "9"), true, "Confirmed staged player must enter the squad");
 assert.equal(body.children.some(row => row.dataset.playerId === "10"), true, "All staged players must be committed together");
+const pendingOneRow=body.children.find(row=>row.dataset.playerId==="9");
+const pendingTwoRow=body.children.find(row=>row.dataset.playerId==="10");
+assert.equal(pendingOneRow.children[6].children[0].children[0].textContent,"6.25%","Edited staged Contract must be preserved when the player is added.");
+assert.equal(pendingTwoRow.children[6].children[0].children[0].textContent,"5.00%","Untouched staged Contract must preserve its default value.");
 for(let id=20;id<39;id+=1){
   assert.equal(route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5, active_contract_revenue_share:2000 }, { render:false }), true);
 }
