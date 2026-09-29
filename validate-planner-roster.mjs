@@ -72,6 +72,12 @@ assert(elements.get("plannerFormationSelect").classList.contains("plannerFormati
 assert.equal(localStorage.getItem("mfl-planner-formation-v1:9001"), "4231", "Formation selection must be stored for this club");
 assert.equal(formationRenders.at(-1), "4231", "Formation selection must update the pitch preview without changing the roster");
 assert.equal(elements.get("plannerRosterBody").children.length, 2, "Changing formation must preserve the squad");
+assert.equal(route.undo(), true, "Undo must restore the previous Planner state after a formation change.");
+assert.equal(elements.get("plannerFormationSelect").value, "442", "Undo must restore the previous formation.");
+assert.equal(formationRenders.at(-1), "442", "Undo must redraw the restored formation.");
+assert.equal(route.redo(), true, "Redo must reapply the formation change.");
+assert.equal(elements.get("plannerFormationSelect").value, "4231", "Redo must restore the changed formation.");
+assert.equal(formationRenders.at(-1), "4231", "Redo must redraw the changed formation.");
 const plannerCachedClub = JSON.parse(localStorage.getItem("mfl-club-display-data-v1"))["9001"];
 assert.equal(plannerCachedClub.name, "First Club", "Planner must cache selected Club name for refresh.");
 assert.equal(plannerCachedClub.divisionName, "Diamond", "Planner must cache selected Club division for refresh.");
@@ -148,6 +154,10 @@ assert.equal(body.children[0].children[6].children[0].children[0].textContent, "
 assert.equal(payload.rows[0][7], 1250, "Editing a planned contract must not mutate canonical database data");
 assert.equal(payload.rows.length, 2, "Removing a player must not mutate canonical data");
 assert.equal(requests.length, 1, "Removing a player must not write to the server");
+assert.equal(route.undo(), true, "Undo must restore a removed squad player.");
+assert.equal(body.children.length, 2, "Undoing Remove must restore the complete prior squad.");
+assert.equal(route.redo(), true, "Redo must remove the restored player again.");
+assert.equal(body.children.length, 1, "Redoing Remove must restore the post-remove squad.");
 route.select({ clubId: "9002", name: "Second Club" });
 route.select({ clubId: "9003", name: "Third Club" });
 await complete(requests[2], { ...payload, rows: [[3, "Newest Player", "CM", 20, 70, 3, 1, 650]], totalRows: 1 });
