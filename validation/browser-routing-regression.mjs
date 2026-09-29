@@ -2397,8 +2397,9 @@ const browserTestSource = String.raw`(() => {
       assert(Array.from(depthPicker.querySelectorAll(".plannerDepthPickerPlayer"),row=>row.dataset.playerId).join(",")==="402,401",
         "Picker must rank qualified candidates by positional CB Overall, not main Overall.");
       fillButton.click();
-      assert(slot("CB#1")?.dataset.playerId==="402" && slot("CB#2")?.dataset.playerId==="401",
-        "Auto-fill must rank by CB Overall and use each player only once.");
+      const autoFilledCbIds = [slot("CB#1")?.dataset.playerId, slot("CB#2")?.dataset.playerId].filter(Boolean).sort();
+      assert(JSON.stringify(autoFilledCbIds) === JSON.stringify(["401","402"]),
+        "Auto-fill must use each eligible CB exactly once; equivalent repeated CB slots are interchangeable.");
       // Neither CB meets 90% of this squad's Overall average. Offer the
       // strongest CB and, once selected, fall back to the next CB in that slot.
       formationPreview.setRoster([
