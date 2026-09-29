@@ -164,8 +164,10 @@
     window.clearTimeout(plannerHighlightTimer);
     const row=document.querySelector('#plannerRosterBody tr[data-player-id="'+id+'"]');
     const spot=document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-player-id="'+id+'"]');
-    for(const element of document.querySelectorAll(".plannerRosterRowHighlighted,.plannerFormationSpotHighlighted")){
-      if(element!==row&&element!==spot)element.classList.remove("plannerRosterRowHighlighted","plannerFormationSpotHighlighted");
+    if(active){
+      for(const element of document.querySelectorAll(".plannerRosterRowHighlighted,.plannerFormationSpotHighlighted")){
+        if(element!==row&&element!==spot)element.classList.remove("plannerRosterRowHighlighted","plannerFormationSpotHighlighted");
+      }
     }
     if(row instanceof HTMLElement)row.classList.toggle("plannerRosterRowHighlighted",Boolean(active));
     if(spot instanceof HTMLElement)spot.classList.toggle("plannerFormationSpotHighlighted",Boolean(active));
@@ -1032,7 +1034,7 @@
     const dirty=plannerHasUnsavedChanges();
     if(unsavedWarning instanceof HTMLElement)unsavedWarning.hidden=true;
     if(planModeLabel instanceof HTMLElement){
-      const mode=plannerReadOnly?"Shared":dirty||!activePlanId?"Unsaved":"Saved";
+      const mode=plannerReadOnly?"Shared":!selectedTeamId?"Draft":dirty||!activePlanId?"Unsaved":"Saved";
       planModeLabel.textContent=mode;
       planModeLabel.classList.toggle("plannerPlanModeDirty",mode==="Unsaved");
       planModeLabel.classList.toggle("plannerPlanModeSaved",mode==="Saved");
