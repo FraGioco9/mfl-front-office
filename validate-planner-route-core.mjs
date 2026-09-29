@@ -59,11 +59,30 @@ invariant(
   "Planner must use one Save action; Duplicate in the Plans library owns branching instead of a redundant Save as control.",
 );
 invariant(
-  styles.includes("#plannerPlanNameInput:hover:not(:disabled){outline:0;border-color:#7db8de")
-    && !styles.includes("#plannerPlanNameInput:focus:not(:disabled)")
-    && styles.includes("#plannerPlanNameInput:focus-visible:not(:disabled){outline:var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color)")
-    && styles.includes("box-shadow:none"),
-  "Planner plan-name input must highlight only on direct pointer hover while preserving the standard keyboard focus ring.",
+  styles.includes(".plannerPlansModalBody{display:grid;gap:7px;min-height:0;padding:14px 16px;overflow:auto}")
+    && styles.includes(".plannerPlansStatus:empty{display:none}")
+    && styles.includes(".plannerPlansList>.searchHint{margin:0;padding:0;color:var(--text-soft)}"),
+  "Planner saved-plan empty state must start at the normal dialog body inset without reserved blank space.",
+);
+invariant(
+  styles.includes(".plannerPlanListActionButton{display:inline-grid;flex:0 0 28px;place-items:center;width:28px;min-width:28px;max-width:28px;height:28px;min-height:28px;max-height:28px")
+    && planner.includes('button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"")')
+    && planner.includes('action("Open plan"')
+    && planner.includes('action("Rename plan"')
+    && planner.includes('action("Duplicate plan"')
+    && planner.includes('action("Share plan"')
+    && planner.includes('action("Delete plan"'),
+  "Planner saved-plan row actions must be icon-only controls with identical 28px geometry.",
+);
+invariant(
+  planner.includes("function plannerFormationLabel(code)")
+    && planner.includes('meta.textContent="Club #"+String(plan.clubId||plan.payload?.clubId||"")+" · "+plannerFormationLabel(plan.payload?.formation)'),
+  "Planner saved-plan metadata must use human-readable formation labels instead of raw formation codes.",
+);
+invariant(
+  styles.includes("#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled){outline:0;border-color:#7db8de")
+    && styles.includes("background:var(--row-hover);color:var(--text);box-shadow:none"),
+  "Planner plan-name input must use one light-blue interaction border without a second outline.",
 );
 invariant(
   html.includes('if (initialPage !== "planner") return;')
