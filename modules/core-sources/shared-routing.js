@@ -288,14 +288,24 @@ function pageTargetFromPath(path) {
   }
 
   if (cleanPath === "/planner") {
-    if (!hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
     const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const shareId = String(params.get("share") || "").trim();
+    const savedId = String(params.get("saved") || "").trim();
+    if (!shareId && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
     const clubId = String(params.get("club") || "").trim();
-    const canonicalPath = clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+    const canonicalPath = shareId
+      ? `/planner?share=${encodeURIComponent(shareId)}`
+      : savedId
+        ? `/planner?saved=${encodeURIComponent(savedId)}`
+        : clubId
+          ? `/planner?club=${encodeURIComponent(clubId)}`
+          : "/planner";
     return {
       pageName: "planner",
       options: {
         path: canonicalPath,
+        ...(shareId ? { shareId } : {}),
+        ...(savedId ? { savedId } : {}),
         ...(clubId ? { clubId } : {}),
         ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
       },
@@ -470,9 +480,18 @@ function pageTargetFromPath(path) {
 
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
-    if (!hasWalletOptIn()) return optedOutPathForPage("planner");
     const explicitPath = String(options.path || "");
+    const explicitShare = explicitPath.startsWith("/planner?share=");
+    const currentShare = window.location.pathname === "/planner"
+      ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+      : "";
+    if (!hasWalletOptIn() && !explicitShare && !currentShare) return optedOutPathForPage("planner");
     if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
+    if (currentShare) return `/planner?share=${encodeURIComponent(currentShare)}`;
+    const savedId = String(options.savedId || (window.location.pathname === "/planner"
+      ? new URLSearchParams(window.location.search).get("saved")
+      : "") || "").trim();
+    if (savedId) return `/planner?saved=${encodeURIComponent(savedId)}`;
     const clubId = String(options.clubId || (window.location.pathname === "/planner"
       ? new URLSearchParams(window.location.search).get("club")
       : "") || "").trim();
