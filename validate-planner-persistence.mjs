@@ -49,9 +49,10 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
+  readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260929203000_planner_plans_and_shares.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
@@ -78,11 +79,17 @@ for (const source of [schema, migration]) {
 assert(saveApi.includes('signedWalletFromRequest(request)') && saveApi.includes("MAX_SAVED_PLANS_PER_WALLET = 50"));
 assert(saveApi.includes('method: "PATCH"') && saveApi.includes('method: "DELETE"'));
 assert(shareApi.includes('signedWalletFromRequest(request)') && shareApi.includes('request.method === "GET"'));
+assert(saveApi.includes('sendPlannerPersistenceUnavailable(response, error, "planner_plans")'));
+assert(shareApi.includes('sendPlannerPersistenceUnavailable(response, error, "planner_shares")'));
+assert(persistenceErrors.includes("Planner persistence is not initialized.")
+  && persistenceErrors.includes("Apply the latest Supabase Planner migration"));
 assert(shareApi.includes("expires_at=gt.") && !shareApi.includes("select=id,name,club_id,payload,created_at,expires_at,wallet_address"));
 assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`"));
 assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
+assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
+assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
 assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
