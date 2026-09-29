@@ -46,6 +46,17 @@ invariant(routes?.canonicalRequest("/planner/opted-out")?.pageName === "planner"
 invariant(routes?.routeDependencyPlan("planner")?.core?.includes("planner"), "Planner navigation must load the Planner route core.");
 invariant(html.includes('id="plannerPage"') && html.includes('id="plannerTeamSearchInput"'), "Planner must expose its dedicated page and team search.");
 invariant(
+  styles.includes(".plannerPlanActions>.compactButton{flex:0 0 78px;width:78px;padding-inline:8px}")
+    && styles.includes(".plannerAutoFillDepthButton,.plannerClearDepthButton{flex:0 0 76px;width:76px;padding-inline:8px}"),
+  "Planner plan actions and Depth actions must keep equal sizes within each action group.",
+);
+invariant(
+  styles.includes("#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled)")
+    && styles.includes("border-color:#7db8de")
+    && styles.includes("box-shadow:inset 0 0 0 1px #7db8de"),
+  "Planner plan-name input must use the canonical light-blue interaction highlight.",
+);
+invariant(
   html.includes('if (initialPage !== "planner") return;')
     && html.includes('document.body.dataset.page = "planner";')
     && html.includes('root.dataset.storedWalletOptIn !== "true"')
