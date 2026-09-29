@@ -83,8 +83,9 @@ for (const token of [
   "--mfl-helper-error-font-weight: 700;",
   "--mfl-helper-text-color: var(--text-soft);",
   "--mfl-helper-error-color: var(--danger);",
-  "--mfl-danger-hover-background: color-mix(in srgb, var(--danger) 70%, #000 30%);",
-  "--mfl-danger-hover-border-color: var(--mfl-danger-hover-background);",
+  "--mfl-danger-hover-background: var(--danger-hover);",
+  "--mfl-danger-hover-border-color: var(--danger-hover);",
+  "--mfl-danger-hover-text-color: #ffffff;",
   "--mfl-focus-ring-color: var(--primary);",
   "--mfl-focus-ring-width: 2px;",
   "--mfl-focus-ring-offset: 2px;",
@@ -105,9 +106,18 @@ for (const token of [
 }
 
 includes(stacking, '@import url("/ui-foundations.css");', "Global UI foundations must load before shared stacking/base styles.");
+for (const token of [
+  "--danger: #a61f1f;",
+  "--danger-hover: #741515;",
+  "--danger: #df5c55;",
+  "--danger-hover: #a93a35;",
+]) {
+  includes(stylesBase, token, `Theme palette is missing rebuilt destructive red: ${token}`);
+}
 for (const source of [stylesBase, dropdowns]) {
-  includes(source, "var(--mfl-danger-hover-background)", "Destructive hover states must consume the shared darker danger background.");
-  includes(source, "var(--mfl-danger-hover-border-color)", "Destructive hover states must consume the shared darker danger border.");
+  includes(source, "var(--mfl-danger-hover-background)", "Destructive hover states must consume the shared danger-hover background.");
+  includes(source, "var(--mfl-danger-hover-border-color)", "Destructive hover states must consume the shared danger-hover border.");
+  includes(source, "var(--mfl-danger-hover-text-color)", "Destructive hover states must consume the shared danger-hover foreground.");
 }
 
 const viewControlTypography = exactRule(stylesBase, ".viewButton");
