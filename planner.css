@@ -217,7 +217,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer>*{align-self:center}
 .plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){display:inline-flex;flex:1 1 0;align-items:center;min-width:0;height:36px;overflow:hidden;font-size:12px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;line-height:20px;font-variant-numeric:tabular-nums}
-.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap;transform:translateY(-2px)}
+.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap;transform:translateY(-3px)}
 .plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}
 .plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;overflow:visible}
 .plannerDepthPickerClear{min-height:44px;align-items:center;color:var(--danger);font-size:12px;font-weight:700;line-height:20px}
