@@ -25,6 +25,9 @@ create index if not exists planner_shares_expires_at_idx
   on public.planner_shares (expires_at);
 
 create index if not exists planner_shares_wallet_active_idx
+
+alter table public.planner_plans enable row level security;
+alter table public.planner_shares enable row level security;
   on public.planner_shares (wallet_address, expires_at);
 
 revoke all on table public.planner_plans from anon, authenticated;
