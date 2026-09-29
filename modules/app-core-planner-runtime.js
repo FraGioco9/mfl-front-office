@@ -145,15 +145,12 @@
   function renderSquadStatus(){
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
     const assignments=roster.length&&Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[];
-    const assignedIds=new Set(assignments.map(item=>String(item?.playerId??item?.player_id??"")).filter(Boolean));
     const filled=Math.min(11,assignments.length);
     if(squadStatusPrimary) squadStatusPrimary.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" players · "+totalPlannedContracts().toFixed(2)+"% contracts · "+filled+"/11 filled";
     if(squadStatusWarnings instanceof HTMLElement){
       const warnings=[];
       if(roster.length&& !assignments.some(item=>String(item?.slotKey??item?.slot_key??"").toUpperCase().startsWith("GK#"))) warnings.push("GK empty");
       if(roster.length&&filled<11) warnings.push((11-filled)+" starter"+(11-filled===1?"":"s")+" missing");
-      const unassigned=Math.max(0,roster.length-assignedIds.size);
-      if(roster.length&&unassigned) warnings.push(unassigned+" unassigned");
       squadStatusWarnings.textContent=warnings.join(" · ");
       squadStatusWarnings.hidden=!warnings.length;
     }
