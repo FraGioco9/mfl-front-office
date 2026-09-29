@@ -230,6 +230,16 @@ invariant(
   "Planner Add player modal must stage multiple players and enforce the 25-player squad limit before and during confirmation.",
 );
 invariant(
+  html.includes('class="plannerPlayerSelectionContractColumn"')
+    && html.includes('<th scope="col">Contract</th>')
+    && planner.includes('contractInput.className="plannerContractInput plannerPendingContractInput"')
+    && planner.includes("totalPendingContracts")
+    && planner.includes("pendingContractLimitForPlayer")
+    && planner.includes("requestedContract")
+    && styles.includes(".plannerPendingContractInput{width:62px;height:26px"),
+  "Selected players must expose editable staged Contracts that are preserved on Add and share the 100% contract budget.",
+);
+invariant(
   planner.includes('playerModal.classList.toggle("modalOpen",true)')
     && planner.includes('playerModal.classList.toggle("modalOpen",false)'),
   "Planner Add player modal must enter and leave the site's canonical modalOpen state.",
@@ -467,6 +477,7 @@ invariant([planner, generatedPlanner].every(source =>
     && !source.includes('.plannerSummaryTable tbody tr:hover{background:var(--row-hover)}')),
   "Canonical and browser-served Planner assets must show an integer Best 11 sum and no summary row/cell hover highlight.");
 invariant(styles.includes('--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px')
+  && styles.includes('.plannerPlayerSelectionTable{max-height:142px;--planner-columns:32px minmax(0,1fr) 18% 8% 10% 96px 88px;--planner-row-width:780px}')
   && styles.includes('.plannerPlayerSearchTable.plannerTableNoVerticalScroll :is(thead,tbody){scrollbar-gutter:auto}')
   && planner.includes('table.classList.toggle("plannerTableNoVerticalScroll",noVerticalScroll)'),
   "Popup action width and scrollbar-free full-width row highlights must stay in sync.");
