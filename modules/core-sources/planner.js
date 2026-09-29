@@ -583,7 +583,7 @@
       row.addEventListener("focusin",()=>setPlannerPlayerHighlight(player.player_id,true));
       row.addEventListener("focusout",event=>{if(!row.contains(event.relatedTarget))setPlannerPlayerHighlight(player.player_id,false);});
       row.addEventListener("click",event=>{
-        if(event.target instanceof Element&&event.target.closest("button,input,select,a"))return;
+        if(event.target?.closest?.("button,input,select,a"))return;
         setPlannerPlayerHighlight(player.player_id,true,{flash:true,scroll:"pitch"});
       });
       const slotCell=document.createElement("td");
@@ -968,7 +968,7 @@
       activeContractEditor?.cancel?.();activeContractEditor=null;
       roster=clonePlannerRoster(snapshot.roster);
       plannerCommittedFormation=String(snapshot.formation||"442");
-      if(formationSelect instanceof HTMLSelectElement)formationSelect.value=plannerCommittedFormation;
+      if(formationSelect&&"value" in formationSelect)formationSelect.value=plannerCommittedFormation;
       if(selectedTeamId){try{localStorage.setItem("mfl-planner-formation-v1:"+selectedTeamId,plannerCommittedFormation);}catch{}}
       sortPlannerRoster();
       renderRoster();
