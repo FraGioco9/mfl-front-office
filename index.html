@@ -2370,12 +2370,6 @@
               if (!current) return true;
               if (candidate.count !== current.count) return candidate.count > current.count;
               if (candidate.score !== current.score) return candidate.score > current.score;
-              const length = Math.max(candidate.slotScores?.length || 0, current.slotScores?.length || 0);
-              for (let index = 0; index < length; index += 1) {
-                const nextScore = candidate.slotScores?.[index] ?? -Infinity;
-                const currentScore = current.slotScores?.[index] ?? -Infinity;
-                if (nextScore !== currentScore) return nextScore > currentScore;
-              }
               return candidate.signature < current.signature;
             };
             const optimizedDepthFill = keys => {
@@ -2387,7 +2381,7 @@
                 .slice()
                 .sort((a,b) => Number(a.player_id)-Number(b.player_id));
               const states = new Array(1 << openKeys.length).fill(null);
-              states[0] = {count:0,score:0,picks:[],slotScores:new Array(openKeys.length).fill(-Infinity),signature:""};
+              states[0] = {count:0,score:0,picks:[],signature:""};
               let currentStates = states;
               for (const player of players) {
                 const nextStates = currentStates.slice();
@@ -2403,13 +2397,10 @@
                     const positionalScore = Number.isFinite(rating) ? rating : 0;
                     const nextMask = mask | (1 << index);
                     const picks = state.picks.concat({key:openKeys[index],playerId});
-                    const slotScores = state.slotScores.slice();
-                    slotScores[index] = positionalScore;
                     const candidate = {
                       count:state.count+1,
                       score:state.score+positionalScore,
                       picks,
-                      slotScores,
                       signature:picks.map(item=>item.key+":"+String(item.playerId).padStart(12,"0")).sort().join("|"),
                     };
                     if (betterDepthFillState(candidate,nextStates[nextMask])) nextStates[nextMask]=candidate;
