@@ -91,6 +91,8 @@ assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansMo
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
+assert(html.includes('<label for="plannerPlanNameInput">Name</label>')
+  && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
 assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
