@@ -543,9 +543,9 @@ invariant(vercel.rewrites.some((rule) => String(rule.source || "").includes("|pl
 
 console.log("Planner route, custom pitch icon, and team-selection search validation passed.");
 
-invariant(planner.includes('function renderSquadSummary()') && planner.includes('if(commit)renderSquadSummary()')
+invariant(planner.includes('function renderSquadSummary()') && planner.includes('if(commit){renderSquadSummary();renderSquadStatus();syncPlannerDirtyState();}')
   && planner.includes('renderSquadSummary();') && styles.includes('.plannerSummaryTable{'),
-  "Five summary metrics must update with squad and contract edits.");
+  "Squad summary and compact status must update together after contract edits.");
 invariant([planner, generatedPlanner].every(source =>
   source.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0)')
   && !source.includes('overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(2)'))
