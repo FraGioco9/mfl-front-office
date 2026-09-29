@@ -236,8 +236,11 @@ invariant(
     && planner.includes("totalPendingContracts")
     && planner.includes("pendingContractLimitForPlayer")
     && planner.includes("requestedContract")
-    && styles.includes(".plannerPendingContractInput{width:62px;height:26px"),
-  "Selected players must expose editable staged Contracts that are preserved on Add and share the 100% contract budget.",
+    && styles.includes(".plannerPendingContractInput{width:54px;height:24px")
+    && styles.includes(".plannerPendingContractControl{display:inline-flex;align-items:center;align-self:center;gap:3px;min-width:0;height:24px}")
+    && planner.includes("renderPendingSelectionStatus")
+    && planner.includes("% contracts used"),
+  "Selected players must expose compact vertically centered staged Contracts, preserve them on Add, and show live aggregate contract usage.",
 );
 invariant(
   planner.includes('playerModal.classList.toggle("modalOpen",true)')
