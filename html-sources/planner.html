@@ -1,5 +1,22 @@
         <section id="plannerPage" class="pageView plannerPage" hidden>
           <h2 class="tablePageTitle">Planner</h2>
+          <div id="plannerPlanBar" class="plannerPlanBar" aria-label="Plan actions">
+            <div class="plannerPlanIdentity">
+              <span class="plannerPlanEyebrow">Plan</span>
+              <strong id="plannerPlanName">Unsaved plan</strong>
+              <span id="plannerPlanMode" class="plannerPlanMode">Draft</span>
+            </div>
+            <div class="plannerPlanActions">
+              <button id="plannerPlansButton" class="compactButton" type="button">Plans</button>
+              <button id="plannerSavePlanButton" class="compactButton" type="button" disabled>Save</button>
+              <button id="plannerSaveAsPlanButton" class="compactButton" type="button" disabled>Save as</button>
+              <button id="plannerSharePlanButton" class="compactButton" type="button" disabled>Share</button>
+            </div>
+          </div>
+          <div id="plannerSharedBanner" class="plannerSharedBanner" hidden>
+            <span>Viewing shared plan <strong id="plannerSharedPlanName"></strong> — read only</span>
+            <button id="plannerCopySharedPlanButton" class="compactButton" type="button">Copy to my plans</button>
+          </div>
           <section id="plannerTeamSelector" class="plannerTeamSelector" aria-label="Team selection">
             <label class="plannerTeamSearchLabel" for="plannerTeamSearchInput">Team</label>
             <div class="plannerTeamSearch">
@@ -123,6 +140,18 @@
                 <div id="plannerFormationPositions" class="plannerFormationPositions" role="group" aria-label="Formation starting positions"></div>
               </div>
               <div id="plannerDepthPicker" class="plannerDepthPicker" role="dialog" aria-label="Select a player for the position" hidden></div>
+            </section>
+          </div>
+          <div id="plannerPlansModal" class="modalBackdrop plannerPlansModalBackdrop" hidden>
+            <section class="mflDialog plannerPlansDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlansModalTitle">
+              <header class="mflDialogHeader">
+                <h2 id="plannerPlansModalTitle">Saved plans</h2>
+                <button id="plannerPlansModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close saved plans"></button>
+              </header>
+              <section class="plannerPlansModalBody">
+                <p id="plannerPlansStatus" class="plannerPlansStatus" role="status" aria-live="polite"></p>
+                <div id="plannerPlansList" class="plannerPlansList"></div>
+              </section>
             </section>
           </div>
           <div id="plannerPlayerModal" class="modalBackdrop plannerPlayerModalBackdrop" hidden>
@@ -732,6 +761,7 @@
             let depthRoster = [];
             let depthClubId = "";
             const depthAssignments = new Map();
+            let depthReadOnly = false;
             const depthPicker = document.getElementById("plannerDepthPicker");
             const depthAutoFill = document.getElementById("plannerAutoFillDepthButton");
             const depthClear = document.getElementById("plannerClearDepthButton");
@@ -989,7 +1019,7 @@
                 const button = document.createElement("button");
                 button.className = "plannerFormationSlotButton";
                 button.type = "button";
-                button.disabled = !depthRoster.length;
+                button.disabled = depthReadOnly || !depthRoster.length;
                 button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". " + spareCount + " available alternative" + (spareCount === 1 ? "" : "s") + ". Select player");
                 button.setAttribute("aria-haspopup", "dialog");
                 button.setAttribute("aria-expanded", "false");
@@ -1164,16 +1194,17 @@
               });
               Reflect.get(window, "__mflPlannerRoute")?.syncSlots?.(assignedSlotByPlayer);
               if (depthAutoFill instanceof HTMLButtonElement) {
-                depthAutoFill.disabled = !depthRoster.length || !keys.some((key, index) =>
+                depthAutoFill.disabled = depthReadOnly || !depthRoster.length || !keys.some((key, index) =>
                   !depthAssignments.has(key) && rankDepthPlayers(depthRoster, key.split("#")[0])
                     .some(player => !claimed.has(Number(player.player_id))));
               }
-              if (depthClear instanceof HTMLButtonElement) depthClear.disabled = !depthAssignments.size;
+              if (depthClear instanceof HTMLButtonElement) depthClear.disabled = depthReadOnly || !depthAssignments.size;
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
               formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
             };
             const autoFillDepth = () => {
+              if (depthReadOnly) return;
               const selected = formationCodes.includes(formationSelect?.value) ? formationSelect.value : "442";
               const keys = slotKeysFor(formationSlots[selected].flat().concat("GK"));
               const claimed = new Set(depthAssignments.values());
@@ -1190,7 +1221,7 @@
             };
             depthAutoFill?.addEventListener("click", autoFillDepth);
             depthClear?.addEventListener("click", () => {
-              if (!depthAssignments.size) return;
+              if (depthReadOnly || !depthAssignments.size) return;
               depthAssignments.clear();
               closeDepthPicker();
               renderFormation(formationSelect?.value || "442");
@@ -1216,6 +1247,26 @@
                 if (depthClubId !== id) { depthClubId = id; depthAssignments.clear(); closeDepthPicker(); }
               },
               autoFill: autoFillDepth,
+              getAssignments() {
+                return Array.from(depthAssignments, ([slotKey, playerId]) => ({ slotKey, playerId: String(playerId) }));
+              },
+              setAssignments(entries) {
+                const rosterIds = new Set(depthRoster.map(player => Number(player.player_id)));
+                depthAssignments.clear();
+                for (const entry of Array.isArray(entries) ? entries : []) {
+                  const slotKey = String(entry?.slotKey || entry?.slot_key || "").trim().toUpperCase();
+                  const playerId = Number(entry?.playerId ?? entry?.player_id);
+                  if (/^[A-Z]{2,3}#[1-9][0-9]?$/.test(slotKey) && Number.isSafeInteger(playerId) && rosterIds.has(playerId)) {
+                    depthAssignments.set(slotKey, playerId);
+                  }
+                }
+                renderFormation(formationSelect?.value || "442");
+              },
+              setReadOnly(value) {
+                depthReadOnly = Boolean(value);
+                closeDepthPicker();
+                renderFormation(formationSelect?.value || "442");
+              },
               setRoster(players) { depthRoster = Array.isArray(players) ? players.slice() : []; renderFormation(formationSelect?.value || "442"); },
             }));
             const initialPage = String(root.dataset.initialPage || "").replace(/\/+$/, "");
@@ -1225,7 +1276,8 @@
             if (!(page instanceof HTMLElement)) return;
 
             document.body.dataset.page = "planner";
-            if (root.dataset.storedWalletOptIn !== "true") {
+            const initialShareId = String(new URLSearchParams(location.search).get("share") || "").trim();
+            if (root.dataset.storedWalletOptIn !== "true" && !initialShareId) {
               // The shared opt-in shell is parsed after Planner. Prepare it as
               // soon as it enters the DOM, before the browser can paint.
               const showLockedPlanner = () => {
