@@ -279,7 +279,7 @@ assert.ok([css, styles].every(sheet => sheet.includes('.plannerDepthActions{disp
   && sheet.includes('.plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;line-height:20px')
   && sheet.includes('.plannerDepthPickerPhoto{position:relative;isolation:isolate;display:block;flex:0 0 36px')
   && sheet.includes('.plannerDepthPickerPhoto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:top;transform:translateY(12%) scale(1.9);transform-origin:top')
-  && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;')
+  && sheet.includes('.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap;transform:translateY(-1px)}')
   && sheet.includes('.plannerDepthPicker .plannerDepthPickerPlayer:hover:not(:disabled),.plannerDepthPicker .plannerDepthPickerPlayer:focus-visible,.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{border-color:var(--primary);background:var(--row-hover);background-image:none;box-shadow:none;outline:0}')
   && sheet.includes('.plannerDepthPicker .plannerDepthPickerClear:hover,.plannerDepthPicker .plannerDepthPickerClear:focus-visible{color:var(--danger)}')
   && sheet.includes('.plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}')
