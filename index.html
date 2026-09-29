@@ -2279,6 +2279,7 @@
               const name = Array.from(formationSelect?.options || [])
                 .find(option => option.value === selected)?.textContent || selected;
               formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
+              Reflect.get(window, "__mflPlannerSyncDirty")?.();
             };
             const autoFillDepth = () => {
               if (depthReadOnly) return;
