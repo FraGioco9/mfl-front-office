@@ -1,6 +1,7 @@
 const { signedWalletFromRequest } = require("./_wallet-auth");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
+const { sendPlannerPersistenceUnavailable } = require("./_planner-persistence");
 const {
   normalizePlannerId,
   generatePlannerId,
@@ -80,6 +81,7 @@ module.exports = async function handler(request, response) {
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     if (sendRequestBodyError(response, error)) return;
+    if (sendPlannerPersistenceUnavailable(response, error, "planner_shares")) return;
     console.warn("Could not handle planner share.", error);
     response.status(500).json({ error: "Could not handle shared plan." });
   }
