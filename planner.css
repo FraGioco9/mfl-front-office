@@ -75,6 +75,11 @@ select.plannerFormationSelect.plannerFormationSelectCommitted,select.plannerForm
 .plannerPlayerSelectionTableShell{max-height:142px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
 .plannerPlayerSelectionTable th{position:sticky;top:0}
 .plannerPendingPlayer:hover td{background:var(--row-hover)}
+.plannerPlayerSelectionTable :is(th,td):nth-child(6){text-align:left;justify-items:start}
+.plannerPendingContractCell{overflow:visible}
+.plannerPendingContractControl{display:inline-flex;align-items:center;gap:3px;min-width:0}
+.plannerPendingContractInput{width:62px;height:26px;padding-inline:5px}
+.plannerPendingContractSuffix{color:var(--text-soft);font-size:12px;font-variant-numeric:tabular-nums}
 .plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto}
 #plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
@@ -133,7 +138,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerPlayerSelectionTableShell{overflow:hidden}
 .plannerRosterPanel .playerTableScroller{overflow:visible}
 .plannerPlayerSearchTable{display:flex;flex-direction:column;min-height:0;max-height:100%;--planner-columns:32px minmax(0,1fr) 20% 9% 11% 100px;--planner-row-width:700px;flex:1}
-.plannerPlayerSelectionTable{max-height:142px}
+.plannerPlayerSelectionTable{max-height:142px;--planner-columns:32px minmax(0,1fr) 18% 8% 10% 96px 88px;--planner-row-width:780px}
 .plannerPlayerSearchTable colgroup{display:none}
 .plannerPlayerSearchTable thead{display:block;flex:none;overflow:hidden;scrollbar-gutter:stable;background:var(--mfl-table-header-background);border-bottom:1px solid var(--mfl-table-border-color)}
 .plannerPlayerSearchTable tbody{display:block;min-height:0;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
@@ -212,7 +217,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 .plannerDepthPickerPlayer>*{align-self:center}
 .plannerDepthPickerPlayer>span:not(.plannerDepthPickerPhoto):not(.plannerDepthPickerSelected){display:inline-flex;flex:1 1 0;align-items:center;min-width:0;height:36px;overflow:hidden;font-size:12px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
 .plannerDepthPickerPlayer strong{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;line-height:20px;font-variant-numeric:tabular-nums}
-.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap}
+.plannerDepthPickerSelected{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:36px;color:var(--primary);font-size:10px;font-weight:800;line-height:20px;white-space:nowrap;transform:translateY(-1px)}
 .plannerDepthPickerRemoveFrame{display:flex;flex:0 0 36px;align-items:center;justify-content:center;width:36px;height:36px;pointer-events:none}
 .plannerDepthPickerRemoveIcon{display:block;flex:0 0 16px;width:16px;height:16px;overflow:visible}
 .plannerDepthPickerClear{min-height:44px;align-items:center;color:var(--danger);font-size:12px;font-weight:700;line-height:20px}
