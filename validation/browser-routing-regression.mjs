@@ -2267,9 +2267,9 @@ const browserTestSource = String.raw`(() => {
         && Math.abs(midY(removeIconFrame.getBoundingClientRect()) - removeMidpoint) <= 1
         && Math.abs(midY(removeIcon.getBoundingClientRect()) - removeMidpoint) <= 1
         && Math.abs(midY(removeText.getBoundingClientRect()) - removeMidpoint) <= 1
-        && getComputedStyle(removeText).height==="20px"
+        && getComputedStyle(removeText).height==="36px"
         && getComputedStyle(removeText).lineHeight==="20px",
-        "Remove icon frame, x and label must all be centered in the 44px row.");
+        "Remove icon frame, x and 36px label track must all be centered in the 44px row.");
       const assignedOtherSlot = depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="101"]');
       assert(assignedOtherSlot && !assignedOtherSlot.disabled && assignedOtherSlot.dataset.assignedSlot==="CB#2"
         && assignedOtherSlot.querySelector(".plannerDepthPickerSelected")?.textContent==="Selected · CB",
@@ -2295,8 +2295,8 @@ const browserTestSource = String.raw`(() => {
         return Math.abs(row.getBoundingClientRect().height - 44) <= 1
           && Array.from(row.children).every(child => Math.abs(midY(child.getBoundingClientRect()) - midpoint) <= 1
             && (child.classList.contains("plannerDepthPickerPhoto")
-              || getComputedStyle(child).height==="20px" && getComputedStyle(child).lineHeight==="20px"));
-      }), "All picker portraits, names, selected labels and positional Overalls must be vertically centered in 44px rows.");
+              || getComputedStyle(child).height==="36px" && getComputedStyle(child).lineHeight==="20px"));
+      }), "All picker portraits, names, selected labels and positional Overalls must share the centered 36px content track in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
         && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
