@@ -7485,7 +7485,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPlanEyebrow{color:var(--text-soft);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 #plannerPlanName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
 .plannerPlanMode{display:inline-flex;align-items:center;min-height:20px;padding:0 6px;border-radius:999px;background:var(--surface-muted);color:var(--text-soft);font-size:10px;font-weight:800}
-.plannerPlanActions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.plannerPlanActions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.plannerPlanActions>.compactButton{flex:0 0 78px;width:78px;padding-inline:8px}
 .plannerSharedBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:9px 12px;border:1px solid var(--primary);border-radius:8px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:12px}
 .plannerSharedBanner[hidden]{display:none}
 .plannerPlansModalBackdrop{z-index:var(--mfl-z-modal)}
@@ -7494,7 +7494,7 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPlanNameBody,.plannerPlanDeleteBody{padding:16px}
 .plannerPlanNameBody .field{display:grid;gap:6px}
 .plannerPlanNameBody .field>span{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
-#plannerPlanNameInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height)}
+#plannerPlanNameInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled){outline:0;border-color:#7db8de;background:var(--row-hover);color:var(--text);box-shadow:inset 0 0 0 1px #7db8de}
 .plannerPlanNameError{margin:7px 0 0;color:var(--danger);font-size:12px}
 .plannerPlanNameError[hidden]{display:none}
 .plannerPlanNameFooter,.plannerPlanDeleteFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px}
@@ -7686,7 +7686,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 /* Interactive depth: keep the original empty MFL ring, but make every slot a
    usable button with a centered SVG plus and an accessible selection menu. */
 .plannerDepthHeader{flex-wrap:wrap}
-.plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}.plannerAutoFillDepthButton,.plannerClearDepthButton{flex:0 0 auto}
+.plannerDepthActions{display:flex;align-items:center;gap:6px;margin-left:auto}.plannerAutoFillDepthButton,.plannerClearDepthButton{flex:0 0 76px;width:76px;padding-inline:8px}
 .plannerFormationSpot{width:clamp(58px,17%,74px);pointer-events:none}
 .plannerFormationSlotButton{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;pointer-events:auto}
 .plannerFormationDepthBadge{position:absolute;z-index:6;top:7%;right:5%;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:18px;height:18px;border:2px solid #14241d;border-radius:50%;background:#757f8d;color:#fff;font-size:10px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.65);pointer-events:none}
