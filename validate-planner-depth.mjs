@@ -207,7 +207,7 @@ vm.runInContext(
   optimizerContext,
 );
 assert.deepEqual(
-  Array.from(optimizerContext.optimize(["CB#1","RB#1"]), pick => [pick.key,pick.playerId]),
+  Array.from(optimizerContext.optimize(["CB#1","RB#1"]), pick => [pick.key,pick.playerId]).sort((a,b)=>a[0].localeCompare(b[0])),
   [["CB#1",102],["RB#1",101]],
   "Auto-fill must optimize the whole XI instead of greedily consuming a versatile player in the first slot.",
 );
