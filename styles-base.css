@@ -967,8 +967,8 @@ body:not(.pinnedSidebarVisible) .siteFooter {
 
 .deleteWatchlistConfirmButton:hover,
 .deleteWatchlistConfirmButton:focus-visible {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
   color: var(--surface);
 }
 
@@ -3939,8 +3939,8 @@ button.playerIdText:active {
 .evaluationLoadDeleteButton:focus-visible,
 .evaluationLoadResult .evaluationLoadDeleteButton:hover:not(:disabled),
 .evaluationLoadResult .evaluationLoadDeleteButton:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
   color: var(--surface);
 }
 
@@ -4017,8 +4017,8 @@ button.playerIdText:active {
 
 .evaluationFooterDeleteButton:hover:not(:disabled),
 .evaluationFooterDeleteButton:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
   color: var(--surface);
 }
 
@@ -4104,8 +4104,8 @@ button.playerIdText:active {
 
 .deleteWatchlistConfirmButton:hover:not(:disabled),
 .deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
   color: var(--surface);
 }
 
@@ -4463,8 +4463,8 @@ button.playerIdText:active {
 
 .settingsEmailDiscardButton:hover:not(:disabled),
 .settingsEmailDiscardButton:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
   color: var(--surface);
 }
 
