@@ -57,6 +57,18 @@
   const plansModalCloseButton=document.getElementById("plannerPlansModalCloseButton");
   const plansStatus=document.getElementById("plannerPlansStatus");
   const plansList=document.getElementById("plannerPlansList");
+  const planNameModal=document.getElementById("plannerPlanNameModal");
+  const planNameModalTitle=document.getElementById("plannerPlanNameModalTitle");
+  const planNameModalCloseButton=document.getElementById("plannerPlanNameModalCloseButton");
+  const planNameInput=/** @type {HTMLInputElement|null} */(document.getElementById("plannerPlanNameInput"));
+  const planNameError=document.getElementById("plannerPlanNameError");
+  const planNameDiscardButton=document.getElementById("plannerPlanNameDiscardButton");
+  const planNameConfirmButton=document.getElementById("plannerPlanNameConfirmButton");
+  const planDeleteModal=document.getElementById("plannerPlanDeleteModal");
+  const planDeleteModalCloseButton=document.getElementById("plannerPlanDeleteModalCloseButton");
+  const planDeleteName=document.getElementById("plannerPlanDeleteName");
+  const planDeleteCancelButton=document.getElementById("plannerPlanDeleteCancelButton");
+  const planDeleteConfirmButton=document.getElementById("plannerPlanDeleteConfirmButton");
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="",selectedTeamData=null;
   let playerSearchTimer=0,playerSearchSequence=0;
@@ -64,6 +76,7 @@
   let pendingPlayers=new Map();
   let activeContractEditor=null;
   let activePlanId="",activePlanName="",activePlanPayload=null,plannerReadOnly=false,loadedPlanRouteIdentity="";
+  let planNameRequest=null,planDeleteRequest=null;
   const MAX_SQUAD_SIZE=25;
   const CLUB_DISPLAY_DATA_STORAGE_KEY="mfl-club-display-data-v1";
   function cachedPlannerClub(clubId){
@@ -849,9 +862,46 @@
       lineup:Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[],
     };
   }
-  function plannerPlanNameInput(defaultName=""){
-    const value=window.prompt("Plan name",String(defaultName||"").trim()||String(selectedTeamData?.name||"Plan")+" plan");
+  function normalizePlannerPlanName(value){
     return String(value||"").trim().replace(/\s+/g," ").slice(0,60);
+  }
+  function closePlannerPlanNameModal(value=""){
+    if(planNameModal instanceof HTMLElement){planNameModal.hidden=true;planNameModal.classList.remove("modalOpen");}
+    const request=planNameRequest;planNameRequest=null;
+    if(request)request.resolve(normalizePlannerPlanName(value));
+  }
+  function requestPlannerPlanName(defaultName="",title="Save plan"){
+    if(!(planNameModal instanceof HTMLElement)||!(planNameInput instanceof HTMLInputElement))return Promise.resolve("");
+    if(planNameRequest)closePlannerPlanNameModal("");
+    const suggested=normalizePlannerPlanName(defaultName)||normalizePlannerPlanName(String(selectedTeamData?.name||"Plan")+" plan");
+    if(planNameModalTitle)planNameModalTitle.textContent=title;
+    if(planNameError instanceof HTMLElement){planNameError.textContent="";planNameError.hidden=true;}
+    planNameInput.value=suggested;planNameInput.removeAttribute("aria-invalid");
+    planNameModal.hidden=false;planNameModal.classList.add("modalOpen");
+    const promise=new Promise(resolve=>{planNameRequest={resolve};});
+    window.setTimeout(()=>{planNameInput.focus();planNameInput.select?.();},0);
+    return promise;
+  }
+  function confirmPlannerPlanName(){
+    const name=normalizePlannerPlanName(planNameInput?.value);
+    if(!name){
+      if(planNameError instanceof HTMLElement){planNameError.textContent="Plan name cannot be blank.";planNameError.hidden=false;}
+      planNameInput?.setAttribute("aria-invalid","true");planNameInput?.focus();return;
+    }
+    closePlannerPlanNameModal(name);
+  }
+  function closePlannerPlanDeleteModal(value=false){
+    if(planDeleteModal instanceof HTMLElement){planDeleteModal.hidden=true;planDeleteModal.classList.remove("modalOpen");}
+    const request=planDeleteRequest;planDeleteRequest=null;if(request)request.resolve(Boolean(value));
+  }
+  function requestPlannerPlanDelete(name){
+    if(!(planDeleteModal instanceof HTMLElement))return Promise.resolve(false);
+    if(planDeleteRequest)closePlannerPlanDeleteModal(false);
+    if(planDeleteName)planDeleteName.textContent=String(name||"this plan");
+    planDeleteModal.hidden=false;planDeleteModal.classList.add("modalOpen");
+    const promise=new Promise(resolve=>{planDeleteRequest={resolve};});
+    window.setTimeout(()=>planDeleteCancelButton?.focus(),0);
+    return promise;
   }
   function syncPlanUi(){
     const optedIn=typeof hasWalletOptIn==="function"&&hasWalletOptIn();
@@ -934,7 +984,7 @@
     if(plannerReadOnly||!selectedTeamId)return false;
     const payload=currentPlannerPayload();
     const overwriting=Boolean(activePlanId)&&!asNew;
-    const name=String(nameOverride||(overwriting&&activePlanName?activePlanName:plannerPlanNameInput(asNew?"":activePlanName))).trim();
+    const name=String(nameOverride||(overwriting&&activePlanName?activePlanName:await requestPlannerPlanName(asNew?"":activePlanName,asNew?"Save plan as":"Save plan"))).trim();
     if(!payload||!name)return false;
     const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:""});
     const plan=data?.plan;
@@ -955,7 +1005,7 @@
   async function shareCurrentPlan(){
     if(plannerReadOnly||!selectedTeamId)return "";
     const payload=currentPlannerPayload();
-    const name=activePlanName||plannerPlanNameInput("");
+    const name=activePlanName||await requestPlannerPlanName("","Share plan");
     if(!payload||!name)return "";
     return createPlannerShare(name,payload);
   }
@@ -974,10 +1024,10 @@
       const action=(label,handler)=>{const button=document.createElement("button");button.type="button";button.className="compactButton";button.textContent=label;button.addEventListener("click",handler);return button;};
       actions.append(
         action("Open",async()=>{closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});history.pushState({},"","/planner?saved="+encodeURIComponent(plan.id));}),
-        action("Rename",async()=>{const next=plannerPlanNameInput(plan.name);if(!next)return;await savePlannerPayload(plan.payload,next,{savedId:plan.id});await openPlansModal();}),
-        action("Duplicate",async()=>{const next=plannerPlanNameInput(String(plan.name||"Plan")+" copy");if(!next)return;await savePlannerPayload(plan.payload,next);await openPlansModal();}),
+        action("Rename",async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;await savePlannerPayload(plan.payload,next,{savedId:plan.id});await openPlansModal();}),
+        action("Duplicate",async()=>{const next=await requestPlannerPlanName(String(plan.name||"Plan")+" copy","Duplicate plan");if(!next)return;await savePlannerPayload(plan.payload,next);await openPlansModal();}),
         action("Share",async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload);}),
-        action("Delete",async()=>{if(!window.confirm("Delete this saved plan?"))return;await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;syncPlanUi();}await openPlansModal();})
+        action("Delete",async()=>{if(!await requestPlannerPlanDelete(plan.name))return;await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;syncPlanUi();}await openPlansModal();})
       );
       row.append(main,actions);fragment.appendChild(row);
     }
@@ -1003,7 +1053,7 @@
   }
   async function copySharedPlannerPlan(){
     if(!plannerReadOnly||!activePlanPayload)return false;
-    const name=plannerPlanNameInput(activePlanName?activePlanName+" copy":"Shared plan copy");
+    const name=await requestPlannerPlanName(activePlanName?activePlanName+" copy":"Shared plan copy","Copy shared plan");
     if(!name)return false;
     const data=await savePlannerPayload(activePlanPayload,name);
     const plan=data?.plan;if(!plan?.id)return false;
@@ -1088,6 +1138,16 @@
   copySharedPlanButton?.addEventListener("click",()=>void copySharedPlannerPlan().catch(error=>setStatus(error?.message||"Could not copy shared plan.")));
   plansModalCloseButton?.addEventListener("click",closePlansModal);
   plansModal?.addEventListener("click",event=>{if(event.target===plansModal)closePlansModal();});
+  planNameModalCloseButton?.addEventListener("click",()=>closePlannerPlanNameModal(""));
+  planNameDiscardButton?.addEventListener("click",()=>closePlannerPlanNameModal(""));
+  planNameConfirmButton?.addEventListener("click",confirmPlannerPlanName);
+  planNameModal?.addEventListener("click",event=>{if(event.target===planNameModal)closePlannerPlanNameModal("");});
+  planNameInput?.addEventListener("input",()=>{planNameInput.removeAttribute("aria-invalid");if(planNameError instanceof HTMLElement){planNameError.textContent="";planNameError.hidden=true;}});
+  planNameInput?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();confirmPlannerPlanName();}else if(event.key==="Escape"){event.preventDefault();closePlannerPlanNameModal("");}});
+  planDeleteModalCloseButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(false));
+  planDeleteCancelButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(false));
+  planDeleteConfirmButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(true));
+  planDeleteModal?.addEventListener("click",event=>{if(event.target===planDeleteModal)closePlannerPlanDeleteModal(false);});
   rosterRetry?.addEventListener("click",()=>{if(selectedTeamId&&!plannerReadOnly)void loadRoster(selectedTeamId);});
   addPlayerButton?.addEventListener("click",openPlayerModal);
   playerModalCloseButton?.addEventListener("click",()=>closePlayerModal({focusButton:true}));
@@ -1121,6 +1181,8 @@
   });
   teamClearButton?.addEventListener("click",clearSelection);
   document.addEventListener("keydown",event=>{
+    if(event.key==="Escape"&&planNameModal instanceof HTMLElement&&!planNameModal.hidden){event.preventDefault();closePlannerPlanNameModal("");return;}
+    if(event.key==="Escape"&&planDeleteModal instanceof HTMLElement&&!planDeleteModal.hidden){event.preventDefault();closePlannerPlanDeleteModal(false);return;}
     if(event.key==="Escape"&&plansModal instanceof HTMLElement&&!plansModal.hidden){event.preventDefault();closePlansModal();return;}
     if(event.key==="Escape"&&playerModal instanceof HTMLElement&&!playerModal.hidden){
       event.preventDefault();
