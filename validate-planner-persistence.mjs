@@ -91,8 +91,9 @@ assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansMo
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
-assert(html.includes('<label for="plannerPlanNameInput">Name</label>')
-  && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"'));
+assert(html.includes('<span class="plannerPlanNameLabel">Name</span>')
+  && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"')
+  && !html.includes('<label for="plannerPlanNameInput">Name</label>'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
 assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
@@ -104,7 +105,15 @@ assert(planner.includes("requestPlannerPlanName") && planner.includes("requestPl
 assert(!planner.includes("window.prompt(") && !planner.includes("window.confirm("));
 assert(generatedPlanner.startsWith("// Generated") && generatedPlanner.includes("currentPlannerPayload"));
 assert(styles.includes(".plannerPlanBar{") && styles.includes(".plannerPlansDialog{") && styles.includes(".plannerSharedBanner{"));
-assert(styles.includes(".plannerPlanNameDialog,.plannerPlanDeleteDialog{") && styles.includes(".plannerPlanDeleteConfirmButton{color:var(--danger)}"));
+assert(styles.includes(".plannerPlanNameDialog{width:min(440px,calc(100vw - 40px))")
+  && styles.includes(".plannerPlanNameLabel{color:var(--text-soft)")
+  && styles.includes("pointer-events:none")
+  && !styles.includes(".plannerPlanNameDialog,.plannerPlanDeleteDialog{")
+  && !styles.includes(".plannerPlanDeleteConfirmButton{color:var(--danger)}"));
+assert(html.includes('class="mflDialog deleteWatchlistDialog plannerPlanDeleteDialog"')
+  && html.includes('class="deleteWatchlistBody plannerPlanDeleteBody"')
+  && html.includes('class="mflDialogFooter deleteWatchlistFooter plannerPlanDeleteFooter"')
+  && html.includes('class="deleteWatchlistConfirmButton plannerPlanDeleteConfirmButton"'));
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
 assert(routing.includes('const shareId = String(params.get("share") || "").trim();')
   && routing.includes('!shareId && !hasWalletOptIn()')
