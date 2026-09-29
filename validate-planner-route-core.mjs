@@ -95,13 +95,13 @@ invariant(
   "Planner plan-name input must use one light-blue interaction border without a second outline.",
 );
 invariant(
-  html.includes('id="plannerPlanMode" class="plannerPlanMode">Unsaved</span>')
+  html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>')
     && styles.includes(".plannerPlanModeDirty{")
     && styles.includes(".plannerPlanModeSaved{")
     && planner.includes("function plannerPayloadFingerprint(payload)")
     && planner.includes("function plannerHasUnsavedChanges()")
     && planner.includes("function syncPlannerDirtyState()")
-    && planner.includes('const mode=plannerReadOnly?"Shared":dirty||!activePlanId?"Unsaved":"Saved";')
+    && planner.includes('const mode=plannerReadOnly?"Shared":!selectedTeamId?"Draft":dirty||!activePlanId?"Unsaved":"Saved";')
     && planner.includes('Reflect.set(window,"__mflPlannerConfirmNavigation",plannerConfirmNavigation)')
     && planner.includes('window.confirm("You have unsaved Planner changes. Leave without saving?")')
     && planner.includes('window.addEventListener("beforeunload",event=>'),
