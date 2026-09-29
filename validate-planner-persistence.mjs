@@ -67,6 +67,8 @@ for (const source of [schema, migration]) {
   assert(source.includes("create table if not exists public.planner_shares"));
   assert(source.includes("planner_plans_wallet_updated_idx"));
   assert(source.includes("planner_shares_expires_at_idx"));
+  assert(source.includes("alter table public.planner_plans enable row level security;"));
+  assert(source.includes("alter table public.planner_shares enable row level security;"));
   assert(source.includes("grant select, insert, update, delete on table public.planner_plans to service_role"));
   assert(source.includes("grant select, insert, update, delete on table public.planner_shares to service_role"));
 }
