@@ -7,7 +7,8 @@
 .plannerPlanActions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .plannerSharedBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:9px 12px;border:1px solid var(--primary);border-radius:8px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:12px}
 .plannerSharedBanner[hidden]{display:none}
-.plannerPlanNameModalBackdrop,.plannerPlanDeleteModalBackdrop,.plannerPlansModalBackdrop{z-index:var(--mfl-z-modal)}
+.plannerPlansModalBackdrop{z-index:var(--mfl-z-modal)}
+.plannerPlanNameModalBackdrop,.plannerPlanDeleteModalBackdrop{z-index:calc(var(--mfl-z-modal) + 1)}
 .plannerPlanNameDialog,.plannerPlanDeleteDialog{width:min(440px,calc(100vw - 40px));max-width:calc(100vw - 40px)}
 .plannerPlanNameBody,.plannerPlanDeleteBody{padding:16px}
 .plannerPlanNameBody .field{display:grid;gap:6px}
