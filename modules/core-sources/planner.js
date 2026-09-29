@@ -581,9 +581,13 @@
       row.addEventListener("mouseenter",()=>setPlannerPlayerHighlight(player.player_id,true));
       row.addEventListener("mouseleave",()=>setPlannerPlayerHighlight(player.player_id,false));
       row.addEventListener("focusin",()=>setPlannerPlayerHighlight(player.player_id,true));
-      row.addEventListener("focusout",event=>{if(!row.contains(event.relatedTarget))setPlannerPlayerHighlight(player.player_id,false);});
+      row.addEventListener("focusout",event=>{
+        const next=/** @type {Node|null} */(event.relatedTarget);
+        if(!next||!row.contains(next))setPlannerPlayerHighlight(player.player_id,false);
+      });
       row.addEventListener("click",event=>{
-        if(event.target?.closest?.("button,input,select,a"))return;
+        const target=/** @type {Element|null} */(event.target);
+        if(target?.closest?.("button,input,select,a"))return;
         setPlannerPlayerHighlight(player.player_id,true,{flash:true,scroll:"pitch"});
       });
       const slotCell=document.createElement("td");
