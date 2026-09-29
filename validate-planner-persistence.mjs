@@ -54,7 +54,7 @@ const [saveApi, shareApi, persistenceErrors, schema, migration, docs, html, plan
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
-  readFile(new URL("./supabase/migrations/20260929203000_planner_plans_and_shares.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
