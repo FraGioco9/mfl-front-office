@@ -2125,7 +2125,7 @@ const browserTestSource = String.raw`(() => {
       assert(contractEditor.hidden, "Opening another Contract must close the previous editor.");
       assert(contractValue.textContent === "12.50%", "Opening another Contract must discard the previous unsaved draft.");
       assert(addedContractEditor instanceof HTMLElement && !addedContractEditor.hidden, "The newly selected Contract must become the only active editor.");
-      assert(addedContractValue?.textContent === "3.75%", "Switching editors must preserve the new Contract's committed value.");
+      assert(addedContractValue?.textContent === "6.25%", "Switching editors must preserve the staged Contract value committed when the player was added.");
       addedContractEdit.click();
       contractEdit.click();
       contractInput.value = "18.25";
