@@ -51,9 +51,17 @@ invariant(
   "Planner plan actions and Depth actions must keep equal sizes within each action group.",
 );
 invariant(
+  html.includes('id="plannerPlansButton"')
+    && html.includes('id="plannerSavePlanButton"')
+    && html.includes('id="plannerSharePlanButton"')
+    && !html.includes('id="plannerSaveAsPlanButton"')
+    && !planner.includes("saveAsPlanButton"),
+  "Planner must use one Save action; Duplicate in the Plans library owns branching instead of a redundant Save as control.",
+);
+invariant(
   styles.includes("#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled)")
     && styles.includes("border-color:#7db8de")
-    && styles.includes("box-shadow:inset 0 0 0 1px #7db8de"),
+    && styles.includes("box-shadow:none"),
   "Planner plan-name input must use the canonical light-blue interaction highlight.",
 );
 invariant(
