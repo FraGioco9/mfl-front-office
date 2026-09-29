@@ -1192,7 +1192,7 @@
               </header>
               <section class="plannerPlanNameBody">
                 <div class="field">
-                  <label for="plannerPlanNameInput">Name</label>
+                  <span class="plannerPlanNameLabel">Name</span>
                   <input id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Plan name" aria-describedby="plannerPlanNameError">
                 </div>
                 <p id="plannerPlanNameError" class="plannerPlanNameError" hidden></p>
@@ -1204,17 +1204,17 @@
             </section>
           </div>
           <div id="plannerPlanDeleteModal" class="modalBackdrop plannerPlanDeleteModalBackdrop" hidden>
-            <section class="mflDialog plannerPlanDeleteDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlanDeleteModalTitle">
+            <section class="mflDialog deleteWatchlistDialog plannerPlanDeleteDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlanDeleteModalTitle">
               <header class="mflDialogHeader">
                 <h2 id="plannerPlanDeleteModalTitle">Delete plan</h2>
                 <button id="plannerPlanDeleteModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete plan dialog"></button>
               </header>
-              <section class="plannerPlanDeleteBody">
+              <section class="deleteWatchlistBody plannerPlanDeleteBody">
                 <p>Delete <strong id="plannerPlanDeleteName">this plan</strong>?</p>
               </section>
-              <footer class="mflDialogFooter plannerPlanDeleteFooter">
+              <footer class="mflDialogFooter deleteWatchlistFooter plannerPlanDeleteFooter">
                 <button id="plannerPlanDeleteCancelButton" type="button">Cancel</button>
-                <button id="plannerPlanDeleteConfirmButton" class="plannerPlanDeleteConfirmButton" type="button">Delete</button>
+                <button id="plannerPlanDeleteConfirmButton" class="deleteWatchlistConfirmButton plannerPlanDeleteConfirmButton" type="button">Delete</button>
               </footer>
             </section>
           </div>
