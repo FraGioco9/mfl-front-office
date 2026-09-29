@@ -43,14 +43,17 @@ function normalizeSquad(value) {
   const source = Array.isArray(value) ? value : [];
   const seen = new Set();
   const squad = [];
+  let remainingContract = 100;
   for (const entry of source) {
     const playerId = normalizePlannerPlayerId(entry?.playerId ?? entry?.player_id ?? entry?.id);
     if (!playerId || seen.has(playerId)) continue;
     seen.add(playerId);
-    squad.push({
-      playerId,
-      contract: normalizeContract(entry?.contract ?? entry?.plannedContract ?? entry?.planned_contract_value),
-    });
+    const contract = Math.min(
+      normalizeContract(entry?.contract ?? entry?.plannedContract ?? entry?.planned_contract_value),
+      remainingContract,
+    );
+    remainingContract = Math.max(0, Math.round((remainingContract - contract) * 100) / 100);
+    squad.push({ playerId, contract });
     if (squad.length >= MAX_PLAN_PLAYERS) break;
   }
   return squad;
