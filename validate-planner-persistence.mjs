@@ -88,6 +88,7 @@ assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_share
 assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
+assert(html.includes('id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>'));
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
@@ -102,7 +103,7 @@ assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planne
 assert(planner.includes('routeParams.get("share")') && planner.includes('routeParams.get("saved")'));
 assert(planner.includes("plannerReadOnly") && planner.includes("copySharedPlannerPlan"));
 assert(planner.includes("requestPlannerPlanName") && planner.includes("requestPlannerPlanDelete"));
-assert(!planner.includes("window.prompt(") && !planner.includes("window.confirm("));
+assert(!planner.includes("window.prompt(") && planner.includes('window.confirm("You have unsaved Planner changes. Leave without saving?")'));
 assert(generatedPlanner.startsWith("// Generated") && generatedPlanner.includes("currentPlannerPayload"));
 assert(styles.includes(".plannerPlanBar{") && styles.includes(".plannerPlansDialog{") && styles.includes(".plannerSharedBanner{"));
 assert(styles.includes(".plannerPlanNameDialog{width:min(440px,calc(100vw - 40px))")
