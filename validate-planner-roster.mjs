@@ -185,8 +185,8 @@ assert.equal(stagedRows.length,2,"Selected players must render as staged rows.")
 assert.equal(stagedRows[0].children.length,7,"Selected-player rows must add Contract before Remove.");
 const stagedContractInput=stagedRows[0].children[5].children[0].children[0];
 const secondStagedContractInput=stagedRows[1].children[5].children[0].children[0];
-assert.equal(stagedContractInput.value,"4.00","Staged Contract must default from the player's database contract.");
-assert.equal(secondStagedContractInput.value,"5.00","Each staged player must receive its own default Contract.");
+assert.equal(stagedContractInput.value,"0.00","Staged Contract must default to zero.");
+assert.equal(secondStagedContractInput.value,"0.00","Each staged player must independently default to zero.");
 assert.ok(elements.get("plannerPlayerSelectionStatus").textContent.endsWith("% contracts used"),"Selected-player status must expose the live contract percentage used.");
 const usageBeforeEdit=elements.get("plannerPlayerSelectionStatus").textContent;
 stagedContractInput.value="6,25";
@@ -200,7 +200,7 @@ assert.equal(body.children.some(row => row.dataset.playerId === "10"), true, "Al
 const pendingOneRow=body.children.find(row=>row.dataset.playerId==="9");
 const pendingTwoRow=body.children.find(row=>row.dataset.playerId==="10");
 assert.equal(pendingOneRow.children[6].children[0].children[0].textContent,"6.25%","Edited staged Contract must be preserved when the player is added.");
-assert.equal(pendingTwoRow.children[6].children[0].children[0].textContent,"5.00%","Untouched staged Contract must preserve its default value.");
+assert.equal(pendingTwoRow.children[6].children[0].children[0].textContent,"0.00%","Untouched staged Contract must remain zero when added.");
 for(let id=20;id<39;id+=1){
   assert.equal(route.addPlayer({ player_id:id, name:"Cap "+id, positions:"CM", age:22, overall:60, retirement_years:5, active_contract_revenue_share:2000 }, { render:false }), true);
 }
