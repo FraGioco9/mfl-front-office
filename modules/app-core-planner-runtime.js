@@ -156,6 +156,13 @@
   function pendingContractLimitForPlayer(playerId){
     return Math.min(20,Math.max(0,Math.round((100-totalPlannedContracts()-totalPendingContracts(playerId))*100)/100));
   }
+  function renderPendingSelectionStatus(){
+    if(!(playerSelectionStatus instanceof HTMLElement))return;
+    const selected=pendingPlayers.size;
+    const slots=availablePlayerSlots();
+    const contractsUsed=Math.min(100,Math.max(0,totalPlannedContracts()+totalPendingContracts()));
+    playerSelectionStatus.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" in squad · "+selected+" selected · "+Math.max(0,slots-selected)+" spots remaining · "+contractsUsed.toFixed(2)+"% contracts used";
+  }
   function contractText(value){return normalizeContractValue(value).toFixed(2);}
   function contractDisplayText(value){return contractText(value)+"%";}
   function plannerPlayerIsRetired(player){
@@ -295,10 +302,7 @@
     const selected=[...pendingPlayers.values()];
     if(playerSelectionCount)playerSelectionCount.textContent=String(selected.length);
     if(playerSelection instanceof HTMLElement)playerSelection.hidden=!selected.length;
-    if(playerSelectionStatus instanceof HTMLElement){
-      const slots=availablePlayerSlots();
-      playerSelectionStatus.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" in squad · "+selected.length+" selected · "+Math.max(0,slots-selected.length)+" spots remaining";
-    }
+    renderPendingSelectionStatus();
     if(playerConfirmButton instanceof HTMLButtonElement)playerConfirmButton.disabled=!selected.length;
     if(!(playerSelectionBody instanceof HTMLElement))return;
     const fragment=document.createDocumentFragment();
@@ -333,6 +337,7 @@
         if(raw&&Number.isFinite(numeric)&&numeric>limit)raw=limit.toFixed(2);
         contractInput.value=raw;
         player.planned_contract_value=raw&&Number.isFinite(Number(raw))?normalizeContractValue(Number(raw)):0;
+        renderPendingSelectionStatus();
       });
       contractInput.addEventListener("blur",()=>{contractInput.value=contractText(player.planned_contract_value);});
       contractInput.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();contractInput.blur();}});
