@@ -245,8 +245,18 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
-function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+function protectedOptOutRoute(pageName, options = {}) {
+  const normalizedPage = String(pageName || "");
+  if (normalizedPage === "planner") {
+    const explicitPath = String(options.path || options.replaceUrl || "");
+    const shareId = explicitPath.startsWith("/planner?share=")
+      ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
+      : window.location.pathname === "/planner"
+        ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+        : "";
+    if (shareId) return false;
+  }
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -278,7 +288,7 @@ function renderProtectedOptOutShell(pageName) {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = protectedOptOutRoute(pageName);
+  const lockedOptOutRoute = protectedOptOutRoute(pageName, options);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
