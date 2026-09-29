@@ -1008,7 +1008,7 @@
     if(!name)return false;
     const data=await savePlannerPayload(activePlanPayload,name);
     const plan=data?.plan;if(!plan?.id)return false;
-    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;loadedPlanRouteIdentity="";syncPlanUi();
+    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;loadedPlanRouteIdentity="";renderRoster();syncPlanUi();
     history.replaceState({},"","/planner?saved="+encodeURIComponent(activePlanId));
     if(typeof showToast==="function")showToast("Plan copied to your saved plans.");
     return true;
@@ -1038,6 +1038,7 @@
       if(loadedPlanRouteIdentity!=="saved:"+savedId)try{await loadSavedPlannerPlan(savedId);}catch(error){setStatus(error?.message||"Saved plan could not be loaded.");}
       syncPlanUi();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();return true;
     }
+    if(loadedPlanRouteIdentity){loadedPlanRouteIdentity="";activePlanId="";activePlanName="";activePlanPayload=null;}
     plannerReadOnly=false;syncPlanUi();
     if(page instanceof HTMLElement)showOnly(page);const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(!routeClubId&&!selectedTeamId&&!(input?.value.trim()))void requestOwnedClubs();if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
@@ -1059,7 +1060,7 @@
   formationSelect?.addEventListener("keydown",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
-    if(selectedTeamId){selectedTeamId="";updatePlannerUrl("",{replace:true});}
+    if(selectedTeamId){selectedTeamId="";activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";syncPlanUi();updatePlannerUrl("",{replace:true});}
     const q=input.value.trim();
     if(!q){clearResults();void requestOwnedClubs();return;}
     if(results instanceof HTMLElement){
