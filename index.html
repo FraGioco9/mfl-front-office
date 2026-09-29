@@ -2394,12 +2394,12 @@
                     const position = openKeys[index].split("#")[0];
                     if (!rankDepthPlayers([player], position).length) continue;
                     const rating = Number(depthPlayerOverall(player, position));
-                    if (!Number.isFinite(rating)) continue;
+                    const positionalScore = Number.isFinite(rating) ? rating : 0;
                     const nextMask = mask | (1 << index);
                     const picks = state.picks.concat({key:openKeys[index],playerId});
                     const candidate = {
                       count:state.count+1,
-                      score:state.score+rating,
+                      score:state.score+positionalScore,
                       picks,
                       signature:picks.map(item=>item.key+":"+String(item.playerId).padStart(12,"0")).sort().join("|"),
                     };
