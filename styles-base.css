@@ -971,7 +971,7 @@ body:not(.pinnedSidebarVisible) .siteFooter {
 .deleteWatchlistConfirmButton:focus-visible {
   border-color: var(--mfl-danger-hover-border-color);
   background: var(--mfl-danger-hover-background);
-  color: var(--surface);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 .addWatchlistDialog {
@@ -3943,7 +3943,7 @@ button.playerIdText:active {
 .evaluationLoadResult .evaluationLoadDeleteButton:focus-visible:not(:disabled) {
   border-color: var(--mfl-danger-hover-border-color);
   background: var(--mfl-danger-hover-background);
-  color: var(--surface);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 #evaluationSaveButton .evaluationButtonIcon {
@@ -4021,7 +4021,7 @@ button.playerIdText:active {
 .evaluationFooterDeleteButton:focus-visible:not(:disabled) {
   border-color: var(--mfl-danger-hover-border-color);
   background: var(--mfl-danger-hover-background);
-  color: var(--surface);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 .watchlistChoiceDialog {
@@ -4108,7 +4108,7 @@ button.playerIdText:active {
 .deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
   border-color: var(--mfl-danger-hover-border-color);
   background: var(--mfl-danger-hover-background);
-  color: var(--surface);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 #tableBody tr:hover .playerNameLink:hover,
@@ -4467,7 +4467,7 @@ button.playerIdText:active {
 .settingsEmailDiscardButton:focus-visible:not(:disabled) {
   border-color: var(--mfl-danger-hover-border-color);
   background: var(--mfl-danger-hover-background);
-  color: var(--surface);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 .settingsEmailActionButton.primary {
