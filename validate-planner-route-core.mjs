@@ -239,8 +239,9 @@ invariant(
     && styles.includes(".plannerPendingContractInput{width:54px;height:24px")
     && styles.includes(".plannerPendingContractControl{display:inline-flex;align-items:center;align-self:center;gap:3px;min-width:0;height:24px}")
     && planner.includes("renderPendingSelectionStatus")
-    && planner.includes("% contracts used"),
-  "Selected players must expose compact vertically centered staged Contracts, preserve them on Add, and show live aggregate contract usage.",
+    && planner.includes("% contracts used")
+    && planner.includes("pendingPlayers.set(playerId,{...player,planned_contract_value:0})"),
+  "Selected players must expose compact vertically centered staged Contracts, default them to 0.00%, preserve edits on Add, and show live aggregate contract usage.",
 );
 invariant(
   planner.includes('playerModal.classList.toggle("modalOpen",true)')
