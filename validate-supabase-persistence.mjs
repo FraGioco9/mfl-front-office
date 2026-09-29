@@ -192,6 +192,8 @@ for (const table of [
   "wallet_auth_sessions",
   "evaluation_saves",
   "evaluation_shares",
+  "planner_plans",
+  "planner_shares",
   "mfl_season_ratios",
 ]) {
   includes(documentation, `\`${table}\``, `SUPABASE_PERSISTENCE.md must document ${table}.`);
