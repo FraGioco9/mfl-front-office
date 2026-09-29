@@ -19,7 +19,11 @@
   const workspace=document.getElementById("plannerWorkspace");
   const rosterBody=document.getElementById("plannerRosterBody");
   const formationSelect=/** @type {HTMLSelectElement|null} */(document.getElementById("plannerFormationSelect"));
+  const undoButton=document.getElementById("plannerUndoButton");
+  const redoButton=document.getElementById("plannerRedoButton");
   const rosterCount=document.getElementById("plannerRosterCount");
+  const squadStatusPrimary=document.getElementById("plannerSquadStatusPrimary");
+  const squadStatusWarnings=document.getElementById("plannerSquadStatusWarnings");
   const squadSummary={
     contracts:document.getElementById("plannerTotalContracts"),
     overall:document.getElementById("plannerAverageOverall"),
@@ -49,6 +53,7 @@
   const unsavedWarning=document.getElementById("plannerUnsavedWarning");
   const plansButton=document.getElementById("plannerPlansButton");
   const savePlanButton=document.getElementById("plannerSavePlanButton");
+  const duplicatePlanButton=document.getElementById("plannerDuplicatePlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
@@ -77,7 +82,11 @@
   let activeContractEditor=null;
   let activePlanId="",activePlanName="",activePlanPayload=null,plannerReadOnly=false,loadedPlanRouteIdentity="";
   let planNameRequest=null,planDeleteRequest=null;
+  let plannerUndoStack=[],plannerRedoStack=[],plannerHistoryApplying=false;
+  let plannerCommittedFormation=String(formationSelect?.value||"442");
+  let plannerHighlightTimer=0;
   const MAX_SQUAD_SIZE=25;
+  const PLANNER_HISTORY_LIMIT=80;
   const CLUB_DISPLAY_DATA_STORAGE_KEY="mfl-club-display-data-v1";
   function cachedPlannerClub(clubId){
     const id=String(clubId||"").trim();
@@ -132,6 +141,39 @@
     set(squadSummary.best11,overall.length?overall.slice(0,11).reduce((total,value)=>total+value,0).toFixed(0):"—");
     set(squadSummary.age,mean(ages));
   }
+  function renderSquadStatus(){
+    const preview=Reflect.get(window,"__mflPlannerFormationPreview");
+    const assignments=Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[];
+    const assignedIds=new Set(assignments.map(item=>String(item?.playerId??item?.player_id??"")).filter(Boolean));
+    const filled=Math.min(11,assignments.length);
+    if(squadStatusPrimary) squadStatusPrimary.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" players · "+totalPlannedContracts().toFixed(2)+"% contracts · "+filled+"/11 filled";
+    if(squadStatusWarnings instanceof HTMLElement){
+      const warnings=[];
+      if(roster.length&& !assignments.some(item=>String(item?.slotKey??item?.slot_key??"").toUpperCase().startsWith("GK#"))) warnings.push("GK empty");
+      if(roster.length&&filled<11) warnings.push((11-filled)+" starter"+(11-filled===1?"":"s")+" missing");
+      const unassigned=Math.max(0,roster.length-assignedIds.size);
+      if(roster.length&&unassigned) warnings.push(unassigned+" unassigned");
+      squadStatusWarnings.textContent=warnings.join(" · ");
+      squadStatusWarnings.hidden=!warnings.length;
+    }
+  }
+  function setPlannerPlayerHighlight(playerId,active=true,{flash=false,scroll=""}={}){
+    const id=String(playerId||"").trim();
+    if(!id)return;
+    window.clearTimeout(plannerHighlightTimer);
+    const row=document.querySelector('#plannerRosterBody tr[data-player-id="'+id+'"]');
+    const spot=document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-player-id="'+id+'"]');
+    for(const element of document.querySelectorAll(".plannerRosterRowHighlighted,.plannerFormationSpotHighlighted")){
+      if(element!==row&&element!==spot)element.classList.remove("plannerRosterRowHighlighted","plannerFormationSpotHighlighted");
+    }
+    if(row instanceof HTMLElement)row.classList.toggle("plannerRosterRowHighlighted",Boolean(active));
+    if(spot instanceof HTMLElement)spot.classList.toggle("plannerFormationSpotHighlighted",Boolean(active));
+    if(active&&scroll==="roster"&&row instanceof HTMLElement)row.scrollIntoView({block:"nearest",inline:"nearest"});
+    if(active&&scroll==="pitch"&&spot instanceof HTMLElement)spot.scrollIntoView({block:"nearest",inline:"nearest"});
+    if(active&&flash){
+      plannerHighlightTimer=window.setTimeout(()=>setPlannerPlayerHighlight(id,false),900);
+    }
+  }
   function resetRoster(){
     activeContractEditor?.cancel?.();
     activeContractEditor=null;
@@ -141,6 +183,8 @@
     roster=[];
     rosterSlots=new Map();
     renderSquadSummary();
+    renderSquadStatus();
+    resetPlannerHistory();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.([]);
     clubSearchPlayers=[];
     if(addPlayerButton instanceof HTMLButtonElement)addPlayerButton.disabled=true;
@@ -409,7 +453,7 @@
     clearPlayerResults();
     playerSearchInput.focus();
   }
-  function addPlayerToRoster(player,{render=true}={}){
+  function addPlayerToRoster(player,{render=true,recordHistory=true}={}){
     const playerId=Number(player?.player_id);
     if(!Number.isSafeInteger(playerId)||playerId<=0)return false;
     if(plannerPlayerIsRetired(player))return false;
@@ -418,6 +462,7 @@
     const availableContract=Math.max(0,Math.round((100-totalPlannedContracts())*100)/100);
     const requestedContract=Number(player?.planned_contract_value);
     const plannedContract=Math.min(Number.isFinite(requestedContract)?normalizeContractValue(requestedContract):contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
+    if(recordHistory)checkpointPlannerHistory();
     roster.push({...player,planned_contract_value:plannedContract});
     sortPlannerRoster();
     if(render)renderRoster();
@@ -441,7 +486,8 @@
     const selected=[...pendingPlayers.values()];
     if(!selected.length)return false;
     let added=0;
-    for(const player of selected){if(addPlayerToRoster(player,{render:false}))added+=1;}
+    checkpointPlannerHistory();
+    for(const player of selected){if(addPlayerToRoster(player,{render:false,recordHistory:false}))added+=1;}
     if(added)renderRoster();
     closePlayerModal({focusButton:true});
     return Boolean(added);
@@ -530,7 +576,16 @@
     const fragment=document.createDocumentFragment();
     for(const player of roster){
       const row=document.createElement("tr");
+      row.className="plannerRosterRow";
       row.dataset.playerId=String(player.player_id);
+      row.addEventListener("mouseenter",()=>setPlannerPlayerHighlight(player.player_id,true));
+      row.addEventListener("mouseleave",()=>setPlannerPlayerHighlight(player.player_id,false));
+      row.addEventListener("focusin",()=>setPlannerPlayerHighlight(player.player_id,true));
+      row.addEventListener("focusout",event=>{if(!row.contains(event.relatedTarget))setPlannerPlayerHighlight(player.player_id,false);});
+      row.addEventListener("click",event=>{
+        if(event.target instanceof Element&&event.target.closest("button,input,select,a"))return;
+        setPlannerPlayerHighlight(player.player_id,true,{flash:true,scroll:"pitch"});
+      });
       const slotCell=document.createElement("td");
       slotCell.className="plannerRosterSlotCell";
       const slotBadge=document.createElement("span");
@@ -601,7 +656,9 @@
         if(commit){
           const raw=contractInput.value.trim();
           const numeric=Number(raw);
-          if(raw&&Number.isFinite(numeric))player.planned_contract_value=Math.min(normalizeContractValue(numeric),contractLimitForPlayer(player.player_id));
+          const previous=normalizeContractValue(player.planned_contract_value);
+          const next=raw&&Number.isFinite(numeric)?Math.min(normalizeContractValue(numeric),contractLimitForPlayer(player.player_id)):previous;
+          if(next!==previous){checkpointPlannerHistory();player.planned_contract_value=next;}
         }
         contractValue.textContent=contractDisplayText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
@@ -667,6 +724,7 @@
       remove.setAttribute("aria-label","Remove "+String(player.name||"player")+" from planned squad");
       remove.addEventListener("click",()=>{
         const index=roster.findIndex(candidate=>candidate.player_id===player.player_id);
+        checkpointPlannerHistory();
         roster=roster.filter(candidate=>candidate.player_id!==player.player_id);
         renderRoster();
         const buttons=rosterBody.querySelectorAll("button");
@@ -684,6 +742,7 @@
     renderSquadSummary();
     Reflect.get(window,"__mflPlannerFormationPreview")?.setRoster?.(roster);
     rosterMessage(roster.length?"":"No players in this squad.");
+    renderSquadStatus();
     syncPlannerDirtyState();
   }
   async function loadRoster(clubId){
@@ -740,6 +799,7 @@
     const code=preview?.selectedForClub?.(clubId)||"442";
     preview?.setClub?.(clubId);
     if(formationSelect&&"value" in formationSelect)formationSelect.value=code;
+    plannerCommittedFormation=code;
     preview?.render?.(code);
   }
   function showTeam(team=null){
@@ -802,7 +862,7 @@
       teamLocation.hidden=!location;
     }
   }
-  function selectTeam(team,{updateUrl=true,replaceUrl=false,loadRosterData=true}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";selectedTeamId=id;input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");syncPlanUi();if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed&&loadRosterData)void loadRoster(id);return true;}
+  function selectTeam(team,{updateUrl=true,replaceUrl=false,loadRosterData=true}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";selectedTeamId=id;if(changed)resetPlannerHistory();input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");syncPlanUi();if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed&&loadRosterData)void loadRoster(id);return true;}
   let ownedClubs=null,ownedWallet="",ownedRequest=null;
   async function requestOwnedClubs(){
     if(typeof hasWalletOptIn!=="function"||!hasWalletOptIn())return [];
@@ -863,6 +923,81 @@
       lineup:Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[],
     };
   }
+  function clonePlannerRoster(players=roster){
+    return (Array.isArray(players)?players:[]).map(player=>({...player,positions:Array.isArray(player?.positions)?player.positions.slice():player?.positions}));
+  }
+  function capturePlannerHistorySnapshot({formationOverride=""}={}){
+    const preview=Reflect.get(window,"__mflPlannerFormationPreview");
+    return {
+      roster:clonePlannerRoster(),
+      formation:String(formationOverride||formationSelect?.value||"442"),
+      assignments:Array.isArray(preview?.getAssignments?.())?preview.getAssignments().map(item=>({...item})):[],
+    };
+  }
+  function plannerHistorySnapshotFingerprint(snapshot){
+    return plannerPayloadFingerprint({
+      clubId:selectedTeamId,
+      formation:snapshot?.formation||"442",
+      squad:(snapshot?.roster||[]).map(player=>({playerId:String(player.player_id),contract:normalizeContractValue(player.planned_contract_value)})),
+      lineup:snapshot?.assignments||[],
+    });
+  }
+  function syncPlannerHistoryButtons(){
+    if(undoButton instanceof HTMLButtonElement)undoButton.disabled=plannerReadOnly||!plannerUndoStack.length;
+    if(redoButton instanceof HTMLButtonElement)redoButton.disabled=plannerReadOnly||!plannerRedoStack.length;
+  }
+  function resetPlannerHistory(){
+    plannerUndoStack=[];plannerRedoStack=[];syncPlannerHistoryButtons();
+  }
+  function checkpointPlannerHistory(options={}){
+    if(plannerHistoryApplying||plannerReadOnly||!selectedTeamId)return false;
+    const snapshot=capturePlannerHistorySnapshot(options);
+    const fingerprint=plannerHistorySnapshotFingerprint(snapshot);
+    const previous=plannerUndoStack.at(-1);
+    if(previous&&plannerHistorySnapshotFingerprint(previous)===fingerprint)return false;
+    plannerUndoStack.push(snapshot);
+    if(plannerUndoStack.length>PLANNER_HISTORY_LIMIT)plannerUndoStack.shift();
+    plannerRedoStack=[];
+    syncPlannerHistoryButtons();
+    return true;
+  }
+  function applyPlannerHistorySnapshot(snapshot){
+    if(!snapshot||plannerReadOnly)return false;
+    plannerHistoryApplying=true;
+    try{
+      activeContractEditor?.cancel?.();activeContractEditor=null;
+      roster=clonePlannerRoster(snapshot.roster);
+      plannerCommittedFormation=String(snapshot.formation||"442");
+      if(formationSelect instanceof HTMLSelectElement)formationSelect.value=plannerCommittedFormation;
+      sortPlannerRoster();
+      renderRoster();
+      const preview=Reflect.get(window,"__mflPlannerFormationPreview");
+      preview?.setClub?.(selectedTeamId);
+      preview?.setRoster?.(roster);
+      preview?.setAssignments?.(snapshot.assignments||[]);
+      preview?.render?.(plannerCommittedFormation);
+      renderSquadStatus();
+      syncPlannerDirtyState();
+      return true;
+    }finally{
+      plannerHistoryApplying=false;
+      syncPlannerHistoryButtons();
+    }
+  }
+  function undoPlanner(){
+    if(plannerReadOnly||!plannerUndoStack.length)return false;
+    const current=capturePlannerHistorySnapshot();
+    const target=plannerUndoStack.pop();
+    plannerRedoStack.push(current);
+    return applyPlannerHistorySnapshot(target);
+  }
+  function redoPlanner(){
+    if(plannerReadOnly||!plannerRedoStack.length)return false;
+    const current=capturePlannerHistorySnapshot();
+    const target=plannerRedoStack.pop();
+    plannerUndoStack.push(current);
+    return applyPlannerHistorySnapshot(target);
+  }
   function plannerPayloadFingerprint(payload){
     if(!payload||typeof payload!=="object")return "";
     const squad=(Array.isArray(payload.squad)?payload.squad:[]).map(item=>({
@@ -889,7 +1024,14 @@
   }
   function syncPlannerDirtyState(){
     const dirty=plannerHasUnsavedChanges();
-    if(unsavedWarning instanceof HTMLElement)unsavedWarning.hidden=!dirty;
+    if(unsavedWarning instanceof HTMLElement)unsavedWarning.hidden=true;
+    if(planModeLabel instanceof HTMLElement){
+      const mode=plannerReadOnly?"Shared":dirty||!activePlanId?"Unsaved":"Saved";
+      planModeLabel.textContent=mode;
+      planModeLabel.classList.toggle("plannerPlanModeDirty",mode==="Unsaved");
+      planModeLabel.classList.toggle("plannerPlanModeSaved",mode==="Saved");
+      planModeLabel.classList.toggle("plannerPlanModeShared",mode==="Shared");
+    }
     Reflect.set(window,"__mflPlannerDirty",dirty);
     return dirty;
   }
@@ -918,6 +1060,9 @@
     return leave;
   }
   Reflect.set(window,"__mflPlannerSyncDirty",syncPlannerDirtyState);
+  Reflect.set(window,"__mflPlannerSyncStatus",renderSquadStatus);
+  Reflect.set(window,"__mflPlannerHighlightPlayer",(playerId,active=true,options={})=>setPlannerPlayerHighlight(playerId,active,options));
+  Reflect.set(window,"__mflPlannerHistory",Object.freeze({checkpoint:checkpointPlannerHistory,undo:undoPlanner,redo:redoPlanner,reset:resetPlannerHistory,sync:syncPlannerHistoryButtons}));
   Reflect.set(window,"__mflPlannerConfirmNavigation",plannerConfirmNavigation);
   window.addEventListener("beforeunload",event=>{
     if(String(state.currentPage||"")!=="planner"||!plannerHasUnsavedChanges())return;
@@ -968,9 +1113,9 @@
   function syncPlanUi(){
     const optedIn=typeof hasWalletOptIn==="function"&&hasWalletOptIn();
     if(planNameLabel)planNameLabel.textContent=activePlanName||"Unsaved plan";
-    if(planModeLabel)planModeLabel.textContent=plannerReadOnly?"Shared":activePlanId?"Saved":"Draft";
     if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn;
     if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId;
+    if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
     if(sharePlanButton instanceof HTMLButtonElement)sharePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
@@ -979,6 +1124,8 @@
     if(formationSelect instanceof HTMLElement)formationSelect.disabled=plannerReadOnly;
     Reflect.get(window,"__mflPlannerFormationPreview")?.setReadOnly?.(plannerReadOnly);
     updateAddPlayerAvailability();
+    syncPlannerHistoryButtons();
+    renderSquadStatus();
     syncPlannerDirtyState();
   }
   async function plannerPrivateRequest(url,options={}){
@@ -1035,7 +1182,9 @@
     preview?.setClub?.(clubId);
     preview?.setRoster?.(roster);
     preview?.setAssignments?.(payload.lineup);
-    preview?.render?.(payload.formation||"442");
+    plannerCommittedFormation=String(payload.formation||"442");
+    preview?.render?.(plannerCommittedFormation);
+    resetPlannerHistory();
     syncPlanUi();
     return true;
   }
@@ -1054,6 +1203,14 @@
     activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;plannerReadOnly=false;syncPlanUi();
     if(typeof showToast==="function")showToast(overwriting?"Plan updated.":"Plan saved.");
     return plan;
+  }
+  async function duplicateCurrentPlan(){
+    if(plannerReadOnly||!selectedTeamId)return false;
+    const fallback=String(selectedTeamData?.name||"Plan")+" plan";
+    const defaultName=(activePlanName||fallback)+" copy";
+    const name=await requestPlannerPlanName(defaultName,"Duplicate plan");
+    if(!name)return false;
+    return saveCurrentPlan({asNew:true,nameOverride:name});
   }
   async function createPlannerShare(name,payload){
     const data=await plannerPrivateRequest("/api/planner-share",{method:"POST",body:JSON.stringify({name,payload})});
@@ -1077,6 +1234,12 @@
     const option=Array.from(formationSelect?.options||[]).find(item=>String(item?.value||"")===value);
     return String(option?.textContent||value.toUpperCase()).trim();
   }
+  function plannerPlanUpdatedLabel(value){
+    const date=new Date(value);
+    if(!value||Number.isNaN(date.getTime()))return "";
+    try{return new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(date);}
+    catch{return date.toLocaleString();}
+  }
   function renderPlannerPlans(plans){
     if(!(plansList instanceof HTMLElement))return;
     const rows=Array.isArray(plans)?plans:[];
@@ -1085,7 +1248,10 @@
       const row=document.createElement("div");row.className="plannerPlanListRow";
       const main=document.createElement("div");main.className="plannerPlanListMain";
       const name=document.createElement("strong");name.textContent=String(plan.name||"Plan");
-      const meta=document.createElement("span");meta.className="plannerPlanListMeta";meta.textContent="Club #"+String(plan.clubId||plan.payload?.clubId||"")+" · "+plannerFormationLabel(plan.payload?.formation);
+      const meta=document.createElement("span");meta.className="plannerPlanListMeta";
+      const squadSize=Array.isArray(plan.payload?.squad)?plan.payload.squad.length:0;
+      const updated=plannerPlanUpdatedLabel(plan.updatedAt||plan.updated_at||plan.createdAt||plan.created_at);
+      meta.textContent=["Club #"+String(plan.clubId||plan.payload?.clubId||""),plannerFormationLabel(plan.payload?.formation),squadSize+" player"+(squadSize===1?"":"s"),updated?"Edited "+updated:""].filter(Boolean).join(" · ");
       main.append(name,meta);
       const actions=document.createElement("div");actions.className="plannerPlanListActions";
       const action=(label,icon,handler,{danger=false}={})=>{const button=document.createElement("button");button.type="button";button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"");button.setAttribute("aria-label",label);button.title=label;button.innerHTML=icon;button.addEventListener("click",async()=>{button.disabled=true;try{await handler();}catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";}finally{if(button.isConnected)button.disabled=false;}});return button;};
@@ -1162,7 +1328,9 @@
     const code=String(formationSelect.value||"");
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
     if(!preview?.codes?.includes(code))return;
+    if(code!==plannerCommittedFormation)checkpointPlannerHistory({formationOverride:plannerCommittedFormation});
     preview.render(code);
+    plannerCommittedFormation=code;
     if(selectedTeamId){
       try{localStorage.setItem("mfl-planner-formation-v1:"+selectedTeamId,code);}catch{}
     }
@@ -1201,7 +1369,10 @@
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
   savePlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:!activePlanId}).catch(error=>setStatus(error?.message||"Could not save plan.")));
+  duplicatePlanButton?.addEventListener("click",()=>void duplicateCurrentPlan().catch(error=>setStatus(error?.message||"Could not duplicate plan.")));
   sharePlanButton?.addEventListener("click",()=>void shareCurrentPlan().catch(error=>setStatus(error?.message||"Could not share plan.")));
+  undoButton?.addEventListener("click",undoPlanner);
+  redoButton?.addEventListener("click",redoPlanner);
   copySharedPlanButton?.addEventListener("click",()=>void copySharedPlannerPlan().catch(error=>setStatus(error?.message||"Could not copy shared plan.")));
   plansModalCloseButton?.addEventListener("click",closePlansModal);
   plansModal?.addEventListener("click",event=>{if(event.target===plansModal)closePlansModal();});
@@ -1278,5 +1449,5 @@
     },{passive:true});
   });
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
-  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers,syncSlots,currentPlan:currentPlannerPayload,savePlan:saveCurrentPlan,loadSavedPlan:loadSavedPlannerPlan,loadSharedPlan:loadSharedPlannerPlan}));
+  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers,syncSlots,currentPlan:currentPlannerPayload,savePlan:saveCurrentPlan,duplicatePlan:duplicateCurrentPlan,undo:undoPlanner,redo:redoPlanner,loadSavedPlan:loadSavedPlannerPlan,loadSharedPlan:loadSharedPlannerPlan}));
 })();
