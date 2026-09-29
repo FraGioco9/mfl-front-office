@@ -143,7 +143,7 @@
   }
   function renderSquadStatus(){
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
-    const assignments=Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[];
+    const assignments=roster.length&&Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[];
     const assignedIds=new Set(assignments.map(item=>String(item?.playerId??item?.player_id??"")).filter(Boolean));
     const filled=Math.min(11,assignments.length);
     if(squadStatusPrimary) squadStatusPrimary.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" players · "+totalPlannedContracts().toFixed(2)+"% contracts · "+filled+"/11 filled";
@@ -1215,7 +1215,12 @@
     const defaultName=(activePlanName||fallback)+" copy";
     const name=await requestPlannerPlanName(defaultName,"Duplicate plan");
     if(!name)return false;
-    return saveCurrentPlan({asNew:true,nameOverride:name});
+    const plan=await saveCurrentPlan({asNew:true,nameOverride:name});
+    if(plan?.id){
+      loadedPlanRouteIdentity="saved:"+String(plan.id);
+      history.replaceState({},"","/planner?saved="+encodeURIComponent(plan.id));
+    }
+    return plan;
   }
   async function createPlannerShare(name,payload){
     const data=await plannerPrivateRequest("/api/planner-share",{method:"POST",body:JSON.stringify({name,payload})});
