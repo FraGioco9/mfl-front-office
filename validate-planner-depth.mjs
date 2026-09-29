@@ -211,6 +211,15 @@ assert.deepEqual(
   [["CB#1",102],["RB#1",101]],
   "Auto-fill must optimize the whole XI instead of greedily consuming a versatile player in the first slot.",
 );
+optimizerContext.depthRoster.splice(0, optimizerContext.depthRoster.length,
+  {player_id:401,eligible:["CB"],ratings:{CB:79}},
+  {player_id:402,eligible:["CB"],ratings:{CB:80}},
+);
+assert.deepEqual(
+  Array.from(optimizerContext.optimize(["CB#1","CB#2"]), pick => [pick.key,pick.playerId]).sort((a,b)=>a[0].localeCompare(b[0])),
+  [["CB#1",402],["CB#2",401]],
+  "Equal-total repeated slots must put the stronger positional OVR in the earlier equivalent slot.",
+);
 
 // Exercise formation-preservation logic: exact assignments win, then an
 // actually eligible equivalent role can retain the same player.
