@@ -37,6 +37,7 @@ const location = { pathname: "/planner", search: "" };
 const document = { getElementById: id => elements.get(id), querySelectorAll: () => [], body: new Element(), addEventListener() {}, createElement: tag => tag === "button" ? new Button(tag) : new Element(tag), createTextNode: text => { const node = new Element(); node.textContent = text; return node; }, createElementNS: (_, tag) => new Element(tag), createDocumentFragment() { const node = new Element(); node.fragment = true; return node; } };
 const formationRenders = [];
 const window = {
+  addEventListener() {},
   __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } },
   __mflPlannerFormationPreview: {
     codes: ["442", "4231"],
