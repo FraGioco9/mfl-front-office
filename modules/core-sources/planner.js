@@ -969,6 +969,7 @@
       roster=clonePlannerRoster(snapshot.roster);
       plannerCommittedFormation=String(snapshot.formation||"442");
       if(formationSelect instanceof HTMLSelectElement)formationSelect.value=plannerCommittedFormation;
+      if(selectedTeamId){try{localStorage.setItem("mfl-planner-formation-v1:"+selectedTeamId,plannerCommittedFormation);}catch{}}
       sortPlannerRoster();
       renderRoster();
       const preview=Reflect.get(window,"__mflPlannerFormationPreview");
