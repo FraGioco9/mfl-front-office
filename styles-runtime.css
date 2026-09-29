@@ -7490,16 +7490,16 @@ html.mflDataLoading #pageSizeSelect {
 .plannerSharedBanner[hidden]{display:none}
 .plannerPlansModalBackdrop{z-index:var(--mfl-z-modal)}
 .plannerPlanNameModalBackdrop,.plannerPlanDeleteModalBackdrop{z-index:calc(var(--mfl-z-modal) + 1)}
-.plannerPlanNameDialog,.plannerPlanDeleteDialog{width:min(440px,calc(100vw - 40px));max-width:calc(100vw - 40px)}
-.plannerPlanNameBody,.plannerPlanDeleteBody{padding:16px}
+.plannerPlanNameDialog{width:min(440px,calc(100vw - 40px));max-width:calc(100vw - 40px)}
+.plannerPlanNameBody{padding:16px}
 .plannerPlanNameBody .field{display:grid;gap:6px}
-.plannerPlanNameBody .field>label{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.plannerPlanNameLabel{color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;pointer-events:none}
 #plannerPlanNameInput{box-sizing:border-box;width:100%;height:var(--mfl-control-height);transition:background var(--mfl-motion-fast) ease,border-color var(--mfl-motion-fast) ease,color var(--mfl-motion-fast) ease}#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled){outline:0;border-color:#7db8de;background:var(--row-hover);color:var(--text);box-shadow:none}
 .plannerPlanNameError{margin:7px 0 0;color:var(--danger);font-size:12px}
 .plannerPlanNameError[hidden]{display:none}
-.plannerPlanNameFooter,.plannerPlanDeleteFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-.plannerPlanDeleteBody p{margin:0}
-.plannerPlanDeleteConfirmButton{color:var(--danger)}
+.plannerPlanNameFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+
+
 .plannerPlansDialog{width:min(760px,calc(100vw - 40px));max-width:calc(100vw - 40px);max-height:min(720px,calc(100dvh - 40px))}
 .plannerPlansModalBody{display:grid;gap:7px;min-height:0;padding:14px 16px;overflow:auto}
 .plannerPlansStatus{margin:0;color:var(--text-soft);font-size:12px}.plannerPlansStatus:empty{display:none}
