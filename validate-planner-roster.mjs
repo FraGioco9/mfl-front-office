@@ -38,6 +38,7 @@ const document = { getElementById: id => elements.get(id), querySelectorAll: () 
 const formationRenders = [];
 const window = {
   addEventListener() {},
+  confirm() { return true; },
   __mflDataClient: { fetch(url, options) { return new Promise(resolve => requests.push({ url, options, resolve })); } },
   __mflPlannerFormationPreview: {
     codes: ["442", "4231"],
