@@ -173,11 +173,12 @@ async function waitForRenderedShell(cdp) {
     });
     const value = evaluation?.result?.value;
     lastValue = value;
-    // The Next dev-tools portal can appear before Next finishes reconciling the
-    // page-owned title. Probe Planner only after both shell and title are ready.
-    const plannerTitleReady = new URL(targetUrl).pathname !== "/planner"
-      || (value?.documentTitle === "Planner - MFL Front Office" && value?.readyState === "complete");
-    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge && plannerTitleReady) {
+    // The Next dev-tools portal can appear before the route title runtime has
+    // reconciled the document. Wait for the route-owned title on every probe.
+    const pathname = new URL(targetUrl).pathname;
+    const expectedTitle = pathname === "/planner" ? "Planner - MFL Front Office" : "MFL Front Office";
+    const titleReady = value?.documentTitle === expectedTitle && value?.readyState === "complete";
+    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge && titleReady) {
       return value;
     }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
