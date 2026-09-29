@@ -510,8 +510,10 @@
     const request = canonicalBootstrapRequest();
     const pageName = String(request?.pageName || "");
     const view = String(request?.options?.view || "");
+    const publicPlannerShare = pageName === "planner"
+      && Boolean(String(new URLSearchParams(window.location.search).get("share") || "").trim());
     const shellId = String(APP_CONFIG.routes.requestShellId(request, {
-      walletOptedIn: root.dataset.storedWalletOptIn === "true",
+      walletOptedIn: root.dataset.storedWalletOptIn === "true" || publicPlannerShare,
     }) || "");
     return Object.freeze({ request, pageName, view, shellId });
   }
