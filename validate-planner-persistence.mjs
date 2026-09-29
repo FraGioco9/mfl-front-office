@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { readFile } from "node:fs/promises";
+
+const require = createRequire(import.meta.url);
+const {
+  normalizePlannerId,
+  normalizePlannerName,
+  normalizePlannerPayload,
+} = require("./api/_planner-payload.js");
+
+assert.equal(normalizePlannerId("ABCDEF0123456789"), "abcdef0123456789");
+assert.equal(normalizePlannerId("bad"), "");
+assert.equal(normalizePlannerName("  Main   plan  "), "Main plan");
+
+const normalized = normalizePlannerPayload({
+  clubId: "9001",
+  formation: "4231",
+  squad: [
+    { playerId: 10, contract: 4.125 },
+    { playerId: "11", contract: 99 },
+    { playerId: 10, contract: 2 },
+  ],
+  lineup: [
+    { slotKey: "ST#1", playerId: 10 },
+    { slotKey: "CM#1", playerId: 11 },
+    { slotKey: "CM#2", playerId: 99 },
+  ],
+});
+assert.deepEqual(normalized, {
+  schemaVersion: 1,
+  clubId: "9001",
+  formation: "4231",
+  squad: [
+    { playerId: "10", contract: 4.13 },
+    { playerId: "11", contract: 20 },
+  ],
+  lineup: [
+    { slotKey: "ST#1", playerId: "10" },
+    { slotKey: "CM#1", playerId: "11" },
+  ],
+});
+assert.equal(normalizePlannerPayload({ clubId: "9001", formation: "invalid", squad: [], lineup: [] }), null);
+
+const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles] = await Promise.all([
+  readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
+  readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
+  readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260929203000_planner_plans_and_shares.sql", import.meta.url), "utf8"),
+  readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
+  readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
+  readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
+  readFile(new URL("./modules/app-core-planner-runtime.js", import.meta.url), "utf8"),
+  readFile(new URL("./planner.css", import.meta.url), "utf8"),
+  readFile(new URL("./styles-runtime.css", import.meta.url), "utf8"),
+]);
+
+for (const source of [schema, migration]) {
+  assert(source.includes("create table if not exists public.planner_plans"));
+  assert(source.includes("create table if not exists public.planner_shares"));
+  assert(source.includes("planner_plans_wallet_updated_idx"));
+  assert(source.includes("planner_shares_expires_at_idx"));
+  assert(source.includes("grant select, insert, update, delete on table public.planner_plans to service_role"));
+  assert(source.includes("grant select, insert, update, delete on table public.planner_shares to service_role"));
+}
+assert(saveApi.includes('signedWalletFromRequest(request)') && saveApi.includes("MAX_SAVED_PLANS_PER_WALLET = 50"));
+assert(saveApi.includes('method: "PATCH"') && saveApi.includes('method: "DELETE"'));
+assert(shareApi.includes('signedWalletFromRequest(request)') && shareApi.includes('request.method === "GET"'));
+assert(shareApi.includes("expires_at=gt.") && !shareApi.includes("select=id,name,club_id,payload,created_at,expires_at,wallet_address"));
+assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`"));
+assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
+
+assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
+assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
+assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
+assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
+assert(planner.includes('scope:"players"') && planner.includes('playerIds:ids.join(",")'));
+assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planner-share"'));
+assert(planner.includes('routeParams.get("share")') && planner.includes('routeParams.get("saved")'));
+assert(planner.includes("plannerReadOnly") && planner.includes("copySharedPlannerPlan"));
+assert(generatedPlanner.startsWith("// Generated") && generatedPlanner.includes("currentPlannerPayload"));
+assert(styles.includes(".plannerPlanBar{") && styles.includes(".plannerPlansDialog{") && styles.includes(".plannerSharedBanner{"));
+assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
+
+console.log("Planner saved plans and unlisted share persistence validation passed.");
