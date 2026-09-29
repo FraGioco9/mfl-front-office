@@ -53,10 +53,12 @@ invariant(
 invariant(
   html.includes('id="plannerPlansButton"')
     && html.includes('id="plannerSavePlanButton"')
+    && html.includes('id="plannerDuplicatePlanButton"')
     && html.includes('id="plannerSharePlanButton"')
     && !html.includes('id="plannerSaveAsPlanButton"')
-    && !planner.includes("saveAsPlanButton"),
-  "Planner must use one Save action; Duplicate in the Plans library owns branching instead of a redundant Save as control.",
+    && !planner.includes("saveAsPlanButton")
+    && planner.includes("async function duplicateCurrentPlan()"),
+  "Planner must keep one Save action and expose a direct Duplicate action without restoring redundant Save as UI.",
 );
 invariant(
   styles.includes(".plannerPlansModalBody{display:grid;gap:7px;min-height:0;padding:14px 16px;overflow:auto}")
@@ -82,8 +84,10 @@ invariant(
 );
 invariant(
   planner.includes("function plannerFormationLabel(code)")
-    && planner.includes('meta.textContent="Club #"+String(plan.clubId||plan.payload?.clubId||"")+" · "+plannerFormationLabel(plan.payload?.formation)'),
-  "Planner saved-plan metadata must use human-readable formation labels instead of raw formation codes.",
+    && planner.includes('const squadSize=Array.isArray(plan.payload?.squad)?plan.payload.squad.length:0;')
+    && planner.includes('updated?"Edited "+updated:""')
+    && planner.includes('plannerFormationLabel(plan.payload?.formation)'),
+  "Planner saved-plan metadata must use human-readable formation labels plus squad size and last-edited time.",
 );
 invariant(
   styles.includes("#plannerPlanNameInput:hover:not(:disabled),#plannerPlanNameInput:focus-visible:not(:disabled){outline:0;border-color:#7db8de")
@@ -91,16 +95,17 @@ invariant(
   "Planner plan-name input must use one light-blue interaction border without a second outline.",
 );
 invariant(
-  html.includes('id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>')
-    && styles.includes(".plannerUnsavedWarning{display:inline-flex;align-items:center;min-height:20px")
-    && styles.includes("color:var(--danger)")
+  html.includes('id="plannerPlanMode" class="plannerPlanMode">Unsaved</span>')
+    && styles.includes(".plannerPlanModeDirty{")
+    && styles.includes(".plannerPlanModeSaved{")
     && planner.includes("function plannerPayloadFingerprint(payload)")
     && planner.includes("function plannerHasUnsavedChanges()")
     && planner.includes("function syncPlannerDirtyState()")
+    && planner.includes('const mode=plannerReadOnly?"Shared":dirty||!activePlanId?"Unsaved":"Saved";')
     && planner.includes('Reflect.set(window,"__mflPlannerConfirmNavigation",plannerConfirmNavigation)')
     && planner.includes('window.confirm("You have unsaved Planner changes. Leave without saving?")')
     && planner.includes('window.addEventListener("beforeunload",event=>'),
-  "Planner must visibly mark unsaved changes and protect them across in-app navigation and browser unload.",
+  "Planner must continuously show Saved/Unsaved/Shared state and protect unsaved changes across navigation and unload.",
 );
 invariant(
   html.includes('if (initialPage !== "planner") return;')
@@ -217,6 +222,16 @@ invariant(
   "Position, Age and Overall must be left-aligned across Squad and modal tables.",
 );
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
+invariant(
+  html.includes('id="plannerUndoButton"') && html.includes('id="plannerRedoButton"')
+    && html.includes('id="plannerSquadStatusPrimary"') && html.includes('id="plannerSquadStatusWarnings"')
+    && planner.includes("function checkpointPlannerHistory(")
+    && planner.includes("function undoPlanner()") && planner.includes("function redoPlanner()")
+    && planner.includes("function renderSquadStatus()")
+    && planner.includes('Reflect.set(window,"__mflPlannerHighlightPlayer"')
+    && styles.includes(".plannerRosterTable tbody tr.plannerRosterRowHighlighted{"),
+  "Planner polish must expose Undo/Redo, compact squad status and Squad↔Depth highlighting.",
+);
 invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
 invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
 invariant(styles.includes("color-mix(in srgb,#05f82c 22%,transparent)") && styles.includes("color:#05f82c") && styles.includes("border-radius:5px") && styles.includes(".plannerRosterSlotBadge[hidden],.plannerRosterSlotEmpty[hidden]{display:none}"), "Slot chip must match the supplied rounded, translucent green example.");
