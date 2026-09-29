@@ -66,14 +66,15 @@ invariant(
 );
 invariant(
   styles.includes(".plannerPlanListActionButton{display:inline-grid;flex:0 0 28px;place-items:center;width:28px;min-width:28px;max-width:28px;height:28px;min-height:28px;max-height:28px")
-    && planner.includes('button.className="plannerPlanListActionButton"+(danger?" evaluationLoadIconButton evaluationLoadDeleteButton":"")')
-    && !styles.includes(".plannerPlanListDeleteButton{")
+    && planner.includes('button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"")')
+    && styles.includes(".plannerPlanListDeleteButton{border-color:var(--border);background:var(--surface-muted);color:var(--danger)}")
+    && styles.includes("background:var(--mfl-danger-hover-background)")
     && planner.includes('action("Open plan"')
     && planner.includes('action("Rename plan"')
     && planner.includes('action("Duplicate plan"')
     && planner.includes('action("Share plan"')
     && planner.includes('action("Delete plan"'),
-  "Planner saved-plan row actions must be icon-only controls with identical 28px geometry and reuse the canonical delete hover.",
+  "Planner saved-plan row actions must stay icon-only and preserve the approved delete treatment while consuming the shared darker destructive hover.",
 );
 invariant(
   planner.includes("function plannerFormationLabel(code)")
