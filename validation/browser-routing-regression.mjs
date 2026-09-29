@@ -2068,10 +2068,23 @@ const browserTestSource = String.raw`(() => {
       assert(selectedRows.length === 2, "Selected players must render in the table below search results.");
       assert(selectedRows[0].children.length === 7 && selectedRows[1].children.length === 7, "Selected-player rows must add a Contract column before Remove.");
       const stagedContractInput = selectedRows[0].querySelector(".plannerPendingContractInput");
+      const stagedContractControl = stagedContractInput?.closest(".plannerPendingContractControl");
+      const stagedContractCell = stagedContractInput?.closest(".plannerPendingContractCell");
       assert(stagedContractInput instanceof HTMLInputElement && stagedContractInput.value === "3.75", "Selected players must expose their database Contract as an editable staged value.");
+      const stagedRowMid = selectedRows[0].getBoundingClientRect().top + selectedRows[0].getBoundingClientRect().height / 2;
+      assert(stagedContractControl && stagedContractCell
+        && getComputedStyle(stagedContractInput).width === "54px"
+        && getComputedStyle(stagedContractInput).height === "24px"
+        && getComputedStyle(stagedContractControl).height === "24px"
+        && Math.abs((stagedContractControl.getBoundingClientRect().top + stagedContractControl.getBoundingClientRect().height / 2) - stagedRowMid) <= 2,
+        "Selected-player Contract control must use the compact 54x24 input and stay vertically centered in its row.");
+      const contractUsageBeforeEdit = text("#plannerPlayerSelectionStatus");
+      assert(/\d+\.\d{2}% contracts used$/.test(contractUsageBeforeEdit), "Selected-player status must show live aggregate contract usage beside remaining spots.");
       stagedContractInput.value = "6,25";
       stagedContractInput.dispatchEvent(new Event("input", { bubbles: true }));
       assert(stagedContractInput.value === "6.25", "Selected-player Contract must normalize comma decimals.");
+      assert(text("#plannerPlayerSelectionStatus") !== contractUsageBeforeEdit && /\d+\.\d{2}% contracts used$/.test(text("#plannerPlayerSelectionStatus")),
+        "Editing a staged Contract must immediately update the displayed contract percentage used.");
       assert(selectedRows[0].querySelector(".plannerPlayerActionText")?.textContent === "Remove", "Selected-player table must expose a plain-text Remove action.");
       assert(selectedRows[0].querySelector(".tableOverallRarityCircle.plannerOverallRarityCircle")?.style.backgroundColor, "Selected-player table must also show the rarity dot.");
       assertCenteredPopupRow(selectedRows[0], "Add player(s) staged selection");
@@ -2308,7 +2321,7 @@ const browserTestSource = String.raw`(() => {
       }), "All picker portraits, names, selected labels and positional Overalls must share the centered 36px content track in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
-        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 1)) <= 1
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 2)) <= 1
         && selectedLabelStyle.transform !== "none"
         && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
