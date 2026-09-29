@@ -393,7 +393,7 @@ for (const [name, source] of [
 for (const token of [
   "# MFL Front Office UI foundations",
   "## Ownership map",
-  "`--danger` is the only global destructive/error-color source.",
+  "`--danger` is the global resting destructive/error red and `--danger-hover` is the global destructive hover/focus red.",
   "Shared page/table title size: `20px` (`--mfl-page-title-font-size`)",
   "Desktop page gutter: `28px` (`--mfl-page-gutter-inline`)",
   "Shared section title: `16px` (`--mfl-section-title-font-size`)",
