@@ -2321,8 +2321,8 @@ const browserTestSource = String.raw`(() => {
       }), "All picker portraits, names, selected labels and positional Overalls must share the centered 36px content track in 44px rows.");
       assert(assignedSlotLabel?.nextElementSibling===assignedOverall
         && selectedLabelBox.right <= assignedOverallBox.left
-        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) - 3)) <= 1
-        && selectedLabelStyle.transform !== "none"
+        && Math.abs(selectedLabelBox.top + selectedLabelBox.height / 2 - ((selectedRowBox.top + selectedRowBox.height / 2) + 1)) <= 1
+        && selectedLabelStyle.transform !== "none" && selectedLabelStyle.transform !== "matrix(1, 0, 0, 1, 0, -3)"
         && Math.abs(assignedNameBox.top + assignedNameBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && Math.abs(assignedOverallBox.top + assignedOverallBox.height / 2 - (selectedRowBox.top + selectedRowBox.height / 2)) <= 1
         && assignedName.textContent==="C. 91"
