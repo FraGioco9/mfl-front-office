@@ -366,7 +366,7 @@ for (const token of [
 for (const token of [
   "#linkWalletButton.walletOptOut {\n  background: transparent;\n  color: var(--danger);",
   ".watchlistDropdownDelete {\n  border-color: var(--border);\n  background: var(--surface-muted);\n  color: var(--danger);",
-  ".watchlistDropdownDelete:hover:not(:disabled),\n.watchlistDropdownDelete:focus-visible:not(:disabled) {\n  border-color: var(--danger);\n  background: var(--danger);\n  color: var(--surface);",
+  ".watchlistDropdownDelete:hover:not(:disabled),\n.watchlistDropdownDelete:focus-visible:not(:disabled) {\n  border-color: var(--mfl-danger-hover-border-color);\n  background: var(--mfl-danger-hover-background);\n  color: var(--mfl-danger-hover-text-color);",
 ]) {
   includes(dropdowns, token, `Dropdown destructive UI must derive from --danger: ${token}`);
 }
