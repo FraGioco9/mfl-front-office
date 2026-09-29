@@ -184,6 +184,62 @@ assert.deepEqual(Array.from(distribute([["ST"]], [
   {player_id: 9, name: "Tie", positions: "ST", overall: 81},
 ])[0], p => p.player_id), [9, 11], "Equal Overall must use stable player ID order.");
 assert.equal(distribute([["RW"]], players)[0].length, 0, "Empty position must remain empty.");
+
+// Exercise the real whole-XI optimizer with a fixture where greedy slot order
+// would consume the only versatile player and leave the second position empty.
+const optimizerContext = {
+  depthAssignments: new Map(),
+  depthRoster: [
+    {player_id:101,eligible:["CB","RB"],ratings:{CB:90,RB:80}},
+    {player_id:102,eligible:["CB"],ratings:{CB:89}},
+  ],
+  rankDepthPlayers: (items, position) => items.filter(item => item.eligible.includes(position)),
+  depthPlayerOverall: (item, position) => String(item.ratings[position] ?? "—"),
+};
+vm.createContext(optimizerContext);
+const optimizerStart = source.indexOf("const betterDepthFillState =");
+const optimizerEnd = source.indexOf("const autoFillDepth =", optimizerStart);
+assert.ok(optimizerStart > 0 && optimizerEnd > optimizerStart, "Planner must expose one whole-XI Auto-fill optimizer.");
+vm.runInContext(
+  "const depthAssignments=this.depthAssignments; const depthRoster=this.depthRoster; "
+  + source.slice(optimizerStart, optimizerEnd)
+  + "\nthis.optimize = optimizedDepthFill;",
+  optimizerContext,
+);
+assert.deepEqual(
+  Array.from(optimizerContext.optimize(["CB#1","RB#1"]), pick => [pick.key,pick.playerId]),
+  [["CB#1",102],["RB#1",101]],
+  "Auto-fill must optimize the whole XI instead of greedily consuming a versatile player in the first slot.",
+);
+
+// Exercise formation-preservation logic: exact assignments win, then an
+// actually eligible equivalent role can retain the same player.
+const preservationContext = {
+  depthAssignments: new Map([["RB#1",201],["CM#1",202],["ST#1",203]]),
+  rankDepthPlayers: (items, position) => items.filter(item => item.eligible.includes(position)),
+};
+vm.createContext(preservationContext);
+const preserveStart = source.indexOf("const equivalentDepthPositions =");
+const preserveEnd = source.indexOf("const closeDepthPicker =", preserveStart);
+assert.ok(preserveStart > 0 && preserveEnd > preserveStart, "Planner must expose formation assignment-preservation helpers.");
+vm.runInContext(
+  "const depthAssignments=this.depthAssignments; "
+  + source.slice(preserveStart, preserveEnd)
+  + "\nthis.preserve = preserveDepthAssignments;",
+  preservationContext,
+);
+const preserved = preservationContext.preserve(
+  ["RWB#1","CM#1","CF#1"],
+  new Map([
+    [201,{player_id:201,eligible:["RB","RWB"]}],
+    [202,{player_id:202,eligible:["CM"]}],
+    [203,{player_id:203,eligible:["ST"]}],
+  ]),
+);
+assert.deepEqual(Array.from(preservationContext.depthAssignments), [["CM#1",202],["RWB#1",201]],
+  "Formation changes must keep exact assignments first, then eligible equivalent roles, while dropping unresolved ones.");
+assert.deepEqual(Array.from(preserved).sort((a,b)=>a-b), [201,202]);
+
 assert.ok(generated.includes(helper), "Generated shell must contain the exact canonical depth algorithm.");
 assert.ok([source, generated].every(shell => !shell.includes('id="plannerDepthDetails"') && !shell.includes("renderDepthDetails(") && shell.includes('plannerFormationPlayerSurname') && !shell.includes('plannerFormationBackups') && shell.includes('plannerSummaryTable')), "Keep the selected player's name and standalone summary without depth cards or backup lists.");
 assert.ok([source, generated].every(shell => shell.includes('surnameText.textContent = depthPlayerSurname(starter);') && shell.includes('surname.title = depthPlayerName(starter);') && shell.includes('countryFlagElement(starter.nationality, "plannerFormationSurnameFlag")') && shell.includes('surname.setAttribute("aria-hidden", "true");')), "Selected circle must display the abbreviated player surname and flag while retaining accessible full name.");
