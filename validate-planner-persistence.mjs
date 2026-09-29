@@ -41,6 +41,13 @@ assert.deepEqual(normalized, {
   ],
 });
 assert.equal(normalizePlannerPayload({ clubId: "9001", formation: "invalid", squad: [], lineup: [] }), null);
+const budgeted = normalizePlannerPayload({
+  clubId: "9001",
+  formation: "442",
+  squad: Array.from({ length: 6 }, (_, index) => ({ playerId: 100 + index, contract: 20 })),
+  lineup: [],
+});
+assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
 const [saveApi, shareApi, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
