@@ -1191,10 +1191,10 @@
                 <button id="plannerPlanNameModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close plan name dialog"></button>
               </header>
               <section class="plannerPlanNameBody">
-                <label class="field">
-                  <span>Name</span>
-                  <input id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" placeholder="Plan name" aria-describedby="plannerPlanNameError">
-                </label>
+                <div class="field">
+                  <label for="plannerPlanNameInput">Name</label>
+                  <input id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Plan name" aria-describedby="plannerPlanNameError">
+                </div>
                 <p id="plannerPlanNameError" class="plannerPlanNameError" hidden></p>
               </section>
               <footer class="mflDialogFooter plannerPlanNameFooter">
