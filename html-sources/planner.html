@@ -905,6 +905,52 @@
                 return position + "#" + count;
               });
             };
+            const equivalentDepthPositions = Object.freeze({
+              LB:["LWB"],LWB:["LB","LM"],RB:["RWB"],RWB:["RB","RM"],
+              LM:["LW","LWB","CM"],LW:["LM","CF","ST"],RM:["RW","RWB","CM"],RW:["RM","CF","ST"],
+              ST:["CF","LW","RW"],CF:["ST","CAM","LW","RW"],
+              CM:["CDM","CAM","LM","RM"],CDM:["CM"],CAM:["CM","CF"],
+              CB:[],GK:[],
+            });
+            const depthPositionCompatibility = (from, to) => {
+              if (from === to) return 0;
+              const index = (equivalentDepthPositions[from] || []).indexOf(to);
+              return index < 0 ? Infinity : index + 1;
+            };
+            const preserveDepthAssignments = (keys, rosterById) => {
+              const previous = Array.from(depthAssignments);
+              const next = new Map();
+              const claimed = new Set();
+              // Preserve exact slot keys first.
+              for (const [key, id] of previous) {
+                const player = rosterById.get(id);
+                const position = key.split("#")[0];
+                if (!keys.includes(key) || !player || claimed.has(id) || !rankDepthPlayers([player], position).length) continue;
+                next.set(key, id);
+                claimed.add(id);
+              }
+              // Then preserve players in the same position or an obvious equivalent
+              // role, but only when that player is actually eligible there.
+              for (const [oldKey, id] of previous) {
+                if (claimed.has(id)) continue;
+                const player = rosterById.get(id);
+                if (!player) continue;
+                const oldPosition = oldKey.split("#")[0];
+                const candidates = keys
+                  .filter(key => !next.has(key))
+                  .map(key => ({ key, position:key.split("#")[0] }))
+                  .filter(item => rankDepthPlayers([player], item.position).length)
+                  .map(item => ({...item, score:depthPositionCompatibility(oldPosition, item.position)}))
+                  .filter(item => Number.isFinite(item.score))
+                  .sort((a,b) => a.score-b.score || keys.indexOf(a.key)-keys.indexOf(b.key));
+                if (!candidates.length) continue;
+                next.set(candidates[0].key, id);
+                claimed.add(id);
+              }
+              depthAssignments.clear();
+              for (const [key, id] of next) depthAssignments.set(key, id);
+              return claimed;
+            };
             const closeDepthPicker = ({ restoreFocus = false } = {}) => {
               const previous = openPickerButton;
               openPickerButton = null;
@@ -925,18 +971,7 @@
               const positions = lines.flat().concat("GK");
               const keys = slotKeysFor(positions);
               const rosterById = new Map(depthRoster.map(player => [Number(player.player_id), player]));
-              const claimed = new Set();
-              // Keep manually selected starters across formation changes where the
-              // position/ordinal still exists, and never keep removed/retired players.
-              for (const [key, id] of depthAssignments) {
-                const player = rosterById.get(id);
-                if (!keys.includes(key) || !player || claimed.has(id)
-                  || !rankDepthPlayers([player], key.split("#")[0]).length) {
-                  depthAssignments.delete(key);
-                } else {
-                  claimed.add(id);
-                }
-              }
+              const claimed = preserveDepthAssignments(keys, rosterById);
               const available = depthRoster.filter(player => !claimed.has(Number(player.player_id)));
               const alternatives = distributeFormationDepth(lines, available);
               const starters = keys.map(key => rosterById.get(depthAssignments.get(key)) || null);
@@ -960,6 +995,37 @@
                 const heading = document.createElement("h4");
                 heading.textContent = "Select " + position;
                 pickerContent.appendChild(heading);
+                const rankedDepth = rankDepthPlayers(depthRoster, position);
+                const currentStarter = rosterById.get(Number(currentId)) || null;
+                const occupiedElsewhere = new Set(Array.from(assignmentByPlayer, ([id, slot]) => slot === key ? null : Number(id)).filter(Number.isFinite));
+                const depthPreview = [];
+                if (currentStarter) depthPreview.push({label:"Starter",player:currentStarter});
+                for (const player of rankedDepth) {
+                  const id = Number(player.player_id);
+                  if (currentStarter && id === Number(currentStarter.player_id)) continue;
+                  if (occupiedElsewhere.has(id)) continue;
+                  depthPreview.push({label:depthPreview.length ? (depthPreview.length === 1 ? "Next" : "Third") : "Starter",player});
+                  if (depthPreview.length >= 3) break;
+                }
+                if (depthPreview.length) {
+                  const depthSummary = document.createElement("div");
+                  depthSummary.className = "plannerDepthPickerDepthSummary";
+                  for (const item of depthPreview) {
+                    const depthRow = document.createElement("div");
+                    depthRow.className = "plannerDepthPickerDepthRow";
+                    const depthLabel = document.createElement("span");
+                    depthLabel.className = "plannerDepthPickerDepthLabel";
+                    depthLabel.textContent = item.label;
+                    const depthName = document.createElement("span");
+                    depthName.className = "plannerDepthPickerDepthName";
+                    depthName.textContent = depthPlayerShortName(item.player);
+                    const depthOverall = document.createElement("strong");
+                    depthOverall.textContent = depthPlayerOverall(item.player, position);
+                    depthRow.append(depthLabel,depthName,depthOverall);
+                    depthSummary.appendChild(depthRow);
+                  }
+                  pickerContent.appendChild(depthSummary);
+                }
                 if (currentId) {
                   const clear = document.createElement("button");
                   clear.type = "button";
@@ -977,6 +1043,7 @@
                   removeText.textContent = "Remove";
                   clear.append(removeIconFrame, removeText);
                   clear.addEventListener("click", () => {
+                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
                     depthAssignments.delete(key);
                     renderFormation(selected);
                     formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
@@ -1021,6 +1088,7 @@
                   }
                   row.appendChild(overall);
                   row.addEventListener("click", () => {
+                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
                     // Move an existing starter rather than leaving the same player in two slots.
                     if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);
                     depthAssignments.set(key, Number(player.player_id));
@@ -1064,7 +1132,16 @@
                 button.setAttribute("aria-label", slotLabel + ": " + (starter ? depthPlayerName(starter) + ", " + depthPlayerOverall(starter, position) : "empty") + ". " + spareCount + " available alternative" + (spareCount === 1 ? "" : "s") + ". Select player");
                 button.setAttribute("aria-haspopup", "dialog");
                 button.setAttribute("aria-expanded", "false");
-                button.addEventListener("click", () => openDepthPicker(key, position, button));
+                if (starter) {
+                  button.addEventListener("mouseenter", () => Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,true));
+                  button.addEventListener("mouseleave", () => Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,false));
+                  button.addEventListener("focus", () => Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,true));
+                  button.addEventListener("blur", () => Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,false));
+                }
+                button.addEventListener("click", () => {
+                  openDepthPicker(key, position, button);
+                  if (starter) Reflect.get(window,"__mflPlannerHighlightPlayer")?.(starter.player_id,true,{flash:true,scroll:"roster"});
+                });
                 const token = document.createElement("span");
                 token.className = "plannerFormationToken" + (starter ? " plannerFormationTokenAssigned" : "");
                 token.dataset.slotToken = "true";
@@ -1234,6 +1311,7 @@
                 empty.hidden = Boolean(slot);
               });
               Reflect.get(window, "__mflPlannerRoute")?.syncSlots?.(assignedSlotByPlayer);
+              Reflect.get(window, "__mflPlannerSyncStatus")?.();
               if (depthAutoFill instanceof HTMLButtonElement) {
                 depthAutoFill.disabled = depthReadOnly || !depthRoster.length || !keys.some((key, index) =>
                   !depthAssignments.has(key) && rankDepthPlayers(depthRoster, key.split("#")[0])
@@ -1245,25 +1323,68 @@
               formationPitch?.setAttribute("aria-label", "Squad depth pitch — formation " + name + ": " + positions.map((position, index) => position + " " + (buckets[index].length ? buckets[index].map(depthPlayerName).join(", ") : "empty")).join("; "));
               Reflect.get(window, "__mflPlannerSyncDirty")?.();
             };
+            const betterDepthFillState = (candidate, current) => {
+              if (!current) return true;
+              if (candidate.count !== current.count) return candidate.count > current.count;
+              if (candidate.score !== current.score) return candidate.score > current.score;
+              return candidate.signature < current.signature;
+            };
+            const optimizedDepthFill = keys => {
+              const openKeys = keys.filter(key => !depthAssignments.has(key));
+              if (!openKeys.length) return [];
+              const claimed = new Set(depthAssignments.values());
+              const players = depthRoster
+                .filter(player => !claimed.has(Number(player.player_id)))
+                .slice()
+                .sort((a,b) => Number(a.player_id)-Number(b.player_id));
+              const states = new Array(1 << openKeys.length).fill(null);
+              states[0] = {count:0,score:0,picks:[],signature:""};
+              let currentStates = states;
+              for (const player of players) {
+                const nextStates = currentStates.slice();
+                const playerId = Number(player.player_id);
+                for (let mask=0; mask<currentStates.length; mask+=1) {
+                  const state = currentStates[mask];
+                  if (!state) continue;
+                  for (let index=0; index<openKeys.length; index+=1) {
+                    if (mask & (1 << index)) continue;
+                    const position = openKeys[index].split("#")[0];
+                    if (!rankDepthPlayers([player], position).length) continue;
+                    const rating = Number(depthPlayerOverall(player, position));
+                    if (!Number.isFinite(rating)) continue;
+                    const nextMask = mask | (1 << index);
+                    const picks = state.picks.concat({key:openKeys[index],playerId});
+                    const candidate = {
+                      count:state.count+1,
+                      score:state.score+rating,
+                      picks,
+                      signature:picks.map(item=>item.key+":"+String(item.playerId).padStart(12,"0")).sort().join("|"),
+                    };
+                    if (betterDepthFillState(candidate,nextStates[nextMask])) nextStates[nextMask]=candidate;
+                  }
+                }
+                currentStates = nextStates;
+              }
+              let best = currentStates[0];
+              for (const state of currentStates) if (state && betterDepthFillState(state,best)) best=state;
+              return best?.picks || [];
+            };
             const autoFillDepth = () => {
               if (depthReadOnly) return;
               const selected = formationCodes.includes(formationSelect?.value) ? formationSelect.value : "442";
               const keys = slotKeysFor(formationSlots[selected].flat().concat("GK"));
-              const claimed = new Set(depthAssignments.values());
-              for (const key of keys) {
-                if (depthAssignments.has(key)) continue;
-                const position = key.split("#")[0];
-                const player = rankDepthPlayers(depthRoster, position).find(candidate => !claimed.has(Number(candidate.player_id)));
-                if (!player) continue;
-                const id = Number(player.player_id);
-                depthAssignments.set(key, id);
-                claimed.add(id);
-              }
+              // Optimize all empty slots together by positional Overall. There is no
+              // extra Natural-position preference beyond the positional rating itself.
+              const picks = optimizedDepthFill(keys);
+              if (!picks.length) return;
+              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
+              for (const pick of picks) depthAssignments.set(pick.key,pick.playerId);
               renderFormation(selected);
             };
             depthAutoFill?.addEventListener("click", autoFillDepth);
             depthClear?.addEventListener("click", () => {
               if (depthReadOnly || !depthAssignments.size) return;
+              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
               depthAssignments.clear();
               closeDepthPicker();
               renderFormation(formationSelect?.value || "442");
