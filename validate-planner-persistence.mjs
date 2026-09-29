@@ -83,6 +83,7 @@ assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_share
 assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
+assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
 assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
@@ -90,8 +91,11 @@ assert(planner.includes('scope:"players"') && planner.includes('playerIds:ids.jo
 assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planner-share"'));
 assert(planner.includes('routeParams.get("share")') && planner.includes('routeParams.get("saved")'));
 assert(planner.includes("plannerReadOnly") && planner.includes("copySharedPlannerPlan"));
+assert(planner.includes("requestPlannerPlanName") && planner.includes("requestPlannerPlanDelete"));
+assert(!planner.includes("window.prompt(") && !planner.includes("window.confirm("));
 assert(generatedPlanner.startsWith("// Generated") && generatedPlanner.includes("currentPlannerPayload"));
 assert(styles.includes(".plannerPlanBar{") && styles.includes(".plannerPlansDialog{") && styles.includes(".plannerSharedBanner{"));
+assert(styles.includes(".plannerPlanNameDialog,.plannerPlanDeleteDialog{") && styles.includes(".plannerPlanDeleteConfirmButton{color:var(--danger)}"));
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
 assert(routing.includes('const shareId = String(params.get("share") || "").trim();')
   && routing.includes('!shareId && !hasWalletOptIn()')
