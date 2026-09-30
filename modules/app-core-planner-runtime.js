@@ -741,6 +741,7 @@
     rosterMessage(roster.length?"":"No players in this squad.");
     renderSquadStatus();
     syncPlannerDirtyState();
+    Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();
   }
   async function loadRoster(clubId){
     resetRoster();
@@ -1153,7 +1154,6 @@
       sharePlanButton.disabled=!canManageShare;
       sharePlanButton.textContent=shared?"Revoke":"Share";
       sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan");
-      sharePlanButton.title=shared?"Revoke share":"Share plan";
     }
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
