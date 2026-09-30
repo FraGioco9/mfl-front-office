@@ -17,6 +17,11 @@ async function savedPlanCount(wallet) {
   return Array.isArray(rows) ? rows.length : 0;
 }
 
+function normalizePlannerRevision(value) {
+  const revision = Number(value);
+  return Number.isSafeInteger(revision) && revision > 0 ? revision : 0;
+}
+
 function responsePlan(row) {
   if (!row) return null;
   return {
@@ -26,6 +31,7 @@ function responsePlan(row) {
     payload: row.payload || {},
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || row.created_at || "",
+    revision: normalizePlannerRevision(row.revision) || 1,
   };
 }
 
@@ -54,17 +60,30 @@ module.exports = async function handler(request, response) {
       }
 
       if (requestedId) {
-        const existingRows = await supabaseRequest(`planner_plans?select=id&wallet_address=eq.${encodeURIComponent(wallet)}&id=eq.${encodeURIComponent(requestedId)}&limit=1`);
+        const expectedRevision = normalizePlannerRevision(body?.expectedRevision ?? body?.revision);
+        if (!expectedRevision) {
+          response.status(400).json({ error: "Missing saved plan revision." });
+          return;
+        }
+        const existingRows = await supabaseRequest(`planner_plans?select=id,revision&wallet_address=eq.${encodeURIComponent(wallet)}&id=eq.${encodeURIComponent(requestedId)}&limit=1`);
         if (!Array.isArray(existingRows) || !existingRows[0]) {
           response.status(404).json({ error: "Saved plan not found." });
           return;
         }
-        const rows = await supabaseRequest(`planner_plans?id=eq.${encodeURIComponent(requestedId)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+        if (normalizePlannerRevision(existingRows[0].revision) !== expectedRevision) {
+          response.status(409).json({ error: "Saved plan changed. Reload it before saving." });
+          return;
+        }
+        const rows = await supabaseRequest(`planner_plans?id=eq.${encodeURIComponent(requestedId)}&wallet_address=eq.${encodeURIComponent(wallet)}&revision=eq.${expectedRevision}`, {
           method: "PATCH",
           headers: { Prefer: "return=representation" },
-          body: JSON.stringify({ name, club_id: payload.clubId, payload, updated_at: new Date().toISOString() }),
+          body: JSON.stringify({ name, club_id: payload.clubId, payload, revision: expectedRevision + 1, updated_at: new Date().toISOString() }),
         });
-        response.status(200).json({ plan: responsePlan(Array.isArray(rows) ? rows[0] : { id: requestedId, name, club_id: payload.clubId, payload }) });
+        if (!Array.isArray(rows) || !rows[0]) {
+          response.status(409).json({ error: "Saved plan changed. Reload it before saving." });
+          return;
+        }
+        response.status(200).json({ plan: responsePlan(rows[0]) });
         return;
       }
 
@@ -77,7 +96,7 @@ module.exports = async function handler(request, response) {
       const rows = await supabaseRequest("planner_plans", {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify([{ id, wallet_address: wallet, club_id: payload.clubId, name, payload }]),
+        body: JSON.stringify([{ id, wallet_address: wallet, club_id: payload.clubId, name, payload, revision: 1 }]),
       });
       response.status(200).json({ plan: responsePlan(Array.isArray(rows) ? rows[0] : { id, name, club_id: payload.clubId, payload }) });
       return;
@@ -87,7 +106,7 @@ module.exports = async function handler(request, response) {
       const requestUrl = new URL(request.url, "http://localhost");
       const id = normalizePlannerId(requestUrl.searchParams.get("id"));
       if (id) {
-        const rows = await supabaseRequest(`planner_plans?select=id,name,club_id,payload,created_at,updated_at&id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+        const rows = await supabaseRequest(`planner_plans?select=id,name,club_id,payload,revision,created_at,updated_at&id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
         const row = Array.isArray(rows) ? rows[0] : null;
         if (!row) {
           response.status(404).json({ error: "Saved plan not found." });
@@ -96,7 +115,7 @@ module.exports = async function handler(request, response) {
         response.status(200).json({ plan: responsePlan(row) });
         return;
       }
-      const rows = await supabaseRequest(`planner_plans?select=id,name,club_id,payload,created_at,updated_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=updated_at.desc&limit=${MAX_SAVED_PLANS_PER_WALLET}`);
+      const rows = await supabaseRequest(`planner_plans?select=id,name,club_id,payload,revision,created_at,updated_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=updated_at.desc&limit=${MAX_SAVED_PLANS_PER_WALLET}`);
       response.status(200).json({ plans: Array.isArray(rows) ? rows.map(responsePlan).filter(Boolean) : [] });
       return;
     }
@@ -104,14 +123,32 @@ module.exports = async function handler(request, response) {
     if (request.method === "DELETE") {
       const requestUrl = new URL(request.url, "http://localhost");
       const id = normalizePlannerId(requestUrl.searchParams.get("id"));
+      const expectedRevision = normalizePlannerRevision(requestUrl.searchParams.get("revision"));
       if (!id) {
         response.status(400).json({ error: "Missing saved plan id." });
         return;
       }
-      await supabaseRequest(`planner_plans?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+      if (!expectedRevision) {
+        response.status(400).json({ error: "Missing saved plan revision." });
+        return;
+      }
+      const existingRows = await supabaseRequest(`planner_plans?select=id,revision&wallet_address=eq.${encodeURIComponent(wallet)}&id=eq.${encodeURIComponent(id)}&limit=1`);
+      if (!Array.isArray(existingRows) || !existingRows[0]) {
+        response.status(404).json({ error: "Saved plan not found." });
+        return;
+      }
+      if (normalizePlannerRevision(existingRows[0].revision) !== expectedRevision) {
+        response.status(409).json({ error: "Saved plan changed. Reload it before deleting." });
+        return;
+      }
+      const rows = await supabaseRequest(`planner_plans?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}&revision=eq.${expectedRevision}`, {
         method: "DELETE",
-        headers: { Prefer: "return=minimal" },
+        headers: { Prefer: "return=representation" },
       });
+      if (!Array.isArray(rows) || !rows[0]) {
+        response.status(409).json({ error: "Saved plan changed. Reload it before deleting." });
+        return;
+      }
       response.status(200).json({ ok: true });
       return;
     }

@@ -85,7 +85,7 @@
   let playerSearchPayload=null,clubSearchPlayers=[];
   let pendingPlayers=new Map();
   let activeContractEditor=null;
-  let activePlanId="",activePlanName="",activePlanPayload=null,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
+  let activePlanId="",activePlanName="",activePlanPayload=null,activePlanRevision=0,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
   let planNameRequest=null,planDeleteRequest=null,planRevokeRequest=null;
   let plannerUndoStack=[],plannerRedoStack=[],plannerHistoryApplying=false;
   let plannerCommittedFormation=String(formationSelect?.value||"442");
@@ -863,7 +863,7 @@
       teamLocation.hidden=!location;
     }
   }
-  function selectTeam(team,{updateUrl=true,replaceUrl=false,loadRosterData=true}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";selectedTeamId=id;if(changed)resetPlannerHistory();input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");syncPlanUi();if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed&&loadRosterData)void loadRoster(id);return true;}
+  function selectTeam(team,{updateUrl=true,replaceUrl=false,loadRosterData=true}={}){const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name||!(input instanceof HTMLInputElement))return false;const changed=selectedTeamId!==id;plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId=id;if(changed)resetPlannerHistory();input.value=name;clearTimeout(searchTimer);showTeam(team);clearResults();syncClearButton();setStatus("");syncPlanUi();if(updateUrl)updatePlannerUrl(id,{replace:replaceUrl});if(changed&&loadRosterData)void loadRoster(id);return true;}
   let ownedClubs=null,ownedWallet="",ownedRequest=null;
   async function requestOwnedClubs(){
     if(typeof hasWalletOptIn!=="function"||!hasWalletOptIn())return [];
@@ -1106,6 +1106,10 @@
   function normalizePlannerPlanName(value){
     return String(value||"").trim().replace(/\s+/g," ").slice(0,60);
   }
+  function plannerPlanRevision(value){
+    const revision=Number(value);
+    return Number.isSafeInteger(revision)&&revision>0?revision:0;
+  }
   function closePlannerPlanNameModal(value=""){
     if(planNameModal instanceof HTMLElement){planNameModal.hidden=true;planNameModal.classList.remove("modalOpen");}
     const request=planNameRequest;planNameRequest=null;
@@ -1226,6 +1230,7 @@
     if(!payload||!clubId)throw new Error("Plan is invalid.");
     plannerReadOnly=Boolean(readOnly);
     activePlanId=plannerReadOnly?"":String(savedId||entry?.id||"");
+    activePlanRevision=plannerReadOnly?0:plannerPlanRevision(entry?.revision);
     activeShareId="";
     activePlanName=String(entry?.name||"Plan");
     activePlanPayload=payload;
@@ -1248,8 +1253,9 @@
     syncPlanUi();
     return true;
   }
-  async function savePlannerPayload(payload,name,{savedId=""}={}){
-    return plannerPrivateRequest("/api/planner-save",{method:"POST",body:JSON.stringify({id:savedId||undefined,name,payload})});
+  async function savePlannerPayload(payload,name,{savedId="",expectedRevision=0}={}){
+    const revision=plannerPlanRevision(expectedRevision);
+    return plannerPrivateRequest("/api/planner-save",{method:"POST",body:JSON.stringify({id:savedId||undefined,name,payload,...(savedId?{expectedRevision:revision}:{})})});
   }
   async function saveCurrentPlan({asNew=false,nameOverride=""}={}){
     if(plannerReadOnly||!selectedTeamId)return false;
@@ -1257,10 +1263,10 @@
     const overwriting=Boolean(activePlanId)&&!asNew;
     const name=String(nameOverride||(overwriting&&activePlanName?activePlanName:await requestPlannerPlanName(asNew?"":activePlanName,asNew?"Save plan as":"Save plan"))).trim();
     if(!payload||!name)return false;
-    const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:""});
+    const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:"",expectedRevision:overwriting?activePlanRevision:0});
     const plan=data?.plan;
     if(!plan?.id)throw new Error("Could not save plan.");
-    activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;plannerReadOnly=false;loadedPlanRouteIdentity="saved:"+activePlanId;
+    activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;activePlanRevision=plannerPlanRevision(plan.revision);plannerReadOnly=false;loadedPlanRouteIdentity="saved:"+activePlanId;
     history.replaceState({},"",plannerStablePlanPath(activePlanId));
     await refreshActivePlannerShare();
     syncPlanUi();
@@ -1343,7 +1349,7 @@
     if(!confirmPlannerDiscard())return false;
     const clubId=String(selectedTeamId||"").trim();
     closePlansModal();closePlayerModal();
-    plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";
+    plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";
     resetPlannerHistory();setStatus("");
     if(clubId){
       history.replaceState({},"","/planner?club="+encodeURIComponent(clubId));
@@ -1403,7 +1409,7 @@
       const linkedShare=shareByPlan.get(String(plan.id||""))||null;
       const actionButtons=[
         action("Open plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',async()=>{if(!confirmPlannerDiscard())return;closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});activeShareId=String(linkedShare?.id||"");syncPlanUi();history.pushState({},"",plannerStablePlanPath(plan.id));Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();}),
-        action("Rename plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>',async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;const data=await savePlannerPayload(plan.payload,next,{savedId:plan.id});if(String(activePlanId)===String(plan.id)){activePlanName=String(data?.plan?.name||next);activePlanPayload=data?.plan?.payload||plan.payload;syncPlanUi();}await openPlansModal();}),
+        action("Rename plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>',async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;const data=await savePlannerPayload(plan.payload,next,{savedId:plan.id,expectedRevision:plan.revision});if(String(activePlanId)===String(plan.id)){activePlanName=String(data?.plan?.name||next);activePlanPayload=data?.plan?.payload||plan.payload;activePlanRevision=plannerPlanRevision(data?.plan?.revision);syncPlanUi();}await openPlansModal();}),
         action("Duplicate plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>',async()=>{const next=await requestPlannerPlanName(String(plan.name||"Plan")+" copy","Duplicate plan");if(!next)return;await savePlannerPayload(plan.payload,next);await openPlansModal();}),
       ];
       if(linkedShare){
@@ -1412,7 +1418,7 @@
       }else{
         actionButtons.push(action("Share plan",'<svg viewBox="1.8 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>',async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload,{sourcePlanId:plan.id});await openPlansModal();}));
       }
-      actionButtons.push(action("Delete plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',async()=>{if(!await requestPlannerPlanDelete(plan.name))return;if(linkedShare)await revokePlannerShare(linkedShare.id,{silent:true});await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";history.replaceState({},"",selectedTeamId?"/planner?club="+encodeURIComponent(selectedTeamId):"/planner");syncPlanUi();}await openPlansModal();},{danger:true}));
+      actionButtons.push(action("Delete plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',async()=>{if(!await requestPlannerPlanDelete(plan.name))return;await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id)+"&revision="+encodeURIComponent(plannerPlanRevision(plan.revision)),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";history.replaceState({},"",selectedTeamId?"/planner?club="+encodeURIComponent(selectedTeamId):"/planner");syncPlanUi();}await openPlansModal();},{danger:true}));
       actions.append(...actionButtons);
       row.append(main,actions);fragment.appendChild(row);
     }
@@ -1463,7 +1469,7 @@
     if(!name)return false;
     const data=await savePlannerPayload(activePlanPayload,name);
     const plan=data?.plan;if(!plan?.id)return false;
-    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;activeShareId="";loadedPlanRouteIdentity="saved:"+activePlanId;renderRoster();syncPlanUi();
+    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;activePlanRevision=plannerPlanRevision(plan.revision);activeShareId="";loadedPlanRouteIdentity="saved:"+activePlanId;renderRoster();syncPlanUi();
     history.replaceState({},"",plannerStablePlanPath(activePlanId));
     if(typeof showToast==="function")showToast("Plan copied to your saved plans.");
     return true;
@@ -1495,7 +1501,7 @@
       if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();
       return null;
     }
-    if(loadedPlanRouteIdentity){loadedPlanRouteIdentity="";activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";}
+    if(loadedPlanRouteIdentity){loadedPlanRouteIdentity="";activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";}
     plannerReadOnly=false;syncPlanUi();
     if(page instanceof HTMLElement)showOnly(page);const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(!routeClubId&&!selectedTeamId&&!(input?.value.trim()))void requestOwnedClubs();if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
@@ -1520,7 +1526,7 @@
   formationSelect?.addEventListener("keydown",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
-    if(selectedTeamId){selectedTeamId="";activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";syncPlanUi();updatePlannerUrl("",{replace:true});}
+    if(selectedTeamId){selectedTeamId="";activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";syncPlanUi();updatePlannerUrl("",{replace:true});}
     const q=input.value.trim();
     if(!q){clearResults();void requestOwnedClubs();return;}
     if(results instanceof HTMLElement){
@@ -1540,7 +1546,7 @@
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){input.blur();}
   });
-  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
   newPlanButton?.addEventListener("click",()=>void newPlannerPlan().catch(error=>setStatus(error?.message||"Could not create a new plan.")));

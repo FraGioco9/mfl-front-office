@@ -49,7 +49,7 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
@@ -57,6 +57,7 @@ const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigra
   readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930125208_planner_share_source_plan.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930163500_planner_share_unique_source.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930170000_planner_plan_revision.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
@@ -98,6 +99,16 @@ assert(shareUniqueSourceMigration.includes("row_number() over")
   && shareUniqueSourceMigration.includes("create unique index planner_shares_wallet_source_idx")
   && shareUniqueSourceMigration.includes("(wallet_address, source_plan_id)"));
 assert(schema.includes("create unique index if not exists planner_shares_wallet_source_idx on public.planner_shares (wallet_address, source_plan_id);"));
+assert(planRevisionMigration.includes("add column if not exists revision integer not null default 1")
+  && planRevisionMigration.includes("foreign key (source_plan_id)")
+  && planRevisionMigration.includes("on delete cascade"));
+assert(schema.includes("revision integer not null default 1")
+  && schema.includes("source_plan_id text references public.planner_plans(id) on delete cascade"));
+assert(saveApi.includes("normalizePlannerRevision")
+  && saveApi.includes("revision=eq.\${expectedRevision}")
+  && saveApi.includes("revision: expectedRevision + 1")
+  && saveApi.includes('response.status(409).json({ error: "Saved plan changed. Reload it before saving." })')
+  && saveApi.includes('response.status(409).json({ error: "Saved plan changed. Reload it before deleting." })'));
 assert(shareApi.includes('"planner_shares?on_conflict=wallet_address,source_plan_id"')
   && shareApi.includes('"resolution=merge-duplicates,return=representation"')
   && !shareApi.includes('planner_shares?wallet_address=eq.${encodeURIComponent(wallet)}&source_plan_id=eq.${encodeURIComponent(sourcePlanId)}'));
@@ -134,6 +145,11 @@ assert(planner.includes("if(!player||plannerPlayerIsRetired(player))return null;
   && generatedPlanner.includes("if(!player||plannerPlayerIsRetired(player))return null;"),
   "Saved/shared plan restoration must drop players that are now explicitly retired.");
 assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planner-share"'));
+assert(planner.includes("activePlanRevision")
+  && planner.includes("expectedRevision:overwriting?activePlanRevision:0")
+  && planner.includes("expectedRevision:plan.revision")
+  && planner.includes('&revision="+encodeURIComponent(plannerPlanRevision(plan.revision))')
+  && generatedPlanner.includes("activePlanRevision"));
 assert(planner.includes('pathPlanMatch=String(location.pathname||"").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i)')
   && planner.includes("loadPlannerPlanById")
   && planner.includes("newPlannerPlan")

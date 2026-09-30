@@ -77,9 +77,12 @@ create table if not exists public.planner_plans (
   club_id text not null,
   name text not null,
   payload jsonb not null default '{}'::jsonb,
+  revision integer not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.planner_plans add column if not exists revision integer not null default 1;
 
 create index if not exists planner_plans_wallet_updated_idx
   on public.planner_plans (wallet_address, updated_at desc);
@@ -87,7 +90,7 @@ create index if not exists planner_plans_wallet_updated_idx
 create table if not exists public.planner_shares (
   id text primary key,
   wallet_address text,
-  source_plan_id text,
+  source_plan_id text references public.planner_plans(id) on delete cascade,
   club_id text not null,
   name text not null,
   payload jsonb not null default '{}'::jsonb,

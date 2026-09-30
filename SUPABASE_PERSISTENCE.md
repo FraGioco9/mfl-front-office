@@ -136,10 +136,11 @@ Stored values:
 - `club_id`: queryable club identity for the plan.
 - `name`: user-defined plan name.
 - `payload`: normalized Planner snapshot containing schema version, formation, squad player IDs/contracts, and lineup slot assignments.
+- `revision`: optimistic-concurrency revision. Updates and deletes must match the current revision; successful overwrites increment it.
 - `created_at`: creation metadata.
 - `updated_at`: ordering metadata refreshed when the plan is overwritten or renamed.
 
-The API permits up to 50 saved plans per wallet. Player names, ratings, portraits, club display metadata, and other public MFL data are intentionally not copied into the plan snapshot; opening a plan resolves player IDs against the current packaged database so public player data stays current.
+The API permits up to 50 saved plans per wallet. Saved-plan updates and deletes are wallet-scoped and revision-checked; stale clients receive HTTP 409 instead of overwriting or deleting a newer revision. Deleting a saved plan cascades to its linked share so an external link cannot outlive its source plan. Player names, ratings, portraits, club display metadata, and other public MFL data are intentionally not copied into the plan snapshot; opening a plan resolves player IDs against the current packaged database so public player data stays current.
 
 ### `planner_shares`
 
