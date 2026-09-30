@@ -103,10 +103,16 @@ assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerNew
   && !html.includes('id="plannerRevokeShareButton"'));
 assert(planner.includes('sharePlanButton.textContent=shared?"Revoke":"Share";')
   && planner.includes('const action=revoking?revokePlannerShare():shareCurrentPlan();')
-  && planner.includes('? action("Revoke share"')
-  && planner.includes(': action("Share plan"'));
+  && planner.includes('action("Revoke share"')
+  && planner.includes('action("Share plan"')
+  && planner.includes('action("Copy share link"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
-assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
+assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"')
+  && html.includes('id="plannerPlanDeleteModal"') && html.includes('id="plannerPlanRevokeModal"')
+  && html.includes('id="plannerPlanRevokeConfirmButton"'));
+assert(planner.includes("requestPlannerPlanRevoke")
+  && planner.includes("copyPlannerShareLink")
+  && planner.includes('if(!silent&&!await requestPlannerPlanRevoke(name||activePlanName||"this plan"))return false;'));
 assert(html.includes('<span class="plannerPlanNameLabel">Name</span>')
   && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"')
   && !html.includes('<label for="plannerPlanNameInput">Name</label>'));
