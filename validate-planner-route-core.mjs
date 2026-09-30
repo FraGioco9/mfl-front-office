@@ -52,13 +52,18 @@ invariant(
 );
 invariant(
   html.includes('id="plannerPlansButton"')
+    && html.includes('id="plannerNewPlanButton"')
     && html.includes('id="plannerSavePlanButton"')
     && html.includes('id="plannerDuplicatePlanButton"')
     && html.includes('id="plannerSharePlanButton"')
+    && html.includes('id="plannerRevokeShareButton"')
     && !html.includes('id="plannerSaveAsPlanButton"')
     && !planner.includes("saveAsPlanButton")
-    && planner.includes("async function duplicateCurrentPlan()"),
-  "Planner must keep one Save action and expose a direct Duplicate action without restoring redundant Save as UI.",
+    && planner.includes("async function newPlannerPlan()")
+    && planner.includes("async function duplicateCurrentPlan()")
+    && planner.includes("async function revokePlannerShare(")
+    && planner.includes("plannerStablePlanPath("),
+  "Planner must expose New, Save, Duplicate, Share and persistent Revoke actions without restoring redundant Save as UI.",
 );
 invariant(
   styles.includes(".plannerPlansModalBody{display:grid;gap:7px;min-height:0;padding:14px 16px;overflow:auto}")
