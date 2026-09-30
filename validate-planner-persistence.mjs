@@ -49,15 +49,16 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, sourcePlanIndexMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930125208_planner_share_source_plan.sql", import.meta.url), "utf8"),
-  readFile(new URL("./supabase/migrations/20260930163500_planner_share_unique_source.sql", import.meta.url), "utf8"),
-  readFile(new URL("./supabase/migrations/20260930170000_planner_plan_revision.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930220112_planner_share_unique_source.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930220121_planner_plan_revision.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930220230_planner_share_source_plan_index.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
@@ -104,6 +105,9 @@ assert(planRevisionMigration.includes("add column if not exists revision integer
   && planRevisionMigration.includes("on delete cascade"));
 assert(schema.includes("revision integer not null default 1")
   && schema.includes("source_plan_id text references public.planner_plans(id) on delete cascade"));
+assert(sourcePlanIndexMigration.includes("create index if not exists planner_shares_source_plan_idx")
+  && sourcePlanIndexMigration.includes("on public.planner_shares (source_plan_id)"));
+assert(schema.includes("create index if not exists planner_shares_source_plan_idx on public.planner_shares (source_plan_id);"));
 assert(saveApi.includes("normalizePlannerRevision")
   && saveApi.includes("revision=eq." + "${expectedRevision}")
   && saveApi.includes("revision: expectedRevision + 1")
