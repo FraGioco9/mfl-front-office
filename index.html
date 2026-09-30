@@ -1053,9 +1053,11 @@
             </div>
             <div class="plannerPlanActions">
               <button id="plannerPlansButton" class="compactButton" type="button">Plans</button>
+              <button id="plannerNewPlanButton" class="compactButton" type="button" disabled>New</button>
               <button id="plannerSavePlanButton" class="compactButton" type="button" disabled>Save</button>
               <button id="plannerDuplicatePlanButton" class="compactButton" type="button" disabled>Duplicate</button>
               <button id="plannerSharePlanButton" class="compactButton" type="button" disabled>Share</button>
+              <button id="plannerRevokeShareButton" class="compactButton" type="button" hidden disabled>Revoke</button>
             </div>
           </div>
           <div id="plannerSharedBanner" class="plannerSharedBanner" hidden>
@@ -2483,7 +2485,9 @@
 
             document.body.dataset.page = "planner";
             const initialShareId = String(new URLSearchParams(location.search).get("share") || "").trim();
-            if (root.dataset.storedWalletOptIn !== "true" && !initialShareId) {
+            const initialPlanMatch = String(location.pathname || "").match(/^\/planner\/([a-f0-9]{16})\/?$/i);
+            const initialPublicPlanId = initialShareId || String(initialPlanMatch?.[1] || "").trim();
+            if (root.dataset.storedWalletOptIn !== "true" && !initialPublicPlanId) {
               // The shared opt-in shell is parsed after Planner. Prepare it as
               // soon as it enters the DOM, before the browser can paint.
               const showLockedPlanner = () => {
