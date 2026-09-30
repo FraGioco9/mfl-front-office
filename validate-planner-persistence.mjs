@@ -139,7 +139,7 @@ assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})
   && lifecycle.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
   && lifecycle.includes("if (publicPlanPath || shareId) return false;"));
 assert(bootstrap.includes("const publicPlannerShare = pageName === \"planner\"")
-  && bootstrap.includes('/^\\/planner\\/[a-f0-9]{16}\\/?$/i.test(String(window.location.pathname || \"\"))')
+  && bootstrap.includes('/^\\/planner\\/[a-f0-9]{16}\\/?$/i.test(String(window.location.pathname || ""))')
   && bootstrap.includes("root.dataset.storedWalletOptIn === \"true\" || publicPlannerShare"));
 assert(stableRoutePage.includes("MflPlannerPlanPage") && stableRoutePage.includes("Planner - MFL Front Office"));
 
