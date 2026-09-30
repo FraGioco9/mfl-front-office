@@ -228,6 +228,7 @@ async function waitForLegacyAutoRefresh(cdp, {
   );
 }
 
+async function runRenderedShellProbe() {
 const executable = browserExecutable();
 const debuggingPort = await reserveTcpPort();
 const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-next-rendered-shell-"));
@@ -322,4 +323,18 @@ try {
     });
   }
   await rm(userDataDirectory, { recursive: true, force: true });
+}
+}
+
+for (let attempt = 1; attempt <= 2; attempt += 1) {
+  try {
+    await runRenderedShellProbe();
+    break;
+  } catch (error) {
+    const message = String(error?.message || error || "");
+    const transient = message.includes("Chrome debugging target did not become ready.")
+      || message.includes("Chrome DevTools request timed out:");
+    if (!transient || attempt === 2) throw error;
+    console.warn(`Retrying transient Next rendered-shell Chrome failure: ${message.split("\\n")[0]}`);
+  }
 }
