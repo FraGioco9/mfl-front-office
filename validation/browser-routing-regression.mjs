@@ -115,6 +115,8 @@ function rowForColumns(columns) {
   return columns.map((column) => testPlayer[column] ?? null);
 }
 
+let browserRegressionResult = null;
+
 const browserTestSource = String.raw`(() => {
   "use strict";
 
@@ -335,6 +337,13 @@ const browserTestSource = String.raw`(() => {
     result.dataset.status = status;
     result.textContent = detail;
     document.body.appendChild(result);
+    void fetch("/__browser-routing-result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, detail }),
+      cache: "no-store",
+      keepalive: true,
+    }).catch(() => {});
   };
   const text = (selector) => String(document.querySelector(selector)?.textContent || "").replace(/\s+/g, " ").trim();
   const hidden = (selector) => {
@@ -2980,6 +2989,22 @@ async function createRegressionServer() {
       response.end(browserTestSource);
       return;
     }
+    if (url.pathname === "/__browser-routing-result" && request.method === "POST") {
+      let body = "";
+      for await (const chunk of request) body += chunk;
+      try {
+        const parsed = JSON.parse(body || "{}");
+        browserRegressionResult = {
+          status: String(parsed?.status || ""),
+          detail: String(parsed?.detail || ""),
+        };
+      } catch {
+        browserRegressionResult = { status: "failed", detail: "Browser regression returned invalid result JSON." };
+      }
+      response.writeHead(204, { "Cache-Control": "no-store" });
+      response.end();
+      return;
+    }
     if (url.pathname === "/api/data") {
       const myClubsMode = String(url.searchParams.get("mode") || "");
       const myClubsRequest = myClubsMode === "my-clubs" || myClubsMode === "my-clubs-competitions";
@@ -3146,14 +3171,10 @@ async function connectCdp(webSocketUrl) {
   };
 }
 
-async function waitForBrowserRegression(cdp) {
-  const deadline = Date.now() + 20_000;
+async function waitForBrowserRegression() {
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
-    const evaluation = await cdp.send("Runtime.evaluate", {
-      expression: '(() => { const el = document.querySelector("#mflBrowserRoutingRegression"); return el ? { status: el.dataset.status || "", detail: el.textContent || "" } : null; })()',
-      returnByValue: true,
-    });
-    const value = evaluation?.result?.value;
+    const value = browserRegressionResult;
     if (value?.status === "passed") return value;
     if (value?.status === "failed") throw new Error(`Browser routing regression failed: ${value.detail}`);
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
@@ -3179,16 +3200,13 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => { stderr += chunk; });
 
-  let cdp = null;
   try {
-    const target = await waitForPageTarget(debuggingPort, url);
-    cdp = await connectCdp(target.webSocketDebuggerUrl);
-    await cdp.send("Runtime.enable");
-    return await waitForBrowserRegression(cdp);
+    browserRegressionResult = null;
+    await waitForPageTarget(debuggingPort, url);
+    return await waitForBrowserRegression();
   } catch (error) {
     throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
   } finally {
-    cdp?.close();
     if (child.exitCode === null) {
       await new Promise((resolvePromise) => {
         child.once("close", resolvePromise);
