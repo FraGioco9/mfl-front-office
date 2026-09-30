@@ -49,12 +49,13 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, persistenceErrors, schema, migration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930122000_planner_share_source_plan.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
@@ -64,6 +65,7 @@ const [saveApi, shareApi, persistenceErrors, schema, migration, docs, html, plan
   readFile(new URL("./modules/core-sources/shared-routing.js", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/shared-page-lifecycle.js", import.meta.url), "utf8"),
   readFile(new URL("./bootstrap.js", import.meta.url), "utf8"),
+  readFile(new URL("./pages/planner/[planId].js", import.meta.url), "utf8"),
 ]);
 
 for (const source of [schema, migration]) {
@@ -78,29 +80,42 @@ for (const source of [schema, migration]) {
 }
 assert(saveApi.includes('signedWalletFromRequest(request)') && saveApi.includes("MAX_SAVED_PLANS_PER_WALLET = 50"));
 assert(saveApi.includes('method: "PATCH"') && saveApi.includes('method: "DELETE"'));
-assert(shareApi.includes('signedWalletFromRequest(request)') && shareApi.includes('request.method === "GET"'));
+assert(shareApi.includes('signedWalletFromRequest(request)') && shareApi.includes('request.method === "GET"')
+  && shareApi.includes('request.method === "DELETE"')
+  && shareApi.includes('requestUrl.searchParams.get("owned") === "1"')
+  && shareApi.includes("source_plan_id"));
 assert(saveApi.includes('sendPlannerPersistenceUnavailable(response, error, "planner_plans")'));
 assert(shareApi.includes('sendPlannerPersistenceUnavailable(response, error, "planner_shares")'));
 assert(persistenceErrors.includes("Planner persistence is not initialized.")
   && persistenceErrors.includes("Apply the latest Supabase Planner migration"));
 assert(shareApi.includes("expires_at=gt.") && !shareApi.includes("select=id,name,club_id,payload,created_at,expires_at,wallet_address"));
-assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`"));
+assert(shareSourceMigration.includes("add column if not exists source_plan_id text")
+  && shareSourceMigration.includes("planner_shares_wallet_source_idx")
+  && schema.includes("source_plan_id text"));
+assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`")
+  && docs.includes("owners can explicitly revoke a share by ID"));
 assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
 assert(html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
-assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"'));
+assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerNewPlanButton"')
+  && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"')
+  && html.includes('id="plannerRevokeShareButton"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
 assert(html.includes('<span class="plannerPlanNameLabel">Name</span>')
   && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"')
   && !html.includes('<label for="plannerPlanNameInput">Name</label>'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
-assert(html.includes('root.dataset.storedWalletOptIn !== "true" && !initialShareId'));
+assert(html.includes('const initialPlanMatch = String(location.pathname || "").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i);')
+  && html.includes('root.dataset.storedWalletOptIn !== "true" && !initialPublicPlanId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
 assert(planner.includes('scope:"players"') && planner.includes('playerIds:ids.join(",")'));
 assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planner-share"'));
-assert(planner.includes('routeParams.get("share")') && planner.includes('routeParams.get("saved")'));
+assert(planner.includes('pathPlanMatch=String(location.pathname||"").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i)')
+  && planner.includes("loadPlannerPlanById")
+  && planner.includes("newPlannerPlan")
+  && planner.includes("revokePlannerShare"));
 assert(planner.includes("plannerReadOnly") && planner.includes("copySharedPlannerPlan"));
 assert(planner.includes("requestPlannerPlanName") && planner.includes("requestPlannerPlanDelete"));
 assert(!planner.includes("window.prompt(") && planner.includes('window.confirm("You have unsaved Planner changes. Leave without saving?")'));
@@ -116,13 +131,16 @@ assert(html.includes('class="mflDialog deleteWatchlistDialog plannerPlanDeleteDi
   && html.includes('class="mflDialogFooter deleteWatchlistFooter plannerPlanDeleteFooter"')
   && html.includes('class="deleteWatchlistConfirmButton plannerPlanDeleteConfirmButton"'));
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
-assert(routing.includes('const shareId = String(params.get("share") || "").trim();')
-  && routing.includes('!shareId && !hasWalletOptIn()')
-  && routing.includes('/planner?share='));
+assert(routing.includes('const plannerPlanMatch = cleanPath.match(/^\\/planner\\/([a-f0-9]{16})$/i);')
+  && routing.includes('const planId = String(pathPlanId || legacyShareId || legacySavedId)')
+  && routing.includes('planId ? `/planner/${encodeURIComponent(planId)}`')
+  && routing.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)'));
 assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})")
-  && lifecycle.includes('explicitPath.startsWith("/planner?share=")')
-  && lifecycle.includes("if (shareId) return false;"));
+  && lifecycle.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
+  && lifecycle.includes("if (publicPlanPath || shareId) return false;"));
 assert(bootstrap.includes("const publicPlannerShare = pageName === \"planner\"")
+  && bootstrap.includes('/^\\/planner\\/[a-f0-9]{16}\\/?$/i.test(String(window.location.pathname || \"\"))')
   && bootstrap.includes("root.dataset.storedWalletOptIn === \"true\" || publicPlannerShare"));
+assert(stableRoutePage.includes("MflPlannerPlanPage") && stableRoutePage.includes("Planner - MFL Front Office"));
 
 console.log("Planner saved plans and unlisted share persistence validation passed.");
