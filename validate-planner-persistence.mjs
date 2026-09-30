@@ -133,7 +133,7 @@ assert(html.includes('class="mflDialog deleteWatchlistDialog plannerPlanDeleteDi
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
 assert(routing.includes('const plannerPlanMatch = cleanPath.match(/^\\/planner\\/([a-f0-9]{16})$/i);')
   && routing.includes('const planId = String(pathPlanId || legacyShareId || legacySavedId)')
-  && routing.includes('planId ? `/planner/${encodeURIComponent(planId)}`')
+  && routing.includes('? `/planner/${encodeURIComponent(planId)}`')
   && routing.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)'));
 assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})")
   && lifecycle.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
