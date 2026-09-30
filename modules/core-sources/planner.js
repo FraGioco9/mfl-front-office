@@ -740,7 +740,6 @@
     rosterMessage(roster.length?"":"No players in this squad.");
     renderSquadStatus();
     syncPlannerDirtyState();
-    Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();
   }
   async function loadRoster(clubId){
     resetRoster();
@@ -1164,6 +1163,7 @@
     syncPlannerHistoryButtons();
     renderSquadStatus();
     syncPlannerDirtyState();
+    Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();
   }
   async function plannerPrivateRequest(url,options={}){
     const response=await window.__mflDataClient.fetch(url,{cache:"no-store",...options,headers:{Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{}),...walletProofHeaders(true),...(options.headers||{})}});
