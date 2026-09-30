@@ -105,7 +105,7 @@ assert(planRevisionMigration.includes("add column if not exists revision integer
 assert(schema.includes("revision integer not null default 1")
   && schema.includes("source_plan_id text references public.planner_plans(id) on delete cascade"));
 assert(saveApi.includes("normalizePlannerRevision")
-  && saveApi.includes("revision=eq.\${expectedRevision}")
+  && saveApi.includes("revision=eq." + "${expectedRevision}")
   && saveApi.includes("revision: expectedRevision + 1")
   && saveApi.includes('response.status(409).json({ error: "Saved plan changed. Reload it before saving." })')
   && saveApi.includes('response.status(409).json({ error: "Saved plan changed. Reload it before deleting." })'));

@@ -383,4 +383,32 @@ assert.equal(body.children.some(row => row.dataset.playerId === "700"), true, "S
 assert.equal(body.children.some(row => row.dataset.playerId === "701"), false, "Saved-plan restore must omit a player whose current retirement status is zero.");
 assert.equal(body.children.some(row => row.dataset.playerId === "702"), true, "Saved-plan restore must keep players with unknown retirement data.");
 
-console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state, retry and retirement-safe restore passed.");
+// A cached Club display payload must be reused directly when restoring a plan. The only public-data
+// request after the private plan read should refresh the saved players, not repeat the Club search.
+const cachedPlanId = "bbbbbbbbbbbbbbbb";
+const requestsBeforeCachedRestore = requests.length;
+const cachedPlanPromise = route.loadSavedPlan(cachedPlanId);
+await complete(requests.at(-1), {
+  plan: {
+    id: cachedPlanId,
+    name: "Cached club restore",
+    revision: 1,
+    payload: {
+      clubId: "9001",
+      formation: "442",
+      squad: [{ playerId: "1", contract: 7 }],
+      lineup: [],
+    },
+  },
+});
+assert.equal(requests.length, requestsBeforeCachedRestore + 2, "Cached Club restore must skip a redundant Club search.");
+const cachedRestoreQuery = new URL(requests.at(-1).url, "https://example.test").searchParams;
+assert.equal(cachedRestoreQuery.get("scope"), "players", "Cached Club restore must refresh player data immediately.");
+await complete(requests.at(-1), {
+  columns: payload.columns,
+  rows: [payload.rows[0]],
+});
+await cachedPlanPromise;
+assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Cached Club display data must restore the team identity.");
+
+console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state, retry, retirement-safe restore and cached Club reuse passed.");

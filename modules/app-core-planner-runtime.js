@@ -1216,6 +1216,7 @@
   }
   async function resolvePlannerClub(clubId){
     const cached=cachedPlannerClub(clubId);
+    if(cached)return {...cached,clubId:String(clubId)};
     try{
       const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q:String(clubId)});
       const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
