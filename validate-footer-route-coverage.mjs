@@ -169,8 +169,9 @@ assert.ok(!generated.includes(".myPlayersLockedPage {\n  position: fixed;"), "Ge
 assert.ok(
   pageLifecycle.includes('["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage)')
     && pageLifecycle.includes('if (normalizedPage === "planner")')
-    && pageLifecycle.includes('if (shareId) return false;'),
-  "All protected pages must remain in the single canonical opted-out route guard, with only public Planner share links exempted.",
+    && pageLifecycle.includes('const publicPlanPath = /^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
+    && pageLifecycle.includes('if (publicPlanPath || shareId) return false;'),
+  "All protected pages must remain in the single canonical opted-out route guard, with stable or legacy public Planner share links exempted.",
 );
 assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");
 
