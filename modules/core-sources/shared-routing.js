@@ -287,25 +287,28 @@ function pageTargetFromPath(path) {
     };
   }
 
-  if (cleanPath === "/planner") {
+  const plannerPlanMatch = cleanPath.match(/^\/planner\/([a-f0-9]{16})$/i);
+  if (cleanPath === "/planner" || plannerPlanMatch) {
     const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
-    const shareId = String(params.get("share") || "").trim();
-    const savedId = String(params.get("saved") || "").trim();
-    if (!shareId && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
+    const legacyShareId = String(params.get("share") || "").trim();
+    const legacySavedId = String(params.get("saved") || "").trim();
+    const pathPlanId = plannerPlanMatch ? decodeURIComponent(plannerPlanMatch[1]) : "";
+    const planId = String(pathPlanId || legacyShareId || legacySavedId).trim().toLowerCase();
+    const planKind = legacyShareId ? "share" : legacySavedId ? "saved" : "";
+    if (!planId && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
+    if (planKind === "saved" && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
     const clubId = String(params.get("club") || "").trim();
-    const canonicalPath = shareId
-      ? `/planner?share=${encodeURIComponent(shareId)}`
-      : savedId
-        ? `/planner?saved=${encodeURIComponent(savedId)}`
-        : clubId
-          ? `/planner?club=${encodeURIComponent(clubId)}`
-          : "/planner";
+    const canonicalPath = planId
+      ? `/planner/${encodeURIComponent(planId)}`
+      : clubId
+        ? `/planner?club=${encodeURIComponent(clubId)}`
+        : "/planner";
     return {
       pageName: "planner",
       options: {
         path: canonicalPath,
-        ...(shareId ? { shareId } : {}),
-        ...(savedId ? { savedId } : {}),
+        ...(planId ? { planId } : {}),
+        ...(planKind ? { planKind } : {}),
         ...(clubId ? { clubId } : {}),
         ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
       },
@@ -481,17 +484,22 @@ function pageTargetFromPath(path) {
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
     const explicitPath = String(options.path || "");
-    const explicitShare = explicitPath.startsWith("/planner?share=");
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?") || /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)) {
+      return explicitPath;
+    }
+    const requestedPlanId = String(options.planId || "").trim().toLowerCase();
+    if (/^[a-f0-9]{16}$/.test(requestedPlanId)) return `/planner/${encodeURIComponent(requestedPlanId)}`;
+    const currentPlanMatch = String(window.location.pathname || "").match(/^\/planner\/([a-f0-9]{16})$/i);
+    if (currentPlanMatch) return `/planner/${encodeURIComponent(currentPlanMatch[1].toLowerCase())}`;
     const currentShare = window.location.pathname === "/planner"
-      ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+      ? String(new URLSearchParams(window.location.search).get("share") || "").trim().toLowerCase()
       : "";
-    if (!hasWalletOptIn() && !explicitShare && !currentShare) return optedOutPathForPage("planner");
-    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?")) return explicitPath;
-    if (currentShare) return `/planner?share=${encodeURIComponent(currentShare)}`;
-    const savedId = String(options.savedId || (window.location.pathname === "/planner"
-      ? new URLSearchParams(window.location.search).get("saved")
-      : "") || "").trim();
-    if (savedId) return `/planner?saved=${encodeURIComponent(savedId)}`;
+    if (currentShare) return `/planner/${encodeURIComponent(currentShare)}`;
+    const currentSaved = window.location.pathname === "/planner"
+      ? String(new URLSearchParams(window.location.search).get("saved") || "").trim().toLowerCase()
+      : "";
+    if (currentSaved && hasWalletOptIn()) return `/planner/${encodeURIComponent(currentSaved)}`;
+    if (!hasWalletOptIn()) return optedOutPathForPage("planner");
     const clubId = String(options.clubId || (window.location.pathname === "/planner"
       ? new URLSearchParams(window.location.search).get("club")
       : "") || "").trim();
