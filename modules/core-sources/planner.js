@@ -1403,7 +1403,7 @@
   redoButton?.addEventListener("click",redoPlanner);
   document.addEventListener("keydown",event=>{
     if(String(state.currentPage||"")!==PAGE||plannerReadOnly||event.altKey||(!event.ctrlKey&&!event.metaKey))return;
-    const target=event.target;
+    const target=/** @type {Element|null} */(event.target);
     if(target?.closest?.("input,textarea,select,[contenteditable='true']"))return;
     const key=String(event.key||"").toLowerCase();
     const redo=key==="y"||(key==="z"&&event.shiftKey);
