@@ -1,11 +1,12 @@
 import { access, readFile } from "node:fs/promises";
 import { createNextRewrites } from "./next.config.mjs";
 
-const [ignoreSource, packageSource, prepareSource, legacyPublicAssetsSource] = await Promise.all([
+const [ignoreSource, packageSource, prepareSource, legacyPublicAssetsSource, changelogHistorySource] = await Promise.all([
   readFile(new URL("./.vercelignore", import.meta.url), "utf8"),
   readFile(new URL("./package.json", import.meta.url), "utf8"),
   readFile(new URL("./prepare-next-runtime.mjs", import.meta.url), "utf8"),
   readFile(new URL("./legacy-public-assets.cjs", import.meta.url), "utf8"),
+  readFile(new URL("./changelog-history-runtime.js", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
   ignoreSource.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")),
@@ -88,10 +89,12 @@ if (!prepareSource.includes("listLegacyPublicAssetPaths(root)")
   throw new Error("Next public compatibility projection must use the shared legacy asset owner for runtime assets and generated application-core runtimes.");
 }
 
-const rewrites = createNextRewrites();
-if (!rewrites.beforeFiles?.some((rule) => rule.source === "/releases.json" && rule.destination === "/api/releases")) {
-  throw new Error("Next must preserve the /releases.json API rewrite before SPA fallback.");
+if (!changelogHistorySource.includes('const RELEASES_URL = assetUrl("api/releases");')
+    || changelogHistorySource.includes('assetUrl("releases.json")')) {
+  throw new Error("Changelog history must fetch the canonical /api/releases endpoint directly.");
 }
+
+const rewrites = createNextRewrites();
 if (!rewrites.fallback?.some((rule) => rule.source === "/:path*" && rule.destination === "/index.html")) {
   throw new Error("Next must rewrite every unmatched SPA route to the compatibility index shell.");
 }
