@@ -3172,6 +3172,7 @@ async function connectCdp(webSocketUrl) {
 }
 
 async function waitForBrowserRegression(cdp) {
+  void cdp; // Retained for diagnostic wrappers that replace the call site and use the live CDP session.
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const value = browserRegressionResult;
