@@ -214,8 +214,12 @@ async function waitForLegacyAutoRefresh(cdp, {
       const tokenReady = expectMarker
         ? Boolean(value?.token) && value.token !== originalToken
         : value?.token === originalToken;
-      if (tokenReady && value?.markerPresent === expectMarker && value?.readyState === "complete") {
-        return value;
+      // The served legacy asset content is the authoritative refresh signal.
+      // Next dev may serve the updated asset without rotating the document-level
+      // diagnostic token, so keep tokenReady for diagnostics without making it
+      // a hard requirement for a successful refresh probe.
+      if (value?.markerPresent === expectMarker && value?.readyState === "complete") {
+        return { ...value, tokenReady };
       }
     } catch {
       // A full Fast Refresh reload can destroy the old execution context briefly.
