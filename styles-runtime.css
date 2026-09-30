@@ -7511,7 +7511,10 @@ html.mflDataLoading #pageSizeSelect {
 .plannerPlansList{display:grid;gap:7px}.plannerPlansList>.searchHint{margin:0;padding:0;color:var(--text-soft)}
 .plannerPlanListRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
 .plannerPlanListMain{display:grid;gap:2px;min-width:0}
-.plannerPlanListMain strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.plannerPlanListTitle{display:flex;align-items:center;gap:7px;min-width:0}
+.plannerPlanListMain strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.plannerPlanListCurrent{display:inline-flex;flex:0 0 auto;align-items:center;min-height:18px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--primary) 10%,var(--surface-muted));color:var(--primary);font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.plannerPlanListRowCurrent{border-color:var(--primary);background:var(--row-hover)}
 .plannerPlanListMeta{color:var(--text-soft);font-size:11px}
 .plannerPlanListActions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap}
 .plannerPlanListActionButton{display:inline-grid;flex:0 0 28px;place-items:center;width:28px;min-width:28px;max-width:28px;height:28px;min-height:28px;max-height:28px;padding:0;border-radius:6px}.plannerPlanListActionButton svg{display:block;width:15px;height:15px;align-self:center;justify-self:center;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.plannerPlanListDeleteButton{border-color:var(--border);background:var(--surface-muted);color:var(--danger)}.plannerPlanListDeleteButton svg{transform:translateY(-.5px)}.plannerPlanListDeleteButton:hover:not(:disabled),.plannerPlanListDeleteButton:focus-visible:not(:disabled){border-color:var(--mfl-danger-hover-border-color);background:var(--mfl-danger-hover-background);color:var(--mfl-danger-hover-text-color)}
@@ -7541,9 +7544,6 @@ html.mflDataLoading #pageSizeSelect {
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
 .plannerSquadStatusStrip{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-height:22px;margin:-5px 0 10px;color:var(--text-soft);font-size:11px;font-weight:700;line-height:18px}
-.plannerSquadStatusWarnings{color:var(--text-soft)}
-.plannerSquadStatusWarnings[hidden]{display:none}
-.plannerSquadStatusWarnings:not(:empty)::before{content:"•";margin-right:10px;color:var(--border-strong)}
 .plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
 .plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
