@@ -52,9 +52,11 @@
   const planModeLabel=document.getElementById("plannerPlanMode");
   const unsavedWarning=document.getElementById("plannerUnsavedWarning");
   const plansButton=document.getElementById("plannerPlansButton");
+  const newPlanButton=document.getElementById("plannerNewPlanButton");
   const savePlanButton=document.getElementById("plannerSavePlanButton");
   const duplicatePlanButton=document.getElementById("plannerDuplicatePlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
+  const revokeShareButton=document.getElementById("plannerRevokeShareButton");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
   const copySharedPlanButton=document.getElementById("plannerCopySharedPlanButton");
@@ -80,7 +82,7 @@
   let playerSearchPayload=null,clubSearchPlayers=[];
   let pendingPlayers=new Map();
   let activeContractEditor=null;
-  let activePlanId="",activePlanName="",activePlanPayload=null,plannerReadOnly=false,loadedPlanRouteIdentity="";
+  let activePlanId="",activePlanName="",activePlanPayload=null,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
   let planNameRequest=null,planDeleteRequest=null;
   let plannerUndoStack=[],plannerRedoStack=[],plannerHistoryApplying=false;
   let plannerCommittedFormation=String(formationSelect?.value||"442");
@@ -1049,10 +1051,20 @@
     Reflect.set(window,"__mflPlannerDirty",dirty);
     return dirty;
   }
+  function plannerStablePlanPath(id){
+    const value=String(id||"").trim().toLowerCase();
+    return /^[a-f0-9]{16}$/.test(value)?"/planner/"+encodeURIComponent(value):"/planner";
+  }
+  function plannerPlanIdFromLocation(){
+    const match=String(location.pathname||"").match(/^\/planner\/([a-f0-9]{16})\/?$/i);
+    if(match)return String(match[1]||"").toLowerCase();
+    const params=new URLSearchParams(location.search);
+    return String(params.get("share")||params.get("saved")||"").trim().toLowerCase();
+  }
   function plannerCurrentRoutePath(){
-    if(loadedPlanRouteIdentity.startsWith("saved:"))return "/planner?saved="+encodeURIComponent(loadedPlanRouteIdentity.slice(6));
-    if(loadedPlanRouteIdentity.startsWith("share:"))return "/planner?share="+encodeURIComponent(loadedPlanRouteIdentity.slice(6));
-    if(activePlanId)return "/planner?saved="+encodeURIComponent(activePlanId);
+    if(loadedPlanRouteIdentity.startsWith("saved:"))return plannerStablePlanPath(loadedPlanRouteIdentity.slice(6));
+    if(loadedPlanRouteIdentity.startsWith("share:"))return plannerStablePlanPath(loadedPlanRouteIdentity.slice(6));
+    if(activePlanId)return plannerStablePlanPath(activePlanId);
     if(selectedTeamId)return "/planner?club="+encodeURIComponent(selectedTeamId);
     return "/planner";
   }
@@ -1064,9 +1076,14 @@
     if(String(state.currentPage||"")!=="planner"||!plannerHasUnsavedChanges())return true;
     const targetPage=String(pageName||"");
     if(targetPage==="planner"){
+      const targetPlanId=plannerPlanIdFromLocation();
       const params=new URLSearchParams(location.search);
-      const targetIdentity=params.get("share")?"share:"+String(params.get("share")):params.get("saved")?"saved:"+String(params.get("saved")):params.get("club")?"club:"+String(params.get("club")):"";
-      const currentIdentity=loadedPlanRouteIdentity||(selectedTeamId?"club:"+selectedTeamId:"");
+      const targetIdentity=targetPlanId?"plan:"+targetPlanId:params.get("club")?"club:"+String(params.get("club")):"";
+      const currentIdentity=loadedPlanRouteIdentity
+        ? "plan:"+String(loadedPlanRouteIdentity.split(":")[1]||"")
+        : activePlanId
+          ? "plan:"+activePlanId
+          : selectedTeamId?"club:"+selectedTeamId:"";
       if(targetIdentity===currentIdentity)return true;
     }
     const leave=confirmPlannerDiscard();
@@ -1128,9 +1145,15 @@
     const optedIn=typeof hasWalletOptIn==="function"&&hasWalletOptIn();
     if(planNameLabel)planNameLabel.textContent=activePlanName||"Unsaved plan";
     if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn;
+    if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn;
     if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId;
     if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
     if(sharePlanButton instanceof HTMLButtonElement)sharePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
+    if(revokeShareButton instanceof HTMLButtonElement){
+      const canRevoke=optedIn&&!plannerReadOnly&&Boolean(activeShareId);
+      revokeShareButton.hidden=!canRevoke;
+      revokeShareButton.disabled=!canRevoke;
+    }
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
     if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn;
@@ -1146,7 +1169,11 @@
     const response=await window.__mflDataClient.fetch(url,{cache:"no-store",...options,headers:{Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{}),...walletProofHeaders(true),...(options.headers||{})}});
     const data=await response.json().catch(()=>({}));
     if(response.status===401&&typeof optOutWallet==="function")optOutWallet({toastMessage:"Dapper opt-in expired. Opt in again to use saved plans."});
-    if(!response.ok)throw new Error(data?.error||"Planner request failed.");
+    if(!response.ok){
+      const error=new Error(data?.error||"Planner request failed.");
+      error.status=response.status;
+      throw error;
+    }
     return data;
   }
   async function resolvePlannerPlayers(payload){
@@ -1181,6 +1208,7 @@
     if(!payload||!clubId)throw new Error("Plan is invalid.");
     plannerReadOnly=Boolean(readOnly);
     activePlanId=plannerReadOnly?"":String(savedId||entry?.id||"");
+    activeShareId="";
     activePlanName=String(entry?.name||"Plan");
     activePlanPayload=payload;
     loadedPlanRouteIdentity=String(routeIdentity||"");
@@ -1214,7 +1242,10 @@
     const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:""});
     const plan=data?.plan;
     if(!plan?.id)throw new Error("Could not save plan.");
-    activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;plannerReadOnly=false;syncPlanUi();
+    activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;plannerReadOnly=false;loadedPlanRouteIdentity="saved:"+activePlanId;
+    history.replaceState({},"",plannerStablePlanPath(activePlanId));
+    await refreshActivePlannerShare();
+    syncPlanUi();
     if(typeof showToast==="function")showToast(overwriting?"Plan updated.":"Plan saved.");
     return plan;
   }
@@ -1227,25 +1258,77 @@
     const plan=await saveCurrentPlan({asNew:true,nameOverride:name});
     if(plan?.id){
       loadedPlanRouteIdentity="saved:"+String(plan.id);
-      history.replaceState({},"","/planner?saved="+encodeURIComponent(plan.id));
+      history.replaceState({},"",plannerStablePlanPath(plan.id));
     }
     return plan;
   }
-  async function createPlannerShare(name,payload){
-    const data=await plannerPrivateRequest("/api/planner-share",{method:"POST",body:JSON.stringify({name,payload})});
+  async function plannerOwnedShares(){
+    const data=await plannerPrivateRequest("/api/planner-share?owned=1");
+    return Array.isArray(data?.shares)?data.shares:[];
+  }
+  async function refreshActivePlannerShare(){
+    activeShareId="";
+    if(plannerReadOnly||!activePlanId||typeof hasWalletOptIn!=="function"||!hasWalletOptIn()){
+      syncPlanUi();
+      return "";
+    }
+    try{
+      const shares=await plannerOwnedShares();
+      const active=shares.find(share=>String(share?.sourcePlanId||"")===String(activePlanId));
+      activeShareId=String(active?.id||"");
+    }catch(error){
+      if(Number(error?.status)!==401)console.warn("Could not read Planner share state.",error);
+    }
+    syncPlanUi();
+    return activeShareId;
+  }
+  async function createPlannerShare(name,payload,{sourcePlanId=activePlanId}={}){
+    const sourceId=String(sourcePlanId||"").trim();
+    const data=await plannerPrivateRequest("/api/planner-share",{method:"POST",body:JSON.stringify({name,payload,sourcePlanId:sourceId||undefined})});
     const share=data?.share;
     if(!share?.id)throw new Error("Could not create share link.");
-    const url=new URL("/planner",window.location.origin);url.searchParams.set("share",share.id);
+    if(!sourceId||sourceId===String(activePlanId))activeShareId=String(share.id);
+    const url=new URL(plannerStablePlanPath(share.id),window.location.origin);
     await navigator.clipboard.writeText(url.toString());
+    syncPlanUi();
     if(typeof showToast==="function")showToast("Plan share link copied.");
     return url.toString();
+  }
+  async function revokePlannerShare(id=activeShareId,{silent=false}={}){
+    const shareId=String(id||"").trim();
+    if(!shareId)return false;
+    await plannerPrivateRequest("/api/planner-share?id="+encodeURIComponent(shareId),{method:"DELETE"});
+    if(activeShareId===shareId)activeShareId="";
+    syncPlanUi();
+    if(!silent&&typeof showToast==="function")showToast("Plan share revoked.");
+    return true;
   }
   async function shareCurrentPlan(){
     if(plannerReadOnly||!selectedTeamId)return "";
     const payload=currentPlannerPayload();
     const name=activePlanName||await requestPlannerPlanName("","Share plan");
     if(!payload||!name)return "";
-    return createPlannerShare(name,payload);
+    return createPlannerShare(name,payload,{sourcePlanId:activePlanId});
+  }
+  async function newPlannerPlan(){
+    if(typeof hasWalletOptIn==="function"&&!hasWalletOptIn())return false;
+    if(!confirmPlannerDiscard())return false;
+    const clubId=String(selectedTeamId||"").trim();
+    closePlansModal();closePlayerModal();
+    plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";
+    resetPlannerHistory();setStatus("");
+    if(clubId){
+      history.replaceState({},"","/planner?club="+encodeURIComponent(clubId));
+      syncFormationForClub(clubId);
+      await loadRoster(clubId);
+    }else{
+      history.replaceState({},"","/planner");
+      showTeam();
+      if(input instanceof HTMLInputElement)input.value="";
+      clearResults();syncClearButton();void requestOwnedClubs();
+    }
+    syncPlanUi();
+    return true;
   }
   function closePlansModal(){if(plansModal instanceof HTMLElement){plansModal.hidden=true;plansModal.classList.remove("modalOpen");}}
   function plannerFormationLabel(code){
@@ -1259,9 +1342,10 @@
     try{return new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(date);}
     catch{return date.toLocaleString();}
   }
-  function renderPlannerPlans(plans){
+  function renderPlannerPlans(plans,shares=[]){
     if(!(plansList instanceof HTMLElement))return;
     const rows=Array.isArray(plans)?plans:[];
+    const shareByPlan=new Map((Array.isArray(shares)?shares:[]).map(share=>[String(share?.sourcePlanId||""),share]).filter(([id])=>id));
     const fragment=document.createDocumentFragment();
     for(const plan of rows){
       const row=document.createElement("div");row.className="plannerPlanListRow";
@@ -1284,13 +1368,16 @@
       main.append(titleLine,meta);
       const actions=document.createElement("div");actions.className="plannerPlanListActions";
       const action=(label,icon,handler,{danger=false}={})=>{const button=document.createElement("button");button.type="button";button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"");button.setAttribute("aria-label",label);button.title=label;button.innerHTML=icon;button.addEventListener("click",async()=>{button.disabled=true;try{await handler();}catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";}finally{if(button.isConnected)button.disabled=false;}});return button;};
-      actions.append(
-        action("Open plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',async()=>{if(!confirmPlannerDiscard())return;closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});history.pushState({},"","/planner?saved="+encodeURIComponent(plan.id));}),
+      const linkedShare=shareByPlan.get(String(plan.id||""))||null;
+      const actionButtons=[
+        action("Open plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',async()=>{if(!confirmPlannerDiscard())return;closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});activeShareId=String(linkedShare?.id||"");syncPlanUi();history.pushState({},"",plannerStablePlanPath(plan.id));}),
         action("Rename plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>',async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;await savePlannerPayload(plan.payload,next,{savedId:plan.id});await openPlansModal();}),
         action("Duplicate plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>',async()=>{const next=await requestPlannerPlanName(String(plan.name||"Plan")+" copy","Duplicate plan");if(!next)return;await savePlannerPayload(plan.payload,next);await openPlansModal();}),
-        action("Share plan",'<svg viewBox="1.8 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>',async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload);}),
-        action("Delete plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',async()=>{if(!await requestPlannerPlanDelete(plan.name))return;await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;syncPlanUi();}await openPlansModal();},{danger:true})
-      );
+        action("Share plan",'<svg viewBox="1.8 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>',async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload,{sourcePlanId:plan.id});await openPlansModal();}),
+      ];
+      if(linkedShare)actionButtons.push(action("Revoke share",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8l8 8"></path><path d="M16 8l-8 8"></path><path d="M4 12h2"></path><path d="M18 12h2"></path></svg>',async()=>{await revokePlannerShare(linkedShare.id);await openPlansModal();},{danger:true}));
+      actionButtons.push(action("Delete plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',async()=>{if(!await requestPlannerPlanDelete(plan.name))return;if(linkedShare)await revokePlannerShare(linkedShare.id,{silent:true});await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";history.replaceState({},"",selectedTeamId?"/planner?club="+encodeURIComponent(selectedTeamId):"/planner");syncPlanUi();}await openPlansModal();},{danger:true}));
+      actions.append(...actionButtons);
       row.append(main,actions);fragment.appendChild(row);
     }
     if(!rows.length){const empty=document.createElement("div");empty.className="searchHint";empty.textContent="No saved plans yet.";fragment.appendChild(empty);}
@@ -1299,19 +1386,41 @@
   async function openPlansModal(){
     if(!(plansModal instanceof HTMLElement)||!(plansList instanceof HTMLElement))return;
     plansModal.hidden=false;plansModal.classList.add("modalOpen");if(plansStatus)plansStatus.textContent="Loading saved plans…";plansList.replaceChildren();
-    try{const data=await plannerPrivateRequest("/api/planner-save");if(plansStatus)plansStatus.textContent="";renderPlannerPlans(data?.plans);}
-    catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";}
+    try{
+      const [data,shareData]=await Promise.all([plannerPrivateRequest("/api/planner-save"),plannerPrivateRequest("/api/planner-share?owned=1")]);
+      if(plansStatus)plansStatus.textContent="";
+      renderPlannerPlans(data?.plans,shareData?.shares);
+    }catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";}
   }
   async function loadSavedPlannerPlan(id){
     const data=await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(id));
     if(!data?.plan)throw new Error("Saved plan not found.");
-    return applyPlannerPlan(data.plan,{savedId:id,routeIdentity:"saved:"+id});
+    const applied=await applyPlannerPlan(data.plan,{savedId:id,routeIdentity:"saved:"+id});
+    await refreshActivePlannerShare();
+    return applied;
   }
   async function loadSharedPlannerPlan(id){
     const response=await window.__mflDataClient.fetch("/api/planner-share?id="+encodeURIComponent(id),{cache:"no-store",headers:{Accept:"application/json"}});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||!data?.share)throw new Error(data?.error||"Shared plan not found.");
+    if(!response.ok||!data?.share){
+      const error=new Error(data?.error||"Shared plan not found.");
+      error.status=response.status;
+      throw error;
+    }
     return applyPlannerPlan(data.share,{readOnly:true,routeIdentity:"share:"+id});
+  }
+  async function loadPlannerPlanById(id,kind=""){
+    const planId=String(id||"").trim().toLowerCase();
+    if(!planId)return false;
+    if(kind==="share")return loadSharedPlannerPlan(planId);
+    if(kind==="saved")return loadSavedPlannerPlan(planId);
+    if(typeof hasWalletOptIn==="function"&&hasWalletOptIn()){
+      try{return await loadSavedPlannerPlan(planId);}
+      catch(error){
+        if(![401,404].includes(Number(error?.status)))throw error;
+      }
+    }
+    return loadSharedPlannerPlan(planId);
   }
   async function copySharedPlannerPlan(){
     if(!plannerReadOnly||!activePlanPayload)return false;
@@ -1319,19 +1428,26 @@
     if(!name)return false;
     const data=await savePlannerPayload(activePlanPayload,name);
     const plan=data?.plan;if(!plan?.id)return false;
-    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;loadedPlanRouteIdentity="";renderRoster();syncPlanUi();
-    history.replaceState({},"","/planner?saved="+encodeURIComponent(activePlanId));
+    plannerReadOnly=false;activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||activePlanPayload;activeShareId="";loadedPlanRouteIdentity="saved:"+activePlanId;renderRoster();syncPlanUi();
+    history.replaceState({},"",plannerStablePlanPath(activePlanId));
     if(typeof showToast==="function")showToast("Plan copied to your saved plans.");
     return true;
   }
   async function renderRoute(updateHash=true,options={}){
     state.currentPage=PAGE;document.body.dataset.page=PAGE;syncNavigation();
     const routeParams=new URLSearchParams(location.search);
-    const shareId=String(routeParams.get("share")||"").trim();
-    const savedId=String(routeParams.get("saved")||"").trim();
-    if(shareId){
+    const pathPlanMatch=String(location.pathname||"").match(/^\/planner\/([a-f0-9]{16})\/?$/i);
+    const legacyShareId=String(routeParams.get("share")||"").trim().toLowerCase();
+    const legacySavedId=String(routeParams.get("saved")||"").trim().toLowerCase();
+    const planId=String(options.planId||pathPlanMatch?.[1]||legacyShareId||legacySavedId||"").trim().toLowerCase();
+    const planKind=String(options.planKind||legacyShareId&&"share"||legacySavedId&&"saved"||"").trim();
+    if(planId){
       if(page instanceof HTMLElement)showOnly(page);
-      if(loadedPlanRouteIdentity!=="share:"+shareId)try{await loadSharedPlannerPlan(shareId);}catch(error){setStatus(error?.message||"Shared plan could not be loaded.");}
+      const samePlan=loadedPlanRouteIdentity.endsWith(":"+planId);
+      if(!samePlan){
+        try{await loadPlannerPlanById(planId,planKind);}
+        catch(error){setStatus(error?.message||"Plan could not be loaded.");}
+      }
       syncPlanUi();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();return true;
     }
     if(typeof hasWalletOptIn==="function"&&!hasWalletOptIn()){
@@ -1344,12 +1460,7 @@
       if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();
       return null;
     }
-    if(savedId){
-      if(page instanceof HTMLElement)showOnly(page);
-      if(loadedPlanRouteIdentity!=="saved:"+savedId)try{await loadSavedPlannerPlan(savedId);}catch(error){setStatus(error?.message||"Saved plan could not be loaded.");}
-      syncPlanUi();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();return true;
-    }
-    if(loadedPlanRouteIdentity){loadedPlanRouteIdentity="";activePlanId="";activePlanName="";activePlanPayload=null;}
+    if(loadedPlanRouteIdentity){loadedPlanRouteIdentity="";activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";}
     plannerReadOnly=false;syncPlanUi();
     if(page instanceof HTMLElement)showOnly(page);const routeClubId=String(options.clubId||new URLSearchParams(location.search).get("club")||"").trim();if(routeClubId){if(routeClubId!==selectedTeamId)await restoreSelectedTeam(routeClubId);}else if(selectedTeamId){selectedTeamId="";showTeam();if(input instanceof HTMLInputElement)input.value="";clearResults();syncClearButton();setStatus("");}if(!routeClubId&&!selectedTeamId&&!(input?.value.trim()))void requestOwnedClubs();if(updateHash&&!routeClubId&&location.pathname+location.search!=="/planner")updatePlannerUrl("",{replace:true});if(typeof syncHomeLoginButton==="function")syncHomeLoginButton();if(typeof resetPageScroll==="function"&&options.preserveScroll!==true)resetPageScroll();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();return true;}
 
@@ -1374,7 +1485,7 @@
   formationSelect?.addEventListener("keydown",()=>formationSelect.classList.remove("plannerFormationSelectCommitted"));
   input?.addEventListener("input",()=>{
     syncClearButton();setStatus("");clearTimeout(searchTimer);searchSequence+=1;
-    if(selectedTeamId){selectedTeamId="";activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";syncPlanUi();updatePlannerUrl("",{replace:true});}
+    if(selectedTeamId){selectedTeamId="";activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";syncPlanUi();updatePlannerUrl("",{replace:true});}
     const q=input.value.trim();
     if(!q){clearResults();void requestOwnedClubs();return;}
     if(results instanceof HTMLElement){
@@ -1394,12 +1505,14 @@
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){input.blur();}
   });
-  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
+  newPlanButton?.addEventListener("click",()=>void newPlannerPlan().catch(error=>setStatus(error?.message||"Could not create a new plan.")));
   savePlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:!activePlanId}).catch(error=>setStatus(error?.message||"Could not save plan.")));
   duplicatePlanButton?.addEventListener("click",()=>void duplicateCurrentPlan().catch(error=>setStatus(error?.message||"Could not duplicate plan.")));
   sharePlanButton?.addEventListener("click",()=>void shareCurrentPlan().catch(error=>setStatus(error?.message||"Could not share plan.")));
+  revokeShareButton?.addEventListener("click",()=>void revokePlannerShare().catch(error=>setStatus(error?.message||"Could not revoke share.")));
   undoButton?.addEventListener("click",undoPlanner);
   redoButton?.addEventListener("click",redoPlanner);
   document.addEventListener("keydown",event=>{
@@ -1490,5 +1603,5 @@
     },{passive:true});
   });
   Reflect.set(window,"__mflRenderPlannerPageOwner",renderRoute);
-  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers,syncSlots,currentPlan:currentPlannerPayload,savePlan:saveCurrentPlan,duplicatePlan:duplicateCurrentPlan,undo:undoPlanner,redo:redoPlanner,loadSavedPlan:loadSavedPlannerPlan,loadSharedPlan:loadSharedPlannerPlan}));
+  Reflect.set(window,"__mflPlannerRoute",Object.freeze({render:renderRoute,search:requestTeams,select:selectTeam,searchPlayers:requestPlayers,addPlayer:addPlayerToRoster,togglePendingPlayer,confirmPendingPlayers,syncSlots,currentPlan:currentPlannerPayload,newPlan:newPlannerPlan,savePlan:saveCurrentPlan,duplicatePlan:duplicateCurrentPlan,sharePlan:shareCurrentPlan,revokeShare:revokePlannerShare,undo:undoPlanner,redo:redoPlanner,loadSavedPlan:loadSavedPlannerPlan,loadSharedPlan:loadSharedPlannerPlan,loadPlan:loadPlannerPlanById}));
 })();
