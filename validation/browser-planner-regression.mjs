@@ -11,23 +11,34 @@ const source = await readFile(sourcePath, "utf8");
 
 await writeFile(temporaryPath, source, "utf8");
 
+const phases = [
+  { name: "shell", scenarios: "planner,planner-out,planner-selected" },
+  { name: "squad", scenarios: "planner" },
+  { name: "depth-picker", scenarios: "planner" },
+  { name: "depth-ranking", scenarios: "planner" },
+];
+
 try {
-  const status = await new Promise((resolveStatus, rejectStatus) => {
-    const child = spawn(process.execPath, [temporaryPath], {
-      cwd: resolve(validationDirectory, ".."),
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        MFL_BROWSER_SCENARIOS: "planner,planner-out,planner-selected",
-        MFL_PLANNER_BROWSER_FOCUSED: "1",
-      },
+  for (const phase of phases) {
+    const status = await new Promise((resolveStatus, rejectStatus) => {
+      const child = spawn(process.execPath, [temporaryPath], {
+        cwd: resolve(validationDirectory, ".."),
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          MFL_BROWSER_SCENARIOS: phase.scenarios,
+          MFL_PLANNER_BROWSER_FOCUSED: "1",
+          MFL_PLANNER_BROWSER_PHASE: phase.name,
+        },
+      });
+      child.once("error", rejectStatus);
+      child.once("close", resolveStatus);
     });
-    child.once("error", rejectStatus);
-    child.once("close", resolveStatus);
-  });
-  assert.equal(status, 0, "Focused Planner browser regression failed.");
+    assert.equal(status, 0, `Planner browser regression failed: ${phase.name}.`);
+    console.log(`Planner browser regression passed: ${phase.name}.`);
+  }
 } finally {
   await rm(temporaryPath, { force: true });
 }
 
-console.log("Focused Planner browser regression passed.");
+console.log("Focused Planner browser regression passed across all phases.");
