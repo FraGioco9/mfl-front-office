@@ -148,13 +148,14 @@ Owner: `api/planner-share.js`.
 Stored values:
 - `id`: unlisted share identifier.
 - `wallet_address`: creator identity retained only for ownership/audit context and never returned by public reads.
+- `source_plan_id`: optional private linkage to the owner's saved Planner plan; it is used only by authenticated share-management reads/revocation and is not returned by public share lookup.
 - `club_id`: shared club identity.
 - `name`: shared plan name.
 - `payload`: the same normalized Planner snapshot used by saved plans.
 - `created_at`: share creation metadata.
 - `expires_at`: mandatory one-year expiry used by public share lookup.
 
-Creating a share copies the normalized plan state into an independent read-only snapshot. Public GET reads select only share-safe fields and never expose the creator wallet. A recipient can view the share without opting in; saving a copy requires an authenticated opted-in wallet and creates a new `planner_plans` row rather than mutating the original share.
+Creating a share copies the normalized plan state into an independent read-only snapshot. A saved plan owns at most one active share: creating another share for the same `source_plan_id` revokes the previous link before issuing the replacement. Authenticated owner reads can list active shares and owners can explicitly revoke a share by ID; DELETE is wallet-scoped. Public GET reads select only share-safe fields and never expose the creator wallet or source-plan linkage. A recipient can view a stable `/planner/<plan_id>` share without opting in; saving a copy requires an authenticated opted-in wallet and creates a new `planner_plans` row rather than mutating the original share.
 
 ### `bug_reports`
 
