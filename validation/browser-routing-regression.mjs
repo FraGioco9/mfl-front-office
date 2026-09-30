@@ -118,6 +118,8 @@ function rowForColumns(columns) {
 const browserTestSource = String.raw`(() => {
   "use strict";
 
+  const plannerBrowserFocused = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_FOCUSED === "1")};
+
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
   const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
@@ -1602,6 +1604,7 @@ const browserTestSource = String.raw`(() => {
       assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
       assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 70 && Number.parseFloat(changedSpots[9].split(":")[1]) === 10 && changedSpots[10].endsWith(":calc(100% - 72px)"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
+      if (!plannerBrowserFocused) {
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
       const formationPreview = window.__mflPlannerFormationPreview;
       await delay(0);
@@ -1961,6 +1964,7 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
         "4-2-3-1 must preserve both deeper CDMs and the striker.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
+      }
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(5)") === "23", "Planner must show player age.");
@@ -3185,7 +3189,18 @@ try {
   assert(address && typeof address === "object", "Browser regression server did not expose a TCP address.");
   const executable = browserExecutable();
 
-  for (const [scenario, path, width = 1280, height = 900] of regressionScenarios) {
+  const requestedScenarioNames = new Set(
+  String(process.env.MFL_BROWSER_SCENARIOS || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean),
+);
+const selectedRegressionScenarios = requestedScenarioNames.size
+  ? regressionScenarios.filter(([scenario]) => requestedScenarioNames.has(scenario))
+  : regressionScenarios;
+assert(selectedRegressionScenarios.length > 0, "No browser regression scenarios matched MFL_BROWSER_SCENARIOS.");
+
+for (const [scenario, path, width = 1280, height = 900] of selectedRegressionScenarios) {
     const url = `http://127.0.0.1:${address.port}${path}`;
     let result = null;
     for (let attempt = 1; attempt <= 2; attempt += 1) {
