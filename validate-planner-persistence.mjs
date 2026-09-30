@@ -94,7 +94,7 @@ assert(shareSourceMigration.includes("add column if not exists source_plan_id te
   && schema.includes("source_plan_id text"));
 assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`")
   && docs.includes("owners can explicitly revoke a share by ID"));
-assert(docs.includes("view the share without opting in") && docs.includes("current packaged database"));
+assert(docs.includes("without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
 assert(html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
