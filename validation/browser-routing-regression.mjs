@@ -3015,8 +3015,9 @@ async function connectCdp(webSocketUrl) {
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(String(event.data));
     if (!message?.id || !pending.has(message.id)) return;
-    const { resolve: resolvePromise, reject: rejectPromise } = pending.get(message.id);
+    const { resolve: resolvePromise, reject: rejectPromise, timer } = pending.get(message.id);
     pending.delete(message.id);
+    clearTimeout(timer);
     if (message.error) rejectPromise(new Error(JSON.stringify(message.error)));
     else resolvePromise(message.result || {});
   });
@@ -3024,8 +3025,18 @@ async function connectCdp(webSocketUrl) {
   function send(method, params = {}) {
     const id = ++sequence;
     return new Promise((resolvePromise, rejectPromise) => {
-      pending.set(id, { resolve: resolvePromise, reject: rejectPromise });
-      socket.send(JSON.stringify({ id, method, params }));
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        rejectPromise(new Error(`Chrome DevTools request timed out: ${method}`));
+      }, 10_000);
+      pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
+      try {
+        socket.send(JSON.stringify({ id, method, params }));
+      } catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        rejectPromise(error);
+      }
     });
   }
 
