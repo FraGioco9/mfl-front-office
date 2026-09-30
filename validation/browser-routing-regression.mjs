@@ -1611,6 +1611,10 @@ const browserTestSource = String.raw`(() => {
         "The reference 4-4-2 midfield must be aligned on the 40% pitch line.");
       const observedFlatFourMidfields = new Set();
       for (const code of formationCodes) {
+        // Keep the long Planner geometry sweep cooperative so CDP health polling
+        // can observe progress instead of timing out while Chrome's main thread
+        // performs every formation/layout assertion in one uninterrupted task.
+        await delay(0);
         formationPreview.render(code);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
