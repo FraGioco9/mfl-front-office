@@ -3026,13 +3026,13 @@ async function connectCdp(webSocketUrl) {
     else resolvePromise(message.result || {});
   });
 
-  function send(method, params = {}) {
+  function send(method, params = {}, timeoutMs = 10_000) {
     const id = ++sequence;
     return new Promise((resolvePromise, rejectPromise) => {
       const timer = setTimeout(() => {
         pending.delete(id);
         rejectPromise(new Error(`Chrome DevTools request timed out: ${method}`));
-      }, 10_000);
+      }, timeoutMs);
       pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
       try {
         socket.send(JSON.stringify({ id, method, params }));
@@ -3058,7 +3058,7 @@ async function waitForBrowserRegression(cdp) {
     const evaluation = await cdp.send("Runtime.evaluate", {
       expression: '(() => { const el = document.querySelector("#mflBrowserRoutingRegression"); return el ? { status: el.dataset.status || "", detail: el.textContent || "" } : null; })()',
       returnByValue: true,
-    });
+    }, 30_000);
     const value = evaluation?.result?.value;
     if (value?.status === "passed") return value;
     if (value?.status === "failed") throw new Error(`Browser routing regression failed: ${value.detail}`);
