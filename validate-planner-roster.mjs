@@ -47,7 +47,7 @@ const window = {
   },
 };
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
-vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
+vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, walletProofHeaders: () => ({}), contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
 const route = window.__mflPlannerRoute;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const payload = { columns: ["player_id", "name", "positions", "age", "overall", "retirement_years", "player_seasons", "active_contract_revenue_share"], rows: [[1, "First Player", "GK", 23, 80, 2, 5, 1250], [2, "Second Player", "ST", 25, 75, 5, 1, 800]], totalRows: 2, club: { clubId: "9001", name: "First Club", division: 1, city: "Rome", nation: "Italy", primaryColor: "#112233", secondaryColor: "#445566" } };
@@ -349,4 +349,38 @@ assert.ok(body.children.every(row => preservedRows.get(row.dataset.playerId) ===
 route.syncSlots(new Map());
 assert.deepEqual(body.children.map(row => row.dataset.playerId), ["501", "502", "503", "504"], "Clearing assignments must restore primary-position order");
 
-console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state and retry passed.");
+// Saved/shared plan restoration must re-check current retirement data. Unknown values stay eligible;
+// only an explicit zero means the player is now retired and must be omitted from the restored squad.
+const restoredPlanId = "aaaaaaaaaaaaaaaa";
+const restoredPlanPromise = route.loadSavedPlan(restoredPlanId);
+await complete(requests.at(-1), {
+  plan: {
+    id: restoredPlanId,
+    name: "Retirement restore check",
+    payload: {
+      clubId: "restore-retirement",
+      formation: "442",
+      squad: [
+        { playerId: "700", contract: 4 },
+        { playerId: "701", contract: 5 },
+        { playerId: "702", contract: 6 },
+      ],
+      lineup: [],
+    },
+  },
+});
+await complete(requests.at(-1), { results: [{ clubId: "restore-retirement", name: "Restore Club", division: 1 }] });
+await complete(requests.at(-1), {
+  columns: payload.columns,
+  rows: [
+    [700, "Still Active", "CM", 24, 82, 5, 2, 400],
+    [701, "Now Retired", "CB", 34, 76, 0, 8, 500],
+    [702, "Retirement Unknown", "ST", 25, 79, null, 3, 600],
+  ],
+});
+await restoredPlanPromise;
+assert.equal(body.children.some(row => row.dataset.playerId === "700"), true, "Saved-plan restore must keep currently active players.");
+assert.equal(body.children.some(row => row.dataset.playerId === "701"), false, "Saved-plan restore must omit a player whose current retirement status is zero.");
+assert.equal(body.children.some(row => row.dataset.playerId === "702"), true, "Saved-plan restore must keep players with unknown retirement data.");
+
+console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state, retry and retirement-safe restore passed.");

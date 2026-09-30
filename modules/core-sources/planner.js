@@ -1205,7 +1205,8 @@
     const byId=new Map(players.map(player=>[String(player.player_id),player]));
     return squad.map(item=>{
       const player=byId.get(String(item.playerId));
-      return player?{...player,planned_contract_value:normalizeContractValue(item.contract)}:null;
+      if(!player||plannerPlayerIsRetired(player))return null;
+      return {...player,planned_contract_value:normalizeContractValue(item.contract)};
     }).filter(Boolean);
   }
   async function resolvePlannerClub(clubId){

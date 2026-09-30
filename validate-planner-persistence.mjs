@@ -121,6 +121,9 @@ assert(html.includes('const initialPlanMatch = String(location.pathname || "").m
   && html.includes('root.dataset.storedWalletOptIn !== "true" && !initialPublicPlanId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
 assert(planner.includes('scope:"players"') && planner.includes('playerIds:ids.join(",")'));
+assert(planner.includes("if(!player||plannerPlayerIsRetired(player))return null;")
+  && generatedPlanner.includes("if(!player||plannerPlayerIsRetired(player))return null;"),
+  "Saved/shared plan restoration must drop players that are now explicitly retired.");
 assert(planner.includes('"/api/planner-save"') && planner.includes('"/api/planner-share"'));
 assert(planner.includes('pathPlanMatch=String(location.pathname||"").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i)')
   && planner.includes("loadPlannerPlanById")
