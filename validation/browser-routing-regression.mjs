@@ -1570,7 +1570,7 @@ const browserTestSource = String.raw`(() => {
       if (plannerBrowserFocused && plannerBrowserPhase === "shell") {
         progress("planner-shell: club selected");
         assert(document.documentElement.scrollWidth <= innerWidth, "Planner shell must not overflow horizontally.");
-        assert(document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner shell must render the selected club roster.");
+        await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner shell selected club roster");
         assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
         finish("passed", "planner-shell: search and club selection are stable; direct URL restoration is covered by planner-selected.");
         return;
