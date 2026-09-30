@@ -249,12 +249,14 @@ function protectedOptOutRoute(pageName, options = {}) {
   const normalizedPage = String(pageName || "");
   if (normalizedPage === "planner") {
     const explicitPath = String(options.path || options.replaceUrl || "");
+    const publicPlanPath = /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)
+      || /^\/planner\/[a-f0-9]{16}$/i.test(String(window.location.pathname || ""));
     const shareId = explicitPath.startsWith("/planner?share=")
       ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
       : window.location.pathname === "/planner"
         ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
         : "";
-    if (shareId) return false;
+    if (publicPlanPath || shareId) return false;
   }
   return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage) && !hasWalletOptIn();
 }
