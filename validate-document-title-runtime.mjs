@@ -33,7 +33,7 @@ includes(bootstrap, 'loadRuntime("/document-title-runtime.js")', "Document-title
 excludes(appEntry, '"/document-title-runtime.js",', "Document-title ownership must not also load from the later application-entry runtime group.");
 includes(runtime, 'const APP_NAME = "MFL Front Office";', "Document titles must have one application-name owner.");
 includes(runtime, 'window.__mflAppConfig?.routes?.canonicalRequest', "Document titles must derive the active page from the canonical SPA route owner.");
-includes(runtime, 'canonicalRequest(window.location.pathname)', "Document titles must classify the current browser URL instead of startup-only page state.");
+includes(runtime, 'canonicalRequest(`${window.location.pathname}${window.location.search}`)', "Document titles must classify the complete current browser URL, including query-backed route identity.");
 includes(runtime, 'if (document.body?.dataset.page === "notfound") return "notfound";', "The fallback classifier must retain typed not-found state before app config is available.");
 assert.ok(
   runtime.indexOf('["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)')
@@ -57,6 +57,10 @@ includes(runtime, 'document.documentElement.dataset.initialEvaluationPlayerName'
 includes(runtime, 'currentTitle.startsWith(prefix) && currentTitle.endsWith(suffix)', "The runtime must preserve an already-resolved server Evaluation title instead of downgrading it during hydration.");
 excludes(runtime, 'textFrom("#evaluationSummaryBody tr td:first-child")', "Evaluation browser titles must not derive identity from the abbreviated N. Surname table cell.");
 includes(runtime, 'return withAppName(`Evaluation - ${playerName}`);', "Selected Evaluation titles must use Evaluation - Name Surname - MFL Front Office.");
+includes(runtime, "function resolvedPlannerTitle(request = currentRouteRequest())", "Planner must own a dedicated resolved browser-title path.");
+includes(runtime, 'const planName = textFrom("#plannerPlanName");', "Planner browser titles must reuse the rendered canonical plan name.");
+includes(runtime, 'return withAppName(`Planner - ${planName}`);', "Saved/shared Planner titles must expose the loaded plan name.");
+includes(runtime, 'if (pageName === "planner") return resolvedPlannerTitle(request);', "Planner routes must use their dedicated title resolver.");
 includes(runtime, 'return withAppName(tableTitle);', "Resolved Club and Agent titles must include the MFL Front Office suffix.");
 includes(runtime, '? withAppName(tableTitle) : withAppName("Watchlist")', "Resolved Watchlist titles must include the MFL Front Office suffix.");
 includes(runtime, 'return withAppName("Agent");', "Unresolved Agent titles must use the generic Agent fallback instead of a raw wallet address.");
@@ -66,6 +70,11 @@ includes(runtime, 'function routeIdentityForRequest(request)', "Document titles 
 includes(runtime, 'if (pageName === "club") return `club:${cleanText(options.clubId)}`;', "Club route identity must stay stable across Squad, Contracts, Current Season, and All Time views.");
 includes(runtime, 'if (pageName === "agents") return `agents:${cleanText(options.walletAddress).toLowerCase()}`;', "Agent route identity must stay stable across Agent views.");
 includes(runtime, 'if (pageName === "watchlist") return `watchlist:${cleanText(options.watchlistId)}`;', "Named Watchlist route identity must stay stable across Watchlist views.");
+includes(runtime, 'if (pageName === "planner") {', "Planner document titles must own plan/club-specific route identity rather than collapsing every Planner URL together.");
+includes(runtime, 'return `planner:plan:${planId}`;', "Saved/shared Planner routes must have plan-specific title identity.");
+includes(runtime, 'return clubId ? `planner:club:${clubId}` : "planner";', "Club-backed Planner drafts must have a stable club-specific title identity.");
+includes(runtime, 'if (pageName === "evaluation") {', "Evaluation query selections must have selection-specific title identity.");
+includes(runtime, 'return `evaluation:player:${playerId}`;', "Evaluation Player changes must not preserve a stale prior Player title while loading.");
 includes(runtime, 'function seedStableTitleFromDocument()', "The runtime must adopt an earlier route-aware title rather than resetting it during startup.");
 includes(runtime, 'seedStableTitleFromDocument();', "The earliest valid title must seed stable entity-title ownership before the first runtime sync.");
 includes(runtime, 'const preserveResolvedTitle = busy && routeIdentity === stableRouteIdentity && stableTitle;', "A same-entity view switch must keep the already-resolved browser title while loading.");
@@ -103,6 +112,35 @@ for (const [visible, full, busy, expected] of [
 }
 includes(runtime, '"data-player-full-name"', "Browser titles must resync when full identity changes without changing the abbreviated label.");
 includes(runtime, '"data-initial-evaluation-player-name"', "Browser titles must resync if the early full Evaluation identity arrives before the visible panel.");
+
+{
+  class TestElement {}
+  const planName = new TestElement();
+  planName.textContent = "Diamond setup";
+  const document = {
+    title: "Planner - MFL Front Office",
+    body: { dataset: { page: "planner" } },
+    documentElement: { dataset: { interactionBusy: "false" } },
+    querySelector: (selector) => selector === "#plannerPlanName" ? planName : null,
+  };
+  let requestedRoute = "";
+  vm.runInNewContext(runtime, {
+    document,
+    HTMLElement: TestElement,
+    localStorage: { getItem: () => null },
+    window: {
+      location: { pathname: "/planner/aaaaaaaaaaaaaaaa", search: "?source=test" },
+      __mflAppConfig: { routes: { canonicalRequest: (value) => {
+        requestedRoute = value;
+        return { pageName: "planner", options: { planId: "aaaaaaaaaaaaaaaa" } };
+      } } },
+      addEventListener() {},
+    },
+    MutationObserver: class { observe() {} },
+  });
+  assert.equal(requestedRoute, "/planner/aaaaaaaaaaaaaaaa?source=test", "Title ownership must pass pathname and search to canonical routing.");
+  assert.equal(document.title, "Planner - Diamond setup - MFL Front Office", "Loaded saved/shared Planner plans must expose their plan name in the browser title.");
+}
 
 
 
