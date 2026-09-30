@@ -245,8 +245,20 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
-function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+function protectedOptOutRoute(pageName, options = {}) {
+  const normalizedPage = String(pageName || "");
+  if (normalizedPage === "planner") {
+    const explicitPath = String(options.path || options.replaceUrl || "");
+    const publicPlanPath = /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)
+      || /^\/planner\/[a-f0-9]{16}$/i.test(String(window.location.pathname || ""));
+    const shareId = explicitPath.startsWith("/planner?share=")
+      ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
+      : window.location.pathname === "/planner"
+        ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+        : "";
+    if (publicPlanPath || shareId) return false;
+  }
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -254,6 +266,7 @@ function renderProtectedOptOutShell(pageName) {
   const copy = {
     myplayers: ["My Players", "In order to see your players, you need to opt in."],
     "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    planner: ["Planner", "In order to use Planner, you need to opt in."],
     watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
     settings: ["Settings", "In order to view settings, you need to opt in."],
   }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
@@ -264,6 +277,8 @@ function renderProtectedOptOutShell(pageName) {
   progressionPage.hidden = true;
   mflStatsPage.hidden = true;
   myPlayersLockedPage.hidden = false;
+  const protectedPlannerPage = document.getElementById("plannerPage");
+  if (protectedPlannerPage instanceof HTMLElement) protectedPlannerPage.hidden = true;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
   settingsPage.hidden = true;
@@ -275,7 +290,7 @@ function renderProtectedOptOutShell(pageName) {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = protectedOptOutRoute(pageName);
+  const lockedOptOutRoute = protectedOptOutRoute(pageName, options);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -319,6 +334,12 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   if (shouldResetScroll) resetPageScroll();
   return;
 }
+
+if (pageName === "planner") {
+    const plannerOwner = Reflect.get(window, "__mflRenderPlannerPageOwner");
+    if (typeof plannerOwner !== "function") throw new Error("Planner route owner is unavailable.");
+    return plannerOwner.call(this, updateHash, options);
+  }
 
 if (pageName === "my-clubs") {
     const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");

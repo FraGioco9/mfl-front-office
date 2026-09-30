@@ -104,7 +104,7 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
     window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
-if (protectedOptOutRoute(routePageName)) {
+if (protectedOptOutRoute(routePageName, options)) {
   renderProtectedOptOutShell(routePageName);
 }
 
@@ -277,6 +277,8 @@ async function prepareInteractiveRouteBeforeCommit(pageName, options = {}) {
 
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   if (!settingsConfirmNavigation(pageName, updateHash)) return null;
+  const plannerConfirmNavigation = Reflect.get(window, "__mflPlannerConfirmNavigation");
+  if (typeof plannerConfirmNavigation === "function" && !plannerConfirmNavigation(pageName, updateHash, options)) return null;
   syncMobileTablePageTransitionChrome(pageName);
   const navigation = Reflect.get(window, "__mflNavigation");
   const loadingController = Reflect.get(window, "__mflInteractionBusy");

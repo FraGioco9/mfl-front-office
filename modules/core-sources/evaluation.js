@@ -1138,7 +1138,7 @@ function renderSavedEvaluationList(rows) {
     deleteButton.className = "evaluationLoadIconButton evaluationLoadDeleteButton";
     deleteButton.setAttribute("aria-label", "Delete saved evaluation");
     deleteButton.dataset.tooltip = "Delete";
-    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
+    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5h8v2"></path><path d="M5 7h14"></path><path d="M7 7l1 12h8l1-12"></path><path d="M10 10v6"></path><path d="M14 10v6"></path></svg>';
 
     attachEvaluationLoadActionTooltip(shareButton);
     attachEvaluationLoadActionTooltip(deleteButton);

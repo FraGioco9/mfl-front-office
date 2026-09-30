@@ -23,6 +23,36 @@ try {
     const child = spawn(process.execPath, [temporaryPath], {
       cwd: resolve(validationDirectory, ".."),
       stdio: "inherit",
+      env: {
+        ...process.env,
+        MFL_BROWSER_SCENARIOS: [
+          "stale",
+          "database",
+          "database-tablet",
+          "database-phone",
+          "database-empty",
+          "database-linked-state",
+          "player",
+          "player-1444",
+          "player-1363",
+          "player-1200",
+          "player-1181",
+          "player-1180",
+          "player-1101",
+          "player-1090",
+          "player-1041",
+          "player-1040",
+          "player-980",
+          "player-901",
+          "watchlist",
+          "watchlist-empty",
+          "myclubs-out",
+          "myclubs-in",
+          "myclubs-competition-fail",
+          "myclubs-stale",
+          "mflstats",
+        ].join(","),
+      },
     });
     child.once("error", rejectStatus);
     child.once("close", resolveStatus);

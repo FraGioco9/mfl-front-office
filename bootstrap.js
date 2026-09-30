@@ -510,8 +510,11 @@
     const request = canonicalBootstrapRequest();
     const pageName = String(request?.pageName || "");
     const view = String(request?.options?.view || "");
+    const publicPlannerShare = pageName === "planner"
+      && (Boolean(String(new URLSearchParams(window.location.search).get("share") || "").trim())
+        || /^\/planner\/[a-f0-9]{16}\/?$/i.test(String(window.location.pathname || "")));
     const shellId = String(APP_CONFIG.routes.requestShellId(request, {
-      walletOptedIn: root.dataset.storedWalletOptIn === "true",
+      walletOptedIn: root.dataset.storedWalletOptIn === "true" || publicPlannerShare,
     }) || "");
     return Object.freeze({ request, pageName, view, shellId });
   }
@@ -1585,9 +1588,8 @@
   }
 
   function playerLoadingPitchHtml() {
-    const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
     const rowLengths = [1, 3, 1, 3, 3, 3, 1];
-    return pitchLines + rowLengths.map((columnCount) => (
+    return rowLengths.map((columnCount) => (
       `<div class="pitchRow pitchRow${columnCount}" style="--pitch-columns: ${columnCount}">${Array.from({ length: columnCount }, () => '<div class="pitchPositionSlot" style="cursor:default;user-select:none;-webkit-user-select:none"><span class="pitchPositionBlank" aria-hidden="true"></span></div>').join("")}</div>`
     )).join("");
   }

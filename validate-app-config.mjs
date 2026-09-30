@@ -104,6 +104,17 @@ same(runtimeConfig.routes.tableViews, TABLE_VIEW_CONFIG, "pre-bootstrap route vi
 same(runtimeConfig.routes.viewBySlug, VIEW_BY_SLUG, "pre-bootstrap view slug map");
 same(runtimeConfig.routes.shellIds, ROUTE_SHELL_IDS, "pre-bootstrap route shell registry");
 same(runtimeConfig.routes.viewShellIds, ROUTE_VIEW_SHELL_IDS, "pre-bootstrap route view shell registry");
+const plannerStableRequest = runtimeConfig.routes.canonicalRequest("/planner/aaaaaaaaaaaaaaaa");
+invariant(
+  plannerStableRequest?.pageName === "planner"
+    && plannerStableRequest?.options?.planId === "aaaaaaaaaaaaaaaa"
+    && plannerStableRequest?.canonicalPath === "/planner/aaaaaaaaaaaaaaaa",
+  "Stable Planner plan URLs must classify as Planner rather than Page not found.",
+);
+invariant(
+  runtimeConfig.routes.canonicalRequest("/planner/not-a-plan")?.pageName === "notfound",
+  "Invalid Planner deep links must remain typed not-found routes.",
+);
 invariant(runtimeConfig.routes.protectedShellId === PROTECTED_ROUTE_SHELL_ID, "Pre-bootstrap protected-route shell must match canonical config.");
 invariant(runtimeConfig.routes.notFoundShellId === NOT_FOUND_ROUTE_SHELL_ID, "Pre-bootstrap not-found shell must match canonical config.");
 same(runtimeConfig.table.baseColumns, TABLE_BASE_COLUMNS, "pre-bootstrap base columns");

@@ -36,7 +36,8 @@ Generated `styles-runtime.css`, `responsive.css`, and `index.html` are projectio
 - Contracts-cell hover: `#dbe8f1`
 - Primary: `#1d5f8a`
 - Primary hover: `#174d70`
-- Danger: `#b42318`
+- Danger: `#a61f1f`
+- Danger hover: `#741515`
 
 ### Dark
 
@@ -53,9 +54,10 @@ Generated `styles-runtime.css`, `responsive.css`, and `index.html` are projectio
 - Contracts-cell hover: `#31404b`
 - Primary: `#4aa3df`
 - Primary hover: `#65b5ea`
-- Danger: `#ff8a80`
+- Danger: `#df5c55`
+- Danger hover: `#a93a35`
 
-`--danger` is the only global destructive/error-color source. Destructive actions, validation errors, invalid-field borders, and destructive hover/focus states must derive from it rather than introducing a separate red.
+`--danger` is the global resting destructive/error red and `--danger-hover` is the global destructive hover/focus red. Destructive actions, validation errors, invalid-field borders, and destructive interaction states must consume these theme palette values rather than introducing local reds.
 
 Data visualization and game-state colors are intentionally not part of this rule. For example, negative progression, Training deltas, and difficulty/status colors may keep domain-owned reds because they communicate data meaning rather than an error or destructive action.
 

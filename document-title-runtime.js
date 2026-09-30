@@ -9,6 +9,7 @@
     database: "Database",
     mfl: "MFL",
     progression: "Progression",
+    planner: "Planner",
     evaluation: "Evaluation",
     watchlist: "Watchlist",
     myplayers: "My Players",
@@ -55,22 +56,22 @@
   }
 
   function fallbackRoutePageName() {
-    if (document.body?.dataset.page === "notfound") return "notfound";
     const firstPart = String(window.location.pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
     if (!firstPart) return "home";
     if (firstPart === "my-players") return "myplayers";
     if (firstPart === "my-clubs" || firstPart === "myclubs") return "my-clubs";
     if (["club", "clubs"].includes(firstPart)) return "club";
     if (firstPart === "players") return "player";
-    if (["database", "mfl", "progression", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
+    if (["database", "mfl", "progression", "planner", "evaluation", "watchlist", "agents", "settings", "changelog", "privacy"].includes(firstPart)) {
       return firstPart;
     }
+    if (document.body?.dataset.page === "notfound") return "notfound";
     return "notfound";
   }
 
   function currentRouteRequest() {
     const canonicalRequest = window.__mflAppConfig?.routes?.canonicalRequest;
-    if (typeof canonicalRequest === "function") return canonicalRequest(window.location.pathname);
+    if (typeof canonicalRequest === "function") return canonicalRequest(`${window.location.pathname}${window.location.search}`);
     return { pageName: fallbackRoutePageName(), options: {} };
   }
 
@@ -81,6 +82,21 @@
     if (pageName === "agents") return `agents:${cleanText(options.walletAddress).toLowerCase()}`;
     if (pageName === "watchlist") return `watchlist:${cleanText(options.watchlistId)}`;
     if (pageName === "player") return `player:${cleanText(options.playerId)}`;
+    if (pageName === "planner") {
+      const planId = cleanText(options.planId).toLowerCase();
+      if (planId) return `planner:plan:${planId}`;
+      const clubId = cleanText(options.clubId);
+      return clubId ? `planner:club:${clubId}` : "planner";
+    }
+    if (pageName === "evaluation") {
+      const playerId = cleanText(options.playerId);
+      if (playerId) return `evaluation:player:${playerId}`;
+      const savedId = cleanText(options.savedId).toLowerCase();
+      if (savedId) return `evaluation:saved:${savedId}`;
+      const shareId = cleanText(options.shareId).toLowerCase();
+      if (shareId) return `evaluation:share:${shareId}`;
+      return "evaluation";
+    }
     return pageName;
   }
 
@@ -169,6 +185,14 @@
     return withAppName("Evaluation");
   }
 
+  function resolvedPlannerTitle(request = currentRouteRequest()) {
+    if (routeBusy()) return withAppName("Planner");
+    const planId = cleanText(request?.options?.planId);
+    const planName = textFrom("#plannerPlanName");
+    if (planId && planName && planName !== "Unsaved plan") return withAppName(`Planner - ${planName}`);
+    return withAppName("Planner");
+  }
+
   function resolvedNotFoundTitle() {
     const notFoundTitle = textFrom("#notFoundTitle") || GENERIC_PAGE_LABELS.notfound;
     return withAppName(notFoundTitle);
@@ -182,6 +206,7 @@
     if (pageName === "agents") return resolvedAgentTitle();
     if (pageName === "watchlist") return resolvedWatchlistTitle();
     if (pageName === "evaluation") return resolvedEvaluationTitle();
+    if (pageName === "planner") return resolvedPlannerTitle(request);
     if (pageName === "notfound") return resolvedNotFoundTitle();
 
     const label = GENERIC_PAGE_LABELS[pageName];
@@ -194,6 +219,7 @@
     const currentTitle = cleanText(document.title);
     const usable = pageName === "home" ? currentTitle === APP_NAME : Boolean(currentTitle && currentTitle !== APP_NAME);
     if (!usable) return;
+    if (pageName !== "notfound" && currentTitle === withAppName(GENERIC_PAGE_LABELS.notfound)) return;
     stableRouteIdentity = routeIdentityForRequest(request);
     stableTitle = currentTitle;
   }

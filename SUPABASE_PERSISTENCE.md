@@ -126,6 +126,38 @@ Preview metadata and the dynamic 2400x1260 social card are derived from the vali
 
 All persisted fields have direct sharing/lifecycle ownership and are retained.
 
+### `planner_plans`
+
+Owner: `api/planner-save.js`.
+
+Stored values:
+- `id`: saved plan identifier.
+- `wallet_address`: private owner and list/update/delete scope.
+- `club_id`: queryable club identity for the plan.
+- `name`: user-defined plan name.
+- `payload`: normalized Planner snapshot containing schema version, formation, squad player IDs/contracts, and lineup slot assignments.
+- `revision`: optimistic-concurrency revision. Updates and deletes must match the current revision; successful overwrites increment it.
+- `created_at`: creation metadata.
+- `updated_at`: ordering metadata refreshed when the plan is overwritten or renamed.
+
+The API permits up to 50 saved plans per wallet. Saved-plan updates and deletes are wallet-scoped and revision-checked; stale clients receive HTTP 409 instead of overwriting or deleting a newer revision. Deleting a saved plan cascades to its linked share so an external link cannot outlive its source plan. Player names, ratings, portraits, club display metadata, and other public MFL data are intentionally not copied into the plan snapshot; opening a plan resolves player IDs against the current packaged database so public player data stays current.
+
+### `planner_shares`
+
+Owner: `api/planner-share.js`.
+
+Stored values:
+- `id`: unlisted share identifier.
+- `wallet_address`: creator identity retained only for ownership/audit context and never returned by public reads.
+- `source_plan_id`: optional private linkage to the owner's saved Planner plan; it is used only by authenticated share-management reads/revocation and is not returned by public share lookup.
+- `club_id`: shared club identity.
+- `name`: shared plan name.
+- `payload`: the same normalized Planner snapshot used by saved plans.
+- `created_at`: share creation metadata.
+- `expires_at`: mandatory one-year expiry used by public share lookup.
+
+Creating a share copies the normalized plan state into an independent read-only snapshot. A saved plan owns at most one active share: `(wallet_address, source_plan_id)` is unique and replacement uses a single Supabase upsert, so concurrent Share requests cannot leave two active links for the same saved plan. Replacing the row also invalidates the previous external ID immediately. Authenticated owner reads can list active shares and owners can explicitly revoke a share by ID; DELETE is wallet-scoped. Public GET reads select only share-safe fields and never expose the creator wallet or source-plan linkage. A recipient can view a stable `/planner/<plan_id>` share without opting in; saving a copy requires an authenticated opted-in wallet and creates a new `planner_plans` row rather than mutating the original share.
+
 ### `bug_reports`
 
 Owner: `api/bug-reports.js`. The browser-side form owner is `bug-report-runtime.js`; it sends reports only to the same-origin API endpoint and never receives Supabase credentials.

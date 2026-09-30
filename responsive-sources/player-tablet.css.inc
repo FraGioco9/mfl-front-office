@@ -377,7 +377,7 @@
 .pitch {
   width: min(100%, clamp(240px, 70vw, 320px));
   height: auto;
-  aspect-ratio: 360 / 498;
+  aspect-ratio: 72 / 109;
   gap: clamp(3px, 0.8vw, 5px);
   margin-top: var(--mfl-player-panel-gap);
   padding: clamp(6px, 1.6vw, 9px) clamp(5px, 1.4vw, 8px);

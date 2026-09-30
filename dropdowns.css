@@ -542,9 +542,9 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .watchlistDropdownDelete:hover:not(:disabled),
 .watchlistDropdownDelete:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: var(--surface);
+  border-color: var(--mfl-danger-hover-border-color);
+  background: var(--mfl-danger-hover-background);
+  color: var(--mfl-danger-hover-text-color);
 }
 
 .watchlistDropdownAction:disabled {
