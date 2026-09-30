@@ -119,6 +119,7 @@ const browserTestSource = String.raw`(() => {
   "use strict";
 
   const plannerBrowserFocused = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_FOCUSED === "1")};
+  const plannerBrowserPhase = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_PHASE || "")};
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
@@ -1606,6 +1607,19 @@ const browserTestSource = String.raw`(() => {
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       const formationPreview = window.__mflPlannerFormationPreview;
       assert(formationPreview && typeof formationPreview.render === "function", "Planner formation preview runtime is unavailable.");
+      if (plannerBrowserFocused && plannerBrowserPhase === "shell") {
+        assert(document.documentElement.scrollWidth <= innerWidth, "Planner shell must not overflow horizontally.");
+        document.getElementById("plannerTeamClearButton").click();
+        assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Planner shell Clear must restore search.");
+        assert(input.value === "" && location.search === "", "Planner shell Clear must reset team and URL.");
+        history.replaceState({}, "", "/planner?club=9001");
+        await window.__mflPlannerRoute.render(false);
+        assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "Planner shell URL restoration must restore the team identity.");
+        await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner shell restored roster");
+        assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+        finish("passed", "planner-shell: search, selection, clear and URL restoration are stable.");
+        return;
+      }
       if (!plannerBrowserFocused) {
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
 
@@ -1967,6 +1981,7 @@ const browserTestSource = String.raw`(() => {
         "4-2-3-1 must preserve both deeper CDMs and the striker.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       }
+      if (!plannerBrowserFocused || plannerBrowserPhase === "squad") {
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(5)") === "23", "Planner must show player age.");
@@ -2175,7 +2190,14 @@ const browserTestSource = String.raw`(() => {
       contractInput.dispatchEvent(new Event("input", { bubbles: true }));
       contractEdit.click();
       assert(contractValue.textContent === "18.25%" && contractEditor.hidden && contractEdit.textContent === "✎", "Explicit Contract confirmation must persist before later roster changes.");
+        if (plannerBrowserFocused) {
+          assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+          finish("passed", "planner-squad: roster, contracts and Add player(s) modal interactions are stable.");
+          return;
+        }
+      }
       // Clickable starters and backup lists use the same roster-derived depth source.
+      if (!plannerBrowserFocused || plannerBrowserPhase === "depth-picker") {
       const fixture = [
         ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,nationality:index===2?"Italy":"",positions:"CB",overall,retirement_years:5})),
         {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
@@ -2406,6 +2428,18 @@ const browserTestSource = String.raw`(() => {
       await delay(0);
       formationPreview.render("433");
       assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
+
+        if (plannerBrowserFocused) {
+          assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+          finish("passed", "planner-depth-picker: depth badges, picker movement, remove and compatible formation retention are stable.");
+          return;
+        }
+      }
+      if (plannerBrowserFocused && plannerBrowserPhase === "depth-ranking") {
+        const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="' + key + '"]');
+        const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
+        const fillButton = document.getElementById("plannerAutoFillDepthButton");
+        const depthPicker = document.getElementById("plannerDepthPicker");
       // Auto-fill must stay available for a repeated slot even if round-robin backups
       // currently land in its occupied sibling's depth column.
       formationPreview.setRoster([
@@ -2497,6 +2531,10 @@ const browserTestSource = String.raw`(() => {
         && depthIndicator("CM#2")?.textContent === "0"
         && depthIndicator("CAM#1")?.textContent === "0",
         "Once selected, the multi-position player cannot count as any position's spare depth.");
+        assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+        finish("passed", "planner-depth-ranking: positional ranking, fallbacks and multi-position auto-fill are stable.");
+        return;
+      }
       formationPreview.setRoster([
         {player_id:1,name:"Browser Player",positions:"ST",overall:80,retirement_years:2},
         {player_id:2,name:"Added Browser Player",positions:"RW",overall:77,retirement_years:4},
