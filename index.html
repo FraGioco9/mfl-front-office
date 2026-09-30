@@ -1097,7 +1097,6 @@
               </div>
               <div id="plannerSquadStatusStrip" class="plannerSquadStatusStrip" role="status" aria-live="polite">
                 <span id="plannerSquadStatusPrimary">0/25 players · 0.00% contracts · 0/11 filled</span>
-                <span id="plannerSquadStatusWarnings" class="plannerSquadStatusWarnings"></span>
               </div>
               <section class="tableShell" aria-label="Planned squad table">
                 <div class="playerTableScroller">
@@ -2086,7 +2085,7 @@
                   removeText.textContent = "Remove";
                   clear.append(removeIconFrame, removeText);
                   clear.addEventListener("click", () => {
-                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
+                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.({label:"player removal"});
                     depthAssignments.delete(key);
                     renderFormation(selected);
                     formationPositions.querySelector('[data-slot-key="' + key + '"] .plannerFormationSlotButton')?.focus();
@@ -2131,7 +2130,7 @@
                   }
                   row.appendChild(overall);
                   row.addEventListener("click", () => {
-                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
+                    Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.({label:"player assignment"});
                     // Move an existing starter rather than leaving the same player in two slots.
                     if (assignedSlot && assignedSlot !== key) depthAssignments.delete(assignedSlot);
                     depthAssignments.set(key, Number(player.player_id));
@@ -2420,14 +2419,14 @@
               // extra Natural-position preference beyond the positional rating itself.
               const picks = optimizedDepthFill(keys);
               if (!picks.length) return;
-              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
+              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.({label:"Auto-fill"});
               for (const pick of picks) depthAssignments.set(pick.key,pick.playerId);
               renderFormation(selected);
             };
             depthAutoFill?.addEventListener("click", autoFillDepth);
             depthClear?.addEventListener("click", () => {
               if (depthReadOnly || !depthAssignments.size) return;
-              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.();
+              Reflect.get(window,"__mflPlannerHistory")?.checkpoint?.({label:"Clear depth"});
               depthAssignments.clear();
               closeDepthPicker();
               renderFormation(formationSelect?.value || "442");
