@@ -511,7 +511,8 @@
     const pageName = String(request?.pageName || "");
     const view = String(request?.options?.view || "");
     const publicPlannerShare = pageName === "planner"
-      && Boolean(String(new URLSearchParams(window.location.search).get("share") || "").trim());
+      && (Boolean(String(new URLSearchParams(window.location.search).get("share") || "").trim())
+        || /^\/planner\/[a-f0-9]{16}\/?$/i.test(String(window.location.pathname || "")));
     const shellId = String(APP_CONFIG.routes.requestShellId(request, {
       walletOptedIn: root.dataset.storedWalletOptIn === "true" || publicPlannerShare,
     }) || "");
