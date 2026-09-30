@@ -100,7 +100,11 @@ assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansMo
 assert(html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerNewPlanButton"')
   && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"')
-  && html.includes('id="plannerRevokeShareButton"'));
+  && !html.includes('id="plannerRevokeShareButton"'));
+assert(planner.includes('sharePlanButton.textContent=shared?"Revoke":"Share";')
+  && planner.includes('const action=revoking?revokePlannerShare():shareCurrentPlan();')
+  && planner.includes('? action("Revoke share"')
+  && planner.includes(': action("Share plan"'));
 assert(!html.includes('id="plannerSaveAsPlanButton"') && !planner.includes("saveAsPlanButton"));
 assert(html.includes('id="plannerPlanNameModal"') && html.includes('id="plannerPlanNameInput"') && html.includes('id="plannerPlanDeleteModal"'));
 assert(html.includes('<span class="plannerPlanNameLabel">Name</span>')
