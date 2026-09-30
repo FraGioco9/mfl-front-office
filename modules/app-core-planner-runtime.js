@@ -24,7 +24,6 @@
   const redoButton=document.getElementById("plannerRedoButton");
   const rosterCount=document.getElementById("plannerRosterCount");
   const squadStatusPrimary=document.getElementById("plannerSquadStatusPrimary");
-  const squadStatusWarnings=document.getElementById("plannerSquadStatusWarnings");
   const squadSummary={
     contracts:document.getElementById("plannerTotalContracts"),
     overall:document.getElementById("plannerAverageOverall"),
@@ -147,12 +146,6 @@
     const assignments=roster.length&&Array.isArray(preview?.getAssignments?.())?preview.getAssignments():[];
     const filled=Math.min(11,assignments.length);
     if(squadStatusPrimary) squadStatusPrimary.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" players · "+totalPlannedContracts().toFixed(2)+"% contracts · "+filled+"/11 filled";
-    if(squadStatusWarnings instanceof HTMLElement){
-      const warnings=[];
-      if(roster.length&&filled<11) warnings.push((11-filled)+" starter"+(11-filled===1?"":"s")+" missing");
-      squadStatusWarnings.textContent=warnings.join(" · ");
-      squadStatusWarnings.hidden=!warnings.length;
-    }
   }
   function setPlannerPlayerHighlight(playerId,active=true,{flash=false,scroll=""}={}){
     const id=String(playerId||"").trim();
@@ -461,7 +454,7 @@
     const availableContract=Math.max(0,Math.round((100-totalPlannedContracts())*100)/100);
     const requestedContract=Number(player?.planned_contract_value);
     const plannedContract=Math.min(Number.isFinite(requestedContract)?normalizeContractValue(requestedContract):contractValueFromDatabase(player.active_contract_revenue_share),availableContract);
-    if(recordHistory)checkpointPlannerHistory();
+    if(recordHistory)checkpointPlannerHistory({label:"add player"});
     roster.push({...player,planned_contract_value:plannedContract});
     sortPlannerRoster();
     if(render)renderRoster();
@@ -485,7 +478,7 @@
     const selected=[...pendingPlayers.values()];
     if(!selected.length)return false;
     let added=0;
-    checkpointPlannerHistory();
+    checkpointPlannerHistory({label:selected.length===1?"add player":"add players"});
     for(const player of selected){if(addPlayerToRoster(player,{render:false,recordHistory:false}))added+=1;}
     if(added)renderRoster();
     closePlayerModal({focusButton:true});
@@ -661,7 +654,7 @@
           const numeric=Number(raw);
           const previous=normalizeContractValue(player.planned_contract_value);
           const next=raw&&Number.isFinite(numeric)?Math.min(normalizeContractValue(numeric),contractLimitForPlayer(player.player_id)):previous;
-          if(next!==previous){checkpointPlannerHistory();player.planned_contract_value=next;}
+          if(next!==previous){checkpointPlannerHistory({label:"contract change"});player.planned_contract_value=next;}
         }
         contractValue.textContent=contractDisplayText(player.planned_contract_value);
         contractInput.value=contractText(player.planned_contract_value);
@@ -727,7 +720,7 @@
       remove.setAttribute("aria-label","Remove "+String(player.name||"player")+" from planned squad");
       remove.addEventListener("click",()=>{
         const index=roster.findIndex(candidate=>candidate.player_id===player.player_id);
-        checkpointPlannerHistory();
+        checkpointPlannerHistory({label:"player removal"});
         roster=roster.filter(candidate=>candidate.player_id!==player.player_id);
         renderRoster();
         const buttons=rosterBody.querySelectorAll("button");
@@ -929,12 +922,17 @@
   function clonePlannerRoster(players=roster){
     return (Array.isArray(players)?players:[]).map(player=>({...player,positions:Array.isArray(player?.positions)?player.positions.slice():player?.positions}));
   }
-  function capturePlannerHistorySnapshot({formationOverride=""}={}){
+  function normalizePlannerHistoryLabel(value){
+    const label=String(value||"change").trim();
+    return label||"change";
+  }
+  function capturePlannerHistorySnapshot({formationOverride="",label=""}={}){
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
     return {
       roster:clonePlannerRoster(),
       formation:String(formationOverride||formationSelect?.value||"442"),
       assignments:Array.isArray(preview?.getAssignments?.())?preview.getAssignments().map(item=>({...item})):[],
+      actionLabel:normalizePlannerHistoryLabel(label),
     };
   }
   function plannerHistorySnapshotFingerprint(snapshot){
@@ -946,8 +944,17 @@
     });
   }
   function syncPlannerHistoryButtons(){
-    if(undoButton instanceof HTMLButtonElement)undoButton.disabled=plannerReadOnly||!plannerUndoStack.length;
-    if(redoButton instanceof HTMLButtonElement)redoButton.disabled=plannerReadOnly||!plannerRedoStack.length;
+    const sync=(button,stack,verb,shortcut)=>{
+      if(!(button instanceof HTMLButtonElement))return;
+      const available=!plannerReadOnly&&stack.length>0;
+      const label=available?normalizePlannerHistoryLabel(stack.at(-1)?.actionLabel):"";
+      const action=label?verb+" "+label:verb;
+      button.disabled=!available;
+      button.setAttribute("aria-label",action);
+      button.title=action+" ("+shortcut+")";
+    };
+    sync(undoButton,plannerUndoStack,"Undo","Ctrl+Z");
+    sync(redoButton,plannerRedoStack,"Redo","Ctrl+Y");
   }
   function resetPlannerHistory(){
     plannerUndoStack=[];plannerRedoStack=[];syncPlannerHistoryButtons();
@@ -990,15 +997,15 @@
   }
   function undoPlanner(){
     if(plannerReadOnly||!plannerUndoStack.length)return false;
-    const current=capturePlannerHistorySnapshot();
     const target=plannerUndoStack.pop();
+    const current=capturePlannerHistorySnapshot({label:target?.actionLabel});
     plannerRedoStack.push(current);
     return applyPlannerHistorySnapshot(target);
   }
   function redoPlanner(){
     if(plannerReadOnly||!plannerRedoStack.length)return false;
-    const current=capturePlannerHistorySnapshot();
     const target=plannerRedoStack.pop();
+    const current=capturePlannerHistorySnapshot({label:target?.actionLabel});
     plannerUndoStack.push(current);
     return applyPlannerHistorySnapshot(target);
   }
@@ -1035,6 +1042,9 @@
       planModeLabel.classList.toggle("plannerPlanModeDirty",mode==="Unsaved");
       planModeLabel.classList.toggle("plannerPlanModeSaved",mode==="Saved");
       planModeLabel.classList.toggle("plannerPlanModeShared",mode==="Shared");
+    }
+    if(savePlanButton instanceof HTMLButtonElement){
+      savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty);
     }
     Reflect.set(window,"__mflPlannerDirty",dirty);
     return dirty;
@@ -1255,13 +1265,23 @@
     const fragment=document.createDocumentFragment();
     for(const plan of rows){
       const row=document.createElement("div");row.className="plannerPlanListRow";
+      const isCurrent=!plannerReadOnly&&Boolean(activePlanId)&&String(plan.id||"")===String(activePlanId);
+      row.classList.toggle("plannerPlanListRowCurrent",isCurrent);
       const main=document.createElement("div");main.className="plannerPlanListMain";
+      const titleLine=document.createElement("div");titleLine.className="plannerPlanListTitle";
       const name=document.createElement("strong");name.textContent=String(plan.name||"Plan");
+      titleLine.appendChild(name);
+      if(isCurrent){
+        const current=document.createElement("span");
+        current.className="plannerPlanListCurrent";
+        current.textContent="Current";
+        titleLine.appendChild(current);
+      }
       const meta=document.createElement("span");meta.className="plannerPlanListMeta";
       const squadSize=Array.isArray(plan.payload?.squad)?plan.payload.squad.length:0;
       const updated=plannerPlanUpdatedLabel(plan.updatedAt||plan.updated_at||plan.createdAt||plan.created_at);
       meta.textContent=["Club #"+String(plan.clubId||plan.payload?.clubId||""),plannerFormationLabel(plan.payload?.formation),squadSize+" player"+(squadSize===1?"":"s"),updated?"Edited "+updated:""].filter(Boolean).join(" · ");
-      main.append(name,meta);
+      main.append(titleLine,meta);
       const actions=document.createElement("div");actions.className="plannerPlanListActions";
       const action=(label,icon,handler,{danger=false}={})=>{const button=document.createElement("button");button.type="button";button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"");button.setAttribute("aria-label",label);button.title=label;button.innerHTML=icon;button.addEventListener("click",async()=>{button.disabled=true;try{await handler();}catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";}finally{if(button.isConnected)button.disabled=false;}});return button;};
       actions.append(
@@ -1337,7 +1357,7 @@
     const code=String(formationSelect.value||"");
     const preview=Reflect.get(window,"__mflPlannerFormationPreview");
     if(!preview?.codes?.includes(code))return;
-    if(code!==plannerCommittedFormation)checkpointPlannerHistory({formationOverride:plannerCommittedFormation});
+    if(code!==plannerCommittedFormation)checkpointPlannerHistory({formationOverride:plannerCommittedFormation,label:"formation change"});
     preview.render(code);
     plannerCommittedFormation=code;
     if(selectedTeamId){
@@ -1382,6 +1402,18 @@
   sharePlanButton?.addEventListener("click",()=>void shareCurrentPlan().catch(error=>setStatus(error?.message||"Could not share plan.")));
   undoButton?.addEventListener("click",undoPlanner);
   redoButton?.addEventListener("click",redoPlanner);
+  document.addEventListener("keydown",event=>{
+    if(String(state.currentPage||"")!==PAGE||plannerReadOnly||event.altKey||(!event.ctrlKey&&!event.metaKey))return;
+    const target=event.target;
+    if(target?.closest?.("input,textarea,select,[contenteditable='true']"))return;
+    const key=String(event.key||"").toLowerCase();
+    const redo=key==="y"||(key==="z"&&event.shiftKey);
+    const undo=key==="z"&&!event.shiftKey;
+    if(!undo&&!redo)return;
+    event.preventDefault();
+    if(redo)redoPlanner();
+    else undoPlanner();
+  });
   copySharedPlanButton?.addEventListener("click",()=>void copySharedPlannerPlan().catch(error=>setStatus(error?.message||"Could not copy shared plan.")));
   plansModalCloseButton?.addEventListener("click",closePlansModal);
   plansModal?.addEventListener("click",event=>{if(event.target===plansModal)closePlansModal();});
