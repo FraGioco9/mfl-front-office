@@ -1604,8 +1604,8 @@ const browserTestSource = String.raw`(() => {
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
       const formationPreview = window.__mflPlannerFormationPreview;
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       const fourMidfieldReference = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"))
         .slice(4, 8).map(spot => [spot.style.left, spot.style.top]);
       assert(fourMidfieldReference.every(([, top]) => top === "40%"),
@@ -1616,8 +1616,8 @@ const browserTestSource = String.raw`(() => {
         // can observe progress instead of timing out while Chrome's main thread
         // performs every formation/layout assertion in one uninterrupted task.
         await delay(0);
+        await delay(0);
         formationPreview.render(code);
-      await delay(0);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         assert(JSON.stringify(spots.map(spot => spot.dataset.position)) === JSON.stringify([...approvedPositionSlots[code].flat(), "GK"]), "Incorrect position markers for formation " + code);
         assert(spots.every(spot => spot.querySelector(".plannerFormationPositionLabel")?.textContent === spot.dataset.position), "Unlabeled position marker for formation " + code);
@@ -1670,8 +1670,8 @@ const browserTestSource = String.raw`(() => {
         "Planner roster ready before hover geometry");
       // Measure the + against its OWN ring at rest and while animating, not its
       // viewport coordinates: a hover can independently expose a page scrollbar.
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       const hoverSpots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
       const center = rect => [rect.left + rect.width / 2, rect.top + rect.height / 2];
       const assertRestingPlus = (spot, state) => {
@@ -1723,40 +1723,40 @@ const browserTestSource = String.raw`(() => {
           "Empty pitch plus changes its circle alignment after hover in 4-4-2 " + spot.dataset.slotKey);
       });
       for (const code of ["352b"]) {
+        await delay(0);
         formationPreview.render(code);
-      await delay(0);
         const spots = Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"));
         const cdms = spots.filter(spot => spot.dataset.position === "CDM");
         const cams = spots.filter(spot => spot.dataset.position === "CAM");
         assert(cdms.some(cdm => cams.some(cam => Number.parseFloat(cdm.style.top) > Number.parseFloat(cam.style.top))), "Defensive and attacking midfield markers must have distinct depths in " + code);
       }
       const formationSpot = position => Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot")).filter(spot => spot.dataset.position === position);
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       assert(formationSpot("CM").every(spot => spot.style.top === "40%"), "The standard midfield must advance slightly without moving the defensive line.");
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "35%,65%", "Two strikers must be closer together in 4-4-2.");
-      formationPreview.render("424");
       await delay(0);
+      formationPreview.render("424");
       assert(formationSpot("ST").map(spot => spot.style.left).join(",") === "40%,60%", "Paired strikers must also narrow between wingers in 4-2-4.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%" && formationSpot("ST").every(spot => spot.style.top === "10%"), "Wingers must sit slightly behind paired strikers.");
-      formationPreview.render("523");
       await delay(0);
+      formationPreview.render("523");
       assert(formationSpot("LWB")[0].style.top === "63%" && formationSpot("RWB")[0].style.top === "63%" && formationSpot("CB").every(spot => spot.style.top === "70%"), "Back-five wingbacks must remain seven points ahead of the lifted centre-back line.");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("ST")[0].style.top === "10%", "Wingers must trail the central striker in back-five formations.");
-      formationPreview.render("433cf");
       await delay(0);
+      formationPreview.render("433cf");
       assert(formationSpot("LW")[0].style.top === "12%" && formationSpot("RW")[0].style.top === "12%"
         && formationSpot("CF")[0].style.top === "16%",
         "4-3-3 (CF) must have raised, level wingers with the CF one step behind them.");
       assert(Number.parseFloat(formationSpot("CF")[0].style.top) > Number.parseFloat(formationSpot("LW")[0].style.top),
         "4-3-3 (CF) central forward must sit below the advanced wingers.");
-      formationPreview.render("433");
       await delay(0);
+      formationPreview.render("433");
       assert(formationSpot("LW")[0].style.top === "16%" && formationSpot("RW")[0].style.top === "16%",
         "Normal 4-3-3 winger heights must remain unchanged.");
       for (const code of ["433", "433a", "433d", "433cf"]) {
+        await delay(0);
         formationPreview.render(code);
-      await delay(0);
         const outerCMs = formationSpot("CM");
         assert(outerCMs.length === (code === "433" || code === "433cf" ? 3 : 2)
           && JSON.stringify(outerCMs.map(spot => spot.style.left).filter(left => left !== "50%")) === JSON.stringify(["23%", "77%"]),
@@ -1765,54 +1765,54 @@ const browserTestSource = String.raw`(() => {
           && (code === "433" || code === "433cf" ? outerCMs[1].style.left === "50%" : true),
           "4-3-3 variants must retain the central role and regular CM line: " + code);
       }
-      formationPreview.render("433d");
       await delay(0);
+      formationPreview.render("433d");
       const defensive433CDMTop = formationSpot("CDM")[0]?.style.top;
       assert(defensive433CDMTop === "54%", "4-3-3 (def) CDM remains on the reference 54% line.");
-      formationPreview.render("4141");
       await delay(0);
+      formationPreview.render("4141");
       assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.top === defensive433CDMTop
         && formationSpot("CDM")[0].style.left === "50%",
         "4-1-4-1 CDM must stay central on the 4-3-3 (def) 54% CDM line.");
       assert(formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-1-4-1 must retain the flat four-player midfield line.");
-      formationPreview.render("4312");
       await delay(0);
+      formationPreview.render("4312");
       assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-3-1-2 midfield must match the regular 4-4-2 midfield height.");
       assert(formationSpot("CAM").length === 1 && formationSpot("CAM")[0].style.top === "25%"
         && formationSpot("ST").length === 2 && formationSpot("ST").every(spot => spot.style.top === "10%"),
         "4-3-1-2 must advance the CAM to 25% while leaving its two strikers at 10%.");
-      formationPreview.render("4321");
       await delay(0);
+      formationPreview.render("4321");
       assert(formationSpot("CM").length === 3 && formationSpot("CM").every(spot => spot.style.top === "40%"),
         "4-3-2-1 midfield must use the normal 4-4-2 height with all three CMs aligned.");
       assert(formationSpot("CF").length === 2
         && formationSpot("CF").every(spot => spot.style.top === "20%")
         && formationSpot("ST").length === 1 && formationSpot("ST")[0].style.top === "10%",
         "4-3-2-1 must place both CFs forward at 20%, below its unchanged striker at 10%.");
-      formationPreview.render("3421");
       await delay(0);
+      formationPreview.render("3421");
       assert(formationSpot("CF").length === 2
         && formationSpot("CF").every(spot => spot.style.top === "20%")
         && formationSpot("CF").map(spot => spot.style.left).join(",") === "28%,72%"
         && formationSpot("ST")[0].style.top === "10%",
         "3-4-2-1 must match 4-3-2-1 CF height at 20% without changing CF width or ST height.");
-      formationPreview.render("4411");
       await delay(0);
+      formationPreview.render("4411");
       assert(formationSpot("CF").length === 1 && formationSpot("CF")[0].style.top === "26%",
         "4-4-1-1 CF must retain its existing 26% height.");
+      await delay(0);
       formationPreview.render("433d");
-      await delay(0);
       const referenceDiamondCDMTop = formationSpot("CDM")[0].style.top;
-      formationPreview.render("433a");
       await delay(0);
+      formationPreview.render("433a");
       const referenceDiamondCAMTop = formationSpot("CAM")[0].style.top;
       assert(referenceDiamondCDMTop === "54%" && referenceDiamondCAMTop === "30%",
         "Diamond reference CDM and CAM levels must remain at 54% and 30%.");
       for (const code of ["343b", "41212", "41212narrow"]) {
+        await delay(0);
         formationPreview.render(code);
-      await delay(0);
         assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
           && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
           && formationSpot("CAM").length === 1 && formationSpot("CAM")[0].style.left === "50%"
@@ -1827,8 +1827,8 @@ const browserTestSource = String.raw`(() => {
             "Diamond strikers must retain their attacking height: " + code);
         }
       }
-      formationPreview.render("343b");
       await delay(0);
+      formationPreview.render("343b");
       assert(JSON.stringify(["LM", "RM"].map(position => formationSpot(position)[0].style.left))
         === JSON.stringify(["18%", "82%"])
         && ["LM", "RM"].every(position => formationSpot(position)[0].style.top === "42%"),
@@ -1841,8 +1841,8 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("LW")[0].style.left === "19%" && formationSpot("ST")[0].style.left === "50%"
         && formationSpot("RW")[0].style.left === "81%",
         "3-4-3 (B) must preserve its defensive and attacking rows.");
-      formationPreview.render("541");
       await delay(0);
+      formationPreview.render("541");
       assert(formationSpot("CDM").length === 1 && formationSpot("CAM").length === 1
         && formationSpot("CDM")[0].style.left === "50%" && formationSpot("CAM")[0].style.left === "50%"
         && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop
@@ -1857,8 +1857,8 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("CB").length === 3 && formationSpot("ST").length === 1
         && formationSpot("ST")[0].style.left === "50%" && formationSpot("ST")[0].style.top === "10%",
         "5-4-1 must preserve its back five and lone striker.");
-      formationPreview.render("41212");
       await delay(0);
+      formationPreview.render("41212");
       const regularDiamondStrikerSpacing = formationSpot("ST").map(spot => spot.style.left);
       assert(JSON.stringify(regularDiamondStrikerSpacing) === JSON.stringify(["35%", "65%"]),
         "Regular diamond strikers must retain their expected spacing.");
@@ -1869,8 +1869,8 @@ const browserTestSource = String.raw`(() => {
             (Number.parseFloat(formationSpot("CDM")[0].style.top) + Number.parseFloat(formationSpot("CAM")[0].style.top)) / 2),
         "Wide diamond LM/RM must stay wide at 18%/82% and halfway between CDM and CAM heights.");
       const regularDiamondMidfieldHeight = formationSpot("LM")[0].style.top;
-      formationPreview.render("41212narrow");
       await delay(0);
+      formationPreview.render("41212narrow");
       assert(JSON.stringify(formationSpot("CM").map(spot => spot.style.left))
         === JSON.stringify(["30%", "70%"])
         && formationSpot("CM").every(spot => spot.style.top === regularDiamondMidfieldHeight)
@@ -1879,8 +1879,8 @@ const browserTestSource = String.raw`(() => {
         "Narrow diamond CMs must sit at 30%/70% and halfway between CDM and CAM heights.");
       assert(JSON.stringify(formationSpot("ST").map(spot => spot.style.left)) === JSON.stringify(regularDiamondStrikerSpacing),
         "Narrow diamond strikers must match regular 4-1-2-1-2 spacing.");
-      formationPreview.render("352");
       await delay(0);
+      formationPreview.render("352");
       assert(formationSpot("CDM").length === 1 && formationSpot("CDM")[0].style.left === "50%"
         && formationSpot("CDM")[0].style.top === referenceDiamondCDMTop,
         "3-5-2 CDM must be central and match 4-3-3 (def) at 54%.");
@@ -1890,22 +1890,22 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("LM")[0].style.left === "12%" && formationSpot("RM")[0].style.left === "88%"
         && formationSpot("LM")[0].style.top === "40%" && formationSpot("RM")[0].style.top === "40%",
         "3-5-2 wide midfielders must retain their horizontal and vertical placement.");
-      formationPreview.render("433a");
       await delay(0);
+      formationPreview.render("433a");
       assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
         && formationSpot("CAM")[0]?.style.top === "30%",
         "4-3-3 (att) CMs must stay on the usual line while CAM advances.");
-      formationPreview.render("433d");
       await delay(0);
+      formationPreview.render("433d");
       assert(formationSpot("CM").length === 2 && formationSpot("CM").every(spot => spot.style.top === "40%")
         && formationSpot("CDM")[0]?.style.top === "54%",
         "4-3-3 (def) CMs must stay on the usual line while CDM drops back.");
-      formationPreview.render("433d");
       await delay(0);
+      formationPreview.render("433d");
       const referenceDefensiveCDMTop = formationSpot("CDM")[0]?.style.top;
       assert(referenceDefensiveCDMTop === "54%", "4-3-3 (def) must retain the reference holding-midfielder depth.");
-      formationPreview.render("4132");
       await delay(0);
+      formationPreview.render("4132");
       assert(["LM", "CM", "RM"].every(position => formationSpot(position).length === 1
         && formationSpot(position)[0].style.top === "36%")
         && formationSpot("CM")[0].style.left === "50%",
@@ -1917,14 +1917,14 @@ const browserTestSource = String.raw`(() => {
       assert(formationSpot("ST").length === 2
         && formationSpot("ST").every(spot => spot.style.top === "10%"),
         "4-1-3-2 must preserve both strikers.");
-      formationPreview.render("41212narrow");
       await delay(0);
+      formationPreview.render("41212narrow");
       assert(formationSpot("CM").every(spot => spot.style.top === "42%")
         && formationSpot("CDM")[0].style.top === "54%"
         && formationSpot("CAM")[0].style.top === "30%",
         "Narrow diamond CMs must remain equidistant from CAM at 30% and CDM at 54%.");
-      formationPreview.render("352b");
       await delay(0);
+      formationPreview.render("352b");
       assert(formationSpot("CDM").map(spot => spot.style.left).join(",") === "38%,62%" && formationSpot("CAM")[0].style.left === "50%", "3-5-2 (B) CAM must be centred between symmetrically placed CDMs.");
       assert(formationSpot("CDM").every(spot => spot.style.top === referenceDiamondCDMTop)
         && formationSpot("CAM")[0].style.top === referenceDiamondCAMTop,
@@ -1933,8 +1933,9 @@ const browserTestSource = String.raw`(() => {
         && formationSpot("ST").every(spot => spot.style.top === "10%"),
         "3-5-2 (B) wide mids and strikers must keep their former heights.");
 
-      formationPreview.render("4222");
       await delay(0);
+
+      formationPreview.render("4222");
       const holdingPair = formationSpot("CDM");
       const attackingPair = formationSpot("CAM");
       const strikerPair = formationSpot("ST");
@@ -1949,8 +1950,8 @@ const browserTestSource = String.raw`(() => {
         && Number.parseFloat(attackingPair[0].style.top) ===
           (Number.parseFloat(holdingPair[0].style.top) + Number.parseFloat(strikerPair[0].style.top)) / 2,
         "4-2-2-2 CAMs must be precisely halfway from CDMs to STs without moving those lines.");
-      formationPreview.render("4231");
       await delay(0);
+      formationPreview.render("4231");
       assert(formationSpot("CAM").length === 1 && formationSpot("LM").length === 1 && formationSpot("RM").length === 1
         && formationSpot("CAM")[0].style.top === "29%"
         && formationSpot("CAM")[0].style.top === formationSpot("LM")[0].style.top
@@ -2177,8 +2178,8 @@ const browserTestSource = String.raw`(() => {
       ];
       const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
       formationPreview.setRoster(fixture);
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
       assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
       const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
@@ -2396,8 +2397,8 @@ const browserTestSource = String.raw`(() => {
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       depthPicker.querySelector(".plannerDepthPickerClear").click();
       assert(!slot("CB#1")?.dataset.playerId && slot("CB#2")?.dataset.playerId==="101","Remove must affect the selected circle only.");
-      formationPreview.render("433");
       await delay(0);
+      formationPreview.render("433");
       assert(slot("CB#2")?.dataset.playerId==="101","Compatible assignments must survive a formation change.");
       // Auto-fill must stay available for a repeated slot even if round-robin backups
       // currently land in its occupied sibling's depth column.
@@ -2405,8 +2406,8 @@ const browserTestSource = String.raw`(() => {
         {player_id:201,name:"CB 95",positions:"CB",overall:95,retirement_years:5},
         {player_id:202,name:"CB 90",positions:"CB",overall:90,retirement_years:5},
       ]);
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       depthPicker.querySelector('.plannerDepthPickerPlayer[data-player-id="201"]').click();
       assert(!fillButton.disabled,"Auto-fill must remain available when CB #2 has one eligible player.");
@@ -2418,8 +2419,8 @@ const browserTestSource = String.raw`(() => {
         {player_id:301,name:"Natural CB",positions:"CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
         {player_id:302,name:"Secondary CB",positions:"CM, CB",overall:80,passing:80,shooting:80,defense:80,dribbling:80,pace:80,physical:80,goalkeeping:20},
       ]);
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(depthPicker.querySelector('[data-player-id="302"] strong')?.textContent === "79", "Picker must display the position-specific rating for a secondary CB.");
       depthPicker.querySelector('[data-player-id="302"]').click();
@@ -2451,8 +2452,8 @@ const browserTestSource = String.raw`(() => {
         {player_id:504,name:"Other CM",positions:"CM",overall:100,retirement_years:5},
         {player_id:505,name:"Other GK",positions:"GK",overall:100,retirement_years:5},
       ]);
-      formationPreview.render("442");
       await delay(0);
+      formationPreview.render("442");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
       assert(depthIndicator("CB#1")?.textContent === "1" && depthIndicator("CB#2")?.textContent === "1",
         "Both repeated CB circles may count the same unassigned strongest positional fallback.");
@@ -2472,14 +2473,14 @@ const browserTestSource = String.raw`(() => {
         {player_id:601,name:"CM CAM",positions:"CM, CAM",overall:94,passing:94,shooting:94,defense:94,dribbling:94,pace:94,physical:94,goalkeeping:20},
         {player_id:602,name:"GK",positions:"GK",overall:92},
       ]);
-      formationPreview.render("433");
       await delay(0);
+      formationPreview.render("433");
       assert(depthIndicator("CM#1")?.textContent === "1"
         && depthIndicator("CM#2")?.textContent === "1"
         && depthIndicator("CM#3")?.textContent === "1",
         "A free multi-position player must count as depth for every matching CM slot.");
-      formationPreview.render("433a");
       await delay(0);
+      formationPreview.render("433a");
       assert(depthIndicator("CAM#1")?.textContent === "1"
         && depthIndicator("CM#1")?.textContent === "1"
         && depthIndicator("CM#2")?.textContent === "1",
@@ -2504,8 +2505,8 @@ const browserTestSource = String.raw`(() => {
       assert(slotBadge(3)?.textContent === "CB" && !slotBadge(3).hidden && slotEmpty(3).hidden, "Repeated Depth positions must show CB, never CB2 or CB#2.");
       const chipStyle = getComputedStyle(slotBadge(3));
       assert(chipStyle.color === "rgb(5, 248, 44)" && chipStyle.borderRadius === "5px" && chipStyle.backgroundColor !== "rgba(0, 0, 0, 0)", "Slot badge must match the translucent rounded green example.");
-      formationPreview.render("433");
       await delay(0);
+      formationPreview.render("433");
       assert(slotBadge(3)?.textContent === "CB", "Slot badges must survive compatible formation changes.");
       slot("CB#2").querySelector(".plannerFormationSlotButton").click();
       depthPicker.querySelector(".plannerDepthPickerClear").click();
@@ -2519,11 +2520,11 @@ const browserTestSource = String.raw`(() => {
       fillButton.click();
       assert(slotBadge(1)?.textContent === "ST" && slotBadge(2)?.textContent === "RW" && slotBadge(3)?.textContent === "CB", "Auto-fill must refresh Slot labels for all starters.");
       assert(Array.from(document.querySelectorAll("#plannerRosterBody tr"), row => row.dataset.playerId).join(",") === "3,2,1", "Auto-fill must reorder the squad by assigned slot.");
+      await delay(0);
       formationPreview.render("442");
-      await delay(0);
       assert(slotBadge(2)?.hidden && !slotEmpty(2)?.hidden && slotBadge(1)?.textContent === "ST", "Formation changes must clear obsolete RW assignments while keeping compatible ST.");
-      formationPreview.render("4231");
       await delay(0);
+      formationPreview.render("4231");
       assert(text("#plannerPitchHeading") === "Depth", "Planner pitch section must be renamed Depth.");
       const squadHeadingBox = document.getElementById("plannerRosterHeading").getBoundingClientRect();
       const depthHeadingBox = document.getElementById("plannerPitchHeading").getBoundingClientRect();
