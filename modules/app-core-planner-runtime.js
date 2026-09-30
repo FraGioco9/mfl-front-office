@@ -1170,8 +1170,7 @@
     const data=await response.json().catch(()=>({}));
     if(response.status===401&&typeof optOutWallet==="function")optOutWallet({toastMessage:"Dapper opt-in expired. Opt in again to use saved plans."});
     if(!response.ok){
-      const error=new Error(data?.error||"Planner request failed.");
-      error.status=response.status;
+      const error=Object.assign(new Error(data?.error||"Planner request failed."),{status:response.status});
       throw error;
     }
     return data;
@@ -1345,7 +1344,11 @@
   function renderPlannerPlans(plans,shares=[]){
     if(!(plansList instanceof HTMLElement))return;
     const rows=Array.isArray(plans)?plans:[];
-    const shareByPlan=new Map((Array.isArray(shares)?shares:[]).map(share=>[String(share?.sourcePlanId||""),share]).filter(([id])=>id));
+    const shareByPlan=new Map();
+    for(const share of Array.isArray(shares)?shares:[]){
+      const sourcePlanId=String(share?.sourcePlanId||"");
+      if(sourcePlanId)shareByPlan.set(sourcePlanId,share);
+    }
     const fragment=document.createDocumentFragment();
     for(const plan of rows){
       const row=document.createElement("div");row.className="plannerPlanListRow";
@@ -1403,8 +1406,7 @@
     const response=await window.__mflDataClient.fetch("/api/planner-share?id="+encodeURIComponent(id),{cache:"no-store",headers:{Accept:"application/json"}});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.share){
-      const error=new Error(data?.error||"Shared plan not found.");
-      error.status=response.status;
+      const error=Object.assign(new Error(data?.error||"Shared plan not found."),{status:response.status});
       throw error;
     }
     return applyPlannerPlan(data.share,{readOnly:true,routeIdentity:"share:"+id});
