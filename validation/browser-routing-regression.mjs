@@ -1552,6 +1552,20 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
       const formation = document.getElementById("plannerFormationSelect");
       const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+      const formationPreview = window.__mflPlannerFormationPreview;
+      assert(formationPreview && typeof formationPreview.render === "function", "Planner formation preview runtime is unavailable.");
+      if (plannerBrowserFocused && plannerBrowserPhase === "shell") {
+        assert(document.documentElement.scrollWidth <= innerWidth, "Planner shell must not overflow horizontally.");
+        document.getElementById("plannerTeamClearButton").click();
+        assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Planner shell Clear must restore search.");
+        assert(input.value === "" && location.search === "", "Planner shell Clear must reset team and URL.");
+        history.replaceState({}, "", "/planner?club=9001");
+        await window.__mflPlannerRoute.render(false);
+        assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "Planner shell URL restoration must restore the team identity.");
+        await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner shell restored roster");
+        assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
+        finish("passed", "planner-shell: search, selection, clear and URL restoration are stable.");
+        return;
       }
 
       if (!plannerBrowserFocused) {
@@ -1608,21 +1622,8 @@ const browserTestSource = String.raw`(() => {
       assert(changedSpots.length === 11 && JSON.stringify(changedSpots) !== JSON.stringify(initialSpots), "Changing formation must rearrange eleven visible position markers.");
       assert(Number.parseFloat(changedSpots[0].split(":")[1]) === 70 && Number.parseFloat(changedSpots[9].split(":")[1]) === 10 && changedSpots[10].endsWith(":calc(100% - 72px)"), "4-2-3-1 must preserve the defender-to-attacker pitch orientation and goalkeeper position.");
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Planner must remember the formation for the selected club.");
-      const formationPreview = window.__mflPlannerFormationPreview;
-      assert(formationPreview && typeof formationPreview.render === "function", "Planner formation preview runtime is unavailable.");
-      if (plannerBrowserFocused && plannerBrowserPhase === "shell") {
-        assert(document.documentElement.scrollWidth <= innerWidth, "Planner shell must not overflow horizontally.");
-        document.getElementById("plannerTeamClearButton").click();
-        assert(!hidden("#plannerTeamSelector") && hidden("#plannerSelectedTeam"), "Planner shell Clear must restore search.");
-        assert(input.value === "" && location.search === "", "Planner shell Clear must reset team and URL.");
-        history.replaceState({}, "", "/planner?club=9001");
-        await window.__mflPlannerRoute.render(false);
-        assert(hidden("#plannerTeamSelector") && text("#plannerTeamName") === "Browser Club", "Planner shell URL restoration must restore the team identity.");
-        await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner shell restored roster");
-        assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
-        finish("passed", "planner-shell: search, selection, clear and URL restoration are stable.");
-        return;
       }
+
       if (!plannerBrowserFocused) {
       const approvedPositionSlots = {"343":[["CB","CB","CB"],["LM","CM","CM","RM"],["LW","ST","RW"]],"352":[["CB","CB","CB"],["LM","CDM","CM","CM","RM"],["ST","ST"]],"424":[["LB","CB","CB","RB"],["CM","CM"],["LW","ST","ST","RW"]],"433":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","ST","RW"]],"442":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["ST","ST"]],"523":[["LWB","CB","CB","CB","RWB"],["CM","CM"],["LW","ST","RW"]],"532":[["LWB","CB","CB","CB","RWB"],["LM","CM","RM"],["ST","ST"]],"541":[["LWB","CB","CB","CB","RWB"],["LM","CDM","CAM","RM"],["ST"]],"3421":[["CB","CB","CB"],["LM","CM","CM","RM"],["CF","CF"],["ST"]],"4132":[["LB","CB","CB","RB"],["CDM"],["LM","CM","RM"],["ST","ST"]],"4141":[["LB","CB","CB","RB"],["CDM"],["LM","CM","CM","RM"],["ST"]],"4222":[["LB","CB","CB","RB"],["CDM","CDM"],["CAM","CAM"],["ST","ST"]],"4231":[["LB","CB","CB","RB"],["CDM","CDM"],["LM","CAM","RM"],["ST"]],"4312":[["LB","CB","CB","RB"],["CM","CM","CM"],["CAM"],["ST","ST"]],"4321":[["LB","CB","CB","RB"],["CM","CM","CM"],["CF","CF"],["ST"]],"4411":[["LB","CB","CB","RB"],["LM","CM","CM","RM"],["CF"],["ST"]],"41212":[["LB","CB","CB","RB"],["CDM"],["LM","RM"],["CAM"],["ST","ST"]],"343b":[["CB","CB","CB"],["LM","CDM","CAM","RM"],["LW","ST","RW"]],"352b":[["CB","CB","CB"],["LM","CDM","CDM","CAM","RM"],["ST","ST"]],"41212narrow":[["LB","CB","CB","RB"],["CDM"],["CM","CM"],["CAM"],["ST","ST"]],"433a":[["LB","CB","CB","RB"],["CM","CAM","CM"],["LW","ST","RW"]],"433d":[["LB","CB","CB","RB"],["CM","CDM","CM"],["LW","ST","RW"]],"433cf":[["LB","CB","CB","RB"],["CM","CM","CM"],["LW","CF","RW"]],"442b":[["LB","CB","CB","RB"],["LM","CDM","CDM","RM"],["ST","ST"]],"541f":[["LWB","CB","CB","CB","RWB"],["LM","CM","CM","RM"],["ST"]]};
 
