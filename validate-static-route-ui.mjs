@@ -63,7 +63,8 @@ const canonicalReplace = coreSource.indexOf('if (options.replaceUrl && `${window
 const canonicalUpdate = coreSource.indexOf('updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });', lockedRouteDecision);
 invariant(lockedRouteDecision > setPageStart && lockedRouteGuard > lockedRouteDecision && canonicalReplace > lockedRouteDecision && canonicalUpdate > canonicalReplace, "Opted-out protected routes must participate in canonical replace/push URL handling while reusing one scoped base-render lock decision.");
 includes(coreSource, 'if (normalizedPage === "planner")', "The protected-route guard must own the Planner-specific share exception.");
-includes(coreSource, 'if (shareId) return false;', "Only a real Planner share id may bypass the opted-out locked shell.");
+includes(coreSource, 'const publicPlanPath = /^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)', "Stable Planner plan ids must participate in the public-share route exception.");
+includes(coreSource, 'if (publicPlanPath || shareId) return false;', "Only a stable Planner plan id or legacy share id may bypass the opted-out locked shell.");
 const optOutStart = coreSource.indexOf("function optOutWallet(options = {}) {");
 const optOutEnd = optOutStart >= 0 ? coreSource.indexOf("\nfunction ", optOutStart + "function optOutWallet".length) : -1;
 invariant(optOutStart >= 0 && optOutEnd > optOutStart, "Wallet opt-out transition owner must remain in canonical app core.");
