@@ -74,9 +74,13 @@ assert(elements.get("plannerFormationSelect").classList.contains("plannerFormati
 assert.equal(localStorage.getItem("mfl-planner-formation-v1:9001"), "4231", "Formation selection must be stored for this club");
 assert.equal(formationRenders.at(-1), "4231", "Formation selection must update the pitch preview without changing the roster");
 assert.equal(elements.get("plannerRosterBody").children.length, 2, "Changing formation must preserve the squad");
+assert.equal(elements.get("plannerUndoButton").attributes["aria-label"], "Undo formation change", "Undo must identify the operation it will reverse.");
+assert.equal(elements.get("plannerUndoButton").title, "Undo formation change (Ctrl+Z)", "Undo tooltip must expose its keyboard shortcut.");
 assert.equal(route.undo(), true, "Undo must restore the previous Planner state after a formation change.");
 assert.equal(elements.get("plannerFormationSelect").value, "442", "Undo must restore the previous formation.");
 assert.equal(formationRenders.at(-1), "442", "Undo must redraw the restored formation.");
+assert.equal(elements.get("plannerRedoButton").attributes["aria-label"], "Redo formation change", "Redo must identify the operation it will reapply.");
+assert.equal(elements.get("plannerRedoButton").title, "Redo formation change (Ctrl+Y)", "Redo tooltip must expose its keyboard shortcut.");
 assert.equal(route.redo(), true, "Redo must reapply the formation change.");
 assert.equal(elements.get("plannerFormationSelect").value, "4231", "Redo must restore the changed formation.");
 assert.equal(formationRenders.at(-1), "4231", "Redo must redraw the changed formation.");
