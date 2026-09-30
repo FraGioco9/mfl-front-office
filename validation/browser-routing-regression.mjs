@@ -1552,6 +1552,9 @@ const browserTestSource = String.raw`(() => {
       assert(!hidden("#plannerWorkspace") && !hidden(".plannerPitch"), "Selected team must expose squad and pitch.");
       const formation = document.getElementById("plannerFormationSelect");
       const formationCodes = ["3421","343","343b","352","352b","41212","41212narrow","4132","4141","4222","4231","424","4312","4321","433","433a","433d","433cf","4411","442","442b","523","532","541","541f"];
+      }
+
+      if (!plannerBrowserFocused) {
       assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
       assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
       assert(formation.value === "442", "Planner must start in the default 4-4-2.");
