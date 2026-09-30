@@ -2197,6 +2197,7 @@ const browserTestSource = String.raw`(() => {
         }
       }
       // Clickable starters and backup lists use the same roster-derived depth source.
+      let slot, depthIndicator, fillButton, clearButton, depthPicker;
       if (!plannerBrowserFocused || plannerBrowserPhase === "depth-picker") {
       const fixture = [
         ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,nationality:index===2?"Italy":"",positions:"CB",overall,retirement_years:5})),
@@ -2204,13 +2205,13 @@ const browserTestSource = String.raw`(() => {
         {player_id:108,name:"GK 82",positions:"GK",overall:82,retirement_years:5},
         {player_id:109,name:"Retired CB",positions:"CB",overall:99,retirement_years:0},
       ];
-      const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
+      slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="'+key+'"]');
       formationPreview.setRoster(fixture);
       await delay(0);
       formationPreview.render("442");
       assert(slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width>=44 && slot("CB#1")?.querySelector(".plannerFormationToken")?.getBoundingClientRect().width<=61, "Planner pitch face tokens must be slightly larger while staying balanced.");
       assert(!slot("CB#1").hasAttribute("title") && !slot("CB#2").hasAttribute("title"), "Both empty and occupied pitch circles must not open native hover tooltips.");
-      const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
+      depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
       assert(depthIndicator("CB#1")?.textContent === "5" && depthIndicator("CB#2")?.textContent === "5"
         && depthIndicator("CB#1")?.classList.contains("multiple")
         && depthIndicator("ST#1")?.textContent === "1" && depthIndicator("ST#1")?.classList.contains("single")
@@ -2230,9 +2231,9 @@ const browserTestSource = String.raw`(() => {
         && badgeRect.left >= circleRect.left + circleRect.width / 2
         && badgeRect.top < circleRect.top + circleRect.height / 2,
         "The 18px depth badge must overlap the upper-right quadrant of the player circle.");
-      const fillButton = document.getElementById("plannerAutoFillDepthButton");
-      const clearButton = document.getElementById("plannerClearDepthButton");
-      const depthPicker = document.getElementById("plannerDepthPicker");
+      fillButton = document.getElementById("plannerAutoFillDepthButton");
+      clearButton = document.getElementById("plannerClearDepthButton");
+      depthPicker = document.getElementById("plannerDepthPicker");
       assert(fillButton instanceof HTMLButtonElement && !fillButton.disabled, "Auto-fill must be available for eligible empty circles.");
       assert(clearButton instanceof HTMLButtonElement && clearButton.disabled, "Clear must be disabled while the pitch has no selected players.");
       slot("CB#1").querySelector(".plannerFormationSlotButton").click();
@@ -2435,11 +2436,13 @@ const browserTestSource = String.raw`(() => {
           return;
         }
       }
-      if (plannerBrowserFocused && plannerBrowserPhase === "depth-ranking") {
-        const slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="' + key + '"]');
-        const depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
-        const fillButton = document.getElementById("plannerAutoFillDepthButton");
-        const depthPicker = document.getElementById("plannerDepthPicker");
+      if (!plannerBrowserFocused || plannerBrowserPhase === "depth-ranking") {
+        if (plannerBrowserFocused) {
+          slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="' + key + '"]');
+          depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
+          fillButton = document.getElementById("plannerAutoFillDepthButton");
+          depthPicker = document.getElementById("plannerDepthPicker");
+        }
       // Auto-fill must stay available for a repeated slot even if round-robin backups
       // currently land in its occupied sibling's depth column.
       formationPreview.setRoster([
