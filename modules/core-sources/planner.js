@@ -148,7 +148,6 @@
     if(squadStatusPrimary) squadStatusPrimary.textContent=roster.length+"/"+MAX_SQUAD_SIZE+" players · "+totalPlannedContracts().toFixed(2)+"% contracts · "+filled+"/11 filled";
     if(squadStatusWarnings instanceof HTMLElement){
       const warnings=[];
-      if(roster.length&& !assignments.some(item=>String(item?.slotKey??item?.slot_key??"").toUpperCase().startsWith("GK#"))) warnings.push("GK empty");
       if(roster.length&&filled<11) warnings.push((11-filled)+" starter"+(11-filled===1?"":"s")+" missing");
       squadStatusWarnings.textContent=warnings.join(" · ");
       squadStatusWarnings.hidden=!warnings.length;
