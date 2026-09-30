@@ -3140,8 +3140,20 @@ try {
 
   for (const [scenario, path, width = 1280, height = 900] of regressionScenarios) {
     const url = `http://127.0.0.1:${address.port}${path}`;
-    const result = await runChromeRegression(executable, url, width, height);
-    assert.equal(result.status, "passed");
+    let result = null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        result = await runChromeRegression(executable, url, width, height);
+        break;
+      } catch (error) {
+        const message = String(error?.message || error || "");
+        const transient = message.includes("Chrome debugging target did not become ready.")
+          || message.includes("Chrome DevTools request timed out:");
+        if (!transient || attempt === 2) throw error;
+        console.warn(`Retrying transient Chrome routing failure: ${scenario}: ${message.split("\n")[0]}`);
+      }
+    }
+    assert.equal(result?.status, "passed");
     console.log(`Browser routing regression passed: ${scenario}: ${result.detail}`);
   }
 } finally {
