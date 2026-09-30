@@ -278,7 +278,8 @@ invariant(
 );
 invariant(
   planner.includes('history.pushState({},"",plannerStablePlanPath(plan.id));Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();')
-    && planner.includes('if(String(activePlanId)===String(plan.id)){activePlanName=String(data?.plan?.name||next);activePlanPayload=data?.plan?.payload||plan.payload;syncPlanUi();}'),
+    && planner.includes('activePlanName=String(data?.plan?.name||next);activePlanPayload=data?.plan?.payload||plan.payload;')
+    && planner.includes('activePlanRevision=plannerPlanRevision(data?.plan?.revision);syncPlanUi();Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();'),
   "Opening or renaming the active saved plan must immediately resync its route-aware browser title.",
 );
 invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
