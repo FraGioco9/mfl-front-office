@@ -503,7 +503,14 @@ export function browserConfigRuntimeSource(release) {
 
     if (pageSegment === "home" && segments.length === 1) return homeRequest(path);
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
-    if (pageSegment === "planner" && segments.length === 1) return requestResult(path, "planner", {}, "/planner");
+    if (pageSegment === "planner") {
+      if (segments.length === 1) return requestResult(path, "planner", {}, "/planner");
+      if (segments.length === 2 && /^[a-f0-9]{16}$/i.test(String(segments[1] || ""))) {
+        const planId = String(segments[1] || "").toLowerCase();
+        return requestResult(path, "planner", { planId }, "/planner/" + encodeURIComponent(planId));
+      }
+      return notFoundRequest(path, "Page");
+    }
     if ((pageSegment === "my-clubs" || pageSegment === "myclubs") && segments.length === 1) return requestResult(path, "my-clubs", {}, "/my-clubs");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
