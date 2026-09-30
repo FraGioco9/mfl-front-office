@@ -7,7 +7,8 @@
     <script>
       (() => {
         const root = document.documentElement;
-        root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+        const initialPath = window.location.pathname.replace(/^\//, "") || "home";
+        root.dataset.initialPage = initialPath === "planner" || initialPath.startsWith("planner/") ? "planner" : initialPath;
 
         // BEGIN GENERATED FIRST-PAINT ROUTE CONFIG
         const FIRST_PAINT_APP_NAME = "MFL Front Office";
