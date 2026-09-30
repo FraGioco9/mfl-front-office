@@ -92,6 +92,7 @@ invariant(
   !planner.includes("revokeShareButton")
     && planner.includes('sharePlanButton.textContent=shared?"Revoke":"Share";')
     && planner.includes('sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan")')
+    && !planner.includes("sharePlanButton.title=")
     && planner.includes('const action=revoking?revokePlannerShare():shareCurrentPlan();'),
   "Planner toolbar must reuse one button slot for Share and Revoke based on active share state.",
 );
