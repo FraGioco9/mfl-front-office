@@ -1,52 +1,206 @@
 [
-  ["v1.128.2", "Add Club branding and stable loading to Player pages"],
-  ["v1.128.1", "Redesign Club pages with branded identity and filter-free views"],
-  ["v1.128.0", "Add My Clubs, URL-synced tables, and unified loading foundations"],
-  ["v1.127.15", "Stage database refreshes, refine competition data, and stabilize protected routes"],
-  ["v1.127.14", "Optimize loading, backend data paths, caching, and database rebuilds"],
-  ["v1.127.13", "Add canonical club ingestion and runtime club data"],
-  ["v1.127.12", "Complete global UI foundations and semantic ownership"],
-  ["v1.127.11", "Refine mobile Player UX, filtering, titles, and repository architecture"],
-  ["v1.127.10", "Consolidate architecture, mobile Player UX, footer consistency, and privacy"],
-  ["v1.127.9", "Polish mobile UX, Evaluation, navigation reliability, and site workflows"],
-  ["v1.127.8", "Refine mobile tables, Evaluation loading, and responsive controls"],
-  ["v1.127.7", "Consolidate UI architecture and protect Watchlist persistence"],
-  ["v1.127.6", "Optimize Evaluation for small screens and stable loading"],
-  ["v1.127.5", "Refine mobile Stats, navigation transitions, and table typography"],
-  ["v1.127.4", "Refine mobile tables, search, sorting, and persisted state"],
-  ["v1.127.3", "Refine Filters, navigation, mobile layout, progression emails, and table controls"],
-  ["v1.127.2", "Refine Settings privacy, checkbox styling, and opt-in loading"],
-  ["v1.127.1", "Refine Evaluation, filter states, and progression email presentation"],
-  ["v1.127.0", "Improve mobile layouts, table loading, and Marketplace scheduling"],
-  ["v1.126.4", "Refine Player tables, dropdown interactions, and progression emails"],
-  ["v1.126.3", "Improve scheduling, Player table actions, and Account interactions"],
-  ["v1.126.2", "Improve mint-age recovery, pager selection, and progression spacing"],
-  ["v1.126.1", "Stabilize loading, search interactions, and table navigation"],
-  ["v1.126.0", "Add marketplace listings and rarity indicators across player views"],
-  ["v1.125.5", "Refine Player loading and progression email portraits"],
-  ["v1.125.4", "Stabilize Evaluation recalculation, Settings persistence, and Player loading"],
-  ["v1.125.3", "Stabilize Evaluation previews, navigation loading, and marketplace snapshots"],
-  ["v1.125.2", "Add rich social previews for shared Evaluation links"],
-  ["v1.125.1", "Stabilize navigation loading, pager visibility, and Evaluation editing behavior"],
-  ["v1.125.0", "Consolidate application architecture, loading ownership, validation, and database refresh reliability"],
-  ["v1.124.5", "Restore progression email delivery and streamline Site quality validation"],
-  ["v1.124.4", "Minimize Supabase persistence and add authenticated last-visit tracking"],
-  ["v1.124.3", "Centralize popup stacking and restore consistent first-open modal animations"],
-  ["v1.124.2", "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"],
-  ["v1.124.1", "Optimize loading, routing, caching, and navigation across the application"],
-  ["v1.124.0", "Add full mobile compatibility with responsive navigation, layouts, dialogs, and scrollable data tables"],
-  ["v1.123.7", "Stabilize Evaluation and global search focus, recent result navigation, and cold-page full search"],
-  ["v1.123.6", "Consolidate runtimes and restore shared table view navigation"],
-  ["v1.123.5", "Cache table filters, unify loading states, and stabilize MFL Stats and wait interactions"],
-  ["v1.123.4", "Make global search authoritative and stabilize Watchlist, table, and Evaluation first paint"],
-  ["v1.123.3", "Stabilize Database Stats state, MFL Stats summaries, and static page rendering"],
-  ["v1.123.2", "Restore static application chrome, protected-route first paint, and loading completion"],
-  ["v1.123.1", "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"],
-  ["v1.123.0", "Consolidate the post-SQLite application architecture into the first stable v1.123 release"],
-  ["v1.121.0", "Query the runtime SQLite database for every site data request"],
-  ["v1.120.4", "Prime Evaluation controls and MFL Stats filters before data loads"],
-  ["v1.120.3", "Stabilize startup, Evaluation loading, and first-paint Stats rendering"],
-  ["v1.120.2", "Refresh the Evaluation Discount Rate from live MFL/USD season ratios"],
-  ["v1.120.1", "Refine Database Stats filtering, tooltips, and Changelog rendering"],
-  ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"]
+  [
+    "v1.128.3",
+    "Harden authentication, routing, performance, and operational reliability"
+  ],
+  [
+    "v1.128.2",
+    "Add Club branding and stable loading to Player pages"
+  ],
+  [
+    "v1.128.1",
+    "Redesign Club pages with branded identity and filter-free views"
+  ],
+  [
+    "v1.128.0",
+    "Add My Clubs, URL-synced tables, and unified loading foundations"
+  ],
+  [
+    "v1.127.15",
+    "Stage database refreshes, refine competition data, and stabilize protected routes"
+  ],
+  [
+    "v1.127.14",
+    "Optimize loading, backend data paths, caching, and database rebuilds"
+  ],
+  [
+    "v1.127.13",
+    "Add canonical club ingestion and runtime club data"
+  ],
+  [
+    "v1.127.12",
+    "Complete global UI foundations and semantic ownership"
+  ],
+  [
+    "v1.127.11",
+    "Refine mobile Player UX, filtering, titles, and repository architecture"
+  ],
+  [
+    "v1.127.10",
+    "Consolidate architecture, mobile Player UX, footer consistency, and privacy"
+  ],
+  [
+    "v1.127.9",
+    "Polish mobile UX, Evaluation, navigation reliability, and site workflows"
+  ],
+  [
+    "v1.127.8",
+    "Refine mobile tables, Evaluation loading, and responsive controls"
+  ],
+  [
+    "v1.127.7",
+    "Consolidate UI architecture and protect Watchlist persistence"
+  ],
+  [
+    "v1.127.6",
+    "Optimize Evaluation for small screens and stable loading"
+  ],
+  [
+    "v1.127.5",
+    "Refine mobile Stats, navigation transitions, and table typography"
+  ],
+  [
+    "v1.127.4",
+    "Refine mobile tables, search, sorting, and persisted state"
+  ],
+  [
+    "v1.127.3",
+    "Refine Filters, navigation, mobile layout, progression emails, and table controls"
+  ],
+  [
+    "v1.127.2",
+    "Refine Settings privacy, checkbox styling, and opt-in loading"
+  ],
+  [
+    "v1.127.1",
+    "Refine Evaluation, filter states, and progression email presentation"
+  ],
+  [
+    "v1.127.0",
+    "Improve mobile layouts, table loading, and Marketplace scheduling"
+  ],
+  [
+    "v1.126.4",
+    "Refine Player tables, dropdown interactions, and progression emails"
+  ],
+  [
+    "v1.126.3",
+    "Improve scheduling, Player table actions, and Account interactions"
+  ],
+  [
+    "v1.126.2",
+    "Improve mint-age recovery, pager selection, and progression spacing"
+  ],
+  [
+    "v1.126.1",
+    "Stabilize loading, search interactions, and table navigation"
+  ],
+  [
+    "v1.126.0",
+    "Add marketplace listings and rarity indicators across player views"
+  ],
+  [
+    "v1.125.5",
+    "Refine Player loading and progression email portraits"
+  ],
+  [
+    "v1.125.4",
+    "Stabilize Evaluation recalculation, Settings persistence, and Player loading"
+  ],
+  [
+    "v1.125.3",
+    "Stabilize Evaluation previews, navigation loading, and marketplace snapshots"
+  ],
+  [
+    "v1.125.2",
+    "Add rich social previews for shared Evaluation links"
+  ],
+  [
+    "v1.125.1",
+    "Stabilize navigation loading, pager visibility, and Evaluation editing behavior"
+  ],
+  [
+    "v1.125.0",
+    "Consolidate application architecture, loading ownership, validation, and database refresh reliability"
+  ],
+  [
+    "v1.124.5",
+    "Restore progression email delivery and streamline Site quality validation"
+  ],
+  [
+    "v1.124.4",
+    "Minimize Supabase persistence and add authenticated last-visit tracking"
+  ],
+  [
+    "v1.124.3",
+    "Centralize popup stacking and restore consistent first-open modal animations"
+  ],
+  [
+    "v1.124.2",
+    "Stabilize Club and Stats rendering, Evaluation loading and routing, and release version ownership"
+  ],
+  [
+    "v1.124.1",
+    "Optimize loading, routing, caching, and navigation across the application"
+  ],
+  [
+    "v1.124.0",
+    "Add full mobile compatibility with responsive navigation, layouts, dialogs, and scrollable data tables"
+  ],
+  [
+    "v1.123.7",
+    "Stabilize Evaluation and global search focus, recent result navigation, and cold-page full search"
+  ],
+  [
+    "v1.123.6",
+    "Consolidate runtimes and restore shared table view navigation"
+  ],
+  [
+    "v1.123.5",
+    "Cache table filters, unify loading states, and stabilize MFL Stats and wait interactions"
+  ],
+  [
+    "v1.123.4",
+    "Make global search authoritative and stabilize Watchlist, table, and Evaluation first paint"
+  ],
+  [
+    "v1.123.3",
+    "Stabilize Database Stats state, MFL Stats summaries, and static page rendering"
+  ],
+  [
+    "v1.123.2",
+    "Restore static application chrome, protected-route first paint, and loading completion"
+  ],
+  [
+    "v1.123.1",
+    "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"
+  ],
+  [
+    "v1.123.0",
+    "Consolidate the post-SQLite application architecture into the first stable v1.123 release"
+  ],
+  [
+    "v1.121.0",
+    "Query the runtime SQLite database for every site data request"
+  ],
+  [
+    "v1.120.4",
+    "Prime Evaluation controls and MFL Stats filters before data loads"
+  ],
+  [
+    "v1.120.3",
+    "Stabilize startup, Evaluation loading, and first-paint Stats rendering"
+  ],
+  [
+    "v1.120.2",
+    "Refresh the Evaluation Discount Rate from live MFL/USD season ratios"
+  ],
+  [
+    "v1.120.1",
+    "Refine Database Stats filtering, tooltips, and Changelog rendering"
+  ],
+  [
+    "v1.120.0",
+    "Add Database Stats with retirement counts and active-player distributions"
+  ]
 ]
