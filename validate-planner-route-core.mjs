@@ -40,6 +40,11 @@ const routes = sandbox.window.__mflAppConfig?.routes;
 invariant(coreSourceByDomain.planner?.source === "planner.js", "Planner must have one canonical lazy route core.");
 invariant(coreSourceByDomain.planner?.runtime === "app-core-planner-runtime.js", "Planner must generate a dedicated route runtime.");
 invariant(routes?.canonicalRequest("/planner")?.pageName === "planner", "Canonical routing must resolve /planner.");
+invariant(
+  routes?.canonicalRequest("/planner/aaaaaaaaaaaaaaaa")?.pageName === "planner"
+    && routes?.canonicalRequest("/planner/aaaaaaaaaaaaaaaa")?.options?.planId === "aaaaaaaaaaaaaaaa",
+  "Canonical pre-bootstrap routing must resolve stable Planner plan URLs as Planner.",
+);
 invariant(routes?.routeShellId("planner") === "plannerPage", "Planner must own plannerPage as its route shell.");
 invariant(routes?.routeShellId("planner",{walletOptedIn:false}) === "myPlayersLockedPage", "Planner must use the opt-in shell before login.");
 invariant(routes?.canonicalRequest("/planner/opted-out")?.pageName === "planner", "Planner must have a canonical opted-out route.");
@@ -270,6 +275,11 @@ invariant(
     && styles.includes(".plannerPlanListRowCurrent{border-color:var(--primary);background:var(--row-hover)}")
     && styles.includes(".plannerPlanListCurrent{display:inline-flex;"),
   "Saved Planner state must disable redundant Save and visibly mark the currently open plan in the Plans library.",
+);
+invariant(
+  planner.includes('history.pushState({},"",plannerStablePlanPath(plan.id));Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();')
+    && planner.includes('if(String(activePlanId)===String(plan.id)){activePlanName=String(data?.plan?.name||next);activePlanPayload=data?.plan?.payload||plan.payload;syncPlanUi();}'),
+  "Opening or renaming the active saved plan must immediately resync its route-aware browser title.",
 );
 invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
 invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
