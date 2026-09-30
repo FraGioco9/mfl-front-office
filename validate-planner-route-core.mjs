@@ -224,13 +224,27 @@ invariant(
 invariant(styles.includes(".plannerRosterTable{width:100%;table-layout:fixed}") && styles.includes(".plannerContractInput"), "Planner roster must own fixed proportional columns and contract input styling.");
 invariant(
   html.includes('id="plannerUndoButton"') && html.includes('id="plannerRedoButton"')
-    && html.includes('id="plannerSquadStatusPrimary"') && html.includes('id="plannerSquadStatusWarnings"')
+    && html.includes('id="plannerSquadStatusPrimary"') && !html.includes('id="plannerSquadStatusWarnings"')
     && planner.includes("function checkpointPlannerHistory(")
+    && planner.includes("function normalizePlannerHistoryLabel(")
+    && planner.includes('button.title=action+" ("+shortcut+")"')
+    && planner.includes('checkpointPlannerHistory({formationOverride:plannerCommittedFormation,label:"formation change"})')
+    && planner.includes('event.ctrlKey&&!event.metaKey')
+    && planner.includes('target?.closest?.("input,textarea,select,[contenteditable=\'true\']")')
+    && planner.includes('const redo=key==="y"||(key==="z"&&event.shiftKey);')
     && planner.includes("function undoPlanner()") && planner.includes("function redoPlanner()")
     && planner.includes("function renderSquadStatus()")
     && planner.includes('Reflect.set(window,"__mflPlannerHighlightPlayer"')
     && styles.includes(".plannerRosterTable tbody tr.plannerRosterRowHighlighted{"),
-  "Planner polish must expose Undo/Redo, compact squad status and Squad↔Depth highlighting.",
+  "Planner polish must expose operation-aware Undo/Redo with keyboard shortcuts, information-only squad status and Squad↔Depth highlighting.",
+);
+invariant(
+  planner.includes('savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty);')
+    && planner.includes('row.classList.toggle("plannerPlanListRowCurrent",isCurrent);')
+    && planner.includes('current.textContent="Current";')
+    && styles.includes(".plannerPlanListRowCurrent{border-color:var(--primary);background:var(--row-hover)}")
+    && styles.includes(".plannerPlanListCurrent{display:inline-flex;"),
+  "Saved Planner state must disable redundant Save and visibly mark the currently open plan in the Plans library.",
 );
 invariant(!html.includes('<th scope="row" colspan="3">Squad totals</th>') && planner.includes('for(let column=0;column<8;column+=1)') && planner.includes('slotCell.className="plannerRosterSlotCell"'), "Slot column must retain eight-cell skeletons and canonical roster rows without a totals footer.");
 invariant(planner.includes('slotBadge.className="plannerRosterSlotBadge"') && planner.includes('slotEmpty.textContent="—"') && html.includes('key.split("#")[0]') && html.includes('badge.hidden = !slot;') && html.includes('empty.hidden = Boolean(slot);'), "Roster slot must show only the active Depth position and clear unassigned/stale slots.");
