@@ -83,8 +83,9 @@ invariant(
     && planner.includes('action("Open plan"')
     && planner.includes('action("Rename plan"')
     && planner.includes('action("Duplicate plan"')
-    && planner.includes('? action("Revoke share"')
-    && planner.includes(': action("Share plan"')
+    && planner.includes('action("Copy share link"')
+    && planner.includes('action("Revoke share"')
+    && planner.includes('action("Share plan"')
     && planner.includes('action("Delete plan"'),
   "Planner saved-plan row actions must stay icon-only, use one contextual Share/Revoke action, and preserve the approved destructive treatment.",
 );
@@ -95,6 +96,16 @@ invariant(
     && !planner.includes("sharePlanButton.title=")
     && planner.includes('const action=revoking?revokePlannerShare():shareCurrentPlan();'),
   "Planner toolbar must reuse one button slot for Share and Revoke based on active share state.",
+);
+invariant(
+  html.includes('id="plannerPlanRevokeModal"')
+    && html.includes('id="plannerPlanRevokeConfirmButton"')
+    && planner.includes("function requestPlannerPlanRevoke(name)")
+    && planner.includes('if(!silent&&!await requestPlannerPlanRevoke(name||activePlanName||"this plan"))return false;')
+    && planner.includes("function copyPlannerShareLink(id)")
+    && planner.includes('await navigator.clipboard.writeText(url);')
+    && planner.includes('action("Copy share link"'),
+  "Planner must confirm user-initiated share revocation and allow copying an existing share link without regenerating it.",
 );
 invariant(
   planner.includes("function plannerFormationLabel(code)")
