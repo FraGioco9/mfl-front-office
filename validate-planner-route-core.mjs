@@ -56,14 +56,14 @@ invariant(
     && html.includes('id="plannerSavePlanButton"')
     && html.includes('id="plannerDuplicatePlanButton"')
     && html.includes('id="plannerSharePlanButton"')
-    && html.includes('id="plannerRevokeShareButton"')
+    && !html.includes('id="plannerRevokeShareButton"')
     && !html.includes('id="plannerSaveAsPlanButton"')
     && !planner.includes("saveAsPlanButton")
     && planner.includes("async function newPlannerPlan()")
     && planner.includes("async function duplicateCurrentPlan()")
     && planner.includes("async function revokePlannerShare(")
     && planner.includes("plannerStablePlanPath("),
-  "Planner must expose New, Save, Duplicate, Share and persistent Revoke actions without restoring redundant Save as UI.",
+  "Planner must expose New, Save, Duplicate and one contextual Share/Revoke action without restoring redundant Save as UI.",
 );
 invariant(
   styles.includes(".plannerPlansModalBody{display:grid;gap:7px;min-height:0;padding:14px 16px;overflow:auto}")
@@ -83,9 +83,17 @@ invariant(
     && planner.includes('action("Open plan"')
     && planner.includes('action("Rename plan"')
     && planner.includes('action("Duplicate plan"')
-    && planner.includes('action("Share plan"')
+    && planner.includes('? action("Revoke share"')
+    && planner.includes(': action("Share plan"')
     && planner.includes('action("Delete plan"'),
-  "Planner saved-plan row actions must stay icon-only and preserve the approved delete treatment while consuming the shared darker destructive hover.",
+  "Planner saved-plan row actions must stay icon-only, use one contextual Share/Revoke action, and preserve the approved destructive treatment.",
+);
+invariant(
+  !planner.includes("revokeShareButton")
+    && planner.includes('sharePlanButton.textContent=shared?"Revoke":"Share";')
+    && planner.includes('sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan")')
+    && planner.includes('const action=revoking?revokePlannerShare():shareCurrentPlan();'),
+  "Planner toolbar must reuse one button slot for Share and Revoke based on active share state.",
 );
 invariant(
   planner.includes("function plannerFormationLabel(code)")
