@@ -1880,7 +1880,7 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
     window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
-if (protectedOptOutRoute(routePageName)) {
+if (protectedOptOutRoute(routePageName, options)) {
   renderProtectedOptOutShell(routePageName);
 }
 
@@ -2414,8 +2414,20 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
-function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+function protectedOptOutRoute(pageName, options = {}) {
+  const normalizedPage = String(pageName || "");
+  if (normalizedPage === "planner") {
+    const explicitPath = String(options.path || options.replaceUrl || "");
+    const publicPlanPath = /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)
+      || /^\/planner\/[a-f0-9]{16}$/i.test(String(window.location.pathname || ""));
+    const shareId = explicitPath.startsWith("/planner?share=")
+      ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
+      : window.location.pathname === "/planner"
+        ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+        : "";
+    if (publicPlanPath || shareId) return false;
+  }
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -2447,7 +2459,7 @@ function renderProtectedOptOutShell(pageName) {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = protectedOptOutRoute(pageName);
+  const lockedOptOutRoute = protectedOptOutRoute(pageName, options);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -8632,7 +8644,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
         if (transition && !navigationTransitionIsCurrent(transition)) return null;
-  if (protectedOptOutRoute(pageName)) {
+  if (protectedOptOutRoute(pageName, incomingOptions)) {
     return renderPage.call(this, pageName, false, {
       ...incomingOptions,
       skipNavigationTransition: true,
