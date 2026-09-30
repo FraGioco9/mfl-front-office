@@ -183,6 +183,22 @@
               </footer>
             </section>
           </div>
+          <div id="plannerPlanRevokeModal" class="modalBackdrop plannerPlanDeleteModalBackdrop plannerPlanRevokeModalBackdrop" hidden>
+            <section class="mflDialog deleteWatchlistDialog plannerPlanDeleteDialog plannerPlanRevokeDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlanRevokeModalTitle">
+              <header class="mflDialogHeader">
+                <h2 id="plannerPlanRevokeModalTitle">Revoke share</h2>
+                <button id="plannerPlanRevokeModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close revoke share dialog"></button>
+              </header>
+              <section class="deleteWatchlistBody plannerPlanDeleteBody plannerPlanRevokeBody">
+                <p>Revoke the share for <strong id="plannerPlanRevokeName">this plan</strong>?</p>
+                <p>The existing link will stop working immediately.</p>
+              </section>
+              <footer class="mflDialogFooter deleteWatchlistFooter plannerPlanDeleteFooter plannerPlanRevokeFooter">
+                <button id="plannerPlanRevokeCancelButton" type="button">Cancel</button>
+                <button id="plannerPlanRevokeConfirmButton" class="deleteWatchlistConfirmButton plannerPlanDeleteConfirmButton plannerPlanRevokeConfirmButton" type="button">Revoke</button>
+              </footer>
+            </section>
+          </div>
           <div id="plannerPlansModal" class="modalBackdrop plannerPlansModalBackdrop" hidden>
             <section class="mflDialog plannerPlansDialog" role="dialog" aria-modal="true" aria-labelledby="plannerPlansModalTitle">
               <header class="mflDialogHeader">
