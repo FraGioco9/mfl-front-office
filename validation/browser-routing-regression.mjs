@@ -3105,7 +3105,7 @@ async function waitForBrowserRegression(cdp) {
     const evaluation = await cdp.send("Runtime.evaluate", {
       expression: '(() => { const el = document.querySelector("#mflBrowserRoutingRegression"); return el ? { status: el.dataset.status || "", detail: el.textContent || "" } : null; })()',
       returnByValue: true,
-    }, 30_000);
+    });
     const value = evaluation?.result?.value;
     if (value?.status === "passed") return value;
     if (value?.status === "failed") throw new Error(`Browser routing regression failed: ${value.detail}`);
