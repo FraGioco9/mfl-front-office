@@ -1994,6 +1994,7 @@ const browserTestSource = String.raw`(() => {
       assert(localStorage.getItem("mfl-planner-formation-v1:9001") === "4231", "Rendering position slots must not alter the club's saved formation.");
       }
       if (!plannerBrowserFocused || plannerBrowserPhase === "squad") {
+      if (plannerBrowserFocused) progress("planner-squad: starting roster and modal checks");
       await waitFor(() => document.querySelector("#plannerRosterBody tr[data-player-id]"), "Planner current roster");
       assert(text("#plannerRosterBody td:nth-child(3)").includes("Browser Player"), "Planner must display the canonical current squad.");
       assert(text("#plannerRosterBody tr[data-player-id] td:nth-child(5)") === "23", "Planner must show player age.");
@@ -2211,6 +2212,7 @@ const browserTestSource = String.raw`(() => {
       // Clickable starters and backup lists use the same roster-derived depth source.
       let slot, depthIndicator, fillButton, clearButton, depthPicker;
       if (!plannerBrowserFocused || plannerBrowserPhase === "depth-picker") {
+      if (plannerBrowserFocused) progress("planner-depth-picker: starting depth interaction checks");
       const fixture = [
         ...[91,88,85,83,80,76].map((overall,index) => ({player_id:101+index,name:index===2?"Marco De Rossi":"CB "+overall,nationality:index===2?"Italy":"",positions:"CB",overall,retirement_years:5})),
         {player_id:107,name:"ST 93",positions:"ST",overall:93,retirement_years:5},
@@ -2450,6 +2452,7 @@ const browserTestSource = String.raw`(() => {
       }
       if (!plannerBrowserFocused || plannerBrowserPhase === "depth-ranking") {
         if (plannerBrowserFocused) {
+          progress("planner-depth-ranking: starting ranking and auto-fill checks");
           slot = key => document.querySelector('#plannerFormationPositions .plannerFormationSpot[data-slot-key="' + key + '"]');
           depthIndicator = key => slot(key)?.querySelector(".plannerFormationDepthBadge");
           fillButton = document.getElementById("plannerAutoFillDepthButton");
