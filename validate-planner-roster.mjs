@@ -412,9 +412,9 @@ await cachedPlanPromise;
 assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Cached Club display data must restore the team identity.");
 
 // Direct ?club=/route entry must use that same exact cached Club identity instead of searching for it again.
-await route.render({ clubId: "" }, false);
+await route.render(false, { clubId: "" });
 const requestsBeforeDirectCachedClub = requests.length;
-const directCachedClubPromise = route.render({ clubId: "9001" }, false);
+const directCachedClubPromise = route.render(false, { clubId: "9001" });
 await tick();
 assert.equal(requests.length, requestsBeforeDirectCachedClub + 1, "Direct cached Club entry must issue only the roster request.");
 const directCachedClubQuery = new URL(requests.at(-1).url, "https://example.test").searchParams;
