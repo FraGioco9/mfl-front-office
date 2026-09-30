@@ -56,7 +56,6 @@
   const savePlanButton=document.getElementById("plannerSavePlanButton");
   const duplicatePlanButton=document.getElementById("plannerDuplicatePlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
-  const revokeShareButton=document.getElementById("plannerRevokeShareButton");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
   const copySharedPlanButton=document.getElementById("plannerCopySharedPlanButton");
@@ -1148,11 +1147,13 @@
     if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn;
     if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId;
     if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
-    if(sharePlanButton instanceof HTMLButtonElement)sharePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
-    if(revokeShareButton instanceof HTMLButtonElement){
-      const canRevoke=optedIn&&!plannerReadOnly&&Boolean(activeShareId);
-      revokeShareButton.hidden=!canRevoke;
-      revokeShareButton.disabled=!canRevoke;
+    if(sharePlanButton instanceof HTMLButtonElement){
+      const canManageShare=optedIn&&!plannerReadOnly&&Boolean(selectedTeamId);
+      const shared=Boolean(activeShareId);
+      sharePlanButton.disabled=!canManageShare;
+      sharePlanButton.textContent=shared?"Revoke":"Share";
+      sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan");
+      sharePlanButton.title=shared?"Revoke share":"Share plan";
     }
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
@@ -1376,9 +1377,11 @@
         action("Open plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',async()=>{if(!confirmPlannerDiscard())return;closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});activeShareId=String(linkedShare?.id||"");syncPlanUi();history.pushState({},"",plannerStablePlanPath(plan.id));}),
         action("Rename plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>',async()=>{const next=await requestPlannerPlanName(plan.name,"Rename plan");if(!next)return;await savePlannerPayload(plan.payload,next,{savedId:plan.id});await openPlansModal();}),
         action("Duplicate plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>',async()=>{const next=await requestPlannerPlanName(String(plan.name||"Plan")+" copy","Duplicate plan");if(!next)return;await savePlannerPayload(plan.payload,next);await openPlansModal();}),
-        action("Share plan",'<svg viewBox="1.8 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>',async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload,{sourcePlanId:plan.id});await openPlansModal();}),
       ];
-      if(linkedShare)actionButtons.push(action("Revoke share",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8l8 8"></path><path d="M16 8l-8 8"></path><path d="M4 12h2"></path><path d="M18 12h2"></path></svg>',async()=>{await revokePlannerShare(linkedShare.id);await openPlansModal();},{danger:true}));
+      actionButtons.push(linkedShare
+        ? action("Revoke share",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8l8 8"></path><path d="M16 8l-8 8"></path><path d="M4 12h2"></path><path d="M18 12h2"></path></svg>',async()=>{await revokePlannerShare(linkedShare.id);await openPlansModal();},{danger:true})
+        : action("Share plan",'<svg viewBox="1.8 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>',async()=>{await createPlannerShare(String(plan.name||"Plan"),plan.payload,{sourcePlanId:plan.id});await openPlansModal();})
+      );
       actionButtons.push(action("Delete plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',async()=>{if(!await requestPlannerPlanDelete(plan.name))return;if(linkedShare)await revokePlannerShare(linkedShare.id,{silent:true});await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(plan.id),{method:"DELETE"});if(activePlanId===String(plan.id)){activePlanId="";activePlanName="";activePlanPayload=null;activeShareId="";loadedPlanRouteIdentity="";history.replaceState({},"",selectedTeamId?"/planner?club="+encodeURIComponent(selectedTeamId):"/planner");syncPlanUi();}await openPlansModal();},{danger:true}));
       actions.append(...actionButtons);
       row.append(main,actions);fragment.appendChild(row);
@@ -1513,8 +1516,11 @@
   newPlanButton?.addEventListener("click",()=>void newPlannerPlan().catch(error=>setStatus(error?.message||"Could not create a new plan.")));
   savePlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:!activePlanId}).catch(error=>setStatus(error?.message||"Could not save plan.")));
   duplicatePlanButton?.addEventListener("click",()=>void duplicateCurrentPlan().catch(error=>setStatus(error?.message||"Could not duplicate plan.")));
-  sharePlanButton?.addEventListener("click",()=>void shareCurrentPlan().catch(error=>setStatus(error?.message||"Could not share plan.")));
-  revokeShareButton?.addEventListener("click",()=>void revokePlannerShare().catch(error=>setStatus(error?.message||"Could not revoke share.")));
+  sharePlanButton?.addEventListener("click",()=>{
+    const revoking=Boolean(activeShareId);
+    const action=revoking?revokePlannerShare():shareCurrentPlan();
+    void Promise.resolve(action).catch(error=>setStatus(error?.message||(revoking?"Could not revoke share.":"Could not share plan.")));
+  });
   undoButton?.addEventListener("click",undoPlanner);
   redoButton?.addEventListener("click",redoPlanner);
   document.addEventListener("keydown",event=>{
