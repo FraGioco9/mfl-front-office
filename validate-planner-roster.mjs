@@ -411,4 +411,17 @@ await complete(requests.at(-1), {
 await cachedPlanPromise;
 assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Cached Club display data must restore the team identity.");
 
+// Direct ?club=/route entry must use that same exact cached Club identity instead of searching for it again.
+await route.render({ clubId: "" }, false);
+const requestsBeforeDirectCachedClub = requests.length;
+const directCachedClubPromise = route.render({ clubId: "9001" }, false);
+await tick();
+assert.equal(requests.length, requestsBeforeDirectCachedClub + 1, "Direct cached Club entry must issue only the roster request.");
+const directCachedClubQuery = new URL(requests.at(-1).url, "https://example.test").searchParams;
+assert.equal(directCachedClubQuery.get("scope"), "club", "Direct cached Club entry must load the canonical roster immediately.");
+assert.equal(directCachedClubQuery.get("clubId"), "9001");
+await complete(requests.at(-1));
+await directCachedClubPromise;
+assert.equal(elements.get("plannerTeamName").textContent, "First Club", "Direct cached Club entry must reuse cached display identity.");
+
 console.log("Planner roster: slot/position sorting, preserved controls, contracts, staged multi-add, table search, limits, removal, stale responses, Clear, empty state, retry, retirement-safe restore and cached Club reuse passed.");
