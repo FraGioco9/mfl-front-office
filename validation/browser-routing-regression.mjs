@@ -3122,7 +3122,56 @@ async function waitForPageTarget(port, targetUrl) {
   throw new Error("Chrome debugging target did not become ready.");
 }
 
-async function waitForBrowserRegression() {
+async function connectCdp(webSocketUrl) {
+  const WebSocketConstructor = globalThis.WebSocket;
+  if (typeof WebSocketConstructor !== "function") {
+    throw new Error("Node runtime does not expose WebSocket for Chrome DevTools Protocol.");
+  }
+  const socket = new WebSocketConstructor(webSocketUrl);
+  await new Promise((resolvePromise, rejectPromise) => {
+    socket.addEventListener("open", resolvePromise, { once: true });
+    socket.addEventListener("error", rejectPromise, { once: true });
+  });
+
+  let sequence = 0;
+  const pending = new Map();
+  socket.addEventListener("message", (event) => {
+    const message = JSON.parse(String(event.data));
+    if (!message?.id || !pending.has(message.id)) return;
+    const { resolve: resolvePromise, reject: rejectPromise, timer } = pending.get(message.id);
+    pending.delete(message.id);
+    clearTimeout(timer);
+    if (message.error) rejectPromise(new Error(JSON.stringify(message.error)));
+    else resolvePromise(message.result || {});
+  });
+
+  function send(method, params = {}, timeoutMs = 10_000) {
+    const id = ++sequence;
+    return new Promise((resolvePromise, rejectPromise) => {
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        rejectPromise(new Error(`Chrome DevTools request timed out: ${method}`));
+      }, timeoutMs);
+      pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
+      try {
+        socket.send(JSON.stringify({ id, method, params }));
+      } catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        rejectPromise(error);
+      }
+    });
+  }
+
+  return {
+    send,
+    close() {
+      socket.close();
+    },
+  };
+}
+
+async function waitForBrowserRegression(cdp) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const value = browserRegressionResult;
@@ -3151,13 +3200,17 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => { stderr += chunk; });
 
+  let cdp = null;
   try {
     browserRegressionResult = null;
-    await waitForPageTarget(debuggingPort, url);
-    return await waitForBrowserRegression();
+    const target = await waitForPageTarget(debuggingPort, url);
+    cdp = await connectCdp(target.webSocketDebuggerUrl);
+    await cdp.send("Runtime.enable");
+    return await waitForBrowserRegression(cdp);
   } catch (error) {
     throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
   } finally {
+    cdp?.close();
     if (child.exitCode === null) {
       await new Promise((resolvePromise) => {
         child.once("close", resolvePromise);
