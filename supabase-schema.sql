@@ -98,7 +98,7 @@ create table if not exists public.planner_shares (
 create index if not exists planner_shares_expires_at_idx on public.planner_shares (expires_at);
 alter table public.planner_shares add column if not exists source_plan_id text;
 create index if not exists planner_shares_wallet_active_idx on public.planner_shares (wallet_address, expires_at);
-create index if not exists planner_shares_wallet_source_idx on public.planner_shares (wallet_address, source_plan_id, expires_at);
+create unique index if not exists planner_shares_wallet_source_idx on public.planner_shares (wallet_address, source_plan_id);
 
 alter table public.planner_plans enable row level security;
 alter table public.planner_shares enable row level security;

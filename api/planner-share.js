@@ -58,16 +58,15 @@ module.exports = async function handler(request, response) {
           response.status(404).json({ error: "Saved plan not found." });
           return;
         }
-        await supabaseRequest(`planner_shares?wallet_address=eq.${encodeURIComponent(wallet)}&source_plan_id=eq.${encodeURIComponent(sourcePlanId)}`, {
-          method: "DELETE",
-          headers: { Prefer: "return=minimal" },
-        });
       }
       const id = generatePlannerId();
       const expiresAt = shareExpiresAt();
-      const rows = await supabaseRequest("planner_shares", {
+      const sharePath = sourcePlanId
+        ? "planner_shares?on_conflict=wallet_address,source_plan_id"
+        : "planner_shares";
+      const rows = await supabaseRequest(sharePath, {
         method: "POST",
-        headers: { Prefer: "return=representation" },
+        headers: { Prefer: sourcePlanId ? "resolution=merge-duplicates,return=representation" : "return=representation" },
         body: JSON.stringify([{ id, wallet_address: wallet, source_plan_id: sourcePlanId || null, club_id: payload.clubId, name, payload, expires_at: expiresAt }]),
       });
       response.status(200).json({ share: responseShare(Array.isArray(rows) ? rows[0] : { id, name, source_plan_id: sourcePlanId || null, club_id: payload.clubId, payload, expires_at: expiresAt }, { owner: true }) });

@@ -49,13 +49,14 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930125208_planner_share_source_plan.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20260930163500_planner_share_unique_source.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
@@ -92,6 +93,14 @@ assert(shareApi.includes("expires_at=gt.") && !shareApi.includes("select=id,name
 assert(shareSourceMigration.includes("add column if not exists source_plan_id text")
   && shareSourceMigration.includes("planner_shares_wallet_source_idx")
   && schema.includes("source_plan_id text"));
+assert(shareUniqueSourceMigration.includes("row_number() over")
+  && shareUniqueSourceMigration.includes("drop index if exists public.planner_shares_wallet_source_idx")
+  && shareUniqueSourceMigration.includes("create unique index planner_shares_wallet_source_idx")
+  && shareUniqueSourceMigration.includes("(wallet_address, source_plan_id)"));
+assert(schema.includes("create unique index if not exists planner_shares_wallet_source_idx on public.planner_shares (wallet_address, source_plan_id);"));
+assert(shareApi.includes('"planner_shares?on_conflict=wallet_address,source_plan_id"')
+  && shareApi.includes('"resolution=merge-duplicates,return=representation"')
+  && !shareApi.includes('planner_shares?wallet_address=eq.${encodeURIComponent(wallet)}&source_plan_id=eq.${encodeURIComponent(sourcePlanId)}'));
 assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_shares`")
   && docs.includes("owners can explicitly revoke a share by ID"));
 assert(docs.includes("without opting in") && docs.includes("current packaged database"));
