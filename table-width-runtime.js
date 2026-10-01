@@ -206,7 +206,7 @@
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
     if (pageSegment === "planner") {
       if (segments.length === 1) return requestResult(path, "planner", {}, "/planner");
-      if (segments.length === 2 && /^[a-f0-9]{16}$/i.test(String(segments[1] || ""))) {
+      if (segments.length === 2 && /^(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(String(segments[1] || ""))) {
         const planId = String(segments[1] || "").toLowerCase();
         return requestResult(path, "planner", { planId }, "/planner/" + encodeURIComponent(planId));
       }
