@@ -4,7 +4,8 @@ const DEFAULT_EVALUATION_MFL_PER_USD = 400;
 const DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES = Object.freeze([80, 80, 60]);
 
 function normalizeEvaluationId(value) {
-  return String(value || "").trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 8);
+  const id = String(value || "").trim();
+  return /^[a-zA-Z0-9]{1,8}$/.test(id) ? id : "";
 }
 
 function generateEvaluationId() {
