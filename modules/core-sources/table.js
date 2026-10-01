@@ -2345,6 +2345,52 @@ function tableEmptyStateMessage(pageName = state.currentPage, sourceRowsCount = 
   return hasSourceRows ? "No players match the current filters." : "No players found.";
 }
 
+
+function tableHasResettableFilters() {
+  // A confirmed zero-result state can be caused by advanced rules or quick filters.
+  // This must not reset sorting, saved view, page size or the selected watchlist.
+  return activeFilterCount() > 0
+    || Boolean(hideRetiredInput?.checked)
+    || Boolean(hideRetiringInput?.checked)
+    || Boolean(hideMflPlayersInput?.checked && state.currentPage === "database")
+    || Boolean(packablePlayersInput?.checked && state.currentPage === "mfl")
+    || Boolean(newMintsInput?.checked);
+}
+
+function tableCanClearFiltersFromEmptyState() {
+  return state.currentPage !== "club"
+    && Number(state.tableSourceRowsCount || 0) > 0
+    && tableHasResettableFilters();
+}
+
+function tableClearFiltersFromEmptyState() {
+  if (!tableCanClearFiltersFromEmptyState()) return false;
+  // Keep the route's existing URL, persistence and incremental-load owners.
+  // All filter families must be cleared or a quick filter may leave it empty.
+  tableClearAdvancedFiltersOwner(false);
+  for (const control of [hideRetiredInput, hideRetiringInput, hideMflPlayersInput, packablePlayersInput, newMintsInput]) {
+    if (control) control.checked = false;
+  }
+  state.page = 1;
+  emptyState.hidden = true;
+  applyFilters();
+  return true;
+}
+
+function tableRenderEmptyFilterAction() {
+  if (!tableCanClearFiltersFromEmptyState()) return;
+  const clear = document.createElement("button");
+  clear.id = "tableEmptyClearFiltersButton";
+  clear.type = "button";
+  clear.className = "compactButton";
+  clear.textContent = "Clear filters";
+  clear.addEventListener("click", () => {
+    clear.disabled = true;
+    tableClearFiltersFromEmptyState();
+  });
+  emptyState.appendChild(clear);
+}
+
 function appliedTableFilterSignature(rules) {
   return JSON.stringify([
     state.currentPage,
