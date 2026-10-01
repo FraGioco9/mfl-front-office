@@ -11,6 +11,7 @@ const validators = [
   "validate-vercel-security-headers.mjs",
   "validate-csp-legacy-script-hashes.mjs",
   "validate-csp-next-nonce.mjs",
+  "validate-csp-legacy-eval-elimination.mjs",
   "validate-wallet-permission-cache.mjs",
   "validate-data-read-cache-policy.mjs",
   "validate-public-page-cache-policy.mjs",
