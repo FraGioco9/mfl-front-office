@@ -5,7 +5,8 @@ const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { sendPlannerPersistenceUnavailable } = require("./_planner-persistence");
 const {
   normalizePlannerId,
-  generatePlannerId,
+  normalizePlannerShareId,
+  generatePlannerShareId,
   normalizePlannerName,
   normalizePlannerPayload,
 } = require("./_planner-payload");
@@ -61,7 +62,7 @@ module.exports = async function handler(request, response) {
           return;
         }
       }
-      const id = generatePlannerId();
+      const id = generatePlannerShareId();
       const expiresAt = shareExpiresAt();
       const sharePath = sourcePlanId
         ? "planner_shares?on_conflict=wallet_address,source_plan_id"
@@ -77,7 +78,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "GET") {
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizePlannerId(requestUrl.searchParams.get("id"));
+      const id = normalizePlannerShareId(requestUrl.searchParams.get("id"));
       const owned = requestUrl.searchParams.get("owned") === "1";
       if (owned) {
         const wallet = await signedWalletFromRequest(request);
@@ -110,7 +111,7 @@ module.exports = async function handler(request, response) {
         return;
       }
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizePlannerId(requestUrl.searchParams.get("id"));
+      const id = normalizePlannerShareId(requestUrl.searchParams.get("id"));
       if (!id) {
         response.status(400).json({ error: "Missing share id." });
         return;
