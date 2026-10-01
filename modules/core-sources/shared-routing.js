@@ -287,7 +287,7 @@ function pageTargetFromPath(path) {
     };
   }
 
-  const plannerPlanMatch = cleanPath.match(/^\/planner\/([a-f0-9]{16})$/i);
+  const plannerPlanMatch = cleanPath.match(/^\/planner\/((?:[a-f0-9]{16}|[a-f0-9]{32}))$/i);
   if (cleanPath === "/planner" || plannerPlanMatch) {
     const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
     const legacyShareId = String(params.get("share") || "").trim();
@@ -484,12 +484,12 @@ function pageTargetFromPath(path) {
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
     const explicitPath = String(options.path || "");
-    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?") || /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)) {
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?") || /^\/planner\/(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(explicitPath)) {
       return explicitPath;
     }
     const requestedPlanId = String(options.planId || "").trim().toLowerCase();
-    if (/^[a-f0-9]{16}$/.test(requestedPlanId)) return `/planner/${encodeURIComponent(requestedPlanId)}`;
-    const currentPlanMatch = String(window.location.pathname || "").match(/^\/planner\/([a-f0-9]{16})$/i);
+    if (/^(?:[a-f0-9]{16}|[a-f0-9]{32})$/.test(requestedPlanId)) return `/planner/${encodeURIComponent(requestedPlanId)}`;
+    const currentPlanMatch = String(window.location.pathname || "").match(/^\/planner\/((?:[a-f0-9]{16}|[a-f0-9]{32}))$/i);
     if (currentPlanMatch) return `/planner/${encodeURIComponent(currentPlanMatch[1].toLowerCase())}`;
     const currentShare = window.location.pathname === "/planner"
       ? String(new URLSearchParams(window.location.search).get("share") || "").trim().toLowerCase()
