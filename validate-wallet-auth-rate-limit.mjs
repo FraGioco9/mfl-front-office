@@ -10,7 +10,7 @@ const {
 } = require("./api/_wallet-rate-limit.js");
 const { createWalletSessionHandler } = require("./api/wallet-session.js");
 
-const source = await readFile(new URL("./supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql", import.meta.url), "utf8");
+const source = await readFile(new URL("./supabase/migrations/20261001155224_wallet_auth_distributed_rate_limit.sql", import.meta.url), "utf8");
 const schema = await readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8");
 for (const sql of [source, schema]) {
   assert.match(sql, /create table if not exists public.wallet_auth_rate_limits/);
