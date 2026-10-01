@@ -16,6 +16,8 @@ The 1 October 2026 **read-only production audit** found **12 public application 
 
 Six legacy tables nevertheless had explicit broad grants to `anon` and `authenticated` (including `TRUNCATE`): `evaluation_saves`, `evaluation_shares`, `mfl_season_ratios`, `wallet_opt_ins`, `wallet_permissions`, `wallet_preferences`. The six newer tables already lacked those grants: `bug_reports`, `planner_plans`, `planner_shares`, `wallet_auth_consumed_challenges`, `wallet_auth_rate_limits`, `wallet_auth_sessions`. With zero client policies, those roles could not read or modify rows through RLS, but removing the table grants provides another protection layer against future policy changes. The live trigger `public.set_updated_at()` also retained `EXECUTE` granted to `PUBLIC`, `anon` and `authenticated`; seven other application functions already had server-only execution grants. No public-schema sequences or views were found.
 
+Storage was also checked read-only: the only storage bucket is `mfl-runtime`, it is **private** (`public=false`), and `storage.objects` has no RLS policies. `anon`/`authenticated` have normal schema `USAGE` privileges on `public` and `storage`, which are not sufficient to bypass table/object permissions. Do not revoke shared `storage` schema access or change Storage's built-in grants to fix the application's table grants.
+
 The staged `supabase/migrations/20261001172000_restrict_application_grants.sql`:
 - revokes all direct table privileges from `PUBLIC`, `anon`, and `authenticated` for **all 12** application tables;
 - explicitly preserves server-side `SELECT/INSERT/UPDATE/DELETE` grants on each table;
