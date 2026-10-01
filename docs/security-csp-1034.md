@@ -165,6 +165,45 @@ Rollback phase 2b by removing the opt-in flag, then (if necessary)
 reverting `proxy.js`, the `_document` nonce handoff, and shared
 policy helper. No database migration or auth-state change is involved.
 
+## Production deployment header repair (01 October 2026)
+
+The protected deploy run
+[#36891193610](https://github.com/FraGioco9/mfl-front-office/actions/runs/36891193610)
+**successfully built and published** `94304240`, then failed its
+live-header gate. Follow-up read-only diagnostics from a GitHub-hosted
+runner proved that the deployed **homepage, `/index.html`, deep-link
+HTML and `/api/csp-report` all omitted** `Content-Security-Policy`,
+`Content-Security-Policy-Report-Only`, `Reporting-Endpoints`
+and `X-Frame-Options`. The API endpoint itself returned the expected
+405 for a GET, confirming the route adapter was deployed.
+
+In this prebuilt Vercel CLI deployment arrangement, the
+`next.config.mjs` `headers()` configuration was **not reaching the
+Vercel edge** for static/rewritten routes. The correct fix is to publish
+the **same** existing policy as a global `vercel.json` header rule,
+`source: "/(.*)"`, which applies to pages, static files, and API
+responses. No script restrictions are added to the enforced CSP.
+The 12 reviewed legacy hashes, report-uri and report-to remain in
+the **Report-Only** header.
+
+The checked-in `vercel.json` is derived using
+`node scripts/workflows/sync-vercel-security-headers.mjs --write`
+and verified without modification using
+`node scripts/workflows/sync-vercel-security-headers.mjs`.
+The standard repository validator and the protected Vercel build
+reject drift between those edge headers and the canonical
+`next.config.mjs` + `csp-report-only-policy.mjs` values.
+
+**Rollout:** Once the fix is squash-merged and all CI green,
+rerun the protected [Vercel site update](https://github.com/FraGioco9/mfl-front-office/actions/workflows/vercel-site-update.yml)
+on the latest `main`. Its post-deploy verifier rejects absent
+enforced/Report-Only CSP, missing frame protection, missing report
+endpoint, mismatched commit/database, and broken canonical HTML.
+Monitor the first-party sanitized report logs and manually test real
+Dapper auth afterwards. **Do not** turn on
+`MFL_CSP_NONCE_REPORT_ONLY` before evaluating interaction between
+a request-scoped proxy CSP and Vercel's global edge header.
+
 ## Phase 2c (01 October 2026): wire the CSP receiver into production
 
 **Deployment verification found a routing gap.** The phase-1 report
