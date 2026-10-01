@@ -598,7 +598,7 @@
   function installRestoreBridge() {
     if (destroyed || restoreBridgeInstalled) return restoreBridgeInstalled;
     try {
-      restoreBridgeInstalled = Boolean(window.eval(`(() => {
+      restoreBridgeInstalled = Boolean((() => {
         if (typeof restoreSavedTableState !== "function") return false;
         if (restoreSavedTableState.__mflMobilePageSize) return true;
         const originalRestoreSavedTableState = restoreSavedTableState;
@@ -615,7 +615,7 @@
         Object.defineProperty(restoreWithMobilePageSize, "__mflMobilePageSize", { value: true });
         restoreSavedTableState = restoreWithMobilePageSize;
         return true;
-      })()`));
+      })());
     } catch (error) {
       console.warn("Could not install mobile table page-size bridge.", error);
       restoreBridgeInstalled = false;
