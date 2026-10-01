@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { expectedVercelSecurityHeaders, syncVercelSecurityHeaders } from "./scripts/workflows/sync-vercel-security-headers.mjs";
 import { securityHeaders, cspReportOnly, cspReportOnlyHeaders } from "./next.config.mjs";
+import { verifyPrebuiltSecurityHeaders } from "./scripts/workflows/verify-prebuilt-security-headers.mjs";
 
 const source = readFileSync(new URL("./vercel.json", import.meta.url), "utf8");
 const config = JSON.parse(source);
@@ -33,4 +34,19 @@ assert.ok(!observed.includes("'nonce-"), "Per-request nonces do not belong in a 
 assert.equal(headerMap.get("reporting-endpoints"), 'mfl-csp="/api/csp-report"');
 assert.equal(headerMap.get("x-frame-options"), "DENY");
 assert.equal(headerMap.get("x-content-type-options"), "nosniff");
+const syntheticRoutes = {
+  version: 3,
+  routes: [{
+    src: "^/(.*)$",
+    headers: Object.fromEntries(headers.map(({ key, value }) => [key, value])),
+    continue: true,
+  }],
+};
+assert.equal(verifyPrebuiltSecurityHeaders(syntheticRoutes), 4);
+assert.throws(() => verifyPrebuiltSecurityHeaders({ ...syntheticRoutes, routes: [] }), /No prebuilt header route/);
+assert.throws(() => verifyPrebuiltSecurityHeaders({
+  ...syntheticRoutes,
+  routes: [{ ...syntheticRoutes.routes[0], headers: { "Content-Security-Policy": enforced } }],
+}), /lacks matching/);
+
 console.log("Vercel edge security headers match Next CSP exactly: enforced, report-only and five core headers, all routes.");
