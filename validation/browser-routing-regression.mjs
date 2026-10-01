@@ -116,7 +116,6 @@ function rowForColumns(columns) {
 }
 
 let browserRegressionResult = null;
-let ux02HomeFailedOnce = false;
 let ux02TypedSearchFailedOnce = false;
 
 const browserTestSource = String.raw`(() => {
@@ -166,6 +165,11 @@ const browserTestSource = String.raw`(() => {
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
+  let ux02HomeRetryClicked = false;
+  document.addEventListener("click", (event) => {
+    if (scenario === "ux02-home-retry" && event.target instanceof Element
+      && event.target.closest("#homeSummaryRetryButton")) ux02HomeRetryClicked = true;
+  }, true);
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const requestUrl = new URL(typeof input === "string" ? input : input.url, window.location.origin);
@@ -175,6 +179,7 @@ const browserTestSource = String.raw`(() => {
     if (!scenario.startsWith("ux02-") && !["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
+    if (scenario === "ux02-home-retry" && ux02HomeRetryClicked) headers.set("x-browser-ux02-retry", "1");
     return originalFetch(input, { ...init, headers });
   };
 
@@ -3126,8 +3131,7 @@ async function createRegressionServer() {
         return;
       }
       if (ux02Scenario === "ux02-home-retry" && ux02Mode === "bootstrap") {
-        if (!ux02HomeFailedOnce) {
-          ux02HomeFailedOnce = true;
+        if (request.headers["x-browser-ux02-retry"] !== "1") {
           writeJson(response, { error: "Fixture bootstrap unavailable" }, 503);
         } else {
           const responseData = dataStub(url);
