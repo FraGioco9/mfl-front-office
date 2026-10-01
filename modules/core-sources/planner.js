@@ -55,7 +55,7 @@
   const savePlanButton=document.getElementById("plannerSavePlanButton");
   const duplicatePlanButton=document.getElementById("plannerDuplicatePlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
-  const planActions=document.querySelector("#plannerPlanBar .plannerPlanActions");
+  const planActions=document.getElementById("plannerPlanBar");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
   const copySharedPlanButton=document.getElementById("plannerCopySharedPlanButton");
