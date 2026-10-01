@@ -5,7 +5,7 @@
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
     : (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
-  const RELEASES_URL = assetUrl("releases.json");
+  const RELEASES_URL = assetUrl("api/releases");
   const expandedMinors = new Set();
 
   document.querySelectorAll(".changelogMinorSection.is-expanded .changelogMinorVersion").forEach((label) => {

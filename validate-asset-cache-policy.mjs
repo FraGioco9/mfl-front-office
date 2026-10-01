@@ -51,7 +51,7 @@ for (const [name, headers] of [
   ["development", developmentHeaders],
   ["production", productionHeaders],
 ]) {
-  for (const source of ["/", "/index.html", "/release.json", "/releases.json"]) {
+  for (const source of ["/", "/index.html", "/release.json"]) {
     invariant(
       cacheControl(headerRule(headers, source)) === "no-store, max-age=0",
       `${name} ${source} must remain uncached so route shell and release metadata are always current.`,
