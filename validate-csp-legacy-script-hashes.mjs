@@ -7,7 +7,7 @@ import { cspLegacyScriptHashes, inlineLegacyScripts, scriptHash, scriptHashesFro
 import { cspReportOnly, cspScriptSources, securityHeaders, createNextHeaders } from "./next.config.mjs";
 
 const require = createRequire(import.meta.url);
-const parse = require("html-react-parser");
+const parse = require("html-react-parser").default;
 const source = await readFile(new URL("./index.html", import.meta.url), "utf8");
 const scripts = inlineLegacyScripts(source);
 
