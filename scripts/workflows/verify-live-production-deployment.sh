@@ -5,6 +5,7 @@ python - <<'PY'
 import json
 import os
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -49,12 +50,54 @@ def verify_route(path: str, token: str) -> None:
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
-        content_type = str(response.headers.get("Content-Type", "")).lower()
+        headers = response.headers
+        content_type = str(headers.get("Content-Type", "")).lower()
         body = response.read().decode("utf-8", errors="replace")
+    enforced = str(headers.get("Content-Security-Policy", ""))
+    reported = str(headers.get("Content-Security-Policy-Report-Only", ""))
+    if enforced != "frame-ancestors 'none'; base-uri 'self'; object-src 'none'":
+        raise RuntimeError(f"{path} did not preserve the required enforced CSP")
+    if "report-uri /api/csp-report" not in reported or "script-src " not in reported:
+        raise RuntimeError(f"{path} did not deliver the CSP Report-Only policy")
+    if str(headers.get("Reporting-Endpoints", "")) != 'mfl-csp="/api/csp-report"':
+        raise RuntimeError(f"{path} did not advertise the reporting endpoint")
     if "text/html" not in content_type:
         raise RuntimeError(f"{path} returned non-HTML content type {content_type!r}")
     if 'id="appShell"' not in body:
         raise RuntimeError(f"{path} did not return the canonical application shell")
+
+
+
+def verify_csp_receiver(token: str) -> None:
+    endpoint = cache_busted(base_url + "/api/csp-report", token)
+    request = urllib.request.Request(endpoint, headers={"Cache-Control": "no-cache, no-store"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raise RuntimeError(f"CSP GET unexpectedly returned {response.status}; expected 405")
+    except urllib.error.HTTPError as error:
+        if error.code != 405:
+            raise RuntimeError(f"CSP GET returned {error.code}; expected 405") from error
+        if str(error.headers.get("Allow", "")).strip() != "POST":
+            raise RuntimeError("CSP report endpoint is not POST-only")
+
+    # Empty valid payloads exercise the public receiver without creating
+    # synthetic violation telemetry or persisting user data.
+    for content_type, payload in [
+        ("application/csp-report", b"{}"),
+        ("application/reports+json", b"[]"),
+    ]:
+        post = urllib.request.Request(
+            endpoint,
+            data=payload,
+            method="POST",
+            headers={"Content-Type": content_type, "Cache-Control": "no-cache, no-store"},
+        )
+        with urllib.request.urlopen(post, timeout=30) as response:
+            if response.status != 204:
+                raise RuntimeError(f"CSP {content_type} returned {response.status}; expected 204")
+            if "no-store" not in str(response.headers.get("Cache-Control", "")):
+                raise RuntimeError("CSP report response must disable caching")
+
 
 
 for attempt in range(1, 13):
@@ -94,6 +137,7 @@ for attempt in range(1, 13):
 
         for index, route in enumerate(routes, start=1):
             verify_route(route, f"{token}-route-{index}")
+        verify_csp_receiver(f"{token}-csp")
 
         commit_note = (
             f"commit {expected['siteCommit']}"
@@ -104,7 +148,8 @@ for attempt in range(1, 13):
             "Live production deployment verified: "
             f"{commit_note}, v{expected['version']}, "
             f"generatedAt {expected_database['generatedAt']}; "
-            f"{len(routes)} representative routes returned the canonical shell."
+            f"{len(routes)} representative routes returned the canonical shell; "
+            "CSP headers and both report formats verified."
         )
         raise SystemExit(0)
     except Exception as error:
