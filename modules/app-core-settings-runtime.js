@@ -189,11 +189,20 @@ async function saveSettingsDraft() {
   state.settingsSaveInFlight = true;
   savePendingSettingsLocally(payload);
   updateSettingsEmailDraftActions();
-  await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
+  let failed = false;
+  try {
+    await saveWalletPreferencesNow({ domains: ["settings"], includeSettings: true });
+  } catch {
+    // Wallet preferences are queued locally; always unlock Save/Discard
+    // so a transient failure can be retried without refreshing the page.
+    failed = true;
+  } finally {
+    state.settingsSaveInFlight = false;
+    updateSettingsEmailDraftActions();
+  }
 
   const pending = loadPendingSettingsLocally();
-  state.settingsSaveInFlight = false;
-  if (pending) {
+  if (failed || pending) {
     state.settingsDraftDirty = true;
     updateSettingsEmailDraftActions();
     showToast("Settings could not be saved.");
