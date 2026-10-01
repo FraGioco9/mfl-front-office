@@ -51,8 +51,14 @@ begin
       raise exception 'SEC-05: inappropriate EXECUTE privilege on %', fn.proname;
     end if;
   end loop;
-  if has_function_privilege('public','public.set_updated_at()','EXECUTE') then
-    raise exception 'SEC-05: public can execute set_updated_at()';
+  if exists (
+    select 1
+    from pg_proc p
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+    where p.oid = 'public.set_updated_at()'::regprocedure
+      and acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
+  ) then
+    raise exception 'SEC-05: PUBLIC can execute set_updated_at()';
   end if;
 end;
 $sec_05$;
