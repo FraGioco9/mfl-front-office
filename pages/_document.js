@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import legacyDevWatchToken from "../legacy-dev-watch-token.js";
+import { nonceEligiblePath } from "../csp-next-nonce.mjs";
 
 const INDEX_PATH = resolve(process.cwd(), "index.html");
 
@@ -52,7 +53,10 @@ export default class MflDocument extends Document {
   static async getInitialProps(ctx) {
     const initialProps = await Document.getInitialProps(ctx);
     const suppliedNonce = ctx.req?.headers?.["x-mfl-csp-nonce"];
+    const requestedUrl = new URL(String(ctx.req?.url || "/"), "https://internal.invalid");
+    const eligibleRoute = nonceEligiblePath(requestedUrl.pathname, requestedUrl.searchParams);
     const nonce = process.env.MFL_CSP_NONCE_REPORT_ONLY === "1"
+      && eligibleRoute
       && typeof suppliedNonce === "string"
       && /^[A-Za-z0-9+/]{22}==$/.test(suppliedNonce)
       ? suppliedNonce
