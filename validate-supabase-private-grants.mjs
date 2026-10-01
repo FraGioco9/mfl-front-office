@@ -20,11 +20,14 @@ for (const name of tables) {
   const count = migration.match(new RegExp(`public\\.${name}(?=,|\\s|$)`, "g"))?.length || 0;
   assert.equal(count, 2, `Table ${name} must be included in revoke and service-role grant sections.`);
 }
-assert.match(migration, /revoke all privileges on table[\\s\\S]*?from public, anon, authenticated;/);
-assert.match(migration, /grant select, insert, update, delete on table[\\s\\S]*?to service_role;/);
-assert.match(migration, /revoke execute on function public\\.set_updated_at\\(\\) from public, anon, authenticated;/);
+assert.match(migration, /revoke all privileges on table[\s\S]*?from public, anon, authenticated;/);
+assert.match(migration, /grant select, insert, update, delete on table[\s\S]*?to service_role;/);
+assert.match(migration, /revoke execute on function public\.set_updated_at\(\) from public, anon, authenticated;/);
 assert.match(migration, /alter default privileges for role postgres in schema public/);
-assert.doesNotMatch(migration, /\\b(?:drop table|delete from|truncate|disable row level security|create policy|grant\\s+(?:all|select).*?\\b(?:anon|authenticated))\\b/i,
+const sqlStatements = migration.split("\n").filter(line => !line.trimStart().startsWith("--")).join("\n");
+assert.doesNotMatch(sqlStatements, /\b(?:drop table|delete from|truncate|disable row level security|create policy)\b/i,
+  "SEC-05 must not remove rows/tables, disable RLS or add client policies.");
+assert.doesNotMatch(sqlStatements, /\bgrant\s+(?:all|select)[^;]*\bto\s+(?:anon|authenticated)\b/i,
   "SEC-05 must not remove data, turn RLS off, add public policies, or grant client data access.");
 
 assert.ok(ratios.includes("const config = supabaseConfig();"),
