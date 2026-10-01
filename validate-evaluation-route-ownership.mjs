@@ -27,13 +27,13 @@ invariant(evaluation.includes('window.addEventListener("resize", updateAdvancedP
 invariant(!shared.includes('evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);'), "Evaluation search/settings bindings must not remain in shared core.");
 invariant(evaluation.includes('evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);'), "Evaluation route core must own search/settings bindings.");
 const evaluationActionBindings = [
-  'evaluationDeleteButton.addEventListener("click", async () => {',
-  'evaluationSaveButton.addEventListener("click", async () => {',
+  'evaluationDeleteButton.addEventListener("click", () => {',
+  'evaluationSaveButton.addEventListener("click", () => {',
   'evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);',
   'closeEvaluationLoadButton.addEventListener("click", () => {',
   'setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));',
   'evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });',
-  'evaluationShareButton.addEventListener("click", async () => {',
+  'evaluationShareButton.addEventListener("click", () => {',
   'evaluationResetButton.addEventListener("click", () => {',
   'const openEvaluationPlayerPage = (event) => {',
   'evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);',

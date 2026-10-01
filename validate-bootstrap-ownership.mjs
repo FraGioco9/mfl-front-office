@@ -389,10 +389,11 @@ for (const retiredBusyOwner of [
   excludes(bootstrapCore, retiredBusyOwner, "Global operation-busy ownership must stay removed through " + retiredBusyOwner + ".");
 }
 for (const localMutationOwner of [
-  "evaluationSaveButton.disabled = true;",
-  "evaluationSaveButton.disabled = false;",
-  "evaluationShareButton.disabled = true;",
-  "evaluationShareButton.disabled = false;",
+  "async function runEvaluationMutation(action) {",
+  "if (evaluationMutationInFlight) return false;",
+  "evaluationSaveButton.disabled = evaluationMutationInFlight;",
+  "evaluationShareButton.disabled = evaluationMutationInFlight;",
+  "evaluationDeleteButton.disabled = evaluationMutationInFlight;",
   "state.walletOptInInProgress = true;",
   "linkWalletButton.disabled = true;",
   'linkWalletButton.textContent = "Loading...";',

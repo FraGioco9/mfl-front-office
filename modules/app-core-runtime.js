@@ -4130,6 +4130,9 @@ function closeAddWatchlistModal() {
 }
 
 function confirmAddWatchlist() {
+  // hideModal fades out before setting hidden. A rapid second Enter/click in
+  // that interval must not create another list or repeat the rename.
+  if (addWatchlistModal?.classList?.contains("modalClosing")) return;
   const name = normalizeWatchlistName(addWatchlistNameInput?.value, "");
   if (!name) {
     if (addWatchlistError) {
@@ -4219,6 +4222,8 @@ function closeDeleteWatchlistModal() {
 }
 
 function confirmDeleteWatchlist() {
+  // An already confirmed/cancelled dialog must not repeat the deletion.
+  if (!state.pendingDeleteWatchlistId || deleteWatchlistModal?.classList?.contains("modalClosing")) return;
   keepWatchlistDropdownOpenAfterModalClick();
   const watchlistId = state.pendingDeleteWatchlistId;
   state.pendingDeleteWatchlistId = "";

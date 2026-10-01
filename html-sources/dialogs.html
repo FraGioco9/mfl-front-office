@@ -33,6 +33,23 @@
       </section>
     </div>
 
+    <div id="evaluationDeleteModal" class="modalBackdrop" hidden>
+      <section class="mflDialog deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationDeleteModalTitle" aria-describedby="evaluationDeleteModalDescription">
+        <header class="mflDialogHeader">
+          <h2 id="evaluationDeleteModalTitle">Delete saved evaluation</h2>
+          <button id="evaluationDeleteModalCloseButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete evaluation dialog"></button>
+        </header>
+        <section class="deleteWatchlistBody">
+          <p id="evaluationDeleteModalDescription">Delete <strong id="evaluationDeleteModalName">this saved evaluation</strong>?</p>
+          <p>This action cannot be undone.</p>
+        </section>
+        <footer class="mflDialogFooter deleteWatchlistFooter">
+          <button id="evaluationDeleteModalCancelButton" type="button">Cancel</button>
+          <button id="evaluationDeleteModalConfirmButton" class="deleteWatchlistConfirmButton" type="button">Delete</button>
+        </footer>
+      </section>
+    </div>
+
     <div id="watchlistChoiceModal" class="modalBackdrop" hidden>
       <section class="mflDialog watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
         <header class="mflDialogHeader">
