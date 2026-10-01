@@ -51,6 +51,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Print reviewed CSP first-paint hashes for SEC-06
+        run: >-
+          node --input-type=module -e "import { cspLegacyScriptHashes } from './csp-legacy-script-hashes.mjs';
+          console.log('SEC06_CSP_HASHES=' + JSON.stringify(cspLegacyScriptHashes));"
+
       - name: Verify Vercel edge CSP configuration matches Next.js
         run: node validate-vercel-security-headers.mjs
 
