@@ -1,4 +1,4 @@
-const { normalizeEvaluationId } = require("./_evaluation-payload");
+const { normalizeEvaluationShareId } = require("./_evaluation-payload");
 const { supabaseConfig } = require("./_supabase");
 const {
   GENERIC_PREVIEW,
@@ -14,7 +14,7 @@ module.exports = async function handler(request, response) {
   }
 
   const requestUrl = new URL(request.url, "http://localhost");
-  const shareId = normalizeEvaluationId(requestUrl.searchParams.get("share"));
+  const shareId = normalizeEvaluationShareId(requestUrl.searchParams.get("share"));
   const playerId = String(requestUrl.searchParams.get("player") || "").trim();
   let metadata = { ...GENERIC_PREVIEW };
 
