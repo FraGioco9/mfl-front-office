@@ -63,6 +63,27 @@ All authenticated preference PUT writes are normalized by `api/wallet-preference
 
 The atomic database RPC is `SECURITY INVOKER`, pins an empty `search_path`, and is service-role-only: `PUBLIC`, `anon`, and `authenticated` have no execute privilege. Browser clients therefore cannot call it directly; the signed-wallet API remains the ownership/authentication boundary. Schema ownership is recorded in `supabase/migrations/20260908131924_atomic_wallet_preferences.sql` and mirrored in `supabase-schema.sql`.
 
+### `wallet_auth_rate_limits`
+
+Owner: `api/_wallet-rate-limit.js`. Migration:
+`supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql`,
+mirrored in `supabase-schema.sql`.
+
+Only a 64-hex-character HMAC-SHA256 of the trusted request IP and rate-limit
+operation, attempt count, and window expiry are stored; no raw IP address,
+wallet address, nonce, token, or credential is persisted in rate-limit rows.
+The HMAC uses the server-only Supabase service role key. Challenge issuance
+and exchange consume an atomic one-minute bucket through the
+`public.consume_wallet_auth_rate_limit` RPC before processing the request,
+enforcing 20 and 10 requests respectively across serverless instances.
+The Postgres function is `SECURITY INVOKER` with a pinned empty search path.
+Its table has RLS enabled; both table and RPC have explicit
+`anon`/`authenticated`/`PUBLIC` revocations, with service-role grants.
+Old buckets are pruned opportunistically. The API fails closed when configured
+distributed throttling is unreachable; local development without configured
+Supabase uses bounded in-memory fallback. Logout remains locally bounded,
+so a failed distributed store cannot prevent cookie cleanup.
+
 ### `wallet_auth_consumed_challenges` and `wallet_auth_sessions`
 
 Owner: `api/_wallet-session.js`. Schema/transaction owner:
