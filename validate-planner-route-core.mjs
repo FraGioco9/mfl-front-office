@@ -589,7 +589,8 @@ invariant(planner.includes('event.key==="Enter"') && planner.includes('event.key
 invariant(routing.includes('cleanPath === "/planner"') && routing.includes('pageName === "planner"'), "Shared SPA routing must preserve Planner navigation and query state.");
 invariant(lifecycle.includes("__mflRenderPlannerPageOwner"), "Shared page lifecycle must delegate Planner rendering.");
 const vercel = JSON.parse(vercelJson);
-invariant(vercel.rewrites.some((rule) => String(rule.source || "").includes("|planner)")), "Vercel shell rewrites must include Planner.");
+invariant(!vercel.rewrites.some((rule) => String(rule.source || "").includes("|planner)") || rule.destination === "/index.html"),
+  "Planner must reach its explicit Next SSR page without a Vercel static HTML rewrite.");
 
 console.log("Planner route, custom pitch icon, and team-selection search validation passed.");
 

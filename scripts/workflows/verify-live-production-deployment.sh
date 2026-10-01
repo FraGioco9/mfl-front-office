@@ -4,6 +4,7 @@ set -euo pipefail
 python - <<'PY'
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -19,7 +20,21 @@ if parsed_database_url.scheme not in {"http", "https"} or not parsed_database_ur
 base_url = f"{parsed_database_url.scheme}://{parsed_database_url.netloc}"
 run_id = os.environ.get("GITHUB_RUN_ID", "run")
 last_error = "No response received."
-routes = ["/", "/database", "/evaluation", "/players/374097", "/clubs/1/squad"]
+routes = ["/", "/home", "/database", "/database/attributes", "/evaluation", "/planner", "/planner/aaaaaaaaaaaaaaaa", "/players/374097", "/clubs/1/squad", "/settings"]
+# UX-01: ensure production HTML reaches the Next page-specific head, rather
+# than an obsolete static index.html rewrite hiding titles on direct refresh.
+expected_titles = {
+    "/": "MFL Front Office",
+    "/home": "MFL Front Office",
+    "/database": "Database - MFL Front Office",
+    "/database/attributes": "Database - MFL Front Office",
+    "/evaluation": "Evaluation - MFL Front Office",
+    "/planner": "Planner - MFL Front Office",
+    "/planner/aaaaaaaaaaaaaaaa": "Planner - MFL Front Office",
+    "/players/374097": "Player - MFL Front Office",
+    "/clubs/1/squad": "Club - MFL Front Office",
+    "/settings": "Settings - MFL Front Office",
+}
 
 
 def cache_busted(url: str, token: str) -> str:
@@ -67,6 +82,15 @@ def verify_route(path: str, token: str) -> None:
         raise RuntimeError(f"{path} returned non-HTML content type {content_type!r}")
     if 'id="appShell"' not in body:
         raise RuntimeError(f"{path} did not return the canonical application shell")
+    head = re.split(r"</head>", body, maxsplit=1, flags=re.IGNORECASE)[0]
+    titles = re.findall(r"<title\b[^>]*>([^<]*)</title>", head, flags=re.IGNORECASE)
+    if titles != [expected_titles[path]]:
+        raise RuntimeError(
+            f"{path} initial HTML title mismatch; expected {expected_titles[path]!r}, observed {titles!r}. "
+            "Check Vercel static rewrites versus Next SSR routing."
+        )
+    if 'name="description"' not in head or 'property="og:title"' not in head:
+        raise RuntimeError(f"{path} initial HTML is missing canonical description or og:title metadata")
 
 
 
@@ -150,7 +174,7 @@ for attempt in range(1, 13):
             "Live production deployment verified: "
             f"{commit_note}, v{expected['version']}, "
             f"generatedAt {expected_database['generatedAt']}; "
-            f"{len(routes)} representative routes returned the canonical shell; "
+            f"{len(routes)} representative routes returned the canonical shell and SSR metadata; "
             "CSP headers and both report formats verified."
         )
         raise SystemExit(0)

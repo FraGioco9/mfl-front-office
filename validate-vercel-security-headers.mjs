@@ -12,8 +12,11 @@ assert.deepEqual(config.headers, [expectedVercelSecurityHeaders()],
   "Vercel must apply the same security headers to static HTML and APIs.");
 assert.equal(config.headers.length, 1);
 assert.equal(config.headers[0].source, "/(.*)");
-assert.ok(Array.isArray(config.rewrites) && config.rewrites.length >= 4,
-  "The existing application routing must remain unchanged.");
+assert.deepEqual(config.rewrites, [{
+  source: "/evaluation",
+  has: [{ type: "query", key: "share" }],
+  destination: "/api/evaluation-preview",
+}], "Only the Evaluation share-preview override may precede route-specific Next SSR on Vercel.");
 const headers = config.headers[0].headers;
 const headerMap = new Map(headers.map(entry => [entry.key.toLowerCase(), entry.value]));
 assert.equal(headerMap.size, headers.length, "Duplicate security headers are not allowed.");
