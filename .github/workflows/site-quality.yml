@@ -130,6 +130,7 @@ jobs:
         env:
           WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4010
+          MFL_CSP_NONCE_REPORT_ONLY: "1"
         run: |
           set -euo pipefail
           npx next start -p 4010 > /tmp/mfl-next-start.log 2>&1 &
@@ -156,6 +157,7 @@ jobs:
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
+          node validation/next-csp-nonce-browser.mjs http://127.0.0.1:4010/ --production
 
       - name: Lint
         if: steps.changes.outputs.site == 'true'

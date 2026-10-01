@@ -100,6 +100,71 @@ Keep the enforced header byte-for-byte unchanged. If rendered HTML differs
 from source bytes, fix the source-to-renderer contract, **not** by enabling
 `'unsafe-inline'`.
 
+## Phase 2b: opt-in Next Pages Router nonce validation
+
+The Next.js 16 Pages Router can pass a per-request CSP nonce through
+`_document.getInitialProps`, `<Head>`, and `<NextScript>`. This is tested
+without enforcing any new CSP directives.
+
+- `csp-report-only-policy.mjs` owns the existing static Report-Only policy
+  and adds a validated per-request nonce to its two script directives.
+  A checked-in `csp-legacy-hash-snapshot.mjs` contains the 12 reviewed
+  hash literals so Next's proxy bundle never needs a filesystem read.
+  `next.config.mjs` and the validator fail if these differ from the
+  exact generated HTML; `node scripts/workflows/refresh-csp-legacy-hashes.mjs`
+  regenerates the snapshot after a reviewed parser-time script change.
+  `node scripts/workflows/refresh-csp-legacy-hashes.mjs --check`
+  verifies that source and snapshot are synchronized.
+  The static default configuration, 12 legacy SHA-256 digests and enforced
+  CSP remain unchanged.
+- `proxy.js` (Next.js 16 Node.js runtime) generates 16 cryptographically
+  random bytes per SSR request and forwards them in an overwritten,
+  internal-only `x-mfl-csp-nonce` header. It sets the **Report-Only**
+  response header for that exact response, and `Cache-Control: private,
+  no-store` so a nonce-bearing response cannot be cached and replayed.
+- `pages/_document.js` only accepts a correctly shaped nonce when
+  `MFL_CSP_NONCE_REPORT_ONLY=1`, and passes it to `Head` and `NextScript`.
+  The 12 parser-time legacy scripts keep using build-stable SHA-256 hashes.
+- The experiment applies only to dynamically server-rendered catch-all
+  pages (for example, `/players/1`, `/database/attributes`, and
+  `/watchlist`), not the statically optimized Home, Planner, or saved
+  Planner pages, nor API requests, Next assets, file URLs or the
+  Evaluation share preview rewrite. Do not supply a request nonce to a
+  statically prerendered/cached HTML document: it would be reused.
+- **Disabled by default** in production and development. Enable only on
+  a dedicated test deployment by explicitly setting
+  `MFL_CSP_NONCE_REPORT_ONLY=1` and deploying that configuration.
+  Existing deployments lacking that setting preserve their previous headers.
+- CI exercises both cases: ordinary Site Quality runs with the flag off;
+  the Next rendered-shell (dev) and Site Quality production runtime smoke
+  tests enable it and verify different nonces across requests, untrusted
+  header overwrite, `NextScript` HTML serialization, unchanged static
+  routes, legacy first-paint hash parity, non-cached responses and unchanged
+  enforced CSP.
+
+**Important deployment and enforcement gates:**
+
+1. The production site last observed at commit `00c69330` predates CSP
+   reporting. Deploy current main to a preview or production test
+   environment; check headers and sanitized CSP reports.
+2. Run actual FCL/Dapper sign-in, reject/cancel, logout, popup and share
+   flows in the browser. The assistant cannot simulate possession of a
+   real user wallet. Only after those browser checks should dynamic
+   third-party sources be narrowed.
+3. The opt-in nonce experiment is **not** a complete nonce rollout.
+   Static Home/Planner and error-page delivery would require explicit
+   dynamic-rendering and caching design before nonce-based enforcement.
+   Never ship an enforced `script-src` on these routes merely because
+   the SSR experiment passed.
+4. Phase 3 enforcement requires a distinct, explicitly reviewed PR,
+   complete browser evidence and an immediate rollback plan. No changes
+   in phase 2b weaken or replace the current enforced
+   `frame-ancestors 'none'; base-uri 'self'; object-src 'none'` policy.
+
+Rollback phase 2b by removing the opt-in flag, then (if necessary)
+reverting `proxy.js`, the `_document` nonce handoff, and shared
+policy helper. No database migration or auth-state change is involved.
+
 ## First-party report processing
 
 `POST /api/csp-report` supports:

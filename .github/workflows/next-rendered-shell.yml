@@ -16,6 +16,9 @@ on:
       - "scripts/ci/create-next-sqlite-smoke-fixture.cjs"
       - "validation/next-rendered-shell-browser.mjs"
       - "validation/next-csp-script-hashes.mjs"
+      - "validation/next-csp-nonce-browser.mjs"
+      - "csp-report-only-policy.mjs"
+      - "proxy.js"
       - "csp-legacy-script-hashes.mjs"
       - "validation/next-mobile-table-browser.mjs"
       - "validation/next-mobile-table-route-browser.mjs"
@@ -41,6 +44,7 @@ jobs:
         shell: bash
         env:
           MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-rendered-shell.db
+          MFL_CSP_NONCE_REPORT_ONLY: "1"
         run: |
           set -euo pipefail
           node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
@@ -60,6 +64,9 @@ jobs:
 
       - name: Verify CSP hashes against actual Next SSR script bytes
         run: node validation/next-csp-script-hashes.mjs http://localhost:4000/
+
+      - name: Verify per-request nonce in live Next SSR and static-route bypass
+        run: node validation/next-csp-nonce-browser.mjs http://localhost:4000/
 
       - name: Verify Planner is a first-class Next route
         shell: bash

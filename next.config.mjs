@@ -3,7 +3,15 @@ import { fileURLToPath } from "node:url";
 
 import { MflLegacyDevBridgePlugin } from "./next-dev-legacy-bridge.mjs";
 import { resolveDeploymentCommit } from "./deployment-commit.mjs";
+import { cspReportOnlyHeaders } from "./csp-report-only-policy.mjs";
 import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
+import { cspLegacyScriptHashSnapshot } from "./csp-legacy-hash-snapshot.mjs";
+export { cspScriptSources, cspReportOnly, cspReportOnlyHeaders } from "./csp-report-only-policy.mjs";
+
+// Build-time integrity check; filesystem access must stay out of the Next proxy.
+if (JSON.stringify(cspLegacyScriptHashes) !== JSON.stringify(cspLegacyScriptHashSnapshot)) {
+  throw new Error("Stale CSP first-paint hash snapshot; regenerate and review before building.");
+}
 
 const root = dirname(fileURLToPath(import.meta.url));
 const deploymentCommit = resolveDeploymentCommit({ root });
@@ -19,34 +27,6 @@ export const securityHeaders = Object.freeze([
   { key: "X-Frame-Options", value: "DENY" },
 ]);
 
-
-// SEC-04 phase 1: observability only. Never merge into the enforced CSP without
-// browser validation of inline legacy scripts, Next runtime, and FCL/Dapper.
-// Hashes keep known parser-time legacy scripts eligible without delaying first paint.
-// Next's dynamic inline bootstrap still requires a request-scoped nonce strategy.
-export const cspScriptSources = Object.freeze(["'self'", "https://esm.sh", ...cspLegacyScriptHashes]);
-export const cspReportOnly = Object.freeze([
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  `script-src ${cspScriptSources.join(" ")}`,
-  `script-src-elem ${cspScriptSources.join(" ")}`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https:",
-  "connect-src 'self' https: wss:",
-  "frame-src 'self' https:",
-  "worker-src 'self' blob:",
-  "media-src 'self' https: blob:",
-  "form-action 'self' https:",
-  "report-uri /api/csp-report",
-  "report-to mfl-csp",
-].join("; "));
-
-export const cspReportOnlyHeaders = Object.freeze([
-  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
-  { key: "Reporting-Endpoints", value: 'mfl-csp="/api/csp-report"' },
-]);
 
 export const outputFileTracingIncludes = {
   "/api/data": ["./api/data-files/mfl_database.db"],
