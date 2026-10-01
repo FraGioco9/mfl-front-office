@@ -44,8 +44,12 @@ for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
     assert.ok(scripts.has(hash), `Legacy parser script was altered by nonce handling: ${path}`);
   }
 }
-for (const path of ["/", "/planner", "/planner/example-id", "/api/identity"]) {
-  const response = await fetch(new URL(path, base), { signal: AbortSignal.timeout(15000) });
+const forgedNonce = Buffer.from("0123456789abcdef").toString("base64");
+for (const path of ["/", "/planner", "/planner/example-id", "/players/test.v1/details", "/api/identity"]) {
+  const response = await fetch(new URL(path, base), {
+    headers: { "x-mfl-csp-nonce": forgedNonce },
+    signal: AbortSignal.timeout(15000),
+  });
   const policy = response.headers.get("content-security-policy-report-only");
   if (production) {
     assert.equal(policy, cspReportOnly,
@@ -55,5 +59,7 @@ for (const path of ["/", "/planner", "/planner/example-id", "/api/identity"]) {
       `Static or API route ${path} must retain unchanged development CSP.`);
   }
   assert.equal(response.headers.get("x-mfl-csp-nonce"), null);
+  const body = await response.text();
+  assert.ok(!body.includes(`nonce="${forgedNonce}"`), "Excluded routes must reject user-supplied nonce.");
 }
 console.log("Next CSP nonce integration passed: independent response nonces, matching SSR NextScript markup, unchanged legacy hashes and static/API bypass.");
