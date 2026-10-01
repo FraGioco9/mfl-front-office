@@ -34,7 +34,7 @@ function request(path) {
   return {
     nextUrl: new URL(`https://mfl.example${path}`),
     headers: new Headers({
-      "x-mfl-csp-nonce": "attacker-supplied",
+      "x-mfl-csp-nonce": validNonce,
     }),
   };
 }
@@ -48,6 +48,8 @@ try {
   process.env.MFL_CSP_NONCE_REPORT_ONLY = "1";
   const staticResponse = proxy(request("/"));
   assert.equal(staticResponse.headers.get("content-security-policy-report-only"), null);
+  assert.equal(staticResponse.headers.get("x-middleware-request-x-mfl-csp-nonce"), null,
+    "Client-provided nonce must be stripped from static-route requests.");
   const first = proxy(request("/players/1"));
   const second = proxy(request("/players/1"));
   const firstPolicy = first.headers.get("content-security-policy-report-only");
@@ -57,7 +59,7 @@ try {
   assert.ok(firstNonce);
   assert.ok(secondNonce);
   assert.notEqual(firstNonce, secondNonce, "Separate responses must have different unpredictable nonces.");
-  assert.notEqual(firstNonce, "attacker-supplied");
+  assert.notEqual(firstNonce, validNonce);
   assert.equal(firstPolicy, cspReportOnlyWithNonce(firstNonce));
   assert.equal(secondPolicy, cspReportOnlyWithNonce(secondNonce));
   assert.equal(first.headers.get("Cache-Control"), "private, no-store");
