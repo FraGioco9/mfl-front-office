@@ -18,6 +18,7 @@ const validators = [
   "validate-database-stats-ownership.mjs",
   "validate-my-clubs-data.mjs",
   "validate-supabase-persistence.mjs",
+  "validate-supabase-private-grants.mjs",
   "validate-wallet-core.mjs",
   "validate-wallet-preferences-lifecycle.mjs",
   "validate-wallet-preference-write-scoping.mjs",
