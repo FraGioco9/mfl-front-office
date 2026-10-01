@@ -194,6 +194,7 @@ for (const result of [true, false, new Error("Verifier unavailable")]) {
   });
   assert.equal(await auth.signedWalletFromRequest(request()), result === true ? wallet : "");
   const handler = load(optInSource, {
+    "./_request-origin": { requireSameOriginMutation: () => true },
     "./_wallet-auth": proof, "./_supabase": supabase,
     "./_wallet-presence": { async touchWalletLastSeen(address) {
       assert.equal(address, wallet);
