@@ -320,10 +320,10 @@ assert.equal(revoked, "s".repeat(43));
 assert.ok(logoutResponse.headers["set-cookie"].some((value) => String(value).startsWith("mfl_wallet_session=;")));
 
 assert.ok(endpointSource.includes('const MAX_BODY_BYTES = 32 * 1024;'));
-assert.ok(endpointSource.includes('const MAX_RATE_BUCKETS = 2_000;'));
+assert.ok(endpointSource.includes('await rateLimiter(kind, request)'));
 assert.ok(endpointSource.includes('expectedNonce: challenge.nonce'));
 assert.ok(endpointSource.includes('consumeChallengeAndCreateSession'));
-assert.ok(endpointSource.includes('response.status(429)'));
+assert.ok(endpointSource.includes('quota?.unavailable ? 503 : 429'), 'Blocked requests must distinguish throttling from shared-store failure.');
 assert.ok(endpointSource.includes('HttpOnly; SameSite=Strict'));
 assert.ok(endpointSource.includes('response.status(204).end();'));
 assert.ok(walletSessionAmbiguityMigration.includes("delete from public.wallet_auth_sessions as sessions"));

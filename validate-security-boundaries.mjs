@@ -5,6 +5,7 @@ import { invariant } from "./validation/assertions.mjs";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const [
   walletSession,
+  walletRateLimiter,
   bugReports,
   evaluationSave,
   evaluationShare,
@@ -13,6 +14,7 @@ const [
   securityDoc,
 ] = await Promise.all([
   read("./api/wallet-session.js"),
+  read("./api/_wallet-rate-limit.js"),
   read("./api/bug-reports.js"),
   read("./api/evaluation-save.js"),
   read("./api/evaluation-share.js"),
@@ -72,12 +74,22 @@ for (const [name, headers] of [
 
 for (const token of [
   "const MAX_BODY_BYTES = 32 * 1024;",
-  "const RATE_LIMITS = Object.freeze({ issue: 20, exchange: 10, logout: 30 });",
-  "const MAX_RATE_BUCKETS = 2_000;",
+  "rateLimiter = createWalletRateLimiter({ now })",
+  "await rateLimiter(kind, request)",
   "sameOriginRequest(request, origin)",
   "consumeChallengeAndCreateSession",
 ]) {
   invariant(walletSession.includes(token), "Wallet-session abuse controls must retain bounded request/rate/origin/replay ownership.");
+}
+
+for (const token of [
+  "const RATE_LIMITS = Object.freeze({ issue: 20, exchange: 10, logout: 30 });",
+  "const MAX_RATE_BUCKETS = 2_000;",
+  'rpc/consume_wallet_auth_rate_limit',
+  'createHmac("sha256", service.key)',
+  "unavailable: true",
+]) {
+  invariant(walletRateLimiter.includes(token), "Wallet authentication must preserve shared, hashed and fail-closed throttling.");
 }
 
 for (const token of [
