@@ -2220,6 +2220,11 @@ td a {
   color: var(--text-soft);
 }
 
+.emptyState .compactButton {
+  display: block;
+  margin: 12px auto 0;
+}
+
 .pager {
   position: relative;
   left: 0;
