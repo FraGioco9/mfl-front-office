@@ -20,15 +20,20 @@ if parsed_database_url.scheme not in {"http", "https"} or not parsed_database_ur
 base_url = f"{parsed_database_url.scheme}://{parsed_database_url.netloc}"
 run_id = os.environ.get("GITHUB_RUN_ID", "run")
 last_error = "No response received."
-routes = ["/", "/database", "/evaluation", "/players/374097", "/clubs/1/squad"]
+routes = ["/", "/home", "/database", "/database/attributes", "/evaluation", "/planner", "/planner/aaaaaaaaaaaaaaaa", "/players/374097", "/clubs/1/squad", "/settings"]
 # UX-01: ensure production HTML reaches the Next page-specific head, rather
 # than an obsolete static index.html rewrite hiding titles on direct refresh.
 expected_titles = {
     "/": "MFL Front Office",
+    "/home": "MFL Front Office",
     "/database": "Database - MFL Front Office",
+    "/database/attributes": "Database - MFL Front Office",
     "/evaluation": "Evaluation - MFL Front Office",
+    "/planner": "Planner - MFL Front Office",
+    "/planner/aaaaaaaaaaaaaaaa": "Planner - MFL Front Office",
     "/players/374097": "Player - MFL Front Office",
     "/clubs/1/squad": "Club - MFL Front Office",
+    "/settings": "Settings - MFL Front Office",
 }
 
 
