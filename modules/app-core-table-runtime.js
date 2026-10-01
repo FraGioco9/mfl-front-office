@@ -2392,6 +2392,24 @@ function tableRenderEmptyFilterAction() {
   emptyState.appendChild(clear);
 }
 
+function tableRenderEmptyDiscoveryAction() {
+  // Only an authoritative zero-source collection can offer discovery.
+  // Filtered-empty states use their own Clear filters action instead.
+  if (Number(state.tableSourceRowsCount || 0) > 0 || !hasWalletOptIn()) return;
+  const label = state.currentPage === "watchlist" ? "Find players"
+    : state.currentPage === "myplayers" ? "Explore players" : "";
+  if (!label) return;
+  const globalSearchButton = document.getElementById("openSearchButton");
+  if (!globalSearchButton || typeof globalSearchButton.click !== "function") return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.id = "tableEmptyDiscoverPlayersButton";
+  button.className = "compactButton";
+  button.textContent = label;
+  button.addEventListener("click", () => globalSearchButton.click());
+  emptyState.appendChild(button);
+}
+
 function appliedTableFilterSignature(rules) {
   return JSON.stringify([
     state.currentPage,
@@ -3134,7 +3152,10 @@ function tableRenderTableOwner() {
   }
   tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());
   emptyState.textContent = tableEmptyStateMessage();
-  if (pageRows.length === 0) tableRenderEmptyFilterAction();
+  if (pageRows.length === 0) {
+    tableRenderEmptyFilterAction();
+    tableRenderEmptyDiscoveryAction();
+  }
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
   const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");

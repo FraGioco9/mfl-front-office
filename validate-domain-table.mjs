@@ -11,6 +11,7 @@ const validators = [
   "validate-mobile-sticky-name-column.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
   "validate-ux02-filtered-empty-recovery.mjs",
+  "validate-ux02-empty-onboarding.mjs",
   "validate-table-url-state.mjs",
   "validate-listing-column.mjs",
   "validate-marketplace-state-freshness.mjs",
