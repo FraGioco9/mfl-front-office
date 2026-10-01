@@ -49,7 +49,7 @@ try {
     ["planner-save", ["POST", "DELETE"]],
     ["planner-share", ["POST", "DELETE"]],
     ["evaluation-save", ["POST", "DELETE"]],
-    ["evaluation-share", ["POST"]],
+    ["evaluation-share", ["POST", "DELETE"]],
     ["wallet-preferences", ["PUT"]],
     ["wallet-opt-ins", ["POST"]],
   ];
