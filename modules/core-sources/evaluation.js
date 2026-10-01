@@ -847,6 +847,71 @@ function rememberSavedEvaluationList(entries) {
   return list;
 }
 
+let evaluationMutationInFlight = false;
+let evaluationDeleteConfirmation = null;
+const evaluationDeleteModal = document.getElementById("evaluationDeleteModal");
+const evaluationDeleteModalName = document.getElementById("evaluationDeleteModalName");
+const evaluationDeleteModalCancelButton = document.getElementById("evaluationDeleteModalCancelButton");
+const evaluationDeleteModalConfirmButton = document.getElementById("evaluationDeleteModalConfirmButton");
+const evaluationDeleteModalCloseButton = document.getElementById("evaluationDeleteModalCloseButton");
+
+function syncEvaluationMutationActions() {
+  if (evaluationSaveButton) evaluationSaveButton.disabled = evaluationMutationInFlight;
+  if (evaluationShareButton) evaluationShareButton.disabled = evaluationMutationInFlight;
+  if (evaluationDeleteButton) evaluationDeleteButton.disabled = evaluationMutationInFlight;
+  if (evaluationLoadButton instanceof HTMLButtonElement) evaluationLoadButton.disabled = evaluationMutationInFlight;
+  const footer = evaluationSaveButton?.closest(".evaluationFooterActions");
+  if (footer instanceof HTMLElement) footer.setAttribute("aria-busy", evaluationMutationInFlight ? "true" : "false");
+  if (evaluationLoadList instanceof HTMLElement) {
+    evaluationLoadList.setAttribute("aria-busy", evaluationMutationInFlight ? "true" : "false");
+    for (const button of evaluationLoadList.querySelectorAll(".evaluationLoadIconButton")) {
+      if (button instanceof HTMLButtonElement) button.disabled = evaluationMutationInFlight;
+    }
+  }
+}
+
+async function runEvaluationMutation(action) {
+  // Lock all private Evaluation mutations before the first await, including
+  // the user's destructive confirmation. Release on cancel, success or failure.
+  if (evaluationMutationInFlight) return false;
+  evaluationMutationInFlight = true;
+  syncEvaluationMutationActions();
+  try {
+    return await action();
+  } finally {
+    evaluationMutationInFlight = false;
+    syncEvaluationMutationActions();
+  }
+}
+
+function finishEvaluationDeleteConfirmation(confirmed = false) {
+  if (!evaluationDeleteConfirmation) return;
+  const resolve = evaluationDeleteConfirmation;
+  evaluationDeleteConfirmation = null;
+  hideModal(evaluationDeleteModal, () => {
+    if (evaluationLoadModal instanceof HTMLElement) {
+      evaluationLoadModal.inert = false;
+      evaluationLoadModal.removeAttribute("aria-hidden");
+    }
+    resolve(Boolean(confirmed));
+  });
+}
+
+function requestEvaluationDeleteConfirmation(name) {
+  if (!(evaluationDeleteModal instanceof HTMLElement) || evaluationDeleteConfirmation) return Promise.resolve(false);
+  if (evaluationDeleteModalName) evaluationDeleteModalName.textContent = String(name || "this saved evaluation");
+  if (evaluationLoadModal instanceof HTMLElement && !evaluationLoadModal.hidden) {
+    evaluationLoadModal.inert = true;
+    evaluationLoadModal.setAttribute("aria-hidden", "true");
+  }
+  showModal(evaluationDeleteModal);
+  window.setTimeout(() => {
+    if (!evaluationDeleteModal.hidden && evaluationDeleteModalCancelButton instanceof HTMLButtonElement)
+      evaluationDeleteModalCancelButton.focus({ preventScroll: true });
+  }, 60);
+  return new Promise(resolve => { evaluationDeleteConfirmation = resolve; });
+}
+
 function savedEvaluationListCache() {
   const wallet = ensureSavedEvaluationCacheWallet();
   return wallet && Array.isArray(window.__mflSavedEvaluationsSessionCache)
@@ -1164,6 +1229,7 @@ function renderSavedEvaluationList(rows) {
     attachEvaluationLoadActionTooltip(deleteButton);
 
     const loadEvaluation = async () => {
+      if (evaluationMutationInFlight) return;
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
       showSavedEvaluationPlayerName(entry, playerId);
@@ -1175,51 +1241,53 @@ function renderSavedEvaluationList(rows) {
       await loadSavedEvaluation(savedId, playerId);
     };
 
-    shareButton.addEventListener("click", async (event) => {
+    shareButton.addEventListener("click", (event) => {
       event.stopPropagation();
       hideEvaluationLoadActionTooltip();
-      shareButton.disabled = true;
-
-      try {
-        const shareUrl = await createSharedEvaluationFromPayload(entry.payload, playerId);
-        await navigator.clipboard.writeText(shareUrl);
-        showToast("Evaluation share link copied.");
-      } catch (error) {
-        showToast(error?.message || "Could not create evaluation share link.");
-      } finally {
-        shareButton.disabled = false;
-      }
+      void runEvaluationMutation(async () => {
+        try {
+          const shareUrl = await createSharedEvaluationFromPayload(entry.payload, playerId);
+          if (!shareUrl) return false;
+          await navigator.clipboard.writeText(shareUrl);
+          showToast("Evaluation share link copied.");
+          return true;
+        } catch (error) {
+          showToast(error?.message || "Could not create evaluation share link.");
+          return false;
+        }
+      });
     });
 
-    deleteButton.addEventListener("click", async (event) => {
+    deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
       hideEvaluationLoadActionTooltip();
-      deleteButton.disabled = true;
-
-      try {
-        await deleteSavedEvaluation(entry.id);
-        result.remove();
-
-        if (!evaluationLoadList.querySelector(".evaluationLoadResult")) {
-          renderSavedEvaluationList([]);
+      void runEvaluationMutation(async () => {
+        if (!await requestEvaluationDeleteConfirmation(name.textContent || "this saved evaluation")) return false;
+        try {
+          await deleteSavedEvaluation(entry.id);
+          result.remove();
+          if (!evaluationLoadList.querySelector(".evaluationLoadResult")) renderSavedEvaluationList([]);
+          if (state.evaluationSavedId === String(entry.id || "")) {
+            state.evaluationSavedId = "";
+            updateEvaluationFooterActions();
+          }
+          if (closeEvaluationLoadButton instanceof HTMLButtonElement) closeEvaluationLoadButton.focus({ preventScroll: true });
+          showToast("Saved evaluation deleted.");
+          return true;
+        } catch (error) {
+          showToast(error?.message || "Could not delete saved evaluation.");
+          return false;
         }
-
-        if (state.evaluationSavedId === String(entry.id || "")) {
-          state.evaluationSavedId = "";
-          updateEvaluationFooterActions();
-        }
-
-        showToast("Saved evaluation deleted.");
-      } catch (error) {
-        deleteButton.disabled = false;
-        showToast(error?.message || "Could not delete saved evaluation.");
-      }
+      });
     });
 
     actions.append(shareButton, deleteButton);
     result.append(main, value, actions);
     result.addEventListener("click", loadEvaluation);
     result.addEventListener("keydown", (event) => {
+      // Enter/Space on the nested Share/Delete buttons must not also open
+      // the saved evaluation through the parent row's button semantics.
+      if (event.target !== result) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         loadEvaluation();
@@ -1227,6 +1295,7 @@ function renderSavedEvaluationList(rows) {
     });
     evaluationLoadList.appendChild(result);
   });
+  syncEvaluationMutationActions();
 }
 
 
@@ -1750,43 +1819,43 @@ renderEvaluationMflPerUsdControl(false);
 evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
 
 if (evaluationDeleteButton) {
-  evaluationDeleteButton.addEventListener("click", async () => {
-    const savedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
-    const playerId = String(state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "").trim();
-
-    if (!savedId) {
-      showToast("No saved evaluation to delete.");
-      return;
-    }
-
-    evaluationDeleteButton.disabled = true;
-
-    try {
-      await deleteSavedEvaluation(savedId);
-      resetEvaluationToDefaultForPlayer(playerId);
-      showToast("Saved evaluation deleted.");
-    } catch (error) {
-      showToast(error?.message || "Could not delete saved evaluation.");
-    } finally {
-      evaluationDeleteButton.disabled = false;
-    }
+  evaluationDeleteButton.addEventListener("click", () => {
+    void runEvaluationMutation(async () => {
+      const savedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
+      const playerId = String(state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "").trim();
+      if (!savedId) {
+        showToast("No saved evaluation to delete.");
+        return false;
+      }
+      if (!await requestEvaluationDeleteConfirmation("this saved evaluation")) return false;
+      try {
+        await deleteSavedEvaluation(savedId);
+        resetEvaluationToDefaultForPlayer(playerId);
+        showToast("Saved evaluation deleted.");
+        return true;
+      } catch (error) {
+        showToast(error?.message || "Could not delete saved evaluation.");
+        return false;
+      }
+    });
   });
 }
 if (evaluationSaveButton) {
-  evaluationSaveButton.addEventListener("click", async () => {
-    evaluationSaveButton.disabled = true;
-    try {
-      const saveResult = await createSavedEvaluation();
-      if (saveResult) {
-        window.history.replaceState({}, "", saveResult.url);
-        updateEvaluationFooterActions();
-        showToast(saveResult.overwritten ? "Evaluation overwritten and saved." : "Evaluation saved.");
+  evaluationSaveButton.addEventListener("click", () => {
+    void runEvaluationMutation(async () => {
+      try {
+        const saveResult = await createSavedEvaluation();
+        if (saveResult) {
+          window.history.replaceState({}, "", saveResult.url);
+          updateEvaluationFooterActions();
+          showToast(saveResult.overwritten ? "Evaluation overwritten and saved." : "Evaluation saved.");
+        }
+        return Boolean(saveResult);
+      } catch (error) {
+        showToast(error?.message || "Could not save evaluation.");
+        return false;
       }
-    } catch (error) {
-      showToast(error?.message || "Could not save evaluation.");
-    } finally {
-      evaluationSaveButton.disabled = false;
-    }
+    });
   });
 }
 if (evaluationLoadButton) {
@@ -1798,7 +1867,8 @@ if (closeEvaluationLoadButton) {
   });
 }
 document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
+  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden
+    || (evaluationDeleteModal instanceof HTMLElement && !evaluationDeleteModal.hidden)) return;
   event.preventDefault();
   hideEvaluationLoadActionTooltip();
   if (document.activeElement instanceof HTMLElement && evaluationLoadModal.contains(document.activeElement)) {
@@ -1806,32 +1876,39 @@ document.addEventListener("keydown", (event) => {
   }
 });
 setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
+evaluationDeleteModalCloseButton?.addEventListener("click", () => finishEvaluationDeleteConfirmation(false));
+evaluationDeleteModalCancelButton?.addEventListener("click", () => finishEvaluationDeleteConfirmation(false));
+evaluationDeleteModalConfirmButton?.addEventListener("click", () => finishEvaluationDeleteConfirmation(true));
+setupBackdropClickClose(evaluationDeleteModal, () => finishEvaluationDeleteConfirmation(false));
+evaluationDeleteModal?.addEventListener("keydown", event => {
+  if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); finishEvaluationDeleteConfirmation(false); }
+});
 if (evaluationLoadList) {
   evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });
 }
 if (evaluationShareButton) {
-  evaluationShareButton.addEventListener("click", async () => {
-    evaluationShareButton.disabled = true;
-    try {
-      const shareUrl = await createSharedEvaluation();
-      if (shareUrl) {
+  evaluationShareButton.addEventListener("click", () => {
+    void runEvaluationMutation(async () => {
+      try {
+        const shareUrl = await createSharedEvaluation();
+        if (!shareUrl) return false;
         const parsedShareUrl = new URL(shareUrl, window.location.origin);
         state.evaluationShareId = parsedShareUrl.searchParams.get("share") || "";
         state.evaluationSavedId = "";
         window.history.replaceState({}, "", shareUrl);
         updateEvaluationFooterActions();
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast("Evaluation share link copied.");
+        } catch {
+          showToast("Share link: " + shareUrl);
+        }
+        return true;
+      } catch (error) {
+        showToast(error?.message || "Could not create evaluation share link.");
+        return false;
       }
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        showToast("Evaluation share link copied.");
-      } catch {
-        showToast("Share link: " + shareUrl);
-      }
-    } catch (error) {
-      showToast(error?.message || "Could not create evaluation share link.");
-    } finally {
-      evaluationShareButton.disabled = false;
-    }
+    });
   });
 }
 
