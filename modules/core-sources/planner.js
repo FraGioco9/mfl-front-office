@@ -1177,9 +1177,9 @@
     if(!buttons.length)return;
     const first=buttons[0],last=buttons.at(-1),focused=document.activeElement;
     if(event.shiftKey&&(focused===first||!modal.contains(focused))){
-      event.preventDefault();last.focus();
+      event.preventDefault();if(last instanceof HTMLButtonElement)last.focus();
     }else if(!event.shiftKey&&(focused===last||!modal.contains(focused))){
-      event.preventDefault();first.focus();
+      event.preventDefault();if(first instanceof HTMLButtonElement)first.focus();
     }
   }
   function closePlannerPlanNameModal(value=""){
