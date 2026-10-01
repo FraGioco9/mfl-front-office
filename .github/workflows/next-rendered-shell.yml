@@ -3,6 +3,7 @@ name: Next rendered shell
 on:
   pull_request:
     paths:
+      - ".github/workflows/next-rendered-shell.yml"
       - "index.html"
       - "next.config.mjs"
       - "package.json"
