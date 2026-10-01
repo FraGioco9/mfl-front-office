@@ -62,6 +62,10 @@ jobs:
           SQL
           sed '/^-- SEC-05 (#1034):/,$d' supabase-schema.sql > /tmp/sec-05-pre-migration.sql
           psql -X -v ON_ERROR_STOP=1 -1 -f /tmp/sec-05-pre-migration.sql
+          # Historical ratio table is owned by its own earlier versioned migration,
+          # not by the canonical wallet/persistence schema.
+          psql -X -v ON_ERROR_STOP=1 -1 \
+            -f supabase/migrations/20260730160100_create_mfl_season_ratios.sql
           # Verify that the fixture actually simulates the historical grants.
           test "$(psql -XqAt -c "select has_table_privilege('anon','public.wallet_preferences','SELECT')")" = t
           test "$(psql -XqAt -c "select has_table_privilege('authenticated','public.mfl_season_ratios','TRUNCATE')")" = t
