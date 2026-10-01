@@ -43,7 +43,7 @@
   function installCoreBridge() {
     if (destroyed || bridgeInstalled || clubRouteActive()) return bridgeInstalled;
     try {
-      bridgeInstalled = Boolean(window.eval(`(() => {
+      bridgeInstalled = Boolean((() => {
         if (typeof uniqueNationalityValues !== "function") return false;
         if (uniqueNationalityValues.__mflAuthoritativeFilterOptions) return true;
         const originalUniqueNationalityValues = uniqueNationalityValues;
@@ -60,7 +60,7 @@
         Object.defineProperty(authoritativeNationalityValues, "__mflAuthoritativeFilterOptions", { value: true });
         uniqueNationalityValues = authoritativeNationalityValues;
         return true;
-      })()`));
+      })());
     } catch (error) {
       console.warn("Could not install nationality filter options.", error);
       bridgeInstalled = false;
@@ -71,13 +71,13 @@
   function refreshCanonicalControls() {
     if (clubRouteActive() || !nationalityOptions.length || !installCoreBridge()) return false;
     try {
-      return Boolean(window.eval(`(() => {
+      return Boolean((() => {
         if (typeof readFilterDraftRules !== "function" || typeof restoreFilterDraftRules !== "function") return false;
         const rules = readFilterDraftRules();
         if (!Array.isArray(rules) || !rules.some((rule) => rule?.column === "nationality")) return true;
         restoreFilterDraftRules(rules);
         return true;
-      })()`));
+      })());
     } catch (error) {
       console.warn("Could not refresh nationality filter controls.", error);
       return false;
