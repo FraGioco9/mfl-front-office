@@ -2710,9 +2710,107 @@ const browserTestSource = String.raw`(() => {
     finish("passed", "stale navigation: newest route remained authoritative with canonical timing.");
   }
 
+  async function runUx02Recovery() {
+    const buttonFor = (selector) => {
+      const button = document.querySelector(selector);
+      assert(button instanceof HTMLButtonElement, "UX-02 action missing: " + selector);
+      assert(!button.disabled && !hidden(selector), "UX-02 action is hidden/disabled: " + selector);
+      const rect = button.getBoundingClientRect();
+      assert(rect.width > 0 && rect.right <= innerWidth + 1 && rect.left >= -1, "UX-02 action overflows viewport: " + selector);
+      button.focus();
+      assert(document.activeElement === button, "UX-02 action cannot receive keyboard focus: " + selector);
+      return button;
+    };
+    if (scenario === "ux02-home-zero") {
+      await waitFor(() => text("#homePlayers") === "0" && text("#homeWallets") === "0",
+        "Home zero-data response must show two authoritative zero counts.", 8000);
+      assert(hidden("#homeSummaryLoadError"), "Valid zero data must not show an API error.");
+      assert(hidden("#homeSummaryRetryButton"), "Valid zero data must not offer Retry.");
+    } else if (scenario === "ux02-home-retry") {
+      await waitFor(() => !hidden("#homeSummaryLoadError"), "Failed Home summary must expose recovery.", 8000);
+      assert(text("#homePlayers") === "-" && text("#homeWallets") === "-", "Home failure must not invent zero counts.");
+      assert(text("#homeSummaryLoadError").includes("Database summary unavailable"),
+        "Home error must explain cause without exposing raw API errors.");
+      buttonFor("#homeSummaryRetryButton").click();
+      await waitFor(() => text("#homePlayers") === "12" && text("#homeWallets") === "3",
+        "Home Retry did not restore authoritative counts.", 8000);
+      assert(hidden("#homeSummaryLoadError"), "Successful Home Retry did not dismiss the error.");
+    } else if (scenario === "ux02-search") {
+      buttonFor("#openSearchButton").click();
+      const modal = document.getElementById("searchModal");
+      await waitFor(() => modal && !modal.hidden, "Global Search modal did not open.");
+      const input = document.getElementById("playerSearchInput");
+      assert(input instanceof HTMLInputElement, "Global Search input missing.");
+      const setQuery = (query) => {
+        input.value = query;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      setQuery("rec");
+      setQuery("recover");
+      assert(text("#playerSearchResults").includes("Searching"), "Typing must announce pending search, not zero results.");
+      await delay(70);
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "No results appeared before the current query settled.");
+      await waitFor(() => text("#playerSearchResults").includes("Could not search."),
+        "A failed typed request must have distinct error copy.", 8500);
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "A failed typed request must not look like zero matches.");
+      buttonFor("#playerSearchResults .compactButton").click();
+      await waitFor(() => text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "Successful retry with no matches must display settled zero results.", 8500);
+      assert(input.value === "recover", "Search Retry changed the user's query.");
+      setQuery("stale");
+      await delay(250);
+      setQuery("browser");
+      await waitFor(() => document.querySelector("#playerSearchResults > .searchResult"),
+        "Fresh query did not return the fixture Player.", 8500);
+      await delay(550);
+      assert(text("#playerSearchResults").includes("Browser Player"),
+        "An obsolete API result overwrote the latest Global Search result.");
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "Stale zero-result response overwrote newer matches.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1,
+        "Global Search modal overflows the mobile viewport.");
+    } else if (scenario === "ux02-myclubs-empty") {
+      await waitFor(() => !hidden("#myClubsSearchButton"), "Empty opted-in My Clubs did not reveal Search clubs.", 9000);
+      assert(document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 0,
+        "Empty My Clubs showed cards despite a verified zero-club response.");
+      assert(hidden("#myClubsRetryButton"), "Successful empty My Clubs must not expose failed-request Retry.");
+      assert(text("#myClubsStatus").includes("no clubs yet"), "Empty My Clubs must explain zero ownership.");
+      buttonFor("#myClubsSearchButton").click();
+      await waitFor(() => !hidden("#searchModal"), "Search clubs did not open Global Search.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "My Clubs action overflows the phone.");
+    } else if (scenario === "ux02-watchlist-zero") {
+      await waitFor(() => !hidden("#tableEmptyDiscoverPlayersButton"),
+        "Empty opted-in Watchlist did not reveal Find players.", 9000);
+      assert(text("#emptyState").includes("Find players"), "Empty Watchlist lacks player discovery text.");
+      assert(!document.getElementById("tableEmptyClearFiltersButton"),
+        "Genuinely empty Watchlist must not offer Clear filters.");
+      buttonFor("#tableEmptyDiscoverPlayersButton").click();
+      await waitFor(() => !hidden("#searchModal"), "Find players did not open Global Search.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "Watchlist onboarding overflows the phone.");
+    } else if (scenario === "ux02-player-failure" || scenario === "ux02-club-failure") {
+      const kind = scenario === "ux02-player-failure" ? "Player" : "Club";
+      await waitFor(() => !hidden("#entityLoadErrorPage"),
+        kind + " HTTP 503 did not display the separate recovery page.", 9000);
+      assert(text("#entityLoadErrorTitle") === "Could not load " + kind,
+        kind + " API failure was mislabeled as Not found.");
+      assert(hidden("#notFoundPage"), "Network error must not be mislabeled as 404.");
+      assert(document.body.dataset.page === "loaderror", "Network failure retained the wrong page owner.");
+      buttonFor("#entityLoadErrorRetryButton");
+      assert(window.location.pathname.startsWith(kind === "Player" ? "/players/1" : "/clubs/9001"),
+        "Recovery UI altered the deep-link URL.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "Entity error UI overflows the phone.");
+    } else {
+      throw new Error("Unsupported UX-02 browser scenario: " + scenario);
+    }
+    finish("passed", scenario + ": real Chromium DOM checked response, keyboard focus and viewport.");
+  }
+
   async function run() {
     try {
-      if (scenario === "stale") await runStaleNavigation();
+      if (scenario.startsWith("ux02-")) await runUx02Recovery();
+      else if (scenario === "stale") await runStaleNavigation();
       else await runRepresentativeRoute();
     } catch (error) {
       finish("failed", String(error?.stack || error));
