@@ -1072,15 +1072,35 @@ function attachEvaluationLoadActionTooltip(button) {
   button.addEventListener("blur", hideEvaluationLoadActionTooltip);
 }
 
+function renderSavedEvaluationState(message, actionLabel = "", onAction = null, error = false) {
+  const empty = document.createElement("div");
+  empty.className = "evaluationLoadEmpty";
+  if (error) empty.setAttribute("role", "alert");
+  const description = document.createElement("p");
+  description.textContent = message;
+  empty.appendChild(description);
+  if (actionLabel && typeof onAction === "function") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "compactButton";
+    button.textContent = actionLabel;
+    button.addEventListener("click", onAction);
+    empty.appendChild(button);
+  }
+  evaluationLoadList.classList.add("evaluationLoadListStatus");
+  evaluationLoadList.replaceChildren(empty);
+}
+
 function renderSavedEvaluationList(rows) {
   hideEvaluationLoadActionTooltip();
+  evaluationLoadList.classList.remove("evaluationLoadListStatus");
   evaluationLoadList.replaceChildren();
 
   if (!rows.length) {
-    const empty = document.createElement("p");
-    empty.className = "evaluationLoadEmpty";
-    empty.textContent = "No saved evaluations yet.";
-    evaluationLoadList.appendChild(empty);
+    renderSavedEvaluationState("No saved evaluations yet. Select a player to create one.", "Search players", () => {
+      hideModal(evaluationLoadModal);
+      evaluationSearchInput?.focus();
+    });
     return;
   }
 
@@ -1281,11 +1301,9 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
     const evaluations = await loadSavedEvaluationListData();
     renderSavedEvaluationList(Array.isArray(evaluations) ? evaluations : []);
   } catch (error) {
-    evaluationLoadList.innerHTML = "";
-    const message = document.createElement("p");
-    message.className = "evaluationLoadEmpty";
-    message.textContent = error?.message || "Could not load saved evaluations.";
-    evaluationLoadList.appendChild(message);
+    renderSavedEvaluationState(error?.message || "Could not load saved evaluations.", "Retry", () => {
+      void evaluationOpenSavedEvaluationsModalOwner();
+    }, true);
   }
 }
 
