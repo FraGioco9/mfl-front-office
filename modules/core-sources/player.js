@@ -494,6 +494,13 @@ function applyOverallBoxAppearance(box, overall) {
     const requiredIndexes = PLAYER_DETAIL_REQUIRED_COLUMNS.map((column) => payload.columns.indexOf(column));
     if (playerIdIndex < 0 || requiredIndexes.some((index) => index < 0)) return false;
     const matchingRow = payload.rows.find((row) => Array.isArray(row) && normalizePlayerId(row[playerIdIndex]) === routePlayerId);
+    if (!matchingRow && payload.rows.length === 0 && Number(payload.totalRows) === 0) {
+      // A successful, canonical empty entity response verifies absence.
+      // Release the pending hero so the shared typed Player not-found route
+      // renders, rather than leaving an indefinite first-paint skeleton.
+      readyDetailPlayerId = routePlayerId;
+      return true;
+    }
     if (!matchingRow || matchingRow.length !== payload.columns.length) return false;
     const clubIdIndex = payload.columns.indexOf("active_contract_club_id");
     if (clubIdIndex >= 0) {

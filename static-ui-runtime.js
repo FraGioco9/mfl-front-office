@@ -216,8 +216,56 @@
     return page;
   }
 
+  function ensureLoadErrorPage(kind = "Page") {
+    const normalizedKind = ["Player", "Club"].includes(kind) ? kind : "Page";
+    let page = document.getElementById("entityLoadErrorPage");
+    if (!(page instanceof HTMLElement)) {
+      page = document.createElement("section");
+      page.id = "entityLoadErrorPage";
+      page.className = "pageView homePage";
+      page.hidden = true;
+      page.setAttribute("role", "alert");
+
+      const title = document.createElement("h1");
+      title.id = "entityLoadErrorTitle";
+      title.style.justifySelf = "center";
+      title.style.fontSize = "44px";
+      title.style.textAlign = "center";
+      const message = document.createElement("p");
+      message.textContent = "This may be a temporary problem. Check your connection and try again.";
+      message.style.textAlign = "center";
+
+      const retry = document.createElement("button");
+      retry.id = "entityLoadErrorRetryButton";
+      retry.type = "button";
+      retry.className = "homeOptInButton";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => {
+        retry.disabled = true;
+        // Re-request the current entity URL with a fresh navigation context.
+        // A GET reload never replays a wallet mutation and avoids stale SPA cache.
+        window.location.reload();
+      });
+      const home = document.createElement("button");
+      home.type = "button";
+      home.className = "homeOptInButton";
+      home.textContent = "Home";
+      home.addEventListener("click", () => window.location.assign("/"));
+      page.append(title, message, retry, home);
+      const main = document.querySelector("main");
+      const footer = main?.querySelector(":scope > .siteFooterDetails");
+      if (main instanceof HTMLElement) main.insertBefore(page, footer instanceof HTMLElement ? footer : null);
+    }
+    const title = page.querySelector("#entityLoadErrorTitle");
+    if (title instanceof HTMLElement) title.textContent = "Could not load " + normalizedKind;
+    const retry = page.querySelector("#entityLoadErrorRetryButton");
+    if (retry instanceof HTMLButtonElement) retry.disabled = false;
+    return page;
+  }
+
   function shellForRoute(state) {
     if (state.page === "notfound") return ensureNotFoundPage(state.notFoundKind || "Page");
+    if (state.page === "loaderror") return ensureLoadErrorPage(state.errorKind || "Page");
     const requestShellId = window.__mflAppConfig?.routes?.requestShellId;
     if (typeof requestShellId !== "function") return null;
     const request = state.request || {
@@ -397,6 +445,18 @@
       page: "notfound",
       view: "",
       notFoundKind: normalizedNotFoundKind(kind),
+      url: window.location.href,
+    });
+  }
+
+  function showLoadError(kind = "Page") {
+    hideGlobalTooltip({ immediate: true });
+    document.body.dataset.page = "loaderror";
+    setActiveNavigation("loaderror");
+    showRouteShell({
+      page: "loaderror",
+      view: "",
+      errorKind: ["Player", "Club"].includes(kind) ? kind : "Page",
       url: window.location.href,
     });
   }
@@ -675,5 +735,5 @@
   window.addEventListener("scroll", onTooltipViewportChange, true);
   window.addEventListener("popstate", onPopState);
 
-  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, showNotFound, hideTooltips, destroy });
+  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy });
 })();
