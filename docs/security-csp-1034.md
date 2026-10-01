@@ -87,12 +87,12 @@ legacy hashes would break Next unless those sources receive a separately
 verified request nonce (or other approved mechanism). The check is intentionally
 limited to deterministic legacy scripts; no nonce is added or assumed.
 
-**Observability blocker:** As checked on 01 October 2026, the most recently
-listed Vercel production deployment was still at `00c69330`, preceding
-phase 1's reporting header. Real CSP violation statistics and Dapper popup
-source inventory therefore cannot yet be inferred. Production deployment
-and a real browser/wallet exercise remain prerequisites for narrowing dynamic
-origins or enabling enforcement.
+**Observability update (01 October 2026):** Production now serves
+`1504d4f3`, which includes the Report-Only header. The initial deployment
+revealed the missing Next Pages API adapter for `/api/csp-report`; see
+Phase 2c for the repair and deployment acceptance gate. Reliable CSP
+report telemetry requires this fix to be deployed. Dapper popup sources
+cannot be inferred without a real browser/wallet test.
 
 **Rollout:** After deploying and verifying phase 1/phase 2a, inventory
 remaining `script-src`, `script-src-elem` and `script-src-attr` reports.
@@ -164,6 +164,42 @@ without enforcing any new CSP directives.
 Rollback phase 2b by removing the opt-in flag, then (if necessary)
 reverting `proxy.js`, the `_document` nonce handoff, and shared
 policy helper. No database migration or auth-state change is involved.
+
+## Phase 2c (01 October 2026): wire the CSP receiver into production
+
+**Deployment verification found a routing gap.** The phase-1 report
+receiver existed at `api/csp-report.js`, but the Next Pages Router did
+not have a matching `pages/api/csp-report.js` adapter. Unlike other
+production API routes, CSP browsers therefore had no direct Next endpoint
+with the intended 405/204 response contract. Without this route, a
+successful build or source-only unit test cannot establish that violations
+are actually collected.
+
+The follow-up change supplies the wrapper, explicitly sets
+`api.bodyParser=false` (required to preserve the receiver's own 16-KiB
+body cap and two browser report formats), and adds **HTTP-level** tests
+against both a real Next development server and a built production server:
+- GET is 405 with `Allow: POST`, not an HTML fallback;
+- empty valid `application/csp-report` JSON and modern
+  `application/reports+json` arrays each return HTTP 204, without
+  persisting or generating synthetic violation logs;
+- malformed JSON returns 400, oversized bodies 413, and unsupported
+  media type 415;
+- deployed HTML retains unchanged enforced CSP, includes the report-only
+  `script-src` and `report-uri /api/csp-report`, and exposes the
+  `Reporting-Endpoints` header.
+
+The protected `Vercel site update` workflow now includes these
+**live post-deployment checks** after database identity and deep-link
+validation. A deployment cannot report successful verification without
+a reachable and accepting CSP reporting endpoint. This remains
+observability-only; it introduces no enforced script CSP or new wallet
+permissions.
+
+The deployment on commit `1504d4f3` completed successfully on
+01 October 2026, but predates the route adapter. Deploy the fix through
+the protected workflow and then observe sanitized reports and exercise
+a real Dapper session before considering enforcement.
 
 ## First-party report processing
 
