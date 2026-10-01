@@ -249,8 +249,8 @@ function protectedOptOutRoute(pageName, options = {}) {
   const normalizedPage = String(pageName || "");
   if (normalizedPage === "planner") {
     const explicitPath = String(options.path || options.replaceUrl || "");
-    const publicPlanPath = /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)
-      || /^\/planner\/[a-f0-9]{16}$/i.test(String(window.location.pathname || ""));
+    const publicPlanPath = /^\/planner\/(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(explicitPath)
+      || /^\/planner\/(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(String(window.location.pathname || ""));
     const shareId = explicitPath.startsWith("/planner?share=")
       ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
       : window.location.pathname === "/planner"
