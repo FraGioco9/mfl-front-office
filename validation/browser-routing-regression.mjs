@@ -116,6 +116,7 @@ function rowForColumns(columns) {
 }
 
 let browserRegressionResult = null;
+let ux02TypedSearchFailedOnce = false;
 
 const browserTestSource = String.raw`(() => {
   "use strict";
@@ -126,7 +127,9 @@ const browserTestSource = String.raw`(() => {
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
   const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
-  const scenario = window.location.pathname === "/privacy"
+  const scenario = window.location.hash.startsWith("#ux02-")
+    ? window.location.hash.slice(1)
+    : window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
       ? (linkedTableRefresh ? "database-linked-state" : filteredEmpty ? "database-empty" : "database")
@@ -162,15 +165,21 @@ const browserTestSource = String.raw`(() => {
 
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
+  let ux02HomeRetryClicked = false;
+  document.addEventListener("click", (event) => {
+    if (scenario === "ux02-home-retry" && event.target instanceof Element
+      && event.target.closest("#homeSummaryRetryButton")) ux02HomeRetryClicked = true;
+  }, true);
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const requestUrl = new URL(typeof input === "string" ? input : input.url, window.location.origin);
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (!["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
+    if (!scenario.startsWith("ux02-") && !["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
+    if (scenario === "ux02-home-retry" && ux02HomeRetryClicked) headers.set("x-browser-ux02-retry", "1");
     return originalFetch(input, { ...init, headers });
   };
 
@@ -203,7 +212,7 @@ const browserTestSource = String.raw`(() => {
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
-  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) {
+  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected", "ux02-myclubs-empty", "ux02-watchlist-zero"].includes(scenario)) {
     const proof = {
       type: "session",
       address: testWallet,
@@ -215,10 +224,10 @@ const browserTestSource = String.raw`(() => {
     };
     localStorage.setItem("mfl-linked-wallet-v1", testWallet);
     localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify(proof));
-    if (scenario === "watchlist" || scenario === "watchlist-empty") {
+    if (scenario === "watchlist" || scenario === "watchlist-empty" || scenario === "ux02-watchlist-zero") {
       localStorage.setItem(
         "mfl-wallet-watchlist-v1:" + testWallet,
-        JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: ["1"] }]),
+        JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: scenario === "ux02-watchlist-zero" ? [] : ["1"] }]),
       );
     }
   }
@@ -2706,9 +2715,108 @@ const browserTestSource = String.raw`(() => {
     finish("passed", "stale navigation: newest route remained authoritative with canonical timing.");
   }
 
+  async function runUx02Recovery() {
+    const buttonFor = (selector) => {
+      const button = document.querySelector(selector);
+      assert(button instanceof HTMLButtonElement, "UX-02 action missing: " + selector);
+      assert(!button.disabled && !hidden(selector), "UX-02 action is hidden/disabled: " + selector);
+      const rect = button.getBoundingClientRect();
+      assert(rect.width > 0 && rect.right <= innerWidth + 1 && rect.left >= -1, "UX-02 action overflows viewport: " + selector);
+      button.focus();
+      assert(document.activeElement === button, "UX-02 action cannot receive keyboard focus: " + selector);
+      return button;
+    };
+    if (scenario === "ux02-home-zero") {
+      await waitFor(() => text("#homePlayers") === "0" && text("#homeWallets") === "0",
+        "Home zero-data response must show two authoritative zero counts.", 8000);
+      assert(hidden("#homeSummaryLoadError"), "Valid zero data must not show an API error.");
+      assert(document.getElementById("homeSummaryRetryButton")?.disabled === true,
+        "Valid zero data must keep its hidden error action disabled.");
+    } else if (scenario === "ux02-home-retry") {
+      await waitFor(() => !hidden("#homeSummaryLoadError"), "Failed Home summary must expose recovery.", 8000);
+      assert(text("#homePlayers") === "-" && text("#homeWallets") === "-", "Home failure must not invent zero counts.");
+      assert(text("#homeSummaryLoadError").includes("Database summary unavailable"),
+        "Home error must explain cause without exposing raw API errors.");
+      buttonFor("#homeSummaryRetryButton").click();
+      await waitFor(() => text("#homePlayers") === "12" && text("#homeWallets") === "3",
+        "Home Retry did not restore authoritative counts.", 8000);
+      assert(hidden("#homeSummaryLoadError"), "Successful Home Retry did not dismiss the error.");
+    } else if (scenario === "ux02-search") {
+      buttonFor("#openSearchButton").click();
+      const modal = document.getElementById("searchModal");
+      await waitFor(() => modal && !modal.hidden, "Global Search modal did not open.");
+      const input = document.getElementById("playerSearchInput");
+      assert(input instanceof HTMLInputElement, "Global Search input missing.");
+      const setQuery = (query) => {
+        input.value = query;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      setQuery("rec");
+      setQuery("recover");
+      assert(text("#playerSearchResults").includes("Searching"), "Typing must announce pending search, not zero results.");
+      await delay(70);
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "No results appeared before the current query settled.");
+      await waitFor(() => text("#playerSearchResults").includes("Could not search."),
+        "A failed typed request must have distinct error copy.", 8500);
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "A failed typed request must not look like zero matches.");
+      buttonFor("#playerSearchResults .compactButton").click();
+      await waitFor(() => text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "Successful retry with no matches must display settled zero results.", 8500);
+      assert(input.value === "recover", "Search Retry changed the user's query.");
+      setQuery("stale");
+      await delay(250);
+      setQuery("browser");
+      await waitFor(() => document.querySelector("#playerSearchResults > .searchResult"),
+        "Fresh query did not return the fixture Player.", 8500);
+      await delay(550);
+      assert(text("#playerSearchResults").includes("Browser Player"),
+        "An obsolete API result overwrote the latest Global Search result.");
+      assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
+        "Stale zero-result response overwrote newer matches.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1,
+        "Global Search modal overflows the mobile viewport.");
+    } else if (scenario === "ux02-myclubs-empty") {
+      await waitFor(() => !hidden("#myClubsSearchButton"), "Empty opted-in My Clubs did not reveal Search clubs.", 9000);
+      assert(document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 0,
+        "Empty My Clubs showed cards despite a verified zero-club response.");
+      assert(hidden("#myClubsRetryButton"), "Successful empty My Clubs must not expose failed-request Retry.");
+      assert(text("#myClubsStatus").includes("no clubs yet"), "Empty My Clubs must explain zero ownership.");
+      buttonFor("#myClubsSearchButton").click();
+      await waitFor(() => !hidden("#searchModal"), "Search clubs did not open Global Search.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "My Clubs action overflows the phone.");
+    } else if (scenario === "ux02-watchlist-zero") {
+      await waitFor(() => !hidden("#tableEmptyDiscoverPlayersButton"),
+        "Empty opted-in Watchlist did not reveal Find players.", 9000);
+      assert(text("#emptyState").includes("Find players"), "Empty Watchlist lacks player discovery text.");
+      assert(!document.getElementById("tableEmptyClearFiltersButton"),
+        "Genuinely empty Watchlist must not offer Clear filters.");
+      buttonFor("#tableEmptyDiscoverPlayersButton").click();
+      await waitFor(() => !hidden("#searchModal"), "Find players did not open Global Search.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "Watchlist onboarding overflows the phone.");
+    } else if (scenario === "ux02-player-failure" || scenario === "ux02-club-failure") {
+      const kind = scenario === "ux02-player-failure" ? "Player" : "Club";
+      await waitFor(() => !hidden("#entityLoadErrorPage"),
+        kind + " HTTP 503 did not display the separate recovery page.", 9000);
+      assert(text("#entityLoadErrorTitle") === "Could not load " + kind,
+        kind + " API failure was mislabeled as Not found.");
+      assert(hidden("#notFoundPage"), "Network error must not be mislabeled as 404.");
+      assert(document.body.dataset.page === "loaderror", "Network failure retained the wrong page owner.");
+      buttonFor("#entityLoadErrorRetryButton");
+      assert(window.location.pathname.startsWith(kind === "Player" ? "/players/1" : "/clubs/9001"),
+        "Recovery UI altered the deep-link URL.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1, "Entity error UI overflows the phone.");
+    } else {
+      throw new Error("Unsupported UX-02 browser scenario: " + scenario);
+    }
+    finish("passed", scenario + ": real Chromium DOM checked response, keyboard focus and viewport.");
+  }
+
   async function run() {
     try {
-      if (scenario === "stale") await runStaleNavigation();
+      if (scenario.startsWith("ux02-")) await runUx02Recovery();
+      else if (scenario === "stale") await runStaleNavigation();
       else await runRepresentativeRoute();
     } catch (error) {
       finish("failed", String(error?.stack || error));
@@ -2805,7 +2913,9 @@ function pageDataStub(url, scenario = "") {
   const plannerRow = pageColumns.map((column) => (
     column === "retirement_years" ? 2 : (testPlayer[column] ?? null)
   ));
-  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const rows = (scope === "watchlist" && scenario === "ux02-watchlist-zero") ? []
+    : scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : [])
+      : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -3013,6 +3123,52 @@ async function createRegressionServer() {
       return;
     }
     if (url.pathname === "/api/data") {
+      const ux02Scenario = String(request.headers["x-browser-regression-scenario"] || "");
+      const ux02Mode = String(url.searchParams.get("mode") || "");
+      if (ux02Scenario === "ux02-home-zero" && ux02Mode === "bootstrap") {
+        const responseData = dataStub(url);
+        writeJson(response, { ...responseData, summary: { playerCount: 0, walletCount: 0, generatedAt } });
+        return;
+      }
+      if (ux02Scenario === "ux02-home-retry" && ux02Mode === "bootstrap") {
+        if (request.headers["x-browser-ux02-retry"] !== "1") {
+          writeJson(response, { error: "Fixture bootstrap unavailable" }, 503);
+        } else {
+          const responseData = dataStub(url);
+          writeJson(response, { ...responseData, summary: { playerCount: 12, walletCount: 3, generatedAt } });
+        }
+        return;
+      }
+      if (ux02Scenario === "ux02-myclubs-empty" && ux02Mode === "my-clubs") {
+        writeJson(response, { generatedAt, clubs: [] });
+        return;
+      }
+      if (ux02Scenario === "ux02-search" && ux02Mode === "search" && url.searchParams.get("type") === "all") {
+        const query = String(url.searchParams.get("q") || "").toLowerCase();
+        if (query === "recover" && !ux02TypedSearchFailedOnce) {
+          ux02TypedSearchFailedOnce = true;
+          writeJson(response, { error: "Fixture typed search failed" }, 503);
+          return;
+        }
+        if (query === "stale") await new Promise(resolve => setTimeout(resolve, 460));
+        const results = query === "browser" ? [rowForColumns(searchColumns)] : [];
+        writeJson(response, {
+          players: { columns: searchColumns, rows: results },
+          agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [] },
+          clubs: [],
+        });
+        return;
+      }
+      if (ux02Scenario === "ux02-player-failure"
+          && ux02Mode === "page" && url.searchParams.get("scope") === "player") {
+        writeJson(response, { error: "Fixture Player API unavailable" }, 503);
+        return;
+      }
+      if (ux02Scenario === "ux02-club-failure"
+          && ux02Mode === "page" && url.searchParams.get("scope") === "club") {
+        writeJson(response, { error: "Fixture Club API unavailable" }, 503);
+        return;
+      }
       const myClubsMode = String(url.searchParams.get("mode") || "");
       const myClubsRequest = myClubsMode === "my-clubs" || myClubsMode === "my-clubs-competitions";
       const invalidMyClubsProof = myClubsRequest
@@ -3258,6 +3414,15 @@ const regressionScenarios = Object.freeze([
   ["planner", "/planner"],
   ["planner-out", "/planner#opted-out"],
   ["planner-selected", "/planner?club=9001"],
+  ...(process.env.MFL_UX02_BROWSER_FOCUSED === "1" ? [
+    ["ux02-home-zero", "/#ux02-home-zero", 520, 844],
+    ["ux02-home-retry", "/#ux02-home-retry", 390, 844],
+    ["ux02-search", "/database/attributes#ux02-search", 390, 844],
+    ["ux02-myclubs-empty", "/my-clubs#ux02-myclubs-empty", 390, 844],
+    ["ux02-watchlist-zero", "/watchlist/browser1/current-season#ux02-watchlist-zero", 390, 844],
+    ["ux02-player-failure", "/players/1#ux02-player-failure", 390, 844],
+    ["ux02-club-failure", "/clubs/9001#ux02-club-failure", 390, 844],
+  ] : []),
 ]);
 
 const server = await createRegressionServer();

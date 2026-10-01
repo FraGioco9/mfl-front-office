@@ -35,3 +35,23 @@ Run the UX-02 validator within the existing route-feature validator group and fu
 ## Unfinished sub-scope
 
 The current PR closes actionable gaps in My Clubs, Planner and saved Evaluation dialogs. Home offline summaries, Player/Club API-error handling, shared table filtered-empty reset, Watchlist onboarding and end-to-end network-failure browser coverage remain to be reviewed or deliberately excluded. Do not check off UX-02 until that disposition is recorded.
+
+
+## UX-02G — Focused real-browser recovery matrix (no production deploy)
+
+Deterministic Chromium test: node validation/browser-ux02-recovery-regression.mjs, executed in Site Quality after general routing. Uses the repository's real Chromium/DevTools browser runner against a stubbed local HTTP server, not Vercel or actual wallet secrets.
+
+| Scenario | Width | Assertions |
+| --- | ---: | --- |
+| Home valid zero counts | 520px | Both values 0, no error or inappropriate Retry. |
+| Home API failure and recovery | 390px | Unknown counts remain unavailable, descriptive error and focusable Retry restore values and clear error. |
+| Global Search | 390px | No premature zero while typing, distinct API failure, Retry, settled zero, stale delayed query cannot override fresh Player, viewport safe. |
+| My Clubs, valid synthetic wallet, zero clubs | 390px | No cards; no inappropriate error Retry; discovery action opens shared Search. |
+| Watchlist, valid synthetic wallet, zero players | 390px | Find players, no inappropriate Clear filters; shared Search opens. |
+| Player HTTP 503 | 390px | Dedicated Could not load Player; typed 404 hidden; Retry focusable; deep-link intact. |
+| Club HTTP 503 | 390px | Dedicated Could not load Club; typed 404 hidden; Retry focusable; deep-link intact. |
+
+These are *synthetic* wallet fixtures. The suite runs separately so standard route CI scenario coverage does not expand.
+
+**Final-release verification still pending:** actual opted-in wallets with no clubs, no saved plans/evaluations, revoked/expired permissions during in-flight requests; Safari/iPhone touch interaction, native-keyboard Tab/Enter/Escape, real-network interruptions, and the one final production deploy verification for UX-01 titles and release integrity. Do not check UX-02G or parent UX-02 off until these checks are completed or explicitly scoped out.
+

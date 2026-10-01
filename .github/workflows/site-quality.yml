@@ -173,6 +173,10 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
 
+      - name: UX-02 recovery browser matrix
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-ux02-recovery-regression.mjs
+
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs
