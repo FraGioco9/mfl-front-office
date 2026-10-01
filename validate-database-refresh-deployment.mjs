@@ -168,7 +168,9 @@ invariant(
   "Checkpoint identity recording must preserve a compatibility gate for the last pre-identity published runtime while retaining the full expected tuple.",
 );
 invariant(
-  deploymentVerifier.includes('routes = ["/", "/database", "/evaluation", "/players/374097", "/clubs/1/squad"]')
+  deploymentVerifier.includes('"/database", "/database/attributes", "/evaluation", "/planner"')
+    && deploymentVerifier.includes('"/players/374097", "/clubs/1/squad", "/settings"')
+    && deploymentVerifier.includes("expected_titles = {")
     && deploymentVerifier.includes('base_url + "/api/identity"')
     && deploymentVerifier.includes("commit_required = bool(expected.get(\"commitVerificationRequired\"))"),
   "Checkpoint verification must cover runtime identity plus representative root and deep routes.",
