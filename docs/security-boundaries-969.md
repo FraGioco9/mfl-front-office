@@ -17,6 +17,14 @@ This intentionally limits only capabilities the application does not use. The CS
 
 A full `script-src`/style/connect/image CSP is not introduced in this slice because the current compatibility shell still contains inline runtime code and loads Flow/Dapper/MFL resources from multiple explicit origins. Tightening those directives should happen only after nonce/hash/origin ownership is designed and browser-tested.
 
+SEC-04 (#1034) adds a **production-only CSP Report-Only candidate**, not a
+change to the enforced CSP. The candidate detects legacy/Next inline-script
+usage and unexpected external destinations without blocking FCL/Dapper or
+ordinary navigation. The first-party `/api/csp-report` endpoint accepts
+both reporting formats, bounds payloads, and logs only sanitized origins
+and coarse route categories. See [the staged CSP rollout and origin
+inventory](security-csp-1034.md) before proposing enforcement.
+
 `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` are intentionally not set by the application because the current Dapper/Flow authentication path can use popup/RPC and third-party resources. Those policies require dedicated wallet-flow verification before adoption.
 
 Strict transport policy remains deployment/platform configuration rather than an application-level duplicate. The application does not attempt to infer custom-domain/HSTS ownership from request headers.

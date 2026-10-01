@@ -18,6 +18,32 @@ export const securityHeaders = Object.freeze([
   { key: "X-Frame-Options", value: "DENY" },
 ]);
 
+
+// SEC-04 phase 1: observability only. Never merge into the enforced CSP without
+// browser validation of inline legacy scripts, Next runtime, and FCL/Dapper.
+export const cspReportOnly = Object.freeze([
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "script-src 'self' https://esm.sh",
+  "script-src-elem 'self' https://esm.sh",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' https:",
+  "worker-src 'self' blob:",
+  "media-src 'self' https: blob:",
+  "form-action 'self' https:",
+  "report-uri /api/csp-report",
+  "report-to mfl-csp",
+].join("; "));
+
+export const cspReportOnlyHeaders = Object.freeze([
+  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
+  { key: "Reporting-Endpoints", value: 'mfl-csp="/api/csp-report"' },
+]);
+
 export const outputFileTracingIncludes = {
   "/api/data": ["./api/data-files/mfl_database.db"],
   "/api/identity": ["./api/data-files/mfl_database.db"],
@@ -36,7 +62,7 @@ export const outputFileTracingIncludes = {
 
 export function createNextHeaders({ production = process.env.NODE_ENV === "production" } = {}) {
   return [
-    { source: "/:path*", headers: securityHeaders },
+    { source: "/:path*", headers: production ? [...securityHeaders, ...cspReportOnlyHeaders] : securityHeaders },
     { source: "/", headers: noStore },
     { source: "/index.html", headers: noStore },
     { source: "/release.json", headers: noStore },

@@ -7,6 +7,7 @@ const validators = [
   "validate-wallet-session-integration.mjs",
   "validate-wallet-auth-rate-limit.mjs",
   "validate-wallet-mutation-origin.mjs",
+  "validate-csp-report-only.mjs",
   "validate-wallet-permission-cache.mjs",
   "validate-data-read-cache-policy.mjs",
   "validate-public-page-cache-policy.mjs",
