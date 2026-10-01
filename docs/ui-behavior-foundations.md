@@ -82,3 +82,19 @@ Selected Player attribute views expose `aria-pressed` in lockstep with the exist
 The matrix intentionally includes the **same 1280×900 desktop viewport with and without a vertical scrollbar**. This protects the page-padding foundation: left/right page content alignment must not change because scrollbar chrome is present or absent.
 
 New shared breakpoints or layout foundations must extend this matrix instead of adding one-off viewport assumptions to individual validators.
+
+
+## UX-03 — action ordering, destructive confirmation and busy-state audit
+
+Audit in issue #1034 uses these distinctions; these are not blanket changes to domain-specific controls:
+
+| Domain | Primary/edit actions | Destructive/clear actions | Behavior owner and follow-up |
+| --- | --- | --- | --- |
+| Planner toolbar | New, Save, Duplicate, contextual Share/Revoke, Copy to my plans | Clear team/depth | UX-03B: one pending guard disables the toolbar on async New/Save/Duplicate/Share/Revoke/Copy and prevents duplicate mutations while allowing cancellation to restore state. Share/Revoke retains the single slot and labels. |
+| Planner saved Plans | Open, Rename, Duplicate, Copy link, Share/Revoke | Delete plan | Already uses icon-only actions, per-button pending state, explicit named Delete and Revoke confirmation dialogs, and domain danger styling. UX-03C: audit cross-row in-flight writes and failure recovery without changing row layout. |
+| Watchlists | Add/rename/activate/save lists and players | Remove player, Delete watchlist | Existing named Delete dialog, and one-watchlist floor. UX-03D: check repeated rapid activation and error/rollback flow; do not promote non-destructive Remove into Delete. |
+| Evaluation | Save/Open saved evaluation and share-related actions | Delete saved evaluation, Reset | UX-03D: audit whether potentially remote mutations have single-flight guards and preserve keyboard/modal contracts. |
+| Filters, Search, Tables | Filter, sort, search, navigation | Clear filters/selection | Clear is an immediately reversible UI action, not destructive remote deletion. UX-03D: keep contextual empty-state Clear filters and the global reset-visibility decision. |
+| Settings and wallet | Save settings, opt in/out | Discard, opt out | Separate ownership/consent semantics; never apply a generic destructive confirmation to ordinary opt-out/navigation without domain justification. |
+
+**Shared contract:** disable overlapping wallet-backed writes synchronously before the first await; restore normal actionable state on success, cancellation, permission failure and HTTP failure. Busy is not "selected". Existing labels, accessible names, confirmation, toast/status and CSS danger treatments must remain domain-owned. Use explicit PR-level tests, and leave UX-03 overall unchecked until all scopes and browser interactions are verified.

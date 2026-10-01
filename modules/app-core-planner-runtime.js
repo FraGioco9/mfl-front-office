@@ -56,6 +56,7 @@
   const savePlanButton=document.getElementById("plannerSavePlanButton");
   const duplicatePlanButton=document.getElementById("plannerDuplicatePlanButton");
   const sharePlanButton=document.getElementById("plannerSharePlanButton");
+  const planActions=document.getElementById("plannerPlanBar");
   const sharedBanner=document.getElementById("plannerSharedBanner");
   const sharedPlanName=document.getElementById("plannerSharedPlanName");
   const copySharedPlanButton=document.getElementById("plannerCopySharedPlanButton");
@@ -88,6 +89,7 @@
   let activeContractEditor=null;
   let activePlanId="",activePlanName="",activePlanPayload=null,activePlanRevision=0,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
   let planNameRequest=null,planDeleteRequest=null,planRevokeRequest=null;
+  let plannerToolbarActionPending=false;
   let plannerUndoStack=[],plannerRedoStack=[],plannerHistoryApplying=false;
   let plannerCommittedFormation=String(formationSelect?.value||"442");
   let plannerHighlightTimer=0;
@@ -1212,23 +1214,24 @@
     return promise;
   }
   function syncPlanUi(){
+    if(planActions instanceof HTMLElement)planActions.setAttribute("aria-busy",plannerToolbarActionPending?"true":"false");
     const optedIn=typeof hasWalletOptIn==="function"&&hasWalletOptIn();
     if(planNameLabel)planNameLabel.textContent=activePlanName||"Unsaved plan";
-    if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn;
-    if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn;
-    if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId;
-    if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn;
+    if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn||plannerToolbarActionPending;
+    if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn||plannerToolbarActionPending;
+    if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId||plannerToolbarActionPending;
+    if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn||plannerToolbarActionPending;
     if(sharePlanButton instanceof HTMLButtonElement){
       const canManageShare=optedIn&&!plannerReadOnly&&Boolean(selectedTeamId);
       const shared=Boolean(activeShareId);
-      sharePlanButton.disabled=!canManageShare;
+      sharePlanButton.disabled=!canManageShare||plannerToolbarActionPending;
       sharePlanButton.textContent=shared?"Revoke":"Share";
       sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan");
     }
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
-    if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn;
-    if(teamClearButton instanceof HTMLButtonElement)teamClearButton.disabled=plannerReadOnly;
+    if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn||plannerToolbarActionPending;
+    if(teamClearButton instanceof HTMLButtonElement)teamClearButton.disabled=plannerReadOnly||plannerToolbarActionPending;
     if(formationSelect instanceof HTMLElement)formationSelect.disabled=plannerReadOnly;
     Reflect.get(window,"__mflPlannerFormationPreview")?.setReadOnly?.(plannerReadOnly);
     updateAddPlayerAvailability();
@@ -1236,6 +1239,23 @@
     renderSquadStatus();
     syncPlannerDirtyState();
     Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();
+  }
+  async function runPlannerToolbarAction(action,failureMessage="Plan action failed."){
+    // Share, Revoke, Save and Duplicate are wallet-backed mutations. Lock their
+    // shared toolbar before any await (including name/confirmation dialogs),
+    // not only the clicked control, to prevent overlapping writes/revocations.
+    if(plannerToolbarActionPending)return false;
+    plannerToolbarActionPending=true;
+    syncPlanUi();
+    try{
+      return await action();
+    }catch(error){
+      setStatus(error?.message||failureMessage);
+      return false;
+    }finally{
+      plannerToolbarActionPending=false;
+      syncPlanUi();
+    }
   }
   async function plannerPrivateRequest(url,options={}){
     const response=await window.__mflDataClient.fetch(url,{cache:"no-store",...options,headers:{Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{}),...walletProofHeaders(true),...(options.headers||{})}});
@@ -1616,14 +1636,14 @@
   function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
-  newPlanButton?.addEventListener("click",()=>void newPlannerPlan().catch(error=>setStatus(error?.message||"Could not create a new plan.")));
-  savePlanButton?.addEventListener("click",()=>void saveCurrentPlan({asNew:!activePlanId}).catch(error=>setStatus(error?.message||"Could not save plan.")));
-  duplicatePlanButton?.addEventListener("click",()=>void duplicateCurrentPlan().catch(error=>setStatus(error?.message||"Could not duplicate plan.")));
-  sharePlanButton?.addEventListener("click",()=>{
+  newPlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>newPlannerPlan(),"Could not create a new plan."));
+  savePlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>saveCurrentPlan({asNew:!activePlanId}),"Could not save plan."));
+  duplicatePlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>duplicateCurrentPlan(),"Could not duplicate plan."));
+  sharePlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>{
     const revoking=Boolean(activeShareId);
     const action=revoking?revokePlannerShare():shareCurrentPlan();
-    void Promise.resolve(action).catch(error=>setStatus(error?.message||(revoking?"Could not revoke share.":"Could not share plan.")));
-  });
+    return action;
+  },"Could not change share state."));
   undoButton?.addEventListener("click",undoPlanner);
   redoButton?.addEventListener("click",redoPlanner);
   document.addEventListener("keydown",event=>{
@@ -1638,7 +1658,7 @@
     if(redo)redoPlanner();
     else undoPlanner();
   });
-  copySharedPlanButton?.addEventListener("click",()=>void copySharedPlannerPlan().catch(error=>setStatus(error?.message||"Could not copy shared plan.")));
+  copySharedPlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>copySharedPlannerPlan(),"Could not copy shared plan."));
   plansModalCloseButton?.addEventListener("click",closePlansModal);
   plansModal?.addEventListener("click",event=>{if(event.target===plansModal)closePlansModal();});
   planNameModalCloseButton?.addEventListener("click",()=>closePlannerPlanNameModal(""));
