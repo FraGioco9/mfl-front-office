@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { queryOne } = require("./_database");
-const { normalizeEvaluationId } = require("./_evaluation-payload");
+const { normalizeEvaluationShareId } = require("./_evaluation-payload");
 const { supabaseConfig } = require("./_supabase");
 const {
   GENERIC_PREVIEW,
@@ -49,7 +49,7 @@ function evaluationShellPath() {
 
 function evaluationCanonicalUrl(origin, shareId, playerId) {
   const url = new URL("/evaluation", origin);
-  const normalizedId = normalizeEvaluationId(shareId);
+  const normalizedId = normalizeEvaluationShareId(shareId);
   const normalizedPlayerId = String(playerId || "").trim();
   if (normalizedId && normalizedPlayerId) url.searchParams.set("player", normalizedPlayerId);
   if (normalizedId) url.searchParams.set("share", normalizedId);
@@ -58,7 +58,7 @@ function evaluationCanonicalUrl(origin, shareId, playerId) {
 
 function evaluationPreviewImageUrl(origin, shareId, playerId) {
   const url = new URL("/api/evaluation-preview-image", origin);
-  const normalizedId = normalizeEvaluationId(shareId);
+  const normalizedId = normalizeEvaluationShareId(shareId);
   const normalizedPlayerId = String(playerId || "").trim();
   if (normalizedId && normalizedPlayerId) url.searchParams.set("player", normalizedPlayerId);
   if (normalizedId) url.searchParams.set("share", normalizedId);
@@ -115,7 +115,7 @@ module.exports = async function handler(request, response) {
   response.setHeader("X-Robots-Tag", "noindex, nofollow,noarchive");
 
   const requestUrl = new URL(request.url, "http://localhost");
-  const shareId = normalizeEvaluationId(requestUrl.searchParams.get("share"));
+  const shareId = normalizeEvaluationShareId(requestUrl.searchParams.get("share"));
   const playerId = String(requestUrl.searchParams.get("player") || "").trim();
   const earlyPlayerName = publicEvaluationPlayerName(playerId);
   const origin = requestOrigin(request);
