@@ -145,7 +145,8 @@ invariant(
     && runtime.includes("canonicalRecentResults.set(key, result);")
     && runtime.includes("applyRecentItemsToCore();")
     && runtime.includes("results.replaceChildren(...ordered);")
-    && runtime.includes("captureCanonicalRecentResults();\n    void searchDatabase(query);")
+    && runtime.includes("captureCanonicalRecentResults();\n    // Cancel the previous request on every edit.")
+    && runtime.includes("searchDebounceTimer = window.setTimeout(() => {")
     && runtime.includes("if (renderCanonicalRecentResults()) return true;")
     && runtime.includes("if (publishCanonicalRecentPayload()) return true;"),
   "Typed Global Search must preserve a separate canonical five-result payload so replacing typed indexes cannot collapse the next empty state or initial render.",

@@ -769,6 +769,18 @@ main > .pageView {
   text-transform: uppercase;
 }
 
+.homeSummaryLoadError {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: var(--mfl-metadata-font-size);
+}
+
+.homeSummaryLoadError[hidden] { display: none; }
+
 .homeOptInButton {
   display: inline-flex;
   align-items: center;
@@ -2324,6 +2336,10 @@ body:not(.pinnedSidebarVisible) .toastMessage {
 
 .searchResults > .searchHint {
   padding-left: 8px;
+}
+
+.searchHint .compactButton {
+  margin-left: 10px;
 }
 
 .playerPage {

@@ -15,6 +15,8 @@
 
   let controller = null;
   let sequence = 0;
+  let searchDebounceTimer = 0;
+  const SEARCH_INPUT_DEBOUNCE_MS = 200;
   let recentController = null;
   let recentSequence = 0;
   let recentLoadPromise = null;
@@ -195,12 +197,21 @@
     if (input && button instanceof HTMLElement) button.hidden = !input.value.trim();
   }
 
-  function renderSearchMessage(message) {
+  function renderSearchMessage(message, retry = null) {
     const results = searchResults();
     if (!results) return;
     const hint = document.createElement("div");
     hint.className = "searchHint";
     hint.textContent = message;
+    if (typeof retry === "function") {
+      hint.setAttribute("role", "alert");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "compactButton";
+      button.textContent = "Retry";
+      button.addEventListener("click", retry);
+      hint.appendChild(button);
+    }
     results.replaceChildren(hint);
     results.classList.remove("filledSearchResults");
   }
@@ -559,7 +570,14 @@
     if (!recentLoadedForSession && pendingRecentLoad) await pendingRecentLoad;
     if (!recentLoadedForSession || input.value.trim()) {
       if (!input.value.trim()) {
-        renderSearchMessage(recentLoadFailed ? "Could not load recent searches." : "Loading recent searches…");
+        renderSearchMessage(
+          recentLoadFailed ? "Could not load recent searches." : "Loading recent searches…",
+          recentLoadFailed ? () => {
+            void preloadRecentResults().then(() => {
+              if (!destroyed && !input.value.trim()) void renderEmptySearchResults();
+            });
+          } : null,
+        );
       }
       return false;
     }
@@ -620,7 +638,11 @@
       if (error?.name !== "AbortError") {
         console.error(error?.message || "Could not search the database.");
         if (!destroyed && requestSequence === sequence && normalize(input.value) === normalizedQuery) {
-          renderSearchMessage("Could not search.");
+          renderSearchMessage("Could not search.", () => {
+            if (!destroyed && normalize(input.value) === normalizedQuery) {
+              void searchDatabase(input.value);
+            }
+          });
           finishSearching(normalizedQuery);
         }
       }
@@ -670,6 +692,8 @@
   }
 
   function clearGlobalRequest() {
+    if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = 0;
     sequence += 1;
     controller?.abort();
     controller = null;
@@ -699,7 +723,15 @@
       return;
     }
     captureCanonicalRecentResults();
-    void searchDatabase(query);
+    // Cancel the previous request on every edit. "No results" is reserved
+    // for a successful response to the settled current query, never typing.
+    clearGlobalRequest();
+    const pendingQuery = normalize(query);
+    markSearching(pendingQuery);
+    searchDebounceTimer = window.setTimeout(() => {
+      searchDebounceTimer = 0;
+      if (!destroyed && normalize(input.value) === pendingQuery) void searchDatabase(input.value);
+    }, SEARCH_INPUT_DEBOUNCE_MS);
   }
 
   function onClearClick(event) {

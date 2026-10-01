@@ -7,17 +7,34 @@ function updateStatusDate(generatedAt) {
 }
 
 function updateSummaryCounts(playerCount, walletCount) {
-  const players = Number(playerCount || 0);
-  const wallets = Number(walletCount || 0);
-  totalPlayers.textContent = players ? formatCount(players) : "-";
-  totalWallets.textContent = wallets ? formatCount(wallets) : "-";
-  homePlayers.textContent = players ? formatCount(players) : "-";
-  homeWallets.textContent = wallets ? formatCount(wallets) : "-";
+  const players = playerCount === null || playerCount === undefined ? NaN : Number(playerCount);
+  const wallets = walletCount === null || walletCount === undefined ? NaN : Number(walletCount);
+  const playerText = Number.isSafeInteger(players) && players >= 0 ? formatCount(players) : "-";
+  const walletText = Number.isSafeInteger(wallets) && wallets >= 0 ? formatCount(wallets) : "-";
+  totalPlayers.textContent = playerText;
+  totalWallets.textContent = walletText;
+  homePlayers.textContent = playerText;
+  homeWallets.textContent = walletText;
 }
 
 let summaryLoadPromise = null;
 let summaryLoaded = false;
 let summarySnapshot = null;
+
+function setHomeSummaryLoadFailed(failed) {
+  if (typeof document === "undefined") return;
+  const notice = document.getElementById("homeSummaryLoadError");
+  const retry = /** @type {HTMLButtonElement | null} */ (document.getElementById("homeSummaryRetryButton"));
+  if (notice) notice.hidden = !failed;
+  if (retry) retry.disabled = !failed;
+}
+
+if (typeof document !== "undefined") {
+  document.getElementById("homeSummaryRetryButton")?.addEventListener("click", () => {
+    if (summaryLoadPromise) return;
+    void loadSummary();
+  });
+}
 
 function homeSummaryCacheReady() {
   return summaryLoaded && Boolean(summarySnapshot);
@@ -35,12 +52,17 @@ async function loadSummary() {
   if (summaryLoadPromise) return summaryLoadPromise;
 
   summaryLoadPromise = (async () => {
+    setHomeSummaryLoadFailed(false);
     try {
       const response = await window.__mflDataClient.fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
       state.manifest = data.manifest || null;
       const summary = data.summary || {};
+      if (![summary.playerCount, summary.walletCount].every(
+        value => value !== null && value !== undefined
+          && Number.isSafeInteger(Number(value)) && Number(value) >= 0
+      )) throw new Error("Database summary is incomplete.");
       summarySnapshot = Object.freeze({
         playerCount: summary.playerCount,
         walletCount: summary.walletCount,
@@ -51,7 +73,8 @@ async function loadSummary() {
       return true;
     } catch (error) {
       console.error(error?.message || "Could not load the database summary.");
-      updateSummaryCounts(0, 0);
+      updateSummaryCounts(null, null);
+      setHomeSummaryLoadFailed(true);
       return false;
     }
   })();
