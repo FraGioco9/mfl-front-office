@@ -271,10 +271,13 @@ invariant(
   "Nested route/data work may reuse only the latest transition-owned route token; page/view transitions themselves must replace stale route ownership.",
 );
 invariant(
-  appCoreSource.includes("evaluationSaveButton.disabled = true;")
-    && appCoreSource.includes("evaluationSaveButton.disabled = false;")
-    && appCoreSource.includes("evaluationShareButton.disabled = true;")
-    && appCoreSource.includes("evaluationShareButton.disabled = false;")
+  appCoreSource.includes("async function runEvaluationMutation(action) {")
+    && appCoreSource.includes("if (evaluationMutationInFlight) return false;")
+    && appCoreSource.includes("evaluationMutationInFlight = true;")
+    && appCoreSource.includes("evaluationMutationInFlight = false;")
+    && appCoreSource.includes("evaluationSaveButton.disabled = evaluationMutationInFlight;")
+    && appCoreSource.includes("evaluationShareButton.disabled = evaluationMutationInFlight;")
+    && appCoreSource.includes("evaluationDeleteButton.disabled = evaluationMutationInFlight;")
     && appCoreSource.includes("state.walletOptInInProgress = true;")
     && appCoreSource.includes("linkWalletButton.disabled = true;")
     && appCoreSource.includes('linkWalletButton.textContent = "Loading...";'),
