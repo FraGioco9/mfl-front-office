@@ -9,7 +9,7 @@ const production = process.argv.includes("--production");
 const seen = new Set();
 for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
   const response = await fetch(new URL(path, base), {
-    headers: { "x-mfl-csp-nonce": "attacker-supplied" },
+    headers: { "x-mfl-csp-nonce": Buffer.from("0123456789abcdef").toString("base64") },
     signal: AbortSignal.timeout(15000),
   });
   assert.equal(response.status, 200, `Could not render ${path}`);
@@ -30,7 +30,8 @@ for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
   assert.ok(nextDataTag, `Next data bootstrap missing on ${path}`);
   assert.ok(nextDataTag.includes(`nonce="${nonce}"`),
     `NextScript must serialize trusted nonce on the bootstrap script: ${path}`);
-  assert.ok(!html.includes('nonce="attacker-supplied"'), "Untrusted forwarded nonce must never reach the browser.");
+  assert.ok(!html.includes(`nonce="${Buffer.from("0123456789abcdef").toString("base64")}"`),
+    "Untrusted forwarded nonce must never reach the browser.");
 
   const scripts = new Set(inlineLegacyScripts(html).map(scriptHash));
   for (const hash of cspLegacyScriptHashes) {
