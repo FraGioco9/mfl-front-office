@@ -10,6 +10,26 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 `api/_operational-health.js` is the server-only reader for operational runtime objects in the existing private `mfl-runtime` Storage bucket. It reads the Marketplace runtime snapshot plus `health/database-refresh.json` and `health/marketplace-refresh.json` with the service-role key; `api/operational-health.js` exposes only normalized freshness/outcome metadata and never returns credentials or raw private objects. Scheduled production workflow writes are owned by `scripts/operations/runtime_health.py`.
 
+## SEC-05 — explicit deny-by-default grants (staged; not applied to production)
+
+The 1 October 2026 **read-only production audit** found **12 public application tables** with RLS enabled and **zero RLS policies**. This is intentional: the browser never authenticates to Supabase as a row owner; wallet ownership is verified by first-party server routes, which query the database via `service_role` after checking the server-issued session. Supabase Security Advisor's `rls_enabled_no_policy` finding is therefore **informational**, not a request to create public policies. [Advisor rule](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
+
+Six legacy tables nevertheless had explicit broad grants to `anon` and `authenticated` (including `TRUNCATE`): `evaluation_saves`, `evaluation_shares`, `mfl_season_ratios`, `wallet_opt_ins`, `wallet_permissions`, `wallet_preferences`. The six newer tables already lacked those grants: `bug_reports`, `planner_plans`, `planner_shares`, `wallet_auth_consumed_challenges`, `wallet_auth_rate_limits`, `wallet_auth_sessions`. With zero client policies, those roles could not read or modify rows through RLS, but removing the table grants provides another protection layer against future policy changes. The live trigger `public.set_updated_at()` also retained `EXECUTE` granted to `PUBLIC`, `anon` and `authenticated`; seven other application functions already had server-only execution grants. No public-schema sequences or views were found.
+
+Storage was also checked read-only: the only storage bucket is `mfl-runtime`, it is **private** (`public=false`), and `storage.objects` has no RLS policies. `anon`/`authenticated` have normal schema `USAGE` privileges on `public` and `storage`, which are not sufficient to bypass table/object permissions. Do not revoke shared `storage` schema access or change Storage's built-in grants to fix the application's table grants.
+
+The staged `supabase/migrations/20261001172000_restrict_application_grants.sql`:
+- revokes all direct table privileges from `PUBLIC`, `anon`, and `authenticated` for **all 12** application tables;
+- explicitly preserves server-side `SELECT/INSERT/UPDATE/DELETE` grants on each table;
+- revokes public execution of the existing `set_updated_at()` trigger function but preserves `service_role`;
+- removes legacy automatic table/sequence grants from `postgres`'s `public` default privileges and removes explicit default `anon/authenticated` function execution grants. It does not change RLS policies, rows, stored procedures, roles or their passwords.
+
+**Provisioning residual:** production default ACLs also exist for objects owned by `supabase_admin`. The connected SQL owner is `postgres`, which cannot assume `supabase_admin`; this migration deliberately does not claim to alter those defaults. PostgreSQL functions may also gain `PUBLIC EXECUTE` from **global** default privileges, independent of schema-specific revocations. New function migrations must therefore explicitly revoke `PUBLIC`, `anon`, and `authenticated` per function, and future table migrations must explicitly enable RLS/revoke browser grants and grant `service_role`. Review the Supabase project-level **Automatically expose new tables and functions** setting and the [2026 default-grants change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically) before introducing new objects. Do not modify `supabase_admin` privileges without an authorized project-level migration.
+
+The `/api/mfl-season-ratios-v2` REST reader is public to the MFL site **but** its Supabase data access remains server-only. It now requires the service-role key instead of attempting an `anon` fallback (which could not read under zero RLS policies). An HTTP GET to the first-party endpoint remains available; the secret never reaches the browser.
+
+**Release policy:** SEC-05 migration and code changes are **not applied to Supabase production now** and are **not deployed to Vercel**. After all of issue #1034 is ready, execute the versioned Supabase migration in the same coordinated final release as Vercel (database migration first, then protected Vercel site update), verify the role ACLs and API reads/writes, and retain a rollback plan. Until then production uses the original privilege set. CI uses an **isolated PostgreSQL 17** service to verify RLS, grants, migration idempotence, trigger behavior and subsequent table defaults without altering production.
+
 ## Tables and owners
 
 ### `wallet_opt_ins`

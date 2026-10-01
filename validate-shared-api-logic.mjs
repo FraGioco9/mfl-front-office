@@ -59,7 +59,8 @@ includes(supabase, "function supabaseConfig(options = {})", "Supabase environmen
 includes(supabase, "async function supabaseRequest(pathname, options = {}, configOptions = {})", "Supabase REST transport must have one canonical owner.");
 invariant(occurrences(combined, "function supabaseConfig(") === 1, "API Supabase configuration must have exactly one owner.");
 invariant(occurrences(combined, "function supabaseRequest(") === 1, "API Supabase REST transport must have exactly one owner.");
-includes(seasonRatios, "supabaseConfig({ allowAnonKey: true })", "MFL season ratios must retain service-role/anon-key fallback through the shared Supabase owner.");
+includes(seasonRatios, "const config = supabaseConfig();", "SEC-05: MFL season ratios must require the server-only Supabase service-role key.");
+invariant(!seasonRatios.includes("allowAnonKey"), "SEC-05: MFL season ratios must not fall back to an anonymous API key.");
 
 includes(requestBody, "async function readRequestBody(request, options = {})", "Bounded request body streaming must have one canonical owner.");
 includes(requestBody, "async function readJsonBody(request, options = {})", "Bounded JSON request parsing must have one canonical owner.");

@@ -27,7 +27,9 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 async function loadRatiosFromSupabase() {
-  const config = supabaseConfig({ allowAnonKey: true });
+  // SEC-05: all Supabase tables are private; the public read-only ratios API
+  // remains the only consumer-facing route, via the server service-role key.
+  const config = supabaseConfig();
   if (!config) {
     throw new Error("Supabase is not configured for MFL season ratios.");
   }
