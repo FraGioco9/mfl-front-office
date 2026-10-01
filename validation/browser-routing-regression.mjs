@@ -2725,7 +2725,8 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => text("#homePlayers") === "0" && text("#homeWallets") === "0",
         "Home zero-data response must show two authoritative zero counts.", 8000);
       assert(hidden("#homeSummaryLoadError"), "Valid zero data must not show an API error.");
-      assert(hidden("#homeSummaryRetryButton"), "Valid zero data must not offer Retry.");
+      assert(document.getElementById("homeSummaryRetryButton")?.disabled === true,
+        "Valid zero data must keep its hidden error action disabled.");
     } else if (scenario === "ux02-home-retry") {
       await waitFor(() => !hidden("#homeSummaryLoadError"), "Failed Home summary must expose recovery.", 8000);
       assert(text("#homePlayers") === "-" && text("#homeWallets") === "-", "Home failure must not invent zero counts.");
