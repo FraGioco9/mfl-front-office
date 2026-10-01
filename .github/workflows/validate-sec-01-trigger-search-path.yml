@@ -72,6 +72,7 @@ jobs:
           end;
           $verify$;
 
+          begin;
           create temporary table sec_01_timestamp_test (id integer primary key, updated_at timestamptz);
           create trigger sec_01_updated_at before update on sec_01_timestamp_test
             for each row execute function public.set_updated_at();
@@ -85,4 +86,5 @@ jobs:
             end if;
           end;
           $verify$;
+          commit;
           SQL
