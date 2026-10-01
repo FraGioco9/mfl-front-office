@@ -53,7 +53,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
         if (transition && !navigationTransitionIsCurrent(transition)) return null;
-  if (protectedOptOutRoute(pageName)) {
+  if (protectedOptOutRoute(pageName, incomingOptions)) {
     return renderPage.call(this, pageName, false, {
       ...incomingOptions,
       skipNavigationTransition: true,

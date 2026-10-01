@@ -64,6 +64,9 @@
   --mfl-helper-error-font-weight: 700;
   --mfl-helper-text-color: var(--text-soft);
   --mfl-helper-error-color: var(--danger);
+  --mfl-danger-hover-background: var(--danger-hover);
+  --mfl-danger-hover-border-color: var(--danger-hover);
+  --mfl-danger-hover-text-color: #ffffff;
 
   /* Shared keyboard-focus language for ordinary interactive controls. */
   --mfl-focus-ring-color: var(--primary);

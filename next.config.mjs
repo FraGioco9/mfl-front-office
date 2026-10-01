@@ -40,7 +40,6 @@ export function createNextHeaders({ production = process.env.NODE_ENV === "produ
     { source: "/", headers: noStore },
     { source: "/index.html", headers: noStore },
     { source: "/release.json", headers: noStore },
-    { source: "/releases.json", headers: noStore },
     ...(production
       ? [
         { source: "/:path*.js", missing: [{ type: "query", key: "mfl_core" }], headers: noStore },
@@ -55,7 +54,6 @@ export function createNextHeaders({ production = process.env.NODE_ENV === "produ
 export function createNextRewrites() {
   return {
     beforeFiles: [
-      { source: "/releases.json", destination: "/api/releases" },
       {
         source: "/evaluation",
         has: [{ type: "query", key: "share" }],

@@ -71,6 +71,47 @@ alter table public.evaluation_shares add column if not exists wallet_address tex
 create index if not exists evaluation_shares_expires_at_idx on public.evaluation_shares (expires_at);
 create index if not exists evaluation_shares_wallet_active_idx on public.evaluation_shares (wallet_address, expires_at);
 
+create table if not exists public.planner_plans (
+  id text primary key,
+  wallet_address text not null,
+  club_id text not null,
+  name text not null,
+  payload jsonb not null default '{}'::jsonb,
+  revision integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.planner_plans add column if not exists revision integer not null default 1;
+
+create index if not exists planner_plans_wallet_updated_idx
+  on public.planner_plans (wallet_address, updated_at desc);
+
+create table if not exists public.planner_shares (
+  id text primary key,
+  wallet_address text,
+  source_plan_id text references public.planner_plans(id) on delete cascade,
+  club_id text not null,
+  name text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists planner_shares_expires_at_idx on public.planner_shares (expires_at);
+alter table public.planner_shares add column if not exists source_plan_id text;
+create index if not exists planner_shares_wallet_active_idx on public.planner_shares (wallet_address, expires_at);
+create unique index if not exists planner_shares_wallet_source_idx on public.planner_shares (wallet_address, source_plan_id);
+create index if not exists planner_shares_source_plan_idx on public.planner_shares (source_plan_id);
+
+alter table public.planner_plans enable row level security;
+alter table public.planner_shares enable row level security;
+
+revoke all on table public.planner_plans from anon, authenticated;
+revoke all on table public.planner_shares from anon, authenticated;
+grant select, insert, update, delete on table public.planner_plans to service_role;
+grant select, insert, update, delete on table public.planner_shares to service_role;
+
 create table if not exists public.bug_reports (
   id uuid primary key default gen_random_uuid(),
   summary text not null,

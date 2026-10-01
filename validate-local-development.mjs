@@ -35,8 +35,8 @@ const [
 const packageJson = JSON.parse(packageSource);
 invariant(packageJson.private === true, "Root package.json must remain private.");
 invariant(packageJson.engines?.node === "22.x", "Next runtime must remain on the supported Node 22 line.");
-invariant(packageJson.dependencies?.next === "16.3.4", "MFL Front Office must use the pinned Next.js runtime.");
-invariant(packageJson.dependencies?.react === "19.2.6" && packageJson.dependencies?.["react-dom"] === "19.2.6", "Next runtime must use the shared React 19.2.6 runtime pair.");
+invariant(packageJson.dependencies?.next === "16.3.6", "MFL Front Office must use the pinned Next.js runtime.");
+invariant(packageJson.dependencies?.react === "19.3.0" && packageJson.dependencies?.["react-dom"] === "19.3.0", "Next runtime must use the shared React 19.3.0 runtime pair.");
 invariant(packageJson.overrides?.["use-sync-external-store"] === "1.6.0", "WalletConnect compatibility must use the React-19-capable external-store shim.");
 invariant(packageJson.scripts?.predev === "node prepare-next-runtime.mjs", "npm predev must prepare the temporary legacy public projection before Next starts.");
 invariant(packageJson.scripts?.dev === "next dev --webpack -p 4000", "npm run dev must directly start Next.js Webpack development mode on port 4000, matching the standard Next development lifecycle used by the sibling projects.");
@@ -54,6 +54,22 @@ invariant(
 invariant(nextConfig.includes('"/api/data": ["./api/data-files/mfl_database.db"]'), "Next tracing must retain the SQLite database for the data API.");
 invariant(prepareRuntime.includes("export async function prepareNextRuntime()"), "Next public compatibility projection must expose a reusable development/build sync function.");
 invariant(prepareRuntime.includes("listLegacyPublicAssetPaths(root)"), "Next public projection must consume the shared legacy asset owner.");
+invariant(
+  prepareRuntime.includes("await restoreMissingIndex();")
+    && prepareRuntime.includes('await assembleFragments(indexFragments, ".html")')
+    && prepareRuntime.includes("await writeGeneratedFragmentFile(indexPath,")
+    && prepareRuntime.includes('if (error.code !== "ENOENT") throw error;'),
+  "Next development must regenerate a missing tracked index.html from canonical fragments before projecting assets.",
+);
+invariant(
+  prepareRuntime.includes("await Promise.all(assets.map((relativePath) => access(resolve(root, relativePath))))")
+    && prepareRuntime.includes("await projectLegacyPublicAssets({ assets, sourceRoot: root, destinationRoot: publicRoot });")
+    && prepareRuntime.includes("export async function projectLegacyPublicAssets(")
+    && prepareRuntime.includes("await mkdir(destinationRoot, { recursive: true });")
+    && !prepareRuntime.includes("rm(publicRoot")
+    && prepareRuntime.includes("preparation = prepareAssets().finally("),
+  "Next development must preflight source assets, preserve live public/, and deduplicate overlapping sync runs.",
+);
 invariant(legacyAssetOwnership.includes("isLegacyPublicAssetRelativePath") && legacyAssetOwnership.includes("listLegacyPublicAssetPaths"), "Legacy public projection scope must have one shared owner.");
 invariant(legacyDevLoader.includes("this.addDependency(absolutePath)") && legacyDevLoader.includes('createHash("sha256")'), "Next development must watch projected legacy assets through a content-sensitive Webpack dependency.");
 invariant(legacyDevBridge.includes("compiler.hooks.watchRun.tapPromise") && legacyDevBridge.includes("prepareNextRuntime()"), "Next development must resync public compatibility assets before rebuilding after a watched legacy change.");

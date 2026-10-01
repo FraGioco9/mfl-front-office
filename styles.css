@@ -2,6 +2,7 @@
 @import url("/scrollbars.css");
 @import url("/dropdowns.css");
 @import url("/controls.css");
+@import url("/planner.css");
 @import url("/footer.css");
 @import url("/loading.css");
 
@@ -36,9 +37,9 @@
   --mfl-table-col-flag: 2.5029289594205983%;
   --mfl-table-col-name: 14.516987964639473%;
   --mfl-table-col-listing: 6.3904569176696135%;
-  --mfl-table-col-positions: 7.508786878261796%;
+  --mfl-table-col-positions: 7.008786878261796%;
   --mfl-table-col-age: 4.505272126957078%;
-  --mfl-table-col-seasons: 5.506443710725317%;
+  --mfl-table-col-seasons: 6.006443710725317%;
   --mfl-table-col-overall: 6.603472148258601%;
   --mfl-table-col-stat: 5.907622395001243%;
   --mfl-table-col-next-overall: 9%;

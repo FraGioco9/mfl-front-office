@@ -83,6 +83,9 @@ for (const token of [
   "--mfl-helper-error-font-weight: 700;",
   "--mfl-helper-text-color: var(--text-soft);",
   "--mfl-helper-error-color: var(--danger);",
+  "--mfl-danger-hover-background: var(--danger-hover);",
+  "--mfl-danger-hover-border-color: var(--danger-hover);",
+  "--mfl-danger-hover-text-color: #ffffff;",
   "--mfl-focus-ring-color: var(--primary);",
   "--mfl-focus-ring-width: 2px;",
   "--mfl-focus-ring-offset: 2px;",
@@ -103,6 +106,19 @@ for (const token of [
 }
 
 includes(stacking, '@import url("/ui-foundations.css");', "Global UI foundations must load before shared stacking/base styles.");
+for (const token of [
+  "--danger: #a61f1f;",
+  "--danger-hover: #741515;",
+  "--danger: #df5c55;",
+  "--danger-hover: #a93a35;",
+]) {
+  includes(stylesBase, token, `Theme palette is missing rebuilt destructive red: ${token}`);
+}
+for (const source of [stylesBase, dropdowns]) {
+  includes(source, "var(--mfl-danger-hover-background)", "Destructive hover states must consume the shared danger-hover background.");
+  includes(source, "var(--mfl-danger-hover-border-color)", "Destructive hover states must consume the shared danger-hover border.");
+  includes(source, "var(--mfl-danger-hover-text-color)", "Destructive hover states must consume the shared danger-hover foreground.");
+}
 
 const viewControlTypography = exactRule(stylesBase, ".viewButton");
 includes(viewControlTypography, "height: var(--mfl-control-height);", "View controls must consume the shared standard control height.");
@@ -350,7 +366,7 @@ for (const token of [
 for (const token of [
   "#linkWalletButton.walletOptOut {\n  background: transparent;\n  color: var(--danger);",
   ".watchlistDropdownDelete {\n  border-color: var(--border);\n  background: var(--surface-muted);\n  color: var(--danger);",
-  ".watchlistDropdownDelete:hover:not(:disabled),\n.watchlistDropdownDelete:focus-visible:not(:disabled) {\n  border-color: var(--danger);\n  background: var(--danger);\n  color: var(--surface);",
+  ".watchlistDropdownDelete:hover:not(:disabled),\n.watchlistDropdownDelete:focus-visible:not(:disabled) {\n  border-color: var(--mfl-danger-hover-border-color);\n  background: var(--mfl-danger-hover-background);\n  color: var(--mfl-danger-hover-text-color);",
 ]) {
   includes(dropdowns, token, `Dropdown destructive UI must derive from --danger: ${token}`);
 }
@@ -377,7 +393,7 @@ for (const [name, source] of [
 for (const token of [
   "# MFL Front Office UI foundations",
   "## Ownership map",
-  "`--danger` is the only global destructive/error-color source.",
+  "`--danger` is the global resting destructive/error red and `--danger-hover` is the global destructive hover/focus red.",
   "Shared page/table title size: `20px` (`--mfl-page-title-font-size`)",
   "Desktop page gutter: `28px` (`--mfl-page-gutter-inline`)",
   "Shared section title: `16px` (`--mfl-section-title-font-size`)",

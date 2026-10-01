@@ -1,6 +1,10 @@
+import json
 import unittest
+from io import BytesIO
+from urllib.error import HTTPError
+from unittest.mock import patch
 
-from scripts.operations.runtime_health import next_health_marker
+from scripts.operations.runtime_health import next_health_marker, read_previous_marker
 
 
 class RuntimeHealthMarkerTests(unittest.TestCase):
@@ -49,6 +53,49 @@ class RuntimeHealthMarkerTests(unittest.TestCase):
         marker = self.marker({"consecutiveFailures": "not-a-number"}, "failure")
         self.assertEqual(marker["consecutiveFailures"], 1)
 
+
+    def test_missing_private_marker_accepts_supabase_nosuchkey_400(self):
+        body = json.dumps(
+            {
+                "httpStatusCode": 404,
+                "userStatusCode": 400,
+                "code": "NoSuchKey",
+                "error": "not_found",
+                "message": "Object not found",
+            }
+        ).encode("utf-8")
+        missing = HTTPError(
+            "https://example.supabase.co/storage/v1/object/authenticated/"
+            "mfl-runtime/health/marketplace-refresh.json",
+            400,
+            "Bad Request",
+            {},
+            BytesIO(body),
+        )
+        with patch("scripts.operations.runtime_health.urlopen", side_effect=missing):
+            marker = read_previous_marker(
+                supabase_url="https://example.supabase.co",
+                service_role_key="service-role-key",
+                object_path="health/marketplace-refresh.json",
+            )
+        self.assertEqual(marker, {})
+
+    def test_generic_400_while_reading_private_marker_still_fails(self):
+        bad_request = HTTPError(
+            "https://example.supabase.co/storage/v1/object/authenticated/"
+            "mfl-runtime/health/marketplace-refresh.json",
+            400,
+            "Bad Request",
+            {},
+            BytesIO(b'{"code":"InvalidRequest","message":"Malformed request"}'),
+        )
+        with patch("scripts.operations.runtime_health.urlopen", side_effect=bad_request):
+            with self.assertRaises(HTTPError):
+                read_previous_marker(
+                    supabase_url="https://example.supabase.co",
+                    service_role_key="service-role-key",
+                    object_path="health/marketplace-refresh.json",
+                )
 
     def test_private_marker_uses_authenticated_download_route(self):
         from scripts.operations.runtime_health import _object_url

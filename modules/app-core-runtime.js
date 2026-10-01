@@ -1347,6 +1347,7 @@ function normalizedPageName(pageName) {
 const PROTECTED_OPTED_OUT_PATHS = Object.freeze({
   myplayers: "/my-players/opted-out",
   "my-clubs": "/my-clubs/opted-out",
+  planner: "/planner/opted-out",
   watchlist: "/watchlist/opted-out",
   settings: "/settings/opted-out",
 });
@@ -1364,6 +1365,7 @@ function optedOutPageFromPath(pathName = window.location.pathname) {
 function defaultProtectedRoutePath(pageName) {
   const normalizedPage = normalizedPageName(pageName);
   if (normalizedPage === "my-clubs") return "/my-clubs";
+  if (normalizedPage === "planner") return "/planner";
   if (normalizedPage === "settings") return "/settings";
   if (normalizedPage === "watchlist") {
     const viewName = normalizeViewForPage("", "watchlist");
@@ -1470,6 +1472,34 @@ function pageTargetFromPath(path) {
       options: {
         ...(signedInTarget.options || {}),
         replaceUrl: signedInTarget.options?.replaceUrl || defaultPath,
+      },
+    };
+  }
+
+  const plannerPlanMatch = cleanPath.match(/^\/planner\/([a-f0-9]{16})$/i);
+  if (cleanPath === "/planner" || plannerPlanMatch) {
+    const params = new URLSearchParams(requestedSearch.replace(/^\?/, ""));
+    const legacyShareId = String(params.get("share") || "").trim();
+    const legacySavedId = String(params.get("saved") || "").trim();
+    const pathPlanId = plannerPlanMatch ? decodeURIComponent(plannerPlanMatch[1]) : "";
+    const planId = String(pathPlanId || legacyShareId || legacySavedId).trim().toLowerCase();
+    const planKind = legacyShareId ? "share" : legacySavedId ? "saved" : "";
+    if (!planId && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
+    if (planKind === "saved" && !hasWalletOptIn()) return { pageName: "planner", options: { replaceUrl: optedOutPathForPage("planner") } };
+    const clubId = String(params.get("club") || "").trim();
+    const canonicalPath = planId
+      ? `/planner/${encodeURIComponent(planId)}`
+      : clubId
+        ? `/planner?club=${encodeURIComponent(clubId)}`
+        : "/planner";
+    return {
+      pageName: "planner",
+      options: {
+        path: canonicalPath,
+        ...(planId ? { planId } : {}),
+        ...(planKind ? { planKind } : {}),
+        ...(clubId ? { clubId } : {}),
+        ...(requestedPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
       },
     };
   }
@@ -1635,12 +1665,36 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "planner", "evaluation", "settings", "changelog", "privacy"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
 
 function pagePath(pageName, options = {}) {
+  if (pageName === "planner") {
+    const explicitPath = String(options.path || "");
+    if (explicitPath === "/planner" || explicitPath.startsWith("/planner?") || /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)) {
+      return explicitPath;
+    }
+    const requestedPlanId = String(options.planId || "").trim().toLowerCase();
+    if (/^[a-f0-9]{16}$/.test(requestedPlanId)) return `/planner/${encodeURIComponent(requestedPlanId)}`;
+    const currentPlanMatch = String(window.location.pathname || "").match(/^\/planner\/([a-f0-9]{16})$/i);
+    if (currentPlanMatch) return `/planner/${encodeURIComponent(currentPlanMatch[1].toLowerCase())}`;
+    const currentShare = window.location.pathname === "/planner"
+      ? String(new URLSearchParams(window.location.search).get("share") || "").trim().toLowerCase()
+      : "";
+    if (currentShare) return `/planner/${encodeURIComponent(currentShare)}`;
+    const currentSaved = window.location.pathname === "/planner"
+      ? String(new URLSearchParams(window.location.search).get("saved") || "").trim().toLowerCase()
+      : "";
+    if (currentSaved && hasWalletOptIn()) return `/planner/${encodeURIComponent(currentSaved)}`;
+    if (!hasWalletOptIn()) return optedOutPathForPage("planner");
+    const clubId = String(options.clubId || (window.location.pathname === "/planner"
+      ? new URLSearchParams(window.location.search).get("club")
+      : "") || "").trim();
+    return clubId ? `/planner?club=${encodeURIComponent(clubId)}` : "/planner";
+  }
+
   if (pageName === "club") {
     const routeConfig = window.__mflAppConfig?.routes;
     const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);
@@ -1826,7 +1880,7 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
     window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
-if (protectedOptOutRoute(routePageName)) {
+if (protectedOptOutRoute(routePageName, options)) {
   renderProtectedOptOutShell(routePageName);
 }
 
@@ -1999,6 +2053,8 @@ async function prepareInteractiveRouteBeforeCommit(pageName, options = {}) {
 
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
   if (!settingsConfirmNavigation(pageName, updateHash)) return null;
+  const plannerConfirmNavigation = Reflect.get(window, "__mflPlannerConfirmNavigation");
+  if (typeof plannerConfirmNavigation === "function" && !plannerConfirmNavigation(pageName, updateHash, options)) return null;
   syncMobileTablePageTransitionChrome(pageName);
   const navigation = Reflect.get(window, "__mflNavigation");
   const loadingController = Reflect.get(window, "__mflInteractionBusy");
@@ -2358,8 +2414,20 @@ function setView() {
   return applyTableViewOwner.apply(this, arguments);
 }
 
-function protectedOptOutRoute(pageName) {
-  return ["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || "")) && !hasWalletOptIn();
+function protectedOptOutRoute(pageName, options = {}) {
+  const normalizedPage = String(pageName || "");
+  if (normalizedPage === "planner") {
+    const explicitPath = String(options.path || options.replaceUrl || "");
+    const publicPlanPath = /^\/planner\/[a-f0-9]{16}$/i.test(explicitPath)
+      || /^\/planner\/[a-f0-9]{16}$/i.test(String(window.location.pathname || ""));
+    const shareId = explicitPath.startsWith("/planner?share=")
+      ? String(new URL(explicitPath, window.location.origin).searchParams.get("share") || "").trim()
+      : window.location.pathname === "/planner"
+        ? String(new URLSearchParams(window.location.search).get("share") || "").trim()
+        : "";
+    if (publicPlanPath || shareId) return false;
+  }
+  return ["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage) && !hasWalletOptIn();
 }
 
 function renderProtectedOptOutShell(pageName) {
@@ -2367,6 +2435,7 @@ function renderProtectedOptOutShell(pageName) {
   const copy = {
     myplayers: ["My Players", "In order to see your players, you need to opt in."],
     "my-clubs": ["My Clubs", "In order to see your clubs, you need to opt in."],
+    planner: ["Planner", "In order to use Planner, you need to opt in."],
     watchlist: ["Watchlist", "In order to use the watchlist, you need to opt in."],
     settings: ["Settings", "In order to view settings, you need to opt in."],
   }[protectedPage] || ["My Players", "In order to see your players, you need to opt in."];
@@ -2377,6 +2446,8 @@ function renderProtectedOptOutShell(pageName) {
   progressionPage.hidden = true;
   mflStatsPage.hidden = true;
   myPlayersLockedPage.hidden = false;
+  const protectedPlannerPage = document.getElementById("plannerPage");
+  if (protectedPlannerPage instanceof HTMLElement) protectedPlannerPage.hidden = true;
   evaluationPage.hidden = true;
   playerPage.hidden = true;
   settingsPage.hidden = true;
@@ -2388,7 +2459,7 @@ function renderProtectedOptOutShell(pageName) {
 }
 
 async function renderPage(pageName, updateHash = true, options = {}) {
-  const lockedOptOutRoute = protectedOptOutRoute(pageName);
+  const lockedOptOutRoute = protectedOptOutRoute(pageName, options);
   resetTableSortSession(pageName, options);
   if (!pageNavigationIsCurrent(options)) return null;
   const plainEvaluationEntry = pageName === "evaluation" && (options.plain || isPlainEvaluationUrl());
@@ -2432,6 +2503,12 @@ async function renderPage(pageName, updateHash = true, options = {}) {
   if (shouldResetScroll) resetPageScroll();
   return;
 }
+
+if (pageName === "planner") {
+    const plannerOwner = Reflect.get(window, "__mflRenderPlannerPageOwner");
+    if (typeof plannerOwner !== "function") throw new Error("Planner route owner is unavailable.");
+    return plannerOwner.call(this, updateHash, options);
+  }
 
 if (pageName === "my-clubs") {
     const myClubsOwner = Reflect.get(window, "__mflRenderMyClubsPageOwner");
@@ -5079,6 +5156,8 @@ function columnIndex(column) {
 }
 
 function getValue(row, column) {
+  // Planner owns named records; table and Player views retain column-indexed arrays.
+  if (row && !Array.isArray(row) && typeof row === "object") return row[column] ?? null;
   const index = columnIndex(column);
   return index >= 0 ? row[index] : null;
 }
@@ -8565,7 +8644,7 @@ async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}
         || (incomingOptions.skipNavigationTransition === true ? pendingViewTransition : null);
       const loadCommittedRoute = async (transition = stagedTransition) => {
         if (transition && !navigationTransitionIsCurrent(transition)) return null;
-  if (protectedOptOutRoute(pageName)) {
+  if (protectedOptOutRoute(pageName, incomingOptions)) {
     return renderPage.call(this, pageName, false, {
       ...incomingOptions,
       skipNavigationTransition: true,

@@ -167,8 +167,11 @@ assert.ok(generated.includes(".myPlayersLockedPage {"), "Generated production CS
 assert.ok(!generated.includes(".myPlayersLockedPage {\n  position: fixed;"), "Generated production CSS must keep opted-out routes in normal footer flow.");
 
 assert.ok(
-  pageLifecycle.includes('["myplayers", "my-clubs", "watchlist", "settings"].includes(String(pageName || ""))'),
-  "All protected pages must remain in the single canonical opted-out route guard.",
+  pageLifecycle.includes('["myplayers", "my-clubs", "planner", "watchlist", "settings"].includes(normalizedPage)')
+    && pageLifecycle.includes('if (normalizedPage === "planner")')
+    && pageLifecycle.includes('const publicPlanPath = /^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
+    && pageLifecycle.includes('if (publicPlanPath || shareId) return false;'),
+  "All protected pages must remain in the single canonical opted-out route guard, with stable or legacy public Planner share links exempted.",
 );
 assert.ok(pageLifecycle.includes("myPlayersLockedPage.hidden = false;"), "SPA navigation must reveal the same normal-flow locked shell for opted-out protected routes.");
 
