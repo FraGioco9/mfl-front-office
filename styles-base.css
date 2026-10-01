@@ -3834,6 +3834,18 @@ button.playerIdText:active {
   justify-self: center;
 }
 
+.evaluationLoadList.evaluationLoadListStatus {
+  grid-auto-rows: auto;
+}
+
+.evaluationLoadEmpty p {
+  margin: 0;
+}
+
+.evaluationLoadEmpty .compactButton {
+  margin-top: 10px;
+}
+
 .evaluationLoadResult {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
