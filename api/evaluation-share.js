@@ -3,8 +3,8 @@ const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
-  normalizeEvaluationId,
-  generateEvaluationId,
+  normalizeEvaluationShareId,
+  generateEvaluationShareId,
   normalizeEvaluationPayload,
 } = require("./_evaluation-payload");
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
@@ -50,7 +50,7 @@ async function snapshotPresentValue(payload) {
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
-  if ((request.method === "POST") && !requireSameOriginMutation(request, response)) return;
+  if ((request.method === "POST" || request.method === "DELETE") && !requireSameOriginMutation(request, response)) return;
 
   if (!supabaseConfig()) {
     response.status(500).json({ error: "Supabase is not configured." });
@@ -75,7 +75,7 @@ module.exports = async function handler(request, response) {
 
       await snapshotPresentValue(payload);
 
-      const id = generateEvaluationId();
+      const id = generateEvaluationShareId();
       const expiresAt = evaluationShareExpiresAt();
       const rows = await supabaseRequest("evaluation_shares", {
         method: "POST",
@@ -102,7 +102,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "GET") {
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizeEvaluationId(requestUrl.searchParams.get("id"));
+      const id = normalizeEvaluationShareId(requestUrl.searchParams.get("id"));
       const playerId = String(requestUrl.searchParams.get("player") || requestUrl.searchParams.get("playerId") || "").trim();
 
       if (!id) {
@@ -126,6 +126,29 @@ module.exports = async function handler(request, response) {
       return;
     }
 
+    if (request.method === "DELETE") {
+      const wallet = await signedWalletFromRequest(request);
+      if (!wallet) {
+        response.status(401).json({ error: "Opt in to revoke shared evaluations." });
+        return;
+      }
+      const requestUrl = new URL(request.url, "http://localhost");
+      const id = normalizeEvaluationShareId(requestUrl.searchParams.get("id"));
+      if (!id) {
+        response.status(400).json({ error: "Missing share id." });
+        return;
+      }
+      // Idempotent and owner-scoped: callers cannot distinguish another
+      // wallet's valid capability from an already absent/revoked share.
+      await supabaseRequest(`evaluation_shares?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+        method: "DELETE",
+        headers: { Prefer: "return=minimal" },
+      });
+      response.status(200).json({ ok: true });
+      return;
+    }
+
+    response.setHeader("Allow", "GET, POST, DELETE");
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     if (sendRequestBodyError(response, error)) return;
