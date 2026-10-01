@@ -3,8 +3,12 @@ name: Next rendered shell
 on:
   pull_request:
     paths:
+      - ".github/workflows/next-rendered-shell.yml"
       - "index.html"
       - "next.config.mjs"
+      - "vercel.json"
+      - "validate-vercel-security-headers.mjs"
+      - "scripts/workflows/sync-vercel-security-headers.mjs"
       - "package.json"
       - "package-lock.json"
       - "pages/**"
@@ -41,6 +45,9 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Verify Vercel edge CSP configuration matches Next.js
+        run: node validate-vercel-security-headers.mjs
 
       - name: Start real Next development server
         shell: bash

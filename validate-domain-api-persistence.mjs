@@ -8,6 +8,7 @@ const validators = [
   "validate-wallet-auth-rate-limit.mjs",
   "validate-wallet-mutation-origin.mjs",
   "validate-csp-report-only.mjs",
+  "validate-vercel-security-headers.mjs",
   "validate-csp-legacy-script-hashes.mjs",
   "validate-csp-next-nonce.mjs",
   "validate-wallet-permission-cache.mjs",
