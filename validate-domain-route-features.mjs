@@ -7,6 +7,7 @@ const validators = [
   "validate-ux01-first-html-metadata.mjs",
   "validate-ux02-empty-states.mjs",
   "validate-ux02d-entity-request-errors.mjs",
+  "validate-ux02f-home-search-recovery.mjs",
   "validate-evaluation-refresh-hydration.mjs",
   "validate-evaluation-stale-wallet-preferences-ui.mjs",
   "validate-settings-route-core.mjs",
