@@ -873,7 +873,7 @@
     if(ownedWallet!==wallet){ownedWallet=wallet;ownedClubs=null;ownedRequest=null;}
     if(results instanceof HTMLElement&&ownedClubs===null){
       const loading=document.createElement("div");loading.className="searchHint";loading.textContent="Loading your clubs…";
-      results.replaceChildren(loading);results.hidden=false;
+      results.replaceChildren(loading);results.setAttribute?.("role","status");results.hidden=false;
     }
     try{
       if(!ownedRequest&&ownedClubs===null){
@@ -910,8 +910,57 @@
       return [];
     }
   }
-  function renderResults(clubs,query="",{owned=false,error=""}={}){if(!(results instanceof HTMLElement))return;const fragment=document.createDocumentFragment();(owned?(Array.isArray(clubs)?clubs:[]):(Array.isArray(clubs)?clubs:[]).slice(0,10)).forEach(team=>{const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();if(!id||!name)return;const button=document.createElement("button");button.type="button";button.className="searchResult clubSearchResult plannerTeamSearchResult";button.setAttribute("role","option");button.dataset.clubId=id;const title=document.createElement("strong");title.textContent=name;const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;if(divisionInfo){meta.append(document.createTextNode(" · "));const division=document.createElement("span");division.className="clubSearchDivision";division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;meta.appendChild(division);}button.append(title,meta);button.addEventListener("click",()=>selectTeam(team));fragment.appendChild(button);});if(!fragment.childNodes.length&&(query||owned)){const empty=document.createElement("div");empty.className="searchHint";empty.textContent=error||(owned?"No clubs found for this wallet.":"No teams found.");fragment.appendChild(empty);}results.replaceChildren(fragment);results.hidden=!results.childNodes.length;}
-  async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence)return[];renderResults([],q);setStatus(error?.message||"Could not search teams.");return[];}}
+  function renderResults(clubs,query="",{owned=false,error=""}={}){
+    if(!(results instanceof HTMLElement))return;
+    const fragment=document.createDocumentFragment();
+    const valid=Array.isArray(clubs)?clubs:[];
+    let hasOptions=false;
+    (owned?valid:valid.slice(0,10)).forEach(team=>{
+      const id=String(team?.clubId||team?.id||"").trim(),name=String(team?.name||team?.clubName||"").trim();
+      if(!id||!name)return;
+      const button=document.createElement("button");button.type="button";
+      button.className="searchResult clubSearchResult plannerTeamSearchResult";
+      button.setAttribute("role","option");button.dataset.clubId=id;
+      const title=document.createElement("strong");title.textContent=name;
+      const meta=document.createElement("span");meta.append(document.createTextNode("Club · #"+id));
+      const divisionInfo=typeof contractDivisionInfo==="function"?contractDivisionInfo(team?.division):null;
+      if(divisionInfo){
+        meta.append(document.createTextNode(" · "));
+        const division=document.createElement("span");division.className="clubSearchDivision";
+        division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;
+        meta.appendChild(division);
+      }
+      button.append(title,meta);
+      button.addEventListener("click",()=>selectTeam(team));
+      fragment.appendChild(button);
+      hasOptions=true;
+    });
+    if(!fragment.childNodes.length&&(query||owned)){
+      const empty=document.createElement("div");empty.className="searchHint";
+      empty.textContent=error||(owned?"No clubs found for this wallet. Search by club name or ID.":"No teams match this search. Try another name or club ID.");
+      fragment.appendChild(empty);
+    }
+    if(error){
+      const retry=document.createElement("button");
+      retry.type="button";retry.className="compactButton";retry.textContent="Retry";
+      retry.addEventListener("click",()=>{
+        if(query){
+          if(input?.value.trim()===query){
+            const loading=document.createElement("div");loading.className="searchHint";loading.textContent="Searching teams…";
+            results.setAttribute?.("role","status");results.replaceChildren(loading);
+            void requestTeams(query);
+          }
+        }else{
+          ownedClubs=null;
+          void requestOwnedClubs();
+        }
+      });
+      fragment.appendChild(retry);
+    }
+    results.setAttribute?.("role",hasOptions?"listbox":"status");
+    results.replaceChildren(fragment);results.hidden=!results.childNodes.length;
+  }
+  async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence||input?.value.trim()!==q)return[];renderResults([],q,{error:error?.message||"Could not search teams."});setStatus("");return[];}}
   async function restoreSelectedTeam(clubId){const id=String(clubId||"").trim();if(!id||!(input instanceof HTMLInputElement))return false;const cached=cachedPlannerClub(id);if(cached)return selectTeam({...cached,clubId:id},{updateUrl:false});input.value=id;syncClearButton();const teams=await requestTeams(id);const exact=teams.find(team=>String(team?.clubId||team?.id||"").trim()===id);if(exact)return selectTeam(exact,{updateUrl:false});if(input.value!==id)return false;showTeam();setStatus("Team not found.");return false;}
   function currentPlannerPayload(){
     if(!selectedTeamId)return null;
@@ -1423,7 +1472,16 @@
       actions.append(...actionButtons);
       row.append(main,actions);fragment.appendChild(row);
     }
-    if(!rows.length){const empty=document.createElement("div");empty.className="searchHint";empty.textContent="No saved plans yet.";fragment.appendChild(empty);}
+    if(!rows.length){
+      const empty=document.createElement("div");empty.className="searchHint";
+      empty.textContent=selectedTeamId?"No saved plans yet. Use Save to save this squad.":"No saved plans yet. Select a club and save your first plan.";
+      fragment.appendChild(empty);
+      if(!selectedTeamId){
+        const select=document.createElement("button");select.type="button";select.className="compactButton";select.textContent="Choose a club";
+        select.addEventListener("click",()=>{closePlansModal();input?.focus();if(!input?.value.trim())void requestOwnedClubs();});
+        fragment.appendChild(select);
+      }
+    }
     plansList.replaceChildren(fragment);
   }
   async function openPlansModal(){
@@ -1433,7 +1491,14 @@
       const [data,shareData]=await Promise.all([plannerPrivateRequest("/api/planner-save"),plannerPrivateRequest("/api/planner-share?owned=1")]);
       if(plansStatus)plansStatus.textContent="";
       renderPlannerPlans(data?.plans,shareData?.shares);
-    }catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";}
+    }catch(error){
+      if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";
+      if(Number(error?.status)!==401){
+        const retry=document.createElement("button");retry.type="button";retry.className="compactButton";retry.textContent="Retry";
+        retry.addEventListener("click",()=>void openPlansModal());
+        plansList.replaceChildren(retry);
+      }
+    }
   }
   async function loadSavedPlannerPlan(id){
     const data=await plannerPrivateRequest("/api/planner-save?id="+encodeURIComponent(id));
@@ -1533,7 +1598,7 @@
     if(results instanceof HTMLElement){
       const loading=document.createElement("div");
       loading.className="searchHint";loading.textContent="Searching teams…";
-      results.replaceChildren(loading);results.hidden=false;
+      results.replaceChildren(loading);results.setAttribute?.("role","status");results.hidden=false;
     }
     searchTimer=setTimeout(()=>void requestTeams(q),140);
   });

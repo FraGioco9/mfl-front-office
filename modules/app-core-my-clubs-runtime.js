@@ -15,6 +15,7 @@
   const grid = document.getElementById("myClubsGrid");
   const status = document.getElementById("myClubsStatus");
   const retryButton = document.getElementById("myClubsRetryButton");
+  const searchButton = document.getElementById("myClubsSearchButton");
 
   let cachedWallet = "";
   let cachedClubs = [];
@@ -57,6 +58,7 @@
     setBusy(true);
     setStatus("");
     if (retryButton) retryButton.hidden = true;
+    if (searchButton) searchButton.hidden = true;
   }
 
 
@@ -166,8 +168,9 @@
     valid.forEach((club) => fragment.appendChild(skeletonCard(club)));
     grid.replaceChildren(fragment);
     setBusy(Boolean(valid.length));
-    setStatus(valid.length ? "" : "No clubs found for this wallet.");
+    setStatus("");
     if (retryButton) retryButton.hidden = true;
+    if (searchButton) searchButton.hidden = true;
   }
 
 
@@ -186,6 +189,7 @@
     setBusy(false);
     setStatus("");
     if (retryButton) retryButton.hidden = true;
+    if (searchButton) searchButton.hidden = true;
   }
 
   function safeColor(value) {
@@ -419,8 +423,9 @@
     valid.forEach((club) => fragment.appendChild(clubCard(club, competitionState)));
     grid.replaceChildren(fragment);
     setBusy(false);
-    setStatus(valid.length ? "" : "No clubs found for this wallet.");
+    setStatus(valid.length ? "" : "This wallet has no clubs yet. Search for a club to explore its squad.");
     if (retryButton) retryButton.hidden = true;
+    if (searchButton) searchButton.hidden = valid.length > 0;
   }
 
   async function privateResponse(path, timeoutMs) {
@@ -605,6 +610,7 @@
       setBusy(false);
       setStatus(error?.message || "Could not load clubs.", true);
       if (retryButton) retryButton.hidden = false;
+      if (searchButton) searchButton.hidden = true;
       return [];
     }
   }
@@ -665,6 +671,10 @@
 
   retryButton?.addEventListener("click", () => {
     void render({ force: true });
+  });
+  searchButton?.addEventListener("click", () => {
+    const headerSearch = document.getElementById("openSearchButton");
+    if (headerSearch instanceof HTMLButtonElement) headerSearch.click();
   });
 
   Reflect.set(window, "__mflMyClubsRoute", Object.freeze({
