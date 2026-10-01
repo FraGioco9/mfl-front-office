@@ -1,8 +1,8 @@
-import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
+import { cspLegacyScriptHashSnapshot } from "./csp-legacy-hash-snapshot.mjs";
 
 // Security headers are intentionally non-enforcing until the browser and real
 // Dapper flow acceptance gates of #1034 are complete.
-export const cspScriptSources = Object.freeze(["'self'", "https://esm.sh", ...cspLegacyScriptHashes]);
+export const cspScriptSources = Object.freeze(["'self'", "https://esm.sh", ...cspLegacyScriptHashSnapshot]);
 
 export const cspReportOnly = Object.freeze([
   "default-src 'self'",
