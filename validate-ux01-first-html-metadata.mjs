@@ -45,6 +45,12 @@ const page = read("pages/[...path].js");
 const home = read("pages/index.js");
 const planner = read("pages/planner.js");
 const saved = read("pages/planner/[planId].js");
+const vercel = JSON.parse(read("vercel.json"));
+assert.ok(Array.isArray(vercel.rewrites), "Explicit Vercel rewrites must be versioned.");
+assert.ok(!vercel.rewrites.some(rule => rule.destination === "/index.html"),
+  "A static index.html rewrite would bypass route-specific first-response titles on Vercel.");
+assert.ok(vercel.rewrites.some(rule => rule.destination === "/api/evaluation-preview"),
+  "Shared Evaluation previews must retain their established routing override.");
 assert.match(routing, /function canonicalRequest\(/);
 assert.match(runtime, /titleForCurrentRoute/);
 assert.match(page, /getServerSideProps/);

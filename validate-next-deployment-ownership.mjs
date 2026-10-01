@@ -42,6 +42,8 @@ const productionHeaders = createNextHeaders({ production: true });
 const rewrites = createNextRewrites();
 const vercelConfig = JSON.parse(vercelConfigSource);
 const vercelRewrites = Array.isArray(vercelConfig.rewrites) ? vercelConfig.rewrites : [];
+// UX-01: known app routes must reach the Next SSR page rather than static index.html.
+// The canonical SPA still renders UI inside the shared Next Document.
 const shellRouteExpression = "mfl|database|progression|my-players|myplayers|my-clubs|myclubs|agents|watchlist|clubs|club|players|settings|changelog|privacy|evaluation|planner";
 invariant(
   outputFileTracingIncludes["/api/data"]?.some((value) => String(value).includes("api/data-files/mfl_database.db")),
@@ -79,15 +81,20 @@ invariant(
   "Vercel routing must preserve shared Evaluation preview requests before the SPA shell fallback.",
 );
 invariant(
-  vercelRewrites.some((rule) =>
-    rule.source === `/:app(${shellRouteExpression})`
-      && rule.destination === "/index.html"
-  )
-    && vercelRewrites.some((rule) =>
-      rule.source === `/:app(${shellRouteExpression})/:path*`
-        && rule.destination === "/index.html"
-    ),
-  "Vercel routing must send canonical app roots and deep links to the SPA shell.",
+  !vercelRewrites.some((rule) =>
+    rule.destination === "/index.html"
+      && (rule.source === "/home"
+        || rule.source === `/:app(${shellRouteExpression})`
+        || rule.source === `/:app(${shellRouteExpression})/:path*`
+        || rule.source === "/:path*")
+  ),
+  "Vercel must not bypass route-specific Next SSR titles by rewriting app deep links to static index.html.",
+);
+invariant(
+  vercelRewrites.some((rule) => rule.source === "/evaluation"
+    && rule.destination === "/api/evaluation-preview"
+    && rule.has?.some((condition) => condition.key === "share")),
+  "Preserve the evaluation share preview route before Next SSR.",
 );
 invariant(
   !vercelRewrites.some((rule) => rule.source === "/api/:path*" && rule.destination === "/index.html"),
