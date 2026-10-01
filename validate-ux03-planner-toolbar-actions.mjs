@@ -19,7 +19,7 @@ const ctx = vm.createContext({
   syncPlanUi: () => states.push(vm.runInContext("plannerToolbarActionPending", ctx)),
   setStatus: value => messages.push(value),
 });
-vm.runInContext("let plannerToolbarActionPending=false;\n" + source, ctx);
+vm.runInContext("let plannerToolbarActionPending=false;let plannerPlansActionPending=false;\n" + source, ctx);
 
 let resolveFirst;
 let networkCalls = 0;
@@ -62,13 +62,13 @@ assert.equal(await ctx.runPlannerToolbarAction(async () => "retry succeeded"), "
   "The same toolbar can retry after a failed request");
 
 const checks = [
-  'plansButton.disabled=!optedIn||plannerToolbarActionPending;',
-  'newPlanButton.disabled=!optedIn||plannerToolbarActionPending;',
-  'savePlanButton.disabled=plannerReadOnly||!selectedTeamId||plannerToolbarActionPending;',
-  'duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn||plannerToolbarActionPending;',
-  'sharePlanButton.disabled=!canManageShare||plannerToolbarActionPending;',
-  'copySharedPlanButton.disabled=!plannerReadOnly||!optedIn||plannerToolbarActionPending;',
-  'teamClearButton.disabled=plannerReadOnly||plannerToolbarActionPending;',
+  'plansButton.disabled=!optedIn||plannerToolbarActionPending||plannerPlansActionPending;',
+  'newPlanButton.disabled=!optedIn||plannerToolbarActionPending||plannerPlansActionPending;',
+  'savePlanButton.disabled=plannerReadOnly||!selectedTeamId||plannerToolbarActionPending||plannerPlansActionPending;',
+  'duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn||plannerToolbarActionPending||plannerPlansActionPending;',
+  'sharePlanButton.disabled=!canManageShare||plannerToolbarActionPending||plannerPlansActionPending;',
+  'copySharedPlanButton.disabled=!plannerReadOnly||!optedIn||plannerToolbarActionPending||plannerPlansActionPending;',
+  'teamClearButton.disabled=plannerReadOnly||plannerToolbarActionPending||plannerPlansActionPending;',
   'planActions.setAttribute("aria-busy",plannerToolbarActionPending?"true":"false");',
   'runPlannerToolbarAction(()=>newPlannerPlan()',
   'runPlannerToolbarAction(()=>saveCurrentPlan({asNew:!activePlanId})',
