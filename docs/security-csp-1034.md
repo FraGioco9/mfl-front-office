@@ -108,6 +108,13 @@ without enforcing any new CSP directives.
 
 - `csp-report-only-policy.mjs` owns the existing static Report-Only policy
   and adds a validated per-request nonce to its two script directives.
+  A checked-in `csp-legacy-hash-snapshot.mjs` contains the 12 reviewed
+  hash literals so Next's proxy bundle never needs a filesystem read.
+  `next.config.mjs` and the validator fail if these differ from the
+  exact generated HTML; `node scripts/workflows/refresh-csp-legacy-hashes.mjs`
+  regenerates the snapshot after a reviewed parser-time script change.
+  `node scripts/workflows/refresh-csp-legacy-hashes.mjs --check`
+  verifies that source and snapshot are synchronized.
   The static default configuration, 12 legacy SHA-256 digests and enforced
   CSP remain unchanged.
 - `proxy.js` (Next.js 16 Node.js runtime) generates 16 cryptographically
