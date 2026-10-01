@@ -4,7 +4,14 @@ import { fileURLToPath } from "node:url";
 import { MflLegacyDevBridgePlugin } from "./next-dev-legacy-bridge.mjs";
 import { resolveDeploymentCommit } from "./deployment-commit.mjs";
 import { cspReportOnlyHeaders } from "./csp-report-only-policy.mjs";
+import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
+import { cspLegacyScriptHashSnapshot } from "./csp-legacy-hash-snapshot.mjs";
 export { cspScriptSources, cspReportOnly, cspReportOnlyHeaders } from "./csp-report-only-policy.mjs";
+
+// Build-time integrity check; filesystem access must stay out of the Next proxy.
+if (JSON.stringify(cspLegacyScriptHashes) !== JSON.stringify(cspLegacyScriptHashSnapshot)) {
+  throw new Error("Stale CSP first-paint hash snapshot; regenerate and review before building.");
+}
 
 const root = dirname(fileURLToPath(import.meta.url));
 const deploymentCommit = resolveDeploymentCommit({ root });
