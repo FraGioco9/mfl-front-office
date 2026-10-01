@@ -11,36 +11,7 @@ const {
 const { exactConfiguredOrigin, requestOrigin, sameOriginRequest } = require("./_request-origin");
 
 const MAX_BODY_BYTES = 32 * 1024;
-const RATE_WINDOW_MS = 60_000;
-const RATE_LIMITS = Object.freeze({ issue: 20, exchange: 10, logout: 30 });
-const MAX_RATE_BUCKETS = 2_000;
-const rateBuckets = new Map();
-
-function requestAddress(request) {
-  return String(request?.headers?.["x-forwarded-for"] || request?.headers?.["x-real-ip"] || request?.socket?.remoteAddress || "unknown")
-    .split(",")[0]
-    .trim() || "unknown";
-}
-
-function allowRate(key, limit, now = Date.now()) {
-  if (rateBuckets.size >= MAX_RATE_BUCKETS) {
-    for (const [bucketKey, bucket] of rateBuckets) {
-      if (bucket.resetAt <= now) rateBuckets.delete(bucketKey);
-    }
-    while (rateBuckets.size >= MAX_RATE_BUCKETS) {
-      rateBuckets.delete(rateBuckets.keys().next().value);
-    }
-  }
-
-  const current = rateBuckets.get(key);
-  if (!current || current.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (current.count >= limit) return false;
-  current.count += 1;
-  return true;
-}
+const { createWalletRateLimiter } = require("./_wallet-rate-limit");
 
 function cookie(name, value, { origin, maxAge, path = "/" }) {
   const secure = new URL(origin).protocol === "https:" ? "; Secure" : "";
@@ -73,6 +44,7 @@ function createWalletSessionHandler({
   sessionStoreFactory = createWalletSessionStore,
   verifyProof = verifyWalletProof,
   readBody = readJsonBody,
+  rateLimiter = createWalletRateLimiter({ now }),
 } = {}) {
   return async function handler(request, response) {
     response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
@@ -88,11 +60,31 @@ function createWalletSessionHandler({
     }
 
     const method = String(request.method || "GET").toUpperCase();
-    const rateKind = method === "GET" ? "issue" : method === "POST" ? "exchange" : "logout";
-    const rateLimit = RATE_LIMITS[rateKind];
-    if (rateLimit && !allowRate(`${rateKind}:${requestAddress(request)}`, rateLimit, now())) {
-      response.setHeader("Retry-After", "60");
-      response.status(429).json({ error: "Too many wallet authentication requests. Try again shortly." });
+    if (!["GET", "POST", "DELETE"].includes(method)) {
+      response.setHeader("Allow", "GET, POST, DELETE");
+      response.status(405).json({ error: "Method not allowed." });
+      return;
+    }
+    // Untrusted cross-origin requests must not consume a legitimate user's quota.
+    if (method !== "GET" && !sameOriginRequest(request, origin)) {
+      response.status(403).json({ error: "Wallet authentication origin mismatch." });
+      return;
+    }
+
+    const kind = method === "GET" ? "issue" : method === "POST" ? "exchange" : "logout";
+    let quota;
+    try {
+      quota = await rateLimiter(kind, request);
+    } catch {
+      quota = { allowed: false, unavailable: true, retryAfter: 30 };
+    }
+    if (!quota?.allowed) {
+      response.setHeader("Retry-After", String(Math.max(1, Math.ceil(quota?.retryAfter || 30))));
+      response.status(quota?.unavailable ? 503 : 429).json({
+        error: quota?.unavailable
+          ? "Wallet authentication is temporarily unavailable."
+          : "Too many wallet authentication requests. Try again shortly.",
+      });
       return;
     }
 
@@ -110,11 +102,6 @@ function createWalletSessionHandler({
         console.warn("Could not issue wallet challenge.", error);
         response.status(503).json({ error: "Wallet authentication is temporarily unavailable." });
       }
-      return;
-    }
-
-    if (!sameOriginRequest(request, origin)) {
-      response.status(403).json({ error: "Wallet authentication origin mismatch." });
       return;
     }
 
@@ -192,8 +179,6 @@ function createWalletSessionHandler({
       return;
     }
 
-    response.setHeader("Allow", "GET, POST, DELETE");
-    response.status(405).json({ error: "Method not allowed." });
   };
 }
 
