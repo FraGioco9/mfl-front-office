@@ -161,7 +161,8 @@ grant select, insert, update, delete on table public.bug_reports to service_role
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
-as $$
+set search_path = ''
+as $
 begin
   new.updated_at = now();
   return new;
