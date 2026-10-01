@@ -37,7 +37,7 @@ for (const { path, signatures } of bridges) {
 // Core bridge assignments still operate on the same globally accessible
 // lexical bindings (the former eval payloads were immediately invoked
 // functions in that same global execution realm).
-const getDirectBridge = new Function(
+const getDirectBridge = new Function([
   "let restoreSavedTableState = function() { return 7 };",
   "let state = { selectedPlayerIds: new Set([1]), selectionAnchorPlayerId: 1 };",
   "const install = () => {",
@@ -52,7 +52,7 @@ const getDirectBridge = new Function(
   "  return true;",
   "};",
   "return { installed: install(), call: () => restoreSavedTableState(), state };",
-).bind(null);
+].join("\n")).bind(null);
 const sample = getDirectBridge();
 assert.equal(sample.installed, true);
 assert.equal(sample.call(), 7);
