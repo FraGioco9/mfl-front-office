@@ -101,7 +101,7 @@ const context=vm.createContext({
   destroyed:false,
 });
 const handlers=[
-  "let sequence = 0; let searchDebounceTimer = 0; let controller = null; let pendingPayload = null; let pendingQuery = '';",
+  "let sequence = 0; let searchDebounceTimer = 0; const SEARCH_INPUT_DEBOUNCE_MS = 200; let controller = null; let pendingPayload = null; let pendingQuery = '';",
   codeBetween("function clearGlobalRequest() {","function clearEvaluationRequest() {"),
   codeBetween("function onInput(event) {","function onClearClick(event) {"),
   codeBetween("function renderSearchMessage(message, retry = null) {","function normalizeSearchResults() {"),
