@@ -116,6 +116,8 @@ function rowForColumns(columns) {
 }
 
 let browserRegressionResult = null;
+let ux02HomeFailedOnce = false;
+let ux02TypedSearchFailedOnce = false;
 
 const browserTestSource = String.raw`(() => {
   "use strict";
@@ -126,7 +128,9 @@ const browserTestSource = String.raw`(() => {
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
   const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
-  const scenario = window.location.pathname === "/privacy"
+  const scenario = window.location.hash.startsWith("#ux02-")
+    ? window.location.hash.slice(1)
+    : window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
       ? (linkedTableRefresh ? "database-linked-state" : filteredEmpty ? "database-empty" : "database")
@@ -168,7 +172,7 @@ const browserTestSource = String.raw`(() => {
     if (requestUrl.searchParams.get("mode") === "my-clubs") myClubsRequests.ownership += 1;
     if (requestUrl.searchParams.get("mode") === "my-clubs-competitions") myClubsRequests.competitions += 1;
     if (requestUrl.searchParams.get("mode") === "mfl-stats-summary") mflStatsSummaryRequests += 1;
-    if (!["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
+    if (!scenario.startsWith("ux02-") && !["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
     return originalFetch(input, { ...init, headers });
@@ -203,7 +207,7 @@ const browserTestSource = String.raw`(() => {
   };
   if (linkedTablePaintSampling) requestAnimationFrame(sampleLinkedTablePaint);
 
-  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) {
+  if (["watchlist", "watchlist-empty", "myclubs-in", "myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected", "ux02-myclubs-empty", "ux02-watchlist-zero"].includes(scenario)) {
     const proof = {
       type: "session",
       address: testWallet,
@@ -215,10 +219,10 @@ const browserTestSource = String.raw`(() => {
     };
     localStorage.setItem("mfl-linked-wallet-v1", testWallet);
     localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify(proof));
-    if (scenario === "watchlist" || scenario === "watchlist-empty") {
+    if (scenario === "watchlist" || scenario === "watchlist-empty" || scenario === "ux02-watchlist-zero") {
       localStorage.setItem(
         "mfl-wallet-watchlist-v1:" + testWallet,
-        JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: ["1"] }]),
+        JSON.stringify([{ id: testWatchlistId, name: "Browser List", playerIds: scenario === "ux02-watchlist-zero" ? [] : ["1"] }]),
       );
     }
   }
@@ -2805,7 +2809,9 @@ function pageDataStub(url, scenario = "") {
   const plannerRow = pageColumns.map((column) => (
     column === "retirement_years" ? 2 : (testPlayer[column] ?? null)
   ));
-  const rows = scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : []) : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
+  const rows = (scope === "watchlist" && scenario === "ux02-watchlist-zero") ? []
+    : scope === "club" ? (["planner", "planner-selected"].includes(scenario) ? [plannerRow] : [])
+      : (filteredEmpty ? [] : [rowForColumns(pageColumns)]);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
   const pageSize = scope === "mflstats"
     ? rows.length
@@ -3013,6 +3019,53 @@ async function createRegressionServer() {
       return;
     }
     if (url.pathname === "/api/data") {
+      const ux02Scenario = String(request.headers["x-browser-regression-scenario"] || "");
+      const ux02Mode = String(url.searchParams.get("mode") || "");
+      if (ux02Scenario === "ux02-home-zero" && ux02Mode === "bootstrap") {
+        const responseData = dataStub(url);
+        writeJson(response, { ...responseData, summary: { playerCount: 0, walletCount: 0, generatedAt } });
+        return;
+      }
+      if (ux02Scenario === "ux02-home-retry" && ux02Mode === "bootstrap") {
+        if (!ux02HomeFailedOnce) {
+          ux02HomeFailedOnce = true;
+          writeJson(response, { error: "Fixture bootstrap unavailable" }, 503);
+        } else {
+          const responseData = dataStub(url);
+          writeJson(response, { ...responseData, summary: { playerCount: 12, walletCount: 3, generatedAt } });
+        }
+        return;
+      }
+      if (ux02Scenario === "ux02-myclubs-empty" && ux02Mode === "my-clubs") {
+        writeJson(response, { generatedAt, clubs: [] });
+        return;
+      }
+      if (ux02Scenario === "ux02-search" && ux02Mode === "search" && url.searchParams.get("type") === "all") {
+        const query = String(url.searchParams.get("q") || "").toLowerCase();
+        if (query === "recover" && !ux02TypedSearchFailedOnce) {
+          ux02TypedSearchFailedOnce = true;
+          writeJson(response, { error: "Fixture typed search failed" }, 503);
+          return;
+        }
+        if (query === "stale") await new Promise(resolve => setTimeout(resolve, 460));
+        const results = query === "browser" ? [rowForColumns(searchColumns)] : [];
+        writeJson(response, {
+          players: { columns: searchColumns, rows: results },
+          agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [] },
+          clubs: [],
+        });
+        return;
+      }
+      if (ux02Scenario === "ux02-player-failure"
+          && ux02Mode === "page" && url.searchParams.get("scope") === "player") {
+        writeJson(response, { error: "Fixture Player API unavailable" }, 503);
+        return;
+      }
+      if (ux02Scenario === "ux02-club-failure"
+          && ux02Mode === "page" && url.searchParams.get("scope") === "club") {
+        writeJson(response, { error: "Fixture Club API unavailable" }, 503);
+        return;
+      }
       const myClubsMode = String(url.searchParams.get("mode") || "");
       const myClubsRequest = myClubsMode === "my-clubs" || myClubsMode === "my-clubs-competitions";
       const invalidMyClubsProof = myClubsRequest
@@ -3258,6 +3311,15 @@ const regressionScenarios = Object.freeze([
   ["planner", "/planner"],
   ["planner-out", "/planner#opted-out"],
   ["planner-selected", "/planner?club=9001"],
+  ...(process.env.MFL_UX02_BROWSER_FOCUSED === "1" ? [
+    ["ux02-home-zero", "/#ux02-home-zero", 520, 844],
+    ["ux02-home-retry", "/#ux02-home-retry", 390, 844],
+    ["ux02-search", "/database/attributes#ux02-search", 390, 844],
+    ["ux02-myclubs-empty", "/my-clubs#ux02-myclubs-empty", 390, 844],
+    ["ux02-watchlist-zero", "/watchlist/browser1/current-season#ux02-watchlist-zero", 390, 844],
+    ["ux02-player-failure", "/players/1#ux02-player-failure", 390, 844],
+    ["ux02-club-failure", "/clubs/9001#ux02-club-failure", 390, 844],
+  ] : []),
 ]);
 
 const server = await createRegressionServer();
