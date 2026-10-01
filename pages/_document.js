@@ -49,6 +49,17 @@ function legacyDocumentSnapshot() {
 const legacy = legacyDocumentSnapshot();
 
 export default class MflDocument extends Document {
+  static async getInitialProps(ctx) {
+    const initialProps = await Document.getInitialProps(ctx);
+    const suppliedNonce = ctx.req?.headers?.["x-mfl-csp-nonce"];
+    const nonce = process.env.MFL_CSP_NONCE_REPORT_ONLY === "1"
+      && typeof suppliedNonce === "string"
+      && /^[A-Za-z0-9+/]{22}==$/.test(suppliedNonce)
+      ? suppliedNonce
+      : undefined;
+    return { ...initialProps, nonce };
+  }
+
   render() {
     return React.createElement(
       Html,
@@ -59,7 +70,7 @@ export default class MflDocument extends Document {
       },
       React.createElement(
         Head,
-        legacy.headProps,
+        { ...legacy.headProps, nonce: this.props.nonce },
         legacy.headChildren,
       ),
       React.createElement(
@@ -67,7 +78,7 @@ export default class MflDocument extends Document {
         { ...legacy.bodyProps, suppressHydrationWarning: true },
         legacy.bodyChildren,
         React.createElement(Main),
-        React.createElement(NextScript),
+        React.createElement(NextScript, { nonce: this.props.nonce }),
       ),
     );
   }
