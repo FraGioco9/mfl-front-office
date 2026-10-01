@@ -42,6 +42,29 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Diagnose currently deployed production CSP headers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.error
+          import urllib.request
+
+          base = "https://mfl-front-office.vercel.app"
+          for path in ["/?verify=csp-diagnostic", "/index.html?verify=csp-diagnostic", "/players/374097?verify=csp-diagnostic", "/api/csp-report?verify=csp-diagnostic"]:
+              req = urllib.request.Request(base + path, headers={"Accept": "text/html", "Cache-Control": "no-cache, no-store"})
+              try:
+                  resp = urllib.request.urlopen(req, timeout=15)
+              except urllib.error.HTTPError as exc:
+                  resp = exc
+              except Exception as exc:
+                  print(f"CSP_DIAG {path}: request failed: {type(exc).__name__}: {exc}")
+                  continue
+              with resp:
+                  print(f"CSP_DIAG {path}: status={resp.status} content-type={resp.headers.get('Content-Type')!r}")
+                  for name in ["Content-Security-Policy", "Content-Security-Policy-Report-Only", "Reporting-Endpoints", "X-Frame-Options", "X-Vercel-Id", "Cache-Control"]:
+                      print(f"CSP_DIAG {name}: {resp.headers.get_all(name)}")
+          PY
+
       - name: Start real Next development server
         shell: bash
         env:
