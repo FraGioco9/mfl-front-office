@@ -678,7 +678,8 @@ const browserTestSource = String.raw`(() => {
         search: window.location.search,
         title: document.title,
         tableText: text("#tableBody"),
-        emptyText: text("#emptyState"),
+        emptyText: String(document.getElementById("emptyState")?.firstChild?.textContent || "").trim(),
+        emptyClearFilters: Boolean(document.getElementById("tableEmptyClearFiltersButton")),
         emptyHidden: hidden("#emptyState"),
         page: String(document.body.dataset.page || ""),
       };
@@ -703,7 +704,8 @@ const browserTestSource = String.raw`(() => {
         search: window.location.search,
         title: document.title,
         tableText: text("#tableBody"),
-        emptyText: text("#emptyState"),
+        emptyText: String(document.getElementById("emptyState")?.firstChild?.textContent || "").trim(),
+        emptyClearFilters: Boolean(document.getElementById("tableEmptyClearFiltersButton")),
         emptyHidden: hidden("#emptyState"),
         watchlistName: text("#watchlistButtonText"),
         lockedHidden: hidden("#myPlayersLockedPage"),
@@ -757,6 +759,7 @@ const browserTestSource = String.raw`(() => {
     if (scenario === "database") {
       assert(stateValue.path === "/database/attributes", "Database canonical path is wrong: " + stateValue.path);
       assert(stateValue.tableText.includes(expectedPlayerName), "Database did not render the fixture player.");
+      assert(!stateValue.emptyClearFilters, "Populated Database must not show Clear filters empty action.");
       assert(stateValue.page === "database", "Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "database-empty") {
       assert(stateValue.path === "/database/attributes", "Filtered Database canonical path is wrong: " + stateValue.path);
@@ -764,6 +767,7 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.tableText === "", "Filtered Database unexpectedly rendered player rows.");
       assert(stateValue.emptyHidden === false, "Filtered Database empty-state message remained hidden after refresh.");
       assert(stateValue.emptyText === "No players match the current filters.", "Filtered Database empty-state message is wrong: " + stateValue.emptyText);
+      assert(stateValue.emptyClearFilters === true, "Filtered Database must offer contextual Clear filters.");
       assert(stateValue.page === "database", "Filtered Database body page owner is wrong: " + stateValue.page);
     } else if (scenario === "database-linked-state") {
       assert(stateValue.path === "/database/attributes", "Linked Database canonical path is wrong: " + stateValue.path);
@@ -842,6 +846,7 @@ const browserTestSource = String.raw`(() => {
         stateValue.emptyText === "No watchlist players match the current filters.",
         "Filtered Watchlist must distinguish zero matches from an empty watchlist: " + stateValue.emptyText,
       );
+      assert(stateValue.emptyClearFilters === true, "Filtered Watchlist must offer contextual Clear filters.");
       assert(stateValue.watchlistName === "Browser List", "Filtered Watchlist selector did not retain the selected list name.");
       assert(stateValue.lockedHidden === true, "Filtered Watchlist incorrectly rendered the guest lock screen.");
     } else if (scenario === "myclubs-stale") {
