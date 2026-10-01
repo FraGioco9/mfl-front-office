@@ -4,6 +4,7 @@ const validators = [
   "validate-global-search-open-lifecycle.mjs",
   "validate-global-search-keyboard.mjs",
   "validate-document-title-runtime.mjs",
+  "validate-ux01-first-html-metadata.mjs",
   "validate-evaluation-refresh-hydration.mjs",
   "validate-evaluation-stale-wallet-preferences-ui.mjs",
   "validate-settings-route-core.mjs",
