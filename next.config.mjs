@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { MflLegacyDevBridgePlugin } from "./next-dev-legacy-bridge.mjs";
 import { resolveDeploymentCommit } from "./deployment-commit.mjs";
+import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const deploymentCommit = resolveDeploymentCommit({ root });
@@ -21,12 +22,15 @@ export const securityHeaders = Object.freeze([
 
 // SEC-04 phase 1: observability only. Never merge into the enforced CSP without
 // browser validation of inline legacy scripts, Next runtime, and FCL/Dapper.
+// Hashes keep known parser-time legacy scripts eligible without delaying first paint.
+// Next's dynamic inline bootstrap still requires a request-scoped nonce strategy.
+export const cspScriptSources = Object.freeze(["'self'", "https://esm.sh", ...cspLegacyScriptHashes]);
 export const cspReportOnly = Object.freeze([
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
-  "script-src 'self' https://esm.sh",
-  "script-src-elem 'self' https://esm.sh",
+  `script-src ${cspScriptSources.join(" ")}`,
+  `script-src-elem ${cspScriptSources.join(" ")}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
