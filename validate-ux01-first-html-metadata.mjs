@@ -21,6 +21,8 @@ const examples = [
   ["/my-players/attributes", "My Players - MFL Front Office"],
   ["/my-clubs", "My Clubs - MFL Front Office"],
   ["/settings", "Settings - MFL Front Office"],
+  ["/settings/opted-out", "Settings - MFL Front Office"],
+  ["/my-clubs/opted-out", "My Clubs - MFL Front Office"],
   ["/changelog", "Changelog - MFL Front Office"],
   ["/privacy", "Privacy - MFL Front Office"],
   ["/missing-page", "Page not found - MFL Front Office"],

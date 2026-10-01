@@ -43,7 +43,9 @@ function requestedPage(rawPath) {
   const parts = pathname.replace(/\/+$/, "").split("/").slice(1);
   if (!parts.length || parts.some(part => !part)) return "notfound";
   const root = parts[0].toLowerCase();
-  if (SINGLE[root]) return parts.length === 1 ? SINGLE[root] : "notfound";
+  if (SINGLE[root]) return parts.length === 1
+    || parts.length === 2 && parts[1] === "opted-out" && (root === "settings" || root === "my-clubs" || root === "myclubs")
+    ? SINGLE[root] : "notfound";
   if (TABLE_VIEWS[root]) {
     const views = TABLE_VIEWS[root];
     return parts.length === 1 || parts.length === 2 && views.includes(parts[1].toLowerCase())
@@ -62,10 +64,6 @@ function requestedPage(rawPath) {
   if (root === "watchlist") {
     if (parts.length === 1 || parts.length === 2) return "watchlist";
     return parts.length === 3 && VIEW_SLUGS.has(parts[2].toLowerCase()) ? "watchlist" : "notfound";
-  }
-  if (root === "my-clubs" || root === "myclubs" || root === "settings") {
-    return parts.length === 2 && parts[1] === "opted-out"
-      ? (root === "settings" ? "settings" : "my-clubs") : "notfound";
   }
   return "notfound";
 }
