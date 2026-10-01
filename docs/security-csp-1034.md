@@ -69,7 +69,9 @@ This phase uses a CSP hash allowlist instead of moving scripts:
   build to stop until the inventory is re-reviewed; and
 - `validate-csp-legacy-script-hashes.mjs` verifies all digest inputs and
   checks HTML-to-React rendering preserves inline script bytes. The repository
-  validation pipeline includes it.
+  validation pipeline includes it. The Next rendered-shell workflow additionally
+  fetches actual Home, Planner, Player and Evaluation route HTML and verifies that
+  all 12 source hashes appear byte-for-byte in those documents.
 
 This intentionally **does not** cover Next.js request-dependent bootstrap
 scripts, third-party/runtime dynamically generated inline scripts, inline
