@@ -21,6 +21,11 @@ on:
       - "validation/next-rendered-shell-browser.mjs"
       - "validation/next-csp-script-hashes.mjs"
       - "validation/next-csp-nonce-browser.mjs"
+      - "nationality-filter-options-runtime.js"
+      - "selection-startup-reset-runtime.js"
+      - "filter-controls-runtime.js"
+      - "shared-table-ui-runtime.js"
+      - "validate-csp-legacy-eval-elimination.mjs"
       - "validation/next-csp-report-route.mjs"
       - "api/csp-report.js"
       - "csp-report-only-policy.mjs"
@@ -76,6 +81,9 @@ jobs:
 
       - name: Verify per-request nonce in live Next SSR and static-route bypass
         run: node validation/next-csp-nonce-browser.mjs http://localhost:4000/
+
+      - name: Verify runtime bridge sources do not require unsafe-eval
+        run: node validate-csp-legacy-eval-elimination.mjs
 
       - name: Verify real Next development CSP reporting endpoint
         run: node validation/next-csp-report-route.mjs http://localhost:4000/
