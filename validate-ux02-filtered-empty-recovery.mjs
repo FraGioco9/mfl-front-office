@@ -98,7 +98,7 @@ for (const scenario of [
   assert.equal(test.state.currentWatchlistId, "watchlist-one");
 }
 
-assert.match(lifecycle, /emptyState\.textContent = tableEmptyStateMessage\(\);\s*if \(pageRows\.length === 0\) tableRenderEmptyFilterAction\(\);\s*emptyState\.hidden = pageRows\.length > 0;/);
+assert.match(lifecycle, /emptyState\.textContent = tableEmptyStateMessage\(\);\s*if \(pageRows\.length === 0\) \{\s*tableRenderEmptyFilterAction\(\);\s*tableRenderEmptyDiscoveryAction\(\);\s*\}\s*emptyState\.hidden = pageRows\.length > 0;/);
 assert.match(lifecycle, /function showTableBusyState\(\)/);
 assert.match(lifecycle, /emptyState\.hidden = true;\s*emptyState\.textContent = "";/);
 assert.match(css, /\.emptyState \.compactButton \{\s*display: block;\s*margin: 12px auto 0;/);
