@@ -1,0 +1,87 @@
+name: SEC-03 distributed auth rate limit
+
+on:
+  pull_request:
+    paths:
+      - supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql
+      - supabase-schema.sql
+      - api/_wallet-rate-limit.js
+      - api/wallet-session.js
+      - validate-wallet-auth-rate-limit.mjs
+      - .github/workflows/sec-03-auth-rate-limit-postgres.yml
+
+permissions:
+  contents: read
+
+jobs:
+  atomic-quotas:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify concurrent PostgreSQL quota and service-role-only access
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $verify$
+          begin
+            if has_function_privilege('anon', 'public.consume_wallet_auth_rate_limit(text,integer,integer)', 'EXECUTE')
+               or has_function_privilege('authenticated', 'public.consume_wallet_auth_rate_limit(text,integer,integer)', 'EXECUTE')
+               or not has_function_privilege('service_role', 'public.consume_wallet_auth_rate_limit(text,integer,integer)', 'EXECUTE')
+               or has_table_privilege('anon', 'public.wallet_auth_rate_limits', 'SELECT')
+               or not (select relrowsecurity from pg_class where oid = 'public.wallet_auth_rate_limits'::regclass) then
+              raise exception 'Wallet rate-limit table or RPC privileges are insecure';
+            end if;
+          end;
+          $verify$;
+          SQL
+          test "$(psql -qAt -c "set role service_role; select allowed from public.consume_wallet_auth_rate_limit(repeat('c',64), 2, 60);")" = t
+          test "$(psql -qAt -c "set role service_role; select allowed from public.consume_wallet_auth_rate_limit(repeat('c',64), 2, 60);")" = t
+          test "$(psql -qAt -c "set role service_role; select allowed from public.consume_wallet_auth_rate_limit(repeat('c',64), 2, 60);")" = f
+          count=0
+          : > /tmp/quotas
+          for n in $(seq 1 40); do
+            (psql -qAt -c "set role service_role; select allowed from public.consume_wallet_auth_rate_limit(repeat('a',64), 10, 60);" >> /tmp/quotas) &
+            if (( n % 10 == 0 )); then wait; fi
+          done
+          wait
+          test "$(wc -l < /tmp/quotas)" -eq 40
+          test "$(grep -c '^t$' /tmp/quotas)" -eq 10
+          test "$(grep -c '^f$' /tmp/quotas)" -eq 30
+          test "$(psql -qAt -c "select hits from public.wallet_auth_rate_limits where bucket_key=repeat('a',64);")" = 10
+          test "$(psql -qAt -c "select retry_after_seconds from public.consume_wallet_auth_rate_limit(repeat('a',64), 10, 60);")" -ge 1
+          test "$(psql -qAt -c "select allowed from public.consume_wallet_auth_rate_limit(repeat('b',64), 1, 1);")" = t
+          test "$(psql -qAt -c "select allowed from public.consume_wallet_auth_rate_limit(repeat('b',64), 1, 1);")" = f
+          sleep 2
+          test "$(psql -qAt -c "select allowed from public.consume_wallet_auth_rate_limit(repeat('b',64), 1, 1);")" = t
+          echo 'SEC-03 shared atomic quota and privilege tests passed.'
