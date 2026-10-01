@@ -5,8 +5,9 @@ import { randomBytes } from "node:crypto";
 export function nonceEligiblePath(pathname, searchParams = new URLSearchParams()) {
   const path = String(pathname || "");
   if (!path.startsWith("/") || path === "/" || path === "/planner" || path.startsWith("/planner/")) return false;
-  if (path === "/index.html" || path.startsWith("/api/") || path.startsWith("/_next/")) return false;
-  if (/(?:^|\/)\.[^/]+(?:\/|$)/.test(path) || /\.[a-z\d]{1,10}$/i.test(path)) return false;
+  if (path === "/index.html" || path.startsWith("/api/") || path.startsWith("/_next/") || path.startsWith("/modules/")) return false;
+  // Match the Next proxy matcher: it deliberately excludes every dotted path.
+  if (path.includes(".")) return false;
   if (path === "/evaluation" && searchParams.has("share")) return false;
   return true;
 }
