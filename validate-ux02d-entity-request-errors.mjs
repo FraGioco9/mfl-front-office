@@ -11,6 +11,8 @@ const routing = read("modules/core-sources/shared-incremental-routing.js");
 // 200 with no Player row is verified absence; failed requests never have a
 // trustworthy result set and must not be presented as "not found".
 assert.match(player, /if \(!row\) \{\s*playerDetailRenderReuse\.invalidate\(\);\s*window\.__mflStaticUiRuntime\?\.showNotFound\?\.\("Player"\)/);
+assert.match(player, /if \(!matchingRow && payload\.rows\.length === 0 && Number\(payload\.totalRows\) === 0\)/);
+assert.match(player, /readyDetailPlayerId = routePlayerId;\s*return true;\s*}\s*if \(!matchingRow/);
 assert.match(navigation, /route\.scope === "player" && pageNavigationIsCurrent\(navigationOptions\)/);
 assert.match(navigation, /window\.__mflStaticUiRuntime\?\.showLoadError\?\.\("Player"\)/);
 assert.match(routing, /if \(!response\.ok\) \{\s*throw new Error\(payload\.error/);
