@@ -147,6 +147,9 @@ jobs:
       - name: Bind deployment commit to prebuilt artifact
         run: node scripts/workflows/write-deployment-commit.mjs "$GITHUB_SHA"
 
+      - name: Validate Vercel edge security headers
+        run: node scripts/workflows/sync-vercel-security-headers.mjs
+
       - name: Build protected Next.js deployment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
