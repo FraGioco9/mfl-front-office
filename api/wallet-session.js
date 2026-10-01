@@ -8,6 +8,8 @@ const {
   cookieValue,
 } = require("./_wallet-auth");
 
+const { exactConfiguredOrigin, requestOrigin, sameOriginRequest } = require("./_request-origin");
+
 const MAX_BODY_BYTES = 32 * 1024;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMITS = Object.freeze({ issue: 20, exchange: 10, logout: 30 });
@@ -18,41 +20,6 @@ function requestAddress(request) {
   return String(request?.headers?.["x-forwarded-for"] || request?.headers?.["x-real-ip"] || request?.socket?.remoteAddress || "unknown")
     .split(",")[0]
     .trim() || "unknown";
-}
-
-function exactConfiguredOrigin(value) {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`;
-  const url = new URL(candidate);
-  if (url.origin !== candidate.replace(/\/$/, "")) {
-    throw new Error("Wallet authentication origin must be an exact origin.");
-  }
-  return url.origin;
-}
-
-function requestOrigin(request, configuredOrigin = process.env.WALLET_CHALLENGE_ORIGIN, deploymentHost = process.env.VERCEL_URL) {
-  const configured = exactConfiguredOrigin(configuredOrigin || deploymentHost);
-  if (configured) return configured;
-
-  const forwardedHost = String(request?.headers?.["x-forwarded-host"] || request?.headers?.host || "")
-    .split(",")[0]
-    .trim();
-  const forwardedProto = String(request?.headers?.["x-forwarded-proto"] || "http")
-    .split(",")[0]
-    .trim();
-  const protocol = forwardedProto === "https" ? "https" : "http";
-  if (!forwardedHost) throw new Error("Wallet authentication request origin is unavailable.");
-  const local = new URL(`${protocol}://${forwardedHost}`);
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(local.hostname)) {
-    throw new Error("Wallet authentication requires a configured trusted deployment origin.");
-  }
-  return local.origin;
-}
-
-function sameOriginRequest(request, origin) {
-  const supplied = String(request?.headers?.origin || "").trim();
-  return Boolean(supplied && supplied === origin);
 }
 
 function allowRate(key, limit, now = Date.now()) {

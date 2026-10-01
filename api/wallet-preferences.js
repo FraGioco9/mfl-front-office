@@ -1,4 +1,5 @@
 const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-auth");
+const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { normalizeLateSeasonRewardRates } = require("./_evaluation-payload");
@@ -320,6 +321,7 @@ async function writePreferences(wallet, preferences) {
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
+  if ((request.method === "PUT") && !requireSameOriginMutation(request, response)) return;
   const wallet = await signedWalletFromRequest(request);
 
   if (!wallet) {

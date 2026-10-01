@@ -53,6 +53,15 @@ challenge-specific user-signature message, and expiry.
 
 ## Proof exchange and replay protection
 
+Cookie-authenticated writes now use the same trusted-origin resolution as wallet-session:
+`POST`/`DELETE` Planner saves and shares, `POST`/`DELETE` Evaluation saves, `POST` Evaluation shares,
+`PUT` wallet preferences, and `POST` opt-in presence. The guard rejects missing, `null`, forged,
+or cross-origin `Origin` headers with `403` **before** resolving a wallet session or reading the
+request body. Deployed origins come from `WALLET_CHALLENGE_ORIGIN` or `VERCEL_URL`, never
+from arbitrary request `Host` or `x-forwarded-host` values; only loopback development
+may derive its origin from request headers. Browser writes must remain same-origin.
+Public reads and guest bug-report submissions are not wallet-authenticated mutations
+and are excluded from this wallet CSRF guard.
 `POST /api/wallet-session` requires a same-origin request, bounded request body, valid browser binding,
 valid unexpired challenge, and valid Flow proof for that exact challenge.
 

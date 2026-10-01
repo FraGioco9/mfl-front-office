@@ -1,4 +1,5 @@
 const { signedWalletFromRequest } = require("./_wallet-auth");
+const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig } = require("./_supabase");
 const { touchWalletLastSeen } = require("./_wallet-presence");
 
@@ -21,6 +22,7 @@ async function recordOptIn(wallet) {
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
+  if ((request.method === "POST") && !requireSameOriginMutation(request, response)) return;
 
   if (request.method !== "POST") {
     response.status(405).json({ error: "Method not allowed." });
