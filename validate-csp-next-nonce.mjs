@@ -15,7 +15,7 @@ assert.equal(nonceExperimentEnabled({ MFL_CSP_NONCE_REPORT_ONLY: "1" }), true);
 assert.equal(nonceExperimentEnabled({ MFL_CSP_NONCE_REPORT_ONLY: "true" }), false);
 
 for (const pathname of ["/", "/planner", "/planner/abc", "/index.html", "/api/identity",
-  "/_next/static/x.js", "/modules/app-entry.js", "/styles-runtime.css", "/.well-known/chrome.json"]) {
+  "/_next/static/x.js", "/modules/app-entry.js", "/modules/without-extension", "/players/test.v1/details", "/styles-runtime.css", "/.well-known/chrome.json"]) {
   assert.equal(nonceEligiblePath(pathname), false, `Static or API path ${pathname} must not receive a nonce.`);
 }
 for (const pathname of ["/players/1", "/database/attributes", "/evaluation", "/watchlist", "/settings"]) {
