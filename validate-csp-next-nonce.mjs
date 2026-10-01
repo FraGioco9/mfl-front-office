@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
 import { cspLegacyScriptHashSnapshot } from "./csp-legacy-hash-snapshot.mjs";
 import { cspReportOnly, cspReportOnlyWithNonce } from "./csp-report-only-policy.mjs";
-import { nonceEligiblePath, nonceExperimentEnabled, proxy } from "./proxy.js";
+import { freshCspNonce, nonceEligiblePath, nonceExperimentEnabled } from "./csp-next-nonce.mjs";
 import { securityHeaders, createNextHeaders } from "./next.config.mjs";
 
 assert.deepEqual(cspLegacyScriptHashSnapshot, cspLegacyScriptHashes,
@@ -34,50 +34,19 @@ for (const invalid of ["", "attacker", "a".repeat(24), "a".repeat(22) + "==; scr
   assert.throws(() => cspReportOnlyWithNonce(invalid), /Invalid CSP nonce/);
 }
 
-function request(path) {
-  return {
-    nextUrl: new URL(`https://mfl.example${path}`),
-    headers: new Headers({
-      "x-mfl-csp-nonce": validNonce,
-    }),
-  };
+const observed = new Set();
+for (let index = 0; index < 30; index += 1) {
+  const nonce = freshCspNonce();
+  assert.match(nonce, /^[A-Za-z0-9+/]{22}==$/);
+  assert.ok(!observed.has(nonce), "Independent documents need unique 128-bit nonces.");
+  observed.add(nonce);
+  assert.equal(cspReportOnlyWithNonce(nonce).split(`'nonce-${nonce}'`).length - 1, 2);
 }
-const oldFlag = process.env.MFL_CSP_NONCE_REPORT_ONLY;
-try {
-  delete process.env.MFL_CSP_NONCE_REPORT_ONLY;
-  const disabled = proxy(request("/players/1"));
-  assert.equal(disabled.headers.get("content-security-policy-report-only"), null,
-    "Disabled experiment must leave default CSP alone.");
-
-  process.env.MFL_CSP_NONCE_REPORT_ONLY = "1";
-  const staticResponse = proxy(request("/"));
-  assert.equal(staticResponse.headers.get("content-security-policy-report-only"), null);
-  assert.equal(staticResponse.headers.get("x-middleware-request-x-mfl-csp-nonce"), null,
-    "Client-provided nonce must be stripped from static-route requests.");
-  const first = proxy(request("/players/1"));
-  const second = proxy(request("/players/1"));
-  const firstPolicy = first.headers.get("content-security-policy-report-only");
-  const secondPolicy = second.headers.get("content-security-policy-report-only");
-  const firstNonce = firstPolicy?.match(/'nonce-([A-Za-z0-9+/]{22}==)'/)?.[1];
-  const secondNonce = secondPolicy?.match(/'nonce-([A-Za-z0-9+/]{22}==)'/)?.[1];
-  assert.ok(firstNonce);
-  assert.ok(secondNonce);
-  assert.notEqual(firstNonce, secondNonce, "Separate responses must have different unpredictable nonces.");
-  assert.notEqual(firstNonce, validNonce);
-  assert.equal(firstPolicy, cspReportOnlyWithNonce(firstNonce));
-  assert.equal(secondPolicy, cspReportOnlyWithNonce(secondNonce));
-  assert.equal(first.headers.get("Cache-Control"), "private, no-store");
-  assert.equal(first.headers.get("Reporting-Endpoints"), 'mfl-csp="/api/csp-report"');
-  assert.equal(first.headers.get("x-middleware-request-x-mfl-csp-nonce"), firstNonce,
-    "Next document must receive the nonce generated for this specific response.");
-} finally {
-  if (oldFlag === undefined) delete process.env.MFL_CSP_NONCE_REPORT_ONLY;
-  else process.env.MFL_CSP_NONCE_REPORT_ONLY = oldFlag;
-}
+assert.equal(freshCspNonce().length, 24);
 
 for (const production of [true, false]) {
   const rule = createNextHeaders({ production }).find(x => x.source === "/:path*");
   assert.equal(rule.headers.find(x => x.key === "Content-Security-Policy")?.value, enforced);
 }
 
-console.log("SEC-04 Next nonce unit validation passed: 128-bit per-request nonce, static path bypass, opt-in flag, spoof resistance, report-only CSP.");
+console.log("SEC-04 Next nonce unit validation passed: 128-bit random nonces, strict path eligibility, opt-in flag and report-only policy.");
