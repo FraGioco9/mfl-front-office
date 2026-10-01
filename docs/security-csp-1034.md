@@ -39,14 +39,58 @@ third-party telemetry service or database table.
 | Dapper/WalletConnect popups or embedded providers | Third-party destinations may vary | Must observe a **real opt-in** session; do not guess or enforce a fixed list |
 | Next runtime / dynamic imports | First-party scripts + runtime-generated inline initialization | Page shell and `pages/_document.js` |
 
-The phase-1 script candidate permits only `'self'` and `https://esm.sh`
-as external script sources, with **no inline or eval allowances**, precisely
-to discover remaining script behavior. This will generate expected reports
+The phase-1 candidate initially permitted only `'self'` and `https://esm.sh`
+as external script sources. Phase 2a additionally hashes the 12 known stable
+parser-time legacy inline scripts, still **without `'unsafe-inline'` or
+`'unsafe-eval'`**, to identify remaining sources. This will generate expected reports
 from the legacy and Next.js shell. A report-only violation is not a security
 block. The less-constrained `connect-src 'self' https: wss:` and
 `img-src 'self' data: blob: https:` deliberately avoid guessing dynamic
 origins until a complete browser inventory exists. Style inline allowances
 remain in the candidate initially.
+
+## Phase 2a (01 October 2026): hash-backed legacy inline script allowlist
+
+**Source-grounded finding:** The canonical generated `index.html` currently
+contains **12 inline parser-time executable scripts**, preserving initial
+route state, table controls, player/Planner first paint and other pre-hydration
+behavior. Moving these scripts into separately fetched files would alter parser
+timing, performance and content visibility unless explicitly staged.
+
+This phase uses a CSP hash allowlist instead of moving scripts:
+- `csp-legacy-script-hashes.mjs` reads the generated `index.html` and
+  calculates one SHA-256 digest for each executable inline script's **exact
+  UTF-8 body**, avoiding `'unsafe-inline'` or build-unstable hardcoded hashes;
+- `next.config.mjs` includes those digests in the existing
+  **Report-Only** `script-src` and `script-src-elem` directives alongside
+  `'self'` and `https://esm.sh`;
+- the inventory is fail-closed at **build time**: any change from the
+  currently reviewed script count (12) or duplicate script hash causes the
+  build to stop until the inventory is re-reviewed; and
+- `validate-csp-legacy-script-hashes.mjs` verifies all digest inputs and
+  checks HTML-to-React rendering preserves inline script bytes. The repository
+  validation pipeline includes it.
+
+This intentionally **does not** cover Next.js request-dependent bootstrap
+scripts, third-party/runtime dynamically generated inline scripts, inline
+event handler attributes or inline style attributes. The existing report-only
+candidate may still report these. An enforced `script-src` with only the
+legacy hashes would break Next unless those sources receive a separately
+verified request nonce (or other approved mechanism). The check is intentionally
+limited to deterministic legacy scripts; no nonce is added or assumed.
+
+**Observability blocker:** As checked on 01 October 2026, the most recently
+listed Vercel production deployment was still at `00c69330`, preceding
+phase 1's reporting header. Real CSP violation statistics and Dapper popup
+source inventory therefore cannot yet be inferred. Production deployment
+and a real browser/wallet exercise remain prerequisites for narrowing dynamic
+origins or enabling enforcement.
+
+**Rollout:** After deploying and verifying phase 1/phase 2a, inventory
+remaining `script-src`, `script-src-elem` and `script-src-attr` reports.
+Keep the enforced header byte-for-byte unchanged. If rendered HTML differs
+from source bytes, fix the source-to-renderer contract, **not** by enabling
+`'unsafe-inline'`.
 
 ## First-party report processing
 
