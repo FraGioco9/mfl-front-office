@@ -19,14 +19,17 @@ export function nonceExperimentEnabled(env = process.env) {
 }
 
 export function proxy(request) {
-  if (!nonceExperimentEnabled() || !nonceEligiblePath(request.nextUrl.pathname, request.nextUrl.searchParams)) {
-    return NextResponse.next();
+  if (!nonceExperimentEnabled()) return NextResponse.next();
+
+  // Strip untrusted client-supplied nonce values even on static SSR routes.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-mfl-csp-nonce");
+  if (!nonceEligiblePath(request.nextUrl.pathname, request.nextUrl.searchParams)) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // 128 unpredictable bits, different for every document request.
-  // All request values of this name are overwritten, never trusted.
   const nonce = randomBytes(16).toString("base64");
-  const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-mfl-csp-nonce", nonce);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
