@@ -59,14 +59,15 @@ invariant(
 );
 invariant(
   plannerRoutePage.includes("export default function MflPlannerPage()")
-    && (plannerRoutePage.includes("return null;")
-      || (plannerRoutePage.includes("React.createElement(Head")
-        && plannerRoutePage.includes("Planner - MFL Front Office"))),
+    && plannerRoutePage.includes("React.createElement(Head")
+    && plannerRoutePage.includes('initialPageMetadata("/planner")')
+    && plannerRoutePage.includes('React.createElement("title", null, metadata.title)'),
   "Planner must be served by an explicit Next page, not only by a static rewrite fallback.",
 );
 invariant(
-  deepRoutePage.includes("export function getServerSideProps()")
-    && deepRoutePage.includes("return { props: {} };"),
+  deepRoutePage.includes("export function getServerSideProps(context)")
+    && deepRoutePage.includes("initialPageMetadata(context.resolvedUrl)")
+    && deepRoutePage.includes("return { props: { initialMetadata: initialPageMetadata(context.resolvedUrl) } };"),
   "Production deep routes must stay server-resolved so Vercel can match arbitrary direct app URLs.",
 );
 invariant(

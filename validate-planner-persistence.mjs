@@ -183,6 +183,8 @@ assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})
 assert(bootstrap.includes("const publicPlannerShare = pageName === \"planner\"")
   && bootstrap.includes('/^\\/planner\\/[a-f0-9]{16}\\/?$/i.test(String(window.location.pathname || ""))')
   && bootstrap.includes("root.dataset.storedWalletOptIn === \"true\" || publicPlannerShare"));
-assert(stableRoutePage.includes("MflPlannerPlanPage") && stableRoutePage.includes("Planner - MFL Front Office"));
+assert(stableRoutePage.includes("MflPlannerPlanPage")
+  && stableRoutePage.includes('initialPageMetadata("/planner")')
+  && stableRoutePage.includes('React.createElement("title", null, metadata.title)'));
 
 console.log("Planner saved plans and unlisted share persistence validation passed.");
