@@ -24,7 +24,7 @@ let summarySnapshot = null;
 function setHomeSummaryLoadFailed(failed) {
   if (typeof document === "undefined") return;
   const notice = document.getElementById("homeSummaryLoadError");
-  const retry = document.getElementById("homeSummaryRetryButton");
+  const retry = /** @type {HTMLButtonElement | null} */ (document.getElementById("homeSummaryRetryButton"));
   if (notice) notice.hidden = !failed;
   if (retry) retry.disabled = !failed;
 }
