@@ -66,7 +66,7 @@ The atomic database RPC is `SECURITY INVOKER`, pins an empty `search_path`, and 
 ### `wallet_auth_rate_limits`
 
 Owner: `api/_wallet-rate-limit.js`. Migration:
-`supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql`,
+`supabase/migrations/20261001155224_wallet_auth_distributed_rate_limit.sql`,
 mirrored in `supabase-schema.sql`.
 
 Only a 64-hex-character HMAC-SHA256 of the trusted request IP and rate-limit
