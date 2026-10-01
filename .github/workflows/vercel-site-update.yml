@@ -156,6 +156,9 @@ jobs:
           ALLOW_VERCEL_ACTION_DEPLOY: "1"
         run: vercel build --prod --yes --token "$VERCEL_TOKEN"
 
+      - name: Verify prebuilt Vercel security header routes
+        run: node scripts/workflows/verify-prebuilt-security-headers.mjs
+
       - name: Verify prebuilt deployment identity
         run: node scripts/workflows/verify-prebuilt-deployment-commit.mjs "$GITHUB_SHA"
 
