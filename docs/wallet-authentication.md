@@ -114,12 +114,28 @@ when startup hydration receives 401.
 The wallet-session endpoint has:
 - a 32 KiB exchange request limit;
 - same-origin enforcement for state-changing exchange/logout requests;
-- bounded per-instance issuance/exchange/logout rate buckets;
+- atomic, shared Supabase rate limits for challenge issuance (20/minute) and exchange (10/minute), per hashed trusted client IP;
+- a bounded, per-instance emergency limiter only when Supabase is not configured (local/CI), and for logout (30/minute);
+- a fail-closed 503 when configured shared throttling is unavailable, without issuing/exchanging a challenge;
+- an accurate `Retry-After` header for rejected requests;
 - no-store response caching;
 - bounded challenge lifetime and one-time durable consumption.
 
-These controls complement platform-level protections; they do not replace infrastructure rate limiting
-if production traffic later warrants it.
+The atomic server-side rate-limit store is `public.wallet_auth_rate_limits` with
+`public.consume_wallet_auth_rate_limit`, service-role-only/RLS enabled. Only HMAC-SHA256
+buckets, operation counters and expiry timestamps are stored; no raw IP is persisted.
+The key derives from the Supabase service role secret, stable across server instances.
+On Vercel, rate-limit identity uses the platform-overwritten `x-vercel-forwarded-for`
+(or `x-forwarded-for`); elsewhere it uses the socket remote IP. Do not deploy behind
+an untrusted proxy that forwards attacker-provided client IPs. Each fixed window
+starts with the first request and lasts 60 seconds. Expired rows are pruned
+probabilistically, using an indexed one-hour grace period. This is a per-IP limit;
+clients on the same NAT may share a quota. A new session continues normally
+once the window expires; existing session cookies are unaffected.
+The new SQL migration must be applied **before** deploying this branch to avoid
+authentication falling back to a temporary 503. If the shared store fails after
+configuration, challenge/exchange fail closed rather than revert to local limits.
+This complements, but does not replace, platform-level abuse protections.
 
 ## Regression coverage
 
