@@ -27,6 +27,7 @@ const validators = [
   "validate-planner-persistence.mjs",
   "validate-sec06-shared-link-boundaries.mjs",
   "validate-sec06-share-api-fixtures.mjs",
+  "validate-sec07-auth-boundary.mjs",
   "validate-evaluation-preview-portrait.mjs",
   "validate-evaluation-preview-rarity-accent.mjs",
   "validate-evaluation-preview-shell-path.mjs",
