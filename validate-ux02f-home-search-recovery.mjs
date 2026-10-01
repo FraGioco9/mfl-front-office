@@ -69,10 +69,10 @@ function codeBetween(start,end) {
 }
 const input={value:"",listeners:{}};
 const searchCalls=[],pendingTimers=new Map(),canceled=[];
-let nextTimer=0, abortCount=0;
+let nextTimer=0;
 const resultNode={
   items:[],
-  querySelector(selector){return this.items.some(item=>item.className==="searchResult")?this.items[0]:null;},
+  querySelector(){return this.items.some(item=>item.className==="searchResult")?this.items[0]:null;},
   replaceChildren(...items){this.items=items;},
   classList:{remove(){}},
 };
