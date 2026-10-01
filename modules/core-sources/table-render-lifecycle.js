@@ -298,6 +298,7 @@ function tableRenderTableOwner() {
   }
   tableBody.setAttribute("data-mfl-rendered-route-identity", currentTableBodyRouteIdentity());
   emptyState.textContent = tableEmptyStateMessage();
+  if (pageRows.length === 0) tableRenderEmptyFilterAction();
   emptyState.hidden = pageRows.length > 0;
   updateTablePlayerCount({ authoritative: true });
   const tableLoadingRuntime = Reflect.get(window, "__mflTableLoadingRuntime");
