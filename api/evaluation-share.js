@@ -1,4 +1,5 @@
 const { signedWalletFromRequest } = require("./_wallet-auth");
+const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
@@ -49,6 +50,7 @@ async function snapshotPresentValue(payload) {
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
+  if ((request.method === "POST") && !requireSameOriginMutation(request, response)) return;
 
   if (!supabaseConfig()) {
     response.status(500).json({ error: "Supabase is not configured." });
