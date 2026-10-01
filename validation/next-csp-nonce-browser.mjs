@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { cspLegacyScriptHashes, inlineLegacyScripts, scriptHash } from "../csp-legacy-script-hashes.mjs";
-import { cspReportOnlyWithNonce } from "../csp-report-only-policy.mjs";
+import { cspReportOnly, cspReportOnlyWithNonce } from "../csp-report-only-policy.mjs";
 
 // Run against a real Next development server launched with
 // MFL_CSP_NONCE_REPORT_ONLY=1, not mock HTML.
 const base = process.argv[2] || "http://localhost:4000/";
+const production = process.argv.includes("--production");
 const seen = new Set();
 for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
   const response = await fetch(new URL(path, base), {
@@ -38,8 +39,14 @@ for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
 }
 for (const path of ["/", "/planner", "/planner/example-id", "/api/identity"]) {
   const response = await fetch(new URL(path, base), { signal: AbortSignal.timeout(15000) });
-  assert.equal(response.headers.get("content-security-policy-report-only"), null,
-    `Static or API route ${path} must retain unchanged development CSP.`);
+  const policy = response.headers.get("content-security-policy-report-only");
+  if (production) {
+    assert.equal(policy, cspReportOnly,
+      `Static or API route ${path} must retain base production CSP Report-Only.`);
+  } else {
+    assert.equal(policy, null,
+      `Static or API route ${path} must retain unchanged development CSP.`);
+  }
   assert.equal(response.headers.get("x-mfl-csp-nonce"), null);
 }
 console.log("Next CSP nonce integration passed: independent response nonces, matching SSR NextScript markup, unchanged legacy hashes and static/API bypass.");
