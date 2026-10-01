@@ -204,6 +204,45 @@ Dapper auth afterwards. **Do not** turn on
 `MFL_CSP_NONCE_REPORT_ONLY` before evaluating interaction between
 a request-scoped proxy CSP and Vercel's global edge header.
 
+## Phase 2d: remove legacy global-script eval bridges
+
+Once the protected deployment [#36894656576](https://github.com/FraGioco9/mfl-front-office/actions/runs/36894656576) successfully published `d6c0f1c9`,
+Vercel logs showed **real Report-Only violations** from `players`:
+`script-src` with blocked source `eval`, recurring roughly every
+10 seconds in the initial 16:50–16:53 UTC sample. The collector
+returned HTTP 204; no server errors were observed in that sampled window.
+
+A source review identified **five** direct uses of `window.eval` in
+four classic-script runtime bridges:
+- `nationality-filter-options-runtime.js`: nationality options and
+  filter-draft refresh;
+- `selection-startup-reset-runtime.js`: saved table state/selection reset;
+- `filter-controls-runtime.js`: numeric steppers, operator and filter
+  defaults;
+- `shared-table-ui-runtime.js`: mobile table page-size restore.
+
+These are a **plausible cause** of the `eval` reports, but the
+privacy-minimized reports do not identify a specific call site.
+The phase-2d PR rewrites the five string-evaluation calls as directly
+invoked functions, retaining the original lexical variable ownership,
+feature flags, guards, and return paths; the bridge bodies are
+otherwise unchanged. A fail-closed source validation checks that no
+production bridge reintroduces `eval` or `new Function`, and a
+real Next browser/routing suite checks ordinary functionality.
+
+**Staging acceptance:** after a protected production deployment,
+monitor the CSP report categories for the players page and test
+Database filters (especially nationality and numeric steppers), table
+selection reset after refresh, and mobile page-size restoration.
+If a browser reports regressions, revert this separate bridge change
+without weakening the CSP policy.
+
+**Do not infer that all `eval` violations are resolved** without a
+post-deploy browser sample; other external/extension code may use
+string evaluation. Keep `script-src` in Report-Only, and do not
+enable `MFL_CSP_NONCE_REPORT_ONLY` or introduce `unsafe-eval`
+on the strength of source scans alone.
+
 ## Phase 2c (01 October 2026): wire the CSP receiver into production
 
 **Deployment verification found a routing gap.** The phase-1 report

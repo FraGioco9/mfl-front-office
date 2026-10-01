@@ -57,7 +57,7 @@
   function installRestoreBridge() {
     if (destroyed || bridgeInstalled) return bridgeInstalled;
     try {
-      bridgeInstalled = Boolean(window.eval(`(() => {
+      bridgeInstalled = Boolean((() => {
         if (typeof restoreSavedTableState !== "function") return false;
         if (restoreSavedTableState.__mflStartupSelectionReset) return true;
         const originalRestoreSavedTableState = restoreSavedTableState;
@@ -80,7 +80,7 @@
         Object.defineProperty(restoreWithoutStartupSelection, "__mflStartupSelectionReset", { value: true });
         restoreSavedTableState = restoreWithoutStartupSelection;
         return true;
-      })()`));
+      })());
     } catch (error) {
       console.warn("Could not install startup selection reset.", error);
       bridgeInstalled = false;
