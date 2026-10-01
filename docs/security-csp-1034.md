@@ -73,6 +73,12 @@ This phase uses a CSP hash allowlist instead of moving scripts:
   fetches actual Home, Planner, Player and Evaluation route HTML and verifies that
   all 12 source hashes appear byte-for-byte in those documents.
 
+The generated-HTML source scan also found **0 static inline event
+handler attributes** (such as `onclick=`), **0 `javascript:` href/src
+values**, and **24 inline `style=` attributes**. These counts are source
+inventory measurements, not a substitute for checking runtime-inserted
+attributes in a browser.
+
 This intentionally **does not** cover Next.js request-dependent bootstrap
 scripts, third-party/runtime dynamically generated inline scripts, inline
 event handler attributes or inline style attributes. The existing report-only
