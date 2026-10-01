@@ -1056,10 +1056,10 @@
   }
   function plannerStablePlanPath(id){
     const value=String(id||"").trim().toLowerCase();
-    return /^[a-f0-9]{16}$/.test(value)?"/planner/"+encodeURIComponent(value):"/planner";
+    return /^(?:[a-f0-9]{16}|[a-f0-9]{32})$/.test(value)?"/planner/"+encodeURIComponent(value):"/planner";
   }
   function plannerPlanIdFromLocation(){
-    const match=String(location.pathname||"").match(/^\/planner\/([a-f0-9]{16})\/?$/i);
+    const match=String(location.pathname||"").match(/^\/planner\/((?:[a-f0-9]{16}|[a-f0-9]{32}))\/?$/i);
     if(match)return String(match[1]||"").toLowerCase();
     const params=new URLSearchParams(location.search);
     return String(params.get("share")||params.get("saved")||"").trim().toLowerCase();
@@ -1478,7 +1478,7 @@
   async function renderRoute(updateHash=true,options={}){
     state.currentPage=PAGE;document.body.dataset.page=PAGE;syncNavigation();
     const routeParams=new URLSearchParams(location.search);
-    const pathPlanMatch=String(location.pathname||"").match(/^\/planner\/([a-f0-9]{16})\/?$/i);
+    const pathPlanMatch=String(location.pathname||"").match(/^\/planner\/((?:[a-f0-9]{16}|[a-f0-9]{32}))\/?$/i);
     const legacyShareId=String(routeParams.get("share")||"").trim().toLowerCase();
     const legacySavedId=String(routeParams.get("saved")||"").trim().toLowerCase();
     const planId=String(options.planId||pathPlanMatch?.[1]||legacyShareId||legacySavedId||"").trim().toLowerCase();

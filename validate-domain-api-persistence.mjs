@@ -24,6 +24,7 @@ const validators = [
   "validate-wallet-preference-write-scoping.mjs",
   "validate-evaluation-share-expiry.mjs",
   "validate-evaluation-share-preview.mjs",
+  "validate-share-capability-security.mjs",
   "validate-planner-persistence.mjs",
   "validate-evaluation-preview-portrait.mjs",
   "validate-evaluation-preview-rarity-accent.mjs",

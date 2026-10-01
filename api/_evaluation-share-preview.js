@@ -1,5 +1,5 @@
 const { queryOne } = require("./_database");
-const { normalizeEvaluationId } = require("./_evaluation-payload");
+const { normalizeEvaluationShareId } = require("./_evaluation-payload");
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
 const { playerPortraitUrl } = require("./_player-portrait");
 const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
@@ -103,7 +103,7 @@ function publicPlayerPreview(playerIdValue) {
 }
 
 async function readActiveEvaluationShare(idValue, playerIdValue = "") {
-  const id = normalizeEvaluationId(idValue);
+  const id = normalizeEvaluationShareId(idValue);
   if (!id) return null;
 
   const playerId = normalizedPlayerId(playerIdValue);
@@ -115,7 +115,7 @@ async function readActiveEvaluationShare(idValue, playerIdValue = "") {
 
   if (!row) return null;
   return {
-    id: normalizeEvaluationId(row.id),
+    id: normalizeEvaluationShareId(row.id),
     playerId: normalizedPlayerId(row.player_id),
     payload: row.payload && typeof row.payload === "object" && !Array.isArray(row.payload) ? row.payload : {},
     expiresAt: String(row.expires_at || ""),

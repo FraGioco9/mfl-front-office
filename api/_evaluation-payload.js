@@ -11,6 +11,17 @@ function generateEvaluationId() {
   return crypto.randomBytes(4).toString("hex");
 }
 
+function normalizeEvaluationShareId(value) {
+  const id = String(value || "").trim().toLowerCase();
+  // Keep existing 32-bit share links readable while issuing only new
+  // 128-bit capability identifiers.
+  return /^(?:[a-f0-9]{8}|[a-f0-9]{32})$/.test(id) ? id : "";
+}
+
+function generateEvaluationShareId() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
 function parseEvaluationRewardRate(value) {
   const parsedValue = Number.parseFloat(String(value).replace(",", "."));
   return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 100
@@ -70,6 +81,8 @@ function normalizeEvaluationPayload(payload, options = {}) {
 module.exports = {
   normalizeEvaluationId,
   generateEvaluationId,
+  normalizeEvaluationShareId,
+  generateEvaluationShareId,
   normalizeLateSeasonRewardRates,
   normalizeEvaluationPayload,
 };

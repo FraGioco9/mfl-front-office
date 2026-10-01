@@ -19,6 +19,15 @@ function generatePlannerId() {
   return crypto.randomBytes(8).toString("hex");
 }
 
+function normalizePlannerShareId(value) {
+  const id = String(value || "").trim().toLowerCase();
+  return /^(?:[a-f0-9]{16}|[a-f0-9]{32})$/.test(id) ? id : "";
+}
+
+function generatePlannerShareId() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
 function normalizePlannerName(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, MAX_PLAN_NAME_LENGTH);
 }
@@ -99,6 +108,8 @@ module.exports = {
   MAX_PLAN_PLAYERS,
   normalizePlannerId,
   generatePlannerId,
+  normalizePlannerShareId,
+  generatePlannerShareId,
   normalizePlannerName,
   normalizePlannerClubId,
   normalizePlannerPayload,

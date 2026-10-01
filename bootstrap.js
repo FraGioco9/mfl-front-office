@@ -512,7 +512,7 @@
     const view = String(request?.options?.view || "");
     const publicPlannerShare = pageName === "planner"
       && (Boolean(String(new URLSearchParams(window.location.search).get("share") || "").trim())
-        || /^\/planner\/[a-f0-9]{16}\/?$/i.test(String(window.location.pathname || "")));
+        || /^\/planner\/(?:[a-f0-9]{16}|[a-f0-9]{32})\/?$/i.test(String(window.location.pathname || "")));
     const shellId = String(APP_CONFIG.routes.requestShellId(request, {
       walletOptedIn: root.dataset.storedWalletOptIn === "true" || publicPlannerShare,
     }) || "");
@@ -1767,7 +1767,7 @@
     if (options.versioned) {
       const version = String(window.__mflReleaseVersion || STATIC_RELEASE_VERSION || "").trim();
       const buildId = String(Reflect.get(window, "__mflCoreBuildId") || "").trim();
-      if (!/^[a-f0-9]{16}$/.test(buildId)) throw new Error("Application core build identity is unavailable.");
+      if (!/^(?:[a-f0-9]{16}|[a-f0-9]{32})$/.test(buildId)) throw new Error("Application core build identity is unavailable.");
       if (version) url.searchParams.set("mfl_core", `${version}-${buildId}`);
     }
     return url.href;

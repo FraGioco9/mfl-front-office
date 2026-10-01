@@ -4,7 +4,7 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 ## Access model
 
-`api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. `api/mfl-season-ratios-v2.js` may use the anon key for the read-only historical ratio dataset. Wallet-owned private endpoints authenticate through the server-issued wallet session cookie before accessing a wallet row; replayable legacy proof headers are no longer an authorization fallback.
+`api/_supabase.js` is the shared REST client. Application writes and private reads use the server-side service-role key. The public first-party `api/mfl-season-ratios-v2.js` endpoint also reads Supabase with the server service-role key; it never exposes that credential or falls back to an `anon` key. Wallet-owned private endpoints authenticate through the server-issued wallet session cookie before accessing a wallet row; replayable legacy proof headers are no longer an authorization fallback.
 
 `bug_reports` is also private application data. The browser never writes to Supabase directly: it submits to `api/bug-reports.js`, which validates and rate-limits the report before using the server-side service-role client. The table has RLS enabled, no `anon` or `authenticated` privileges, and no public read policy.
 
@@ -152,14 +152,14 @@ The API permits up to 100 saved Evaluations per wallet. Overwriting an existing 
 Write/lifecycle owner: `api/evaluation-share.js`. Active-share lookup owner: `api/_evaluation-share-preview.js`, reused by `api/evaluation-share.js`, the public shared-link metadata endpoint `api/evaluation-preview.js`, and the dynamic social-card endpoint `api/evaluation-preview-image.js`.
 
 Stored values:
-- `id`: share identifier.
+- `id`: unlisted capability identifier. New shares use 128-bit random IDs (32 hex characters); legacy 32-bit IDs (8 hex characters) remain readable until they expire or are revoked.
 - `wallet_address`: creator identity retained for ownership/audit context; there is no per-wallet share-count limit.
 - `player_id`: validates/resolves the shared player context.
 - `payload`: normalized public Evaluation share state.
 - `created_at`: share ordering metadata.
 - `expires_at`: mandatory expiry and active-share filtering; new shares expire one calendar year after share creation.
 
-Shared Evaluations are unlimited per wallet. Creating a new share never prunes or replaces older active shares; each link remains valid independently until its own `expires_at` timestamp.
+Shared Evaluations are unlimited per wallet. Creating a new share never prunes or replaces older active shares; each link remains valid independently until its own `expires_at` timestamp or an authenticated owner revokes it. Revocation is same-origin, wallet-scoped and idempotent, so a caller cannot distinguish another wallet's live share from an already absent/revoked identifier.
 
 The preview lookup selects only `id`, `player_id`, `payload`, and `expires_at`; it never exposes or selects the creator wallet. Only after that active share has been validated, the preview owner resolves the player's current public `name`, `age`, and `retirement_years` from the packaged public player database (`mfl_database.db`). Name and age keep the card aligned with the public player identity shown by the site. For valuation, the saved `overallValues` array is also the canonical saved Expected Seasons horizon because the Evaluation page creates exactly one Overall entry per raw expected season. Public age/retirement context is therefore only a backward-compatibility fallback when a legacy payload does not contain that horizon.
 
@@ -188,7 +188,7 @@ The API permits up to 50 saved plans per wallet. Saved-plan updates and deletes 
 Owner: `api/planner-share.js`.
 
 Stored values:
-- `id`: unlisted share identifier.
+- `id`: unlisted capability identifier. New shares use 128-bit random IDs (32 hex characters); existing 64-bit IDs (16 hex characters) remain valid and routable until expiry/revocation.
 - `wallet_address`: creator identity retained only for ownership/audit context and never returned by public reads.
 - `source_plan_id`: optional private linkage to the owner's saved Planner plan; it is used only by authenticated share-management reads/revocation and is not returned by public share lookup.
 - `club_id`: shared club identity.
@@ -197,7 +197,7 @@ Stored values:
 - `created_at`: share creation metadata.
 - `expires_at`: mandatory one-year expiry used by public share lookup.
 
-Creating a share copies the normalized plan state into an independent read-only snapshot. A saved plan owns at most one active share: `(wallet_address, source_plan_id)` is unique and replacement uses a single Supabase upsert, so concurrent Share requests cannot leave two active links for the same saved plan. Replacing the row also invalidates the previous external ID immediately. Authenticated owner reads can list active shares and owners can explicitly revoke a share by ID; DELETE is wallet-scoped. Public GET reads select only share-safe fields and never expose the creator wallet or source-plan linkage. A recipient can view a stable `/planner/<plan_id>` share without opting in; saving a copy requires an authenticated opted-in wallet and creates a new `planner_plans` row rather than mutating the original share.
+Creating a share copies the normalized plan state into an independent read-only snapshot. A saved plan owns at most one active share: `(wallet_address, source_plan_id)` is unique and replacement uses a single Supabase upsert, so concurrent Share requests cannot leave two active links for the same saved plan. Replacing the row also invalidates the previous external ID immediately. Authenticated owner reads can list active shares and owners can explicitly revoke a share by ID; DELETE is wallet-scoped and public responses do not reveal ownership. Public GET reads select only share-safe fields, require `expires_at` to remain in the future, and never expose the creator wallet or source-plan linkage. A recipient can view either a legacy 16-hex or new 32-hex stable `/planner/<share_id>` link without opting in; saving a copy requires an authenticated opted-in wallet and creates a new `planner_plans` row rather than mutating the original share.
 
 ### `bug_reports`
 
