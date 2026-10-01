@@ -21,7 +21,13 @@ for (const path of ["/players/1", "/database/attributes", "/watchlist"]) {
   assert.ok(!seen.has(nonce), "Nonce must change per SSR request.");
   seen.add(nonce);
   assert.equal(policy, cspReportOnlyWithNonce(nonce));
-  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  const cachePolicy = response.headers.get("cache-control");
+  if (production) {
+    assert.equal(cachePolicy, "private, no-store", "Production nonce responses must never be cached.");
+  } else {
+    assert.ok(["private, no-store", "no-cache, must-revalidate"].includes(cachePolicy),
+      "Next development may override the per-request cache header for HMR.");
+  }
   assert.equal(response.headers.get("reporting-endpoints"), 'mfl-csp="/api/csp-report"');
   assert.equal(response.headers.get("content-security-policy"), "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
 
