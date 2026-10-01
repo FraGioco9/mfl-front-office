@@ -873,7 +873,7 @@
     if(ownedWallet!==wallet){ownedWallet=wallet;ownedClubs=null;ownedRequest=null;}
     if(results instanceof HTMLElement&&ownedClubs===null){
       const loading=document.createElement("div");loading.className="searchHint";loading.textContent="Loading your clubs…";
-      results.replaceChildren(loading);results.hidden=false;
+      results.replaceChildren(loading);results.setAttribute("role","status");results.hidden=false;
     }
     try{
       if(!ownedRequest&&ownedClubs===null){
@@ -943,7 +943,11 @@
       retry.type="button";retry.className="compactButton";retry.textContent="Retry";
       retry.addEventListener("click",()=>{
         if(query){
-          if(input?.value.trim()===query)void requestTeams(query);
+          if(input?.value.trim()===query){
+            const loading=document.createElement("div");loading.className="searchHint";loading.textContent="Searching teams…";
+            results.setAttribute("role","status");results.replaceChildren(loading);
+            void requestTeams(query);
+          }
         }else{
           ownedClubs=null;
           void requestOwnedClubs();
@@ -951,6 +955,7 @@
       });
       fragment.appendChild(retry);
     }
+    results.setAttribute("role",fragment.querySelector(".plannerTeamSearchResult")?"listbox":"status");
     results.replaceChildren(fragment);results.hidden=!results.childNodes.length;
   }
   async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence||input?.value.trim()!==q)return[];renderResults([],q,{error:error?.message||"Could not search teams."});setStatus("");return[];}}
@@ -1591,7 +1596,7 @@
     if(results instanceof HTMLElement){
       const loading=document.createElement("div");
       loading.className="searchHint";loading.textContent="Searching teams…";
-      results.replaceChildren(loading);results.hidden=false;
+      results.replaceChildren(loading);results.setAttribute("role","status");results.hidden=false;
     }
     searchTimer=setTimeout(()=>void requestTeams(q),140);
   });
