@@ -100,6 +100,18 @@ def read_previous_marker(
     except HTTPError as error:
         if error.code == 404:
             return {}
+        if error.code == 400:
+            try:
+                error_payload = json.loads(error.read().decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                error_payload = {}
+            if (
+                str(error_payload.get("code") or "").strip() == "NoSuchKey"
+                or str(error_payload.get("error") or "").strip() == "not_found"
+                or str(error_payload.get("message") or "").strip().lower()
+                == "object not found"
+            ):
+                return {}
         raise
     return payload if isinstance(payload, dict) else {}
 
