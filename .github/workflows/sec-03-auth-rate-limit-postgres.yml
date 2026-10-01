@@ -3,7 +3,7 @@ name: SEC-03 distributed auth rate limit
 on:
   pull_request:
     paths:
-      - supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql
+      - supabase/migrations/20261001155224_wallet_auth_distributed_rate_limit.sql
       - supabase-schema.sql
       - api/_wallet-rate-limit.js
       - api/wallet-session.js
@@ -51,7 +51,7 @@ jobs:
           create role authenticated nologin;
           create role service_role nologin bypassrls;
           SQL
-          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261001170000_wallet_auth_distributed_rate_limit.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261001155224_wallet_auth_distributed_rate_limit.sql
           psql -X -v ON_ERROR_STOP=1 <<'SQL'
           do $verify$
           begin
