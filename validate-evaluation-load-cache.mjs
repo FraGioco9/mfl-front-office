@@ -56,7 +56,7 @@ invariant(
 );
 
 invariant(
-  evaluationCore.includes('document.addEventListener("keydown", (event) => {\n  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;')
+  evaluationCore.includes('document.addEventListener("keydown", (event) => {\n  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden\n    || (evaluationDeleteModal instanceof HTMLElement && !evaluationDeleteModal.hidden)) return;')
     && evaluationCore.includes('event.preventDefault();\n  hideEvaluationLoadActionTooltip();\n  if (document.activeElement instanceof HTMLElement && evaluationLoadModal.contains(document.activeElement)) {\n    document.activeElement.blur();')
     && !sharedCore.includes('document.addEventListener("keydown", (event) => {\n  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;'),
   "Saved Evaluations must keep Escape focus-release behavior in the lazy Evaluation owner without a duplicate Shared listener.",

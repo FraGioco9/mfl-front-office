@@ -14,6 +14,7 @@ const validators = [
   "validate-planner-route-core.mjs",
   "validate-ux03-planner-toolbar-actions.mjs",
   "validate-ux03c-planner-saved-plans-actions.mjs",
+  "validate-ux03d-cross-domain-actions.mjs",
   "validate-planner-roster.mjs",
   "validate-settings-email-privacy.mjs",
   "validate-player-route-core.mjs",
