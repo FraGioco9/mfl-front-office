@@ -50,7 +50,7 @@ jobs:
             if not exists (
               select 1 from pg_proc
               where oid = 'public.set_updated_at()'::regprocedure
-                and proconfig @> array['search_path=']::text[]
+                and coalesce(array_to_string(proconfig, ','), '') like 'search_path=%'
             ) then
               raise exception 'Canonical trigger function has no pinned search_path';
             end if;
@@ -65,7 +65,7 @@ jobs:
             if not exists (
               select 1 from pg_proc
               where oid = 'public.set_updated_at()'::regprocedure
-                and proconfig @> array['search_path=']::text[]
+                and coalesce(array_to_string(proconfig, ','), '') like 'search_path=%'
             ) then
               raise exception 'Migration did not pin the trigger search_path';
             end if;
