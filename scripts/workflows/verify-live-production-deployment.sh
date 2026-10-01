@@ -56,11 +56,13 @@ def verify_route(path: str, token: str) -> None:
     enforced = str(headers.get("Content-Security-Policy", ""))
     reported = str(headers.get("Content-Security-Policy-Report-Only", ""))
     if enforced != "frame-ancestors 'none'; base-uri 'self'; object-src 'none'":
-        raise RuntimeError(f"{path} did not preserve the required enforced CSP")
+        raise RuntimeError(f"{path} did not preserve the required enforced CSP: observed={enforced!r}")
     if "report-uri /api/csp-report" not in reported or "script-src " not in reported:
-        raise RuntimeError(f"{path} did not deliver the CSP Report-Only policy")
+        raise RuntimeError(f"{path} did not deliver CSP Report-Only: observed={reported[:100]!r}, length={len(reported)}")
     if str(headers.get("Reporting-Endpoints", "")) != 'mfl-csp="/api/csp-report"':
         raise RuntimeError(f"{path} did not advertise the reporting endpoint")
+    if str(headers.get("X-Frame-Options", "")).upper() != "DENY":
+        raise RuntimeError(f"{path} is missing X-Frame-Options DENY")
     if "text/html" not in content_type:
         raise RuntimeError(f"{path} returned non-HTML content type {content_type!r}")
     if 'id="appShell"' not in body:
