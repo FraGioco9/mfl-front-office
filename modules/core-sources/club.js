@@ -491,10 +491,10 @@
     if (!clubId) return;
     const openSequence = ++clubOpenSequence;
     const nextClubId = String(clubId);
+    const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
     try {
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
-      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
         || clubTitleIdentityFromSearchIndex(activeClubId);
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;

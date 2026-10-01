@@ -98,6 +98,7 @@ interface MflStaticUiRuntime {
   sync?: () => unknown;
   syncTableViews?: (page: string, view: string) => void;
   showNotFound?: (kind?: string) => unknown;
+  showLoadError?: (kind?: string) => unknown;
   destroy?: () => void;
   hideTooltips?: (options?: { immediate?: boolean; restore?: boolean }) => void;
 }
