@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { cspLegacyScriptHashes } from "./csp-legacy-script-hashes.mjs";
+import { cspLegacyScriptHashSnapshot } from "./csp-legacy-hash-snapshot.mjs";
 import { cspReportOnly, cspReportOnlyWithNonce } from "./csp-report-only-policy.mjs";
 import { nonceEligiblePath, nonceExperimentEnabled, proxy } from "./proxy.js";
 import { securityHeaders, createNextHeaders } from "./next.config.mjs";
+
+assert.deepEqual(cspLegacyScriptHashSnapshot, cspLegacyScriptHashes,
+  "The proxy-safe literal snapshot must match the exact canonical HTML hashes.");
 
 const enforced = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
 assert.equal(securityHeaders.find(x => x.key === "Content-Security-Policy")?.value, enforced);
