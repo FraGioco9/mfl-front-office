@@ -8539,7 +8539,11 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         }
         return result;
       } catch (error) {
-        showToast(error?.message || "Could not load this page.");
+        if (route.scope === "player" && pageNavigationIsCurrent(navigationOptions)) {
+          window.__mflStaticUiRuntime?.showLoadError?.("Player");
+        } else if (route.scope !== "player") {
+          showToast(error?.message || "Could not load this page.");
+        }
         return;
       } finally {
         window.__mflTableLoadingRuntime?.finishRequest?.(progressionLoadingRequestToken);

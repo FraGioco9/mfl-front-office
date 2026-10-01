@@ -169,7 +169,7 @@
           cache: "no-store",
           headers: { Accept: "application/json" },
         });
-        if (!response.ok) return null;
+        if (!response.ok) throw new Error("Club identity request failed.");
         const payload = await response.json();
         const clubEntry = Array.isArray(payload?.clubs)
           ? payload.clubs.find((candidate) => String(candidate?.clubId || "") === normalizedClubId)
@@ -183,8 +183,6 @@
           name: clubEntry.name,
           division,
         });
-      } catch {
-        return null;
       } finally {
         clubTitleIdentityPromises.delete(normalizedClubId);
       }
@@ -494,10 +492,10 @@
     if (!clubId) return;
     const openSequence = ++clubOpenSequence;
     const nextClubId = String(clubId);
+    const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
     try {
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
-      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
         || clubTitleIdentityFromSearchIndex(activeClubId);
       if (earlyClubTitle) activeClubTitle = earlyClubTitle;
@@ -584,6 +582,13 @@
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
+    } catch (error) {
+      // Keep 200+empty -> Club not found, but never use 404 for a transport,
+      // server, timeout or secondary Club-identity lookup failure.
+      if (openSequence === clubOpenSequence && String(activeClubId) === nextClubId
+        && normalizedPath() === canonicalClubRoute(nextClubId, nextView)) {
+        window.__mflStaticUiRuntime?.showLoadError?.("Club");
+      }
     } finally {
       await finishClubSwitch();
     }
