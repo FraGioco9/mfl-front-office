@@ -73,7 +73,7 @@
   function installCoreBridge() {
     if (destroyed || clubRouteActive()) return false;
     try {
-      const installed = Boolean(window.eval(`(() => {
+      const installed = Boolean((() => {
         if (typeof buildOperatorSelect !== "function"
           || typeof buildValueControl !== "function"
           || typeof ruleMatches !== "function"
@@ -197,7 +197,7 @@
         }
 
         return true;
-      })()`));
+      })());
       if (installed) syncDropdowns(document.getElementById("filtersModal") || document);
       return installed;
     } catch (error) {
