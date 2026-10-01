@@ -35,7 +35,7 @@ const [
 const packageJson = JSON.parse(packageSource);
 invariant(packageJson.private === true, "Root package.json must remain private.");
 invariant(packageJson.engines?.node === "22.x", "Next runtime must remain on the supported Node 22 line.");
-invariant(packageJson.dependencies?.next === "16.3.4", "MFL Front Office must use the pinned Next.js runtime.");
+invariant(packageJson.dependencies?.next === "16.3.6", "MFL Front Office must use the pinned Next.js runtime.");
 invariant(packageJson.dependencies?.react === "19.2.6" && packageJson.dependencies?.["react-dom"] === "19.2.6", "Next runtime must use the shared React 19.2.6 runtime pair.");
 invariant(packageJson.overrides?.["use-sync-external-store"] === "1.6.0", "WalletConnect compatibility must use the React-19-capable external-store shim.");
 invariant(packageJson.scripts?.predev === "node prepare-next-runtime.mjs", "npm predev must prepare the temporary legacy public projection before Next starts.");
