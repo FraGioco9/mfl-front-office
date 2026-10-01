@@ -141,7 +141,7 @@ assert(html.includes('<span class="plannerPlanNameLabel">Name</span>')
   && html.includes('id="plannerPlanNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false"')
   && !html.includes('<label for="plannerPlanNameInput">Name</label>'));
 assert(html.includes("getAssignments()") && html.includes("setAssignments(entries)") && html.includes("setReadOnly(value)"));
-assert(html.includes('const initialPlanMatch = String(location.pathname || "").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i);')
+assert(html.includes('const initialPlanMatch = String(location.pathname || "").match(/^\\/planner\\/((?:[a-f0-9]{16}|[a-f0-9]{32}))\\/?$/i);')
   && html.includes('root.dataset.storedWalletOptIn !== "true" && !initialPublicPlanId'));
 assert(planner.includes("currentPlannerPayload") && planner.includes("resolvePlannerPlayers"));
 assert(planner.includes('scope:"players"') && planner.includes('playerIds:ids.join(",")'));
@@ -154,7 +154,7 @@ assert(planner.includes("activePlanRevision")
   && planner.includes("expectedRevision:plan.revision")
   && planner.includes('&revision="+encodeURIComponent(plannerPlanRevision(plan.revision))')
   && generatedPlanner.includes("activePlanRevision"));
-assert(planner.includes('pathPlanMatch=String(location.pathname||"").match(/^\\/planner\\/([a-f0-9]{16})\\/?$/i)')
+assert(planner.includes('pathPlanMatch=String(location.pathname||"").match(/^\\/planner\\/((?:[a-f0-9]{16}|[a-f0-9]{32}))\\/?$/i)')
   && planner.includes("loadPlannerPlanById")
   && planner.includes("newPlannerPlan")
   && planner.includes("revokePlannerShare"));
@@ -173,15 +173,15 @@ assert(html.includes('class="mflDialog deleteWatchlistDialog plannerPlanDeleteDi
   && html.includes('class="mflDialogFooter deleteWatchlistFooter plannerPlanDeleteFooter"')
   && html.includes('class="deleteWatchlistConfirmButton plannerPlanDeleteConfirmButton"'));
 assert(generatedStyles.includes(".plannerPlanBar{") && generatedStyles.includes(".plannerPlansDialog{"));
-assert(routing.includes('const plannerPlanMatch = cleanPath.match(/^\\/planner\\/([a-f0-9]{16})$/i);')
+assert(routing.includes('const plannerPlanMatch = cleanPath.match(/^\\/planner\\/((?:[a-f0-9]{16}|[a-f0-9]{32}))$/i);')
   && routing.includes('const planId = String(pathPlanId || legacyShareId || legacySavedId)')
   && routing.includes('? `/planner/${encodeURIComponent(planId)}`')
-  && routing.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)'));
+  && routing.includes('/^\\/planner\\/(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(explicitPath)'));
 assert(lifecycle.includes("function protectedOptOutRoute(pageName, options = {})")
-  && lifecycle.includes('/^\\/planner\\/[a-f0-9]{16}$/i.test(explicitPath)')
+  && lifecycle.includes('/^\\/planner\\/(?:[a-f0-9]{16}|[a-f0-9]{32})$/i.test(explicitPath)')
   && lifecycle.includes("if (publicPlanPath || shareId) return false;"));
 assert(bootstrap.includes("const publicPlannerShare = pageName === \"planner\"")
-  && bootstrap.includes('/^\\/planner\\/[a-f0-9]{16}\\/?$/i.test(String(window.location.pathname || ""))')
+  && bootstrap.includes('/^\\/planner\\/(?:[a-f0-9]{16}|[a-f0-9]{32})\\/?$/i.test(String(window.location.pathname || ""))')
   && bootstrap.includes("root.dataset.storedWalletOptIn === \"true\" || publicPlannerShare"));
 assert(stableRoutePage.includes("MflPlannerPlanPage") && stableRoutePage.includes("Planner - MFL Front Office"));
 
