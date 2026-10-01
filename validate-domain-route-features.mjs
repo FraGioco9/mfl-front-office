@@ -12,6 +12,7 @@ const validators = [
   "validate-evaluation-stale-wallet-preferences-ui.mjs",
   "validate-settings-route-core.mjs",
   "validate-planner-route-core.mjs",
+  "validate-ux03-planner-toolbar-actions.mjs",
   "validate-planner-roster.mjs",
   "validate-settings-email-privacy.mjs",
   "validate-player-route-core.mjs",
