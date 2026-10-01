@@ -133,7 +133,7 @@ const watchCtx=vm.createContext({
 });
 watchCtx.deletes=[];
 vm.runInContext(section(watchSource,"function confirmDeleteWatchlist() {","function clearSelectionsForDeletedWatchlist("),watchCtx);
-vm.runInContext(section(watchSource,"function confirmAddWatchlist() {","function keepWatchlistDropdownOpenAfterModalClick()").replace("function confirmAddWatchlist() {","function confirmAddWatchlist() {"),vm.createContext({
+vm.runInContext(section(watchSource,"function confirmAddWatchlist() {","function closeDeleteWatchlistModal() {"),vm.createContext({
   addWatchlistModal:closingModal
 }));
 watchCtx.confirmDeleteWatchlist();
