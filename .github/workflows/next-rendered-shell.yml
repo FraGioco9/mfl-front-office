@@ -15,6 +15,8 @@ on:
       - "next-dev-legacy-bridge.mjs"
       - "scripts/ci/create-next-sqlite-smoke-fixture.cjs"
       - "validation/next-rendered-shell-browser.mjs"
+      - "validation/next-csp-script-hashes.mjs"
+      - "csp-legacy-script-hashes.mjs"
       - "validation/next-mobile-table-browser.mjs"
       - "validation/next-mobile-table-route-browser.mjs"
   workflow_dispatch:
@@ -55,6 +57,9 @@ jobs:
 
       - name: Verify Next owns the visible document and dev indicator
         run: node validation/next-rendered-shell-browser.mjs http://localhost:4000/
+
+      - name: Verify CSP hashes against actual Next SSR script bytes
+        run: node validation/next-csp-script-hashes.mjs http://localhost:4000/
 
       - name: Verify Planner is a first-class Next route
         shell: bash
