@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - supabase-schema.sql
-      - supabase/migrations/20261001131500_pin_updated_at_trigger_search_path.sql
+      - supabase/migrations/20261001152303_pin_updated_at_trigger_search_path.sql
       - .github/workflows/validate-sec-01-trigger-search-path.yml
 
 permissions:
@@ -59,7 +59,7 @@ jobs:
 
           -- Simulate an existing production function, then apply the versioned migration.
           alter function public.set_updated_at() reset search_path;
-          \i supabase/migrations/20261001131500_pin_updated_at_trigger_search_path.sql
+          \i supabase/migrations/20261001152303_pin_updated_at_trigger_search_path.sql
           do $verify$
           begin
             if not exists (
