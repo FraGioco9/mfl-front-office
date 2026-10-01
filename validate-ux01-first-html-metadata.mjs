@@ -54,6 +54,10 @@ assert.ok(vercel.rewrites.some(rule => rule.destination === "/api/evaluation-pre
 assert.match(routing, /function canonicalRequest\(/);
 assert.match(runtime, /titleForCurrentRoute/);
 assert.match(page, /getServerSideProps/);
+const releaseGate = read("scripts/workflows/verify-live-production-deployment.sh");
+assert.match(releaseGate, /expected_titles = \{/);
+assert.match(releaseGate, /initial HTML title mismatch/);
+assert.match(releaseGate, /property="og:title"/);
 for (const source of [page, home, planner, saved]) {
   assert.match(source, /initialPageMetadata/);
   assert.match(source, /name: "description"/);
