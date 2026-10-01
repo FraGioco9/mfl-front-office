@@ -89,6 +89,7 @@
   let activePlanId="",activePlanName="",activePlanPayload=null,activePlanRevision=0,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
   let planNameRequest=null,planDeleteRequest=null,planRevokeRequest=null;
   let plannerToolbarActionPending=false;
+  let plannerPlansActionPending=false;
   let plannerUndoStack=[],plannerRedoStack=[],plannerHistoryApplying=false;
   let plannerCommittedFormation=String(formationSelect?.value||"442");
   let plannerHighlightTimer=0;
@@ -1161,8 +1162,29 @@
     const revision=Number(value);
     return Number.isSafeInteger(revision)&&revision>0?revision:0;
   }
+  function syncPlannerNestedDialogAccessibility(){
+    if(!(plansModal instanceof HTMLElement))return;
+    const nestedOpen=!plansModal.hidden&&[planNameModal,planDeleteModal,planRevokeModal]
+      .some(modal=>modal instanceof HTMLElement&&!modal.hidden);
+    plansModal.inert=nestedOpen;
+    if(nestedOpen)plansModal.setAttribute("aria-hidden","true");
+    else plansModal.removeAttribute("aria-hidden");
+  }
+  function trapPlannerConfirmationTab(event,modal){
+    if(event.key!=="Tab"||!(modal instanceof HTMLElement)||modal.hidden)return;
+    const buttons=Array.from(modal.querySelectorAll("button:not([disabled])"))
+      .filter(button=>button instanceof HTMLButtonElement&&!button.hidden&&button.getClientRects().length>0);
+    if(!buttons.length)return;
+    const first=buttons[0],last=buttons.at(-1),focused=document.activeElement;
+    if(event.shiftKey&&(focused===first||!modal.contains(focused))){
+      event.preventDefault();last.focus();
+    }else if(!event.shiftKey&&(focused===last||!modal.contains(focused))){
+      event.preventDefault();first.focus();
+    }
+  }
   function closePlannerPlanNameModal(value=""){
     if(planNameModal instanceof HTMLElement){planNameModal.hidden=true;planNameModal.classList.remove("modalOpen");}
+    syncPlannerNestedDialogAccessibility();
     const request=planNameRequest;planNameRequest=null;
     if(request)request.resolve(normalizePlannerPlanName(value));
   }
@@ -1173,7 +1195,7 @@
     if(planNameModalTitle)planNameModalTitle.textContent=title;
     if(planNameError instanceof HTMLElement){planNameError.textContent="";planNameError.hidden=true;}
     planNameInput.value=suggested;planNameInput.removeAttribute("aria-invalid");
-    planNameModal.hidden=false;planNameModal.classList.add("modalOpen");
+    planNameModal.hidden=false;planNameModal.classList.add("modalOpen");syncPlannerNestedDialogAccessibility();
     const promise=new Promise(resolve=>{planNameRequest={resolve};});
     window.setTimeout(()=>{planNameInput.focus();planNameInput.select?.();},0);
     return promise;
@@ -1188,49 +1210,51 @@
   }
   function closePlannerPlanDeleteModal(value=false){
     if(planDeleteModal instanceof HTMLElement){planDeleteModal.hidden=true;planDeleteModal.classList.remove("modalOpen");}
+    syncPlannerNestedDialogAccessibility();
     const request=planDeleteRequest;planDeleteRequest=null;if(request)request.resolve(Boolean(value));
   }
   function requestPlannerPlanDelete(name){
     if(!(planDeleteModal instanceof HTMLElement))return Promise.resolve(false);
     if(planDeleteRequest)closePlannerPlanDeleteModal(false);
     if(planDeleteName)planDeleteName.textContent=String(name||"this plan");
-    planDeleteModal.hidden=false;planDeleteModal.classList.add("modalOpen");
+    planDeleteModal.hidden=false;planDeleteModal.classList.add("modalOpen");syncPlannerNestedDialogAccessibility();
     const promise=new Promise(resolve=>{planDeleteRequest={resolve};});
-    window.setTimeout(()=>planDeleteCancelButton?.focus(),0);
+    window.setTimeout(()=>{if(planDeleteModal instanceof HTMLElement&&!planDeleteModal.hidden)planDeleteCancelButton?.focus();},0);
     return promise;
   }
   function closePlannerPlanRevokeModal(value=false){
     if(planRevokeModal instanceof HTMLElement){planRevokeModal.hidden=true;planRevokeModal.classList.remove("modalOpen");}
+    syncPlannerNestedDialogAccessibility();
     const request=planRevokeRequest;planRevokeRequest=null;if(request)request.resolve(Boolean(value));
   }
   function requestPlannerPlanRevoke(name){
     if(!(planRevokeModal instanceof HTMLElement))return Promise.resolve(false);
     if(planRevokeRequest)closePlannerPlanRevokeModal(false);
     if(planRevokeName)planRevokeName.textContent=String(name||"this plan");
-    planRevokeModal.hidden=false;planRevokeModal.classList.add("modalOpen");
+    planRevokeModal.hidden=false;planRevokeModal.classList.add("modalOpen");syncPlannerNestedDialogAccessibility();
     const promise=new Promise(resolve=>{planRevokeRequest={resolve};});
-    window.setTimeout(()=>planRevokeCancelButton?.focus(),0);
+    window.setTimeout(()=>{if(planRevokeModal instanceof HTMLElement&&!planRevokeModal.hidden)planRevokeCancelButton?.focus();},0);
     return promise;
   }
   function syncPlanUi(){
     if(planActions instanceof HTMLElement)planActions.setAttribute("aria-busy",plannerToolbarActionPending?"true":"false");
     const optedIn=typeof hasWalletOptIn==="function"&&hasWalletOptIn();
     if(planNameLabel)planNameLabel.textContent=activePlanName||"Unsaved plan";
-    if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn||plannerToolbarActionPending;
-    if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn||plannerToolbarActionPending;
-    if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId||plannerToolbarActionPending;
-    if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn||plannerToolbarActionPending;
+    if(plansButton instanceof HTMLButtonElement)plansButton.disabled=!optedIn||plannerToolbarActionPending||plannerPlansActionPending;
+    if(newPlanButton instanceof HTMLButtonElement)newPlanButton.disabled=!optedIn||plannerToolbarActionPending||plannerPlansActionPending;
+    if(savePlanButton instanceof HTMLButtonElement)savePlanButton.disabled=plannerReadOnly||!selectedTeamId||plannerToolbarActionPending||plannerPlansActionPending;
+    if(duplicatePlanButton instanceof HTMLButtonElement)duplicatePlanButton.disabled=plannerReadOnly||!selectedTeamId||!optedIn||plannerToolbarActionPending||plannerPlansActionPending;
     if(sharePlanButton instanceof HTMLButtonElement){
       const canManageShare=optedIn&&!plannerReadOnly&&Boolean(selectedTeamId);
       const shared=Boolean(activeShareId);
-      sharePlanButton.disabled=!canManageShare||plannerToolbarActionPending;
+      sharePlanButton.disabled=!canManageShare||plannerToolbarActionPending||plannerPlansActionPending;
       sharePlanButton.textContent=shared?"Revoke":"Share";
       sharePlanButton.setAttribute("aria-label",shared?"Revoke share":"Share plan");
     }
     if(sharedBanner instanceof HTMLElement)sharedBanner.hidden=!plannerReadOnly;
     if(sharedPlanName)sharedPlanName.textContent=plannerReadOnly?(activePlanName||"Shared plan"):"";
-    if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn||plannerToolbarActionPending;
-    if(teamClearButton instanceof HTMLButtonElement)teamClearButton.disabled=plannerReadOnly||plannerToolbarActionPending;
+    if(copySharedPlanButton instanceof HTMLButtonElement)copySharedPlanButton.disabled=!plannerReadOnly||!optedIn||plannerToolbarActionPending||plannerPlansActionPending;
+    if(teamClearButton instanceof HTMLButtonElement)teamClearButton.disabled=plannerReadOnly||plannerToolbarActionPending||plannerPlansActionPending;
     if(formationSelect instanceof HTMLElement)formationSelect.disabled=plannerReadOnly;
     Reflect.get(window,"__mflPlannerFormationPreview")?.setReadOnly?.(plannerReadOnly);
     updateAddPlayerAvailability();
@@ -1243,7 +1267,7 @@
     // Share, Revoke, Save and Duplicate are wallet-backed mutations. Lock their
     // shared toolbar before any await (including name/confirmation dialogs),
     // not only the clicked control, to prevent overlapping writes/revocations.
-    if(plannerToolbarActionPending)return false;
+    if(plannerToolbarActionPending||plannerPlansActionPending)return false;
     plannerToolbarActionPending=true;
     syncPlanUi();
     try{
@@ -1434,7 +1458,47 @@
     syncPlanUi();
     return true;
   }
-  function closePlansModal(){if(plansModal instanceof HTMLElement){plansModal.hidden=true;plansModal.classList.remove("modalOpen");}}
+  function closePlansModal(){
+    if(plansModal instanceof HTMLElement){
+      plansModal.hidden=true;plansModal.classList.remove("modalOpen");
+      syncPlannerNestedDialogAccessibility();
+    }
+  }
+  function syncPlannerSavedPlanActionButtons(){
+    if(!(plansList instanceof HTMLElement))return;
+    plansList.setAttribute("aria-busy",plannerPlansActionPending?"true":"false");
+    for(const button of plansList.querySelectorAll?.(".plannerPlanListActionButton")||[]){
+      if(button instanceof HTMLButtonElement)button.disabled=plannerPlansActionPending;
+    }
+  }
+  function restorePlannerSavedPlanFocus(button){
+    if(plansModal instanceof HTMLElement&&!plansModal.hidden){
+      const original=button instanceof HTMLButtonElement&&button.isConnected&&!button.disabled
+        &&!button.closest("[hidden],[inert]")?button:null;
+      const target=original||(plansModalCloseButton instanceof HTMLButtonElement&&!plansModalCloseButton.disabled
+        ?plansModalCloseButton:null);
+      target?.focus({preventScroll:true});
+    }else if(plansButton instanceof HTMLButtonElement&&!plansButton.disabled){
+      plansButton.focus({preventScroll:true});
+    }
+  }
+  async function runPlannerSavedPlanAction(action,trigger){
+    if(plannerPlansActionPending||plannerToolbarActionPending)return false;
+    plannerPlansActionPending=true;
+    syncPlannerSavedPlanActionButtons();
+    syncPlanUi();
+    try{
+      return await action();
+    }catch(error){
+      if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";
+      return false;
+    }finally{
+      plannerPlansActionPending=false;
+      syncPlannerSavedPlanActionButtons();
+      syncPlanUi();
+      restorePlannerSavedPlanFocus(trigger);
+    }
+  }
   function plannerFormationLabel(code){
     const value=String(code||"").trim();
     const option=Array.from(formationSelect?.options||[]).find(item=>String(item?.value||"")===value);
@@ -1475,7 +1539,7 @@
       meta.textContent=["Club #"+String(plan.clubId||plan.payload?.clubId||""),plannerFormationLabel(plan.payload?.formation),squadSize+" player"+(squadSize===1?"":"s"),updated?"Edited "+updated:""].filter(Boolean).join(" · ");
       main.append(titleLine,meta);
       const actions=document.createElement("div");actions.className="plannerPlanListActions";
-      const action=(label,icon,handler,{danger=false}={})=>{const button=document.createElement("button");button.type="button";button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"");button.setAttribute("aria-label",label);button.title=label;button.innerHTML=icon;button.addEventListener("click",async()=>{button.disabled=true;try{await handler();}catch(error){if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";}finally{if(button.isConnected)button.disabled=false;}});return button;};
+      const action=(label,icon,handler,{danger=false}={})=>{const button=document.createElement("button");button.type="button";button.className="plannerPlanListActionButton"+(danger?" plannerPlanListDeleteButton":"");button.setAttribute("aria-label",label);button.title=label;button.innerHTML=icon;button.addEventListener("click",()=>void runPlannerSavedPlanAction(handler,button));return button;};
       const linkedShare=shareByPlan.get(String(plan.id||""))||null;
       const actionButtons=[
         action("Open plan",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',async()=>{if(!confirmPlannerDiscard())return;closePlansModal();await applyPlannerPlan(plan,{savedId:plan.id,routeIdentity:"saved:"+plan.id});activeShareId=String(linkedShare?.id||"");syncPlanUi();history.pushState({},"",plannerStablePlanPath(plan.id));Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();}),
@@ -1503,6 +1567,7 @@
       }
     }
     plansList.replaceChildren(fragment);
+    syncPlannerSavedPlanActionButtons();
   }
   async function openPlansModal(){
     if(!(plansModal instanceof HTMLElement)||!(plansList instanceof HTMLElement))return;
@@ -1666,6 +1731,8 @@
   planNameModal?.addEventListener("click",event=>{if(event.target===planNameModal)closePlannerPlanNameModal("");});
   planNameInput?.addEventListener("input",()=>{planNameInput.removeAttribute("aria-invalid");if(planNameError instanceof HTMLElement){planNameError.textContent="";planNameError.hidden=true;}});
   planNameInput?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();confirmPlannerPlanName();}else if(event.key==="Escape"){event.preventDefault();closePlannerPlanNameModal("");}});
+  planDeleteModal?.addEventListener("keydown",event=>trapPlannerConfirmationTab(event,planDeleteModal));
+  planRevokeModal?.addEventListener("keydown",event=>trapPlannerConfirmationTab(event,planRevokeModal));
   planDeleteModalCloseButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(false));
   planDeleteCancelButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(false));
   planDeleteConfirmButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(true));
