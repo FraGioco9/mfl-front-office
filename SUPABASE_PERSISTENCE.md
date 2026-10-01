@@ -10,6 +10,22 @@ This document is the canonical inventory of MFL Front Office data persisted in S
 
 `api/_operational-health.js` is the server-only reader for operational runtime objects in the existing private `mfl-runtime` Storage bucket. It reads the Marketplace runtime snapshot plus `health/database-refresh.json` and `health/marketplace-refresh.json` with the service-role key; `api/operational-health.js` exposes only normalized freshness/outcome metadata and never returns credentials or raw private objects. Scheduled production workflow writes are owned by `scripts/operations/runtime_health.py`.
 
+## SEC-07 — Supabase Auth password-advisor scope (1 October 2026)
+
+The **MFL Front Office web application** authenticates users with an FCL/Dapper wallet challenge and signed account proof. `api/wallet-session.js` issues a first-party, HttpOnly, SameSite=Strict wallet-session cookie; `api/_wallet-auth.js` resolves that server-owned session before private wallet actions. `api/_supabase.js` uses the server-side service-role REST API, not a Supabase Auth user JWT. A search of the runtime sources and package manifest found no Supabase Auth password login, registration or password-reset implementation.
+
+The **Supabase project** is a separate security boundary. Read-only checks on 1 October 2026 found:
+
+- Security Advisor warning `auth_leaked_password_protection` (`WARN`): leaked-password protection is disabled.
+- Four rows in `auth.users`, four rows in `auth.identities`, all four identities using provider `email` and all four user rows with non-empty password hashes (aggregated counts only; no email addresses or hashes retrieved).
+- These records show that password-capable accounts **exist in this project**. They do **not** prove that the current email/password provider is enabled, that the accounts are active, or that this MFL site uses them. Ownership/purpose of the records has not been established.
+
+**Decision:** the warning is **not applicable to the Front Office's wallet login path**, but **must not be dismissed as inapplicable to the entire Supabase project**. Preserve the warning as a project-level follow-up until the provider configuration and purpose of the four accounts are confirmed by the project owner in the Supabase Auth dashboard. If password login is in use, assess enabling leaked-password protection (Supabase documents plan availability and settings in [Password security](https://supabase.com/docs/guides/auth/password-security)). Do not delete or change account records to silence an advisor.
+
+`validate-sec07-auth-boundary.mjs` is a static regression inventory: it guards the canonical runtime sources against introducing Supabase Auth credential APIs without re-review and checks the app's wallet/server REST boundary. It does **not** read project Auth settings or replace a real login/browser test. Its presence is not evidence that the four Auth records are safe or unused.
+
+**Release policy:** this audit requires no database migration, user-account change, Supabase Auth configuration edit, or Vercel deployment. Keep all Vercel deployments and SEC-05 database migration for the single coordinated final release of issue #1034.
+
 ## SEC-05 — explicit deny-by-default grants (staged; not applied to production)
 
 The 1 October 2026 **read-only production audit** found **12 public application tables** with RLS enabled and **zero RLS policies**. This is intentional: the browser never authenticates to Supabase as a row owner; wallet ownership is verified by first-party server routes, which query the database via `service_role` after checking the server-issued session. Supabase Security Advisor's `rls_enabled_no_policy` finding is therefore **informational**, not a request to create public policies. [Advisor rule](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
