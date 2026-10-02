@@ -51,6 +51,12 @@ const page = readFileSync(new URL("./pages/[...path].js", import.meta.url), "utf
 const workflow = readFileSync(new URL("./.github/workflows/site-quality.yml", import.meta.url), "utf8");
 const smoke = readFileSync(new URL("./scripts/ci/create-next-sqlite-smoke-fixture.cjs", import.meta.url), "utf8");
 const lookupSource = readFileSync(new URL("./entity-deep-links.mjs", import.meta.url), "utf8");
+const nextConfig = readFileSync(new URL("./next.config.mjs", import.meta.url), "utf8");
+assert.match(lookupSource, /createRequire\(resolve\(process\.cwd\(\), "package\.json"\)\)/,
+  "SSR must native-require the SQLite module instead of bundling node:sqlite into the route.");
+assert.match(lookupSource, /serverRequire\(resolve\(process\.cwd\(\), "api\/_database\.js"\)\)/);
+assert.match(nextConfig, /"\/\[\.\.\.path\]": \["\.\/api\/_database\.js", "\.\/api\/data-files\/mfl_database\.db"\]/,
+  "Server-side file tracing must include both native SQLite module and the snapshot.");
 assert.match(lookupSource, /WHERE player_id = \? LIMIT 1", \[String\(id\)\]/,
   "Player TEXT identity columns require string-bound SQLite parameters.");
 assert.match(lookupSource, /WHERE club_id = \? LIMIT 1"[\s\S]*?\[String\(id\)\]/,

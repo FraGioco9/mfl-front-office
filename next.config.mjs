@@ -29,6 +29,9 @@ export const securityHeaders = Object.freeze([
 
 
 export const outputFileTracingIncludes = {
+  // The wildcard Next SSR entity probe loads the canonical CommonJS SQLite
+  // module through native require to avoid bundling node:sqlite in Turbopack.
+  "/[...path]": ["./api/_database.js", "./api/data-files/mfl_database.db"],
   "/api/data": ["./api/data-files/mfl_database.db"],
   "/api/identity": ["./api/data-files/mfl_database.db"],
   "/api/operational-health": ["./api/data-files/mfl_database.db"],

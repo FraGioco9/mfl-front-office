@@ -6,6 +6,13 @@ const CLUB_VIEWS = new Set([
 ]);
 const DECIMAL_ID = /^[0-9]+$/;
 
+// The Next production SSR bundler must not compile node:sqlite inside its
+// route chunk (its native Url external is unsupported in that path).
+// Keep the existing CommonJS SQLite layer in Node's own module loader.
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+const serverRequire = createRequire(resolve(process.cwd(), "package.json"));
+
 export function parseEntityDeepLink(rawUrl) {
   let path;
   try {
@@ -27,12 +34,13 @@ export function parseEntityDeepLink(rawUrl) {
 }
 
 export async function sqliteEntityExists(kind, id) {
-  // The import is deliberately deferred for non-entity routes. DatabaseSync
-  // initializes one cached read-only connection; player_id/club_id are probed
+  // The native require call runs only for entity routes; database module loading
+  // stays lazy. DatabaseSync initializes one cached read-only connection;
+  // player_id/club_id are probed
   // with LIMIT 1 instead of fetching profiles, rosters or aggregations.
   // SQLite player_id/club_id are TEXT in CI and some snapshots: bind a string,
   // because node:sqlite's numeric parameter does not match a TEXT ID there.
-  const { queryOne, tableExists } = (await import("./api/_database.js")).default;
+  const { queryOne, tableExists } = serverRequire(resolve(process.cwd(), "api/_database.js"));
   if (kind === "player") {
     return Boolean(queryOne("SELECT 1 AS present FROM players WHERE player_id = ? LIMIT 1", [String(id)]));
   }
