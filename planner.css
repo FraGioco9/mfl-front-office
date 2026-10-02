@@ -57,10 +57,10 @@
 .plannerWorkspace[hidden],.plannerRosterPanel [hidden]{display:none}
 .plannerRosterPanel,.plannerPitchPanel{min-width:0}
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
-.plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
+.plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)}
 .plannerSquadStatusStrip{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-height:22px;margin:-5px 0 10px;color:var(--text-soft);font-size:11px;font-weight:700;line-height:18px}
 .plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
-.plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px;font-weight:800}
+.plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)}
 .plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
 .plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}
 select.plannerFormationSelect.plannerFormationSelectCommitted,select.plannerFormationSelect.plannerFormationSelectCommitted:is(:hover,:focus,:focus-visible,:open){outline:0;border-color:var(--mfl-control-border-color);background:var(--mfl-control-background);color:var(--mfl-control-text-color);box-shadow:none}
@@ -271,7 +271,7 @@ body:has(#plannerPlayerModal.modalOpen) #mflGlobalTooltip{z-index:calc(var(--mfl
 
 /* Separate summary: values follow the full planned roster, never only the pitch eleven. */
 .plannerSummary{margin-top:16px}
-.plannerSummaryHeading{margin:0 0 10px;font-size:16px;font-weight:800}
+.plannerSummaryHeading{margin:0 0 10px;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)}
 .plannerSummaryTable{width:100%;table-layout:fixed;border-collapse:collapse}
 .plannerSummaryTable :is(th,td){padding:8px 12px;vertical-align:middle;border-bottom:1px solid var(--mfl-table-border-color);font-size:12px;line-height:20px}
 .plannerSummaryTable thead th{background:var(--mfl-table-header-background);color:var(--mfl-table-header-text-color);font-size:var(--mfl-table-header-font-size);font-weight:800;text-transform:uppercase}
