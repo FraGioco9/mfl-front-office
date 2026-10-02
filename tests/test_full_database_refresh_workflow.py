@@ -114,6 +114,26 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         self.assertIn("Transient Vercel upload failure", publisher)
         self.assertIn("verify-live-production-deployment.sh", publisher)
 
+    def test_published_source_reconciled_after_build_not_before(self) -> None:
+        publisher = Path(
+            "scripts/workflows/full-database-refresh-publish-checkpoint.sh"
+        ).read_text(encoding="utf-8")
+        helper = "full-database-refresh-assert-published-site-source.sh"
+        self.assertIn(f"{helper}\" production-site", publisher)
+        self.assertIn(f"{helper}\" . reconcile-build", publisher)
+        self.assertLess(
+            publisher.index(f"{helper}\" production-site"),
+            publisher.index("vercel build --prod --yes"),
+        )
+        self.assertLess(
+            publisher.index("vercel build --prod --yes"),
+            publisher.index(f"{helper}\" . reconcile-build"),
+        )
+        self.assertLess(
+            publisher.index(f"{helper}\" . reconcile-build"),
+            publisher.index("vercel deploy --prebuilt"),
+        )
+
     def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
         for checkpoint_path in (
             "core",
