@@ -3,6 +3,7 @@ function currentNavigationPath() {
 }
 
 function commitViewTransition(pageName, viewName, options = {}) {
+  window.__mflStaticUiRuntime?.captureHistoryScroll?.();
   const nextView = String(viewName || "");
   if (!nextView) return "";
 
@@ -39,7 +40,8 @@ function commitViewTransition(pageName, viewName, options = {}) {
   }
 
   if (targetPath && currentNavigationPath() !== targetPath) {
-    window.history[options.replace ? "replaceState" : "pushState"]({}, "", targetPath);
+    window.history[options.replace ? "replaceState" : "pushState"](
+      options.replace ? window.history.state : {}, "", targetPath);
   }
 
   updateViewButtons();
@@ -49,6 +51,7 @@ function commitViewTransition(pageName, viewName, options = {}) {
 }
 
 function commitPageTransition(pageName, updateHash = true, options = {}) {
+  window.__mflStaticUiRuntime?.captureHistoryScroll?.();
   const requestedPageName = String(pageName || "home");
   const routePageName = requestedPageName === "mflstats" ? "mfl" : requestedPageName;
   const viewConfig = Reflect.get(window, "__mflTableViewConfig");
@@ -101,7 +104,8 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   const replaceRoute = Boolean(options.replace || options.replaceUrl);
   const currentPath = currentNavigationPath();
   if (targetPath && currentPath !== targetPath && (updateHash || replaceRoute)) {
-    window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
+    window.history[replaceRoute ? "replaceState" : "pushState"](
+      replaceRoute ? window.history.state : {}, "", targetPath);
   }
 
 if (protectedOptOutRoute(routePageName, options)) {
