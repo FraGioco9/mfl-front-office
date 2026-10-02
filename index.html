@@ -931,9 +931,9 @@
           </section>
 
           <nav class="pager" aria-label="Pagination" hidden>
-            <button id="prevButton" type="button"><span class="pagerButtonLabel">Previous</span></button>
+            <button id="prevButton" type="button" aria-label="Previous page"><span class="pagerButtonLabel">Previous</span></button>
             <span id="pageText">Page 1</span>
-            <button id="nextButton" type="button"><span class="pagerButtonLabel">Next</span></button>
+            <button id="nextButton" type="button" aria-label="Next page"><span class="pagerButtonLabel">Next</span></button>
           </nav>
 
           <div id="selectionBar" class="selectionBar">
@@ -2043,7 +2043,17 @@
                 previous.setAttribute("aria-expanded", "false");
                 previous.classList.remove("plannerFormationSlotButtonPickerOpen");
               }
-              if (restoreFocus && previous?.isConnected) previous.focus();
+              if (restoreFocus && previous?.isConnected) {
+                previous.focus({ preventScroll: true });
+                // Closing an anchored picker can make Chromium reset focus to
+                // <body> after the Escape key's default processing. Recover
+                // only when focus was lost; never steal it from another control.
+                requestAnimationFrame(() => {
+                  if (previous.isConnected && !previous.disabled && document.activeElement === document.body) {
+                    previous.focus({ preventScroll: true });
+                  }
+                });
+              }
             };
             const renderFormation = code => {
               closeDepthPicker();
@@ -2197,7 +2207,7 @@
                 pointer.setAttribute("aria-hidden", "true");
                 pointer.style.left = Math.max(16, Math.min(rect.left + rect.width / 2 - menuRect.left, menuRect.width - 16)) - 8 + "px";
                 depthPicker.appendChild(pointer);
-                depthPicker.querySelector("button")?.focus();
+                depthPicker.querySelector("button")?.focus({ preventScroll: true });
               };
               const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position, spareCount = 0) => {
                 const spot = document.createElement("span");
