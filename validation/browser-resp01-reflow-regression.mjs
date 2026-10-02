@@ -25,7 +25,14 @@ const code = await new Promise((resolveStatus, rejectStatus) => {
   const child = spawn(process.execPath, [resolve(directory, "browser-routing-regression.mjs")], {
     cwd: resolve(directory, ".."),
     stdio: "inherit",
-    env: { ...process.env, MFL_BROWSER_SCENARIOS: scenarios.join(",") },
+    // Run the existing Planner shell/club-selection smoke at 320px; its full
+    // desktop pitch-token pixel tests are enforced separately by Planner CI.
+    env: {
+      ...process.env,
+      MFL_BROWSER_SCENARIOS: scenarios.join(","),
+      MFL_PLANNER_BROWSER_FOCUSED: "1",
+      MFL_PLANNER_BROWSER_PHASE: "shell",
+    },
   });
   child.once("error", rejectStatus);
   child.once("close", resolveStatus);
