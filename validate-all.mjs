@@ -30,6 +30,7 @@ const validators = [
   "validate-ui01-typography.mjs",
   "validate-ui02-overlay-scroll.mjs",
   "validate-ui03-icon-color-states.mjs",
+  "validate-nav01-entity-http.mjs",
   "validate-performance-foundations.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",
