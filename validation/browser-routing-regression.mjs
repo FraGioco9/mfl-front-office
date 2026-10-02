@@ -959,6 +959,19 @@ const browserTestSource = String.raw`(() => {
     assert(nameHeader instanceof HTMLTableCellElement, "Database Name header is missing.");
     assert(nameButton instanceof HTMLButtonElement, "Sortable Name header must expose a native button.");
     assert(nameButton.getAttribute("aria-label") === "Sort by Name", "Sortable Name button has the wrong accessible name.");
+    assert(nameButton.title === "Sort Name ascending"
+      && nameButton.getAttribute("aria-description") === nameButton.title,
+      "Unsorted Name should advertise its next direction.");
+    const filtersButton = document.getElementById("openFiltersButton");
+    assert(filtersButton instanceof HTMLButtonElement, "Filter trigger is missing.");
+    const quickCount = [
+      document.getElementById("hideRetiredInput")?.checked,
+      document.getElementById("hideRetiringInput")?.checked,
+      document.getElementById("hideMflPlayersInput")?.checked,
+      document.getElementById("newMintsInput")?.checked,
+    ].filter(Boolean).length;
+    assert(filtersButton.getAttribute("aria-label") === `Filters: 0 advanced rules, ${quickCount} active quick ${quickCount === 1 ? "filter" : "filters"}`,
+      "Filter summary must distinguish advanced-rule badge and active quick filters.");
     const loadedHeaderColor = getComputedStyle(nameButton).color;
     nameButton.disabled = true;
     assert(getComputedStyle(nameButton).opacity === "1", "Loading sort headers must retain full opacity despite generic disabled-button styling.");
@@ -971,13 +984,57 @@ const browserTestSource = String.raw`(() => {
       () => document.querySelector('#tableHead th[data-table-column="name"]')?.getAttribute("aria-sort") === "ascending",
       "Database Name sort did not expose aria-sort=ascending.",
     );
+    const nextNameButton = document.querySelector('#tableHead th[data-table-column="name"] > .tableSortButton');
+    assert(nextNameButton?.title === "Sort Name descending",
+      "Sorted Name must advertise reverse direction.");
+    assert(document.activeElement === nextNameButton,
+      "Keyboard focus was lost when the Name sort header was rebuilt.");
     const overallButton = document.querySelector('#tableHead th[data-table-column="overall"] > .tableSortButton');
     assert(overallButton instanceof HTMLButtonElement, "Overall sort button is missing after Name sorting.");
+    assert(overallButton.title === "Sort Overall descending", "Unsorted Overall next action must be descending.");
+    overallButton.focus();
     overallButton.click();
     await waitFor(
       () => document.querySelector('#tableHead th[data-table-column="overall"]')?.getAttribute("aria-sort") === "descending",
       "Database sort did not restore Overall descending semantics.",
     );
+    assert(document.activeElement === document.querySelector('#tableHead th[data-table-column="overall"] > .tableSortButton'),
+      "Keyboard focus was lost after switching from Name to Overall sorting.");
+
+    filtersButton.click();
+    await waitFor(() => !hidden("#filtersModal"), "Advanced Filters dialog did not open.");
+    const clearRules = document.getElementById("clearFiltersButton");
+    assert(clearRules?.textContent.trim() === "Clear rules",
+      "Advanced-only clear control must not imply that quick filters are cleared.");
+    const addSelect = document.getElementById("addFilterSelect");
+    assert(addSelect instanceof HTMLSelectElement && Array.from(addSelect.options).some(o => o.value === "age"),
+      "Age is missing from Database advanced filters.");
+    addSelect.value = "age";
+    addSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    const ageRule = document.querySelector('#filterRules .filterRule[data-filter-column="age"]');
+    const ageInput = ageRule?.querySelector("[data-filter-value]");
+    assert(ageInput instanceof HTMLInputElement, "New Age filter is missing its value.");
+    ageInput.value = "23";
+    ageInput.dispatchEvent(new Event("input", { bubbles: true }));
+    document.getElementById("applyFiltersButton").click();
+    await waitFor(() => hidden("#filtersModal") && text("#filterSummary") === "1",
+      "Applying Age rule did not update the advanced-only filter badge.");
+    assert(filtersButton.getAttribute("aria-label")?.startsWith("Filters: 1 advanced rule, " + quickCount + " active quick "),
+      "Advanced rule summary lost the quick filter count.");
+
+    filtersButton.click();
+    await waitFor(() => !hidden("#filtersModal"), "Filters did not reopen for selective Clear.");
+    clearRules.click();
+    document.getElementById("applyFiltersButton").click();
+    await waitFor(() => hidden("#filtersModal") && text("#filterSummary") === "0",
+      "Clear rules did not remove the advanced filter.");
+    assert([
+      document.getElementById("hideRetiredInput")?.checked,
+      document.getElementById("hideRetiringInput")?.checked,
+      document.getElementById("hideMflPlayersInput")?.checked,
+      document.getElementById("newMintsInput")?.checked,
+    ].filter(Boolean).length === quickCount,
+    "Clearing advanced rules unexpectedly changed quick filters.");
   }
 
   function assertParkedTableSpacing() {
