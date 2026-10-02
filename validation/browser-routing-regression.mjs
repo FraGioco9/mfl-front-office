@@ -1819,6 +1819,18 @@ const browserTestSource = String.raw`(() => {
         return;
       }
 
+      // Focused phases inject their own synthetic depth roster. Wait until
+      // the real selected-club fetch has fully painted its squad so an
+      // in-flight loadRoster() cannot overwrite that fixture mid-assertion.
+      // The shell phase already waits for the same roster before returning.
+      if (plannerBrowserFocused) {
+        await waitFor(
+          () => document.querySelector("#plannerRosterBody tr[data-player-id]")
+            && document.getElementById("plannerRosterBody")?.getAttribute("aria-busy") !== "true",
+          "Planner focused fixture roster load to settle",
+        );
+      }
+
       if (!plannerBrowserFocused) {
       assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
       assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
@@ -2776,10 +2788,21 @@ const browserTestSource = String.raw`(() => {
       ]);
       await delay(0);
       formationPreview.render("433");
+      const multiPositionSnapshot = () => ({
+        formation: formation.value,
+        assignments: formationPreview.getAssignments(),
+        spots: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), element => ({
+          key: element.dataset.slotKey,
+          position: element.dataset.position,
+          player: element.dataset.playerId || null,
+          depth: element.querySelector(".plannerFormationDepthBadge")?.textContent || null,
+        })),
+      });
       assert(depthIndicator("CM#1")?.textContent === "1"
         && depthIndicator("CM#2")?.textContent === "1"
         && depthIndicator("CM#3")?.textContent === "1",
-        "A free multi-position player must count as depth for every matching CM slot.");
+        "A free multi-position player must count as depth for every matching CM slot: "
+          + JSON.stringify(multiPositionSnapshot()));
       await delay(0);
       formationPreview.render("433a");
       assert(depthIndicator("CAM#1")?.textContent === "1"

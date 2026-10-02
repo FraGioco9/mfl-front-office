@@ -331,6 +331,11 @@ html:not(.mflInitialRouteResolved):is(
     max-width: 100%;
   }
 
+  /* Keep the body's implicit grid track from expanding to the Player's min-content size. */
+  body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   button {
     -webkit-tap-highlight-color: transparent;
   }
@@ -458,6 +463,8 @@ html:not(.mflInitialRouteResolved):is(
   .appShell {
     --sidebar-offset: 0px;
     position: relative;
+    min-width: 0;
+    width: 100%;
   }
 
   .menuRail {
