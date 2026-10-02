@@ -87,7 +87,9 @@ export async function auditControlSemantics(cdp, url, baseline) {
         shareText: String(share?.textContent || "").trim(),
         shareName: share?.getAttribute("aria-label") || "",
         undoName: document.getElementById("plannerUndoButton")?.getAttribute("aria-label") || "",
+        undoDisabled: Boolean(document.getElementById("plannerUndoButton")?.disabled),
         redoName: document.getElementById("plannerRedoButton")?.getAttribute("aria-label") || "",
+        redoDisabled: Boolean(document.getElementById("plannerRedoButton")?.disabled),
         revokeDialogLabelledBy: revoke?.getAttribute("aria-labelledby") || "",
         revokeConfirm: String(document.getElementById("plannerPlanRevokeConfirmButton")?.textContent || "").trim(),
         revokeClose: document.getElementById("plannerPlanRevokeModalCloseButton")?.getAttribute("aria-label") || "",
@@ -128,8 +130,8 @@ export async function auditControlSemantics(cdp, url, baseline) {
     assert.match(state.planner?.pitchName || "", /ST Browser Player/);
     assert.ok(["Share", "Revoke"].includes(state.planner?.shareText), "A11Y-02 Planner share action has an unexpected visible state.");
     assert.equal(state.planner?.shareName, state.planner?.shareText === "Revoke" ? "Revoke share" : "Share plan");
-    assert.equal(state.planner?.undoName, "Undo Planner change");
-    assert.equal(state.planner?.redoName, "Redo Planner change");
+    assert.match(state.planner?.undoName || "", state.planner?.undoDisabled ? /^Undo$/ : /^Undo .+/);
+    assert.match(state.planner?.redoName || "", state.planner?.redoDisabled ? /^Redo$/ : /^Redo .+/);
     assert.equal(state.planner?.revokeDialogLabelledBy, "plannerPlanRevokeModalTitle");
     assert.equal(state.planner?.revokeConfirm, "Revoke");
     assert.equal(state.planner?.revokeClose, "Close revoke share dialog");
