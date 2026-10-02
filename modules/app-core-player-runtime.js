@@ -302,9 +302,9 @@
     const status = escapeHtml(ageMarker.status || "default");
     const label = escapeHtml(ageMarker.label || "");
     if (ageMarker.status === "retired") {
-      return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" data-tooltip="${label}" aria-label="${label}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></i>`;
+      return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" role="img" data-tooltip="${label}" aria-label="${label}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></i>`;
     }
-    return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" data-tooltip="${label}" aria-label="${label}"></i>`;
+    return `<i class="retirementMarker playerAgeMarker retirementMarker--${status}" role="img" data-tooltip="${label}" aria-label="${label}"></i>`;
   }
 
   function playerNationalityFlagHtml(rawNationality) {

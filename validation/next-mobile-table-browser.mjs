@@ -129,19 +129,32 @@ async function setPhoneViewport(cdp, width, height = 844) {
 
 async function installProbeRow(cdp) {
   const evaluation = await cdp.send("Runtime.evaluate", {
-    expression: `(() => {
+    expression: `(async () => {
       const page = document.querySelector("#progressionPage");
       const scroller = page?.querySelector(".playerTableScroller");
       if (!(page instanceof HTMLElement) || !(scroller instanceof HTMLElement)) {
-        return { installed: false };
+        return { installed: false, assetsReady: false };
       }
       page.hidden = false;
       scroller.innerHTML = '<table><tbody id="tableBody"><tr data-player-id="mobile-probe"><td class="selectionCell"><span class="tableControlCellContent tableControlCellContentCentered"><input type="checkbox" aria-label="Select probe"></span></td><td class="nameCell col-name"><span class="tableControlCellContent"><div class="playerNameCell"><a class="playerNameLink"><span class="playerNameFullValue">Nicolò Barella</span><span class="playerNameCompactValue">N. Barella</span></a><span class="playerNameMarkers"><span class="playerNoteIcon">📝</span></span></div></span></td><td class="flagCell"><span class="tableControlCellContent tableControlCellContentCentered"><img class="flagImage" src="/flags/it.svg" alt="Italy"></span></td><td class="col-listing"><span class="tableControlCellContent"><span class="listingCellTableHost"><span class="listingCellContent"><img class="listingCellIcon" src="/listing-shopping-bag.svg" width="12" height="12" alt=""><span class="listingCellPrice">$10,000</span></span></span></span></td><td class="col-age"><span class="tableControlCellContent"><span class="playerAgeValue">23</span><span class="retirementMarker">R</span></span></td><td class="col-owned-since"><span class="tableControlCellContent"><span class="joinedAgencyFullValue">17/09/2026 12:30</span><span class="joinedAgencyCompactValue">17/09/2026</span></span></td><td class="rowActionsCell"><span class="tableControlCellContent tableControlCellContentCentered"><button type="button" class="playerTableActionsButton" aria-label="Actions"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1"></circle><circle cx="8" cy="8" r="1"></circle><circle cx="13" cy="8" r="1"></circle></svg></button></span></td></tr></tbody></table>';
-      return { installed: Boolean(scroller.querySelector('tr[data-player-id="mobile-probe"]')) };
+      const images = Array.from(scroller.querySelectorAll('img'));
+      await Promise.all(images.map(image => image.complete
+        ? Promise.resolve()
+        : new Promise(resolve => {
+            image.addEventListener("load", resolve, { once: true });
+            image.addEventListener("error", resolve, { once: true });
+          })));
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return {
+        installed: Boolean(scroller.querySelector('tr[data-player-id="mobile-probe"]')),
+        assetsReady: images.every(image => image.complete),
+      };
     })()`,
+    awaitPromise: true,
     returnByValue: true,
   });
   assert.equal(evaluation?.result?.value?.installed, true, "Could not install the mobile table probe row in the real Next shell.");
+  assert.equal(evaluation?.result?.value?.assetsReady, true, "Mobile table probe image assets did not settle before geometry checks.");
 }
 
 async function snapshot(cdp, width) {

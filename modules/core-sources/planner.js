@@ -259,6 +259,7 @@
     const marker=plannerAgeMarker(player);
     if(!marker||!(host instanceof HTMLElement))return;
     const element=document.createElement("span");
+    element.setAttribute("role","img");
     if(marker.type==="retirement"){
       element.className="retirementMarker plannerAgeMarker retirementMarker--"+marker.status;
     }else{
