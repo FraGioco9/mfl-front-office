@@ -31,8 +31,7 @@ for (const required of [
   "outline-offset: calc(-1 * var(--mfl-focus-ring-width));",
 ]) {
   assert.ok(controlRule.includes(required), "Ordinary clear focus ring must consume " + required);
-  assert.ok(plannerRule.includes(required.replaceAll(": ", ":").replaceAll(" * ", " * ")) ||
-    plannerRule.includes(required.replaceAll(": ", ":")),
+  assert.ok(plannerRule.includes(required.replaceAll(": ", ":").replace(/;$/, "")),
     "Planner clear focus ring must consume " + required);
 }
 assert.match(controls, /outline: 0;\s*border-color: transparent;\s*background: transparent;\s*box-shadow: none;/,
