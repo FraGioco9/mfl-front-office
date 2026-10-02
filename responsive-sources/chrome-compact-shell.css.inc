@@ -215,6 +215,10 @@
   .appShell {
     --sidebar-offset: 0px;
     position: relative;
+    /* Body is a grid: prevent the Player's intrinsic pitch/hero width from
+       setting the implicit grid column wider than the phone viewport. */
+    min-width: 0;
+    width: 100%;
   }
 
   .menuRail {
