@@ -1000,7 +1000,19 @@ function tableBuildHeaderOwner() {
       const sortButton = document.createElement("button");
       sortButton.type = "button";
       sortButton.className = "tableSortButton";
-      sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);
+      const sortLabel = fullLabel || (column === "listing_price" ? "Listing" : column);
+      const defaultSortDirection = numberColumns.has(column) ? "desc" : "asc";
+      const nextSortDirection = !isSorted
+        ? defaultSortDirection
+        : state.sortDirection === defaultSortDirection
+          ? (defaultSortDirection === "asc" ? "desc" : "asc")
+          : column === "overall" ? defaultSortDirection : null;
+      const nextAction = nextSortDirection
+        ? `Sort ${sortLabel} ${nextSortDirection === "asc" ? "ascending" : "descending"}`
+        : "Reset sorting to Overall descending";
+      sortButton.setAttribute("aria-label", `Sort by ${sortLabel}`);
+      sortButton.setAttribute("aria-description", nextAction);
+      sortButton.title = nextAction;
       sortButton.appendChild(label);
       if (isSorted) {
         const arrow = document.createElement("span");
@@ -1011,6 +1023,7 @@ function tableBuildHeaderOwner() {
       cell.replaceChildren(sortButton);
 
       sortButton.addEventListener("click", () => {
+        const restoreSortFocus = document.activeElement === sortButton;
         const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
         const resetDirection = "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
@@ -1030,6 +1043,11 @@ function tableBuildHeaderOwner() {
         rememberTableSortState();
         state.page = 1;
         buildHeader();
+        // The active header button is replaced on every sort. Keyboard users
+        // must not lose their position when toggling its direction.
+        if (restoreSortFocus) {
+          tableHead.querySelector(`th[data-table-column="${column}"] > .tableSortButton`)?.focus({ preventScroll: true });
+        }
         applyFilters();
       });
     }
@@ -1122,9 +1140,23 @@ function updateFilterSummary(count = activeFilterCount()) {
   const numericCount = Number(count);
   const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;
   const active = normalizedCount >= 1;
+  // The visible badge intentionally counts advanced rules only. Quick toggles
+  // have their own controls and may be enabled by default.
+  const quickCount = state.currentPage === "club" ? 0 : [
+    hideRetiredInput?.checked,
+    hideRetiringInput?.checked,
+    state.currentPage === "database" && hideMflPlayersInput?.checked,
+    state.currentPage === "mfl" && packablePlayersInput?.checked,
+    newMintsInput?.checked,
+  ].filter(Boolean).length;
+  const filterDescription = `Filters: ${normalizedCount} advanced ${normalizedCount === 1 ? "rule" : "rules"}, ${quickCount} active quick ${quickCount === 1 ? "filter" : "filters"}`;
   filterSummary.textContent = String(normalizedCount);
   filterSummary.classList.toggle("hasActiveFilters", active);
   openFiltersButton?.classList.toggle("hasActiveFilters", active);
+  if (openFiltersButton) {
+    openFiltersButton.setAttribute("aria-label", filterDescription);
+    openFiltersButton.title = filterDescription;
+  }
 }
 
 function selectedFilterColumns(exceptRule = null) {
@@ -1555,6 +1587,7 @@ function tableAddFilterRuleOwner(column, options = {}) {
       return;
     }
     rule.dataset.filterColumn = nextColumn;
+    remove.setAttribute("aria-label", `Remove ${filterLabel(nextColumn)} filter`);
     replaceOperatorSelect(rule, nextColumn);
     replaceValueControl(rule, nextColumn);
     populateAddFilterSelect();
