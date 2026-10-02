@@ -51,6 +51,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Assemble canonical parser-time HTML before CSP verification
+        run: node build-html.mjs
+
       - name: Verify Vercel edge CSP configuration matches Next.js
         run: node validate-vercel-security-headers.mjs
 
