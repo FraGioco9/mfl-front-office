@@ -264,9 +264,16 @@ function renderSearchResults() {
   void (async () => {
     try {
       if (await requestDatabaseSearch(query, "all", { force: Boolean(query) })) renderSearchResultsNow();
+      if (query && normalizeSearchText(playerSearchInput.value.trim()) === normalizeSearchText(query)
+        && typeof announceActionStatus === "function") {
+        const count = playerSearchResults.querySelectorAll(".searchResult").length;
+        announceActionStatus(count + " search result" + (count === 1 ? "" : "s") + " for " + query + ".");
+      }
     } catch (error) {
       console.error(error?.message || "Could not search the database.");
       renderSearchResultsNow();
+      if (query && normalizeSearchText(playerSearchInput.value.trim()) === normalizeSearchText(query)
+        && typeof announceActionStatus === "function") announceActionStatus("Could not search the database. Try again.", { urgent: true });
     }
   })();
 }
