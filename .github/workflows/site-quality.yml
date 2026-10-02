@@ -177,6 +177,10 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-ux02-recovery-regression.mjs
 
+      - name: UX-03 saved actions desktop and phone browser matrix
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-ux03-action-regression.mjs
+
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs

@@ -1731,7 +1731,7 @@
   planNameConfirmButton?.addEventListener("click",confirmPlannerPlanName);
   planNameModal?.addEventListener("click",event=>{if(event.target===planNameModal)closePlannerPlanNameModal("");});
   planNameInput?.addEventListener("input",()=>{planNameInput.removeAttribute("aria-invalid");if(planNameError instanceof HTMLElement){planNameError.textContent="";planNameError.hidden=true;}});
-  planNameInput?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();confirmPlannerPlanName();}else if(event.key==="Escape"){event.preventDefault();closePlannerPlanNameModal("");}});
+  planNameInput?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();confirmPlannerPlanName();}else if(event.key==="Escape"){event.preventDefault();event.stopPropagation();closePlannerPlanNameModal("");}});
   planDeleteModal?.addEventListener("keydown",event=>trapPlannerConfirmationTab(event,planDeleteModal));
   planRevokeModal?.addEventListener("keydown",event=>trapPlannerConfirmationTab(event,planRevokeModal));
   planDeleteModalCloseButton?.addEventListener("click",()=>closePlannerPlanDeleteModal(false));
