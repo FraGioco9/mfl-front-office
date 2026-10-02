@@ -229,7 +229,7 @@ function ensureSettingsPageStructure() {
   if (settingsEmailSaveButton) {
     settingsEmailSaveButton.hidden = false;
     settingsEmailSaveButton.textContent = "Save";
-    settingsEmailSaveButton.setAttribute("aria-label", "Save all Settings changes");
+    settingsEmailSaveButton.setAttribute("aria-label", "Save settings changes");
   }
 }
 
