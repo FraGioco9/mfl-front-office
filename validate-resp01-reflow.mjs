@@ -24,6 +24,9 @@ assert.ok(routing.includes('reflowMatrix ? "about:blank" : url')
 assert.ok(routing.includes("window.innerWidth === expected")
   && routing.includes("viewportWidth === expected"),
   "Never let headless Chromium silently clamp the 320px/360px test widths.");
+assert.ok(browser.includes('MFL_PLANNER_BROWSER_FOCUSED: "1"')
+  && browser.includes('MFL_PLANNER_BROWSER_PHASE: "shell"'),
+  "320px Planner reflow must use the focused shell/club selection test rather than desktop pitch size tests.");
 assert.ok(workflow.includes("node validation/browser-resp01-reflow-regression.mjs"),
   "RESP-01 CSS reflow suite must be enforced by Site Quality.");
 assert.ok(docs.includes("real browser zoom") && docs.includes("text-only scaling"),
