@@ -166,11 +166,38 @@
     });
   }
 
+  const OPT_IN_DESTINATIONS = new Set(["watchlist", "myplayers", "my-clubs", "settings", "planner"]);
+
+  function syncNavigationAccess() {
+    const optedIn = document.documentElement.dataset.storedWalletOptIn === "true";
+    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
+      const page = String(button.dataset.page || "").toLowerCase();
+      if (!optedIn && OPT_IN_DESTINATIONS.has(page)) {
+        button.setAttribute("aria-description", page === "planner"
+          ? "Saved plans require Dapper opt-in; shared plans remain accessible."
+          : "Dapper opt-in required to use this section.");
+      } else {
+        button.removeAttribute("aria-description");
+      }
+      // Links still navigate to the existing locked-route shell: aria-disabled
+      // would misrepresent the interaction and block keyboard discovery.
+    });
+  }
+
   function setActiveNavigation(page) {
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       const buttonPage = String(button.dataset.page || "").toLowerCase();
+      const isActive = buttonPage === page;
       button.classList.toggle("active", buttonPage === page);
+      if (isActive) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
     });
+    const homeLink = document.querySelector(".brandLink[data-page='home']");
+    if (homeLink instanceof HTMLAnchorElement) {
+      if (page === "home") homeLink.setAttribute("aria-current", "page");
+      else homeLink.removeAttribute("aria-current");
+    }
+    syncNavigationAccess();
   }
 
   function setActiveView(container, view) {
@@ -818,5 +845,6 @@
   window.__mflStaticUiRuntime = Object.freeze({
     sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy,
     captureHistoryScroll, historyScrollToken, restoreHistoryScroll,
+    syncNavigationAccess,
   });
 })();

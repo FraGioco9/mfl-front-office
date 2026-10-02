@@ -1513,6 +1513,7 @@ const browserTestSource = String.raw`(() => {
       const savedTop = main.scrollTop;
       const databasePath = location.pathname + location.search;
       await setPage("privacy", true);
+      assertNav03Navigation("privacy transition");
       assert(location.pathname === "/privacy", "NAV-02 page transition did not create Privacy history.");
       assert(main.scrollTop === 0, "NAV-02 ordinary forward navigation must start at the top.");
       history.back();
@@ -1529,11 +1530,49 @@ const browserTestSource = String.raw`(() => {
           && document.body.dataset.page === "database"
           && Math.abs(main.scrollTop - savedTop) < 8,
         "NAV-02 repeated Back lost Database scroll.", 8500);
+      assertNav03Navigation("browser Back");
       assert(history.state?.__mflMainScrollPath === databasePath,
         "NAV-02 Back must retain the restored history entry's URL signature.");
     } finally {
       spacer.remove();
     }
+  }
+
+  function assertNav03Navigation(label = "route") {
+    const current = String(document.body.dataset.page || "").toLowerCase();
+    const sidebarPage = current === "mflstats" ? "mfl" : current;
+    const links = Array.from(document.querySelectorAll("#sidebar .navButton[data-page]"));
+    const currentLinks = links.filter((link) => link.getAttribute("aria-current") === "page");
+    const activeLinks = links.filter((link) => link.classList.contains("active"));
+    const selected = links.find((link) => link.dataset.page === sidebarPage);
+    assert(currentLinks.length === (selected ? 1 : 0),
+      "NAV-03 " + label + ": sidebar must expose only its navigable route as aria-current.");
+    assert(activeLinks.length === currentLinks.length
+        && activeLinks.every((link) => currentLinks.includes(link)),
+      "NAV-03 " + label + ": visual and semantic active-route indicators diverged.");
+    if (selected) assert(currentLinks[0] === selected,
+      "NAV-03 " + label + ": wrong sidebar entry claimed the current page.");
+
+    const brand = document.querySelector(".brandLink[data-page='home']");
+    assert(brand instanceof HTMLAnchorElement
+        && (brand.getAttribute("aria-current") === "page") === (current === "home"),
+      "NAV-03 " + label + ": home brand current-page indicator is stale.");
+
+    const optedIn = document.documentElement.dataset.storedWalletOptIn === "true";
+    for (const page of ["watchlist", "myplayers", "my-clubs", "settings", "planner"]) {
+      const link = links.find((entry) => entry.dataset.page === page);
+      assert(link instanceof HTMLAnchorElement && !link.hasAttribute("aria-disabled")
+          && !link.hasAttribute("disabled") && Boolean(link.getAttribute("href")),
+        "NAV-03 " + label + ": protected links must remain real navigable links to the opt-in shell.");
+      const description = link.getAttribute("aria-description");
+      assert(optedIn ? description === null : Boolean(description?.includes("Dapper opt-in")),
+        "NAV-03 " + label + ": opt-in semantics are stale on " + page);
+    }
+    const progression = links.find((link) => link.dataset.page === "progression");
+    const canSeeProgression = document.documentElement.dataset.storedProgressionAccess === "true";
+    assert(progression instanceof HTMLAnchorElement
+      && (getComputedStyle(progression).display !== "none") === canSeeProgression,
+      "NAV-03 " + label + ": Progression visibility does not reflect current permission.");
   }
 
   async function runRepresentativeRoute() {
@@ -1546,6 +1585,7 @@ const browserTestSource = String.raw`(() => {
     assertInitialTiming(timeline);
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
+    assertNav03Navigation("direct refresh");
     if (scenario === "database-linked-state") {
       await delay(80);
       linkedTablePaintSampling = false;
@@ -2814,6 +2854,7 @@ const browserTestSource = String.raw`(() => {
     assertPageAccessibilityState();
     const spaState = routeState();
     assertRouteState(spaState);
+    assertNav03Navigation("cached SPA return");
     assert(
       JSON.stringify(spaState) === JSON.stringify(directState),
       scenario + " direct refresh and SPA navigation did not converge to the same canonical state.",
