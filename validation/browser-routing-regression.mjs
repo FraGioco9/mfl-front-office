@@ -3765,7 +3765,6 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
     browserRegressionResult = null;
     const target = await waitForPageTarget(debuggingPort, reflowMatrix ? "about:blank" : url);
     cdp = await connectCdp(target.webSocketDebuggerUrl);
-    await cdp.send("Runtime.enable");
     if (reflowMatrix) {
       // Apply dimensions before loading app scripts and first-paint CSS.
       await cdp.send("Page.enable");
@@ -3774,6 +3773,8 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
       });
       await cdp.send("Page.navigate", { url });
     }
+    // Keep the exact source hook for existing breakpoint/table CDP probe suites.
+    await cdp.send("Runtime.enable");
     return await waitForBrowserRegression(cdp);
   } catch (error) {
     throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
