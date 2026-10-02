@@ -41,6 +41,18 @@ does not disable user zoom.
 - Site Quality enforces the matrix and `validate-resp01-reflow.mjs` checks
   coverage/CI ownership. No database, wallet or production mutations.
 
+## First instrumented findings
+
+- Database first-paint/hydration and sticky Name regression passed all seven
+  layout cases (320, 360, 520, 640, 900, 901 and 900×360 landscape) in
+  [Site Quality #37011782094](https://github.com/FraGioco9/mfl-front-office/actions/runs/37011782094).
+- Player at 320px **intentionally shortens the visible identity** from
+  `Browser Player` to `B. Player` but retains the **full** name in
+  `document.title`. The first regression incorrectly expected desktop
+  full-name text in the compact content. The new assertion checks the
+  compact visible label plus the canonical full title separately. The
+  remaining 320px Player/Planner checks are still required before merge.
+
 ## Outstanding (do not mark complete from a viewport-only emulation)
 
 - **RESP-01B:** only after failure evidence, make narrow, source-owned CSS
