@@ -1133,7 +1133,7 @@
                 pointer.setAttribute("aria-hidden", "true");
                 pointer.style.left = Math.max(16, Math.min(rect.left + rect.width / 2 - menuRect.left, menuRect.width - 16)) - 8 + "px";
                 depthPicker.appendChild(pointer);
-                depthPicker.querySelector("button")?.focus({ preventScroll: true });
+                depthPicker.querySelector("button")?.focus();
               };
               const makeFormationSpot = (position, key, goalkeeper = false, starter = null, backups = [], slotLabel = position, spareCount = 0) => {
                 const spot = document.createElement("span");
