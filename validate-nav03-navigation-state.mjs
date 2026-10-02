@@ -48,5 +48,5 @@ for (const token of ["assertNav03Navigation(\"direct refresh\")",
   "getComputedStyle(progression).display",
   "Dapper opt-in", "aria-current"])
   assert.ok(browser.includes(token), "Chromium navigation matrix must cover: " + token);
-assert.ok(docs.includes("NAV-03C") && docs.includes("Safari iPhone") && docs.includes("Guest"));
+assert.ok(docs.includes("NAV-03C") && docs.includes("Safari iPhone") && docs.includes("guest"));
 console.log("NAV-03 route/current accessibility, live progression visibility, protected discovery and mobile geometry contracts passed.");
