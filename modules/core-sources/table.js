@@ -1000,7 +1000,10 @@ function tableBuildHeaderOwner() {
       const sortButton = document.createElement("button");
       sortButton.type = "button";
       sortButton.className = "tableSortButton";
-      sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);
+      const sortLabel = fullLabel || (column === "listing_price" ? "Listing" : column);
+      sortButton.setAttribute("aria-label", isSorted
+        ? `Sort by ${sortLabel}, currently ${state.sortDirection === "asc" ? "ascending" : "descending"}`
+        : `Sort by ${sortLabel}`);
       sortButton.appendChild(label);
       if (isSorted) {
         const arrow = document.createElement("span");
@@ -1125,6 +1128,7 @@ function updateFilterSummary(count = activeFilterCount()) {
   filterSummary.textContent = String(normalizedCount);
   filterSummary.classList.toggle("hasActiveFilters", active);
   openFiltersButton?.classList.toggle("hasActiveFilters", active);
+  openFiltersButton?.setAttribute("aria-label", active ? `Filters, ${normalizedCount} active` : "Filters");
 }
 
 function selectedFilterColumns(exceptRule = null) {
