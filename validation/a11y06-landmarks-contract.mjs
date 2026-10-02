@@ -31,7 +31,7 @@ for (const [name,css] of [["canonical CSS",styles],["generated CSS",generated]])
 }
 assert.ok(footerValidator.includes("html.indexOf('<main id=\"mflMainContent\" tabindex=\"-1\">')"),
   "Footer validation must follow the exact one canonical main region.");
-assert.ok(sidebarValidator.includes('<nav id=\"sidebar\" class=\"sidebar\" aria-label=\"Main navigation\">'),
+assert.ok(sidebarValidator.includes('<nav id="sidebar" class="sidebar" aria-label="Main navigation">'),
   "Sidebar navigation contract must be owned by the native named nav element.");
 assert.ok(nextDocument.includes("bodyChildren: parse(body[2])"), "Next document must continue projecting canonical body children.");
 console.log("A11Y-06 skip, main, primary/pagination navigation, CSS focus and Next projection contracts passed.");
