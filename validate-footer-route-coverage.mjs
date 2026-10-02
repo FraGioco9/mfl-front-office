@@ -16,7 +16,7 @@ const pageLifecycle = read("modules/core-sources/shared-page-lifecycle.js");
 const ids = ["homePage", "progressionPage", "databaseStatsPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage", "privacyPage"];
 for (const id of ids) assert.match(html, new RegExp(`<section id="${id}" class="[^"]*\\bpageView\\b[^"]*"`), `${id} must remain a pageView.`);
 
-const mainIndex = html.indexOf("<main>");
+const mainIndex = html.indexOf('<main id="mflMainContent" tabindex="-1">');
 const footerIndex = html.indexOf('<footer class="siteFooterDetails"');
 const mainEnd = html.indexOf("</main>", footerIndex);
 assert.ok(mainIndex >= 0 && footerIndex > mainIndex && mainEnd > footerIndex, "Footer must stay in main after static route shells.");
