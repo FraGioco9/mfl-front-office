@@ -1101,7 +1101,7 @@
     if(planModeLabel instanceof HTMLElement){
       const mode=plannerReadOnly?"Shared":!activePlanId?"Draft":"Saved";
       planModeLabel.textContent=mode;
-      planModeLabel.classList.toggle("plannerPlanModeDirty",mode==="Unsaved");
+      planModeLabel.classList.toggle("plannerPlanModeDirty",false);
       planModeLabel.classList.toggle("plannerPlanModeSaved",mode==="Saved");
       planModeLabel.classList.toggle("plannerPlanModeShared",mode==="Shared");
     }
