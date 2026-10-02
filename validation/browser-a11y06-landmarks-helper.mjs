@@ -6,6 +6,8 @@ export async function auditLandmarks(cdp, url, baseline) {
   assert.equal(baseline?.status,"passed","Canonical route must hydrate successfully before landmarks check.");
   const route=String(process.env.MFL_A11Y06_ROUTE || "");
   await auditAccessibility(cdp, url, baseline);
+  const resetFocus = await cdp.send("Runtime.evaluate", { expression: "document.activeElement instanceof HTMLElement && document.activeElement.blur(); true", returnByValue: true });
+  if (resetFocus.exceptionDetails) throw Error("A11Y-06 could not reset prior keyboard-audit focus.");
   const evalJs=async expression=>{
     const response=await cdp.send("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});
     if(response.exceptionDetails)throw new Error("A11Y-06 Chromium JS failure: "+JSON.stringify(response.exceptionDetails));
