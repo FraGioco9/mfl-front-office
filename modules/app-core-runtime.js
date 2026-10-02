@@ -1779,6 +1779,7 @@ function currentNavigationPath() {
 }
 
 function commitViewTransition(pageName, viewName, options = {}) {
+  window.__mflStaticUiRuntime?.captureHistoryScroll?.();
   const nextView = String(viewName || "");
   if (!nextView) return "";
 
@@ -1815,7 +1816,8 @@ function commitViewTransition(pageName, viewName, options = {}) {
   }
 
   if (targetPath && currentNavigationPath() !== targetPath) {
-    window.history[options.replace ? "replaceState" : "pushState"]({}, "", targetPath);
+    window.history[options.replace ? "replaceState" : "pushState"](
+      options.replace ? window.history.state : {}, "", targetPath);
   }
 
   updateViewButtons();
@@ -1825,6 +1827,7 @@ function commitViewTransition(pageName, viewName, options = {}) {
 }
 
 function commitPageTransition(pageName, updateHash = true, options = {}) {
+  window.__mflStaticUiRuntime?.captureHistoryScroll?.();
   const requestedPageName = String(pageName || "home");
   const routePageName = requestedPageName === "mflstats" ? "mfl" : requestedPageName;
   const viewConfig = Reflect.get(window, "__mflTableViewConfig");
@@ -1877,7 +1880,8 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
   const replaceRoute = Boolean(options.replace || options.replaceUrl);
   const currentPath = currentNavigationPath();
   if (targetPath && currentPath !== targetPath && (updateHash || replaceRoute)) {
-    window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
+    window.history[replaceRoute ? "replaceState" : "pushState"](
+      replaceRoute ? window.history.state : {}, "", targetPath);
   }
 
 if (protectedOptOutRoute(routePageName, options)) {
@@ -7909,8 +7913,18 @@ window.addEventListener("scroll", () => hidePlayerNoteTooltip({ immediate: true 
 window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true }));
 
 window.addEventListener("popstate", () => {
+  // The loaded Club route handler already owns identity and view restoration.
+  // Sending this same event through setPage starts a second async transition.
+  if (/^\/(?:clubs|club)(?:\/|$)/i.test(window.location.pathname)
+      && typeof window.__mflOpenClubPageRoute === "function") return;
+  const staticUi = window.__mflStaticUiRuntime;
+  const scrollToken = staticUi?.historyScrollToken?.();
   const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
-  setPage(target.pageName, false, { ...target.options, preserveScroll: true });
+  void Promise.resolve(setPage(target.pageName, false, { ...target.options, preserveScroll: true }))
+    .then(
+      () => staticUi?.restoreHistoryScroll?.(scrollToken),
+      () => staticUi?.restoreHistoryScroll?.(scrollToken),
+    );
 });
 
 accountButton.addEventListener("click", (event) => {
@@ -8173,7 +8187,7 @@ function syncLayoutCenter() {
 
   function commitIncrementalLocation(pageName, updateHash, options = {}) {
     if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
-      window.history.replaceState({}, "", options.replaceUrl);
+      window.history.replaceState(window.history.state, "", options.replaceUrl);
       return;
     }
     updatePageUrl(pageName, {
@@ -8429,7 +8443,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         state.sortKey = previousSortKey;
         state.sortDirection = previousSortDirection;
         if (`${window.location.pathname}${window.location.search}` !== previousPath) {
-          window.history.replaceState({}, "", previousPath);
+          window.history.replaceState(window.history.state, "", previousPath);
         }
         updateViewButtons();
         showToast(error?.message || "Could not load this view.");
@@ -8562,7 +8576,8 @@ const setIncrementalView = async function setIncrementalView(viewName) {
           tableLoadingRequestToken: progressionLoadingRequestToken,
         });
         if (result === false) return false;
-        if (previousPage !== incrementalLoadingPageName(pageName, route)) {
+        if (previousPage !== incrementalLoadingPageName(pageName, route)
+            && navigationOptions.preserveScroll !== true) {
           resetPageScroll();
         }
         return result;
