@@ -98,7 +98,7 @@ export async function auditAccessibility(cdp, url, baseline) {
       // A normal keyDown with its text payload, not rawKeyDown, is required
       // for Chromium to synthesize the native Enter/Space button click.
       type: key === "Enter" || key === " " ? "keyDown" : "rawKeyDown", key, code,
-      ...(key === "Enter" || key === " " ? { text: key === "Enter" ? "\\r" : " ", unmodifiedText: key === "Enter" ? "\\r" : " " } : {}),
+      ...(key === "Enter" || key === " " ? { text: key === "Enter" ? "\r" : " ", unmodifiedText: key === "Enter" ? "\r" : " " } : {}),
       windowsVirtualKeyCode: codes[key], nativeVirtualKeyCode: codes[key],
       modifiers: shift ? 8 : 0
     });
