@@ -55,6 +55,10 @@ does not disable user zoom.
 
 ## Outstanding (do not mark complete from a viewport-only emulation)
 
+- The narrow Planner case reuses the existing **focused shell + owned-club
+  selection** browser phase. Pixel-size contracts for desktop pitch tokens
+  continue to run in the separate Planner browser suite; they are not applied
+  at 320px merely because the same functional fixture is reused.
 - **RESP-01B:** only after failure evidence, make narrow, source-owned CSS
   fixes to any clipped controls, dialog scrollports or non-table overflow.
   Keep the existing table horizontal-scroll contract.
