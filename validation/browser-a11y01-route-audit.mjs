@@ -22,19 +22,17 @@ const cases = [
   { route: "home", scenario: "database" },
   { route: "database", scenario: "database" },
   { route: "player", scenario: "player" },
-  { route: "planner", scenario: "planner-selected" },
+  { route: "planner", scenario: "planner" },
   { route: "settings", scenario: "database" },
   { route: "database", scenario: "database", phone: true },
-  { route: "planner", scenario: "planner-selected", phone: true },
+  { route: "planner", scenario: "planner", phone: true },
 ];
 
 try {
   for (const item of cases) {
     let text = injected;
-    if (item.phone) {
-      const entries = item.scenario === "database"
-        ? ['["database", "/database/attributes"],', '["database", "/database/attributes", 390, 844],']
-        : ['["planner-selected", "/planner?club=9001"],', '["planner-selected", "/planner?club=9001", 390, 844],'];
+    if (item.phone && item.scenario === "database") {
+      const entries = ['["database", "/database/attributes"],', '["database", "/database/attributes", 390, 844],'];
       assert.ok(text.includes(entries[0]), "A11Y-01 could not locate phone fixture: " + item.scenario);
       text = text.replace(entries[0], entries[1]);
     }
@@ -47,7 +45,8 @@ try {
           ...process.env,
           MFL_BROWSER_SCENARIOS: item.scenario,
           MFL_A11Y01_ROUTE: item.route,
-          MFL_PLANNER_BROWSER_FOCUSED: item.scenario === "planner-selected" ? "1" : "0",
+          MFL_PLANNER_BROWSER_FOCUSED: item.scenario === "planner" ? "1" : "0",
+          MFL_UX03_BROWSER_VIEWPORT: item.phone ? "phone" : "desktop",
           MFL_PLANNER_BROWSER_PHASE: "shell",
         },
       });
