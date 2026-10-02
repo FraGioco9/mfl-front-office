@@ -23,6 +23,7 @@ const cases = [
   { route: "planner", scenario: "planner", phone: true },
 ];
 
+const failedCases = [];
 try {
   for (const item of cases) {
     let content = injected;
@@ -50,9 +51,13 @@ try {
       child.once("error", reject);
       child.once("close", done);
     });
-    assert.equal(code, 0, "A11Y-03 contrast audit failed for " + item.route + (item.phone ? " phone" : " desktop"));
+    if (code !== 0) {
+      failedCases.push(item.route + (item.phone ? " phone" : " desktop"));
+      console.error("A11Y-03 contrast audit failed on " + failedCases.at(-1));
+    }
   }
 } finally {
   await rm(temporaryPath, {force:true});
 }
+assert.deepEqual(failedCases, [], "A11Y-03 contrast failures across route/viewport cases: " + failedCases.join(", "));
 console.log("A11Y-03 seven route/viewport cases pass both light and dark color-contrast audits.");
