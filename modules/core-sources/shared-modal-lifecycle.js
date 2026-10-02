@@ -88,6 +88,12 @@ function showModal(modal) {
   modal.classList.remove("modalClosing", "modalOpen");
   modal.hidden = false;
   syncModalBackgroundAccessibility();
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // No waiting for two entrance frames when motion is explicitly reduced.
+    modal.classList.add("modalOpen");
+    focusModalFallback(modal);
+    return;
+  }
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
       modal.classList.add("modalOpen");
@@ -113,7 +119,7 @@ function hideModal(modal, afterClose) {
 
   modal.classList.remove("modalOpen");
   modal.classList.add("modalClosing");
-  window.setTimeout(() => {
+  const finishClose = () => {
     modal.hidden = true;
     modal.classList.remove("modalClosing");
     modalReturnFocus.delete(modal);
@@ -124,7 +130,9 @@ function hideModal(modal, afterClose) {
     if (typeof afterClose === "function") {
       afterClose();
     }
-  }, 180);
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
+  else window.setTimeout(finishClose, 180);
 }
 
 function setupBackdropClickClose(modal, closeCallback) {
