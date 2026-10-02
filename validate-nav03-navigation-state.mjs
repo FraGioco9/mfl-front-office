@@ -28,9 +28,9 @@ for (const token of [
 ]) assert.ok(source.includes(token), "Passive navigation semantic contract missing: " + token);
 assert.match(source, /function syncNavigationAccess\(\) \{[\s\S]*?OPT_IN_DESTINATIONS\.has\(page\)/);
 assert.ok(!source.includes('button.setAttribute("aria-disabled"'), "Protected routes must remain navigable.");
-assert.match(initial, /const initialPage = String\(root\.dataset\.initialTablePage \|\| root\.dataset\.initialPage/);
-assert.match(initial, /if \(link\.dataset\.page === currentPage\) link\.setAttribute\("aria-current", "page"\)/);
-assert.match(initial, /currentPage === "home"\) brandLink\.setAttribute\("aria-current", "page"\)/);
+// The existing CSS retains first-paint active styling. Semantic state is
+// activated by the passive static chrome script without injecting inline HTML.
+assert.ok(source.includes('function setActiveNavigation(page) {'));
 assert.match(initial, /mobileNavigationMedia\.addEventListener\("change", syncSettingsNavPlacement\)/,
   "NAV-03 must preserve the established mobile settings parking.");
 const menuStart = session.indexOf("function updateMenuVisibility() {");

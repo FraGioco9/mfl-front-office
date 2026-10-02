@@ -23,14 +23,14 @@ The visual `active` class on sidebar links did not announce the current page to 
 ## NAV-03A/B implementation
 
 - Preserve all existing links and their precise desktop three-row/sidebar geometry, mobile bottom rail, and mobile Settings parking. **Do not add tabs or new navigation groups.**
-- Initial inline chrome sets `aria-current="page"` on the selected sidebar anchor or Home brand before the shared core loads, using the canonical initial-table/page flags. Shared static route chrome maintains exactly one `aria-current` on navigation, view changes and browser Back/Forward; entity routes with no sidebar destination have no selected sidebar item.
+- The existing parser-time CSS keeps first-paint active-route styling; the passive static route chrome adds the semantic `aria-current="page"` when its lightweight runtime initializes. It maintains exactly one current navigation destination through SPA navigation, view changes and browser Back/Forward. Home uses its brand link; public Player/Club/Agent pages correctly have no invented sidebar entry. No additional inline parser script or CSP hash change is required.
 - Protected links (Watchlist, My Players, My Clubs, Settings, Planner) remain keyboard-clickable. For guest/opted-out accounts, the static nav owner adds a meaningful `aria-description` (“Dapper opt-in required…”; Planner distinguishes public shared plans). The description is removed immediately when verified opt-in exists. Do **not** set `disabled`, `aria-disabled`, or hide these links, since locked routes are valid destinations and shared plans can be public.
 - The established permission/session owner updates `data-stored-wallet-opt-in` and `data-stored-progression-access` as live permissions change, then asks passive chrome to resynchronize descriptions. This fixes a stale Progression link on desktop and mobile without overriding the permission security gate or changing the locked shell.
 - No new CSS, breakpoints, animation, hover tooltips or navigation routes.
 
 ## Automated tests
 
-- `validate-nav03-navigation-state.mjs` validates the destination matrix, first-paint and runtime semantic owners, no duplicate owner, protected link semantics, live permission flags and mobile Settings placement. Registered in `validate-all.mjs`.
+- `validate-nav03-navigation-state.mjs` validates the destination matrix, static runtime semantic owner, no duplicate owner, protected link semantics, live permission flags and mobile Settings placement. Registered in `validate-all.mjs`.
 - Existing real Chromium routing regression checks `aria-current`, active visual state, guest/verified opt-in descriptions, Progression computed visibility, Home brand and locked links on direct refresh and cached route return, plus Privacy and real Back/Forward navigation.
 - Full Site Quality, Windows Next dev smoke, Mobile first-paint, Table Header and exact generated-head parity.
   
