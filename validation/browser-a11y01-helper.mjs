@@ -122,6 +122,17 @@ export async function auditAccessibility(cdp, url, baseline) {
   // Enter and Space behavior, the expanded state and Escape focus restoration.
   if (route === "planner") {
     const ready = await evaluate(`(async () => {
+      // The selected-club fixture may not carry a usable outfield roster.
+      // Isolate keyboard semantics with deterministic players in the in-page
+      // preview; never write to the real Planner or to any API.
+      const preview = window.__mflPlannerFormationPreview;
+      if (!preview?.setRoster || !preview?.render) return false;
+      preview.setAssignments([]);
+      preview.setRoster([
+        { player_id: 91001, name: "A11Y CB", positions: "CB", overall: 95, retirement_years: 5 },
+        { player_id: 91002, name: "A11Y GK", positions: "GK", overall: 90, retirement_years: 5 }
+      ]);
+      preview.render("442");
       const slot = document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton:not(:disabled)');
       if (!(slot instanceof HTMLButtonElement)) return false;
       slot.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
