@@ -920,6 +920,13 @@ function tableBuildTableColGroupOwner() {
   tableColGroup.replaceChildren(fragment);
 }
 function tableBuildHeaderOwner() {
+  // Header updates can occur again after an incremental sort request settles.
+  // Remember any focused native sort button before replacing its DOM node.
+  const focused = document.activeElement;
+  const focusedSortColumn = focused instanceof HTMLButtonElement
+    && focused.classList.contains("tableSortButton")
+    && tableHead.contains(focused)
+    ? focused.closest("th")?.getAttribute("data-table-column") : "";
   buildTableColGroup();
   const headerRow = document.createElement("tr");
   const selectionHeader = document.createElement("th");
@@ -1057,6 +1064,10 @@ function tableBuildHeaderOwner() {
   });
 
   tableHead.replaceChildren(headerRow);
+  if (focusedSortColumn) {
+    const replacement = tableHead.querySelector(`th[data-table-column="${focusedSortColumn}"] > .tableSortButton`);
+    if (replacement instanceof HTMLButtonElement) replacement.focus({ preventScroll: true });
+  }
 }
 
 function isMissingSortValue(value) {
