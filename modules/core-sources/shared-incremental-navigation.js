@@ -73,7 +73,7 @@
 
   function commitIncrementalLocation(pageName, updateHash, options = {}) {
     if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
-      window.history.replaceState({}, "", options.replaceUrl);
+      window.history.replaceState(window.history.state, "", options.replaceUrl);
       return;
     }
     updatePageUrl(pageName, {
@@ -329,7 +329,7 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         state.sortKey = previousSortKey;
         state.sortDirection = previousSortDirection;
         if (`${window.location.pathname}${window.location.search}` !== previousPath) {
-          window.history.replaceState({}, "", previousPath);
+          window.history.replaceState(window.history.state, "", previousPath);
         }
         updateViewButtons();
         showToast(error?.message || "Could not load this view.");
@@ -462,7 +462,8 @@ const setIncrementalView = async function setIncrementalView(viewName) {
           tableLoadingRequestToken: progressionLoadingRequestToken,
         });
         if (result === false) return false;
-        if (previousPage !== incrementalLoadingPageName(pageName, route)) {
+        if (previousPage !== incrementalLoadingPageName(pageName, route)
+            && navigationOptions.preserveScroll !== true) {
           resetPageScroll();
         }
         return result;

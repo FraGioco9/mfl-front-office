@@ -609,10 +609,21 @@
     const path = normalizedPath();
     const route = clubRoute(path);
     if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.__mflStaticUiRuntime?.showNotFound?.("Club");
+      const staticUi = window.__mflStaticUiRuntime;
+      const scrollToken = staticUi?.historyScrollToken?.();
+      staticUi?.showNotFound?.("Club");
+      staticUi?.restoreHistoryScroll?.(scrollToken);
       return;
     }
-    if (route) void openClubPage(route.clubId, route.view, false);
+    if (route) {
+      const staticUi = window.__mflStaticUiRuntime;
+      const scrollToken = staticUi?.historyScrollToken?.();
+      void Promise.resolve(openClubPage(route.clubId, route.view, false))
+        .then(
+          () => staticUi?.restoreHistoryScroll?.(scrollToken),
+          () => staticUi?.restoreHistoryScroll?.(scrollToken),
+        );
+    }
   });
 
     function bootClubRoute() {

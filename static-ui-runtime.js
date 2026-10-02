@@ -39,6 +39,81 @@
   let lastPrimedRouteIdentity = "";
   let lastRoutePage = "";
   let lastRouteView = "";
+  let historyScrollFrame = 0;
+  let historyScrollSerial = 0;
+  let pendingHistoryScroll = null;
+  const HISTORY_SCROLL_Y = "__mflMainScrollTop";
+  const HISTORY_SCROLL_PATH = "__mflMainScrollPath";
+
+  function currentHistoryScrollPath() {
+    return `${window.location.pathname}${window.location.search}`;
+  }
+
+  function canonicalMainScrollport() {
+    const main = document.querySelector("body > #appShell > main");
+    return main instanceof HTMLElement ? main : null;
+  }
+
+  function scrollHistoryState() {
+    const saved = window.history.state;
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  }
+
+  function captureHistoryScroll() {
+    if (pendingHistoryScroll) return;
+    const main = canonicalMainScrollport();
+    if (!main) return;
+    if (historyScrollFrame) window.cancelAnimationFrame(historyScrollFrame);
+    historyScrollFrame = 0;
+    const state = scrollHistoryState();
+    const top = Math.max(0, Math.round(main.scrollTop));
+    const path = currentHistoryScrollPath();
+    if (state[HISTORY_SCROLL_Y] === top && state[HISTORY_SCROLL_PATH] === path) return;
+    try {
+      // Preserve Next and wallet history.state fields rather than replacing them.
+      window.history.replaceState({ ...state, [HISTORY_SCROLL_Y]: top, [HISTORY_SCROLL_PATH]: path }, "");
+    } catch {
+      // Navigation remains usable if the browser refuses the state write.
+    }
+  }
+
+  function onMainHistoryScroll(event) {
+    if (event.target !== canonicalMainScrollport() || pendingHistoryScroll || historyScrollFrame) return;
+    historyScrollFrame = window.requestAnimationFrame(() => {
+      historyScrollFrame = 0;
+      captureHistoryScroll();
+    });
+  }
+
+  function beginHistoryScrollRestore() {
+    const state = scrollHistoryState();
+    const path = currentHistoryScrollPath();
+    const valid = state[HISTORY_SCROLL_PATH] === path
+      && typeof state[HISTORY_SCROLL_Y] === "number"
+      && Number.isFinite(state[HISTORY_SCROLL_Y]);
+    pendingHistoryScroll = {
+      serial: ++historyScrollSerial,
+      path,
+      top: valid ? Math.max(0, state[HISTORY_SCROLL_Y]) : 0,
+    };
+  }
+
+  function historyScrollToken() {
+    return pendingHistoryScroll?.serial || 0;
+  }
+
+  function restoreHistoryScroll(serial) {
+    const entry = pendingHistoryScroll;
+    if (!entry || serial !== entry.serial || entry.path !== currentHistoryScrollPath()) return;
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      if (pendingHistoryScroll !== entry || entry.path !== currentHistoryScrollPath()) return;
+      const main = canonicalMainScrollport();
+      if (main) main.scrollTop = Math.min(entry.top, Math.max(0, main.scrollHeight - main.clientHeight));
+      pendingHistoryScroll = null;
+      captureHistoryScroll();
+    }));
+  }
+
 
   function recordStaticRouteStage(phase, state = {}) {
     const owner = Reflect.get(window, "__mflClientPerformance");
@@ -462,8 +537,8 @@
   }
 
   function resetMainPageScroll() {
-    const main = document.querySelector("body > #appShell > main");
-    if (main instanceof HTMLElement) main.scrollTop = 0;
+    const main = canonicalMainScrollport();
+    if (main) main.scrollTop = 0;
   }
 
   function syncRouteChrome(urlLike = window.location.href) {
@@ -691,6 +766,7 @@
 
   function onPopState() {
     hideGlobalTooltip({ immediate: true });
+    beginHistoryScrollRestore();
     syncRouteChrome(window.location.href);
   }
 
@@ -721,6 +797,9 @@
     window.removeEventListener("resize", onTooltipViewportChange);
     window.removeEventListener("scroll", onTooltipViewportChange, true);
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("scroll", onMainHistoryScroll, true);
+    if (historyScrollFrame) window.cancelAnimationFrame(historyScrollFrame);
+    pendingHistoryScroll = null;
   }
 
   syncRouteChrome(window.location.href);
@@ -734,6 +813,10 @@
   window.addEventListener("resize", onTooltipViewportChange);
   window.addEventListener("scroll", onTooltipViewportChange, true);
   window.addEventListener("popstate", onPopState);
+  window.addEventListener("scroll", onMainHistoryScroll, { capture: true, passive: true });
 
-  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy });
+  window.__mflStaticUiRuntime = Object.freeze({
+    sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy,
+    captureHistoryScroll, historyScrollToken, restoreHistoryScroll,
+  });
 })();

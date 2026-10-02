@@ -1456,6 +1456,17 @@ const browserTestSource = String.raw`(() => {
       await waitFor(() => text("#clubIdentityName") === "Second Browser Club", "Club B identity did not remain authoritative.");
       await returnToMyClubs.catch(() => null);
 
+      // NAV-02: the Club owner (not the shared setPage popstate listener) must
+      // restore this entry once; the earlier My Clubs entry must remain reachable.
+      history.back();
+      await waitFor(() => location.pathname === "/my-clubs"
+          && document.getElementById("myClubsPage")?.hidden === false,
+        "NAV-02 Club -> My Clubs Back failed.", 8500);
+      history.forward();
+      await waitFor(() => location.pathname === "/clubs/9002/squad"
+          && text("#clubIdentityName") === "Second Browser Club",
+        "NAV-02 My Clubs -> Club Forward did not restore Club B's identity.", 8500);
+
       await setPage("my-clubs", true);
       await waitFor(
         () => document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length === 3,
@@ -1482,6 +1493,47 @@ const browserTestSource = String.raw`(() => {
 
     await delay(100);
     assertSpaTimingAfter(timeline, baselineSequence);
+  }
+
+
+  async function runNav02HistoryMatrix(setPage) {
+    await setPage("database", true, { view: "attributes" });
+    const main = document.querySelector("body > #appShell > main");
+    const database = document.getElementById("progressionPage");
+    assert(main instanceof HTMLElement && database instanceof HTMLElement,
+      "NAV-02 needs the canonical main scrollport and Database view.");
+    const spacer = document.createElement("div");
+    spacer.style.height = "1650px";
+    spacer.setAttribute("aria-hidden", "true");
+    database.appendChild(spacer);
+    try {
+      main.scrollTop = 320;
+      await waitFor(() => main.scrollTop >= 300 && history.state?.__mflMainScrollTop >= 300,
+        "NAV-02 did not snapshot Database scroll into the current history entry.");
+      const savedTop = main.scrollTop;
+      const databasePath = location.pathname + location.search;
+      await setPage("privacy", true);
+      assert(location.pathname === "/privacy", "NAV-02 page transition did not create Privacy history.");
+      assert(main.scrollTop === 0, "NAV-02 ordinary forward navigation must start at the top.");
+      history.back();
+      await waitFor(() => location.pathname + location.search === databasePath
+          && document.body.dataset.page === "database"
+          && Math.abs(main.scrollTop - savedTop) < 8,
+        "NAV-02 Back did not restore Database history entry scroll on its cached route.", 8500);
+      history.forward();
+      await waitFor(() => location.pathname === "/privacy"
+          && document.body.dataset.page === "privacy" && main.scrollTop === 0,
+        "NAV-02 Forward did not restore Privacy's top-of-page position.", 8500);
+      history.back();
+      await waitFor(() => location.pathname + location.search === databasePath
+          && document.body.dataset.page === "database"
+          && Math.abs(main.scrollTop - savedTop) < 8,
+        "NAV-02 repeated Back lost Database scroll.", 8500);
+      assert(history.state?.__mflMainScrollPath === databasePath,
+        "NAV-02 Back must retain the restored history entry's URL signature.");
+    } finally {
+      spacer.remove();
+    }
   }
 
   async function runRepresentativeRoute() {
@@ -2755,6 +2807,7 @@ const browserTestSource = String.raw`(() => {
       return;
     }
 
+    if (scenario === "database" && innerWidth > 900) await runNav02HistoryMatrix(setPage);
     await navigateBackToScenario(setPage, timeline);
     await assertStickyNameSeparator();
     assertSharedChromeGeometry();
