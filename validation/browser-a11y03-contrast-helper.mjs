@@ -18,7 +18,7 @@ export async function auditContrast(cdp, url, baseline) {
       const theme = ${JSON.stringify(theme)};
       document.documentElement.dataset.theme = theme;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      await new Promise(resolve => setTimeout(resolve, 70));
+      await new Promise(resolve => setTimeout(resolve, 550));
       const results = await window.axe.run(document, {
         runOnly: { type: "rule", values: ["color-contrast"] },
         iframes: false,
