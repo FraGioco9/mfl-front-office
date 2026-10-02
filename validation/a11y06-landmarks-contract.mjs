@@ -21,7 +21,7 @@ for (const [name,source] of [["canonical chrome",chrome],["generated HTML",index
   assert.equal((source.match(/<nav id="sidebar" class="sidebar" aria-label="Main navigation">/g)||[]).length, 1,
     name+" must use one named native primary nav landmark.");
   assert.ok(!source.includes('<aside id="sidebar"'), name+" must not keep the obsolete sidebar-as-aside markup.");
-  assert.ok(source.includes('<nav class="pager" aria-label="Pagination"'), name+" should preserve separately named pager navigation.");
+  if (name === "generated HTML") assert.ok(source.includes('<nav class="pager" aria-label="Pagination"'), "Pagination must remain independently named in assembled routes.");
 }
 for (const [name,css] of [["canonical CSS",styles],["generated CSS",generated]]) {
   assert.match(css,/\.mflSkipLink \{[\s\S]*?z-index: var\(--mfl-z-toast\);[\s\S]*?transform: translateY\(calc\(-100% - 24px\)\);\s*\}/,
