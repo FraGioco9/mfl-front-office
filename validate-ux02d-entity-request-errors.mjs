@@ -36,7 +36,8 @@ assert.match(shell, /window\.location\.assign\("\/"\)/);
 assert.match(shell, /if \(state\.page === "loaderror"\) return ensureLoadErrorPage/);
 assert.match(shell, /function showLoadError\(/);
 assert.match(shell, /showRouteShell\(\{\s*page: "loaderror"/);
-assert.match(shell, /Object\.freeze\(\{ sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy \}\)/);
+assert.match(shell, /sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy,/);
+assert.match(shell, /captureHistoryScroll, historyScrollToken, restoreHistoryScroll,/);
 assert.match(shell, /function showNotFound\(/);
 assert.match(shell, /page\.id = "notFoundPage"/);
 
