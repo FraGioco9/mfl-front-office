@@ -2043,7 +2043,17 @@
                 previous.setAttribute("aria-expanded", "false");
                 previous.classList.remove("plannerFormationSlotButtonPickerOpen");
               }
-              if (restoreFocus && previous?.isConnected) previous.focus();
+              if (restoreFocus && previous?.isConnected) {
+                previous.focus({ preventScroll: true });
+                // Closing an anchored picker can make Chromium reset focus to
+                // <body> after the Escape key's default processing. Recover
+                // only when focus was lost; never steal it from another control.
+                requestAnimationFrame(() => {
+                  if (previous.isConnected && !previous.disabled && document.activeElement === document.body) {
+                    previous.focus({ preventScroll: true });
+                  }
+                });
+              }
             };
             const renderFormation = code => {
               closeDepthPicker();
