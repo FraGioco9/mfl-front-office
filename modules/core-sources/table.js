@@ -1043,13 +1043,13 @@ function tableBuildHeaderOwner() {
         rememberTableSortState();
         state.page = 1;
         buildHeader();
-        // The active header button is replaced on every sort. Keyboard users
-        // must not lose their position when toggling its direction.
+        applyFilters();
+        // Applying the table state can rebuild its header again, especially
+        // when returning to default Overall sorting. Restore focus afterwards.
         if (restoreSortFocus) {
           const nextSortButton = tableHead.querySelector(`th[data-table-column="${column}"] > .tableSortButton`);
           if (nextSortButton instanceof HTMLButtonElement) nextSortButton.focus({ preventScroll: true });
         }
-        applyFilters();
       });
     }
 
