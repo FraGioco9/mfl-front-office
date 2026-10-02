@@ -1,5 +1,8 @@
 # Post-foundations browser baseline — 2026-09-15
 
+> **Updated reference (2026-10-02):** see [PERF-01 current React/Next baseline](performance-1034-perf01.md), with 70 complete journey runs and preserved raw capture. The September data below remain a historical snapshot, not a directly controlled comparison to October.
+
+
 This is a local production Next runtime on a GitHub-hosted runner with synthetic client throttling.
 These measurements **must never be described as production latency**. No application behavior changes
 are included in this evidence PR.
@@ -19,7 +22,7 @@ are included in this evidence PR.
 - Cold: new browser profile and cleared browser cache; the production server is already running and its dataset discovery has occurred. This is not a serverless cold-start measurement.
 - Refresh: full document reload with HTTP cache enabled (`Page.reload({ignoreCache: false})`). It is not a cache-bypassing hard reload.
 - Cached: SPA revisit after navigating Home within the same browser session.
-- [Original complete JSON](performance-baselines/2026-09-15.json) contains every raw sample, Server-Timing aggregate and stage breakdown. It is checked in so evidence survives Actions artifact expiry.
+- The original complete JSON was retained when the September capture was written, but its former `performance-baselines/2026-09-15.json` link is **no longer present in the current repository** (verified 2026-10-02). The historical published median/slowest table and original Actions run remain the available reference; see [PERF-01](performance-1034-perf01.md) for newly retained raw and summary evidence.
 
 The capture's original Actions summary lost values because Markdown backticks were evaluated by Bash.
 The downloadable JSON/logs were intact. This PR switches summary rendering to Python and removes the
