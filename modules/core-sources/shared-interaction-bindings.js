@@ -291,8 +291,18 @@ window.addEventListener("scroll", () => hidePlayerNoteTooltip({ immediate: true 
 window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true }));
 
 window.addEventListener("popstate", () => {
+  // The loaded Club route handler already owns identity and view restoration.
+  // Sending this same event through setPage starts a second async transition.
+  if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(window.location.pathname)
+      && typeof window.__mflOpenClubPageRoute === "function") return;
+  const staticUi = window.__mflStaticUiRuntime;
+  const scrollToken = staticUi?.historyScrollToken?.();
   const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
-  setPage(target.pageName, false, { ...target.options, preserveScroll: true });
+  void Promise.resolve(setPage(target.pageName, false, { ...target.options, preserveScroll: true }))
+    .then(
+      () => staticUi?.restoreHistoryScroll?.(scrollToken),
+      () => staticUi?.restoreHistoryScroll?.(scrollToken),
+    );
 });
 
 accountButton.addEventListener("click", (event) => {
