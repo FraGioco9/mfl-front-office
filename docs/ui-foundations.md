@@ -66,6 +66,7 @@ Data visualization and game-state colors are intentionally not part of this rule
 - Font: `"Titillium Web", Arial, Helvetica, sans-serif`
 - `font-size-adjust`: `0.500`
 - Shared page/table title size: `20px` (`--mfl-page-title-font-size`)
+- Shared page/table title weight: `700` (`--mfl-page-title-font-weight`), explicit instead of depending on the browser's default `h2` weight
 - Shared page-title minimum height: `32px` (`--mfl-page-title-min-height`)
 - Phone and compact-phone title scaling override the same token to `18px` / `17px`
 - Page-title block margins: `0px` before / `8px` after (`--mfl-page-title-margin-block-start` / `--mfl-page-title-margin-block-end`)
@@ -83,7 +84,7 @@ Data visualization and game-state colors are intentionally not part of this rule
 - Error feedback weight: `700` (`--mfl-helper-error-font-weight`)
 - Numeric/count values use tabular figures where stable alignment matters
 
-The shared section-title scale is used only where the heading has the same structural role. Settings and Advanced Settings use the standard size; MFL Stats distribution and Privacy cards use the compact size. Player and Evaluation headings remain specialist-owned.
+The shared section-title scale is used only where the heading has the same structural role. Settings, Advanced Settings and the Planner Squad/Depth/Squad summary panes use the standard size, weight and line-height; MFL Stats distribution and Privacy cards use the compact size. Player and Evaluation detail headings remain specialist-owned.
 
 Metadata tokens apply only to true small labels/secondary metadata. The table Watchlist label consumes the standard metadata size/weight, while the Rows label consumes the compact/strong metadata variant; route/table CSS may add presentation such as uppercase text but must not re-own those typography values. The same classes are present during first paint/loading, so loaded and loading chrome inherit the same typography owner. Component labels whose geometry controls a row height, and Player/Evaluation-specific labels, may keep locally owned line-height or sizing.
 
