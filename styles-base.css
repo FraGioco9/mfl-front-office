@@ -4093,7 +4093,7 @@ button.playerIdText:active {
 
 .watchlistPlayerCount {
   margin-left: auto;
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -4507,6 +4507,17 @@ button.playerIdText:active {
   border-color: var(--primary);
   background: var(--primary);
   color: #ffffff;
+}
+
+:root[data-theme="dark"] :is(
+  .settingsToggleButton.active,
+  .settingsEmailActionButton.primary,
+  .playerEvaluateButton,
+  .playerExternalButton,
+  .playerEvaluateButton:hover,
+  .playerExternalButton:hover
+) {
+  color: var(--page-bg);
 }
 
 .settingsEmailActionButton:disabled {
