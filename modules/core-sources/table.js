@@ -2459,6 +2459,9 @@ function tableApplyFiltersOwner(options = {}) {
   const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
   if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-prep-start", { page: state.currentPage });
   if (state.currentPage === "club") {
+    // Club has no quick/advanced filters. Reset a prior route's visible badge
+    // and accessible description when moving between Table pages.
+    updateFilterSummary(0);
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
     state.filteredRows.sort(compareRows);
