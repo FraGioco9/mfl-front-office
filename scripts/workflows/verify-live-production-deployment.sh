@@ -13,6 +13,9 @@ from pathlib import Path
 
 expected_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-production-expected.json"
 expected = json.loads(expected_path.read_text(encoding="utf-8"))
+route_mode = str(expected.get("routeVerificationMode", "")).strip()
+if route_mode not in {"legacy-static", "next-ssr"}:
+    raise SystemExit(f"Missing or unsupported published route verification mode: {route_mode!r}")
 database_url = os.environ["PRODUCTION_DATABASE_URL"]
 parsed_database_url = urllib.parse.urlsplit(database_url)
 if parsed_database_url.scheme not in {"http", "https"} or not parsed_database_url.netloc:
@@ -84,12 +87,22 @@ def verify_route(path: str, token: str) -> None:
         raise RuntimeError(f"{path} did not return the canonical application shell")
     head = re.split(r"</head>", body, maxsplit=1, flags=re.IGNORECASE)[0]
     titles = re.findall(r"<title\b[^>]*>([^<]*)</title>", head, flags=re.IGNORECASE)
-    if titles != [expected_titles[path]]:
+    # A legacy static rewrite has one app-wide title in index.html. A modern
+    # Next route must deliver the page title and canonical metadata before JS.
+    allowed_titles = {expected_titles[path]}
+    if route_mode == "legacy-static":
+        # Some legacy Next pages render their own title before a static rewrite;
+        # both the generic shell and the known page title are valid in this mode.
+        allowed_titles.add("MFL Front Office")
+    if len(titles) != 1 or titles[0] not in allowed_titles:
         raise RuntimeError(
-            f"{path} initial HTML title mismatch; expected {expected_titles[path]!r}, observed {titles!r}. "
+            f"{path} initial HTML title mismatch ({route_mode}); "
+            f"expected one of {sorted(allowed_titles)!r}, observed {titles!r}. "
             "Check Vercel static rewrites versus Next SSR routing."
         )
-    if 'name="description"' not in head or 'property="og:title"' not in head:
+    if route_mode == "next-ssr" and (
+        'name="description"' not in head or 'property="og:title"' not in head
+    ):
         raise RuntimeError(f"{path} initial HTML is missing canonical description or og:title metadata")
 
 
@@ -174,7 +187,8 @@ for attempt in range(1, 13):
             "Live production deployment verified: "
             f"{commit_note}, v{expected['version']}, "
             f"generatedAt {expected_database['generatedAt']}; "
-            f"{len(routes)} representative routes returned the canonical shell and SSR metadata; "
+            f"{len(routes)} representative routes returned the canonical shell "
+            f"and {route_mode} head contract; "
             "CSP headers and both report formats verified."
         )
         raise SystemExit(0)

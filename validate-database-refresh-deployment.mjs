@@ -188,6 +188,22 @@ excludes(
   "Database-only deployment logs must not claim that the API runtime adapter is being updated.",
 );
 
+invariant(
+  identityRecorder.includes('route_verification_mode = "legacy-static" if legacy_static_routes else "next-ssr"')
+    && identityRecorder.includes('str(rule.get("source", "")).startswith("/:app(")')
+    && identityRecorder.includes('"routeVerificationMode": route_verification_mode'),
+  "Expected route verification must be pinned to legacy static rewrites in the published site source.",
+);
+invariant(
+  deploymentVerifier.includes('if route_mode not in {"legacy-static", "next-ssr"}:')
+    && deploymentVerifier.includes('allowed_titles = {expected_titles[path]}')
+    && deploymentVerifier.includes('allowed_titles.add("MFL Front Office")')
+    && deploymentVerifier.includes('if len(titles) != 1 or titles[0] not in allowed_titles:')
+    && deploymentVerifier.includes('if route_mode == "next-ssr" and (')
+    && deploymentVerifier.includes('property="og:title"'),
+  "Legacy static routes must retain shell/title/security checks while modern Next SSR metadata remains mandatory.",
+);
+
 const materializeFinalIndex = workflow.indexOf("- name: Materialize final checkpoint");
 const uploadFinalIndex = workflow.indexOf("- name: Upload final database");
 const publishFinalIndex = workflow.indexOf("- name: Publish final checkpoint");
