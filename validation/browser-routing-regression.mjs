@@ -985,8 +985,10 @@ const browserTestSource = String.raw`(() => {
       "Database Name sort did not expose aria-sort=ascending.",
     );
     const nextNameButton = document.querySelector('#tableHead th[data-table-column="name"] > .tableSortButton');
-    assert(nextNameButton?.title === "Sort Name descending",
-      "Sorted Name must advertise reverse direction; observed title=" + JSON.stringify(nextNameButton?.title) + ", aria-sort=" + String(document.querySelector('#tableHead th[data-table-column="name"]')?.getAttribute("aria-sort")) + ", key=" + String(state.sortKey) + ", direction=" + String(state.sortDirection));
+    // The global tooltip manager temporarily clears native title on focus.
+    // aria-description must remain stable for assistive technology.
+    assert(nextNameButton?.getAttribute("aria-description") === "Sort Name descending",
+      "Sorted Name must advertise reverse direction to keyboard and assistive technology.");
     assert(document.activeElement === nextNameButton,
       "Keyboard focus was lost when the Name sort header was rebuilt.");
     const overallButton = document.querySelector('#tableHead th[data-table-column="overall"] > .tableSortButton');
