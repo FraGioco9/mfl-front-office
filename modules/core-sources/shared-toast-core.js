@@ -1,3 +1,20 @@
+function scheduleToastHide(toast) {
+  window.clearTimeout(state.toastTimer);
+  state.toastTimer = window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 2200);
+}
+
+function hideToast() {
+  const toast = document.querySelector("#toastMessage");
+  if (!toast) {
+    return;
+  }
+
+  window.clearTimeout(state.toastTimer);
+  toast.classList.remove("visible");
+}
+
 // Stable status/alert nodes, kept outside route shells and dialogs so hidden
 // destinations or a closing modal cannot swallow operation feedback.
 let lastActionAnnouncementText = "";
@@ -45,23 +62,6 @@ function announceActionStatus(message, options = {}) {
   if (fresh && typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(commit);
   else commit();
   return true;
-}
-
-function scheduleToastHide(toast) {
-  window.clearTimeout(state.toastTimer);
-  state.toastTimer = window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2200);
-}
-
-function hideToast() {
-  const toast = document.querySelector("#toastMessage");
-  if (!toast) {
-    return;
-  }
-
-  window.clearTimeout(state.toastTimer);
-  toast.classList.remove("visible");
 }
 
 function showToast(message, options = {}) {
