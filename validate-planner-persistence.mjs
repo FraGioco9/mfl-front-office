@@ -121,7 +121,7 @@ assert(docs.includes("### `planner_plans`") && docs.includes("### `planner_share
 assert(docs.includes("without opting in") && docs.includes("current packaged database"));
 
 assert(html.includes('id="plannerPlanBar"') && html.includes('id="plannerPlansModal"') && html.includes('id="plannerSharedBanner"'));
-assert(html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
+assert(html.includes('id="plannerPlanMode" class="plannerPlanMode" aria-live="polite">Draft</span>') && html.includes('id="plannerDuplicatePlanButton"'));
 assert(html.includes('id="plannerPlansButton"') && html.includes('id="plannerNewPlanButton"')
   && html.includes('id="plannerSavePlanButton"') && html.includes('id="plannerSharePlanButton"')
   && !html.includes('id="plannerRevokeShareButton"'));
